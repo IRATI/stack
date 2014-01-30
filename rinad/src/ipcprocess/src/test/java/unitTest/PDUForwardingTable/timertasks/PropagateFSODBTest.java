@@ -43,7 +43,7 @@ public class PropagateFSODBTest {
 		impl.flowAllocated(1, 1, 2, 1);
 		timer.schedule(new PropagateFSODB(impl), 1);
 		try {
-		    Thread.sleep(1000);
+		    Thread.sleep(500);
 		} catch(InterruptedException ex) {
 		    Thread.currentThread().interrupt();
 		}
@@ -62,7 +62,7 @@ public class PropagateFSODBTest {
 		impl.flowAllocated(1, 1, 2, 1);
 		timer.schedule(new PropagateFSODB(impl), 1);
 		try {
-		    Thread.sleep(1000);
+		    Thread.sleep(500);
 		} catch(InterruptedException ex) {
 		    Thread.currentThread().interrupt();
 		}

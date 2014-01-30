@@ -156,7 +156,7 @@ public class IPCManager {
 	
 	private RINAConfiguration readConfigurationFile(){
 		try {
-    		ObjectStateMapper objectMapper = new ObjectStateMapper();
+    		ObjectMapper objectMapper = new ObjectMapper();
     		RINAConfiguration rinaConfiguration = (RINAConfiguration) 
     			objectMapper.readValue(new FileInputStream(System.getProperty("configFileLocation")), 
     					RINAConfiguration.class);

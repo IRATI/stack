@@ -1,6 +1,15 @@
 package rina.PDUForwardingTable.api;
 
+import rina.ribdaemon.api.RIBObjectNames;
+
 public class FlowStateObject{
+	
+	public static final String FLOW_STATE_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
+			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
+			+ RIBObjectNames.FLOWSTATEOBJECTGROUP + RIBObjectNames.SEPARATOR;
+	
+	public static final String FLOW_STATE_RIB_OBJECT_CLASS = "flowstateob";
 	
 	/* The address of the IPC Process */ 
 	protected long address;

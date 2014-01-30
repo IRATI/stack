@@ -1,7 +1,8 @@
 package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeSet;
+import java.util.HashSet;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
 
@@ -11,8 +12,9 @@ public class Graph {
 	  private List<FlowStateObject> flowStateObjects;
 
 	  public Graph(List<FlowStateObject> flowStateO) {
-		
 		this.flowStateObjects = flowStateO;
+		this.vertices = new ArrayList<Vertex>();
+		this.edges = new ArrayList<Edge>();
 	    initVertices();
 	    initEdges();
 	  }
@@ -28,54 +30,56 @@ public class Graph {
 	  private void initVertices()
 	  {
 		  
-		  TreeSet<Vertex> notRepeatedOrigin = new TreeSet<Vertex>();
-		  TreeSet<Vertex> notRepeatedDest = new TreeSet<Vertex>();
+		  HashSet<Vertex> notRepeatedOrigin = new HashSet<Vertex>();
+		  HashSet<Vertex> notRepeatedDest = new HashSet<Vertex>();
 		  
 		  for (FlowStateObject e : this.flowStateObjects)
 		  {
-			  notRepeatedOrigin.add(new Vertex(e.getAddress(), e.getPortid()));
-			  notRepeatedDest.add(new Vertex(e.getNeighborAddress(), e.getNeighborPortid()));
+			  Vertex v1 = new Vertex(e.getAddress());
+			  Vertex v2 = new Vertex(e.getNeighborAddress());
+			  notRepeatedOrigin.add(v1);
+			  notRepeatedDest.add(v2);
 		  }
 		  notRepeatedOrigin.retainAll(notRepeatedDest);
-		  
+		
 		  vertices.addAll(notRepeatedOrigin);
 	  }
 	  
 	  private void initEdges()
 	  {
-			boolean originChecked;
-			boolean destChecked;
-			Vertex origin = null;
-			Vertex dest = null;
+			boolean v1Checked;
+			boolean v2Checked;
+			Vertex v1 = null;
+			Vertex v2 = null;
+//			int portV1 = -1;
+//			int portV2 = -1;
 			int i;
 			
 			for (FlowStateObject f : flowStateObjects)
 			{
 				i = 0;
-				originChecked = false;
-				destChecked = false;
-				while(!originChecked && !destChecked && i < vertices.size())
+				v1Checked = false;
+				v2Checked = false;
+				while((!v1Checked || !v2Checked) && i < vertices.size())
 				{
 					Vertex v = vertices.get(i);
-					if (v.getAddress() == f.getAddress() && v.getPortId() == f.getPortid())
+					if (v.getAddress() == f.getAddress())
 					{
-						origin = v;
-						originChecked = true;
+						v1 = v;
+						v1Checked = true;
+//						portV1 = f.getPortid();
 					}
-					if (v.getAddress() == f.getNeighborAddress() && v.getPortId() == f.getNeighborPortid())
+					if (v.getAddress() == f.getNeighborAddress())
 					{
-						dest = v;
-						destChecked = true;
+						v2 = v;
+						v2Checked = true;
+//						portV2 = f.getNeighborPortid();
 					}
 					i++;
 				}
-				if (!originChecked || !destChecked)
+				if (v1Checked && v2Checked && !this.edges.contains(new Edge(v2, v1, 1)))
 				{
-					flowStateObjects.remove(f);
-				}
-				else
-				{
-					this.edges.add(new Edge(origin, dest, 1));			
+					this.edges.add(new Edge(v1, v2, 1));			
 				}
 			}
 		}

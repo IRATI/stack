@@ -17,6 +17,8 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.PDUForwardingTable.api.FlowStateObject;
+import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.applicationprocess.api.WhatevercastName;
 import rina.utils.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
@@ -34,6 +36,8 @@ import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwa
 import rina.encoding.impl.googleprotobuf.enrollment.EnrollmentInformationEncoder;
 import rina.encoding.impl.googleprotobuf.flow.FlowEncoder;
 import rina.encoding.impl.googleprotobuf.flowservice.FlowServiceEncoder;
+import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
+import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.encoding.impl.googleprotobuf.neighbor.NeighborArrayEncoder;
 import rina.encoding.impl.googleprotobuf.neighbor.NeighborEncoder;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeArrayEncoder;
@@ -317,6 +321,8 @@ public class IPCProcessImpl implements IPCProcess {
           encoder.addEncoder(ApplicationRegistration.class.getName(), new ApplicationRegistrationEncoder());
           encoder.addEncoder(Neighbor.class.getName(), new NeighborEncoder());
           encoder.addEncoder(Neighbor[].class.getName(), new NeighborArrayEncoder());
+          encoder.addEncoder(FlowStateObject.class.getName(), new FlowStateEncoder());
+          encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
           
           return encoder;
 	}

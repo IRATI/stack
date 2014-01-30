@@ -208,6 +208,7 @@ public class FakeCDAPSessionManager implements CDAPSessionManager{
 			message.setObjValue(arg5);
 			message.setOpCode(Opcode.M_WRITE);
 			message.setObjName(arg6);
+			message.setObjClass(arg3);
 			return message;
 	}
 

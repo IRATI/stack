@@ -8,715 +8,298 @@ public final class FlowStateMessage {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistry registry) {
   }
-  public interface flowStateObject_tOrBuilder
-      extends com.google.protobuf.MessageOrBuilder {
-
-    // optional uint64 address = 1;
-    /**
-     * <code>optional uint64 address = 1;</code>
-     *
-     * <pre>
-     * The address of the IPC Process
-     * </pre>
-     */
-    boolean hasAddress();
-    /**
-     * <code>optional uint64 address = 1;</code>
-     *
-     * <pre>
-     * The address of the IPC Process
-     * </pre>
-     */
-    long getAddress();
-
-    // required uint32 portid = 2;
-    /**
-     * <code>required uint32 portid = 2;</code>
-     *
-     * <pre>
-     * The port-id of the N-1 flow
-     * </pre>
-     */
-    boolean hasPortid();
-    /**
-     * <code>required uint32 portid = 2;</code>
-     *
-     * <pre>
-     * The port-id of the N-1 flow
-     * </pre>
-     */
-    int getPortid();
-
-    // optional uint64 neighbor_address = 3;
-    /**
-     * <code>optional uint64 neighbor_address = 3;</code>
-     *
-     * <pre>
-     * The address of the neighbor IPC Process	
-     * </pre>
-     */
-    boolean hasNeighborAddress();
-    /**
-     * <code>optional uint64 neighbor_address = 3;</code>
-     *
-     * <pre>
-     * The address of the neighbor IPC Process	
-     * </pre>
-     */
-    long getNeighborAddress();
-
-    // required uint32 neighbor_portid = 4;
-    /**
-     * <code>required uint32 neighbor_portid = 4;</code>
-     *
-     * <pre>
-     * The port_id assigned by the neighbor IPC Process to the N-1 flow
-     * </pre>
-     */
-    boolean hasNeighborPortid();
-    /**
-     * <code>required uint32 neighbor_portid = 4;</code>
-     *
-     * <pre>
-     * The port_id assigned by the neighbor IPC Process to the N-1 flow
-     * </pre>
-     */
-    int getNeighborPortid();
-
-    // optional bool state = 5;
-    /**
-     * <code>optional bool state = 5;</code>
-     *
-     * <pre>
-     * Flow up (true) or down (false) 
-     * </pre>
-     */
-    boolean hasState();
-    /**
-     * <code>optional bool state = 5;</code>
-     *
-     * <pre>
-     * Flow up (true) or down (false) 
-     * </pre>
-     */
-    boolean getState();
-
-    // optional uint32 sequence_number = 6;
-    /**
-     * <code>optional uint32 sequence_number = 6;</code>
-     *
-     * <pre>
-     * A sequence number to be able to discard old information
-     * </pre>
-     */
-    boolean hasSequenceNumber();
-    /**
-     * <code>optional uint32 sequence_number = 6;</code>
-     *
-     * <pre>
-     * A sequence number to be able to discard old information
-     * </pre>
-     */
-    int getSequenceNumber();
-
-    // optional uint32 age = 7;
-    /**
-     * <code>optional uint32 age = 7;</code>
-     *
-     * <pre>
-     * Age of this FSO (in seconds)
-     * </pre>
-     */
-    boolean hasAge();
-    /**
-     * <code>optional uint32 age = 7;</code>
-     *
-     * <pre>
-     * Age of this FSO (in seconds)
-     * </pre>
-     */
-    int getAge();
-  }
-  /**
-   * Protobuf type {@code rina.messages.flowStateObject_t}
-   *
-   * <pre>
-   * Contains the information of a flow object
-   * </pre>
-   */
   public static final class flowStateObject_t extends
-      com.google.protobuf.GeneratedMessage
-      implements flowStateObject_tOrBuilder {
+      com.google.protobuf.GeneratedMessage {
     // Use flowStateObject_t.newBuilder() to construct.
-    private flowStateObject_t(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
-      super(builder);
-      this.unknownFields = builder.getUnknownFields();
+    private flowStateObject_t() {
+      initFields();
     }
-    private flowStateObject_t(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
-
+    private flowStateObject_t(boolean noInit) {}
+    
     private static final flowStateObject_t defaultInstance;
     public static flowStateObject_t getDefaultInstance() {
       return defaultInstance;
     }
-
+    
     public flowStateObject_t getDefaultInstanceForType() {
       return defaultInstance;
     }
-
-    private final com.google.protobuf.UnknownFieldSet unknownFields;
-    @java.lang.Override
-    public final com.google.protobuf.UnknownFieldSet
-        getUnknownFields() {
-      return this.unknownFields;
-    }
-    private flowStateObject_t(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      initFields();
-      int mutable_bitField0_ = 0;
-      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-          com.google.protobuf.UnknownFieldSet.newBuilder();
-      try {
-        boolean done = false;
-        while (!done) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              done = true;
-              break;
-            default: {
-              if (!parseUnknownField(input, unknownFields,
-                                     extensionRegistry, tag)) {
-                done = true;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              address_ = input.readUInt64();
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              portid_ = input.readUInt32();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              neighborAddress_ = input.readUInt64();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              neighborPortid_ = input.readUInt32();
-              break;
-            }
-            case 40: {
-              bitField0_ |= 0x00000010;
-              state_ = input.readBool();
-              break;
-            }
-            case 48: {
-              bitField0_ |= 0x00000020;
-              sequenceNumber_ = input.readUInt32();
-              break;
-            }
-            case 56: {
-              bitField0_ |= 0x00000040;
-              age_ = input.readUInt32();
-              break;
-            }
-          }
-        }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-        throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
-        throw new com.google.protobuf.InvalidProtocolBufferException(
-            e.getMessage()).setUnfinishedMessage(this);
-      } finally {
-        this.unknownFields = unknownFields.build();
-        makeExtensionsImmutable();
-      }
-    }
+    
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
       return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internal_static_rina_messages_flowStateObject_t_descriptor;
     }
-
+    
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internal_static_rina_messages_flowStateObject_t_fieldAccessorTable
-          .ensureFieldAccessorsInitialized(
-              rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.class, rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.Builder.class);
+      return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internal_static_rina_messages_flowStateObject_t_fieldAccessorTable;
     }
-
-    public static com.google.protobuf.Parser<flowStateObject_t> PARSER =
-        new com.google.protobuf.AbstractParser<flowStateObject_t>() {
-      public flowStateObject_t parsePartialFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return new flowStateObject_t(input, extensionRegistry);
-      }
-    };
-
-    @java.lang.Override
-    public com.google.protobuf.Parser<flowStateObject_t> getParserForType() {
-      return PARSER;
-    }
-
-    private int bitField0_;
+    
     // optional uint64 address = 1;
     public static final int ADDRESS_FIELD_NUMBER = 1;
-    private long address_;
-    /**
-     * <code>optional uint64 address = 1;</code>
-     *
-     * <pre>
-     * The address of the IPC Process
-     * </pre>
-     */
-    public boolean hasAddress() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    /**
-     * <code>optional uint64 address = 1;</code>
-     *
-     * <pre>
-     * The address of the IPC Process
-     * </pre>
-     */
-    public long getAddress() {
-      return address_;
-    }
-
+    private boolean hasAddress;
+    private long address_ = 0L;
+    public boolean hasAddress() { return hasAddress; }
+    public long getAddress() { return address_; }
+    
     // required uint32 portid = 2;
     public static final int PORTID_FIELD_NUMBER = 2;
-    private int portid_;
-    /**
-     * <code>required uint32 portid = 2;</code>
-     *
-     * <pre>
-     * The port-id of the N-1 flow
-     * </pre>
-     */
-    public boolean hasPortid() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    /**
-     * <code>required uint32 portid = 2;</code>
-     *
-     * <pre>
-     * The port-id of the N-1 flow
-     * </pre>
-     */
-    public int getPortid() {
-      return portid_;
-    }
-
+    private boolean hasPortid;
+    private int portid_ = 0;
+    public boolean hasPortid() { return hasPortid; }
+    public int getPortid() { return portid_; }
+    
     // optional uint64 neighbor_address = 3;
     public static final int NEIGHBOR_ADDRESS_FIELD_NUMBER = 3;
-    private long neighborAddress_;
-    /**
-     * <code>optional uint64 neighbor_address = 3;</code>
-     *
-     * <pre>
-     * The address of the neighbor IPC Process	
-     * </pre>
-     */
-    public boolean hasNeighborAddress() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    /**
-     * <code>optional uint64 neighbor_address = 3;</code>
-     *
-     * <pre>
-     * The address of the neighbor IPC Process	
-     * </pre>
-     */
-    public long getNeighborAddress() {
-      return neighborAddress_;
-    }
-
+    private boolean hasNeighborAddress;
+    private long neighborAddress_ = 0L;
+    public boolean hasNeighborAddress() { return hasNeighborAddress; }
+    public long getNeighborAddress() { return neighborAddress_; }
+    
     // required uint32 neighbor_portid = 4;
     public static final int NEIGHBOR_PORTID_FIELD_NUMBER = 4;
-    private int neighborPortid_;
-    /**
-     * <code>required uint32 neighbor_portid = 4;</code>
-     *
-     * <pre>
-     * The port_id assigned by the neighbor IPC Process to the N-1 flow
-     * </pre>
-     */
-    public boolean hasNeighborPortid() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    /**
-     * <code>required uint32 neighbor_portid = 4;</code>
-     *
-     * <pre>
-     * The port_id assigned by the neighbor IPC Process to the N-1 flow
-     * </pre>
-     */
-    public int getNeighborPortid() {
-      return neighborPortid_;
-    }
-
+    private boolean hasNeighborPortid;
+    private int neighborPortid_ = 0;
+    public boolean hasNeighborPortid() { return hasNeighborPortid; }
+    public int getNeighborPortid() { return neighborPortid_; }
+    
     // optional bool state = 5;
     public static final int STATE_FIELD_NUMBER = 5;
-    private boolean state_;
-    /**
-     * <code>optional bool state = 5;</code>
-     *
-     * <pre>
-     * Flow up (true) or down (false) 
-     * </pre>
-     */
-    public boolean hasState() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
-    }
-    /**
-     * <code>optional bool state = 5;</code>
-     *
-     * <pre>
-     * Flow up (true) or down (false) 
-     * </pre>
-     */
-    public boolean getState() {
-      return state_;
-    }
-
+    private boolean hasState;
+    private boolean state_ = false;
+    public boolean hasState() { return hasState; }
+    public boolean getState() { return state_; }
+    
     // optional uint32 sequence_number = 6;
     public static final int SEQUENCE_NUMBER_FIELD_NUMBER = 6;
-    private int sequenceNumber_;
-    /**
-     * <code>optional uint32 sequence_number = 6;</code>
-     *
-     * <pre>
-     * A sequence number to be able to discard old information
-     * </pre>
-     */
-    public boolean hasSequenceNumber() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    /**
-     * <code>optional uint32 sequence_number = 6;</code>
-     *
-     * <pre>
-     * A sequence number to be able to discard old information
-     * </pre>
-     */
-    public int getSequenceNumber() {
-      return sequenceNumber_;
-    }
-
+    private boolean hasSequenceNumber;
+    private int sequenceNumber_ = 0;
+    public boolean hasSequenceNumber() { return hasSequenceNumber; }
+    public int getSequenceNumber() { return sequenceNumber_; }
+    
     // optional uint32 age = 7;
     public static final int AGE_FIELD_NUMBER = 7;
-    private int age_;
-    /**
-     * <code>optional uint32 age = 7;</code>
-     *
-     * <pre>
-     * Age of this FSO (in seconds)
-     * </pre>
-     */
-    public boolean hasAge() {
-      return ((bitField0_ & 0x00000040) == 0x00000040);
-    }
-    /**
-     * <code>optional uint32 age = 7;</code>
-     *
-     * <pre>
-     * Age of this FSO (in seconds)
-     * </pre>
-     */
-    public int getAge() {
-      return age_;
-    }
-
+    private boolean hasAge;
+    private int age_ = 0;
+    public boolean hasAge() { return hasAge; }
+    public int getAge() { return age_; }
+    
     private void initFields() {
-      address_ = 0L;
-      portid_ = 0;
-      neighborAddress_ = 0L;
-      neighborPortid_ = 0;
-      state_ = false;
-      sequenceNumber_ = 0;
-      age_ = 0;
     }
-    private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-
-      if (!hasPortid()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasNeighborPortid()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
+      if (!hasPortid) return false;
+      if (!hasNeighborPortid) return false;
       return true;
     }
-
+    
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt64(1, address_);
+      if (hasAddress()) {
+        output.writeUInt64(1, getAddress());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt32(2, portid_);
+      if (hasPortid()) {
+        output.writeUInt32(2, getPortid());
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt64(3, neighborAddress_);
+      if (hasNeighborAddress()) {
+        output.writeUInt64(3, getNeighborAddress());
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeUInt32(4, neighborPortid_);
+      if (hasNeighborPortid()) {
+        output.writeUInt32(4, getNeighborPortid());
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeBool(5, state_);
+      if (hasState()) {
+        output.writeBool(5, getState());
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeUInt32(6, sequenceNumber_);
+      if (hasSequenceNumber()) {
+        output.writeUInt32(6, getSequenceNumber());
       }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
-        output.writeUInt32(7, age_);
+      if (hasAge()) {
+        output.writeUInt32(7, getAge());
       }
       getUnknownFields().writeTo(output);
     }
-
+    
     private int memoizedSerializedSize = -1;
     public int getSerializedSize() {
       int size = memoizedSerializedSize;
       if (size != -1) return size;
-
+    
       size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+      if (hasAddress()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(1, address_);
+          .computeUInt64Size(1, getAddress());
       }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+      if (hasPortid()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(2, portid_);
+          .computeUInt32Size(2, getPortid());
       }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+      if (hasNeighborAddress()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(3, neighborAddress_);
+          .computeUInt64Size(3, getNeighborAddress());
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+      if (hasNeighborPortid()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(4, neighborPortid_);
+          .computeUInt32Size(4, getNeighborPortid());
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (hasState()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(5, state_);
+          .computeBoolSize(5, getState());
       }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+      if (hasSequenceNumber()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(6, sequenceNumber_);
+          .computeUInt32Size(6, getSequenceNumber());
       }
-      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+      if (hasAge()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(7, age_);
+          .computeUInt32Size(7, getAge());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
     }
-
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-
+    
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data);
+      return newBuilder().mergeFrom(data).buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
-      return PARSER.parseFrom(data, extensionRegistry);
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
-      return PARSER.parseFrom(input);
+      return newBuilder().mergeFrom(input).buildParsed();
     }
     public static rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
-      return PARSER.parseFrom(input, extensionRegistry);
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
     }
-
+    
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
     public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
-
-    @java.lang.Override
-    protected Builder newBuilderForType(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-      Builder builder = new Builder(parent);
-      return builder;
-    }
-    /**
-     * Protobuf type {@code rina.messages.flowStateObject_t}
-     *
-     * <pre>
-     * Contains the information of a flow object
-     * </pre>
-     */
+    
     public static final class Builder extends
-        com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_tOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internal_static_rina_messages_flowStateObject_t_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internal_static_rina_messages_flowStateObject_t_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.class, rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.Builder.class);
-      }
-
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t result;
+      
       // Construct using rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-
-      private Builder(
-          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
-        super(parent);
-        maybeForceBuilderInitialization();
-      }
-      private void maybeForceBuilderInitialization() {
-        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
-        }
-      }
+      private Builder() {}
+      
       private static Builder create() {
-        return new Builder();
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t();
+        return builder;
       }
-
+      
+      protected rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t internalGetResult() {
+        return result;
+      }
+      
       public Builder clear() {
-        super.clear();
-        address_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        portid_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        neighborAddress_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        neighborPortid_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000008);
-        state_ = false;
-        bitField0_ = (bitField0_ & ~0x00000010);
-        sequenceNumber_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000020);
-        age_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000040);
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t();
         return this;
       }
-
+      
       public Builder clone() {
-        return create().mergeFrom(buildPartial());
+        return create().mergeFrom(result);
       }
-
+      
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internal_static_rina_messages_flowStateObject_t_descriptor;
+        return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.getDescriptor();
       }
-
+      
       public rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t getDefaultInstanceForType() {
         return rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.getDefaultInstance();
       }
-
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
       public rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t build() {
-        rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t result = buildPartial();
-        if (!result.isInitialized()) {
+        if (result != null && !isInitialized()) {
           throw newUninitializedMessageException(result);
         }
-        return result;
+        return buildPartial();
       }
-
+      
+      private rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
       public rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t buildPartial() {
-        rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t result = new rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
         }
-        result.address_ = address_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.portid_ = portid_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.neighborAddress_ = neighborAddress_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.neighborPortid_ = neighborPortid_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000010;
-        }
-        result.state_ = state_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.sequenceNumber_ = sequenceNumber_;
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000040;
-        }
-        result.age_ = age_;
-        result.bitField0_ = to_bitField0_;
-        onBuilt();
-        return result;
+        rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t returnMe = result;
+        result = null;
+        return returnMe;
       }
-
+      
       public Builder mergeFrom(com.google.protobuf.Message other) {
         if (other instanceof rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t) {
           return mergeFrom((rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t)other);
@@ -725,7 +308,7 @@ public final class FlowStateMessage {
           return this;
         }
       }
-
+      
       public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t other) {
         if (other == rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.getDefaultInstance()) return this;
         if (other.hasAddress()) {
@@ -752,398 +335,205 @@ public final class FlowStateMessage {
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
-
-      public final boolean isInitialized() {
-        if (!hasPortid()) {
-          
-          return false;
-        }
-        if (!hasNeighborPortid()) {
-          
-          return false;
-        }
-        return true;
-      }
-
+      
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t parsedMessage = null;
-        try {
-          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t) e.getUnfinishedMessage();
-          throw e;
-        } finally {
-          if (parsedMessage != null) {
-            mergeFrom(parsedMessage);
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setAddress(input.readUInt64());
+              break;
+            }
+            case 16: {
+              setPortid(input.readUInt32());
+              break;
+            }
+            case 24: {
+              setNeighborAddress(input.readUInt64());
+              break;
+            }
+            case 32: {
+              setNeighborPortid(input.readUInt32());
+              break;
+            }
+            case 40: {
+              setState(input.readBool());
+              break;
+            }
+            case 48: {
+              setSequenceNumber(input.readUInt32());
+              break;
+            }
+            case 56: {
+              setAge(input.readUInt32());
+              break;
+            }
           }
         }
-        return this;
       }
-      private int bitField0_;
-
+      
+      
       // optional uint64 address = 1;
-      private long address_ ;
-      /**
-       * <code>optional uint64 address = 1;</code>
-       *
-       * <pre>
-       * The address of the IPC Process
-       * </pre>
-       */
       public boolean hasAddress() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return result.hasAddress();
       }
-      /**
-       * <code>optional uint64 address = 1;</code>
-       *
-       * <pre>
-       * The address of the IPC Process
-       * </pre>
-       */
       public long getAddress() {
-        return address_;
+        return result.getAddress();
       }
-      /**
-       * <code>optional uint64 address = 1;</code>
-       *
-       * <pre>
-       * The address of the IPC Process
-       * </pre>
-       */
       public Builder setAddress(long value) {
-        bitField0_ |= 0x00000001;
-        address_ = value;
-        onChanged();
+        result.hasAddress = true;
+        result.address_ = value;
         return this;
       }
-      /**
-       * <code>optional uint64 address = 1;</code>
-       *
-       * <pre>
-       * The address of the IPC Process
-       * </pre>
-       */
       public Builder clearAddress() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        address_ = 0L;
-        onChanged();
+        result.hasAddress = false;
+        result.address_ = 0L;
         return this;
       }
-
+      
       // required uint32 portid = 2;
-      private int portid_ ;
-      /**
-       * <code>required uint32 portid = 2;</code>
-       *
-       * <pre>
-       * The port-id of the N-1 flow
-       * </pre>
-       */
       public boolean hasPortid() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return result.hasPortid();
       }
-      /**
-       * <code>required uint32 portid = 2;</code>
-       *
-       * <pre>
-       * The port-id of the N-1 flow
-       * </pre>
-       */
       public int getPortid() {
-        return portid_;
+        return result.getPortid();
       }
-      /**
-       * <code>required uint32 portid = 2;</code>
-       *
-       * <pre>
-       * The port-id of the N-1 flow
-       * </pre>
-       */
       public Builder setPortid(int value) {
-        bitField0_ |= 0x00000002;
-        portid_ = value;
-        onChanged();
+        result.hasPortid = true;
+        result.portid_ = value;
         return this;
       }
-      /**
-       * <code>required uint32 portid = 2;</code>
-       *
-       * <pre>
-       * The port-id of the N-1 flow
-       * </pre>
-       */
       public Builder clearPortid() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        portid_ = 0;
-        onChanged();
+        result.hasPortid = false;
+        result.portid_ = 0;
         return this;
       }
-
+      
       // optional uint64 neighbor_address = 3;
-      private long neighborAddress_ ;
-      /**
-       * <code>optional uint64 neighbor_address = 3;</code>
-       *
-       * <pre>
-       * The address of the neighbor IPC Process	
-       * </pre>
-       */
       public boolean hasNeighborAddress() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
+        return result.hasNeighborAddress();
       }
-      /**
-       * <code>optional uint64 neighbor_address = 3;</code>
-       *
-       * <pre>
-       * The address of the neighbor IPC Process	
-       * </pre>
-       */
       public long getNeighborAddress() {
-        return neighborAddress_;
+        return result.getNeighborAddress();
       }
-      /**
-       * <code>optional uint64 neighbor_address = 3;</code>
-       *
-       * <pre>
-       * The address of the neighbor IPC Process	
-       * </pre>
-       */
       public Builder setNeighborAddress(long value) {
-        bitField0_ |= 0x00000004;
-        neighborAddress_ = value;
-        onChanged();
+        result.hasNeighborAddress = true;
+        result.neighborAddress_ = value;
         return this;
       }
-      /**
-       * <code>optional uint64 neighbor_address = 3;</code>
-       *
-       * <pre>
-       * The address of the neighbor IPC Process	
-       * </pre>
-       */
       public Builder clearNeighborAddress() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        neighborAddress_ = 0L;
-        onChanged();
+        result.hasNeighborAddress = false;
+        result.neighborAddress_ = 0L;
         return this;
       }
-
+      
       // required uint32 neighbor_portid = 4;
-      private int neighborPortid_ ;
-      /**
-       * <code>required uint32 neighbor_portid = 4;</code>
-       *
-       * <pre>
-       * The port_id assigned by the neighbor IPC Process to the N-1 flow
-       * </pre>
-       */
       public boolean hasNeighborPortid() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
+        return result.hasNeighborPortid();
       }
-      /**
-       * <code>required uint32 neighbor_portid = 4;</code>
-       *
-       * <pre>
-       * The port_id assigned by the neighbor IPC Process to the N-1 flow
-       * </pre>
-       */
       public int getNeighborPortid() {
-        return neighborPortid_;
+        return result.getNeighborPortid();
       }
-      /**
-       * <code>required uint32 neighbor_portid = 4;</code>
-       *
-       * <pre>
-       * The port_id assigned by the neighbor IPC Process to the N-1 flow
-       * </pre>
-       */
       public Builder setNeighborPortid(int value) {
-        bitField0_ |= 0x00000008;
-        neighborPortid_ = value;
-        onChanged();
+        result.hasNeighborPortid = true;
+        result.neighborPortid_ = value;
         return this;
       }
-      /**
-       * <code>required uint32 neighbor_portid = 4;</code>
-       *
-       * <pre>
-       * The port_id assigned by the neighbor IPC Process to the N-1 flow
-       * </pre>
-       */
       public Builder clearNeighborPortid() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        neighborPortid_ = 0;
-        onChanged();
+        result.hasNeighborPortid = false;
+        result.neighborPortid_ = 0;
         return this;
       }
-
+      
       // optional bool state = 5;
-      private boolean state_ ;
-      /**
-       * <code>optional bool state = 5;</code>
-       *
-       * <pre>
-       * Flow up (true) or down (false) 
-       * </pre>
-       */
       public boolean hasState() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
+        return result.hasState();
       }
-      /**
-       * <code>optional bool state = 5;</code>
-       *
-       * <pre>
-       * Flow up (true) or down (false) 
-       * </pre>
-       */
       public boolean getState() {
-        return state_;
+        return result.getState();
       }
-      /**
-       * <code>optional bool state = 5;</code>
-       *
-       * <pre>
-       * Flow up (true) or down (false) 
-       * </pre>
-       */
       public Builder setState(boolean value) {
-        bitField0_ |= 0x00000010;
-        state_ = value;
-        onChanged();
+        result.hasState = true;
+        result.state_ = value;
         return this;
       }
-      /**
-       * <code>optional bool state = 5;</code>
-       *
-       * <pre>
-       * Flow up (true) or down (false) 
-       * </pre>
-       */
       public Builder clearState() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        state_ = false;
-        onChanged();
+        result.hasState = false;
+        result.state_ = false;
         return this;
       }
-
+      
       // optional uint32 sequence_number = 6;
-      private int sequenceNumber_ ;
-      /**
-       * <code>optional uint32 sequence_number = 6;</code>
-       *
-       * <pre>
-       * A sequence number to be able to discard old information
-       * </pre>
-       */
       public boolean hasSequenceNumber() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
+        return result.hasSequenceNumber();
       }
-      /**
-       * <code>optional uint32 sequence_number = 6;</code>
-       *
-       * <pre>
-       * A sequence number to be able to discard old information
-       * </pre>
-       */
       public int getSequenceNumber() {
-        return sequenceNumber_;
+        return result.getSequenceNumber();
       }
-      /**
-       * <code>optional uint32 sequence_number = 6;</code>
-       *
-       * <pre>
-       * A sequence number to be able to discard old information
-       * </pre>
-       */
       public Builder setSequenceNumber(int value) {
-        bitField0_ |= 0x00000020;
-        sequenceNumber_ = value;
-        onChanged();
+        result.hasSequenceNumber = true;
+        result.sequenceNumber_ = value;
         return this;
       }
-      /**
-       * <code>optional uint32 sequence_number = 6;</code>
-       *
-       * <pre>
-       * A sequence number to be able to discard old information
-       * </pre>
-       */
       public Builder clearSequenceNumber() {
-        bitField0_ = (bitField0_ & ~0x00000020);
-        sequenceNumber_ = 0;
-        onChanged();
+        result.hasSequenceNumber = false;
+        result.sequenceNumber_ = 0;
         return this;
       }
-
+      
       // optional uint32 age = 7;
-      private int age_ ;
-      /**
-       * <code>optional uint32 age = 7;</code>
-       *
-       * <pre>
-       * Age of this FSO (in seconds)
-       * </pre>
-       */
       public boolean hasAge() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return result.hasAge();
       }
-      /**
-       * <code>optional uint32 age = 7;</code>
-       *
-       * <pre>
-       * Age of this FSO (in seconds)
-       * </pre>
-       */
       public int getAge() {
-        return age_;
+        return result.getAge();
       }
-      /**
-       * <code>optional uint32 age = 7;</code>
-       *
-       * <pre>
-       * Age of this FSO (in seconds)
-       * </pre>
-       */
       public Builder setAge(int value) {
-        bitField0_ |= 0x00000040;
-        age_ = value;
-        onChanged();
+        result.hasAge = true;
+        result.age_ = value;
         return this;
       }
-      /**
-       * <code>optional uint32 age = 7;</code>
-       *
-       * <pre>
-       * Age of this FSO (in seconds)
-       * </pre>
-       */
       public Builder clearAge() {
-        bitField0_ = (bitField0_ & ~0x00000040);
-        age_ = 0;
-        onChanged();
+        result.hasAge = false;
+        result.age_ = 0;
         return this;
       }
-
+      
       // @@protoc_insertion_point(builder_scope:rina.messages.flowStateObject_t)
     }
-
+    
     static {
       defaultInstance = new flowStateObject_t(true);
+      rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.internalForceInit();
       defaultInstance.initFields();
     }
-
+    
     // @@protoc_insertion_point(class_scope:rina.messages.flowStateObject_t)
   }
-
+  
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_rina_messages_flowStateObject_t_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_rina_messages_flowStateObject_t_fieldAccessorTable;
-
+  
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
     return descriptor;
@@ -1170,7 +560,9 @@ public final class FlowStateMessage {
           internal_static_rina_messages_flowStateObject_t_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_flowStateObject_t_descriptor,
-              new java.lang.String[] { "Address", "Portid", "NeighborAddress", "NeighborPortid", "State", "SequenceNumber", "Age", });
+              new java.lang.String[] { "Address", "Portid", "NeighborAddress", "NeighborPortid", "State", "SequenceNumber", "Age", },
+              rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.class,
+              rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t.Builder.class);
           return null;
         }
       };
@@ -1179,6 +571,8 @@ public final class FlowStateMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
   }
-
+  
+  public static void internalForceInit() {}
+  
   // @@protoc_insertion_point(outer_class_scope)
 }

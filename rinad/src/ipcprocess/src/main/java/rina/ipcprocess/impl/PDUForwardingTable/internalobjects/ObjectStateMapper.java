@@ -1,6 +1,7 @@
 package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import rina.PDUForwardingTable.api.*;
 
@@ -31,7 +32,7 @@ public class ObjectStateMapper {
 	
 	public FlowStateInternalObjectGroup FSOGMap (FlowStateObjectGroup intObj)
 	{
-		ArrayList<FlowStateObject> srcObj = intObj.getFlowStateObjectArray();
+		List<FlowStateObject> srcObj = intObj.getFlowStateObjectArray();
 		ArrayList<FlowStateInternalObject> destObj = new ArrayList<FlowStateInternalObject>();
 		
 		for (int i = 0; i < srcObj.size() ; i++)

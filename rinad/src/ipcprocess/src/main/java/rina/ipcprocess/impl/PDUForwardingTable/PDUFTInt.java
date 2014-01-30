@@ -1,8 +1,6 @@
 package rina.ipcprocess.impl.PDUForwardingTable;
 
-import java.util.ArrayList;
-
-import rina.PDUForwardingTable.api.FlowStateObject;
+import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.RoutingAlgorithmInt;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.VertexInt;
@@ -23,7 +21,7 @@ public interface PDUFTInt {
 
 	public void updateAge();
 
-	public boolean writeMessage(ArrayList<FlowStateObject> objectsToModify, int srcPort);
+	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
 	public void ForwardingTableupdate ();
 

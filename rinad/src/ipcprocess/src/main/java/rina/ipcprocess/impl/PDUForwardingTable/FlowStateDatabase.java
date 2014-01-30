@@ -2,10 +2,14 @@ package rina.ipcprocess.impl.PDUForwardingTable;
 
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
 
 public class FlowStateDatabase {
+	private static final Log log = LogFactory.getLog(FlowStateDatabase.class);
 	/**
 	 * The FlowStateObjectGroup
 	 */
@@ -31,6 +35,8 @@ public class FlowStateDatabase {
 	/*		Constructors		*/
 	public FlowStateDatabase()
 	{
+		this.flowStateObjectGroup = new FlowStateInternalObjectGroup();
+		this.isModified = false;
 	}
 	
 	/*		Methods		*/
@@ -73,7 +79,9 @@ public class FlowStateDatabase {
 			{
 				FlowStateInternalObject obj = objects.get(i);
 				
-				if (objM.getAddress() == obj.getAddress() && objM.getPortid() == obj.getPortid())
+				if (objM.getAddress() == obj.getAddress() && objM.getPortid() == obj.getPortid()
+						&& objM.getNeighborAddress() == obj.getNeighborAddress() 
+						&& objM.getNeighborPortid() == obj.getNeighborPortid())
 				{
 					continueLoop = false;
 					if (objM.getSequenceNumber() > obj.getSequenceNumber())
@@ -91,11 +99,11 @@ public class FlowStateDatabase {
 			}
 			if (continueLoop == true)
 			{
-				FlowStateInternalObject obj = new FlowStateInternalObject(objM);
-				obj.setAvoidPort(avoidPort);
-				obj.setModified(true);
-				objects.add(obj);
-				
+				objM.setAvoidPort(avoidPort);
+				objM.setModified(true);
+				objects.add(objM);
+
+				this.isModified = true;
 			}
 			continueLoop = true;
 			i = 0;

@@ -19,11 +19,10 @@ public class SendReadCDAPTest {
 		
 		timer.schedule(new SendReadCDAP(3, new FakeCDAPSessionManager(), rib, 1), 1);
 		try {
-		    Thread.sleep(1000);
+		    Thread.sleep(500);
 		} catch(InterruptedException ex) {
 		    Thread.currentThread().interrupt();
 		}
 		Assert.assertTrue(rib.waitingResponse);
 	}
-
 }

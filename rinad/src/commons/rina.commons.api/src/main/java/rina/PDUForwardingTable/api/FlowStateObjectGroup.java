@@ -1,16 +1,27 @@
 package rina.PDUForwardingTable.api;
 
 import java.util.ArrayList;
+import java.util.List;
+
+import rina.ribdaemon.api.RIBObjectNames;
 
 public class FlowStateObjectGroup {
-	protected ArrayList<FlowStateObject> flowStateObjectArray = null;
 
+	public static final String FLOW_STATE_GROUP_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
+			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
+			+ RIBObjectNames.FLOWSTATEOBJECTGROUP;
+	
+	public static final String FLOW_STATE_GROUP_RIB_OBJECT_CLASS = "flowstateobject";
+	
+	protected List<FlowStateObject> flowStateObjectArray = null;
+	
 	/*		Accessors		*/
-	public ArrayList<FlowStateObject> getFlowStateObjectArray() {
+	public List<FlowStateObject> getFlowStateObjectArray() {
 		return flowStateObjectArray;
 	}
 	public void setFlowStateObjectArray(
-			ArrayList<FlowStateObject> flowStateObjectArray) {
+			List<FlowStateObject> flowStateObjectArray) {
 		this.flowStateObjectArray = flowStateObjectArray;
 	}
 	
@@ -19,7 +30,7 @@ public class FlowStateObjectGroup {
 	{
 		flowStateObjectArray = new ArrayList<FlowStateObject>();
 	}
-	public FlowStateObjectGroup(ArrayList<FlowStateObject> objects) {
+	public FlowStateObjectGroup(List<FlowStateObject> objects) {
 		flowStateObjectArray = objects;
 	}
 }

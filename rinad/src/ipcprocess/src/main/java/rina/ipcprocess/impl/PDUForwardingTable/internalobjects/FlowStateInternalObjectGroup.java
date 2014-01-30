@@ -46,12 +46,12 @@ public class FlowStateInternalObjectGroup{
 	public FlowStateInternalObject getByPortId(int portId)
 	{
 		int i = 0;
-		while (this.flowStateObjectArray.get(i).portid != portId && i < this.flowStateObjectArray.size())
+		while (i < this.flowStateObjectArray.size() && this.flowStateObjectArray.get(i).portid != portId)
 		{
 			i++;
 		}
 		
-		if (i == this.flowStateObjectArray.size()-1)
+		if (i == this.flowStateObjectArray.size())
 		{
 			return null;
 		}
