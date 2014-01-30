@@ -315,7 +315,6 @@ static struct pft_entry * pft_find(struct pft * instance,
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 if ((pos->destination == destination) &&
                     (pos->qos_id      == qos_id)) {
-                        rcu_read_unlock();
                         return pos;
                 }
         }
