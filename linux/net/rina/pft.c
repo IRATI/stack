@@ -490,7 +490,6 @@ int pft_dump(struct pft *       instance,
 
         rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
-                /* FIXME: Use pfte_create_ni */
                 entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
                 if (!entry) {
                         rcu_read_unlock();
