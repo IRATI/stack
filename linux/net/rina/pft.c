@@ -256,17 +256,22 @@ struct pft * pft_create_ni(void)
 struct pft * pft_create(void)
 { return pft_create_gfp(GFP_KERNEL); }
 
-static bool pft_is_ok(struct pft * instance)
+static bool __pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
 
+/* FIXME: This is broken, a lock has to be taken here */
+bool pft_is_ok(struct pft * instance)
+{ return __pft_is_ok(instance); }
+
+/* FIXME: This is broken, a lock has to be taken here */
 bool pft_is_empty(struct pft * instance)
-{ return pft_is_ok(instance) ? list_empty(&instance->entries) : false;  }
+{ return __pft_is_ok(instance) ? list_empty(&instance->entries) : false;  }
 
 static void __pft_flush(struct pft * instance)
 {
         struct pft_entry * pos, * next;
 
-        ASSERT(pft_is_ok(instance));
+        ASSERT(__pft_is_ok(instance));
 
         list_for_each_entry_safe(pos, next, &instance->entries, next) {
                 pfte_destroy(pos);
@@ -275,13 +280,11 @@ static void __pft_flush(struct pft * instance)
 
 int pft_flush(struct pft * instance)
 {
+        if (!__pft_is_ok(instance))
+                return -1;
+      
         spin_lock(&instance->write_lock);
         
-        if (!pft_is_ok(instance)) {
-                spin_unlock(&instance->write_lock);
-                return -1;
-        }
-      
         __pft_flush(instance);
 
         spin_unlock(&instance->write_lock);
@@ -291,18 +294,16 @@ int pft_flush(struct pft * instance)
 
 int pft_destroy(struct pft * instance)
 {
-        spin_lock(&instance->write_lock);
-
-        if (!pft_is_ok(instance)) {
-                spin_unlock(&instance->write_lock);
+        if (!__pft_is_ok(instance))
                 return -1;
-        }
+
+        spin_lock(&instance->write_lock);
 
         __pft_flush(instance);
 
-        rkfree(instance);
-
         spin_unlock(&instance->write_lock);
+
+        rkfree(instance);
 
         return 0;
 }
@@ -313,7 +314,7 @@ static struct pft_entry * pft_find(struct pft * instance,
 {
         struct pft_entry * pos;
 
-        ASSERT(pft_is_ok(instance));
+        ASSERT(__pft_is_ok(instance));
         ASSERT(is_address_ok(destination));
 
         list_for_each_entry_rcu(pos, &instance->entries, next) {
@@ -335,12 +336,10 @@ int pft_add(struct pft *      instance,
         struct pft_entry * tmp;
         int                i;
 
-        spin_lock(&instance->write_lock);
-
-        if (!pft_is_ok(instance)) {
-                spin_unlock(&instance->write_lock);
+        if (!__pft_is_ok(instance))
                 return -1;
-        }
+
+        spin_lock(&instance->write_lock);
 
         if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
@@ -386,18 +385,20 @@ int pft_remove(struct pft *      instance,
         struct pft_entry * tmp;
         int                i;
 
-        spin_lock(&instance->write_lock);
-
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
+
+        spin_lock(&instance->write_lock);
 
         if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
         if (!ports || !count) {
                 LOG_ERR("Bogus output parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
         
@@ -414,6 +415,7 @@ int pft_remove(struct pft *      instance,
         if (list_empty(&tmp->ports)) {
                 pfte_destroy(tmp);
         }
+
         spin_unlock(&instance->write_lock);
 
         return 0;
@@ -427,7 +429,7 @@ int pft_nhop(struct pft * instance,
 {
         struct pft_entry * tmp;
 
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
 
         if (!is_address_ok(destination) ||
@@ -470,7 +472,7 @@ int pft_dump(struct pft *       instance,
         struct pft_entry *    pos;
         struct pdu_ft_entry * entry;
 
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
 
         rcu_read_lock();
