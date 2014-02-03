@@ -33,7 +33,7 @@
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
         port_id_t        port_id;
-        
+
         struct list_head next;
 };
 
@@ -166,7 +166,7 @@ static int pfte_port_add(struct pft_entry * entry,
                 return -1;
 
         list_add_rcu(&pe->next, &entry->ports);
-        
+
         return 0;
 }
 
@@ -259,22 +259,22 @@ struct pft * pft_create(void)
 static bool __pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
 
-/* 
- *  NOTE: This is broken if we do more checks on the instance.
- *  A lock has to be taken here in that case.
+/*
+ * NOTE: This could break if we do more checks on the instance.
+ *       A lock will have to be be taken in that case ...
  */
 bool pft_is_ok(struct pft * instance)
 { return __pft_is_ok(instance); }
 
 bool pft_is_empty(struct pft * instance)
-{ 
+{
         bool empty;
 
         if (!__pft_is_ok(instance))
                 return false;
 
         rcu_read_lock();
-        empty = list_empty(&instance->entries);  
+        empty = list_empty(&instance->entries);
         rcu_read_unlock();
 
         return empty;
@@ -295,9 +295,9 @@ int pft_flush(struct pft * instance)
 {
         if (!__pft_is_ok(instance))
                 return -1;
-      
+
         spin_lock(&instance->write_lock);
-        
+
         __pft_flush(instance);
 
         spin_unlock(&instance->write_lock);
@@ -376,7 +376,7 @@ int pft_add(struct pft *      instance,
 
                 list_add_rcu(&tmp->next, &instance->entries);
         }
-        
+
         for (i = 0; i < count; i++) {
                 if (pfte_port_add(tmp, ports[i])) {
                         pfte_destroy(tmp);
@@ -414,7 +414,7 @@ int pft_remove(struct pft *      instance,
                 spin_unlock(&instance->write_lock);
                 return -1;
         }
-        
+
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 spin_unlock(&instance->write_lock);
@@ -423,7 +423,7 @@ int pft_remove(struct pft *      instance,
 
         for (i = 0; i < count; i++)
                 pfte_port_remove(tmp, ports[i]);
-       
+
         /* If the list of port-ids is empty, remove the entry */
         if (list_empty(&tmp->ports)) {
                 pfte_destroy(tmp);
