@@ -35,6 +35,8 @@
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
+#define NETLINK_RINA_A_MAX 9
+
 struct message_handler {
         void *             data;
         message_handler_cb cb;
@@ -53,7 +55,7 @@ struct genl_family      rnl_nl_family = {
         .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
-        /* .maxattr = NETLINK_RINA_A_MAX, */
+        .maxattr = NETLINK_RINA_A_MAX, 
 };
 
 static int is_message_type_in_range(msg_type_t msg_type)
@@ -140,81 +142,109 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-static struct nla_policy dumb_policy[IRAR_ATTR_MAX + 1];
-static struct nla_policy test_policy[IRAR_ATTR_MAX + 1] = {
-        [IRAR_ATTR_APP_NAME] = {
-                .type = NLA_NESTED,
-        },
-        [IRAR_ATTR_DIF_NAME] = {
-                .type = NLA_NESTED,
-        }
+static struct nla_policy iatdr_policy[IATDR_ATTR_MAX + 1] = {
+        [IATDR_ATTR_DIF_INFORMATION] = {.type = NLA_NESTED, .len = 0},
 };
 
-#define DECL_NL_OP(X) {                         \
-                .cmd    = X,                    \
+static struct nla_policy iudcr_policy[IUDCR_ATTR_MAX + 1] = {
+        [IUDCR_ATTR_DIF_CONFIGURATION] = {.type = NLA_NESTED, .len = 0},
+};
+
+
+static struct nla_policy idrn_policy[IDRN_ATTR_MAX + 1] = {
+        [IDRN_ATTR_IPC_PROCESS_NAME] = {.type = NLA_NESTED, .len = 0};
+        [IDRN_ATTR_DIF_NAME]         = {.type = NLA_NESTED, .len = 0};
+        [IDRN_ATTR_REGISTRATION]     = {.type = NLA_FLAG, .len = 0};
+};
+
+static struct nla_policy idun_policy[IDUN_ATTR_MAX + 1] = {
+        [IDUN_ATTR_RESULT] = {.type = NLA_U32, .len = 4}; 
+};
+
+static struct nla_policy iafrm_policy[IAFRM_ATTR_MAX + 1] = {
+        [IAFRM_ATTR_SOURCE_APP_NAME] = {.type = NLA_NESTED, .len=0};
+        [IAFRM_ATTR_DEST_APP_NAME]   = {.type = NLA_NESTED, .len=0};
+        [IAFRM_ATTR_FLOW_SPEC]       = {.type = NLA_NESTED, .len=0};
+        [IAFRM_ATTR_DIF_NAME]        = {.type = NLA_NESTED, .len=0};
+};
+
+static struct nla_policy attr_policy[IAFRA_ATTR_MAX + 1] = {
+        [IAFRA_ATTR_SOURCE_APP_NAME] = {.type = NLA_NESTED, .len = 0};
+        [IAFRA_ATTR_DEST_APP_NAME]   = {.type = NLA_NESTED, .len = 0};
+        [IAFRA_ATTR_FLOW_SPEC]       = {.type = NLA_NESTED, .len = 0};
+        [IAFRA_ATTR_DIF_NAME]        = {.type = NLA_NESTED, .len = 0};
+        [IAFRA_ATTR_PORT_ID]         = {.type = NLA_U32, .len = 4};
+};
+
+static struct nla_policy iafre_policy[IAFRE_ATTR_MAX + 1] = {
+        [IAFRE_ATTR_RESULT]        = {.type = NLA_U32, .len = 4};
+        [IAFRE_ATTR_NOTIFY_SOURCE] = {.type = NLA_FLAG, .len = 0};
+};
+
+static struct nla_policy idfrt_policy[IDFRT_ATTR_MAX + 1] = {
+        [IDFRT_ATTR_PORT_ID] = {.type = NLA_U32, .len = 4};
+};
+
+static struct nla_policy ifdn_policy[IFDN_ATTR_MAX + 1] = {
+        [IFDN_ATTR_PORT_ID] = {.type = NLA_U32, .len = 0};
+        [IFDN_ATTR_CODE]    = {.type = NLA_U32, .len = 0};
+};
+
+static struct nla_policy iccrq_policy[ICCRQ_ATTR_MAX + 1] = {
+        [ICCRQ_ATTR_PORT_ID]     = {.type = NLA_U32, .len = 0};
+        [ICCRQ_ATTR_SOURCE_ADDR] = {.type = NLA_U32, .len = 0};
+        [ICCRQ_ATTR_DEST_ADDR]   = {.type = NLA_U32, .len = 0};
+        [ICCRQ_ATTR_QOS_ID]      = {.type = NLA_U32, .len = 0};
+        [ICCRQ_ATTR_POLICIES]    = {.type = NLA_U32, .len = 0};
+};
+
+#define DECL_NL_OP(X, Y) {                      \
+                        .cmd    = X,            \
                         .flags  = 0,            \
+                        .policy = Y,            \
                         .doit   = dispatcher,   \
                         .dumpit = NULL,         \
                         }
 
 static struct genl_ops nl_ops[] = {
-//        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
-        { 
-                .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,        
-                .flags  = 0,       
-                .policy = test_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-//        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION),
-//        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION),
-//        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
-//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
-//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION),
-//        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
-        { 
-                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,        
-                .flags  = 0,       
-                .policy = test_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-//        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
-//        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST),
-//        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
-//        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
-//        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
-//        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
-        { 
-                .cmd    = RINA_C_IPCM_IPC_MANAGER_PRESENT,        
-                .flags  = 0,       
-                .policy = test_policy,
-                .doit   = dispatcher,
-                .dumpit = NULL,
-        },
-//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST),
-//        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT)
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, iatdr_policy),
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST, iudcr_policy),
+        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
+                   idrn_policy),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
+                   idun_policy),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, iafrm_policy),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, iafre_policy),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, idfrt_policy),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, ifdn_policy),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
+        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
+        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
+        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT),
+        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST),
+        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
