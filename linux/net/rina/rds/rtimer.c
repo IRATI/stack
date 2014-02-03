@@ -81,18 +81,42 @@ int rtimer_start(struct rtimer * timer,
 
         add_timer(&timer->tl);
 
-        LOG_DBG("Timer %pK started", timer);
+        LOG_DBG("Timer %pK started (function = %pK, data = %pK, expires = %ld",
+                timer,
+                (void *) timer->tl.function,
+                (void *) timer->tl.data,
+                timer->tl.expires);
 
         return 0;
 }
 EXPORT_SYMBOL(rtimer_start);
 
-static int _rtimer_stop(struct rtimer * timer)
+static bool __rtimer_is_pending(struct rtimer * timer)
 {
         ASSERT(timer);
 
-        del_timer(&timer->tl);
+        return timer_pending(&timer->tl) ? true : false;
+}
 
+bool rtimer_is_pending(struct rtimer * timer)
+{
+        if (!timer)
+                return false;
+
+        return __rtimer_is_pending(timer);
+}
+EXPORT_SYMBOL(rtimer_is_pending);
+
+static int __rtimer_stop(struct rtimer * timer)
+{
+        ASSERT(timer);
+
+        if (!__rtimer_is_pending(timer)) {
+                LOG_DBG("Timer %pK is not pending", timer);
+                return 0;
+        }
+
+        del_timer(&timer->tl);
         LOG_DBG("Timer %pK stopped", timer);
 
         return 0;
@@ -103,7 +127,7 @@ int rtimer_stop(struct rtimer * timer)
         if (!timer)
                 return -1;
 
-        return _rtimer_stop(timer);
+        return __rtimer_stop(timer);
 }
 EXPORT_SYMBOL(rtimer_stop);
 
@@ -112,7 +136,7 @@ int rtimer_destroy(struct rtimer * timer)
         if (!timer)
                 return -1;
 
-        if (_rtimer_stop(timer))
+        if (__rtimer_stop(timer))
                 return -1;
 
         rkfree(timer);
@@ -124,7 +148,7 @@ int rtimer_destroy(struct rtimer * timer)
 EXPORT_SYMBOL(rtimer_destroy);
 
 #ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
-int data1;
+static int data1;
 
 static void timer1_function(void * data)
 {
@@ -133,7 +157,7 @@ static void timer1_function(void * data)
         *tmp *= 2;
 }
 
-int data2;
+static int data2;
 
 static void timer2_function(void * data)
 {
