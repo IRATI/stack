@@ -91,7 +91,8 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
-        LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
+        LOG_DBG("Dispatching message (skb-in=%pK, info=%pK, attrs=%pK)",
+                skb_in, info, info->attrs);
 
         msg_type = (msg_type_t) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
@@ -139,6 +140,16 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
+static struct nla_policy dumb_policy[IRAR_ATTR_MAX + 1];
+static struct nla_policy test_policy[IRAR_ATTR_MAX + 1] = {
+        [IRAR_ATTR_APP_NAME] = {
+                .type = NLA_NESTED,
+        },
+        [IRAR_ATTR_DIF_NAME] = {
+                .type = NLA_NESTED,
+        }
+};
+
 #define DECL_NL_OP(X) {                         \
                 .cmd    = X,                    \
                         .flags  = 0,            \
@@ -147,42 +158,63 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                         }
 
 static struct genl_ops nl_ops[] = {
-        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
-        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST),
-        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
-        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
-        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT),
-        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST),
-        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT),
-        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST),
-        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT)
+//        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
+        { 
+                .cmd    = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST,        
+                .flags  = 0,       
+                .policy = test_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+//        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION),
+//        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION),
+//        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
+//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
+//        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION),
+//        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
+        { 
+                .cmd    = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,        
+                .flags  = 0,       
+                .policy = test_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+//        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
+//        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST),
+//        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
+//        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
+//        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
+//        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
+        { 
+                .cmd    = RINA_C_IPCM_IPC_MANAGER_PRESENT,        
+                .flags  = 0,       
+                .policy = test_policy,
+                .doit   = dispatcher,
+                .dumpit = NULL,
+        },
+//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST),
+//        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
@@ -450,6 +482,7 @@ int rnl_init(void)
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
+
         if (ret != 0) {
                 LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);
