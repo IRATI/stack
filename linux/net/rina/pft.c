@@ -275,22 +275,34 @@ static void __pft_flush(struct pft * instance)
 
 int pft_flush(struct pft * instance)
 {
-        if (!pft_is_ok(instance))
+        spin_lock(&instance->write_lock);
+        
+        if (!pft_is_ok(instance)) {
+                spin_unlock(&instance->write_lock);
                 return -1;
-
+        }
+      
         __pft_flush(instance);
+
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
 
 int pft_destroy(struct pft * instance)
 {
-        if (!pft_is_ok(instance))
+        spin_lock(&instance->write_lock);
+
+        if (!pft_is_ok(instance)) {
+                spin_unlock(&instance->write_lock);
                 return -1;
+        }
 
         __pft_flush(instance);
 
         rkfree(instance);
+
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -323,20 +335,25 @@ int pft_add(struct pft *      instance,
         struct pft_entry * tmp;
         int                i;
 
-        if (!pft_is_ok(instance))
+        spin_lock(&instance->write_lock);
+
+        if (!pft_is_ok(instance)) {
+                spin_unlock(&instance->write_lock);
                 return -1;
+        }
 
         if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
         if (!ports || !count) {
                 LOG_ERR("Bogus output parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
-        spin_lock(&instance->write_lock);
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 tmp = pfte_create(destination, qos_id);
@@ -369,6 +386,8 @@ int pft_remove(struct pft *      instance,
         struct pft_entry * tmp;
         int                i;
 
+        spin_lock(&instance->write_lock);
+
         if (!pft_is_ok(instance))
                 return -1;
 
@@ -381,8 +400,7 @@ int pft_remove(struct pft *      instance,
                 LOG_ERR("Bogus output parameters");
                 return -1;
         }
-
-        spin_lock(&instance->write_lock);
+        
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 spin_unlock(&instance->write_lock);
