@@ -259,13 +259,26 @@ struct pft * pft_create(void)
 static bool __pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
 
-/* FIXME: This is broken, a lock has to be taken here */
+/* 
+ *  NOTE: This is broken if we do more checks on the instance.
+ *  A lock has to be taken here in that case.
+ */
 bool pft_is_ok(struct pft * instance)
 { return __pft_is_ok(instance); }
 
-/* FIXME: This is broken, a lock has to be taken here */
 bool pft_is_empty(struct pft * instance)
-{ return __pft_is_ok(instance) ? list_empty(&instance->entries) : false;  }
+{ 
+        bool empty;
+
+        if (!__pft_is_ok(instance))
+                return false;
+
+        rcu_read_lock();
+        empty = list_empty(&instance->entries);  
+        rcu_read_unlock();
+
+        return empty;
+}
 
 static void __pft_flush(struct pft * instance)
 {
