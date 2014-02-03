@@ -53,6 +53,8 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         tmp->function = function;
         tmp->data     = data;
 
+        LOG_DBG("Timer %pK created", tmp);
+
         return tmp;
 }
 
@@ -79,7 +81,9 @@ int rtimer_start(struct rtimer * timer,
 
         add_timer(&timer->tl);
 
-        return -1;
+        LOG_DBG("Timer %pK started", timer);
+
+        return 0;
 }
 EXPORT_SYMBOL(rtimer_start);
 
@@ -88,6 +92,8 @@ static int _rtimer_stop(struct rtimer * timer)
         ASSERT(timer);
 
         del_timer(&timer->tl);
+
+        LOG_DBG("Timer %pK stopped", timer);
 
         return 0;
 }
@@ -110,6 +116,8 @@ int rtimer_destroy(struct rtimer * timer)
                 return -1;
 
         rkfree(timer);
+
+        LOG_DBG("Timer %pK destroyed", timer);
 
         return 0;
 }
