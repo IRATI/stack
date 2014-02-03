@@ -1111,19 +1111,19 @@ static int
 rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
                        struct rnl_ipcm_ipcp_dif_reg_noti_msg_attrs * msg_attrs)
 {
-        if (info->attrs[IDRN_ATTR_IPC_PROCESS_NAME] &&
-            info->attrs[IDRN_ATTR_DIF_NAME]         && 
-            info->attrs[IDRN_ATTR_REGISTRATION]) {
+        if (info->attrs[IDRN_ATTR_IPC_PROCESS_NAME])
                 if (parse_app_name_info(info->attrs[IDRN_ATTR_IPC_PROCESS_NAME],
-                                        msg_attrs->ipcp_name) ||
-                    parse_app_name_info(info->attrs[IDRN_ATTR_DIF_NAME],
+                                        msg_attrs->ipcp_name)) 
+                        goto parse_fail;
+        if (info->attrs[IDRN_ATTR_DIF_NAME])
+                if (parse_app_name_info(info->attrs[IDRN_ATTR_DIF_NAME],
                                         msg_attrs->dif_name))
                         goto parse_fail;
+        if (info->attrs[IDRN_ATTR_REGISTRATION]) 
                 msg_attrs->is_registered = \
                         nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
 
-                return 0;
-        }
+        return 0;
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_"                \
@@ -1136,14 +1136,9 @@ rnl_parse_ipcm_ipcp_dif_unreg_noti_msg(struct genl_info * info,
                      struct rnl_ipcm_ipcp_dif_unreg_noti_msg_attrs * msg_attrs)
 {
 
-        if (info->attrs[IDUN_ATTR_RESULT]) {
+        if (info->attrs[IDUN_ATTR_RESULT]) 
                 msg_attrs->result = nla_get_u32(info->attrs[IDUN_ATTR_RESULT]);
-                return 0;
-        }
-
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_IPC_PROCESS_"         \
-                                        "DIF_UNREGISTRATION_NOTIFICATION"));
-        return -1;
+        return 0;
 }
 
 static int
@@ -1177,13 +1172,15 @@ rnl_parse_ipcm_alloc_flow_req_arrived_msg(struct genl_info * info,
             parse_app_name_info(info->attrs[IAFRA_ATTR_DIF_NAME],
                                 msg_attrs->dif_name)                    ||
             parse_flow_spec(info->attrs[IAFRA_ATTR_FLOW_SPEC],
-                            msg_attrs->fspec)                           ||
-            !info->attrs[IAFRA_ATTR_PORT_ID]) {
+                            msg_attrs->fspec)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ALLOCATE_"\
                                                         "FLOW_REQUEST_ARRIVED"));
                         return -1;
         }
-        msg_attrs->id = nla_get_u32(info->attrs[IAFRA_ATTR_PORT_ID]);
+        
+        if (info->attrs[IAFRA_ATTR_PORT_ID]) 
+                msg_attrs->id = nla_get_u32(info->attrs[IAFRA_ATTR_PORT_ID]);
+
         return 0;
 }
 
@@ -1191,142 +1188,117 @@ static int
 rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
                                struct rnl_alloc_flow_resp_msg_attrs * msg_attrs)
 {
-        if (info->attrs[IAFRE_ATTR_RESULT] && 
-            info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]) {
+        if (info->attrs[IAFRE_ATTR_RESULT]) 
                 msg_attrs->result =
                         nla_get_u32(info->attrs[IAFRE_ATTR_RESULT]);
+        if (info->attrs[IAFRE_ATTR_NOTIFY_SOURCE])
                 msg_attrs->notify_src =
                         nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
-                return 0;
-        }
 
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE"));
-        return -1;
+        return 0;
 }
 
 static int
 rnl_parse_ipcm_dealloc_flow_req_msg(struct genl_info * info,
                         struct rnl_ipcm_dealloc_flow_req_msg_attrs * msg_attrs)
 {
-        if (info->attrs[IDFRT_ATTR_PORT_ID]) {
+        if (info->attrs[IDFRT_ATTR_PORT_ID]) 
                 msg_attrs->id =
                         nla_get_u32(info->attrs[IDFRT_ATTR_PORT_ID]);
-                return 0;
-        }
 
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST"));
-        return -1;
+        return 0;
 }
 
 static int rnl_parse_ipcm_flow_dealloc_noti_msg(struct genl_info * info,
                                                 struct rnl_ipcm_flow_dealloc_noti_msg_attrs * msg_attrs)
 {
-        if (info->attrs[IFDN_ATTR_PORT_ID] && info->attrs[IFDN_ATTR_CODE]) {
+        if (info->attrs[IFDN_ATTR_PORT_ID])
                 msg_attrs->id = nla_get_u32(info->attrs[IFDN_ATTR_PORT_ID]);
+        if (info->attrs[IFDN_ATTR_CODE]) 
                 msg_attrs->code = nla_get_u32(info->attrs[IFDN_ATTR_CODE]);
-                return 0;
-        }
 
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_FLOW_"         \
-                                        "DEALLOCATED_NOTIFICATION"));
-        return -1;
+        return 0;
 }
 
 static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
                                               struct rnl_ipcp_conn_create_req_msg_attrs * msg_attrs)
 {
-        if (info->attrs[ICCRQ_ATTR_PORT_ID]     &&
-            info->attrs[ICCRQ_ATTR_SOURCE_ADDR] &&
-            info->attrs[ICCRQ_ATTR_DEST_ADDR]   &&
-            info->attrs[ICCRQ_ATTR_QOS_ID]      &&
-            info->attrs[ICCRQ_ATTR_POLICIES]) { 
+        if (info->attrs[ICCRQ_ATTR_PORT_ID])
                 msg_attrs->port_id  = 
                         nla_get_u32(info->attrs[ICCRQ_ATTR_PORT_ID]);
+        if (info->attrs[ICCRQ_ATTR_SOURCE_ADDR])
                 msg_attrs->src_addr = 
                         nla_get_u32(info->attrs[ICCRQ_ATTR_SOURCE_ADDR]);
+        if (info->attrs[ICCRQ_ATTR_DEST_ADDR])
                 msg_attrs->dst_addr = 
                         nla_get_u32(info->attrs[ICCRQ_ATTR_DEST_ADDR]);
+        if (info->attrs[ICCRQ_ATTR_QOS_ID])
                 msg_attrs->qos_id   = 
                         nla_get_u32(info->attrs[ICCRQ_ATTR_QOS_ID]);
+        if (info->attrs[ICCRQ_ATTR_POLICIES]) 
                 msg_attrs->policies = 
                         nla_get_u32(info->attrs[ICCRQ_ATTR_POLICIES]);
-                return 0;
-        }
-
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_CREATE_REQUEST"));
-        return -1;
+        return 0;
 }
 
 static int 
 rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
                      struct rnl_ipcp_conn_create_arrived_msg_attrs * msg_attrs)
 {
-        if (info->attrs[ICCA_ATTR_PORT_ID]           &&
-            info->attrs[ICCA_ATTR_SOURCE_ADDR]       &&
-            info->attrs[ICCA_ATTR_DEST_ADDR]         &&
-            info->attrs[ICCA_ATTR_DEST_CEP_ID]       &&
-            info->attrs[ICCA_ATTR_QOS_ID]            &&
-            info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID] &&
-            info->attrs[ICCA_ATTR_POLICIES]) {
+        if (info->attrs[ICCA_ATTR_PORT_ID]) 
                 msg_attrs->port_id =
                         nla_get_u32(info->attrs[ICCA_ATTR_PORT_ID]);
+        if (info->attrs[ICCA_ATTR_SOURCE_ADDR])
                 msg_attrs->src_addr =
                         nla_get_u32(info->attrs[ICCA_ATTR_SOURCE_ADDR]);
+        if (info->attrs[ICCA_ATTR_DEST_ADDR])    
                 msg_attrs->dst_addr =
                         nla_get_u32(info->attrs[ICCA_ATTR_DEST_ADDR]);
+        if (info->attrs[ICCA_ATTR_DEST_CEP_ID])
                 msg_attrs->dst_cep =
                         nla_get_u32(info->attrs[ICCA_ATTR_DEST_CEP_ID]);
+        if (info->attrs[ICCA_ATTR_QOS_ID]) 
                 msg_attrs->qos_id =
                         nla_get_u32(info->attrs[ICCA_ATTR_QOS_ID]);
+        if (info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID])
                 msg_attrs->flow_user_ipc_process_id =
                         nla_get_u16(info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID]);
+        if (info->attrs[ICCA_ATTR_POLICIES]) 
                 msg_attrs->policies =
                         nla_get_u32(info->attrs[ICCA_ATTR_POLICIES]);
-                return 0;
-        }
-
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_CREATE_ARRIVED"));
-        return -1;
+        return 0;
 }
 
 static int
 rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
                          struct rnl_ipcp_conn_update_req_msg_attrs * msg_attrs)
 {
-        if (info->attrs[ICURQ_ATTR_PORT_ID]       &&
-            info->attrs[ICURQ_ATTR_SOURCE_CEP_ID] &&
-            info->attrs[ICURQ_ATTR_DEST_CEP_ID]   &&
-            info->attrs[ICURQ_ATTR_FLOW_USER_IPCP_ID]) {
+        if (info->attrs[ICURQ_ATTR_PORT_ID]) 
                 msg_attrs->port_id =
                         nla_get_u32(info->attrs[ICURQ_ATTR_PORT_ID]);
+        if (info->attrs[ICURQ_ATTR_SOURCE_CEP_ID])
                 msg_attrs->src_cep =
                         nla_get_u32(info->attrs[ICURQ_ATTR_SOURCE_CEP_ID]);
+        if (info->attrs[ICURQ_ATTR_DEST_CEP_ID])
                 msg_attrs->dst_cep =
                         nla_get_u32(info->attrs[ICURQ_ATTR_DEST_CEP_ID]);
+        if (info->attrs[ICURQ_ATTR_FLOW_USER_IPCP_ID])
                 msg_attrs->flow_user_ipc_process_id =
                         nla_get_u16(info->attrs[ICURQ_ATTR_FLOW_USER_IPCP_ID]);
-                return 0;
-        }
-
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_UPDATE_REQUEST"));
-        return -1;
+        return 0;
 }
 
 static int
 rnl_parse_ipcm_conn_destroy_req_msg(struct genl_info * info,
                         struct rnl_ipcp_conn_destroy_req_msg_attrs * msg_attrs)
 {
-        if (info->attrs[ICDR_ATTR_PORT_ID] &&
-            info->attrs[ICDR_ATTR_SOURCE_CEP_ID]) {
+        if (info->attrs[ICDR_ATTR_PORT_ID])
                 msg_attrs->port_id =
                         nla_get_u32(info->attrs[ICDR_ATTR_PORT_ID]);
+        if (info->attrs[ICDR_ATTR_SOURCE_CEP_ID])
                 msg_attrs->src_cep =
                         nla_get_u32(info->attrs[ICDR_ATTR_SOURCE_CEP_ID]);
-                return 0;
-        }
-
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_CONN_DESTROY_REQUEST"));
-        return -1;
+        return 0;
 }
 
 static int
@@ -1341,7 +1313,6 @@ rnl_parse_ipcm_reg_app_req_msg(struct genl_info * info,
                                                 "APPLICATION_REQUEST"));
                 return -1;
         }
-
         return 0;
 }
 
@@ -1356,7 +1327,6 @@ static int rnl_parse_ipcm_unreg_app_req_msg(struct genl_info * info,
                                                 "APPLICATION_REQUEST"));
                 return -1;
         }
-
         return 0;
 }
 
@@ -1364,19 +1334,17 @@ static int
 rnl_parse_ipcm_query_rib_req_msg(struct genl_info * info,
                            struct rnl_ipcm_query_rib_req_msg_attrs * msg_attrs)
 {
-        if (info->attrs[IDQR_ATTR_OBJECT] &&
-            info->attrs[IDQR_ATTR_SCOPE]  &&
-            info->attrs[IDQR_ATTR_FILTER]) {
-                if (parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
-                                     msg_attrs->rib_obj))
-                        goto parse_fail;
+        if (parse_rib_object(info->attrs[IDQR_ATTR_OBJECT],
+                             msg_attrs->rib_obj))
+                goto parse_fail;
+        if (info->attrs[IDQR_ATTR_SCOPE])
                 msg_attrs->scope = \
                         nla_get_u32(info->attrs[IDQR_ATTR_SCOPE]);
+        if (info->attrs[IDQR_ATTR_FILTER])
                 nla_strlcpy(msg_attrs->filter,
                             info->attrs[IDQR_ATTR_FILTER],
                             sizeof(info->attrs[IDQR_ATTR_FILTER]));
-                return 0;
-        }
+        return 0;
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_QUERY_RIB_REQUEST"));
@@ -1440,15 +1408,13 @@ static int
 rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
                                  struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
 {
-        if (info->attrs[RMPFE_ATTR_ENTRIES] &&
-            info->attrs[RMPFE_ATTR_MODE]) {
-                if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
-                                           msg_attrs))
-                        goto parse_fail;
+        if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
+                                   msg_attrs))
+                goto parse_fail;
+        if (info->attrs[RMPFE_ATTR_MODE]) 
                 msg_attrs->mode =
                         nla_get_u32(info->attrs[RMPFE_ATTR_MODE]);
-                return 0;
-        }
+        return 0;
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_RMT_MODIFY_FTE_REQ_MSG"));
