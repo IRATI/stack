@@ -41,7 +41,7 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
 {
         struct rtimer * tmp;
 
-        if (!data) {
+        if (!function) {
                 LOG_DBG("Bogus input parameter, cannot create timer");
                 return NULL;
         }
