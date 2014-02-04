@@ -41,18 +41,25 @@ struct buffer * buffer_dup_gfp(gfp_t                 flags,
                                const struct buffer * b);
 
 struct pci {
+        uint8_t version;
         pdu_type_t type;
 
         /* If type == PDU_TYPE_MGMT, all the following fields are useless */
-        address_t source;
         address_t destination;
+        address_t source;
 
+        /* 
+         * QUESTION: Group ceps and qos_id together in 
+         * connection-id struct? (See spec) 
+         */
         struct {
                 cep_id_t source;
                 cep_id_t destination;
         }         ceps;
 
         qos_id_t  qos_id;
+        uint8_t flags;
+        ssize_t pdu_length;
         seq_num_t sequence_number;
 };
 
