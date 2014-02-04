@@ -30,7 +30,11 @@ static bool has_common_hooks(struct ipcp_instance_ops * ops)
 {
         ASSERT(ops);
 
-        LOG_MISSING;
+        if (ops->assign_to_dif     &&
+            ops->update_dif_config &&
+            ops->sdu_write         &&
+            ops->ipcp_name)
+                return true;
 
         return false;
 }
@@ -43,7 +47,12 @@ bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops)
         if (!has_common_hooks(ops))
                 return false;
 
-        LOG_MISSING;
+        if (ops->flow_deallocate        &&
+            ops->flow_allocate_request  &&
+            ops->flow_allocate_response &&
+            ops->application_register   &&
+            ops->application_unregister)
+                return true;
 
         return false;
 }
@@ -57,7 +66,20 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
         if (!has_common_hooks(ops))
                 return false;
 
-        LOG_MISSING;
+        if (ops->connection_create         ||
+            ops->connection_update         ||
+            ops->connection_destroy        ||
+            ops->connection_create_arrived ||
+            ops->mgmt_sdu_write            ||
+            ops->mgmt_sdu_read             ||
+            ops->mgmt_sdu_post             ||
+            ops->pft_add                   ||
+            ops->pft_remove                ||
+            ops->pft_dump                  ||
+            ops->flow_binding_ipcp         ||
+            ops->flow_destroy              ||
+            ops->sdu_enqueue)
+                return true;
 
         return false;
 }
