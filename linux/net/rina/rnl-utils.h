@@ -158,7 +158,7 @@ enum ipcm_conn_create_arrived_attrs_list {
         ICCA_ATTR_DEST_ADDR,
         ICCA_ATTR_DEST_CEP_ID,
         ICCA_ATTR_QOS_ID,
-        ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        ICCA_ATTR_FLOW_USER_IPCP_ID,
         ICCA_ATTR_POLICIES,
         __ICCA_ATTR_MAX,
 };
@@ -176,7 +176,7 @@ enum ipcm_conn_update_req_attrs_list {
         ICURQ_ATTR_PORT_ID = 1,
         ICURQ_ATTR_SOURCE_CEP_ID,
         ICURQ_ATTR_DEST_CEP_ID,
-        ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        ICURQ_ATTR_FLOW_USER_IPCP_ID,
         __ICURQ_ATTR_MAX,
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
@@ -302,12 +302,6 @@ enum dif_config_attrs_list {
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
-
-enum generic_one_attribute_list {
-        GOA_ATTR_ONE = 1,
-        __GOA_ATTR_MAX
-};
-#define GOA_ATTR_MAX (__GOA_ATTR_MAX - 1)
 
 enum ipcm_assign_to_dif_resp_attrs_list {
         IATDRE_ATTR_RESULT = 1,
