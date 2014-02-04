@@ -1,5 +1,5 @@
 /*
- *  IPC Processes layer
+ *  IPC Process Instances
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -20,11 +20,11 @@
 
 #include <linux/types.h>
 
-#define RINA_PREFIX "ipcp"
+#define RINA_PREFIX "ipcp-instances"
 
 #include "logs.h"
 #include "debug.h"
-#include "ipcp.h"
+#include "ipcp-instances.h"
 
 static bool has_common_hooks(struct ipcp_instance_ops * ops)
 {

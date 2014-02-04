@@ -21,7 +21,7 @@
 #ifndef RINA_IPCP_FACTORIES_H
 #define RINA_IPCP_FACTORIES_H
 
-#include "ipcp.h"
+#include "ipcp-instances.h"
 
 struct ipcp_factory_data;
 

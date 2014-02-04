@@ -1,5 +1,5 @@
 /*
- *  IPC Processes layer
+ *  IPC Processes Instances
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IPCP_H
-#define RINA_IPCP_H
+#ifndef RINA_IPCP_INSTANCES_H
+#define RINA_IPCP_INSTANCES_H
 
 #include <linux/list.h>
 #include <linux/kobject.h>
