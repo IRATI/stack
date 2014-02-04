@@ -31,6 +31,7 @@ struct pft;
 struct pft * pft_create(void);
 int          pft_destroy(struct pft * instance);
 
+bool         pft_is_ok(struct pft * instance);
 bool         pft_is_empty(struct pft * instance);
 int          pft_flush(struct pft * instance);
 

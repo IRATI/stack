@@ -31,6 +31,7 @@ int             rtimer_destroy(struct rtimer * timer);
 
 int             rtimer_start(struct rtimer * timer,
                              unsigned int    millisec);
+bool            rtimer_is_pending(struct rtimer * timer);
 int             rtimer_stop(struct rtimer * timer);
 
 #endif
