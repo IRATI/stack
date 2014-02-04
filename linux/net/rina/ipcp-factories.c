@@ -23,10 +23,9 @@
 #define RINA_PREFIX "ipcp-factories"
 
 #include "logs.h"
-#include "ipcp.h"
-#include "ipcp-factories.h"
 #include "utils.h"
 #include "debug.h"
+#include "ipcp-factories.h"
 
 struct ipcp_factories {
         struct kset * set;

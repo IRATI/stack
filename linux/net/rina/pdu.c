@@ -47,9 +47,9 @@ struct pci {
         address_t   destination;
         address_t   source;
 
-        /* 
+        /*
          * FIXME: Group ceps and qos_id together in connection-id struct ?
-         *        (See spec) 
+         *        (See spec)
          */
         struct {
                 cep_id_t source;
