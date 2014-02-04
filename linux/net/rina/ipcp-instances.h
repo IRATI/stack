@@ -1,5 +1,5 @@
 /*
- *  IPC Processes layer
+ *  IPC Processes Instances
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IPCP_H
-#define RINA_IPCP_H
+#ifndef RINA_IPCP_INSTANCES_H
+#define RINA_IPCP_INSTANCES_H
 
 #include <linux/list.h>
 #include <linux/kobject.h>
@@ -201,7 +201,12 @@ struct ipcp_instance_ops {
 
         int (* pft_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);
+
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
 };
+
+bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops);
+bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops);
+bool ipcp_instance_is_ok(struct ipcp_instance_ops * ops);
 
 #endif
