@@ -35,7 +35,8 @@
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
-#define NETLINK_RINA_A_MAX 9
+/* FIXME: This should be done more "dynamically" */
+#define NETLINK_RINA_A_MAX ICCA_ATTR_MAX
 
 struct message_handler {
         void *             data;
@@ -51,7 +52,6 @@ struct rnl_set {
 static struct rnl_set * default_set = NULL;
 struct genl_family      rnl_nl_family = {
         .id      = GENL_ID_GENERATE,
-        /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
