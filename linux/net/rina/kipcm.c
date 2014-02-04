@@ -177,6 +177,12 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
+        if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+                LOG_ERR("Could not create flow at KFA");
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
+        }
+
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
@@ -791,6 +797,11 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (!ipcp)
                 goto fail;
 
+        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
+                LOG_ERR("Could not bind ipcp to flow at KFA");
+                goto fail;
+        }
+
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
@@ -891,6 +902,11 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         user_ipc_id = attrs->flow_user_ipc_process_id;
         ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp) {
+                goto fail;
+        }
+
+        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
+                LOG_ERR("Could not bind ipcp to flow at KFA");
                 goto fail;
         }
 
@@ -1745,21 +1761,20 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 {
         uint_t             nl_port_id;
         rnl_sn_t           seq_num;
-        struct ipcp_flow * flow;
+        struct ipcp_instance * ipc_process;
 
         IRQ_BARRIER;
 
         /* FIXME: Use a constant (define) ! */
         nl_port_id = 1;
 
-        /*
-         * NB: This flow find is just a check, I think it's useful to be sure
-         * the arrived flow request has been properly processed by the
-         * IPC process calling this API.
-         */
-        flow = kfa_find_flow_by_pid(kipcm->kfa, port_id);
-        if (!flow) {
-                LOG_DBG("There's no flow pending for port_id: %d", port_id);
+        ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return -1;
+        }
+        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipc_process)) {
+                LOG_ERR("Could not bind ipcp to flow at KFA");
                 return -1;
         }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
@@ -1798,7 +1813,6 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
         KIPCM_LOCK(kipcm);
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-
         if (!ipc_process) {
                 LOG_ERR("Couldn't find the ipc process %d", ipc_id);
                 KIPCM_UNLOCK(kipcm);
