@@ -18,6 +18,52 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/types.h>
+
 #define RINA_PREFIX "ipcp"
 
 #include "logs.h"
+#include "debug.h"
+#include "ipcp.h"
+
+static bool has_common_hooks(struct ipcp_instance_ops * ops)
+{
+        ASSERT(ops);
+
+        LOG_MISSING;
+
+        return false;
+}
+
+bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops)
+{
+        if (!ops)
+                return false;
+
+        if (!has_common_hooks(ops))
+                return false;
+
+        LOG_MISSING;
+
+        return false;
+}
+EXPORT_SYMBOL(ipcp_instance_is_shim);
+
+bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
+{
+        if (!ops)
+                return false;
+
+        if (!has_common_hooks(ops))
+                return false;
+
+        LOG_MISSING;
+
+        return false;
+}
+EXPORT_SYMBOL(ipcp_instance_is_normal);
+
+/* FIXME: Bogus way to check for functionalities */
+bool ipcp_instance_is_ok(struct ipcp_instance_ops * ops)
+{ return ops && (ipcp_instance_is_shim(ops) || ipcp_instance_is_normal(ops)); }
+EXPORT_SYMBOL(ipcp_instance_is_ok);
