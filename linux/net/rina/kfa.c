@@ -141,7 +141,7 @@ int kfa_flow_create(struct kfa *     instance,
         init_waitqueue_head(&flow->wait_queue);
 
         if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
-                LOG_ERR("Could not map Flow and Port ID");
+                LOG_ERR("Could not map flow and port-id %d", pid);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
                 return -1;
@@ -248,6 +248,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
+
         if (flow->state != PORT_STATE_PENDING) {
                 LOG_ERR("Flow on port-id %d already committed", pid);
                 spin_unlock(&instance->lock);
@@ -265,7 +266,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        LOG_DBG("Flow bound to port id %d with waitqueue %pK",
+        LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
 
         spin_unlock(&instance->lock);
@@ -309,13 +310,13 @@ static int kfa_flow_destroy(struct kfa *       instance,
 
         ASSERT(flow);
 
-        ipcp = flow->ipc_process;
         LOG_DBG("We are destroying a flow");
+
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
 
         if (kfa_pmap_remove(instance->flows, id)) {
-                LOG_ERR("Could not remove pending flow with port_id %d", id);
+                LOG_ERR("Could not remove pending flow with port-id %d", id);
                 return -1;
         }
 
@@ -324,13 +325,15 @@ static int kfa_flow_destroy(struct kfa *       instance,
                 return -1;
         }
 
+        ipcp = flow->ipc_process;
+
         ASSERT(ipcp);
         ASSERT(ipcp->ops);
-        ASSERT(ipcp->data);
 
         if (ipcp->ops->flow_destroy)
                 if (ipcp->ops->flow_destroy(ipcp->data, id)) {
-                        LOG_ERR("Problems destroying the flow");
+                        LOG_ERR("Problems destroying the flow "
+                                "on port-id %d", id);
                         return -1;
                 }
 
@@ -357,7 +360,7 @@ int kfa_flow_deallocate(struct kfa * instance,
 
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
-                LOG_ERR("There is no flow created with port_id %d", id);
+                LOG_ERR("There is no flow created with port-id %d", id);
                 spin_unlock(&instance->lock);
                 return -1;
         }
@@ -366,7 +369,8 @@ int kfa_flow_deallocate(struct kfa * instance,
 
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0)) {
-                kfa_flow_destroy(instance, flow, id);
+                if (kfa_flow_destroy(instance, flow, id))
+                        LOG_ERR("Could not destroy the flow correctly");
                 spin_unlock(&instance->lock);
                 return 0;
         }
@@ -482,6 +486,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
         }
 
         ASSERT(ipcp->ops);
+        ASSERT(ipcp->ops->sdu_write);
+
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 retval = -1;
@@ -489,10 +495,11 @@ int kfa_flow_sdu_write(struct kfa * instance,
         }
 
  finish:
-        if ((atomic_dec_and_test(&flow->writers)) &&
-            (atomic_read(&flow->readers) == 0) &&
+        if (atomic_dec_and_test(&flow->writers) &&
+            (atomic_read(&flow->readers) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
-                kfa_flow_destroy(instance, flow, id);
+                if (kfa_flow_destroy(instance, flow, id))
+                        LOG_ERR("Could not destroy the flow correctly");
 
         spin_unlock(&instance->lock);
 
@@ -579,9 +586,10 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
  finish:
         if (atomic_dec_and_test(&flow->readers) &&
-            (atomic_read(&flow->writers) == 0) &&
+            (atomic_read(&flow->writers) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
-                kfa_flow_destroy(instance, flow, id);
+                if (kfa_flow_destroy(instance, flow, id))
+                        LOG_ERR("Could not destroy the flow correctly");
 
         spin_unlock(&instance->lock);
 
