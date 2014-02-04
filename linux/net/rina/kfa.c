@@ -311,6 +311,7 @@ static int kfa_flow_destroy(struct kfa *       instance,
 
         LOG_DBG("We are destroying a flow");
 
+        ipcp = flow->ipc_process;
         kfifo_free(&flow->sdu_ready);
         rkfree(flow);
 
@@ -323,8 +324,6 @@ static int kfa_flow_destroy(struct kfa *       instance,
                 LOG_ERR("Could not release pid %d from the map", id);
                 return -1;
         }
-
-        ipcp = flow->ipc_process;
 
         ASSERT(ipcp);
         ASSERT(ipcp->ops);
