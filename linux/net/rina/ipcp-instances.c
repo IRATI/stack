@@ -47,7 +47,7 @@ bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops)
 
         return false;
 }
-EXPORT_SYMBOL(ipcp_instance_is_shim);
+/* EXPORT_SYMBOL(ipcp_instance_is_shim); */
 
 bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
 {
@@ -61,9 +61,9 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
 
         return false;
 }
-EXPORT_SYMBOL(ipcp_instance_is_normal);
+/* EXPORT_SYMBOL(ipcp_instance_is_normal); */
 
 /* FIXME: Bogus way to check for functionalities */
 bool ipcp_instance_is_ok(struct ipcp_instance_ops * ops)
 { return ops && (ipcp_instance_is_shim(ops) || ipcp_instance_is_normal(ops)); }
-EXPORT_SYMBOL(ipcp_instance_is_ok);
+/* EXPORT_SYMBOL(ipcp_instance_is_ok); */
