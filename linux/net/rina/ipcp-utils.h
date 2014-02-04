@@ -25,7 +25,7 @@
 #include <linux/uaccess.h>
 
 #include "common.h"
-#include "ipcp.h"
+#include "ipcp-instances.h"
 #include "efcp.h"
 
 /*

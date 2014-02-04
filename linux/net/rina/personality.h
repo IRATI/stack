@@ -24,7 +24,7 @@
 #include <linux/kobject.h>
 
 #include "common.h"
-#include "ipcp.h"
+#include "ipcp-instances.h"
 #include "du.h"
 
 /* Pre-declared, the personality should define it properly */

@@ -185,7 +185,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
         if (user_ipc_id) {
-
                 usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!usr_ipcp) {
                         LOG_DBG("Could not find the user ipcp of the flow...");
@@ -196,8 +195,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 ASSERT(usr_ipcp->ops);
                 ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
-                                                     pid)) {
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data, pid)) {
                         LOG_DBG("Could not bind the user ipcp' RMT "
                                 "with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);

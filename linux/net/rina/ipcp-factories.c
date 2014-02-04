@@ -23,7 +23,7 @@
 #define RINA_PREFIX "ipcp-factories"
 
 #include "logs.h"
-#include "ipcp.h"
+#include "ipcp-instances.h"
 #include "ipcp-factories.h"
 #include "utils.h"
 #include "debug.h"
