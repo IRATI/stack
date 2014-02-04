@@ -205,8 +205,22 @@ struct ipcp_instance_ops {
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
 };
 
+/* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */
 bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops);
 bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops);
 bool ipcp_instance_is_ok(struct ipcp_instance_ops * ops);
+
+struct ipcp_factory;
+
+/* FIXME: Hide this data structure */
+struct ipcp_instance {
+        struct kobject              kobj;
+
+        /* FIXME: Should be hidden and not fixed up in KIPCM ... */
+        struct ipcp_factory *       factory; /* The parent factory */
+
+        struct ipcp_instance_data * data;
+        struct ipcp_instance_ops *  ops;
+};
 
 #endif
