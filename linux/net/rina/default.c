@@ -36,7 +36,6 @@
 struct personality_data {
         struct kipcm *   kipcm;
         struct rnl_set * nlset;
-        struct kfa *     kfa;
 };
 
 static bool is_personality_ok(const struct personality_data * p)
@@ -45,9 +44,9 @@ static bool is_personality_ok(const struct personality_data * p)
                 return false;
         if (!p->kipcm)
                 return false;
-        if (!p->nlset)
+        if (!kipcm_kfa(p->kipcm))
                 return false;
-        if (!p->kfa)
+        if (!p->nlset)
                 return false;
 
         return true;
@@ -115,9 +114,11 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        /* FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
-         * process once the distributed solution is adopted */
-        return kfa_flow_deallocate(data->kfa, port_id);
+        /*
+         * FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
+         *        process once the distributed solution is adopted
+         */
+        return kfa_flow_deallocate(kipcm_kfa(data->kipcm), port_id);
 }
 
 static int default_mgmt_sdu_write(struct personality_data * data,
@@ -209,8 +210,6 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
-        data->kfa = kipcm_kfa(data->kipcm);
-
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
 
@@ -233,8 +232,7 @@ struct personality_ops ops = {
 };
 
 static struct personality_data data;
-
-static struct personality * personality = NULL;
+static struct personality *    personality = NULL;
 
 /* FIXME: Remove the following externs */
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS
