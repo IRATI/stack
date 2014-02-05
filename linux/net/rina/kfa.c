@@ -255,8 +255,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        flow->state       = PORT_STATE_ALLOCATED;
-        flow->ipc_process = ipc_process;
+        flow->state = PORT_STATE_ALLOCATED;
 
         if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
@@ -697,3 +696,25 @@ int kfa_sdu_post_to_user_space(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_sdu_post_to_user_space);
+
+int kfa_flow_ipcp_bind(struct kfa *           instance,
+                       port_id_t              pid,
+                       struct ipcp_instance * ipcp)
+{
+        struct ipcp_flow * flow;
+
+        spin_lock(&instance->lock);
+
+        flow = kfa_pmap_find(instance->flows, pid);
+        if (!flow) {
+                LOG_ERR("There is no flow with port-id %d, "
+                        "cannot bind it", pid);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+        flow->ipc_process = ipcp;
+
+        spin_unlock(&instance->lock);
+
+        return 0;
+}

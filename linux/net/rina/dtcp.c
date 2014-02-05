@@ -134,7 +134,7 @@ struct dtcp_policies {
         int (* received_retransmission)(struct dtcp * instance);
         int (* sending_ack)(struct dtcp * instance);
         int (* sending_ack_list)(struct dtcp * instance);
-        int (* initial_creadit)(struct dtcp * instance);
+        int (* initial_credit)(struct dtcp * instance);
         int (* initial_rate)(struct dtcp * instance);
         int (* receiving_flow_control)(struct dtcp * instance);
         int (* update_credit)(struct dtcp * instance);
@@ -188,7 +188,7 @@ static struct dtcp_policies default_policies = {
         .received_retransmission     = NULL,
         .sending_ack                 = NULL,
         .sending_ack_list            = NULL,
-        .initial_creadit             = NULL,
+        .initial_credit              = NULL,
         .initial_rate                = NULL,
         .receiving_flow_control      = NULL,
         .update_credit               = NULL,
