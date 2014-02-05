@@ -264,7 +264,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
 
         ipc_id = 0;
-        msg = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE);
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE);
         if (!msg) {
                 rnl_msg_destroy(msg);
                 return -1;
@@ -295,6 +295,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
         if (kipcm_smap_remove(kipcm->messages->egress, info->snd_seq)) {
                 LOG_ERR("Could not destroy egress messages map entry");
+                rnl_msg_destroy(msg);
+                return -1;
         }
 
         if (user_ipc_id) {
@@ -1988,13 +1990,16 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
-        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances, process_name);
+        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
+                                                  process_name);
         if (!user_ipc_process) {
                 /*
-                 * FIXME: Here we should distinguish between a flow for an app in
-                 * user-space or an ipc process in the system
+                 * FIXME: Here we should distinguish between a flow for an
+                 *        application in user-space or an ipc process in the
+                 *        system
                  */
                 LOG_DBG("This flow should go for an app");
+
                 LOG_MISSING;
         }
 
@@ -2047,6 +2052,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
 
         if (kipcm_pmap_remove(kipcm->messages->ingress, pid)) {
                 LOG_ERR("Could not destroy ingress messages map entry");
+                return -1;
         }
 
         /* FIXME: The rnl_port_id shouldn't be hardcoded as 1 */
@@ -2069,6 +2075,7 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                         "flow deallocation");
                 return -1;
         }
+
         return 0;
 }
 EXPORT_SYMBOL(kipcm_notify_flow_dealloc);
