@@ -36,21 +36,20 @@
 struct personality_data {
         struct kipcm *   kipcm;
         struct rnl_set * nlset;
-        struct kfa *     kfa;
 };
 
-static int is_personality_ok(const struct personality_data * p)
+static bool is_personality_ok(const struct personality_data * p)
 {
         if (!p)
-                return 0;
+                return false;
         if (!p->kipcm)
-                return 0;
+                return false;
+        if (!kipcm_kfa(p->kipcm))
+                return false;
         if (!p->nlset)
-                return 0;
-        if (!p->kfa)
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 
 static int default_ipc_create(struct personality_data * data,
@@ -115,9 +114,11 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        /* FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
-         * process once the distributed solution is adopted */
-        return kfa_flow_deallocate(data->kfa, port_id);
+        /*
+         * FIXME: This should call kipcm_deallocate_port to retrieve the ipcp
+         *        process once the distributed solution is adopted
+         */
+        return kfa_flow_deallocate(kipcm_kfa(data->kipcm), port_id);
 }
 
 static int default_mgmt_sdu_write(struct personality_data * data,
@@ -171,12 +172,6 @@ static int default_fini(struct personality_data * data)
                 if (err) return err;
         }
 
-        LOG_DBG("Finalizing kfa");
-        if (tmp->kfa) {
-                err = kfa_destroy(tmp->kfa);
-                if (err) return err;
-        }
-
         /* FIXME: To be removed */
         default_kipcm = NULL; /* Useless */
 
@@ -215,8 +210,6 @@ static int default_init(struct kobject *          parent,
                 }
         }
 
-        data->kfa = kipcm_kfa(data->kipcm);
-
         /* FIXME: To be removed */
         default_kipcm = data->kipcm;
 
@@ -239,8 +232,7 @@ struct personality_ops ops = {
 };
 
 static struct personality_data data;
-
-static struct personality * personality = NULL;
+static struct personality *    personality = NULL;
 
 /* FIXME: Remove the following externs */
 #ifdef CONFIG_RINA_PFT_REGRESSION_TESTS

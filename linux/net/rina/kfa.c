@@ -134,7 +134,7 @@ int kfa_flow_create(struct kfa *     instance,
                 return -1;
         }
 
-        flow->state  = PORT_STATE_PENDING;
+        flow->state = PORT_STATE_PENDING;
         atomic_set(&flow->readers, 0);
         atomic_set(&flow->writers, 0);
 
@@ -255,8 +255,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        flow->state       = PORT_STATE_ALLOCATED;
-        flow->ipc_process = ipc_process;
+        flow->state = PORT_STATE_ALLOCATED;
 
         if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
@@ -275,32 +274,34 @@ int kfa_flow_bind(struct kfa *           instance,
 }
 EXPORT_SYMBOL(kfa_flow_bind);
 
-int kfa_flow_bind_rmt(struct kfa * kfa,
+int kfa_flow_rmt_bind(struct kfa * instance,
                       port_id_t    pid,
                       struct rmt * rmt)
 {
         struct ipcp_flow * flow;
 
-        if (!kfa)
+        if (!instance)
                 return -1;
 
         if (!is_port_id_ok(pid))
                 return -1;
 
-        spin_lock(&kfa->lock);
-        flow = kfa_pmap_find(kfa->flows, pid);
+        spin_lock(&instance->lock);
+
+        flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 LOG_ERR("The flow with port-id %d does not exist, "
                         "cannot bind rmt", pid);
-                spin_unlock(&kfa->lock);
+                spin_unlock(&instance->lock);
                 return -1;
         }
         flow->rmt = rmt;
-        spin_unlock(&kfa->lock);
+
+        spin_unlock(&instance->lock);
 
         return 0;
 }
-EXPORT_SYMBOL(kfa_flow_bind_rmt);
+EXPORT_SYMBOL(kfa_flow_rmt_bind);
 
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
@@ -697,3 +698,34 @@ int kfa_sdu_post_to_user_space(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_sdu_post_to_user_space);
+
+int kfa_flow_ipcp_bind(struct kfa *           instance,
+                       port_id_t              pid,
+                       struct ipcp_instance * ipcp)
+{
+        struct ipcp_flow * flow;
+
+        if (!instance)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        if (!ipcp)
+                return -1;
+
+        spin_lock(&instance->lock);
+
+        flow = kfa_pmap_find(instance->flows, pid);
+        if (!flow) {
+                LOG_ERR("There is no flow with port-id %d, "
+                        "cannot bind it", pid);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+        flow->ipc_process = ipcp;
+
+        spin_unlock(&instance->lock);
+
+        return 0;
+}
