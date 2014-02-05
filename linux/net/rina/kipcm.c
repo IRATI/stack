@@ -1990,7 +1990,8 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances, process_name);
         if (!user_ipc_process) {
-                /*FIXME: Here we should distinguish betweem a flow for an app in
+                /*
+                 * FIXME: Here we should distinguish between a flow for an app in
                  * user-space or an ipc process in the system
                  */
                 LOG_DBG("This flow should go for an app");
@@ -2006,7 +2007,14 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
         }
 
         if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
-                LOG_ERR("Could not create flow in the KFA");
+                LOG_ERR("Could not create flow");
+                kfa_port_id_release(kipcm->kfa, pid);
+                name_destroy(process_name);
+                return port_id_bad();
+        }
+
+        if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+                LOG_ERR("Problems binding IPC process to flow");
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return port_id_bad();
