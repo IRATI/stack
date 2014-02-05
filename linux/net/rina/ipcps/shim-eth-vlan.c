@@ -1294,7 +1294,7 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 
         INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
 
-        LOG_INFO("%s intialized", SHIM_NAME);
+        LOG_INFO("%s initialized", SHIM_NAME);
 
         return 0;
 }
