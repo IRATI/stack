@@ -39,18 +39,18 @@ struct personality_data {
         struct kfa *     kfa;
 };
 
-static int is_personality_ok(const struct personality_data * p)
+static bool is_personality_ok(const struct personality_data * p)
 {
         if (!p)
-                return 0;
+                return false;
         if (!p->kipcm)
-                return 0;
+                return false;
         if (!p->nlset)
-                return 0;
+                return false;
         if (!p->kfa)
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 
 static int default_ipc_create(struct personality_data * data,
