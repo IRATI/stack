@@ -512,11 +512,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                 return -1;
 
         /*
+         * FIXME: rearrange this comment (outdated)
+         *
          * We are going to dup the SDU since the shim has now the ownership
          * and it is always its burden to free it whenever the processing of
          * the SDU is finished (e.g. the SDU has been sent through a wire).
          * For the shim-dummy the processing consists of sending the new SDU
-         * to the sdu_ready kfifo, which will take the ownership of this copy.
+         * to the sdu-ready fifo, which will take the ownership of this copy.
          */
         copy_sdu = sdu_dup_ni(sdu);
         if (!copy_sdu)
