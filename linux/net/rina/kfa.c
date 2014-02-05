@@ -703,6 +703,15 @@ int kfa_flow_ipcp_bind(struct kfa *           instance,
 {
         struct ipcp_flow * flow;
 
+        if (!instance)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        if (!ipcp)
+                return -1;
+
         spin_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, pid);
