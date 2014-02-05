@@ -46,6 +46,7 @@ struct dtp_sv {
         } outbound;
 };
 
+/* FIXME: Has to be rearranged */
 struct dtp_policies {
         int (* xxx_fixme_add_policies_here)(struct dtp * instance);
 };
