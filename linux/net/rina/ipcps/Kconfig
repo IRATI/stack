@@ -39,3 +39,10 @@ config RINA_SHIM_TCP_UDP
         depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
+
+config RINA_SHIM_HV_VIRTIO
+	tristate "Shim IPC for Hypervisors (using Virtio)"
+	default m
+        depends on RINA_PERSONALITY_DEFAULT && VIRTIO
+	help
+	  No help for the time being
