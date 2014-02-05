@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,11 +33,10 @@ struct dtp_sv {
         struct connection * connection; /* FIXME: Are we really sure ??? */
         uint_t              max_flow_sdu;
         uint_t              max_flow_pdu_size;
-        uint_t              initial_sequence_number;
         uint_t              seq_number_rollover_threshold;
 
         struct {
-                seq_num_t   last_sequence_delivered;
+                seq_num_t   left_window_edge;
         } inbound;
 
         struct {
@@ -62,9 +62,8 @@ static struct dtp_sv default_sv = {
         .connection                      = NULL,
         .max_flow_sdu                    = 0,
         .max_flow_pdu_size               = 0,
-        .initial_sequence_number         = 0,
         .seq_number_rollover_threshold   = 0,
-        .inbound.last_sequence_delivered = 0,
+        .inbound.left_window_edge        = 0,
         .outbound.next_sequence_to_send  = 0,
         .outbound.right_window_edge      = 0
 };
@@ -209,6 +208,7 @@ int dtp_write(struct dtp * instance,
         struct pdu *    pdu;
         struct pci *    pci;
         struct dtp_sv * sv;
+        int             ret;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
@@ -254,10 +254,14 @@ int dtp_write(struct dtp * instance,
         }
 
         /* Give the data to RMT now ! */
-        return rmt_send(instance->rmt,
-                        pci_destination(pci),
-                        pci_qos_id(pci),
-                        pdu);
+        ret = rmt_send(instance->rmt,
+                       pci_destination(pci),
+                       pci_qos_id(pci),
+                       pdu);
+        if (!ret)
+                sv->outbound.next_sequence_to_send++;
+
+        return ret;
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
