@@ -97,8 +97,10 @@ enum ipcm_alloc_flow_resp_attrs_list {
 };
 #define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with deny
- * reasons strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with deny
+ * reasons strings in US
+ */
 #define ALLOC_RESP_DENY_REASON_1 "FAILED"
 
 enum ipcm_alloc_flow_req_result_attrs_list {
@@ -108,8 +110,10 @@ enum ipcm_alloc_flow_req_result_attrs_list {
 };
 #define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define ALLOC_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_dealloc_flow_req_attrs_list {
@@ -124,8 +128,10 @@ enum ipcm_dealloc_flow_resp_attrs_list {
 };
 #define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define DEALLOC_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_flow_dealloc_noti_attrs_list {
@@ -215,8 +221,10 @@ enum ipcm_reg_app_resp_attrs_list {
 };
 #define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define REG_APP_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_unreg_app_req_attrs_list {
@@ -232,8 +240,10 @@ enum ipcm_unreg_app_resp_attrs_list {
 };
 #define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define UNREG_APP_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_query_rib_req_attrs_list {
@@ -309,8 +319,10 @@ enum ipcm_assign_to_dif_resp_attrs_list {
 };
 #define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define ASSIGN_TO_DIF_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_ipcp_dif_reg_noti_attrs_list {

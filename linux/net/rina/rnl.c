@@ -55,7 +55,7 @@ struct genl_family      rnl_nl_family = {
         .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
-        .maxattr = NETLINK_RINA_A_MAX, 
+        .maxattr = NETLINK_RINA_A_MAX,
 };
 
 static int is_message_type_in_range(msg_type_t msg_type)
@@ -158,7 +158,7 @@ static struct nla_policy idrn_policy[IDRN_ATTR_MAX + 1] = {
 };
 
 static struct nla_policy idun_policy[IDUN_ATTR_MAX + 1] = {
-        [IDUN_ATTR_RESULT] = {.type = NLA_U32, .len = 4}, 
+        [IDUN_ATTR_RESULT] = { .type = NLA_U32, .len = 4 },
 };
 
 static struct nla_policy iafrm_policy[IAFRM_ATTR_MAX + 1] = {
