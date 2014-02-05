@@ -262,7 +262,7 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
 static int ipcp_flow_notification(struct ipcp_instance_data * data,
                                   port_id_t                   pid)
 {
-        if (kfa_flow_bind_rmt(data->kfa, pid, data->rmt))
+        if (kfa_flow_rmt_bind(data->kfa, pid, data->rmt))
                 return -1;
 
         if (rmt_queue_send_add(data->rmt, pid))
