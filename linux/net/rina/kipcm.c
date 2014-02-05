@@ -24,7 +24,6 @@
 #include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/export.h>
-#include <linux/kfifo.h>
 #include <linux/mutex.h>
 #include <linux/hardirq.h>
 
