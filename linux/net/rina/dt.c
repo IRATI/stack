@@ -60,7 +60,7 @@ void dtsv_dtp_release(struct dt_sv * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot release SV lock");
-                return NULL;
+                return;
         }
 
         spin_unlock(&sv->lock);
@@ -81,7 +81,7 @@ void dtsv_dtcp_release(struct dt_sv * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot release SV lock");
-                return NULL;
+                return;
         }
 
         spin_unlock(&sv->lock);
