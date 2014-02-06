@@ -27,7 +27,7 @@
 #include "common.h"
 #include "qos.h"
 
-/* FIXME: Add setters/getters to struct connection*/
+/* FIXME: Move RNL structure to RNL placeholder files */
 /* FIXME: More params to be added */
 struct conn_p_params {
         bool    dtcp_present;
@@ -38,7 +38,8 @@ struct conn_p_params {
         uint_t  max_closed_winq_length;
 };
 
-/* NOTE: Do not use this struct directly */
+/* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */
+/* FIXME: Add setters/getters to struct connection*/
 struct connection {
         port_id_t            port_id;
 
@@ -55,8 +56,8 @@ struct connection {
 };
 
 struct connection * connection_create(void);
-struct connection *
-connection_dup_from_user(const struct connection __user * conn);
+struct connection * connection_dup_from_user(const
+                                             struct connection __user * conn);
 int                 connection_destroy(struct connection * conn);
 
 #endif
