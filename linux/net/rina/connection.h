@@ -28,20 +28,30 @@
 #include "qos.h"
 
 /* FIXME: Add setters/getters to struct connection*/
+/* FIXME. More params to be added */
+struct conn_p_params {
+        bool    dtcp_present;
+        bool    flow_ctrl;
+        bool    rtx_ctrl;
+        bool    window_based_fctrl;
+        bool    rate_based_fctrl;
+        uint_t  max_closed_winq_length;
+};
 
 /* NOTE: Do not use this struct directly */
 struct connection {
-        port_id_t port_id;
+        port_id_t            port_id;
 
-        address_t source_address;
-        address_t destination_address;
+        address_t            source_address;
+        address_t            destination_address;
 
-        cep_id_t  source_cep_id;
-        cep_id_t  destination_cep_id;
+        cep_id_t             source_cep_id;
+        cep_id_t             destination_cep_id;
 
-        qos_id_t  qos_id;
+        qos_id_t             qos_id;
 
         /* FIXME: Add the list of policies associated with this connection */
+        struct conn_p_params polocies_params;
 };
 
 struct connection * connection_create(void);

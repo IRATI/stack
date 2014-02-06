@@ -191,21 +191,21 @@ static struct nla_policy ifdn_policy[IFDN_ATTR_MAX + 1] = {
 };
 
 static struct nla_policy iccrq_policy[ICCRQ_ATTR_MAX + 1] = {
-        [ICCRQ_ATTR_PORT_ID]     = { .type = NLA_U32, .len = 4 },
-        [ICCRQ_ATTR_SOURCE_ADDR] = { .type = NLA_U32, .len = 4 },
-        [ICCRQ_ATTR_DEST_ADDR]   = { .type = NLA_U32, .len = 4 },
-        [ICCRQ_ATTR_QOS_ID]      = { .type = NLA_U32, .len = 4 },
-        [ICCRQ_ATTR_POLICIES]    = { .type = NLA_U32, .len = 4 },
+        [ICCRQ_ATTR_PORT_ID]         = { .type = NLA_U32,    .len = 4 },
+        [ICCRQ_ATTR_SOURCE_ADDR]     = { .type = NLA_U32,    .len = 4 },
+        [ICCRQ_ATTR_DEST_ADDR]       = { .type = NLA_U32,    .len = 4 },
+        [ICCRQ_ATTR_QOS_ID]          = { .type = NLA_U32,    .len = 4 },
+        [ICCRQ_ATTR_POLICIES_PARAMS] = { .type = NLA_NESTED, .len = 0 },
 };
 
 static struct nla_policy icca_policy[ICCA_ATTR_MAX + 1] = {
-        [ICCA_ATTR_PORT_ID]           = { .type = NLA_U32, .len = 4 },
-        [ICCA_ATTR_SOURCE_ADDR]       = { .type = NLA_U32, .len = 4 },
-        [ICCA_ATTR_DEST_ADDR]         = { .type = NLA_U32, .len = 4 },
-        [ICCA_ATTR_DEST_CEP_ID]       = { .type = NLA_U32, .len = 4 },
-        [ICCA_ATTR_QOS_ID]            = { .type = NLA_U32, .len = 4 },
-        [ICCA_ATTR_FLOW_USER_IPCP_ID] = { .type = NLA_U16, .len = 2 },
-        [ICCA_ATTR_POLICIES]          = { .type = NLA_U32, .len = 4 },
+        [ICCA_ATTR_PORT_ID]           = { .type = NLA_U32,    .len = 4 },
+        [ICCA_ATTR_SOURCE_ADDR]       = { .type = NLA_U32,    .len = 4 },
+        [ICCA_ATTR_DEST_ADDR]         = { .type = NLA_U32,    .len = 4 },
+        [ICCA_ATTR_DEST_CEP_ID]       = { .type = NLA_U32,    .len = 4 },
+        [ICCA_ATTR_QOS_ID]            = { .type = NLA_U32,    .len = 4 },
+        [ICCA_ATTR_FLOW_USER_IPCP_ID] = { .type = NLA_U16,    .len = 2 },
+        [ICCA_ATTR_POLICIES_PARAMS]   = { .type = NLA_NESTED, .len = 0 },
 };
 
 static struct nla_policy icurq_policy[ICURQ_ATTR_MAX + 1] = {
