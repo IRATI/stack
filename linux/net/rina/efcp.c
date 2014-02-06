@@ -436,8 +436,8 @@ EXPORT_SYMBOL(efcp_container_receive);
 
 static int is_connection_ok(const struct connection * connection)
 {
-        LOG_MISSING;
         /* FIXME: Add checks for policy params */
+
         if (!connection                                   ||
             !is_cep_id_ok(connection->source_cep_id)      ||
             !is_cep_id_ok(connection->destination_cep_id) ||

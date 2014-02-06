@@ -1,5 +1,5 @@
 /*
- * RNL (RINA NetLink support)
+ * RNL (RINA NetLink Layer)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>

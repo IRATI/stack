@@ -1,5 +1,5 @@
 /*
- * RNL (RINA NetLink support)
+ * RNL (RINA NetLink Layer)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
@@ -233,7 +233,7 @@ static struct nla_policy iuar_policy[IUAR_ATTR_MAX + 1] = {
 static struct nla_policy idqr_policy[IDQR_ATTR_MAX + 1] = {
         [IDQR_ATTR_OBJECT] = { .type = NLA_NESTED, .len = 0 },
         [IDQR_ATTR_SCOPE]  = { .type = NLA_U32,    .len = 4 },
-        [IDQR_ATTR_FILTER] = { .type = NLA_STRING},
+        [IDQR_ATTR_FILTER] = { .type = NLA_STRING },
 };
 
 static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {
