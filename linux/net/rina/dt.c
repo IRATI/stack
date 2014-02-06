@@ -32,7 +32,7 @@ struct dt {
         spinlock_t    lock;
 };
 
-struct dt * dtcreate(void)
+struct dt * dt_create(void)
 {
         struct dt * tmp;
 
@@ -45,49 +45,6 @@ struct dt * dtcreate(void)
         return tmp;
 }
 
-struct dtp * dt_dtp_take(struct dt * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot take SV lock");
-                return NULL;
-        }
-
-        spin_lock(&sv->lock);
-        return sv->dtp;
-}
-
-void dt_dtp_release(struct dt * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot release SV lock");
-                return;
-        }
-
-        spin_unlock(&sv->lock);
-}
-
-struct dtcp * dt_dtcp_take(struct dt * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot take SV lock");
-                return NULL;
-        }
-
-        spin_lock(&sv->lock);
-
-        return sv->dtcp;
-}
-
-void dt_dtcp_release(struct dt * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot release SV lock");
-                return;
-        }
-
-        spin_unlock(&sv->lock);
-}
-
 int dt_destroy(struct dt * sv)
 {
         if (!sv)
@@ -96,4 +53,56 @@ int dt_destroy(struct dt * sv)
         rkfree(sv);
 
         return 0;
+}
+
+int dt_dtp_bind(struct dt *  dt, struct dtp * dtp)
+{
+        if (!dt)
+                return -1;
+
+        spin_lock(&dt->lock);
+        dt->dtp = dtp;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
+int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
+{
+        if (!dt)
+                return -1;
+
+        spin_lock(&dt->lock);
+        dt->dtcp = dtcp;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
+struct dtp * dt_dtp(struct dt * dt)
+{
+        struct dtp * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->dtp;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct dtcp * dt_dtcp(struct dt * dt)
+{
+        struct dtcp * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->dtcp;
+        spin_unlock(&dt->lock);
+
+        return tmp;
 }
