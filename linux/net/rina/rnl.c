@@ -151,111 +151,111 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
 #define NLA_INIT_FLAG   NLA_INIT(NLA_FLAG,   0)
 
 static struct nla_policy iatdr_policy[IATDR_ATTR_MAX + 1] = {
-        [IATDR_ATTR_DIF_INFORMATION] = NLA_INIT(NLA_NESTED, 0),
+        [IATDR_ATTR_DIF_INFORMATION] = NLA_INIT_NESTED,
 };
 
 static struct nla_policy iudcr_policy[IUDCR_ATTR_MAX + 1] = {
-        [IUDCR_ATTR_DIF_CONFIGURATION] = NLA_INIT(NLA_NESTED, 0),
+        [IUDCR_ATTR_DIF_CONFIGURATION] = NLA_INIT_NESTED,
 };
 
 
 static struct nla_policy idrn_policy[IDRN_ATTR_MAX + 1] = {
-        [IDRN_ATTR_IPC_PROCESS_NAME] = NLA_INIT(NLA_NESTED, 0),
-        [IDRN_ATTR_DIF_NAME]         = NLA_INIT(NLA_NESTED, 0),
-        [IDRN_ATTR_REGISTRATION]     = NLA_INIT(NLA_FLAG,   0),
+        [IDRN_ATTR_IPC_PROCESS_NAME] = NLA_INIT_NESTED,
+        [IDRN_ATTR_DIF_NAME]         = NLA_INIT_NESTED,
+        [IDRN_ATTR_REGISTRATION]     = NLA_INIT_FLAG,
 };
 
 static struct nla_policy idun_policy[IDUN_ATTR_MAX + 1] = {
-        [IDUN_ATTR_RESULT] = { .type = NLA_U32, .len = 4 },
+        [IDUN_ATTR_RESULT] = NLA_INIT_U32,
 };
 
 static struct nla_policy iafrm_policy[IAFRM_ATTR_MAX + 1] = {
-        [IAFRM_ATTR_SOURCE_APP_NAME] = NLA_INIT(NLA_NESTED, 0),
-        [IAFRM_ATTR_DEST_APP_NAME]   = NLA_INIT(NLA_NESTED, 0),
-        [IAFRM_ATTR_FLOW_SPEC]       = NLA_INIT(NLA_NESTED, 0),
-        [IAFRM_ATTR_DIF_NAME]        = NLA_INIT(NLA_NESTED, 0),
+        [IAFRM_ATTR_SOURCE_APP_NAME] = NLA_INIT_NESTED,
+        [IAFRM_ATTR_DEST_APP_NAME]   = NLA_INIT_NESTED,
+        [IAFRM_ATTR_FLOW_SPEC]       = NLA_INIT_NESTED,
+        [IAFRM_ATTR_DIF_NAME]        = NLA_INIT_NESTED,
 };
 
 static struct nla_policy iafra_policy[IAFRA_ATTR_MAX + 1] = {
-        [IAFRA_ATTR_SOURCE_APP_NAME] = NLA_INIT(NLA_NESTED, 0),
-        [IAFRA_ATTR_DEST_APP_NAME]   = NLA_INIT(NLA_NESTED, 0),
-        [IAFRA_ATTR_FLOW_SPEC]       = NLA_INIT(NLA_NESTED, 0),
-        [IAFRA_ATTR_DIF_NAME]        = NLA_INIT(NLA_NESTED, 0),
-        [IAFRA_ATTR_PORT_ID]         = NLA_INIT(NLA_U32,    4),
+        [IAFRA_ATTR_SOURCE_APP_NAME] = NLA_INIT_NESTED,
+        [IAFRA_ATTR_DEST_APP_NAME]   = NLA_INIT_NESTED,
+        [IAFRA_ATTR_FLOW_SPEC]       = NLA_INIT_NESTED,
+        [IAFRA_ATTR_DIF_NAME]        = NLA_INIT_NESTED,
+        [IAFRA_ATTR_PORT_ID]         = NLA_INIT_U32,
 };
 
 static struct nla_policy iafre_policy[IAFRE_ATTR_MAX + 1] = {
-        [IAFRE_ATTR_RESULT]        = NLA_INIT(NLA_U32,  4),
-        [IAFRE_ATTR_NOTIFY_SOURCE] = NLA_INIT(NLA_FLAG, 0),
+        [IAFRE_ATTR_RESULT]        = NLA_INIT_U32,
+        [IAFRE_ATTR_NOTIFY_SOURCE] = NLA_INIT_FLAG,
 };
 
 static struct nla_policy idfrt_policy[IDFRT_ATTR_MAX + 1] = {
-        [IDFRT_ATTR_PORT_ID] = NLA_INIT(NLA_U32, 4),
+        [IDFRT_ATTR_PORT_ID] = NLA_INIT_U32,
 };
 
 static struct nla_policy ifdn_policy[IFDN_ATTR_MAX + 1] = {
-        [IFDN_ATTR_PORT_ID] = NLA_INIT(NLA_U32, 4),
-        [IFDN_ATTR_CODE]    = NLA_INIT(NLA_U32, 4),
+        [IFDN_ATTR_PORT_ID] = NLA_INIT_U32,
+        [IFDN_ATTR_CODE]    = NLA_INIT_U32,
 };
 
 static struct nla_policy iccrq_policy[ICCRQ_ATTR_MAX + 1] = {
-        [ICCRQ_ATTR_PORT_ID]         = NLA_INIT(NLA_U32,    4),
-        [ICCRQ_ATTR_SOURCE_ADDR]     = NLA_INIT(NLA_U32,    4),
-        [ICCRQ_ATTR_DEST_ADDR]       = NLA_INIT(NLA_U32,    4),
-        [ICCRQ_ATTR_QOS_ID]          = NLA_INIT(NLA_U32,    4),
-        [ICCRQ_ATTR_POLICIES_PARAMS] = NLA_INIT(NLA_NESTED, 0),
+        [ICCRQ_ATTR_PORT_ID]         = NLA_INIT_U32,
+        [ICCRQ_ATTR_SOURCE_ADDR]     = NLA_INIT_U32,
+        [ICCRQ_ATTR_DEST_ADDR]       = NLA_INIT_U32,
+        [ICCRQ_ATTR_QOS_ID]          = NLA_INIT_U32,
+        [ICCRQ_ATTR_POLICIES_PARAMS] = NLA_INIT_NESTED,
 };
 
 static struct nla_policy icca_policy[ICCA_ATTR_MAX + 1] = {
-        [ICCA_ATTR_PORT_ID]           = NLA_INIT(NLA_U32,    4),
-        [ICCA_ATTR_SOURCE_ADDR]       = NLA_INIT(NLA_U32,    4),
-        [ICCA_ATTR_DEST_ADDR]         = NLA_INIT(NLA_U32,    4),
-        [ICCA_ATTR_DEST_CEP_ID]       = NLA_INIT(NLA_U32,    4),
-        [ICCA_ATTR_QOS_ID]            = NLA_INIT(NLA_U32,    4),
-        [ICCA_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT(NLA_U16,    2),
-        [ICCA_ATTR_POLICIES_PARAMS]   = NLA_INIT(NLA_NESTED, 0),
+        [ICCA_ATTR_PORT_ID]           = NLA_INIT_U32,
+        [ICCA_ATTR_SOURCE_ADDR]       = NLA_INIT_U32,
+        [ICCA_ATTR_DEST_ADDR]         = NLA_INIT_U32,
+        [ICCA_ATTR_DEST_CEP_ID]       = NLA_INIT_U32,
+        [ICCA_ATTR_QOS_ID]            = NLA_INIT_U32,
+        [ICCA_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
+        [ICCA_ATTR_POLICIES_PARAMS]   = NLA_INIT_NESTED,
 };
 
 static struct nla_policy icurq_policy[ICURQ_ATTR_MAX + 1] = {
-        [ICURQ_ATTR_PORT_ID]           = NLA_INIT(NLA_U32, 4),
-        [ICURQ_ATTR_SOURCE_CEP_ID]     = NLA_INIT(NLA_U32, 4),
-        [ICURQ_ATTR_DEST_CEP_ID]       = NLA_INIT(NLA_U32, 4),
-        [ICURQ_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT(NLA_U16, 2),
+        [ICURQ_ATTR_PORT_ID]           = NLA_INIT_U32,
+        [ICURQ_ATTR_SOURCE_CEP_ID]     = NLA_INIT_U32,
+        [ICURQ_ATTR_DEST_CEP_ID]       = NLA_INIT_U32,
+        [ICURQ_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
 };
 
 static struct nla_policy icdr_policy[ICDR_ATTR_MAX + 1] = {
-        [ICDR_ATTR_PORT_ID]       = NLA_INIT(NLA_U32, 4),
-        [ICDR_ATTR_SOURCE_CEP_ID] = NLA_INIT(NLA_U32, 4),
+        [ICDR_ATTR_PORT_ID]       = NLA_INIT_U32,
+        [ICDR_ATTR_SOURCE_CEP_ID] = NLA_INIT_U32,
 };
 
 static struct nla_policy irar_policy[IRAR_ATTR_MAX + 1] = {
-        [IRAR_ATTR_APP_NAME] = NLA_INIT(NLA_NESTED, 0),
-        [IRAR_ATTR_DIF_NAME] = NLA_INIT(NLA_NESTED, 0),
+        [IRAR_ATTR_APP_NAME] = NLA_INIT_NESTED,
+        [IRAR_ATTR_DIF_NAME] = NLA_INIT_NESTED,
 };
 
 static struct nla_policy iuar_policy[IUAR_ATTR_MAX + 1] = {
-        [IUAR_ATTR_APP_NAME] = NLA_INIT(NLA_NESTED, 0),
-        [IUAR_ATTR_DIF_NAME] = NLA_INIT(NLA_NESTED, 0),
+        [IUAR_ATTR_APP_NAME] = NLA_INIT_NESTED,
+        [IUAR_ATTR_DIF_NAME] = NLA_INIT_NESTED,
 };
 
 static struct nla_policy idqr_policy[IDQR_ATTR_MAX + 1] = {
-        [IDQR_ATTR_OBJECT] = NLA_INIT(NLA_NESTED, 0),
-        [IDQR_ATTR_SCOPE]  = NLA_INIT(NLA_U32,    4),
-        [IDQR_ATTR_FILTER] = NLA_INIT(NLA_STRING, 0),
+        [IDQR_ATTR_OBJECT] = NLA_INIT_NESTED,
+        [IDQR_ATTR_SCOPE]  = NLA_INIT_U32,
+        [IDQR_ATTR_FILTER] = NLA_INIT_STRING,
 };
 
 static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {
-        [RMPFE_ATTR_ENTRIES] = NLA_INIT(NLA_NESTED, 0),
-        [RMPFE_ATTR_MODE]    = NLA_INIT(NLA_U32,    4),
+        [RMPFE_ATTR_ENTRIES] = NLA_INIT_NESTED,
+        [RMPFE_ATTR_MODE]    = NLA_INIT_U32,
 };
 
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
-                        .flags  = 0,            \
-                        .policy = POLICY,       \
-                        .doit   = dispatcher,   \
-                        .dumpit = NULL,         \
-                        }
+                .flags  = 0,                    \
+                .policy = POLICY,               \
+                .doit   = dispatcher,           \
+                .dumpit = NULL,                 \
+}
 
 static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, iatdr_policy),
