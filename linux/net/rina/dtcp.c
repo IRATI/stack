@@ -266,7 +266,7 @@ int dtcp_bind(struct dtcp * instance,
         if (instance->peer) {
                 if (instance->peer != peer) {
                         LOG_ERR("This instance is already bound to "
-                                "a different peer, unbind it first");
+                                "a different peer, unbind it first !");
                         return -1;
                 }
 
@@ -287,7 +287,13 @@ int dtcp_unbind(struct dtcp * instance)
                 return -1;
         }
 
-        instance->peer = NULL;
+        if (instance->peer) {
+                LOG_DBG("Instance %pK unbound from DTP peer %pK",
+                        instance, instance->peer);
+                instance->peer = NULL;
+        } else {
+                LOG_DBG("Instance %pK was not bound to a peer DTP");
+        }
 
         return 0;
 
