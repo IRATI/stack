@@ -25,16 +25,16 @@
 #include "debug.h"
 #include "dt.h"
 
-struct dt_sv {
-        struct dtp_sv *  dtp_sv;
-        struct dtcp_sv * dtcp_sv;
+struct dt {
+        struct dtp *  dtp;
+        struct dtcp * dtcp;
 
-        spinlock_t       lock;
+        spinlock_t    lock;
 };
 
-struct dt_sv * dtsv_create(void)
+struct dt * dtcreate(void)
 {
-        struct dt_sv * tmp;
+        struct dt * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -45,7 +45,7 @@ struct dt_sv * dtsv_create(void)
         return tmp;
 }
 
-struct dtp_sv * dtsv_dtp_take(struct dt_sv * sv)
+struct dtp * dt_dtp_take(struct dt * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot take SV lock");
@@ -53,10 +53,10 @@ struct dtp_sv * dtsv_dtp_take(struct dt_sv * sv)
         }
 
         spin_lock(&sv->lock);
-        return sv->dtp_sv;
+        return sv->dtp;
 }
 
-void dtsv_dtp_release(struct dt_sv * sv)
+void dt_dtp_release(struct dt * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot release SV lock");
@@ -66,7 +66,7 @@ void dtsv_dtp_release(struct dt_sv * sv)
         spin_unlock(&sv->lock);
 }
 
-struct dtcp_sv * dtsv_dtcp_take(struct dt_sv * sv)
+struct dtcp * dt_dtcp_take(struct dt * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot take SV lock");
@@ -74,10 +74,11 @@ struct dtcp_sv * dtsv_dtcp_take(struct dt_sv * sv)
         }
 
         spin_lock(&sv->lock);
-        return sv->dtcp_sv;
+
+        return sv->dtcp;
 }
 
-void dtsv_dtcp_release(struct dt_sv * sv)
+void dt_dtcp_release(struct dt * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot release SV lock");
@@ -87,7 +88,7 @@ void dtsv_dtcp_release(struct dt_sv * sv)
         spin_unlock(&sv->lock);
 }
 
-int dtsv_destroy(struct dt_sv * sv)
+int dt_destroy(struct dt * sv)
 {
         if (!sv)
                 return -1;
