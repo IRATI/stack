@@ -48,7 +48,13 @@ struct dtp_sv {
 
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
-        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
+        int (* transmission_control)(struct dtp * instance);
+        int (* closed_window_queue)(struct dtp * instance);
+        int (* flow_control_overrun)(struct dtp * instance);
+        int (* unknown_flow)(struct dtp * instance);
+        int (* initial_sequence_number)(struct dtp * instance);
+        int (* receiver_inactivity_timer)(struct dtp * instance);
+        int (* sender_inactivitty_timer)(struct dtp * instance);
 };
 
 #define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
@@ -217,30 +223,6 @@ int dtp_unbind(struct dtp * instance)
         return 0;
 
 }
-
-#if 0
-static int apply_policy_CsldWinQ(struct dtp * dtp,
-                                 struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int apply_policy_RexmsnQ(struct dtp * dtp,
-                                struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-#endif
 
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
