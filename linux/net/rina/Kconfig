@@ -13,12 +13,15 @@ menuconfig RINA
 
 if RINA
 
+menu "Core"
+
 config RINA_DEBUG
 	bool "Debugging support"
 	default y
-        depends on RINA_ASSERTIONS
 	help
 	  No help for the time being
+
+if RINA_DEBUG
 
 config RINA_SYSCALLS_DEBUG
        bool "Debug RINA syscalls"
@@ -54,25 +57,14 @@ config RINA_REGRESSION_TESTS
 	help
 	  No help for the time being
 
-config RINA_RMT_REGRESSION_TESTS
-	bool "RMT regression tests"
-	default n
-        depends on RINA_REGRESSION_TESTS
-	help
-	  No help for the time being
-
-config RINA_PFT_REGRESSION_TESTS
-	bool "PFT regression tests"
-	default n
-        depends on RINA_REGRESSION_TESTS
-	help
-	  No help for the time being
-
 config RINA_ASSERTIONS
 	bool "Embed assertions (slowing down everything)"
 	default y
 	help
 	  No help for the time being
+endif
+
+source "net/rina/rds/Kconfig"
 
 config RINA_PERSONALITY_DEFAULT
        	tristate "Default Personality support"
@@ -80,8 +72,16 @@ config RINA_PERSONALITY_DEFAULT
 	---help---
 	  No help for the time being
 
-source "net/rina/rds/Kconfig"
+endmenu
+
 source "net/rina/rinarp/Kconfig"
+
+menuconfig IPC_PROCESSES
+	bool "IPC Processes support"
+        default y
+
+if IPC_PROCESSES
 source "net/rina/ipcps/Kconfig"
+endif
 
 endif

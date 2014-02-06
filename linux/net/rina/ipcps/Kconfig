@@ -11,8 +11,22 @@ config RINA_NORMAL_IPCP
 	help
 	  No help for the time being
 
+config RINA_RMT_REGRESSION_TESTS
+	bool "RMT regression tests"
+	default n
+        depends on RINA_REGRESSION_TESTS && RINA_NORMAL_IPCP
+	help
+	  No help for the time being
+
+config RINA_PFT_REGRESSION_TESTS
+	bool "PFT regression tests"
+	default n
+        depends on RINA_REGRESSION_TESTS && RINA_NORMAL_IPCP
+	help
+	  No help for the time being
+
 config RINA_SHIM_DUMMY
-	tristate "Dummy Shim IPC"
+	tristate "Shim IPC Dummy (loopback)"
 	default m
         depends on RINA_PERSONALITY_DEFAULT && RINA_DEBUG
 	help

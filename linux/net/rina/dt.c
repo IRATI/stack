@@ -49,7 +49,7 @@ struct dtp_sv * dtsv_dtp_take(struct dt_sv * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot take SV lock");
-                return;
+                return NULL;
         }
 
         spin_lock(&sv->lock);
@@ -60,7 +60,7 @@ void dtsv_dtp_release(struct dt_sv * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot release SV lock");
-                return;
+                return NULL;
         }
 
         spin_unlock(&sv->lock);
@@ -70,7 +70,7 @@ struct dtcp_sv * dtsv_dtcp_take(struct dt_sv * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot take SV lock");
-                return;
+                return NULL;
         }
 
         spin_lock(&sv->lock);
@@ -81,7 +81,7 @@ void dtsv_dtcp_release(struct dt_sv * sv)
 {
         if (!sv) {
                 LOG_ERR("Cannot release SV lock");
-                return;
+                return NULL;
         }
 
         spin_unlock(&sv->lock);

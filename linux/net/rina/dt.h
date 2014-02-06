@@ -25,6 +25,7 @@
 
 #include "common.h"
 
+/* FIXME: Instances or State-Vectors ? */
 struct dtp_sv;
 struct dtcp_sv;
 struct dt_sv;
