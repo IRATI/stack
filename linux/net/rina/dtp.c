@@ -191,7 +191,7 @@ int dtp_bind(struct dtp *  instance,
         if (instance->peer) {
                 if (instance->peer != peer) {
                         LOG_ERR("This instance is already bound to "
-                                "a different peer, unbind it first");
+                                "a different DTCP peer, unbind it first !");
                         return -1;
                 }
 
@@ -212,7 +212,13 @@ int dtp_unbind(struct dtp * instance)
                 return -1;
         }
 
-        instance->peer = NULL;
+        if (instance->peer) {
+                LOG_DBG("Instance %pK unbound from DTCP peer %pK",
+                        instance, instance->peer);
+                instance->peer = NULL;
+        } else {
+                LOG_DBG("Instance %pK was not bound to a peer DTCP");
+        }
 
         return 0;
 
@@ -371,7 +377,7 @@ int dtp_mgmt_write(struct rmt * rmt,
 
         /* Give the data to RMT now ! */
 
-        /* FIXME: What about sequencing (and all the other procedures) ? */ 
+        /* FIXME: What about sequencing (and all the other procedures) ? */
         return rmt_send(rmt,
                         pci_destination(pci),
                         pci_cep_destination(pci),
