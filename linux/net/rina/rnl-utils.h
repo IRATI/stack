@@ -97,8 +97,10 @@ enum ipcm_alloc_flow_resp_attrs_list {
 };
 #define IAFRE_ATTR_MAX (__IAFRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with deny
- * reasons strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with deny
+ * reasons strings in US
+ */
 #define ALLOC_RESP_DENY_REASON_1 "FAILED"
 
 enum ipcm_alloc_flow_req_result_attrs_list {
@@ -108,8 +110,10 @@ enum ipcm_alloc_flow_req_result_attrs_list {
 };
 #define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define ALLOC_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_dealloc_flow_req_attrs_list {
@@ -124,8 +128,10 @@ enum ipcm_dealloc_flow_resp_attrs_list {
 };
 #define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define DEALLOC_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_flow_dealloc_noti_attrs_list {
@@ -158,7 +164,7 @@ enum ipcm_conn_create_arrived_attrs_list {
         ICCA_ATTR_DEST_ADDR,
         ICCA_ATTR_DEST_CEP_ID,
         ICCA_ATTR_QOS_ID,
-        ICCA_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        ICCA_ATTR_FLOW_USER_IPCP_ID,
         ICCA_ATTR_POLICIES,
         __ICCA_ATTR_MAX,
 };
@@ -176,7 +182,7 @@ enum ipcm_conn_update_req_attrs_list {
         ICURQ_ATTR_PORT_ID = 1,
         ICURQ_ATTR_SOURCE_CEP_ID,
         ICURQ_ATTR_DEST_CEP_ID,
-        ICURQ_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        ICURQ_ATTR_FLOW_USER_IPCP_ID,
         __ICURQ_ATTR_MAX,
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
@@ -215,8 +221,10 @@ enum ipcm_reg_app_resp_attrs_list {
 };
 #define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define REG_APP_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_unreg_app_req_attrs_list {
@@ -232,8 +240,10 @@ enum ipcm_unreg_app_resp_attrs_list {
 };
 #define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define UNREG_APP_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_query_rib_req_attrs_list {
@@ -303,20 +313,16 @@ enum dif_config_attrs_list {
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
-enum generic_one_attribute_list {
-        GOA_ATTR_ONE = 1,
-        __GOA_ATTR_MAX
-};
-#define GOA_ATTR_MAX (__GOA_ATTR_MAX - 1)
-
 enum ipcm_assign_to_dif_resp_attrs_list {
         IATDRE_ATTR_RESULT = 1,
         __IATDRE_ATTR_MAX,
 };
 #define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
 
-/* FIXME: Need to specify the possible values of result to map with error
- * descriptions strings in US */
+/*
+ * FIXME: Need to specify the possible values of result to map with error
+ * descriptions strings in US
+ */
 #define ASSIGN_TO_DIF_RESP_ERR_DESC_1 "FAILED"
 
 enum ipcm_ipcp_dif_reg_noti_attrs_list {

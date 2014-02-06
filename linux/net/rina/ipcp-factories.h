@@ -21,20 +21,12 @@
 #ifndef RINA_IPCP_FACTORIES_H
 #define RINA_IPCP_FACTORIES_H
 
-#include "ipcp.h"
+#include <linux/kobject.h>
+
+#include "common.h"
+#include "ipcp-instances.h"
 
 struct ipcp_factory_data;
-
-/* FIXME: Hide this data structure */
-struct ipcp_instance {
-        struct kobject              kobj;
-
-        /* FIXME: Should be hidden and not fixed up in KIPCM ... */
-        struct ipcp_factory *       factory; /* The parent factory */
-
-        struct ipcp_instance_data * data;
-        struct ipcp_instance_ops *  ops;
-};
 
 struct ipcp_factory_ops {
         int                    (* init)(struct ipcp_factory_data * data);

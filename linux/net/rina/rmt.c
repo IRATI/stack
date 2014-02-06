@@ -679,6 +679,7 @@ static int process_mgmt_sdu(struct rmt * rmt,
                 sdu_destroy(sdu);
                 return -1;
         }
+        sdu_destroy(sdu);
 
         buffer = pdu_buffer_get_rw(pdu);
         if (!buffer_is_ok(buffer)) {

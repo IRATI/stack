@@ -24,7 +24,6 @@
 #include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/export.h>
-#include <linux/kfifo.h>
 #include <linux/mutex.h>
 #include <linux/hardirq.h>
 
@@ -177,6 +176,12 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
+        if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+                LOG_ERR("Could not create flow at KFA");
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
+        }
+
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
@@ -185,7 +190,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         }
 
         if (user_ipc_id) {
-
                 usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!usr_ipcp) {
                         LOG_DBG("Could not find the user ipcp of the flow...");
@@ -196,8 +200,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 ASSERT(usr_ipcp->ops);
                 ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
-                                                     pid)) {
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data, pid)) {
                         LOG_DBG("Could not bind the user ipcp' RMT "
                                 "with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
@@ -260,7 +263,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
 
         ipc_id = 0;
-        msg = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE);
+        msg    = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE);
         if (!msg) {
                 rnl_msg_destroy(msg);
                 return -1;
@@ -291,6 +294,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
         if (kipcm_smap_remove(kipcm->messages->egress, info->snd_seq)) {
                 LOG_ERR("Could not destroy egress messages map entry");
+                rnl_msg_destroy(msg);
+                return -1;
         }
 
         if (user_ipc_id) {
@@ -793,6 +798,11 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (!ipcp)
                 goto fail;
 
+        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
+                LOG_ERR("Could not bind ipcp to flow at KFA");
+                goto fail;
+        }
+
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
@@ -893,6 +903,11 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         user_ipc_id = attrs->flow_user_ipc_process_id;
         ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp) {
+                goto fail;
+        }
+
+        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
+                LOG_ERR("Could not bind ipcp to flow at KFA");
                 goto fail;
         }
 
@@ -1747,21 +1762,20 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
 {
         uint_t             nl_port_id;
         rnl_sn_t           seq_num;
-        struct ipcp_flow * flow;
+        struct ipcp_instance * ipc_process;
 
         IRQ_BARRIER;
 
         /* FIXME: Use a constant (define) ! */
         nl_port_id = 1;
 
-        /*
-         * NB: This flow find is just a check, I think it's useful to be sure
-         * the arrived flow request has been properly processed by the
-         * IPC process calling this API.
-         */
-        flow = kfa_find_flow_by_pid(kipcm->kfa, port_id);
-        if (!flow) {
-                LOG_DBG("There's no flow pending for port_id: %d", port_id);
+        ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                return -1;
+        }
+        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipc_process)) {
+                LOG_ERR("Could not bind ipcp to flow at KFA");
                 return -1;
         }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
@@ -1800,7 +1814,6 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
         KIPCM_LOCK(kipcm);
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-
         if (!ipc_process) {
                 LOG_ERR("Couldn't find the ipc process %d", ipc_id);
                 KIPCM_UNLOCK(kipcm);
@@ -1976,12 +1989,16 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
-        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances, process_name);
+        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
+                                                  process_name);
         if (!user_ipc_process) {
-                /*FIXME: Here we should distinguish betweem a flow for an app in
-                 * user-space or an ipc process in the system
+                /*
+                 * FIXME: Here we should distinguish between a flow for an
+                 *        application in user-space or an ipc process in the
+                 *        system
                  */
                 LOG_DBG("This flow should go for an app");
+
                 LOG_MISSING;
         }
 
@@ -1994,7 +2011,14 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
         }
 
         if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
-                LOG_ERR("Could not create flow in the KFA");
+                LOG_ERR("Could not create flow");
+                kfa_port_id_release(kipcm->kfa, pid);
+                name_destroy(process_name);
+                return port_id_bad();
+        }
+
+        if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+                LOG_ERR("Problems binding IPC process to flow");
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return port_id_bad();
@@ -2027,6 +2051,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
 
         if (kipcm_pmap_remove(kipcm->messages->ingress, pid)) {
                 LOG_ERR("Could not destroy ingress messages map entry");
+                return -1;
         }
 
         /* FIXME: The rnl_port_id shouldn't be hardcoded as 1 */
@@ -2049,6 +2074,7 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                         "flow deallocation");
                 return -1;
         }
+
         return 0;
 }
 EXPORT_SYMBOL(kipcm_notify_flow_dealloc);
