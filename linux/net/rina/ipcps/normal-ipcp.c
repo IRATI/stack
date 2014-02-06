@@ -727,6 +727,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+        /* FIXME: This (whole) function has to be rehersed HEAVILY */
+
         instance->data->info->name = name_dup(name);
         if (!instance->data->info->name) {
                 LOG_ERR("Failed creation of ipc name");

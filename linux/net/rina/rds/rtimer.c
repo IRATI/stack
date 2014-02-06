@@ -66,18 +66,17 @@ struct rtimer * rtimer_create_ni(void (* function)(void * data), void * data)
 { return rtimer_create_gfp(GFP_ATOMIC, function, data); }
 EXPORT_SYMBOL(rtimer_create_ni);
 
-int rtimer_start(struct rtimer * timer,
-                 unsigned int    millisec)
+static int __rtimer_start(struct rtimer * timer,
+                          unsigned int    millisecs)
 {
-        if (!timer)
-                return -1;
+        ASSERT(timer);
 
         init_timer(&timer->tl);
 
         /* FIXME: Crappy, rearrange */
         timer->tl.function = (void (*)(unsigned long)) timer->function;
         timer->tl.data     = (unsigned long)           timer->data;
-        timer->tl.expires  = jiffies + (millisec * HZ) / 1000;
+        timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
 
         add_timer(&timer->tl);
 
@@ -88,6 +87,15 @@ int rtimer_start(struct rtimer * timer,
                 timer->tl.expires);
 
         return 0;
+}
+
+int rtimer_start(struct rtimer * timer,
+                 unsigned int    millisecs)
+{
+        if (!timer)
+                return -1;
+
+        return __rtimer_start(timer, millisecs);
 }
 EXPORT_SYMBOL(rtimer_start);
 
@@ -130,6 +138,19 @@ int rtimer_stop(struct rtimer * timer)
         return __rtimer_stop(timer);
 }
 EXPORT_SYMBOL(rtimer_stop);
+
+int rtimer_restart(struct rtimer * timer,
+                   unsigned int    millisecs)
+{
+        if (!timer)
+                return -1;
+
+        if (__rtimer_stop(timer))
+                return -1;
+
+        return __rtimer_start(timer, millisecs);
+}
+EXPORT_SYMBOL(rtimer_restart);
 
 int rtimer_destroy(struct rtimer * timer)
 {

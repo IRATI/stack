@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "dtcp.h"
 
+/* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
         /* Control state */
         uint_t       max_pdu_size;
@@ -147,14 +148,14 @@ struct dtcp {
          * NOTE: The DTCP State Vector can be discarded during long periods of
          *       no traffic
          */
-        struct dtcp_sv *       state_vector;
+        struct dtcp_sv *       sv; /* The state-vector */
         struct dtcp_policies * policies;
 
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
 
-        struct dtp *           peer;
+        struct dtp *           peer; /* The peering DTP instance */
 };
 
 static struct dtcp_sv default_sv = {
@@ -206,8 +207,8 @@ struct dtcp * dtcp_create(void)
                 return NULL;
         }
 
-        tmp->state_vector = rkzalloc(sizeof(*tmp->state_vector), GFP_KERNEL);
-        if (!tmp->state_vector) {
+        tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_KERNEL);
+        if (!tmp->sv) {
                 LOG_ERR("Cannot create DTCP state-vector");
                 dtcp_destroy(tmp);
                 return NULL;
@@ -219,13 +220,13 @@ struct dtcp * dtcp_create(void)
                 return NULL;
         }
 
-        *tmp->state_vector = default_sv;
+        *tmp->sv       = default_sv;
         /* FIXME: fixups to the state-vector should be placed here */
 
-        *tmp->policies     = default_policies;
+        *tmp->policies = default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer          = NULL;
+        tmp->peer      = NULL;
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
@@ -239,8 +240,8 @@ int dtcp_destroy(struct dtcp * instance)
                 return -1;
         }
 
-        if (instance->state_vector) rkfree(instance->state_vector);
-        if (instance->policies)     rkfree(instance->policies);
+        if (instance->sv)       rkfree(instance->sv);
+        if (instance->policies) rkfree(instance->policies);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -249,6 +250,7 @@ int dtcp_destroy(struct dtcp * instance)
 }
 
 
+/* FIXME: Do we really need bind() alike operation ? */
 int dtcp_bind(struct dtcp * instance,
               struct dtp *  peer)
 {
@@ -277,6 +279,7 @@ int dtcp_bind(struct dtcp * instance,
         return 0;
 }
 
+/* FIXME: Do we really need unbind() alike operation ? */
 int dtcp_unbind(struct dtcp * instance)
 {
         if (!instance) {
