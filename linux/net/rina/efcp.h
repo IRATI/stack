@@ -47,9 +47,10 @@ int                     efcp_container_mgmt_write(struct efcp_container * c,
                                                   address_t               src,
                                                   port_id_t               port,
                                                   struct sdu *            sdu);
-
-cep_id_t                efcp_connection_create(struct efcp_container * cont,
-                                               struct connection     * conn);
+cep_id_t
+efcp_connection_create(struct efcp_container * cont,
+                       struct connection     * conn,
+                       bool                    dtcp_present);
 int                     efcp_connection_destroy(struct efcp_container * cont,
                                                 cep_id_t                id);
 int                     efcp_connection_update(struct efcp_container * cont,

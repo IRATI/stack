@@ -446,7 +446,8 @@ static int is_connection_ok(const struct connection * connection)
 }
 
 cep_id_t efcp_connection_create(struct efcp_container * container,
-                                struct connection *     connection)
+                                struct connection *     connection,
+                                bool                    dtcp_present)
 {
         struct efcp * tmp;
         cep_id_t      cep_id;
@@ -482,19 +483,17 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
         }
 
-        /*
-         *  FIXME: We need to know if DTCP is needed ...
-         *
-         *  tmp->dtcp = dtcp_create();
-         *  if (!tmp->dtcp) {
-         *      efcp_destroy(tmp);
-         *      return -1;
-         *  }
-         *
-         * No needs to check here, bindings are straightforward
-         * dtp_bind(tmp->dtp,   tmp->dtcp);
-         * dtcp_bind(tmp->dtcp, tmp->dtp);
-         */
+        if (dtcp_present) {
+                tmp->dtcp = dtcp_create();
+                if (!tmp->dtcp) {
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+
+                /* No needs to check here, bindings are straightforward */
+                dtp_bind(tmp->dtp,   tmp->dtcp);
+                dtcp_bind(tmp->dtcp, tmp->dtp);
+        }
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
