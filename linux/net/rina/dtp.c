@@ -217,7 +217,7 @@ int dtp_unbind(struct dtp * instance)
                         instance, instance->peer);
                 instance->peer = NULL;
         } else {
-                LOG_DBG("Instance %pK was not bound to a peer DTCP");
+                LOG_DBG("Instance %pK was not bound to a peer DTCP", instance);
         }
 
         return 0;
