@@ -92,7 +92,13 @@ static struct dtp_sv default_sv = {
 };
 
 static struct dtp_policies default_policies = {
-        .xxx_fixme_add_policies_here = NULL
+        .transmission_control = NULL,
+        .closed_window_queue = NULL,
+        .flow_control_overrun = NULL,
+        .unknown_flow = NULL,
+        .initial_sequence_number = NULL,
+        .receiver_inactivity_timer = NULL,
+        .sender_inactivitty_timer = NULL,
 };
 
 static void tf_sender_inactivity(void * data)
