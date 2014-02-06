@@ -142,13 +142,13 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-#define NLA_INIT(TYPE, LEN) { .type = TYPE, .len = LEN }
+#define __NLA_INIT(TYPE, LEN) { .type = TYPE, .len = LEN }
 
-#define NLA_INIT_U32    NLA_INIT(NLA_U32,    4)
-#define NLA_INIT_U16    NLA_INIT(NLA_U16,    2)
-#define NLA_INIT_NESTED NLA_INIT(NLA_NESTED, 0)
-#define NLA_INIT_STRING NLA_INIT(NLA_STRING, 0)
-#define NLA_INIT_FLAG   NLA_INIT(NLA_FLAG,   0)
+#define NLA_INIT_U32    __NLA_INIT(NLA_U32,    4)
+#define NLA_INIT_U16    __NLA_INIT(NLA_U16,    2)
+#define NLA_INIT_NESTED __NLA_INIT(NLA_NESTED, 0)
+#define NLA_INIT_STRING __NLA_INIT(NLA_STRING, 0)
+#define NLA_INIT_FLAG   __NLA_INIT(NLA_FLAG,   0)
 
 static struct nla_policy iatdr_policy[IATDR_ATTR_MAX + 1] = {
         [IATDR_ATTR_DIF_INFORMATION] = NLA_INIT_NESTED,
