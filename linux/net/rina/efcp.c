@@ -436,6 +436,8 @@ EXPORT_SYMBOL(efcp_container_receive);
 
 static int is_connection_ok(const struct connection * connection)
 {
+        LOG_MISSING;
+        /* FIXME: Add checks for policy params */
         if (!connection                                   ||
             !is_cep_id_ok(connection->source_cep_id)      ||
             !is_cep_id_ok(connection->destination_cep_id) ||
@@ -446,8 +448,7 @@ static int is_connection_ok(const struct connection * connection)
 }
 
 cep_id_t efcp_connection_create(struct efcp_container * container,
-                                struct connection *     connection,
-                                bool                    dtcp_present)
+                                struct connection *     connection)
 {
         struct efcp * tmp;
         cep_id_t      cep_id;
@@ -483,7 +484,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
         }
 
-        if (dtcp_present) {
+        if (connection->policies_params.dtcp_present) {
                 tmp->dtcp = dtcp_create();
                 if (!tmp->dtcp) {
                         efcp_destroy(tmp);
