@@ -29,7 +29,7 @@
 typedef int           port_id_t;
 
 /* ALWAYS use this function to check if the id looks good */
-int       is_port_id_ok(port_id_t id);
+bool      is_port_id_ok(port_id_t id);
 
 /* ALWAYS use this function to get a bad id */
 port_id_t port_id_bad(void);
@@ -37,7 +37,7 @@ port_id_t port_id_bad(void);
 typedef int           cep_id_t;
 
 /* ALWAYS use this function to check if the id looks good */
-int      is_cep_id_ok(cep_id_t id);
+bool     is_cep_id_ok(cep_id_t id);
 
 /* ALWAYS use this function to get a bad id */
 cep_id_t cep_id_bad(void);
@@ -52,7 +52,7 @@ typedef uint          uint_t;
 /* FIXME: Is this address_t definition correct ??? */
 typedef uint32_t      address_t;
 
-int       is_address_ok(address_t address);
+bool      is_address_ok(address_t address);
 address_t address_bad(void);
 
 typedef uint          timeout_t;
