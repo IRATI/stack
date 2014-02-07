@@ -114,9 +114,9 @@ struct rxmtq {
        
 };
 
-struct rxmtq * rxmtq_create(void) 
+struct rtxq * rtxq_create(void) 
 {
-        struct rxmtq * tmp;
+        struct rtxq * tmp;
         
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -126,7 +126,7 @@ struct rxmtq * rxmtq_create(void)
 }
 
 
-int rxmtq_destroy(struct rxmtq * q)
+int rtxq_destroy(struct rtxq * q)
 {
         if (!q)
                 return -1;

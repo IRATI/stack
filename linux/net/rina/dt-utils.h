@@ -37,20 +37,20 @@ int             cwq_push(struct cwq * q,
 struct pdu *    cwq_pop(struct cwq * q);
 bool            cwq_is_empty(struct cwq * q);
 
-struct rxmtq;
+struct rtxq;
 
-struct rxmtq *  rxmtq_create(void);
-int             rxmtq_destroy(struct rxmtq * q);
+struct rtxq *   rtxq_create(void);
+int             rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
-int             rxmtq_push(struct rxmtq * q,
-                           struct pdu *   pdu);
-int             rxmtq_drop(struct rxmtq * q,
-                           seq_num_t      from,
-                           seq_num_t      to);
-int             rxmtq_set_pop(struct rxmtq *     q,
-                              seq_num_t          from,
-                              seq_num_t          to,
-                              struct list_head * p);
+int             rtxq_push(struct rtxq *  q,
+                          struct pdu *   pdu);
+int             rtxq_drop(struct rtxq *  q,
+                          seq_num_t      from,
+                          seq_num_t      to);
+int             rtxq_set_pop(struct rtxq *      q,
+                             seq_num_t          from,
+                             seq_num_t          to,
+                             struct list_head * p);
 
 #endif
