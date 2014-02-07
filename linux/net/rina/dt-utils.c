@@ -48,7 +48,7 @@ struct cwq * cwq_create(void)
 }
 
 
-int cwq_destroy(struct cwq * queue) 
+int cwq_destroy(struct cwq * queue)
 {
         if (!queue)
                 return -1;
@@ -62,7 +62,7 @@ int cwq_destroy(struct cwq * queue)
         }
 
         rkfree(queue);
-        
+
         return 0;
 }
 
@@ -71,7 +71,7 @@ int cwq_push(struct cwq * queue,
 {
         if (!queue)
                 return -1;
-        
+
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus PDU passed");
                 return -1;
@@ -106,18 +106,18 @@ bool cwq_is_empty(struct cwq * queue)
 {
         if (!queue)
                 return false;
-        
+
         return rqueue_is_empty(queue->q);
 }
 
 struct rtxq {
-       
+
 };
 
-struct rtxq * rtxq_create(void) 
+struct rtxq * rtxq_create(void)
 {
         struct rtxq * tmp;
-        
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
