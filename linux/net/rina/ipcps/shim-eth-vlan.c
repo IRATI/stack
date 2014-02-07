@@ -680,6 +680,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 return -1;
         }
+
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
                 LOG_ERR("Dest hw is not known");

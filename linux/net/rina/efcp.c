@@ -36,8 +36,11 @@
 
 struct efcp {
         struct connection *     connection;
+
+        /* FIXME: DTP and DTCP instances to be replaced with DT instance */
         struct dtp *            dtp;
         struct dtcp *           dtcp;
+
         struct efcp_container * efcpc;
 };
 
@@ -302,13 +305,12 @@ int efcp_container_write(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_write);
 
+/* FIXME: Goes directly into RMT ... */
 int efcp_container_mgmt_write(struct efcp_container * container,
                               address_t               src_address,
                               port_id_t               port_id,
                               struct sdu *            sdu)
-{
-        return dtp_mgmt_write(container->rmt, src_address, port_id, sdu);
-}
+{ return dtp_mgmt_write(container->rmt, src_address, port_id, sdu); }
 EXPORT_SYMBOL(efcp_container_mgmt_write);
 
 struct receive_data {
@@ -436,6 +438,8 @@ EXPORT_SYMBOL(efcp_container_receive);
 
 static int is_connection_ok(const struct connection * connection)
 {
+        /* FIXME: Add checks for policy params */
+
         if (!connection                                   ||
             !is_cep_id_ok(connection->source_cep_id)      ||
             !is_cep_id_ok(connection->destination_cep_id) ||
@@ -482,19 +486,17 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
         }
 
-        /*
-         *  FIXME: We need to know if DTCP is needed ...
-         *
-         *  tmp->dtcp = dtcp_create();
-         *  if (!tmp->dtcp) {
-         *      efcp_destroy(tmp);
-         *      return -1;
-         *  }
-         *
-         * No needs to check here, bindings are straightforward
-         * dtp_bind(tmp->dtp,   tmp->dtcp);
-         * dtcp_bind(tmp->dtcp, tmp->dtp);
-         */
+        if (connection->policies_params.dtcp_present) {
+                tmp->dtcp = dtcp_create();
+                if (!tmp->dtcp) {
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+
+                /* No needs to check here, bindings are straightforward */
+                dtp_bind(tmp->dtp,   tmp->dtcp);
+                dtcp_bind(tmp->dtcp, tmp->dtp);
+        }
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,

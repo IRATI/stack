@@ -25,16 +25,16 @@
 #include "debug.h"
 #include "dt.h"
 
-struct dt_sv {
-        struct dtp_sv *  dtp_sv;
-        struct dtcp_sv * dtcp_sv;
+struct dt {
+        struct dtp *  dtp;
+        struct dtcp * dtcp;
 
-        spinlock_t       lock;
+        spinlock_t    lock;
 };
 
-struct dt_sv * dtsv_create(void)
+struct dt * dt_create(void)
 {
-        struct dt_sv * tmp;
+        struct dt * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -45,49 +45,7 @@ struct dt_sv * dtsv_create(void)
         return tmp;
 }
 
-struct dtp_sv * dtsv_dtp_take(struct dt_sv * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot take SV lock");
-                return;
-        }
-
-        spin_lock(&sv->lock);
-        return sv->dtp_sv;
-}
-
-void dtsv_dtp_release(struct dt_sv * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot release SV lock");
-                return;
-        }
-
-        spin_unlock(&sv->lock);
-}
-
-struct dtcp_sv * dtsv_dtcp_take(struct dt_sv * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot take SV lock");
-                return;
-        }
-
-        spin_lock(&sv->lock);
-        return sv->dtcp_sv;
-}
-
-void dtsv_dtcp_release(struct dt_sv * sv)
-{
-        if (!sv) {
-                LOG_ERR("Cannot release SV lock");
-                return;
-        }
-
-        spin_unlock(&sv->lock);
-}
-
-int dtsv_destroy(struct dt_sv * sv)
+int dt_destroy(struct dt * sv)
 {
         if (!sv)
                 return -1;
@@ -95,4 +53,56 @@ int dtsv_destroy(struct dt_sv * sv)
         rkfree(sv);
 
         return 0;
+}
+
+int dt_dtp_bind(struct dt *  dt, struct dtp * dtp)
+{
+        if (!dt)
+                return -1;
+
+        spin_lock(&dt->lock);
+        dt->dtp = dtp;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
+int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
+{
+        if (!dt)
+                return -1;
+
+        spin_lock(&dt->lock);
+        dt->dtcp = dtcp;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
+struct dtp * dt_dtp(struct dt * dt)
+{
+        struct dtp * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->dtp;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct dtcp * dt_dtcp(struct dt * dt)
+{
+        struct dtcp * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->dtcp;
+        spin_unlock(&dt->lock);
+
+        return tmp;
 }

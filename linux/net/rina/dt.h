@@ -25,20 +25,21 @@
 
 #include "common.h"
 
-struct dtp_sv;
-struct dtcp_sv;
-struct dt_sv;
+struct dtp;
+struct dtcp;
+struct dt;
 
-struct dt_sv *   dtsv_create(void);
-int              dtsv_destroy(struct dt_sv * sv);
+/*
+ * FIXME: The DT instance would represent the DTP/DTCP couple. It has to land
+ *        on EFCP. DTP, DTCP instances have to be removed from there
+ */
+struct dt *   dt_create(void);
+int           dt_destroy(struct dt * dt);
 
-int              dtsv_dtp_bind(struct dt_sv *  dt, struct dtp_sv *  dtp);
-int              dtsv_dtcp_bind(struct dt_sv * dt, struct dtcp_sv * dtp);
+int           dt_dtp_bind(struct dt *  dt, struct dtp *  dtp);
+int           dt_dtcp_bind(struct dt * dt, struct dtcp * dtp);
 
-struct dtp_sv *  dtsv_dtp_take(struct dt_sv * sv);
-void             dtsv_dtp_release(struct dt_sv * sv);
-
-struct dtcp_sv * dtsv_dtcp_take(struct dt_sv * sv);
-void             dtsv_dtcp_release(struct dt_sv * sv);
+struct dtp *  dt_dtp(struct dt * dt);
+struct dtcp * dt_dtcp(struct dt * dt);
 
 #endif
