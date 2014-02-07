@@ -87,6 +87,7 @@ static int queue_destroy(struct rmt_queue * q)
 
 struct rmt_qmap {
         spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
+
         DECLARE_HASHTABLE(queues, 7);
 };
 

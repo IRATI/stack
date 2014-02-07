@@ -19,6 +19,7 @@
  */
 
 #include <linux/export.h>
+#include <linux/types.h>
 
 #define RINA_PREFIX "common"
 
@@ -31,14 +32,14 @@ port_id_t port_id_bad(void)
 { return PORT_ID_WRONG; }
 EXPORT_SYMBOL(port_id_bad);
 
-int is_port_id_ok(port_id_t id)
-{ return id >= 0 ? 1 : 0; }
+bool is_port_id_ok(port_id_t id)
+{ return id >= 0 ? true : false; }
 EXPORT_SYMBOL(is_port_id_ok);
 
 #define CEP_ID_WRONG -1
 
-int is_cep_id_ok(cep_id_t id)
-{ return 1; /* FIXME: Bummer, add it */ }
+bool is_cep_id_ok(cep_id_t id)
+{ return true; /* FIXME: Bummer, add it */ }
 EXPORT_SYMBOL(is_cep_id_ok);
 
 cep_id_t cep_id_bad(void)
@@ -47,8 +48,8 @@ EXPORT_SYMBOL(cep_id_bad);
 
 #define ADDRESS_WRONG 0
 
-int is_address_ok(address_t address)
-{ return address > 0 ? 1 : 0; }
+bool is_address_ok(address_t address)
+{ return address > 0 ? true : false; }
 EXPORT_SYMBOL(is_address_ok);
 
 address_t address_bad(void)
