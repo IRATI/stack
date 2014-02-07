@@ -110,7 +110,7 @@ bool cwq_is_empty(struct cwq * queue)
         return rqueue_is_empty(queue->q);
 }
 
-struct rxmtq {
+struct rtxq {
        
 };
 
