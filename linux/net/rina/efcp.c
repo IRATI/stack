@@ -457,7 +457,7 @@ int efcp_container_receive(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_receive);
 
-static int is_connection_ok(const struct connection * connection)
+static bool is_connection_ok(const struct connection * connection)
 {
         /* FIXME: Add checks for policy params */
 
@@ -465,9 +465,9 @@ static int is_connection_ok(const struct connection * connection)
             !is_cep_id_ok(connection->source_cep_id)      ||
             !is_cep_id_ok(connection->destination_cep_id) ||
             !is_port_id_ok(connection->port_id))
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 
 cep_id_t efcp_connection_create(struct efcp_container * container,
