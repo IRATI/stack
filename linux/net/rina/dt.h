@@ -24,6 +24,7 @@
 #include <linux/kernel.h>
 
 #include "common.h"
+#include "pdu.h"
 
 struct dtp;
 struct dtcp;
@@ -41,5 +42,20 @@ int           dt_dtcp_bind(struct dt * dt, struct dtcp * dtp);
 
 struct dtp *  dt_dtp(struct dt * dt);
 struct dtcp * dt_dtcp(struct dt * dt);
+
+int           dt_closed_window_queue_push(struct dt * dt,
+                                          struct pdu * pdu);
+struct pdu *  dt_closed_window_queue_pop(struct dt * dt);
+bool          dt_closed_window_queue_is_empty(struct dt *dt);
+
+/* FIXME: Where do we keep the rexmsntimer for the PDU? */
+int           dt_rexmsn_queue_push(struct dt * dt,
+                                   struct pdu * pdu);
+int           dt_rexmsn_queue_del(struct dt * dt,
+                                  seq_num_t from,
+                                  seq_num_t to);
+struct pdu ** dt_rexmsn_queue_get(struct dt * dt,
+                                  seq_num_t from,
+                                  seq_num_t to);
 
 #endif
