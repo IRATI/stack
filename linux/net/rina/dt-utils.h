@@ -46,6 +46,7 @@ int             rxmtq_destroy(struct rxmtq * q);
 int             rxmtq_push(struct rxmtq * q,
                            struct pdu *   pdu);
 struct pdu *    rxmtq_pop(struct rxmtq * q);
+bool            rxmtq_is_empty(struct rxmtq * q);
 int             rxmtq_drop(struct rxmtq * q,
                            seq_num_t      from,
                            seq_num_t      to);
