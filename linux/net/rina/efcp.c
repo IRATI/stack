@@ -41,7 +41,7 @@ struct efcp {
         struct dtp *            dtp;
         struct dtcp *           dtcp;
 
-        struct efcp_container * efcpc;
+        struct efcp_container * container;
 };
 
 static struct efcp * efcp_create(void)
@@ -145,7 +145,6 @@ int efcp_container_destroy(struct efcp_container * container)
         if (container->cidm)       cidm_destroy(container->cidm);
 
         if (container->egress_wq)  rwq_destroy(container->egress_wq);
-
         if (container->ingress_wq) rwq_destroy(container->ingress_wq);
 
         rkfree(container);
@@ -266,9 +265,9 @@ static int efcp_write(struct efcp * efcp,
                 return -1;
         }
 
-        ASSERT(efcp->efcpc->egress_wq);
+        ASSERT(efcp->container->egress_wq);
 
-        if (rwq_work_post(efcp->efcpc->egress_wq, item)) {
+        if (rwq_work_post(efcp->container->egress_wq, item)) {
                 write_data_destroy(tmp);
                 sdu_destroy(sdu);
                 return -1;
@@ -397,9 +396,9 @@ static int efcp_receive(struct efcp * efcp,
                 return -1;
         }
 
-        ASSERT(efcp->efcpc->ingress_wq);
+        ASSERT(efcp->container->ingress_wq);
 
-        if (rwq_work_post(efcp->efcpc->ingress_wq, item)) {
+        if (rwq_work_post(efcp->container->ingress_wq, item)) {
                 receive_data_destroy(data);
                 pdu_destroy(pdu);
                 return -1;
@@ -473,7 +472,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id = cidm_allocate(container->cidm);
 
         /* We must ensure that the DTP is instantiated, at least ... */
-        tmp->efcpc                = container;
+        tmp->container            = container;
         connection->source_cep_id = cep_id;
         tmp->connection           = connection;
 
