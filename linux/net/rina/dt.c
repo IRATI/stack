@@ -24,6 +24,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "dt.h"
+#include "pdu.h"
 
 struct dt {
         struct dtp *    dtp;
