@@ -160,8 +160,53 @@ struct dtcp {
         struct dtp *           peer; /* The peering DTP instance */
 };
 
+/* FIXME: Mock up code */
 static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 {
+        struct pdu * pdu_ctrl;
+        struct pci * pci;
+
+        if (!dtcp)
+                return -1;
+
+        pdu_ctrl = pdu_create();
+        if (!pdu_ctrl)
+                return -1;
+
+        pci = pci_create();
+        if (!pci) {
+                pdu_destroy(pdu_ctrl);
+                return -1;
+        }
+        if (pci_format(pci,
+                       0,
+                       0,
+                       0,
+                       0,
+                       dtcp->sv->next_snd_ctl_seq,
+                       0,
+                       PDU_TYPE_ACK_AND_FC)) {
+                pdu_destroy(pdu_ctrl);
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_pci_set(pdu_ctrl, pci)) {
+                pdu_destroy(pdu_ctrl);
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu_control_ack_flow(pdu_ctrl,
+                             dtcp->sv->last_rcv_ctl_seq,
+                             seq,
+                             seq + dtcp->sv->rcvr_credit,
+                             0,
+                             1,
+                             dtcp->sv->send_left_wind_edge,
+                             dtcp->sv->snd_rt_wind_edge,
+                             dtcp->sv->sndr_rate);
+
         return -1;
 }
 
@@ -267,8 +312,8 @@ int dtcp_send(struct dtcp * instance,
         return -1;
 }
 
-int dtcp_notify_seq_rxmtq(struct dtcp * instance,
-                           seq_num_t     seq)
+int dtcp_notify_seq_rtxq(struct dtcp * instance,
+                          seq_num_t     seq)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");

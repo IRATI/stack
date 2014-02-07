@@ -133,5 +133,14 @@ int                   pdu_control_ack_create(struct pdu * pdu_ctrl,
                                              uint_t       my_left_wind_edge,
                                              uint_t       my_rt_wind_edge,
                                              uint_t       my_rcvr_rate);
+int                   pdu_control_ack_flow(struct pdu * pdu_ctrl,
+                                           seq_num_t    last_ctrl_seq_rcvd,
+                                           seq_num_t    ack_nack_seq,
+                                           uint_t       new_rt_wind_edge,
+                                           uint_t       new_rate,
+                                           uint_t       time_unit,
+                                           uint_t       my_left_wind_edge,
+                                           uint_t       my_rt_wind_edge,
+                                           uint_t       my_rcvr_rate);
 
 #endif
