@@ -124,11 +124,13 @@ struct dtcp_sv {
          * received until a new time unit begins
          */
         uint_t       pdus_rcvd_in_time_unit;
+
+        bool         set_drf_flag;
 };
 
 struct dtcp_policies {
         int (* flow_init)(struct dtcp * instance);
-        int (* sv_update)(struct dtcp * instance);
+        int (* sv_update)(struct dtcp * instance, seq_num_t seq);
         int (* lost_control_pdu)(struct dtcp * instance);
         int (* rtt_estimator)(struct dtcp * instance);
         int (* retransmission_timer_expiry)(struct dtcp * instance);
@@ -158,6 +160,11 @@ struct dtcp {
         struct dtp *           peer; /* The peering DTP instance */
 };
 
+static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+{
+        return -1;
+}
+
 static struct dtcp_sv default_sv = {
         .max_pdu_size           = 0,
         .trd                    = 0,
@@ -178,11 +185,12 @@ static struct dtcp_sv default_sv = {
         .rcvr_rt_wind_edge      = 0,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
+        .set_drf_flag           = false,
 };
 
 static struct dtcp_policies default_policies = {
         .flow_init                   = NULL,
-        .sv_update                   = NULL,
+        .sv_update                   = default_sv_update,
         .lost_control_pdu            = NULL,
         .rtt_estimator               = NULL,
         .retransmission_timer_expiry = NULL,
@@ -307,5 +315,18 @@ int dtcp_send(struct dtcp * instance,
         /* Takes the pdu and enqueue in its internal queues */
 
         return -1;
+}
+
+int dtcp_notify_seq_rxmtq(struct dtcp * instance,
+                           seq_num_t     seq)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        instance->sv->send_left_wind_edge = seq;
+
+        return 0;
 }
 

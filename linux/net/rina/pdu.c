@@ -520,3 +520,14 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);
+
+int pdu_control_ack_create(struct pdu * pdu_ctrl,
+                           seq_num_t    last_ctrl_seq_rcvd,
+                           uint_t       snd_left_wind_edge,
+                           uint_t       snd_rt_wind_edge,
+                           uint_t       my_left_wind_edge,
+                           uint_t       my_rt_wind_edge,
+                           uint_t       my_rcvr_rate)
+{
+        return -1;
+}

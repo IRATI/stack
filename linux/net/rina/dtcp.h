@@ -38,4 +38,7 @@ int           dtcp_unbind(struct dtcp * instance);
 int           dtcp_send(struct dtcp * instance,
                         struct sdu *  sdu);
 
+int           dtcp_notify_seq_rxmtq(struct dtcp * instance,
+                                     seq_num_t     seq);
+
 #endif
