@@ -75,7 +75,7 @@ static int efcp_destroy(struct efcp * instance)
         if (instance->dt) {
                 struct dtp *  dtp  = dt_dtp(instance->dt);
                 struct dtcp * dtcp = dt_dtcp(instance->dt);
-                
+
                 /* FIXME: We should watch for memleaks here ... */
                 if (dtp)  dtp_destroy(dtp);
                 if (dtcp) dtcp_destroy(dtcp);
@@ -92,7 +92,7 @@ static int efcp_destroy(struct efcp * instance)
                         cidm_release(instance->container->cidm,
                                      instance->connection->source_cep_id);
                 }
-      
+
                 rkfree(instance->connection);
         }
 
@@ -243,12 +243,12 @@ static int efcp_write_worker(void * o)
                 LOG_ERR("No DTP instance available");
                 return -1;
         }
-        
+
         if (dtp_write(dtp, tmp->sdu)) {
                 LOG_ERR("Could not write SDU to DTP");
                 return -1;
         }
-        
+
         return 0;
 }
 
@@ -384,7 +384,7 @@ static int efcp_receive_worker(void * o)
                 LOG_ERR("No DTP instance available");
                 return -1;
         }
-        
+
         if (dtp_receive(dtp, tmp->pdu)) {
                 LOG_ERR("Could not receive SDU from DTP");
                 return -1;

@@ -251,11 +251,11 @@ static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {
 
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
-                .flags  = 0,                    \
-                .policy = POLICY,               \
-                .doit   = dispatcher,           \
-                .dumpit = NULL,                 \
-}
+                        .flags  = 0,            \
+                        .policy = POLICY,       \
+                        .doit   = dispatcher,   \
+                        .dumpit = NULL,         \
+                        }
 
 static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, iatdr_policy),
