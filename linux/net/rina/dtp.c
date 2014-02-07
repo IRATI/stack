@@ -175,55 +175,6 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
-/* FIXME: Do we really need bind() alike operation ? */
-int dtp_bind(struct dtp *  instance,
-             struct dtcp * peer)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-        if (!peer) {
-                LOG_ERR("Bad peer passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                if (instance->peer != peer) {
-                        LOG_ERR("This instance is already bound to "
-                                "a different DTCP peer, unbind it first !");
-                        return -1;
-                }
-
-                LOG_DBG("This instance is already bound to the same peer ...");
-                return 0;
-        }
-
-        instance->peer = peer;
-
-        return 0;
-}
-
-/* FIXME: Do we really need unbind() alike operation ? */
-int dtp_unbind(struct dtp * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                LOG_DBG("Instance %pK unbound from DTCP peer %pK",
-                        instance, instance->peer);
-                instance->peer = NULL;
-        } else {
-                LOG_DBG("Instance %pK was not bound to a peer DTCP", instance);
-        }
-
-        return 0;
-
-}
-
 #if 0
 static int apply_policy_CsldWinQ(struct dtp * dtp,
                                  struct sdu * sdu)

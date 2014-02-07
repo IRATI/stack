@@ -34,11 +34,6 @@ struct dtp * dtp_create(struct rmt *        rmt,
                         struct connection * connection);
 int          dtp_destroy(struct dtp * instance);
 
-/* FIXME: Do we really need bind() and unbind() alike operations ? */
-int          dtp_bind(struct dtp *  instance,
-                      struct dtcp * peer);
-int          dtp_unbind(struct dtp * instance);
-
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);
