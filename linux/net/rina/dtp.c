@@ -48,7 +48,13 @@ struct dtp_sv {
 
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
-        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
+        int (* transmission_control)(struct dtp * instance);
+        int (* closed_window_queue)(struct dtp * instance);
+        int (* flow_control_overrun)(struct dtp * instance);
+        int (* unknown_flow)(struct dtp * instance);
+        int (* initial_sequence_number)(struct dtp * instance);
+        int (* receiver_inactivity_timer)(struct dtp * instance);
+        int (* sender_inactivitty_timer)(struct dtp * instance);
 };
 
 #define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
@@ -86,7 +92,13 @@ static struct dtp_sv default_sv = {
 };
 
 static struct dtp_policies default_policies = {
-        .xxx_fixme_add_policies_here = NULL
+        .transmission_control = NULL,
+        .closed_window_queue = NULL,
+        .flow_control_overrun = NULL,
+        .unknown_flow = NULL,
+        .initial_sequence_number = NULL,
+        .receiver_inactivity_timer = NULL,
+        .sender_inactivitty_timer = NULL,
 };
 
 static void tf_sender_inactivity(void * data)

@@ -26,10 +26,13 @@
 #include "dt.h"
 
 struct dt {
-        struct dtp *  dtp;
-        struct dtcp * dtcp;
+        struct dtp *    dtp;
+        struct dtcp *   dtcp;
 
-        spinlock_t    lock;
+        struct rqueue * rexmsn_queue;
+        struct rqueue * closed_window_queue;
+
+        spinlock_t      lock;
 };
 
 struct dt * dt_create(void)
@@ -42,6 +45,24 @@ struct dt * dt_create(void)
 
         spin_lock_init(&tmp->lock);
 
+        /* FXIME: Only create the queues when they are needed */
+        tmp->rexmsn_queue = rqueue_create();
+        if (!tmp->rexmsn_queue) {
+                LOG_ERR("Failed to create rexmsn queue");
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->closed_window_queue = rqueue_create();
+        if (!tmp->closed_window_queue) {
+                LOG_ERR("Failed to create closed window queue");
+                if (rqueue_destroy(tmp->rexmsn_queue,
+                                   (void (*)(void *)) pdu_destroy))
+                        LOG_ERR("Failed to destroy rexmsn queue");
+                rkfree(tmp);
+                return NULL;
+        }
+
         return tmp;
 }
 
@@ -49,6 +70,22 @@ int dt_destroy(struct dt * sv)
 {
         if (!sv)
                 return -1;
+
+        if (sv->rexmsn_queue) {
+                if (rqueue_destroy(sv->rexmsn_queue,
+                                   (void (*)(void *)) pdu_destroy)) {
+                        LOG_ERR("Failed to destroy rexmsn queue");
+                        return -1;
+                }
+        }
+
+        if (sv->closed_window_queue) {
+                if (rqueue_destroy(sv->closed_window_queue,
+                                   (void (*)(void *)) pdu_destroy)) {
+                        LOG_ERR("Failed to destroy closed window queue");
+                        return -1;
+                }
+        }
 
         rkfree(sv);
 
