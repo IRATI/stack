@@ -22,7 +22,7 @@
 #ifndef RINA_DT_UTILS_H
 #define RINA_DT_UTILS_H
 
-#include <linux/types.h>
+#include <linux/list.h>
 
 #include "common.h"
 #include "pdu.h"
@@ -30,26 +30,28 @@
 struct cwq;
 
 struct cwq *    cwq_create(void);
-int             cwq_destroy(struct cwq * cwq);
+int             cwq_destroy(struct cwq * q);
 
-int             cwq_push(struct dt * dt,
+int             cwq_push(struct cwq * q,
                          struct pdu * pdu);
-struct pdu *    cwq_pop(struct dt * dt);
-bool            cwq_is_empty(struct dt *dt);
+struct pdu *    cwq_pop(struct cwq * q);
+bool            cwq_is_empty(struct cwq * q);
 
-struct rexmsnq;
+struct rxmtq;
 
-struct rexmsn * rexmsnq_create(void);
-int             rexmsnq_destroy(struct rexmsn * rexmsn);
+struct rxmtq *  rxmtq_create(void);
+int             rxmtq_destroy(struct rxmtq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
-int             rexmsnq_push(struct dt * dt,
-                             struct pdu * pdu);
-int             rexmsnq_del(struct dt * dt,
-                            seq_num_t from,
-                            seq_num_t to);
-struct pdu **   rexmsnq_get(struct dt * dt,
-                            seq_num_t from,
-                            seq_num_t to);
+int             rxmtq_push(struct rxmtq * q,
+                           struct pdu *   pdu);
+struct pdu *    rxmtq_pop(struct rxmtq * q);
+int             rxmtq_drop(struct rxmtq * q,
+                           seq_num_t      from,
+                           seq_num_t      to);
+int             rxmtq_set_pop(struct rxmtq *     q,
+                              seq_num_t          from,
+                              seq_num_t          to,
+                              struct list_head * p);
 
 #endif
