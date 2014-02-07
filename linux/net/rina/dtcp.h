@@ -35,6 +35,6 @@ int           dtcp_send(struct dtcp * instance,
                         struct sdu *  sdu);
 
 int           dtcp_notify_seq_rtxq(struct dtcp * instance,
-                                    seq_num_t     seq);
+                                   seq_num_t     seq);
 
 #endif
