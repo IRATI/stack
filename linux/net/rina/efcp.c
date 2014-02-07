@@ -41,6 +41,17 @@ struct efcp {
         struct efcp_container * container;
 };
 
+struct efcp_container {
+        struct efcp_imap *        instances;
+        struct cidm *             cidm;
+        struct dt_cons            dt_cons;
+        struct rmt *              rmt;
+        struct kfa *              kfa;
+
+        struct workqueue_struct * egress_wq;
+        struct workqueue_struct * ingress_wq;
+};
+
 static struct efcp * efcp_create(void)
 {
         struct efcp * instance;
@@ -73,7 +84,17 @@ static int efcp_destroy(struct efcp * instance)
         } else
                 LOG_WARN("No DT instance present");
 
-        if (instance->connection) rkfree(instance->connection);
+        if (instance->connection) {
+                if (is_cep_id_ok(instance->connection->source_cep_id)) {
+                        ASSERT(instance->container);
+                        ASSERT(instance->container->cidm);
+
+                        cidm_release(instance->container->cidm,
+                                     instance->connection->source_cep_id);
+                }
+      
+                rkfree(instance->connection);
+        }
 
         rkfree(instance);
 
@@ -81,17 +102,6 @@ static int efcp_destroy(struct efcp * instance)
 
         return 0;
 }
-
-struct efcp_container {
-        struct efcp_imap *        instances;
-        struct cidm *             cidm;
-        struct dt_cons            dt_cons;
-        struct rmt *              rmt;
-        struct kfa *              kfa;
-
-        struct workqueue_struct * egress_wq;
-        struct workqueue_struct * ingress_wq;
-};
 
 struct efcp_container * efcp_container_create(struct kfa * kfa)
 {
@@ -483,22 +493,25 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (!tmp)
                 return cep_id_bad();
 
-        cep_id = cidm_allocate(container->cidm);
-
-        /* We must ensure that the DTP is instantiated, at least ... */
-        tmp->container            = container;
-
-        /* FIXME: We change the connection cep-id an return cep-id ... */
-        connection->source_cep_id = cep_id;
-        tmp->connection           = connection;
-
-        tmp->dt                   = dt_create();
+        tmp->dt = dt_create();
         if (!tmp->dt) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
 
         ASSERT(tmp->dt);
+
+        cep_id = cidm_allocate(container->cidm);
+
+        /* We must ensure that the DTP is instantiated, at least ... */
+        tmp->container            = container;
+
+        /* Initial value to avoid problems in case of errors */
+        connection->source_cep_id = cep_id_bad();
+
+        /* FIXME: We change the connection cep-id and we return cep-id ... */
+        connection->source_cep_id = cep_id;
+        tmp->connection           = connection;
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(container->rmt,
@@ -517,6 +530,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
         }
 
+        dtcp = NULL;
         if (connection->policies_params.dtcp_present) {
                 dtcp = dtcp_create();
                 if (!dtcp) {
