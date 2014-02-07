@@ -24,15 +24,16 @@
 #include "utils.h"
 #include "debug.h"
 #include "dt.h"
+#include "pdu.h"
 
 struct dt {
-        struct dtp *  dtp;
-        struct dtcp * dtcp;
+        struct dtp *    dtp;
+        struct dtcp *   dtcp;
 
         struct rqueue * rexmsn_queue;
         struct rqueue * closed_window_queue;
 
-        spinlock_t    lock;
+        spinlock_t      lock;
 };
 
 struct dt * dt_create(void)
@@ -70,7 +71,6 @@ int dt_destroy(struct dt * sv)
 {
         if (!sv)
                 return -1;
-
 
         if (sv->rexmsn_queue) {
                 if (rqueue_destroy(sv->rexmsn_queue,
