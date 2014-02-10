@@ -354,6 +354,22 @@ struct pdu * pdu_create_ni(void)
 { return pdu_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(pdu_create_ni);
 
+static struct pdu * pdu_create_from_gfp(gfp_t              flags,
+                                        const struct sdu * sdu)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+
+struct pdu * pdu_create_from(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_KERNEL, sdu); }
+EXPORT_SYMBOL(pdu_create_from);
+
+struct pdu * pdu_create_from_ni(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
+EXPORT_SYMBOL(pdu_create_from_ni);
+
 static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                                         struct sdu * sdu)
 {
@@ -361,9 +377,7 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
         const struct buffer * tmp_buff;
         const uint8_t *       ptr;
 
-        /*
-         * FIXME: This implementation is pure crap, please fix it soon
-         */
+        /* FIXME: This implementation is pure crap, please fix it soon */
 
         if (!sdu_is_ok(sdu))
                 return NULL;
@@ -388,6 +402,13 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                                        ptr + sizeof(struct pci),
                                        (buffer_length(sdu->buffer) -
                                         sizeof(struct pci)));
+
+        /*
+         * NOTE: We took ownership of the SDU and "theoretically" we built a
+         *       PDU from the SDU. Due to this crap implementation, we're
+         *       destroying the input SDU now
+         */
+        sdu_destroy(sdu);
 
         ASSERT(pdu_is_ok(tmp_pdu));
 
