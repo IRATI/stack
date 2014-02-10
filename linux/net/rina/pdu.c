@@ -329,7 +329,7 @@ struct pdu {
 };
 
 bool pdu_is_ok(const struct pdu * p)
-{ return (p && pci_is_ok(p->pci) && p->buffer) ? true : false; }
+{ return (p && pci_is_ok(p->pci) && buffer_is_ok(p->buffer)) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
 static struct pdu * pdu_create_gfp(gfp_t flags)
@@ -406,7 +406,7 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
         struct pdu * tmp;
 
         /*
-         * FIXME: We use pdu_create_from_gfp to mimic the intended behavior 
+         * FIXME: We use pdu_create_from_gfp to mimic the intended behavior
          *        of pdu_create_with_gfp. This implementation has to be fixed.
          */
 
