@@ -718,7 +718,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        retval = dev_queue_xmit(skb );
+        retval = dev_queue_xmit(skb);
         if (retval != NET_XMIT_SUCCESS) {
                 LOG_ERR("Problems in dev_queue_xmit (%d)", retval);
                 sdu_destroy(sdu);
