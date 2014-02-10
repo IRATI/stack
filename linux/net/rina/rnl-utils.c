@@ -1078,10 +1078,53 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         return 0;
 }
 
-static int parse_conn_policies_params(struct nlattr *      ccp_attr,
-                                      struct conn_p_params cpp_struct)
+static int parse_conn_policies_params(struct nlattr *        cpp_attr,
+                                      struct conn_p_params * cpp_struct)
 {
-        LOG_MISSING;
+        struct nla_policy attr_policy[CPP_ATTR_MAX + 1];
+        struct nlattr * attrs[CPP_ATTR_MAX + 1];
+
+        attr_policy[CPP_ATTR_DTCP_PRESENT].type              = NLA_FLAG;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].len               = 0;
+        attr_policy[CPP_ATTR_FLOW_CONTROL].type              = NLA_FLAG;
+        attr_policy[CPP_ATTR_FLOW_CONTROL].len               = 0;
+        attr_policy[CPP_ATTR_RTX_CONTROL].type               = NLA_FLAG;
+        attr_policy[CPP_ATTR_RTX_CONTROL].len                = 0;
+        attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].type = NLA_FLAG;
+        attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].len  = 0;
+        attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type   = NLA_FLAG;
+        attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].len    = 0;
+        attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].type    = NLA_U32;
+        attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].len     = 4;
+
+        if (nla_parse_nested(attrs,
+                             CPP_ATTR_MAX,
+                             cpp_attr, attr_policy) < 0)
+                return -1;
+
+        if (attrs[CPP_ATTR_DTCP_PRESENT])
+                cpp_struct->dtcp_present =
+                        nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
+
+        if (attrs[CPP_ATTR_FLOW_CONTROL])
+                cpp_struct->flow_ctrl =
+                        nla_get_flag(attrs[CPP_ATTR_FLOW_CONTROL]);
+
+        if (attrs[CPP_ATTR_RTX_CONTROL])
+                cpp_struct->rtx_ctrl =
+                        nla_get_flag(attrs[CPP_ATTR_RTX_CONTROL]);
+
+        if (attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL])
+                cpp_struct->window_based_fctrl =
+                        nla_get_flag(attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL]);
+
+        if (attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL])
+                cpp_struct->rate_based_fctrl =
+                        nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]);
+
+        if (attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH])
+                cpp_struct->max_closed_winq_length =
+                        nla_get_u32(attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH]);
         return 0;
 }
 
@@ -1243,7 +1286,7 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
                 msg_attrs->qos_id   =
                         nla_get_u32(info->attrs[ICCRQ_ATTR_QOS_ID]);
         if (parse_conn_policies_params(info->attrs[ICCRQ_ATTR_POLICIES_PARAMS],
-                                       msg_attrs->cp_params)) {
+                                       &msg_attrs->cp_params)) {
                 LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION_"
                                                 "CREATE_REQUEST"));
                 return -1;
@@ -1275,7 +1318,7 @@ rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
                 msg_attrs->flow_user_ipc_process_id =
                         nla_get_u16(info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID]);
         if (parse_conn_policies_params(info->attrs[ICCA_ATTR_POLICIES_PARAMS],
-                                       msg_attrs->cp_params)) {
+                                       &msg_attrs->cp_params)) {
                 LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION_"
                                                 "CREATE_ARRIVED"));
                 return -1;
