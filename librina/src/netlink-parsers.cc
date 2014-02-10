@@ -1545,6 +1545,28 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	return result;
 }
 
+int putConnectionPoliciesParametersObject(nl_msg* netlinkMessage,
+		const ConnectionPoliciesParameters& object) {
+	if (object.isDTCPpresent())
+	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_DTCP_PRESENT);
+	if (object.isFlowControl())
+	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_FLOW_CONTROL);
+	if (object.isRTXcontrol())
+	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_RTX_CONTROL);
+	if (object.isWindowBasedFlowControl())
+	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_WINDOW_BASED_FLOW_CONTROL);
+	if (object.isRateBasedFlowControl())
+	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_RATE_BASED_FLOW_CONTROL);
+	NLA_PUT_U32(netlinkMessage, CPP_ATTR_MAX_CLOSED_WINQ_LENGTH,
+			object.getMaxClosedWindowQueueLength());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building ConnectionPoliciesParameters Netlink object");
+	return -1;
+}
+
 ConnectionPoliciesParameters *
 parseConnectionPoliciesParametersObject(nlattr *nested) {
 	struct nla_policy attr_policy[CCP_ATTR_MAX + 1];
@@ -2724,6 +2746,10 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDRESS,
                                 object.getDestAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID, object.getQosId());
+        if (putConnectionPoliciesParametersObject(netlinkMessage,
+                        object.getConnPoliciesParams()) < 0) {
+                goto nla_put_failure;
+        }
 
         return 0;
 
