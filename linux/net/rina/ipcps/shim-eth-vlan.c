@@ -652,7 +652,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(sdu);
 
-        LOG_DBG("Entered the sdu write");
+        LOG_DBG("Entered the sdu-write");
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
@@ -677,20 +677,21 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
-                LOG_ERR("Failed to get src hw addr");
+                LOG_ERR("Failed to get source HW addr");
                 sdu_destroy(sdu);
                 return -1;
         }
 
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
-                LOG_ERR("Dest hw is not known");
+                LOG_ERR("Destination HW address is unknown");
                 sdu_destroy(sdu);
                 return -1;
         }
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
+                LOG_ERR("Cannot allocate a skb");
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -707,13 +708,16 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 return -1;
         }
+
         sdu_destroy(sdu);
 
         skb->dev      = data->dev;
         skb->protocol = htons(ETH_P_RINA);
 
-        if (dev_hard_header(skb, data->dev, ETH_P_RINA,
-                            dest_hw, src_hw, skb->len) < 0) {
+        retval = dev_hard_header(skb, data->dev,
+                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
+        if (retval < 0) {
+                LOG_ERR("Problems in dev_hard_header (%d)", retval);
                 kfree_skb(skb);
                 return -1;
         }
