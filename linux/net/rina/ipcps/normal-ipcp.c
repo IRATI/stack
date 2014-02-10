@@ -39,7 +39,6 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "efcp-utils.h"
-#include "efcp-utils.h"
 #include "connection.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
