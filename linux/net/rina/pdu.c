@@ -357,22 +357,6 @@ EXPORT_SYMBOL(pdu_create_ni);
 static struct pdu * pdu_create_from_gfp(gfp_t              flags,
                                         const struct sdu * sdu)
 {
-        LOG_MISSING;
-
-        return NULL;
-}
-
-struct pdu * pdu_create_from(const struct sdu * sdu)
-{ return pdu_create_from_gfp(GFP_KERNEL, sdu); }
-EXPORT_SYMBOL(pdu_create_from);
-
-struct pdu * pdu_create_from_ni(const struct sdu * sdu)
-{ return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
-EXPORT_SYMBOL(pdu_create_from_ni);
-
-static struct pdu * pdu_create_with_gfp(gfp_t        flags,
-                                        struct sdu * sdu)
-{
         struct pdu *          tmp_pdu;
         const struct buffer * tmp_buff;
         const uint8_t *       ptr;
@@ -403,16 +387,39 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                                        (buffer_length(sdu->buffer) -
                                         sizeof(struct pci)));
 
-        /*
-         * NOTE: We took ownership of the SDU and "theoretically" we built a
-         *       PDU from the SDU. Due to this crap implementation, we're
-         *       destroying the input SDU now
-         */
-        sdu_destroy(sdu);
-
         ASSERT(pdu_is_ok(tmp_pdu));
 
         return tmp_pdu;
+}
+
+struct pdu * pdu_create_from(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_KERNEL, sdu); }
+EXPORT_SYMBOL(pdu_create_from);
+
+struct pdu * pdu_create_from_ni(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
+EXPORT_SYMBOL(pdu_create_from_ni);
+
+static struct pdu * pdu_create_with_gfp(gfp_t        flags,
+                                        struct sdu * sdu)
+{
+        struct pdu * tmp;
+
+        /*
+         * FIXME: We use pdu_create_from_gfp to mimic the intended behavior 
+         *        of pdu_create_with_gfp. This implementation has to be fixed.
+         */
+
+        tmp = pdu_create_from_gfp(flags, sdu);
+
+        /*
+         * NOTE: We took ownership of the SDU and "theoretically" we built a
+         *       PDU from the SDU. Due to this crap implementation, we're
+         *       destroying the input SDU now ...
+         */
+        sdu_destroy(sdu);
+
+        return tmp;
 }
 
 struct pdu * pdu_create_with(struct sdu * sdu)
