@@ -71,6 +71,17 @@ enum ipcp_config_entry_attrs_list {
 };
 #define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
 
+enum conn_policies_params_attrs_list {
+        CPP_ATTR_DTCP_PRESENT = 1,
+        CPP_ATTR_FLOW_CONTROL,
+        CPP_ATTR_RTX_CONTROL,
+        CPP_ATTR_WINDOW_BASED_FLOW_CONTROL,
+        CPP_ATTR_RATE_BASED_FLOW_CONTROL,
+        CPP_ATTR_MAX_CLOSED_WINQ_LENGTH,
+        __CPP_ATTR_MAX,
+};
+#define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)
+
 /* FIXME: in user space these are called without _NAME */
 enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_SOURCE_APP_NAME = 1,

@@ -400,10 +400,15 @@ struct pdu * pdu_create_from_ni(const struct sdu * sdu)
 { return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
 EXPORT_SYMBOL(pdu_create_from_ni);
 
+/* FIXME: This code must be completely re-written */
 static struct pdu * pdu_create_with_gfp(gfp_t        flags,
                                         struct sdu * sdu)
 {
         struct pdu * tmp;
+
+        /* Just to prevent complaints from sdu_destroy */
+        if (!sdu_is_ok(sdu))
+                return NULL;
 
         /*
          * FIXME: We use pdu_create_from_gfp to mimic the intended behavior
