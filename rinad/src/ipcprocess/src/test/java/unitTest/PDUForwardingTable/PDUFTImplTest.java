@@ -40,6 +40,7 @@ public class PDUFTImplTest {
 	public void set()
 	{
 		impl = new PDUFTImpl(2147483647);
+		impl.setTest(true);
 	}
 	@Test
 	public void PDUFTImpl_Constructor_True()
@@ -64,7 +65,7 @@ public class PDUFTImplTest {
 		
 		impl.flowAllocated(1, 1, 2, 1);
 		
-		Assert.assertTrue(impl.flowdeAllocated(1));
+		Assert.assertTrue(impl.flowDeallocated(1));
 	}
 
 	@Test
@@ -75,7 +76,7 @@ public class PDUFTImplTest {
 		
 		impl.flowAllocated(1, 1, 2, 1);
 		
-		Assert.assertFalse(impl.flowdeAllocated(2));
+		Assert.assertFalse(impl.flowDeallocated(2));
 	}
 	
 	@Test
@@ -322,4 +323,5 @@ public class PDUFTImplTest {
 		
 		Assert.assertTrue(rib.waitingResponse);
 	}
+	
 }

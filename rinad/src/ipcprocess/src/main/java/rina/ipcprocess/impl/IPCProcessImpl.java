@@ -586,8 +586,31 @@ public class IPCProcessImpl implements IPCProcess {
      * Returns the list of IPC processes that are part of the DIF this IPC Process is part of
      * @return
      */
-    public List<Neighbor> getNeighbors(){
-            return enrollmentTask.getNeighbors();
+    public List<Neighbor> getNeighbors()
+    {
+        return enrollmentTask.getNeighbors();
     }
+
+	@Override
+	public long getAdressByname(ApplicationProcessNamingInformation name) 
+	{
+		List<Neighbor> neighbors = getNeighbors();
+		long address = 0;
+		int i = -1;
+		boolean end = false;
+		
+		while (!end | i < neighbors.size())
+		{
+			Neighbor n = neighbors.get(i);
+			if (n.getName() == name)
+			{
+				address= n.getAddress();
+				end = true;
+			}
+			i++;
+		}
+			
+		return address;
+	}
 
 }

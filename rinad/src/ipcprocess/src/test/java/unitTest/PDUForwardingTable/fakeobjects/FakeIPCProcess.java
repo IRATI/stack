@@ -118,5 +118,10 @@ public class FakeIPCProcess implements IPCProcess{
 		// TODO Auto-generated method stub
 		return null;
 	}
+	@Override
+	public long getAdressByname(ApplicationProcessNamingInformation arg0) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
 }

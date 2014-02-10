@@ -6,7 +6,7 @@ import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.RoutingAlgorith
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.VertexInt;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 
-public interface PDUFTInt {
+public interface PDUFTable {
 	public void setIPCProcess(IPCProcess ipcProcess);
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex);
@@ -15,7 +15,7 @@ public interface PDUFTInt {
 
 	public boolean flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
 
-	public boolean flowdeAllocated(int portId);
+	public boolean flowDeallocated(int portId);
 
 	public boolean propagateFSDB();
 
@@ -24,5 +24,7 @@ public interface PDUFTInt {
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
 	public void ForwardingTableupdate ();
+	
+	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
 }

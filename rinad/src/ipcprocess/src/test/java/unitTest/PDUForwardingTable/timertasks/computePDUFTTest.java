@@ -5,7 +5,7 @@ import junit.framework.Assert;
 
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTInt;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTable;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;
@@ -19,7 +19,7 @@ import org.junit.Test;
 public class computePDUFTTest {
 	
 	protected ComputePDUFT compute = null;
-	protected PDUFTInt impl = null;
+	protected PDUFTable impl = null;
 
 	@Before
 	public void setup()
