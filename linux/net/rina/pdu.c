@@ -329,7 +329,7 @@ struct pdu {
 };
 
 bool pdu_is_ok(const struct pdu * p)
-{ return (p && p->pci && p->buffer) ? true : false; }
+{ return (p && pci_is_ok(p->pci) && p->buffer) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
 static struct pdu * pdu_create_gfp(gfp_t flags)
@@ -483,6 +483,15 @@ const struct pci * pdu_pci_get_ro(const struct pdu * pdu)
         return pdu->pci;
 }
 EXPORT_SYMBOL(pdu_pci_get_ro);
+
+bool pdu_pci_present(const struct pdu * pdu)
+{
+        if (!pdu_is_ok(pdu))
+                return false;
+
+        return pdu->pci ? true : false;
+}
+EXPORT_SYMBOL(pdu_pci_present);
 
 struct pci * pdu_pci_get_rw(struct pdu * pdu)
 {

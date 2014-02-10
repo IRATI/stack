@@ -110,6 +110,8 @@ struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
 struct pdu *          pdu_dup(const struct pdu * pdu);
 struct pdu *          pdu_dup_ni(const struct pdu * pdu);
+
+/* NOTE: PCI is ok and has a buffer */
 bool                  pdu_is_ok(const struct pdu * pdu);
 const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu);
 struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);
@@ -117,6 +119,9 @@ struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);
 /* NOTE: Takes ownership of the buffer passed */
 int                   pdu_buffer_set(struct pdu *    pdu,
                                      struct buffer * buffer);
+
+/* NOTE: Please use this "method" instead of pdu_pci_get_*(), for checks */
+bool                  pdu_pci_present(const struct pdu * pdu);
 
 const struct pci *    pdu_pci_get_ro(const struct pdu * pdu);
 struct pci *          pdu_pci_get_rw(struct pdu * pdu);
