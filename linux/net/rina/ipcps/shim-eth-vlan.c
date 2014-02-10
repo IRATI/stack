@@ -647,6 +647,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
+        int                      retval;
 
         ASSERT(data);
         ASSERT(sdu);
@@ -717,15 +718,17 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Problems in dev_queue_xmit");
+        retval = dev_queue_xmit(skb);
+        if (retval) {
+                LOG_ERR("Problems in dev_queue_xmit (%d)", retval);
                 kfree_skb(skb);
                 sdu_destroy(sdu);
                 return -1;
         }
 
         sdu_destroy(sdu);
-        LOG_DBG("Sent a packet");
+
+        LOG_DBG("Packet sent");
 
         return 0;
 }

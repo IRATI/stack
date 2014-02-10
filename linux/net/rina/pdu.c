@@ -329,7 +329,7 @@ struct pdu {
 };
 
 bool pdu_is_ok(const struct pdu * p)
-{ return (p && pci_is_ok(p->pci) && p->buffer) ? true : false; }
+{ return (p && pci_is_ok(p->pci) && buffer_is_ok(p->buffer)) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
 static struct pdu * pdu_create_gfp(gfp_t flags)
@@ -354,16 +354,14 @@ struct pdu * pdu_create_ni(void)
 { return pdu_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(pdu_create_ni);
 
-static struct pdu * pdu_create_with_gfp(gfp_t        flags,
-                                        struct sdu * sdu)
+static struct pdu * pdu_create_from_gfp(gfp_t              flags,
+                                        const struct sdu * sdu)
 {
         struct pdu *          tmp_pdu;
         const struct buffer * tmp_buff;
         const uint8_t *       ptr;
 
-        /*
-         * FIXME: This implementation is pure crap, please fix it soon
-         */
+        /* FIXME: This implementation is pure crap, please fix it soon */
 
         if (!sdu_is_ok(sdu))
                 return NULL;
@@ -392,6 +390,36 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
         ASSERT(pdu_is_ok(tmp_pdu));
 
         return tmp_pdu;
+}
+
+struct pdu * pdu_create_from(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_KERNEL, sdu); }
+EXPORT_SYMBOL(pdu_create_from);
+
+struct pdu * pdu_create_from_ni(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
+EXPORT_SYMBOL(pdu_create_from_ni);
+
+static struct pdu * pdu_create_with_gfp(gfp_t        flags,
+                                        struct sdu * sdu)
+{
+        struct pdu * tmp;
+
+        /*
+         * FIXME: We use pdu_create_from_gfp to mimic the intended behavior
+         *        of pdu_create_with_gfp. This implementation has to be fixed.
+         */
+
+        tmp = pdu_create_from_gfp(flags, sdu);
+
+        /*
+         * NOTE: We took ownership of the SDU and "theoretically" we built a
+         *       PDU from the SDU. Due to this crap implementation, we're
+         *       destroying the input SDU now ...
+         */
+        sdu_destroy(sdu);
+
+        return tmp;
 }
 
 struct pdu * pdu_create_with(struct sdu * sdu)
