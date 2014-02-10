@@ -30,7 +30,10 @@ struct rtimer * rtimer_create_ni(void (* function)(void * data),
 int             rtimer_destroy(struct rtimer * timer);
 
 int             rtimer_start(struct rtimer * timer,
-                             unsigned int    millisec);
+                             unsigned int    millisecs);
+bool            rtimer_is_pending(struct rtimer * timer);
 int             rtimer_stop(struct rtimer * timer);
+int             rtimer_restart(struct rtimer * timer,
+                               unsigned int    millisecs);
 
 #endif

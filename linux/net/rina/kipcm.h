@@ -24,7 +24,7 @@
 #define RINA_KIPCM_H
 
 #include "common.h"
-#include "ipcp.h"
+#include "ipcp-instances.h"
 #include "ipcp-factories.h"
 #include "du.h"
 #include "rnl.h"

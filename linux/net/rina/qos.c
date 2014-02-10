@@ -32,6 +32,6 @@ qos_id_t qos_id_bad(void)
 { return QOS_ID_WRONG; }
 EXPORT_SYMBOL(qos_id_bad);
 
-int is_qos_id_ok(qos_id_t id)
-{ return id != QOS_ID_WRONG ? 1 : 0; }
+bool is_qos_id_ok(qos_id_t id)
+{ return id != QOS_ID_WRONG ? true : false; }
 EXPORT_SYMBOL(is_qos_id_ok);

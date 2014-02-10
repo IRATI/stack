@@ -23,7 +23,7 @@
 #define RINA_PIM_H
 
 #include "common.h"
-#include "ipcp.h"
+#include "ipcp-instances.h"
 
 /* Port/IPCP-Instance Mapping */
 struct pim;

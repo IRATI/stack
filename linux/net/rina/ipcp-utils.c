@@ -283,16 +283,18 @@ EXPORT_SYMBOL(name_dup);
         ((X->FIELD && Y->FIELD) ? string_cmp(X->FIELD, Y->FIELD) :      \
          ((!X->FIELD && !Y->FIELD) ? 0 : -1))
 
-bool is_name_ok(const struct name * n)
-{ return (!n && n->process_name); }
+/* NOTE: RINA reference model says only process_name is mandatory */
+bool name_is_ok(const struct name * n)
+{ return (n && n->process_name); }
+EXPORT_SYMBOL(name_is_ok);
 
-static int name_is_equal_internal(const struct name * a,
-                                  const struct name * b)
+bool name_is_equal(const struct name * a,
+                   const struct name * b)
 {
         if (a == b)
-                return 0;
+                return true;
         if (!a || !b)
-                return -1;
+                return false;
 
         ASSERT(a != b);
         ASSERT(a != NULL);
@@ -300,19 +302,16 @@ static int name_is_equal_internal(const struct name * a,
 
         /* Now compare field by field */
         if (NAME_CMP_FIELD(a, b, process_name))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, process_instance))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, entity_name))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, entity_instance))
-                return -1;
+                return false;
 
-        return 0;
+        return true;
 }
-
-bool name_is_equal(const struct name * a, const struct name * b)
-{ return !name_is_equal_internal(a, b) ? true : false; }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"

@@ -1,5 +1,5 @@
 /*
- * RNL (RINA NetLink support)
+ * RNL (RINA NetLink Layer)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
@@ -35,6 +35,9 @@
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
 
+/* FIXME: This should be done more "dynamically" */
+#define NETLINK_RINA_A_MAX ICCA_ATTR_MAX
+
 struct message_handler {
         void *             data;
         message_handler_cb cb;
@@ -49,14 +52,13 @@ struct rnl_set {
 static struct rnl_set * default_set = NULL;
 struct genl_family      rnl_nl_family = {
         .id      = GENL_ID_GENERATE,
-        /* .hdrsize = 0, */
         .hdrsize = sizeof(struct rina_msg_hdr),
         .name    = NETLINK_RINA,
         .version = 1,
-        /* .maxattr = NETLINK_RINA_A_MAX, */
+        .maxattr = NETLINK_RINA_A_MAX,
 };
 
-static int is_message_type_in_range(msg_type_t msg_type)
+static bool is_message_type_in_range(msg_type_t msg_type)
 { return is_value_in_range(msg_type, NETLINK_RINA_C_MIN, NETLINK_RINA_C_MAX); }
 
 static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
@@ -91,7 +93,8 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
                 return -1;
         }
 
-        LOG_DBG("Dispatching message (skb-in=%pK, info=%pK)", skb_in, info);
+        LOG_DBG("Dispatching message (skb-in=%pK, info=%pK, attrs=%pK)",
+                skb_in, info, info->attrs);
 
         msg_type = (msg_type_t) info->genlhdr->cmd;
         LOG_DBG("Multiplexing message type %d", msg_type);
@@ -139,50 +142,160 @@ static int dispatcher(struct sk_buff * skb_in, struct genl_info * info)
         return 0;
 }
 
-#define DECL_NL_OP(X) {                         \
-                .cmd    = X,                    \
+#define __NLA_INIT(TYPE, LEN) { .type = TYPE, .len = LEN }
+
+#define NLA_INIT_U32    __NLA_INIT(NLA_U32,    4)
+#define NLA_INIT_U16    __NLA_INIT(NLA_U16,    2)
+#define NLA_INIT_NESTED __NLA_INIT(NLA_NESTED, 0)
+#define NLA_INIT_STRING __NLA_INIT(NLA_STRING, 0)
+#define NLA_INIT_FLAG   __NLA_INIT(NLA_FLAG,   0)
+
+static struct nla_policy iatdr_policy[IATDR_ATTR_MAX + 1] = {
+        [IATDR_ATTR_DIF_INFORMATION] = NLA_INIT_NESTED,
+};
+
+static struct nla_policy iudcr_policy[IUDCR_ATTR_MAX + 1] = {
+        [IUDCR_ATTR_DIF_CONFIGURATION] = NLA_INIT_NESTED,
+};
+
+
+static struct nla_policy idrn_policy[IDRN_ATTR_MAX + 1] = {
+        [IDRN_ATTR_IPC_PROCESS_NAME] = NLA_INIT_NESTED,
+        [IDRN_ATTR_DIF_NAME]         = NLA_INIT_NESTED,
+        [IDRN_ATTR_REGISTRATION]     = NLA_INIT_FLAG,
+};
+
+static struct nla_policy idun_policy[IDUN_ATTR_MAX + 1] = {
+        [IDUN_ATTR_RESULT] = NLA_INIT_U32,
+};
+
+static struct nla_policy iafrm_policy[IAFRM_ATTR_MAX + 1] = {
+        [IAFRM_ATTR_SOURCE_APP_NAME] = NLA_INIT_NESTED,
+        [IAFRM_ATTR_DEST_APP_NAME]   = NLA_INIT_NESTED,
+        [IAFRM_ATTR_FLOW_SPEC]       = NLA_INIT_NESTED,
+        [IAFRM_ATTR_DIF_NAME]        = NLA_INIT_NESTED,
+};
+
+static struct nla_policy iafra_policy[IAFRA_ATTR_MAX + 1] = {
+        [IAFRA_ATTR_SOURCE_APP_NAME] = NLA_INIT_NESTED,
+        [IAFRA_ATTR_DEST_APP_NAME]   = NLA_INIT_NESTED,
+        [IAFRA_ATTR_FLOW_SPEC]       = NLA_INIT_NESTED,
+        [IAFRA_ATTR_DIF_NAME]        = NLA_INIT_NESTED,
+        [IAFRA_ATTR_PORT_ID]         = NLA_INIT_U32,
+};
+
+static struct nla_policy iafre_policy[IAFRE_ATTR_MAX + 1] = {
+        [IAFRE_ATTR_RESULT]        = NLA_INIT_U32,
+        [IAFRE_ATTR_NOTIFY_SOURCE] = NLA_INIT_FLAG,
+};
+
+static struct nla_policy idfrt_policy[IDFRT_ATTR_MAX + 1] = {
+        [IDFRT_ATTR_PORT_ID] = NLA_INIT_U32,
+};
+
+static struct nla_policy ifdn_policy[IFDN_ATTR_MAX + 1] = {
+        [IFDN_ATTR_PORT_ID] = NLA_INIT_U32,
+        [IFDN_ATTR_CODE]    = NLA_INIT_U32,
+};
+
+static struct nla_policy iccrq_policy[ICCRQ_ATTR_MAX + 1] = {
+        [ICCRQ_ATTR_PORT_ID]         = NLA_INIT_U32,
+        [ICCRQ_ATTR_SOURCE_ADDR]     = NLA_INIT_U32,
+        [ICCRQ_ATTR_DEST_ADDR]       = NLA_INIT_U32,
+        [ICCRQ_ATTR_QOS_ID]          = NLA_INIT_U32,
+        [ICCRQ_ATTR_POLICIES_PARAMS] = NLA_INIT_NESTED,
+};
+
+static struct nla_policy icca_policy[ICCA_ATTR_MAX + 1] = {
+        [ICCA_ATTR_PORT_ID]           = NLA_INIT_U32,
+        [ICCA_ATTR_SOURCE_ADDR]       = NLA_INIT_U32,
+        [ICCA_ATTR_DEST_ADDR]         = NLA_INIT_U32,
+        [ICCA_ATTR_DEST_CEP_ID]       = NLA_INIT_U32,
+        [ICCA_ATTR_QOS_ID]            = NLA_INIT_U32,
+        [ICCA_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
+        [ICCA_ATTR_POLICIES_PARAMS]   = NLA_INIT_NESTED,
+};
+
+static struct nla_policy icurq_policy[ICURQ_ATTR_MAX + 1] = {
+        [ICURQ_ATTR_PORT_ID]           = NLA_INIT_U32,
+        [ICURQ_ATTR_SOURCE_CEP_ID]     = NLA_INIT_U32,
+        [ICURQ_ATTR_DEST_CEP_ID]       = NLA_INIT_U32,
+        [ICURQ_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
+};
+
+static struct nla_policy icdr_policy[ICDR_ATTR_MAX + 1] = {
+        [ICDR_ATTR_PORT_ID]       = NLA_INIT_U32,
+        [ICDR_ATTR_SOURCE_CEP_ID] = NLA_INIT_U32,
+};
+
+static struct nla_policy irar_policy[IRAR_ATTR_MAX + 1] = {
+        [IRAR_ATTR_APP_NAME] = NLA_INIT_NESTED,
+        [IRAR_ATTR_DIF_NAME] = NLA_INIT_NESTED,
+};
+
+static struct nla_policy iuar_policy[IUAR_ATTR_MAX + 1] = {
+        [IUAR_ATTR_APP_NAME] = NLA_INIT_NESTED,
+        [IUAR_ATTR_DIF_NAME] = NLA_INIT_NESTED,
+};
+
+static struct nla_policy idqr_policy[IDQR_ATTR_MAX + 1] = {
+        [IDQR_ATTR_OBJECT] = NLA_INIT_NESTED,
+        [IDQR_ATTR_SCOPE]  = NLA_INIT_U32,
+        [IDQR_ATTR_FILTER] = NLA_INIT_STRING,
+};
+
+static struct nla_policy rmpfe_policy[RMPFE_ATTR_MAX + 1] = {
+        [RMPFE_ATTR_ENTRIES] = NLA_INIT_NESTED,
+        [RMPFE_ATTR_MODE]    = NLA_INIT_U32,
+};
+
+#define DECL_NL_OP(COMMAND, POLICY) {           \
+                .cmd    = COMMAND,              \
                         .flags  = 0,            \
+                        .policy = POLICY,       \
                         .doit   = dispatcher,   \
                         .dumpit = NULL,         \
                         }
 
 static struct genl_ops nl_ops[] = {
-        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT),
-        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST),
-        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE),
-        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST),
-        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST),
-        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY),
-        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION),
-        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED),
-        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT),
-        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST),
-        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT),
-        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST),
-        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT)
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST, iatdr_policy),
+        DECL_NL_OP(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST, iudcr_policy),
+        DECL_NL_OP(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
+                   idrn_policy),
+        DECL_NL_OP(RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
+                   idun_policy),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, NULL),
+        DECL_NL_OP(RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, NULL),
+        DECL_NL_OP(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, iafrm_policy),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, iafra_policy),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, NULL),
+        DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, iafre_policy),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, idfrt_policy),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, ifdn_policy),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, irar_policy),
+        DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, iuar_policy),
+        DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_REQUEST, idqr_policy),
+        DECL_NL_OP(RINA_C_IPCM_QUERY_RIB_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_RMT_MODIFY_FTE_REQUEST, rmpfe_policy),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REQUEST, NULL),
+        DECL_NL_OP(RINA_C_RMT_DUMP_FT_REPLY, NULL),
+        DECL_NL_OP(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, NULL),
+        DECL_NL_OP(RINA_C_IPCM_IPC_MANAGER_PRESENT, NULL),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_REQUEST, iccrq_policy),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESPONSE, NULL),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_ARRIVED, icca_policy),
+        DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT, NULL),
+        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST, icurq_policy),
+        DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT, NULL),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST, icdr_policy),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT, NULL)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
@@ -450,6 +563,7 @@ int rnl_init(void)
         ret = genl_register_family_with_ops(&rnl_nl_family,
                                             nl_ops,
                                             ARRAY_SIZE(nl_ops));
+
         if (ret != 0) {
                 LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);

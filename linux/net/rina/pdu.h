@@ -108,8 +108,12 @@ struct pdu *          pdu_create(void);
 struct pdu *          pdu_create_ni(void);
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
+struct pdu *          pdu_create_from(const struct sdu * sdu);
+struct pdu *          pdu_create_from_ni(const struct sdu * sdu);
 struct pdu *          pdu_dup(const struct pdu * pdu);
 struct pdu *          pdu_dup_ni(const struct pdu * pdu);
+
+/* NOTE: PCI is ok and has a buffer */
 bool                  pdu_is_ok(const struct pdu * pdu);
 const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu);
 struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);
@@ -118,6 +122,9 @@ struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);
 int                   pdu_buffer_set(struct pdu *    pdu,
                                      struct buffer * buffer);
 
+/* NOTE: Please use this "method" instead of pdu_pci_get_*(), for checks */
+bool                  pdu_pci_present(const struct pdu * pdu);
+
 const struct pci *    pdu_pci_get_ro(const struct pdu * pdu);
 struct pci *          pdu_pci_get_rw(struct pdu * pdu);
 /* NOTE: Takes ownership of the PCI passed */
@@ -125,4 +132,24 @@ int                   pdu_buffer_disown(struct pdu * pdu);
 int                   pdu_pci_set(struct pdu * pdu, struct pci * pci);
 
 int                   pdu_destroy(struct pdu * pdu);
+
+/* FIXME: Shrink input parameters count */
+int                   pdu_control_ack_create(struct pdu * pdu_ctrl,
+                                             seq_num_t    last_ctrl_seq_rcvd,
+                                             uint_t       snd_left_wind_edge,
+                                             uint_t       snd_rt_wind_edge,
+                                             uint_t       my_left_wind_edge,
+                                             uint_t       my_rt_wind_edge,
+                                             uint_t       my_rcvr_rate);
+/* FIXME: Shrink input parameters count */
+int                   pdu_control_ack_flow(struct pdu * pdu_ctrl,
+                                           seq_num_t    last_ctrl_seq_rcvd,
+                                           seq_num_t    ack_nack_seq,
+                                           uint_t       new_rt_wind_edge,
+                                           uint_t       new_rate,
+                                           uint_t       time_unit,
+                                           uint_t       my_left_wind_edge,
+                                           uint_t       my_rt_wind_edge,
+                                           uint_t       my_rcvr_rate);
+
 #endif

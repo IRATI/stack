@@ -512,11 +512,13 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                 return -1;
 
         /*
+         * FIXME: rearrange this comment (outdated)
+         *
          * We are going to dup the SDU since the shim has now the ownership
          * and it is always its burden to free it whenever the processing of
          * the SDU is finished (e.g. the SDU has been sent through a wire).
          * For the shim-dummy the processing consists of sending the new SDU
-         * to the sdu_ready kfifo, which will take the ownership of this copy.
+         * to the sdu-ready fifo, which will take the ownership of this copy.
          */
         copy_sdu = sdu_dup_ni(sdu);
         if (!copy_sdu)
@@ -676,19 +678,13 @@ static int dummy_update_dif_config(struct ipcp_instance_data * data,
 
 static const struct name * dummy_ipcp_name(struct ipcp_instance_data * data)
 {
-        const struct name * retname;
-
         ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->name));
 
-        retname = data->info->name;
-        if (!retname){
-                LOG_ERR("Could not retrieve IPCP name");
-                return NULL;
-        }
+        return data->info->name;
+}
 
-        return retname; 
-} 
-                
 static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request  = dummy_flow_allocate_request,
         .flow_allocate_response = dummy_flow_allocate_response,

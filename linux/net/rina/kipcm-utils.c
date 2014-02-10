@@ -31,6 +31,7 @@
 #include "common.h"
 #include "kipcm-utils.h"
 #include "rnl-utils.h"
+#include "ipcp-utils.h"
 
 /*
  * IMAPs
@@ -104,7 +105,7 @@ static struct ipcp_imap_entry * imap_entry_find(struct ipcp_imap * map,
         return NULL;
 }
 
-static struct ipcp_imap_entry * 
+static struct ipcp_imap_entry *
 imap_entry_find_by_name(struct ipcp_imap *  map,
                         const struct name * name)
 {
@@ -118,6 +119,10 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
                 entry_name = entry->value->ops->ipcp_name(entry->value->data);
+                if (!name_is_ok(entry_name)) {
+                        LOG_ERR("Bad name, bailing out");
+                        return NULL;
+                }
                 /*FIXME: Check if we can use the name API */
                 if (!strcmp(entry_name->process_name,
                             name->process_name)           &&
@@ -126,7 +131,7 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
                         LOG_DBG("This is an IPC Process");
                         return entry;
                 }
-                    
+
         }
 
         return NULL;
@@ -245,8 +250,8 @@ rnl_sn_t seq_num_bad(void)
 EXPORT_SYMBOL(seq_num_bad);
 
 /* FIXME: We need to change this */
-int is_seq_num_ok(rnl_sn_t sn)
-{ return (sn < SNVALUE_WRONG) ? 1 : 0; }
+bool is_seq_num_ok(rnl_sn_t sn)
+{ return (sn < SNVALUE_WRONG) ? true : false; }
 EXPORT_SYMBOL(is_seq_num_ok);
 
 struct kipcm_pmap {

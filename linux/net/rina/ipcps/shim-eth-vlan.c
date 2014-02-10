@@ -311,7 +311,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
-        if (flow->sdu_queue)  
+        if (flow->sdu_queue)
                 rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
         rkfree(flow);
 
@@ -496,12 +496,12 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
                 while (!rfifo_is_empty(flow->sdu_queue)) {
                         struct sdu * tmp = NULL;
-                        
+
                         tmp = rfifo_pop(flow->sdu_queue);
                         ASSERT(tmp);
 
                         LOG_DBG("Got a new element from the fifo");
-                        
+
                         if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
                                 LOG_ERR("Couldn't post SDU to KFA ...");
                                 return -1;
@@ -647,11 +647,12 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
+        int                      retval;
 
         ASSERT(data);
         ASSERT(sdu);
 
-        LOG_DBG("Entered the sdu write");
+        LOG_DBG("Entered the sdu-write");
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
@@ -676,19 +677,21 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
-                LOG_ERR("Failed to get src hw addr");
+                LOG_ERR("Failed to get source HW addr");
                 sdu_destroy(sdu);
                 return -1;
         }
+
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
-                LOG_ERR("Dest hw is not known");
+                LOG_ERR("Destination HW address is unknown");
                 sdu_destroy(sdu);
                 return -1;
         }
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
+                LOG_ERR("Cannot allocate a skb");
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -706,25 +709,26 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        sdu_destroy(sdu);
+
         skb->dev      = data->dev;
         skb->protocol = htons(ETH_P_RINA);
 
-        if (dev_hard_header(skb, data->dev, ETH_P_RINA,
-                            dest_hw, src_hw, skb->len) < 0) {
+        retval = dev_hard_header(skb, data->dev,
+                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
+        if (retval < 0) {
+                LOG_ERR("Problems in dev_hard_header (%d)", retval);
                 kfree_skb(skb);
-                sdu_destroy(sdu);
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Problems in dev_queue_xmit");
-                kfree_skb(skb);
-                sdu_destroy(sdu);
+        retval = dev_queue_xmit(skb);
+        if (retval != NET_XMIT_SUCCESS) {
+                LOG_ERR("Problems in dev_queue_xmit (%d)", retval);
                 return -1;
         }
 
-        sdu_destroy(sdu);
-        LOG_DBG("Sent a packet");
+        LOG_DBG("Packet sent");
 
         return 0;
 }
@@ -878,7 +882,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
 
                 LOG_DBG("Added flow to the list");
-                
+
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
                         LOG_ERR("Couldn't create the sdu queue "
@@ -964,7 +968,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
-    
+
                         if (rfifo_push(flow->sdu_queue, du)) {
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1259,18 +1263,11 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 
 static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
 {
-        const struct name * retname;
-
         ASSERT(data);
+        ASSERT(name_is_ok(data->name));
 
-        retname = data->name;
-        if (!retname){
-                LOG_ERR("Could not retrieve IPCP name");
-                return NULL;
-        }
-
-        return retname; 
-} 
+        return data->name;
+}
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request  = eth_vlan_flow_allocate_request,
@@ -1301,7 +1298,7 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 
         INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
 
-        LOG_INFO("%s intialized", SHIM_NAME);
+        LOG_INFO("%s initialized", SHIM_NAME);
 
         return 0;
 }

@@ -1,5 +1,5 @@
 /*
- *  IPC Processes layer
+ *  IPC Processes Instances
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,13 +18,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_IPCP_H
-#define RINA_IPCP_H
+#ifndef RINA_IPCP_INSTANCES_H
+#define RINA_IPCP_INSTANCES_H
 
 #include <linux/list.h>
 #include <linux/kobject.h>
 
 #include "du.h"
+#include "connection.h"
 
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
@@ -144,7 +145,7 @@ struct ipcp_instance_ops {
                                        address_t                   source,
                                        address_t                   dest,
                                        qos_id_t                    qos_id,
-                                       int                         policies);
+                                       struct conn_p_params        cp_params);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id,
@@ -161,7 +162,7 @@ struct ipcp_instance_ops {
                                       address_t                   dest,
                                       qos_id_t                    qos_id,
                                       cep_id_t                    dst_cep_id,
-                                      int                         policies);
+                                      struct conn_p_params        cp_params);
 
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id);
@@ -201,7 +202,26 @@ struct ipcp_instance_ops {
 
         int (* pft_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);
+
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
+};
+
+/* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */
+bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops);
+bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops);
+bool ipcp_instance_is_ok(struct ipcp_instance_ops * ops);
+
+struct ipcp_factory;
+
+/* FIXME: Hide this data structure */
+struct ipcp_instance {
+        struct kobject              kobj;
+
+        /* FIXME: Should be hidden and not fixed up in KIPCM ... */
+        struct ipcp_factory *       factory; /* The parent factory */
+
+        struct ipcp_instance_data * data;
+        struct ipcp_instance_ops *  ops;
 };
 
 #endif

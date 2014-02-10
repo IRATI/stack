@@ -39,6 +39,8 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "efcp-utils.h"
+#include "efcp-utils.h"
+#include "connection.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -55,7 +57,7 @@ struct mgmt_data {
 };
 
 struct ipcp_instance_data {
-        /* FIXME add missing needed attributes */
+        /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
         struct list_head        flows;
@@ -158,12 +160,13 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
-static cep_id_t connection_create_request(struct ipcp_instance_data * data,
-                                          port_id_t                   port_id,
-                                          address_t                   source,
-                                          address_t                   dest,
-                                          qos_id_t                    qos_id,
-                                          int                         policies)
+static
+cep_id_t connection_create_request(struct ipcp_instance_data * data,
+                                   port_id_t                   port_id,
+                                   address_t                   source,
+                                   address_t                   dest,
+                                   qos_id_t                    qos_id,
+                                   struct conn_p_params        cp_params)
 {
         cep_id_t               cep_id;
         struct connection *    conn;
@@ -262,7 +265,7 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
 static int ipcp_flow_notification(struct ipcp_instance_data * data,
                                   port_id_t                   pid)
 {
-        if (kfa_flow_bind_rmt(data->kfa, pid, data->rmt))
+        if (kfa_flow_rmt_bind(data->kfa, pid, data->rmt))
                 return -1;
 
         if (rmt_queue_send_add(data->rmt, pid))
@@ -307,7 +310,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          int                         policies)
+                          struct conn_p_params        cp_params)
 {
         struct connection *    conn;
         cep_id_t               cep_id;
@@ -607,7 +610,7 @@ static int normal_pft_remove(struct ipcp_instance_data * data,
 
 static int normal_pft_dump(struct ipcp_instance_data * data,
                            struct list_head *          entries)
-{       
+{
         ASSERT(data);
 
         return rmt_pft_dump(data->rmt,
@@ -615,18 +618,12 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
 }
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
-{       
-        const struct name * retname;
-
+{
         ASSERT(data);
+        ASSERT(data->info);
+        ASSERT(name_is_ok(data->info->name));
 
-        retname = data->info->name;
-        if (!retname){
-                LOG_ERR("Could not retrieve IPCP name");
-                return NULL;
-        }
-
-        return retname; 
+        return data->info->name;
 }
 
 /*  FIXME: register ops */
@@ -732,6 +729,8 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rkfree(instance);
                 return NULL;
         }
+
+        /* FIXME: This (whole) function has to be rehersed HEAVILY */
 
         instance->data->info->name = name_dup(name);
         if (!instance->data->info->name) {

@@ -87,6 +87,7 @@ static int queue_destroy(struct rmt_queue * q)
 
 struct rmt_qmap {
         spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
+
         DECLARE_HASHTABLE(queues, 7);
 };
 
@@ -444,13 +445,13 @@ int rmt_send_port_id(struct rmt * instance,
                 s_queue = qmap_find(instance->egress.queues, id);
                 if (s_queue) {
                         struct pdu * tmp;
-                
+
                         tmp = rfifo_pop(s_queue->queue);
                         if (tmp)
                                 pdu_destroy(tmp);
                 }
                 spin_unlock(&instance->egress.queues->lock);
-                
+
                 return -1;
         }
 
@@ -679,6 +680,7 @@ static int process_mgmt_sdu(struct rmt * rmt,
                 sdu_destroy(sdu);
                 return -1;
         }
+        sdu_destroy(sdu);
 
         buffer = pdu_buffer_get_rw(pdu);
         if (!buffer_is_ok(buffer)) {
@@ -710,63 +712,96 @@ static int process_mgmt_sdu(struct rmt * rmt,
                                                 sdu) ? -1 : 0);
 }
 
+/* FIXME: This function is a mess, we have to rearrange ASAP */
 static int process_dt_sdu(struct rmt *       rmt,
                           port_id_t          port_id,
                           struct sdu *       sdu,
                           struct rmt_queue * entry)
 {
         struct pdu * pdu;
-        cep_id_t     c;
-        address_t    dest_add;
+        address_t    dest_addr;
 
         /* (FUTURE) Address and qos-id are the same, do a single match only */
-        pdu = pdu_create_with(sdu);
+        pdu = pdu_create_from(sdu);
         if (!pdu) {
                 LOG_ERR("Cannot get PDU from SDU");
                 sdu_destroy(sdu);
                 return -1;
         }
-        dest_add = pci_destination(pdu_pci_get_ro(pdu));
-        if (!is_address_ok(dest_add)) {
-                LOG_ERR("Wrong destination address");
+
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Bad PDU from SDU, cannot process");
+                pdu_destroy(pdu);
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        if (rmt->address != dest_add) {
+        ASSERT(pdu_is_ok(pdu));
+        ASSERT(sdu_is_ok(sdu));
+
+        /* NOTE: We have good sdu and pdu (we have to get rid of */
+        dest_addr = pci_destination(pdu_pci_get_ro(pdu));
+        if (!is_address_ok(dest_addr)) {
+                LOG_ERR("PDU has Wrong destination address");
+                pdu_destroy(pdu);
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (rmt->address != dest_addr) {
                 qos_id_t qos_id;
                 int      i;
 
                 qos_id = pci_qos_id(pdu_pci_get_ro(pdu));
                 if (pft_nhop(rmt->pft,
-                             dest_add,
+                             dest_addr,
                              qos_id,
                              &(rmt->ingress.cache.pids),
                              &(rmt->ingress.cache.count))) {
+                        LOG_ERR("Cannot get NHOP");
                         pdu_destroy(pdu);
+                        sdu_destroy(sdu);
                         return -1;
                 }
 
                 for (i = 0; i < rmt->ingress.cache.count; i++) {
+                        struct sdu * tmp;
+
+                        tmp = sdu_dup(sdu);
+                        if (!tmp)
+                                continue;
+
                         if (kfa_flow_sdu_write(rmt->kfa,
                                                rmt->ingress.cache.pids[i],
-                                               sdu))
+                                               tmp))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
                                         rmt->ingress.cache.pids[i]);
                 }
 
-                return 0;
-        }
-        c = pci_cep_destination(pdu_pci_get_ro(pdu));
-        if (!is_cep_id_ok(c)) {
-                LOG_ERR("Wrong CEP-id in PDU");
+                /*
+                 * NOTE: Nobody took ownership of the PDU so we're getting rid
+                 *       of it explicitly
+                 */
                 pdu_destroy(pdu);
-                return -1;
+        } else {
+                cep_id_t c;
+
+                c = pci_cep_destination(pdu_pci_get_ro(pdu));
+                if (!is_cep_id_ok(c)) {
+                        LOG_ERR("Wrong CEP-id in PDU");
+                        pdu_destroy(pdu);
+                        sdu_destroy(sdu);
+                        return -1;
+                }
+
+                if (efcp_container_receive(rmt->efcpc, c, pdu)) {
+                        LOG_ERR("EFCP container problems");
+                        sdu_destroy(sdu);
+                        return -1;
+                }
         }
 
-        if (efcp_container_receive(rmt->efcpc, c, pdu)) {
-                LOG_ERR("EFCP container problems");
-                return -1;
-        }
+        sdu_destroy(sdu);
 
         return 0;
 }

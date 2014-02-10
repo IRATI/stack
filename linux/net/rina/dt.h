@@ -1,5 +1,5 @@
 /*
- *  IPC Processes layer
+ * DT (Data Transfer)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,6 +18,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "ipcp"
+#ifndef RINA_DT_H
+#define RINA_DT_H
 
-#include "logs.h"
+struct dtp;
+struct dtcp;
+struct dt;
+
+/*
+ * FIXME: The DT instance would represent the DTP/DTCP couple. It has to land
+ *        on EFCP. DTP, DTCP instances have to be removed from there
+ */
+struct dt *   dt_create(void);
+int           dt_destroy(struct dt * dt);
+
+int           dt_dtp_bind(struct dt *  dt, struct dtp *  dtp);
+int           dt_dtcp_bind(struct dt * dt, struct dtcp * dtp);
+
+struct dtp *  dt_dtp(struct dt * dt);
+struct dtcp * dt_dtcp(struct dt * dt);
+
+#endif

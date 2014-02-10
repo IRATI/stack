@@ -122,11 +122,11 @@ static bool pfte_is_ok(struct pft_entry * entry)
 
 static void pfte_destroy(struct pft_entry * entry)
 {
-        struct pft_port_entry * pos;
+        struct pft_port_entry * pos, * next;
 
         ASSERT(pfte_is_ok(entry));
 
-        list_for_each_entry_rcu(pos, &entry->ports, next) {
+        list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 pft_pe_destroy(pos);
         }
 
@@ -173,22 +173,18 @@ static int pfte_port_add(struct pft_entry * entry,
 static void pfte_port_remove(struct pft_entry * entry,
                              port_id_t          id)
 {
-        struct pft_port_entry * pos;
+        struct pft_port_entry * pos, * next;
 
         ASSERT(pfte_is_ok(entry));
         ASSERT(is_port_id_ok(id));
 
-        /* Remove the port-id here */
-        list_for_each_entry_rcu(pos, &entry->ports, next) {
+        list_for_each_entry_safe(pos, next, &entry->ports, next) {
                 if (pft_pe_port(pos) == id) {
                         pft_pe_destroy(pos);
+                        return;
                 }
         }
 
-        /* If the list of port-ids is empty, remove the entry */
-        if (list_empty(&entry->ports)) {
-                pfte_destroy(entry);
-        }
 }
 
 static int pfte_ports_copy(struct pft_entry * entry,
@@ -233,6 +229,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft {
+        spinlock_t       write_lock;
         struct list_head entries;
 };
 
@@ -243,6 +240,8 @@ static struct pft * pft_create_gfp(gfp_t flags)
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
+
+        spin_lock_init(&tmp->write_lock);
 
         INIT_LIST_HEAD(&tmp->entries);
 
@@ -257,39 +256,65 @@ struct pft * pft_create_ni(void)
 struct pft * pft_create(void)
 { return pft_create_gfp(GFP_KERNEL); }
 
-static bool pft_is_ok(struct pft * instance)
+static bool __pft_is_ok(struct pft * instance)
 { return instance ? true : false; }
 
+/*
+ * NOTE: This could break if we do more checks on the instance.
+ *       A lock will have to be be taken in that case ...
+ */
+bool pft_is_ok(struct pft * instance)
+{ return __pft_is_ok(instance); }
+
 bool pft_is_empty(struct pft * instance)
-{ return pft_is_ok(instance) ? list_empty(&instance->entries) : false;  }
+{
+        bool empty;
+
+        if (!__pft_is_ok(instance))
+                return false;
+
+        rcu_read_lock();
+        empty = list_empty(&instance->entries);
+        rcu_read_unlock();
+
+        return empty;
+}
 
 static void __pft_flush(struct pft * instance)
 {
-        struct pft_entry * pos;
+        struct pft_entry * pos, * next;
 
-        ASSERT(pft_is_ok(instance));
+        ASSERT(__pft_is_ok(instance));
 
-        list_for_each_entry_rcu(pos, &instance->entries, next) {
+        list_for_each_entry_safe(pos, next, &instance->entries, next) {
                 pfte_destroy(pos);
         }
 }
 
 int pft_flush(struct pft * instance)
 {
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
 
+        spin_lock(&instance->write_lock);
+
         __pft_flush(instance);
+
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
 
 int pft_destroy(struct pft * instance)
 {
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
 
+        spin_lock(&instance->write_lock);
+
         __pft_flush(instance);
+
+        spin_unlock(&instance->write_lock);
 
         rkfree(instance);
 
@@ -302,18 +327,15 @@ static struct pft_entry * pft_find(struct pft * instance,
 {
         struct pft_entry * pos;
 
-        ASSERT(pft_is_ok(instance));
+        ASSERT(__pft_is_ok(instance));
         ASSERT(is_address_ok(destination));
 
-        rcu_read_lock();
         list_for_each_entry_rcu(pos, &instance->entries, next) {
                 if ((pos->destination == destination) &&
                     (pos->qos_id      == qos_id)) {
-                        rcu_read_unlock();
                         return pos;
                 }
         }
-        rcu_read_unlock();
 
         return NULL;
 }
@@ -327,24 +349,30 @@ int pft_add(struct pft *      instance,
         struct pft_entry * tmp;
         int                i;
 
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
+
+        spin_lock(&instance->write_lock);
 
         if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
         if (!ports || !count) {
                 LOG_ERR("Bogus output parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 tmp = pfte_create(destination, qos_id);
-                if (!tmp)
+                if (!tmp) {
+                        spin_unlock(&instance->write_lock);
                         return -1;
+                }
 
                 list_add_rcu(&tmp->next, &instance->entries);
         }
@@ -352,9 +380,11 @@ int pft_add(struct pft *      instance,
         for (i = 0; i < count; i++) {
                 if (pfte_port_add(tmp, ports[i])) {
                         pfte_destroy(tmp);
+                        spin_unlock(&instance->write_lock);
                         return -1;
                 }
         }
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -368,25 +398,38 @@ int pft_remove(struct pft *      instance,
         struct pft_entry * tmp;
         int                i;
 
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
+
+        spin_lock(&instance->write_lock);
 
         if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
                 LOG_ERR("Bogus input parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
         if (!ports || !count) {
                 LOG_ERR("Bogus output parameters");
+                spin_unlock(&instance->write_lock);
                 return -1;
         }
 
         tmp = pft_find(instance, destination, qos_id);
-        if (!tmp)
+        if (!tmp) {
+                spin_unlock(&instance->write_lock);
                 return -1;
+        }
 
         for (i = 0; i < count; i++)
                 pfte_port_remove(tmp, ports[i]);
+
+        /* If the list of port-ids is empty, remove the entry */
+        if (list_empty(&tmp->ports)) {
+                pfte_destroy(tmp);
+        }
+
+        spin_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -399,7 +442,7 @@ int pft_nhop(struct pft * instance,
 {
         struct pft_entry * tmp;
 
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
 
         if (!is_address_ok(destination) ||
@@ -442,7 +485,7 @@ int pft_dump(struct pft *       instance,
         struct pft_entry *    pos;
         struct pdu_ft_entry * entry;
 
-        if (!pft_is_ok(instance))
+        if (!__pft_is_ok(instance))
                 return -1;
 
         rcu_read_lock();
@@ -466,7 +509,7 @@ int pft_dump(struct pft *       instance,
                 list_add_rcu(&entry->next, entries);
         }
         rcu_read_unlock();
-                 
+
         return 0;
 }
 
