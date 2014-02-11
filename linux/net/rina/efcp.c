@@ -167,6 +167,22 @@ int efcp_container_destroy(struct efcp_container * container)
 }
 EXPORT_SYMBOL(efcp_container_destroy);
 
+struct efcp * efcp_container_find(struct efcp_container * container,
+                                  cep_id_t                id)
+{
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return NULL;
+        }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot find instance");
+                return NULL;
+        }
+
+        return efcp_imap_find(container->instances, id);
+}
+EXPORT_SYMBOL(efcp_container_find);
+
 int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
                                struct efcp_container * container)
 {
@@ -292,7 +308,7 @@ int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
                          struct sdu *            sdu)
 {
-        struct efcp * efcp;
+        struct efcp * tmp;
 
         if (!container || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
@@ -303,13 +319,13 @@ int efcp_container_write(struct efcp_container * container,
                 return -1;
         }
 
-        efcp = efcp_imap_find(container->instances, cep_id);
-        if (!efcp) {
-                LOG_ERR("There is no EFCP bound to this cep_id %d", cep_id);
+        tmp = efcp_imap_find(container->instances, cep_id);
+        if (!tmp) {
+                LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
                 return -1;
         }
 
-        if (efcp_write(efcp, sdu))
+        if (efcp_write(tmp, sdu))
                 return -1;
 
         return 0;
@@ -465,7 +481,7 @@ int efcp_container_receive(struct efcp_container * container,
 {
         struct efcp * tmp;
 
-        if (!container || !pdu) {
+        if (!container || !pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus input parameters");
                 return -1;
         }
@@ -474,7 +490,7 @@ int efcp_container_receive(struct efcp_container * container,
                 return -1;
         }
 
-        tmp = efcp_container_find(container, cep_id);
+        tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
                 LOG_ERR("Cannot find the requested instance");
                 return -1;
@@ -683,22 +699,6 @@ int efcp_connection_update(struct efcp_container * container,
         return 0;
 }
 EXPORT_SYMBOL(efcp_connection_update);
-
-struct efcp * efcp_container_find(struct efcp_container * container,
-                                  cep_id_t                id)
-{
-        if (!container) {
-                LOG_ERR("Bogus container passed, bailing out");
-                return NULL;
-        }
-        if (!is_cep_id_ok(id)) {
-                LOG_ERR("Bad cep-id, cannot find instance");
-                return NULL;
-        }
-
-        return efcp_imap_find(container->instances, id);
-}
-EXPORT_SYMBOL(efcp_container_find);
 
 int efcp_bind_rmt(struct efcp_container * container,
                   struct rmt *            rmt)
