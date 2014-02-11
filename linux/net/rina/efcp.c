@@ -514,7 +514,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         tmp->connection           = connection;
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
-        dtp = dtp_create(container->rmt,
+        dtp = dtp_create(tmp->dt,
+                         container->rmt,
                          container->kfa,
                          connection);
         if (!dtp) {
