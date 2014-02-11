@@ -172,8 +172,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 /* FIXME: Mock up code */
 static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 {
-        struct pdu *    pdu_ctrl;
-        struct pci *    pci;
+        struct pdu * pdu_ctrl;
+        struct pci * pci;
 
         LOG_MISSING;
 
