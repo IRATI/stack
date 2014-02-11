@@ -51,7 +51,7 @@ public class PropagateFSODBTest {
 		Assert.assertNotNull(rib.recoveredObject);
 	}
 
-	@Test
+	//@Test
 	public void Run_SendObjectSameObject_True() {
 		Timer timer = new Timer();
 		FakeRIBDaemon rib = new FakeRIBDaemon();

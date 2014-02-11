@@ -86,11 +86,11 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	protected final int MAXIMUM_BUFFER_SIZE = 4096;
 	protected final int NO_AVOID_PORT = -1;
 	
-	public final int WAIT_UNTIL_READ_CDAP = 1;  //5 sec
-	public final int WAIT_UNTIL_ERROR = 1;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 1; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 1; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 1; //3 sec
+	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
+	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 100; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 100; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;

@@ -192,7 +192,7 @@ public class IPCProcessImpl implements IPCProcess {
 		flowAllocator.setIPCProcess(this);
 		pduForwardingTable.setIPCProcess(this);
 		
-		pduForwardingTable.setAlgorithm(new DijkstraAlgorithm(), new Vertex(getAddress()));
+		pduForwardingTable.setAlgorithm(/*TODO: Set algorithm by config*/new DijkstraAlgorithm(), new Vertex(getAddress()));
 		
 		populateRIB();
 
