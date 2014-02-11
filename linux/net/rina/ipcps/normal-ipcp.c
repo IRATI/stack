@@ -39,6 +39,7 @@
 #include "efcp.h"
 #include "rmt.h"
 #include "efcp-utils.h"
+#include "connection.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -158,12 +159,13 @@ find_instance(struct ipcp_factory_data * data,
         return NULL;
 }
 
-static cep_id_t connection_create_request(struct ipcp_instance_data * data,
-                                          port_id_t                   port_id,
-                                          address_t                   source,
-                                          address_t                   dest,
-                                          qos_id_t                    qos_id,
-                                          int                         policies)
+static
+cep_id_t connection_create_request(struct ipcp_instance_data * data,
+                                   port_id_t                   port_id,
+                                   address_t                   source,
+                                   address_t                   dest,
+                                   qos_id_t                    qos_id,
+                                   struct conn_p_params        cp_params)
 {
         cep_id_t               cep_id;
         struct connection *    conn;
@@ -307,7 +309,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          int                         policies)
+                          struct conn_p_params        cp_params)
 {
         struct connection *    conn;
         cep_id_t               cep_id;

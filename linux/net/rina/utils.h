@@ -30,7 +30,7 @@
         static struct kobj_attribute NAME##_attr =              \
                 __ATTR(NAME, 0644, NAME##show, NAME##store)
 
-int     is_value_in_range(int value, int min_value, int max_value);
+bool    is_value_in_range(int value, int min_value, int max_value);
 
 /* Syscalls */
 char *  strdup_from_user(const char __user * src);

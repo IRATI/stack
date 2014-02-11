@@ -124,11 +124,13 @@ struct dtcp_sv {
          * received until a new time unit begins
          */
         uint_t       pdus_rcvd_in_time_unit;
+
+        bool         set_drf_flag;
 };
 
 struct dtcp_policies {
         int (* flow_init)(struct dtcp * instance);
-        int (* sv_update)(struct dtcp * instance);
+        int (* sv_update)(struct dtcp * instance, seq_num_t seq);
         int (* lost_control_pdu)(struct dtcp * instance);
         int (* rtt_estimator)(struct dtcp * instance);
         int (* retransmission_timer_expiry)(struct dtcp * instance);
@@ -158,6 +160,56 @@ struct dtcp {
         struct dtp *           peer; /* The peering DTP instance */
 };
 
+/* FIXME: Mock up code */
+static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+{
+        struct pdu * pdu_ctrl;
+        struct pci * pci;
+
+        if (!dtcp)
+                return -1;
+
+        pdu_ctrl = pdu_create();
+        if (!pdu_ctrl)
+                return -1;
+
+        pci = pci_create();
+        if (!pci) {
+                pdu_destroy(pdu_ctrl);
+                return -1;
+        }
+        if (pci_format(pci,
+                       0,
+                       0,
+                       0,
+                       0,
+                       dtcp->sv->next_snd_ctl_seq,
+                       0,
+                       PDU_TYPE_ACK_AND_FC)) {
+                pdu_destroy(pdu_ctrl);
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_pci_set(pdu_ctrl, pci)) {
+                pdu_destroy(pdu_ctrl);
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu_control_ack_flow(pdu_ctrl,
+                             dtcp->sv->last_rcv_ctl_seq,
+                             seq,
+                             seq + dtcp->sv->rcvr_credit,
+                             0,
+                             1,
+                             dtcp->sv->send_left_wind_edge,
+                             dtcp->sv->snd_rt_wind_edge,
+                             dtcp->sv->sndr_rate);
+
+        return -1;
+}
+
 static struct dtcp_sv default_sv = {
         .max_pdu_size           = 0,
         .trd                    = 0,
@@ -178,11 +230,12 @@ static struct dtcp_sv default_sv = {
         .rcvr_rt_wind_edge      = 0,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
+        .set_drf_flag           = false,
 };
 
 static struct dtcp_policies default_policies = {
         .flow_init                   = NULL,
-        .sv_update                   = NULL,
+        .sv_update                   = default_sv_update,
         .lost_control_pdu            = NULL,
         .rtt_estimator               = NULL,
         .retransmission_timer_expiry = NULL,
@@ -249,56 +302,6 @@ int dtcp_destroy(struct dtcp * instance)
         return 0;
 }
 
-
-/* FIXME: Do we really need bind() alike operation ? */
-int dtcp_bind(struct dtcp * instance,
-              struct dtp *  peer)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-        if (!peer) {
-                LOG_ERR("Bad peer passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                if (instance->peer != peer) {
-                        LOG_ERR("This instance is already bound to "
-                                "a different peer, unbind it first !");
-                        return -1;
-                }
-
-                LOG_DBG("This instance is already bound to the same peer ...");
-                return 0;
-        }
-
-        instance->peer = peer;
-
-        return 0;
-}
-
-/* FIXME: Do we really need unbind() alike operation ? */
-int dtcp_unbind(struct dtcp * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                LOG_DBG("Instance %pK unbound from DTP peer %pK",
-                        instance, instance->peer);
-                instance->peer = NULL;
-        } else {
-                LOG_DBG("Instance %pK was not bound to a peer DTP", instance);
-        }
-
-        return 0;
-
-}
-
 int dtcp_send(struct dtcp * instance,
               struct sdu *  sdu)
 {
@@ -307,5 +310,18 @@ int dtcp_send(struct dtcp * instance,
         /* Takes the pdu and enqueue in its internal queues */
 
         return -1;
+}
+
+int dtcp_notify_seq_rtxq(struct dtcp * instance,
+                         seq_num_t     seq)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        instance->sv->send_left_wind_edge = seq;
+
+        return 0;
 }
 

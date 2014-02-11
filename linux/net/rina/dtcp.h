@@ -30,12 +30,11 @@ struct dtcp;
 struct dtcp * dtcp_create(void);
 int           dtcp_destroy(struct dtcp * instance);
 
-int           dtcp_bind(struct dtcp * instance,
-                        struct dtp *  peer);
-int           dtcp_unbind(struct dtcp * instance);
-
 /* NOTE: Takes the ownership of the passed PDU */
 int           dtcp_send(struct dtcp * instance,
                         struct sdu *  sdu);
+
+int           dtcp_notify_seq_rtxq(struct dtcp * instance,
+                                   seq_num_t     seq);
 
 #endif
