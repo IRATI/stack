@@ -533,7 +533,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         dtcp = NULL;
         if (connection->policies_params.dtcp_present) {
-                dtcp = dtcp_create();
+                dtcp = dtcp_create(tmp->dt);
                 if (!dtcp) {
                         dtp_destroy(dtp);
                         efcp_destroy(tmp);
