@@ -1094,8 +1094,6 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].len  = 0;
         attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type   = NLA_FLAG;
         attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].len    = 0;
-        attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].type    = NLA_U32;
-        attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].len     = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
@@ -1122,9 +1120,6 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->rate_based_fctrl =
                         nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]);
 
-        if (attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH])
-                cpp_struct->max_closed_winq_length =
-                        nla_get_u32(attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH]);
         return 0;
 }
 
