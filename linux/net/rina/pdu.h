@@ -87,10 +87,9 @@ int                   pci_destination_set(struct pci * pci,
                                           address_t    dst_address);
 int                   pci_source_set(struct pci * pci,
                                      address_t    src_address);
-/* FIXME: To be renamed */
 int                   pci_sequence_number_set(struct pci * pci,
                                               seq_num_t    sequence_number);
-/* FIXME: To be renamed */
+/* FIXME: if pci is NULL, it should return and error (-1) ... */
 seq_num_t             pci_sequence_number_get(struct pci * pci);
 
 int                   pci_qos_id_set(struct pci * pci,
