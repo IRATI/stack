@@ -62,6 +62,7 @@ struct dtp_policies {
 #define TIME_A   300 /* FIXME: Completely bogus value, must be in ms */
 
 struct dtp {
+        struct dt *           parent;
         /*
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
@@ -109,14 +110,20 @@ static void tf_receiver_inactivity(void * data)
 static void tf_a(void * data)
 { }
 
-struct dtp * dtp_create(struct rmt *        rmt,
+struct dtp * dtp_create(struct dt *         dt,
+                        struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection)
 {
         struct dtp * tmp;
 
+        if (!dt) {
+                LOG_ERR("No DT passed, bailing out");
+                return NULL;
+        }
+
         if (!rmt) {
-                LOG_ERR("No rmt, bailing out");
+                LOG_ERR("No RMT passed, bailing out");
                 return NULL;
         }
 
@@ -125,6 +132,8 @@ struct dtp * dtp_create(struct rmt *        rmt,
                 LOG_ERR("Cannot create DTP instance");
                 return NULL;
         }
+
+        tmp->parent = dt;
 
         tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
