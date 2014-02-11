@@ -60,7 +60,6 @@ struct dtp_policies {
 #define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
 #define TIME_R   200 /* FIXME: Completely bogus value, must be in ms */
 #define TIME_A   300 /* FIXME: Completely bogus value, must be in ms */
-
 struct dtp {
         struct dt *           parent;
         /*
@@ -380,6 +379,8 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
+
+        ASSERT(instance->sv);
 
         if (kfa_sdu_post(instance->kfa,
                          instance->sv->connection->port_id,
