@@ -136,17 +136,26 @@ int pci_source_set(struct pci * pci,
 }
 EXPORT_SYMBOL(pci_source_set);
 
-int pci_nxt_seq_send_set(struct pci * pci,
-                         seq_num_t    nxt_seq_send)
+int pci_sequence_number_set(struct pci * pci,
+                            seq_num_t    sequence_number)
 {
         if (!pci)
                 return -1;
 
-        pci->sequence_number = nxt_seq_send;
+        pci->sequence_number = sequence_number;
 
         return 0;
 }
-EXPORT_SYMBOL(pci_nxt_seq_send_set);
+EXPORT_SYMBOL(pci_sequence_number_set);
+
+seq_num_t pci_sequence_number_get(struct pci * pci)
+{
+        if (!pci)
+                return -1;
+
+        return pci->sequence_number;
+}
+EXPORT_SYMBOL(pci_sequence_number_get);
 
 int pci_qos_id_set(struct pci * pci,
                    qos_id_t     qos_id)
@@ -176,16 +185,16 @@ int pci_format(struct pci * pci,
                cep_id_t     dst_cep_id,
                address_t    src_address,
                address_t    dst_address,
-               seq_num_t    nxt_seq_send,
+               seq_num_t    sequence_number,
                qos_id_t     qos_id,
                pdu_type_t   type)
 {
-        if (pci_cep_destination_set(pci, src_cep_id) ||
-            pci_cep_source_set(pci, dst_cep_id)      ||
-            pci_destination_set(pci, dst_address)    ||
-            pci_source_set(pci, src_address)         ||
-            pci_nxt_seq_send_set(pci, nxt_seq_send)  ||
-            pci_qos_id_set(pci, qos_id)              ||
+        if (pci_cep_destination_set(pci, src_cep_id)      ||
+            pci_cep_source_set(pci, dst_cep_id)           ||
+            pci_destination_set(pci, dst_address)         ||
+            pci_source_set(pci, src_address)              ||
+            pci_sequence_number_set(pci, sequence_number) ||
+            pci_qos_id_set(pci, qos_id)                   ||
             pci_type_set(pci, type)) {
                 return -1;
         }
@@ -571,6 +580,8 @@ int pdu_control_ack_create(struct pdu * pdu_ctrl,
                            uint_t       my_rt_wind_edge,
                            uint_t       my_rcvr_rate)
 {
+        LOG_MISSING;
+
         return -1;
 }
 EXPORT_SYMBOL(pdu_control_ack_create);
@@ -585,6 +596,8 @@ int pdu_control_ack_flow(struct pdu * pdu_ctrl,
                          uint_t       my_rt_wind_edge,
                          uint_t       my_rcvr_rate)
 {
+        LOG_MISSING;
+
         return -1;
 }
 EXPORT_SYMBOL(pdu_control_ack_flow);

@@ -60,3 +60,10 @@ config RINA_SHIM_HV_VIRTIO
         depends on RINA_PERSONALITY_DEFAULT && VIRTIO
 	help
 	  No help for the time being
+
+config RINA_SHIM_HV_XEN
+	tristate "Shim IPC for Hypervisors (using XEN)"
+	default m
+        depends on RINA_PERSONALITY_DEFAULT
+	help
+	  No help for the time being
