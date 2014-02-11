@@ -8,6 +8,7 @@ import org.apache.commons.logging.LogFactory;
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -44,12 +45,14 @@ public class FlowStateDatabase {
 	}
 	
 	/*		Methods		*/
-	public boolean addObjectToGroup(FlowStateInternalObject object, FlowStateRIBObjectGroup fsRIBGroup )
+	public boolean addObjectToGroup(FlowStateInternalObject internalObject, FlowStateRIBObjectGroup fsRIBGroup )
 	{
-		boolean check = this.flowStateObjectGroup.add(object);
+		boolean check = this.flowStateObjectGroup.add(internalObject);
+		ObjectStateMapper mapper = new ObjectStateMapper();
 		if (check)
 		{
 			this.isModified = true;
+			FlowStateObject object = mapper.FSOMap(internalObject);
 			try {
 				fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), object.getID(), object);
 			} catch (RIBDaemonException e) {

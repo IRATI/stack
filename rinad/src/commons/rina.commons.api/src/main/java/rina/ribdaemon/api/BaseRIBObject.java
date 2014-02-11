@@ -55,6 +55,7 @@ public abstract class BaseRIBObject implements RIBObject{
 		this.objectName = objectName;
 		this.objectClass = objectClass;
 		this.objectInstance = objectInstance;
+		this.ribDaemon = ipcProcess.getRIBDaemon();
 	}
 	
 	public IPCProcess getIPCProcess() {

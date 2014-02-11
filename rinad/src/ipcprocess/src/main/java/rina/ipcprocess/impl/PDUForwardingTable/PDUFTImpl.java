@@ -23,11 +23,13 @@ import rina.ipcprocess.impl.PDUForwardingTable.timertasks.SendReadCDAP;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.UpdateAge;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
+import rina.ipcprocess.impl.events.NeighborAddedEvent;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowInformation;
+import eu.irati.librina.Neighbor;
 import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.PDUForwardingTableException;
@@ -191,6 +193,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	private void subscribeToEvents(){
 		this.ribDaemon.subscribeToEvent(Event.N_MINUS_1_FLOW_DEALLOCATED, this);
 		this.ribDaemon.subscribeToEvent(Event.N_MINUS_1_FLOW_ALLOCATED, this);
+		this.ribDaemon.subscribeToEvent(Event.NEIGHBOR_ADDED, this);
 	}
 	
 	/**
@@ -204,6 +207,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
 			flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
 					ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
+		}else if (event.getId().equals(Event.NEIGHBOR_ADDED))
+		{
+			NeighborAddedEvent neighborAddedEvent = (NeighborAddedEvent) event;
+			Neighbor neighbor= neighborAddedEvent.getNeighbor();
+			// TODO: Treure el tema del newMember
+			enrollmentToNeighbor(neighbor.getName(), neighbor.getAddress(), true , neighbor.getUnderlyingPortId());
 		}
 	}
 	
@@ -322,7 +331,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			List<FlowStateObject> fsoList = mapper.FSOGMap(db.getFlowStateObjectGroup()).getFlowStateObjectArray();
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
 			try {
-				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 0);
+				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
 			} catch (PDUForwardingTableException e) {
 				e.printStackTrace();
 			}

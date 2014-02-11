@@ -1,6 +1,5 @@
 package unitTest.PDUForwardingTable;
 
-import static org.junit.Assert.*;
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -8,7 +7,6 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
 
-import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
@@ -16,8 +14,6 @@ import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
 import unitTest.PDUForwardingTable.fakeobjects.FakeIPCProcess;
 import unitTest.PDUForwardingTable.fakeobjects.FakeRIBDaemon;
@@ -50,7 +46,7 @@ public class FlowStateDatabaseTest {
 		
 		Assert.assertFalse(db.isModified());
 	}
-	
+
 	@Test
 	public void addObjectToGroup_AddObjectCheckModified_True()
 	{
@@ -193,4 +189,5 @@ public class FlowStateDatabaseTest {
 		
 		Assert.assertNotSame(db.getFlowStateObjectGroup().getFlowStateObjectArray().get(0).getSequenceNumber(), 0);
 	}
+	
 }
