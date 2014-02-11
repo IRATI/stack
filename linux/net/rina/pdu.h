@@ -52,16 +52,26 @@ typedef uint8_t pdu_flags_t;
 typedef uint16_t pdu_type_t;
 
 #define pdu_type_is_ok(X)                               \
-        ((X && PDU_TYPE_EFCP)       ? true :            \
-         ((X && PDU_TYPE_DT)         ? true :           \
-          ((X && PDU_TYPE_CC)         ? true :          \
-           ((X && PDU_TYPE_SACK)       ? true :         \
-            ((X && PDU_TYPE_NACK)       ? true :        \
-             ((X && PDU_TYPE_FC)         ? true :       \
-              ((X && PDU_TYPE_ACK)        ? true :      \
-               ((X && PDU_TYPE_ACK_AND_FC) ? true :     \
-                ((X && PDU_TYPE_MGMT)       ? true :    \
+        ((X == PDU_TYPE_EFCP)       ? true :            \
+         ((X == PDU_TYPE_DT)         ? true :           \
+          ((X == PDU_TYPE_CC)         ? true :          \
+           ((X == PDU_TYPE_SACK)       ? true :         \
+            ((X == PDU_TYPE_NACK)       ? true :        \
+             ((X == PDU_TYPE_FC)         ? true :       \
+              ((X == PDU_TYPE_ACK)        ? true :      \
+               ((X == PDU_TYPE_ACK_AND_FC) ? true :     \
+                ((X == PDU_TYPE_MGMT)       ? true :    \
                  false)))))))))
+
+#define pdu_type_is_control(X)                          \
+        ((X == PDU_TYPE_EFCP)       ? true :            \
+         ((X == PDU_TYPE_CC)         ? true :           \
+          ((X == PDU_TYPE_SACK)       ? true :          \
+           ((X == PDU_TYPE_NACK)       ? true :         \
+            ((X == PDU_TYPE_FC)         ? true :        \
+             ((X == PDU_TYPE_ACK)        ? true :       \
+              ((X == PDU_TYPE_ACK_AND_FC) ? true :      \
+               false)))))))
 
 typedef uint seq_num_t;
 
@@ -78,17 +88,22 @@ int                   pci_destination_set(struct pci * pci,
                                           address_t    dst_address);
 int                   pci_source_set(struct pci * pci,
                                      address_t    src_address);
-int                   pci_seq_num_set(struct pci * pci,
-                                      seq_num_t    seq_num);
+
+int                   pci_sequence_number_set(struct pci * pci,
+                                              seq_num_t    sequence_number);
+/* FIXME: if pci is NULL, it should return and error (-1) ... */
+seq_num_t             pci_sequence_number_get(struct pci * pci);
+
 int                   pci_qos_id_set(struct pci * pci,
-                                     qos_id_t   qos_id);
-int                   pci_type_set(struct pci * pci, pdu_type_t type);
+                                     qos_id_t     qos_id);
+int                   pci_type_set(struct pci * pci,
+                                   pdu_type_t   type);
 int                   pci_format(struct pci * pci,
                                  cep_id_t     src_cep_id,
                                  cep_id_t     dst_cep_id,
                                  address_t    src_address,
                                  address_t    dst_address,
-                                 seq_num_t    seq_num,
+                                 seq_num_t    sequence_number,
                                  qos_id_t     qos_id,
                                  pdu_type_t   type);
 

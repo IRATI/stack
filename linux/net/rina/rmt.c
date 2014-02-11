@@ -870,6 +870,14 @@ static int receive_worker(void * o)
                         case PDU_TYPE_MGMT:
                                 process_mgmt_sdu(tmp, port_id, sdu);
                                 break;
+
+                        case PDU_TYPE_EFCP:
+                        case PDU_TYPE_CC:
+                        case PDU_TYPE_SACK:
+                        case PDU_TYPE_NACK:
+                        case PDU_TYPE_FC:
+                        case PDU_TYPE_ACK:
+                        case PDU_TYPE_ACK_AND_FC:
                         case PDU_TYPE_DT:
                                 /*
                                  * (FUTURE)
@@ -879,6 +887,7 @@ static int receive_worker(void * o)
                                  */
                                 process_dt_sdu(tmp, port_id, sdu, entry);
                                 break;
+
                         default:
                                 LOG_ERR("Unknown PDU type %d", pdu_type);
                                 sdu_destroy(sdu);
