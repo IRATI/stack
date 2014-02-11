@@ -21,8 +21,10 @@
 #ifndef RINA_QOS_H
 #define RINA_QOS_H
 
+#include <linux/types.h>
+
 /* ALWAYS use this function to check if the id looks good */
-int      is_qos_id_ok(qos_id_t id);
+bool     is_qos_id_ok(qos_id_t id);
 
 /* ALWAYS use this function to get a bad id */
 qos_id_t qos_id_bad(void);

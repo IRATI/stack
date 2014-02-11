@@ -329,7 +329,7 @@ struct pdu {
 };
 
 bool pdu_is_ok(const struct pdu * p)
-{ return (p && p->pci && p->buffer) ? true : false; }
+{ return (p && pci_is_ok(p->pci) && buffer_is_ok(p->buffer)) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
 static struct pdu * pdu_create_gfp(gfp_t flags)
@@ -354,16 +354,14 @@ struct pdu * pdu_create_ni(void)
 { return pdu_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(pdu_create_ni);
 
-static struct pdu * pdu_create_with_gfp(gfp_t        flags,
-                                        struct sdu * sdu)
+static struct pdu * pdu_create_from_gfp(gfp_t              flags,
+                                        const struct sdu * sdu)
 {
         struct pdu *          tmp_pdu;
         const struct buffer * tmp_buff;
         const uint8_t *       ptr;
 
-        /*
-         * FIXME: This implementation is pure crap, please fix it soon
-         */
+        /* FIXME: This implementation is pure crap, please fix it soon */
 
         if (!sdu_is_ok(sdu))
                 return NULL;
@@ -392,6 +390,41 @@ static struct pdu * pdu_create_with_gfp(gfp_t        flags,
         ASSERT(pdu_is_ok(tmp_pdu));
 
         return tmp_pdu;
+}
+
+struct pdu * pdu_create_from(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_KERNEL, sdu); }
+EXPORT_SYMBOL(pdu_create_from);
+
+struct pdu * pdu_create_from_ni(const struct sdu * sdu)
+{ return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
+EXPORT_SYMBOL(pdu_create_from_ni);
+
+/* FIXME: This code must be completely re-written */
+static struct pdu * pdu_create_with_gfp(gfp_t        flags,
+                                        struct sdu * sdu)
+{
+        struct pdu * tmp;
+
+        /* Just to prevent complaints from sdu_destroy */
+        if (!sdu_is_ok(sdu))
+                return NULL;
+
+        /*
+         * FIXME: We use pdu_create_from_gfp to mimic the intended behavior
+         *        of pdu_create_with_gfp. This implementation has to be fixed.
+         */
+
+        tmp = pdu_create_from_gfp(flags, sdu);
+
+        /*
+         * NOTE: We took ownership of the SDU and "theoretically" we built a
+         *       PDU from the SDU. Due to this crap implementation, we're
+         *       destroying the input SDU now ...
+         */
+        sdu_destroy(sdu);
+
+        return tmp;
 }
 
 struct pdu * pdu_create_with(struct sdu * sdu)
@@ -484,6 +517,15 @@ const struct pci * pdu_pci_get_ro(const struct pdu * pdu)
 }
 EXPORT_SYMBOL(pdu_pci_get_ro);
 
+bool pdu_pci_present(const struct pdu * pdu)
+{
+        if (!pdu_is_ok(pdu))
+                return false;
+
+        return pdu->pci ? true : false;
+}
+EXPORT_SYMBOL(pdu_pci_present);
+
 struct pci * pdu_pci_get_rw(struct pdu * pdu)
 {
         if (!pdu_is_ok(pdu))
@@ -520,3 +562,29 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);
+
+int pdu_control_ack_create(struct pdu * pdu_ctrl,
+                           seq_num_t    last_ctrl_seq_rcvd,
+                           uint_t       snd_left_wind_edge,
+                           uint_t       snd_rt_wind_edge,
+                           uint_t       my_left_wind_edge,
+                           uint_t       my_rt_wind_edge,
+                           uint_t       my_rcvr_rate)
+{
+        return -1;
+}
+EXPORT_SYMBOL(pdu_control_ack_create);
+
+int pdu_control_ack_flow(struct pdu * pdu_ctrl,
+                         seq_num_t    last_ctrl_seq_rcvd,
+                         seq_num_t    ack_nack_seq,
+                         uint_t       new_rt_wind_edge,
+                         uint_t       new_rate,
+                         uint_t       time_unit,
+                         uint_t       my_left_wind_edge,
+                         uint_t       my_rt_wind_edge,
+                         uint_t       my_rcvr_rate)
+{
+        return -1;
+}
+EXPORT_SYMBOL(pdu_control_ack_flow);

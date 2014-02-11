@@ -1,5 +1,5 @@
 /*
- * DTCP (Data Transfer Control Protocol)
+ * DT (Data Transfer)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,23 +18,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DTCP_H
-#define RINA_DTCP_H
-
-#include "common.h"
-#include "du.h"
+#ifndef RINA_DT_H
+#define RINA_DT_H
 
 struct dtp;
 struct dtcp;
+struct dt;
 
-struct dtcp * dtcp_create(void);
-int           dtcp_destroy(struct dtcp * instance);
+/*
+ * FIXME: The DT instance would represent the DTP/DTCP couple. It has to land
+ *        on EFCP. DTP, DTCP instances have to be removed from there
+ */
+struct dt *   dt_create(void);
+int           dt_destroy(struct dt * dt);
 
-/* NOTE: Takes the ownership of the passed PDU */
-int           dtcp_send(struct dtcp * instance,
-                        struct sdu *  sdu);
+int           dt_dtp_bind(struct dt *  dt, struct dtp *  dtp);
+int           dt_dtcp_bind(struct dt * dt, struct dtcp * dtp);
 
-int           dtcp_notify_seq_rtxq(struct dtcp * instance,
-                                   seq_num_t     seq);
+struct dtp *  dt_dtp(struct dt * dt);
+struct dtcp * dt_dtcp(struct dt * dt);
 
 #endif

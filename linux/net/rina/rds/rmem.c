@@ -52,7 +52,7 @@ static void mb_filler_init(uint8_t * f, size_t length)
         }
 }
 
-static int mb_is_filler_ok(const uint8_t * f, size_t length)
+static bool mb_is_filler_ok(const uint8_t * f, size_t length)
 {
         size_t          i;
         const uint8_t * g;
@@ -83,24 +83,24 @@ static int mb_is_filler_ok(const uint8_t * f, size_t length)
 
                         LOG_ERR("Filler dump end");
 
-                        return 0;
+                        return false;
                 }
                 g++;
         }
 
-        return 1;
+        return true;
 }
 
 static void mb_header_filler_init(struct memblock_header * m)
 { mb_filler_init(m->filler, ARRAY_SIZE(m->filler)); }
 
-static int mb_is_header_filler_ok(const struct memblock_header * m)
+static bool mb_is_header_filler_ok(const struct memblock_header * m)
 { return mb_is_filler_ok(m->filler, ARRAY_SIZE(m->filler)); }
 
 static void mb_footer_filler_init(struct memblock_footer * m)
 { mb_filler_init(m->filler, ARRAY_SIZE(m->filler)); }
 
-static int mb_is_footer_filler_ok(const struct memblock_footer * m)
+static bool mb_is_footer_filler_ok(const struct memblock_footer * m)
 { return mb_is_filler_ok(m->filler, ARRAY_SIZE(m->filler)); }
 #endif
 

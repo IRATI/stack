@@ -808,7 +808,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                attrs->src_addr,
                                                attrs->dst_addr,
                                                attrs->qos_id,
-                                               attrs->policies);
+                                               attrs->cp_params);
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
@@ -929,7 +929,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                                        attrs->dst_addr,
                                                        attrs->qos_id,
                                                        attrs->dst_cep,
-                                                       attrs->policies);
+                                                       attrs->cp_params);
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");

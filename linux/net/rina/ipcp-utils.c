@@ -288,13 +288,13 @@ bool name_is_ok(const struct name * n)
 { return (n && n->process_name); }
 EXPORT_SYMBOL(name_is_ok);
 
-static int __name_is_equal(const struct name * a,
-                           const struct name * b)
+bool name_is_equal(const struct name * a,
+                   const struct name * b)
 {
         if (a == b)
-                return 0;
+                return true;
         if (!a || !b)
-                return -1;
+                return false;
 
         ASSERT(a != b);
         ASSERT(a != NULL);
@@ -302,19 +302,16 @@ static int __name_is_equal(const struct name * a,
 
         /* Now compare field by field */
         if (NAME_CMP_FIELD(a, b, process_name))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, process_instance))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, entity_name))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, entity_instance))
-                return -1;
+                return false;
 
-        return 0;
+        return true;
 }
-
-bool name_is_equal(const struct name * a, const struct name * b)
-{ return !__name_is_equal(a, b) ? true : false; }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"

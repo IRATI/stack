@@ -25,6 +25,7 @@
 #include <linux/kobject.h>
 
 #include "du.h"
+#include "connection.h"
 
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
@@ -144,7 +145,7 @@ struct ipcp_instance_ops {
                                        address_t                   source,
                                        address_t                   dest,
                                        qos_id_t                    qos_id,
-                                       int                         policies);
+                                       struct conn_p_params        cp_params);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id,
@@ -161,7 +162,7 @@ struct ipcp_instance_ops {
                                       address_t                   dest,
                                       qos_id_t                    qos_id,
                                       cep_id_t                    dst_cep_id,
-                                      int                         policies);
+                                      struct conn_p_params        cp_params);
 
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id);
