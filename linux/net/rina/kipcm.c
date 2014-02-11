@@ -1204,9 +1204,29 @@ static int notify_ipcp_modify_pfte(void *             data,
                 return -1;
         }
 
-        op = attrs->mode ?
-                ipc_process->ops->pft_remove :
-                ipc_process->ops->pft_add;
+        switch(attrs->mode) {
+        case 2:
+                if (ipc_process->ops->pft_flush(ipc_process->data)) {
+                        LOG_ERR("Problems flushing PFT");
+                        rnl_msg_destroy(msg);
+                        return -1;
+                }
+
+                op = ipc_process->ops->pft_add;
+                break;
+        case 1:
+                op = ipc_process->ops->pft_remove;
+                break;
+        case 0:
+                op = ipc_process->ops->pft_add;
+                break;
+        default:
+                LOG_ERR("Unknown mode for modify PFT operation %d",
+                                attrs->mode);
+                rnl_msg_destroy(msg);
+                return -1;
+                break;
+        }
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {

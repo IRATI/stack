@@ -1013,6 +1013,12 @@ int rmt_pft_dump(struct rmt *       instance,
 }
 EXPORT_SYMBOL(rmt_pft_dump);
 
+int rmt_pft_flush(struct rmt * instance)
+{
+        return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1;
+}
+EXPORT_SYMBOL(rmt_pft_flush);
+
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 static struct pdu * regression_tests_pdu_create(address_t address)
 {
