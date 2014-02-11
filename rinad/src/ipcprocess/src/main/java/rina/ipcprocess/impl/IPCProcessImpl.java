@@ -51,6 +51,8 @@ import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
+import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
+import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
@@ -189,6 +191,8 @@ public class IPCProcessImpl implements IPCProcess {
 		registrationManager.setIPCProcess(this);
 		flowAllocator.setIPCProcess(this);
 		pduForwardingTable.setIPCProcess(this);
+		
+		pduForwardingTable.setAlgorithm(new DijkstraAlgorithm(), new Vertex(getAddress()));
 		
 		populateRIB();
 
