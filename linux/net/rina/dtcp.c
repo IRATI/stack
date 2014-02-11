@@ -110,7 +110,7 @@ struct dtcp_sv {
         uint_t       rcvr_credit;
 
         /* Value of credit in this flow */
-        uint_t       rcvr_rt_wind_edge;
+        seq_num_t    rcvr_rt_wind_edge;
 
         /*
          * Current rate receiver has told sender it may send PDUs
@@ -152,6 +152,7 @@ struct dtcp {
          */
         struct dtcp_sv *       sv; /* The state-vector */
         struct dtcp_policies * policies;
+        struct connection *    conn;
 
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
@@ -160,11 +161,18 @@ struct dtcp {
         struct dtp *           peer; /* The peering DTP instance */
 };
 
+int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
+{
+        return 0;
+}
+
 /* FIXME: Mock up code */
 static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 {
-        struct pdu * pdu_ctrl;
-        struct pci * pci;
+        struct pdu *    pdu_ctrl;
+        struct pci *    pci;
+
+        LOG_MISSING;
 
         if (!dtcp)
                 return -1;

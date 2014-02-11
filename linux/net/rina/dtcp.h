@@ -37,4 +37,8 @@ int           dtcp_send(struct dtcp * instance,
 int           dtcp_notify_seq_rtxq(struct dtcp * instance,
                                    seq_num_t     seq);
 
+/* Used by RMT to send an incoming DTCP PDU. */
+int           dtcp_common_rcv_control(struct dtcp * dtcp,
+                                      struct pdu *  pdu);
+
 #endif

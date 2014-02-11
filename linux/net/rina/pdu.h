@@ -51,16 +51,26 @@ typedef uint8_t pdu_flags_t;
 typedef uint16_t pdu_type_t;
 
 #define pdu_type_is_ok(X)                               \
-        ((X && PDU_TYPE_EFCP)       ? true :            \
-         ((X && PDU_TYPE_DT)         ? true :           \
-          ((X && PDU_TYPE_CC)         ? true :          \
-           ((X && PDU_TYPE_SACK)       ? true :         \
-            ((X && PDU_TYPE_NACK)       ? true :        \
-             ((X && PDU_TYPE_FC)         ? true :       \
-              ((X && PDU_TYPE_ACK)        ? true :      \
-               ((X && PDU_TYPE_ACK_AND_FC) ? true :     \
-                ((X && PDU_TYPE_MGMT)       ? true :    \
+        ((X == PDU_TYPE_EFCP)       ? true :            \
+         ((X == PDU_TYPE_DT)         ? true :           \
+          ((X == PDU_TYPE_CC)         ? true :          \
+           ((X == PDU_TYPE_SACK)       ? true :         \
+            ((X == PDU_TYPE_NACK)       ? true :        \
+             ((X == PDU_TYPE_FC)         ? true :       \
+              ((X == PDU_TYPE_ACK)        ? true :      \
+               ((X == PDU_TYPE_ACK_AND_FC) ? true :     \
+                ((X == PDU_TYPE_MGMT)       ? true :    \
                  false)))))))))
+
+#define pdu_type_is_control(X)                          \
+        ((X == PDU_TYPE_EFCP)       ? true :            \
+          ((X == PDU_TYPE_CC)         ? true :          \
+           ((X == PDU_TYPE_SACK)       ? true :         \
+            ((X == PDU_TYPE_NACK)       ? true :        \
+             ((X == PDU_TYPE_FC)         ? true :       \
+              ((X == PDU_TYPE_ACK)        ? true :      \
+               ((X == PDU_TYPE_ACK_AND_FC) ? true :     \
+                 false)))))))
 
 typedef uint seq_num_t;
 

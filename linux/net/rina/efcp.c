@@ -363,6 +363,8 @@ static int efcp_receive_worker(void * o)
 {
         struct receive_data * tmp;
         struct dtp *          dtp;
+        struct dtcp *         dtcp;
+        pdu_type_t            pdu_type;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -372,6 +374,9 @@ static int efcp_receive_worker(void * o)
 
         if (!is_receive_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_receive_worker");
+                if (tmp->pdu)
+                        pdu_destroy(tmp->pdu);
+
                 receive_data_destroy(tmp);
                 return -1;
         }
@@ -379,14 +384,31 @@ static int efcp_receive_worker(void * o)
         ASSERT(tmp->efcp);
         ASSERT(tmp->efcp->dt);
 
+        pdu_type = pci_type(pdu_pci_get_ro(tmp->pdu));
+        if (pdu_type_is_control(pdu_type)) {
+                dtcp = dt_dtcp(tmp->efcp->dt);
+                if (!dtcp) {
+                        LOG_ERR("No DTCP instance available");
+                        pdu_destroy(tmp->pdu);
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+                if (dtcp_common_rcv_control(dtcp, tmp->pdu)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+        }
         dtp = dt_dtp(tmp->efcp->dt);
         if (!dtp) {
                 LOG_ERR("No DTP instance available");
+                pdu_destroy(tmp->pdu);
+                receive_data_destroy(tmp);
                 return -1;
         }
 
         if (dtp_receive(dtp, tmp->pdu)) {
                 LOG_ERR("Could not receive SDU from DTP");
+                receive_data_destroy(tmp);
                 return -1;
         }
 
