@@ -393,11 +393,19 @@ static int efcp_receive_worker(void * o)
                         receive_data_destroy(tmp);
                         return -1;
                 }
+
                 if (dtcp_common_rcv_control(dtcp, tmp->pdu)) {
                         receive_data_destroy(tmp);
                         return -1;
                 }
+
+                /* FIXME: The PDU has been consumed ... */
         }
+
+        /*
+         * FIXME: Based on the previous FIXME, shouldn't the rest of this
+         *        functionbe in the else case ?
+         */
         dtp = dt_dtp(tmp->efcp->dt);
         if (!dtp) {
                 LOG_ERR("No DTP instance available");
@@ -407,7 +415,7 @@ static int efcp_receive_worker(void * o)
         }
 
         if (dtp_receive(dtp, tmp->pdu)) {
-                LOG_ERR("Could not receive SDU from DTP");
+                LOG_ERR("DTP cannot receive this PDU");
                 receive_data_destroy(tmp);
                 return -1;
         }
