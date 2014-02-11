@@ -28,7 +28,7 @@
 
 struct cwq {
         struct rqueue * q;
-        spinlock_t lock;
+        spinlock_t      lock;
 };
 
 struct cwq * cwq_create(void)
@@ -56,12 +56,12 @@ int cwq_destroy(struct cwq * queue)
         if (!queue)
                 return -1;
 
-        if (queue->q) {
-                if (rqueue_destroy(queue->q,
-                                   (void (*)(void *)) pdu_destroy)) {
-                        LOG_ERR("Failed to destroy closed window queue");
-                        return -1;
-                }
+        ASSERT(queue->q);
+
+        if (rqueue_destroy(queue->q,
+                           (void (*)(void *)) pdu_destroy)) {
+                LOG_ERR("Failed to destroy closed window queue");
+                return -1;
         }
 
         rkfree(queue);
@@ -83,6 +83,7 @@ int cwq_push(struct cwq * queue,
         spin_lock(&queue->lock);
         if (rqueue_tail_push(queue->q, pdu)) {
                 LOG_ERR("Failed to add PDU");
+                pdu_destroy(pdu);
                 spin_unlock(&queue->lock);
                 return -1;
         }
@@ -102,6 +103,7 @@ struct pdu * cwq_pop(struct cwq * queue)
         spin_lock(&queue->lock);
         tmp = (struct pdu *) rqueue_head_pop(queue->q);
         spin_unlock(&queue->lock);
+
         if (!tmp) {
                 LOG_ERR("Failed to retrieve PDU");
                 return NULL;
@@ -125,7 +127,7 @@ bool cwq_is_empty(struct cwq * queue)
 }
 
 struct rtxq {
-
+        int filler_to_be_removed;
 };
 
 struct rtxq * rtxq_create(void)
