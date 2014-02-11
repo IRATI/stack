@@ -23,21 +23,24 @@
 
 #include "common.h"
 #include "du.h"
+#include "rmt.h"
+#include "connection.h"
 
 struct dtp;
 struct dtcp;
 
-struct dtcp * dtcp_create(void);
+struct dtcp * dtcp_create(struct connection * conn,
+                          struct rmt *        rmt);
 int           dtcp_destroy(struct dtcp * instance);
 
 /* NOTE: Takes the ownership of the passed PDU */
 int           dtcp_send(struct dtcp * instance,
                         struct sdu *  sdu);
 
-int           dtcp_notify_seq_rtxq(struct dtcp * instance,
-                                   seq_num_t     seq);
+int           dtcp_sv_update(struct dtcp * instance,
+                             seq_num_t     seq);
 
-/* Used by RMT to send an incoming DTCP PDU. */
+/* Used by EFCP to send an incoming DTCP PDU. */
 int           dtcp_common_rcv_control(struct dtcp * dtcp,
                                       struct pdu *  pdu);
 

@@ -153,6 +153,7 @@ struct dtcp {
         struct dtcp_sv *       sv; /* The state-vector */
         struct dtcp_policies * policies;
         struct connection *    conn;
+        struct rmt *           rmt;
 
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
@@ -215,6 +216,8 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                              dtcp->sv->snd_rt_wind_edge,
                              dtcp->sv->sndr_rate);
 
+        rmt_send(dtcp->rmt, 0, 0, pdu_ctrl);
+
         return -1;
 }
 
@@ -258,7 +261,8 @@ static struct dtcp_policies default_policies = {
         .reconcile_flow_conflict     = NULL,
 };
 
-struct dtcp * dtcp_create(void)
+struct dtcp * dtcp_create(struct connection * conn,
+                          struct rmt *        rmt)
 {
         struct dtcp * tmp;
 
@@ -288,6 +292,9 @@ struct dtcp * dtcp_create(void)
         /* FIXME: fixups to the policies should be placed here */
 
         tmp->peer      = NULL;
+
+        tmp->conn      = conn;
+
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
@@ -320,8 +327,8 @@ int dtcp_send(struct dtcp * instance,
         return -1;
 }
 
-int dtcp_notify_seq_rtxq(struct dtcp * instance,
-                         seq_num_t     seq)
+int dtcp_sv_update(struct dtcp * instance,
+                   seq_num_t     seq)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
