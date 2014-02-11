@@ -23,11 +23,9 @@
 
 #include "common.h"
 #include "du.h"
+#include "dt.h"
 
-struct dtp;
-struct dtcp;
-
-struct dtcp * dtcp_create(void);
+struct dtcp * dtcp_create(struct dt * dt);
 int           dtcp_destroy(struct dtcp * instance);
 
 /* NOTE: Takes the ownership of the passed PDU */
