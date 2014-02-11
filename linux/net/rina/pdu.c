@@ -148,6 +148,15 @@ int pci_nxt_seq_send_set(struct pci * pci,
 }
 EXPORT_SYMBOL(pci_nxt_seq_send_set);
 
+seq_num_t pci_nxt_seq_send_get(struct pci * pci)
+{
+        if (!pci)
+                return -1;
+
+        return pci->sequence_number;
+}
+EXPORT_SYMBOL(pci_nxt_seq_send_get);
+
 int pci_qos_id_set(struct pci * pci,
                    qos_id_t     qos_id)
 {
