@@ -192,8 +192,6 @@ public class IPCProcessImpl implements IPCProcess {
 		flowAllocator.setIPCProcess(this);
 		pduForwardingTable.setIPCProcess(this);
 		
-		pduForwardingTable.setAlgorithm(/*TODO: Set algorithm by config*/new DijkstraAlgorithm(), new Vertex(getAddress()));
-		
 		populateRIB();
 
 		log.info("Initialized IPC Process with AP name: "+namingInfo.getProcessName()
@@ -536,6 +534,8 @@ public class IPCProcessImpl implements IPCProcess {
 						QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME, qosCubes);
 			}
 			
+			/*TODO: Set algorithm by config*/
+			pduForwardingTable.setAlgorithm(new DijkstraAlgorithm(), new Vertex(getAddress()));
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());
