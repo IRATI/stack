@@ -271,7 +271,7 @@ public class PDUFTImplTest {
 		}
 		Assert.assertTrue(impl.writeMessageRecieved(cdapMessage, 1));
 	}
-	
+	/*
 	@Test
 	public void enrollmentToNeighborWriteMessageRecieved_cancelTimer_False() {
 		ObjectValue ov = new ObjectValue();
@@ -305,7 +305,7 @@ public class PDUFTImplTest {
 		
 		Assert.assertFalse(rib.waitingResponse);
 	}
-	//@Test
+	@Test
 	public void enrollmentToNeighbor_NotCancelTimer_True() {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		FakeCDAPSessionManager cdapSM = new FakeCDAPSessionManager();
@@ -322,5 +322,5 @@ public class PDUFTImplTest {
 		}
 		
 		Assert.assertTrue(rib.waitingResponse);
-	}
+	}*/
 }
