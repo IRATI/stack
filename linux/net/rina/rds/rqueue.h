@@ -26,22 +26,28 @@ struct rqueue;
 struct rqueue * rqueue_create(void);
 struct rqueue * rqueue_create_ni(void);
 
+ssize_t         rqueue_length(struct rqueue * queue);
+
 /* NOTE: dtor has the ownership of freeing the passed element */
-int             rqueue_destroy(struct rqueue * q,
-                               void         (* dtor)(void * e));
+int             rqueue_destroy(struct rqueue * queue,
+                               void         (* dtor)(void * data));
 
 /*
  * NOTE: We allow pushing NULL entries in the fifo but the dtor passed to
  *       rfifo_destroy() has to handle them opportunely
  */
-int             rqueue_tail_push(struct rqueue * q, void * e);
-int             rqueue_tail_push_ni(struct rqueue * q, void * e);
-void *          rqueue_tail_pop(struct rqueue * q);
+int             rqueue_tail_push(struct rqueue * queue,
+                                 void *          data);
+int             rqueue_tail_push_ni(struct rqueue * queue,
+                                    void *          data);
+void *          rqueue_tail_pop(struct rqueue * queue);
 
-int             rqueue_head_push(struct rqueue * q, void * e);
-int             rqueue_head_push_ni(struct rqueue * q, void * e);
-void *          rqueue_head_pop(struct rqueue * q);
+int             rqueue_head_push(struct rqueue * queue,
+                                 void *          data);
+int             rqueue_head_push_ni(struct rqueue * queue,
+                                    void *          data);
+void *          rqueue_head_pop(struct rqueue * queue);
 
-bool            rqueue_is_empty(struct rqueue * q);
+bool            rqueue_is_empty(struct rqueue * queue);
 
 #endif
