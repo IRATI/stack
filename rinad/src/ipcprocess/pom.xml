@@ -133,7 +133,7 @@
             <version>2.12.4</version>
             <configuration>
                 <environmentVariables>
-                    <LD_LIBRARY_PATH>/home/irati/bin/lib</LD_LIBRARY_PATH>
+                    <LD_LIBRARY_PATH>${installation.path}/../../lib</LD_LIBRARY_PATH>
                 </environmentVariables>
             </configuration>
         	</plugin>
