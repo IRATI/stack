@@ -35,7 +35,11 @@ struct dtp_sv {
         uint_t              max_flow_sdu_size;
         uint_t              max_flow_pdu_size;
         uint_t              seq_number_rollover_threshold;
-
+        bool                window_based;
+        bool                window_closed;
+        uint_t              max_cwq_len;
+        int                 rexmsn_ctrl;
+        
         struct {
                 seq_num_t   left_window_edge;
         } inbound;
@@ -49,14 +53,16 @@ struct dtp_sv {
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
         int (* transmission_control)(struct dtp * instance);
+        /* FIXME: What is this policy for? */
         int (* closed_window_queue)(struct dtp * instance);
         int (* flow_control_overrun)(struct dtp * instance);
         int (* unknown_flow)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
-        int (* sender_inactivitty_timer)(struct dtp * instance);
+        int (* sender_inactivity_timer)(struct dtp * instance);
 };
 
+/* FIXME: Should probably be kept in a different component */
 #define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
 #define TIME_R   200 /* FIXME: Completely bogus value, must be in ms */
 #define TIME_A   300 /* FIXME: Completely bogus value, must be in ms */
@@ -85,6 +91,10 @@ static struct dtp_sv default_sv = {
         .max_flow_sdu_size               = 0,
         .max_flow_pdu_size               = 0,
         .seq_number_rollover_threshold   = 0,
+        .window_based                    = false,
+        .window_closed                   = false,
+        .rexmsn_ctrl                     = false,
+        .max_cwq_len                     = 0,
         .inbound.left_window_edge        = 0,
         .outbound.next_sequence_to_send  = 0,
         .outbound.right_window_edge      = 0
@@ -97,7 +107,7 @@ static struct dtp_policies default_policies = {
         .unknown_flow              = NULL,
         .initial_sequence_number   = NULL,
         .receiver_inactivity_timer = NULL,
-        .sender_inactivitty_timer  = NULL,
+        .sender_inactivity_timer   = NULL,
 };
 
 static void tf_sender_inactivity(void * data)
@@ -144,7 +154,7 @@ struct dtp * dtp_create(struct dt *         dt,
         *tmp->sv            = default_sv;
         /* FIXME: fixups to the state-vector should be placed here */
 
-        tmp->sv->connection = connection;
+        tmp->sv->connection   = connection;
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
@@ -222,12 +232,13 @@ int dtp_write(struct dtp * instance,
         struct pdu *    pdu;
         struct pci *    pci;
         struct dtp_sv * sv;
-        int             ret;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
+
+        /* FIXME: Stop SenderInactivityTimer */
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -266,21 +277,52 @@ int dtp_write(struct dtp * instance,
                 pci_destroy(pci);
                 return -1;
         }
+        /* 
+         * Incrementing here means the PDU cannot 
+         * be just thrown away from this point onwards 
+         */
+        sv->outbound.next_sequence_to_send++;
 
         /* Step 1: Sequencing */
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
+
+        if (sv->window_based) {
+                if (!sv->window_closed && 
+                    pci_seq_num(pci) < 
+                    sv->outbound.right_window_edge) {
+                        /* 
+                         * Call TransmissionControlPolicy
+                         *
+                         * Might close window 
+                         * 
+                         * What happens when we aren't 
+                         * allowed to add it here? 
+                         */
+                } else {
+                        sv->window_closed = true;
+                        if (/*cwq_len < */ sv->max_cwq_len-1) {
+                                /* FIXME: Put PDU on cwq and return */
+                        } else {
+                                /* Call FlowControlOverrunPolicy and return */
+                        }
+                }
+        }
+       
+        if (sv->rexmsn_ctrl) {
+                /* Add timer for PDU */
+                /* Put a copy in the rtxq queue */
+        }
+
+        /* Post SDU to RMT */
         /* Give the data to RMT now ! */
-        ret = rmt_send(instance->rmt,
-                       pci_destination(pci),
-                       pci_qos_id(pci),
-                       pdu);
+        return rmt_send(instance->rmt,
+                        pci_destination(pci),
+                        pci_qos_id(pci),
+                        pdu);
 
-        if (!ret)
-                sv->outbound.next_sequence_to_send++;
-
-        return ret;
+        /* FIXME: Start SenderInactivityTimer */
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
