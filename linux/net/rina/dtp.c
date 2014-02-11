@@ -78,7 +78,6 @@ struct dtp {
                 struct rtimer * a;
         } timers;
 
-        struct dtcp *         peer; /* The peering DTCP instance */
 };
 
 static struct dtp_sv default_sv = {
@@ -142,7 +141,6 @@ struct dtp * dtp_create(struct rmt *        rmt,
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer           = NULL;
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
 
