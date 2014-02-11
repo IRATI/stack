@@ -92,13 +92,13 @@ static struct dtp_sv default_sv = {
 };
 
 static struct dtp_policies default_policies = {
-        .transmission_control = NULL,
-        .closed_window_queue = NULL,
-        .flow_control_overrun = NULL,
-        .unknown_flow = NULL,
-        .initial_sequence_number = NULL,
+        .transmission_control      = NULL,
+        .closed_window_queue       = NULL,
+        .flow_control_overrun      = NULL,
+        .unknown_flow              = NULL,
+        .initial_sequence_number   = NULL,
         .receiver_inactivity_timer = NULL,
-        .sender_inactivitty_timer = NULL,
+        .sender_inactivitty_timer  = NULL,
 };
 
 static void tf_sender_inactivity(void * data)
@@ -134,10 +134,9 @@ struct dtp * dtp_create(struct rmt *        rmt,
                 rkfree(tmp);
                 return NULL;
         }
-
         *tmp->sv            = default_sv;
-
         /* FIXME: fixups to the state-vector should be placed here */
+
         tmp->sv->connection = connection;
 
         tmp->policies       = &default_policies;
