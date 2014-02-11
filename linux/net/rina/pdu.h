@@ -88,10 +88,10 @@ int                   pci_destination_set(struct pci * pci,
 int                   pci_source_set(struct pci * pci,
                                      address_t    src_address);
 /* FIXME: To be renamed */
-int                   pci_nxt_seq_send_set(struct pci * pci,
-                                           seq_num_t    nxt_seq_send);
+int                   pci_sequence_number_set(struct pci * pci,
+                                              seq_num_t    sequence_number);
 /* FIXME: To be renamed */
-seq_num_t             pci_nxt_seq_send_get(struct pci * pci);
+seq_num_t             pci_sequence_number_get(struct pci * pci);
 
 int                   pci_qos_id_set(struct pci * pci,
                                      qos_id_t     qos_id);
@@ -102,7 +102,7 @@ int                   pci_format(struct pci * pci,
                                  cep_id_t     dst_cep_id,
                                  address_t    src_address,
                                  address_t    dst_address,
-                                 seq_num_t    nxt_seq_send,
+                                 seq_num_t    sequence_number,
                                  qos_id_t     qos_id,
                                  pdu_type_t   type);
 
