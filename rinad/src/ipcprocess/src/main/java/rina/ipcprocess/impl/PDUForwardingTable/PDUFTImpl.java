@@ -2,6 +2,9 @@ package rina.ipcprocess.impl.PDUForwardingTable;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
+import rina.PDUForwardingTable.api.PDUFTable;
+import rina.PDUForwardingTable.api.RoutingAlgorithmInt;
+import rina.PDUForwardingTable.api.VertexInt;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
@@ -25,6 +28,10 @@ import rina.ribdaemon.api.RIBObject;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowInformation;
+import eu.irati.librina.PDUForwardingTableEntry;
+import eu.irati.librina.PDUForwardingTableEntryList;
+import eu.irati.librina.PDUForwardingTableException;
+import eu.irati.librina.rina;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +83,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	protected final int MAXIMUM_BUFFER_SIZE = 4096;
 	protected final int NO_AVOID_PORT = -1;
+	
 	public final int WAIT_UNTIL_READ_CDAP = 1;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 1;  //5 sec
 	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 1; // 100 ms
@@ -106,16 +114,19 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	protected CDAPSessionManager cdapSessionManager = null;
 	
+	/**
+	 * The Flow State Database
+	 */
+	protected FlowStateDatabase db = null;
+	protected FlowStateRIBObjectGroup fsRIBGroup = null;
+	
 	protected boolean test = false;
 	public void setTest(boolean test)
 	{
 		this.test = test;
 	}
 	
-	/**
-	 * The Flow State Database
-	 */
-	protected FlowStateDatabase db = null;
+	
 	/**
 	 * Constructor
 	 */
@@ -170,8 +181,8 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	private void populateRIB(){
 		try{
-			RIBObject ribObject = new FlowStateRIBObjectGroup(this, ipcProcess);
-			ribDaemon.addRIBObject(ribObject);
+			fsRIBGroup = new FlowStateRIBObjectGroup(this, ipcProcess);
+			ribDaemon.addRIBObject(fsRIBGroup);
 		}catch(Exception ex){
 			log.error("Could not subscribe to RIB Daemon:" +ex.getMessage());
 		}
@@ -226,8 +237,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public boolean flowAllocated(long address, int portId, long neighborAddress, int neighborPortId)
 	{
 		FlowStateInternalObject object = new FlowStateInternalObject(address, portId, neighborAddress, neighborPortId, true, 1, 0);
-		
-		return db.addObjectToGroup(object);
+		return db.addObjectToGroup(object, fsRIBGroup);
 	}
 	
 	public boolean flowDeallocated(int portId)
@@ -266,9 +276,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			FlowStateInternalObject object = modifiedFSOs.get(i);
 			FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
 			
-			String stateName = ""+ object.getAddress() +"-"+ object.getPortid();
-			String objName = FlowStateObject.FLOW_STATE_RIB_OBJECT_NAME + stateName;
-			
 			try {
 				objectValue.setByteval(encoder.encode(mapper.FSOMap(object)));
 			} catch (Exception e1) {
@@ -284,7 +291,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 					try 
 					{
 						CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(portId, null,
-								null, FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, 0, objectValue, objName, 0, false);
+								null, FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, 0, objectValue, object.getID(), 0, false);
 						ribDaemon.sendMessage(cdapMessage, portId , null);
 					} 
 					catch (Exception e) 
@@ -307,6 +314,20 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		db.incrementAge(maximumAge);
 	}
 	
+	public void ForwardingTableUpdate ()
+	{
+		if (db.isModified())
+		{
+			ObjectStateMapper  mapper = new ObjectStateMapper();
+			List<FlowStateObject> fsoList = mapper.FSOGMap(db.getFlowStateObjectGroup()).getFlowStateObjectArray();
+			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
+			try {
+				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 0);
+			} catch (PDUForwardingTableException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 	
 	private void writeMessageRecieved(FlowStateObjectGroup objectsToModify, int srcPort)
 	{
@@ -327,16 +348,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		FlowStateInternalObjectGroup intObjectsToModify = mapper.FSOGMap(objectsToModify);
 		
 		db.updateObjects(intObjectsToModify, srcPort);
-	}
-	
-	public void ForwardingTableupdate ()
-	{
-		if (db.isModified())
-		{
-			ObjectStateMapper  mapper = new ObjectStateMapper();
-			List<FlowStateObject> fsoList = mapper.FSOGMap(db.getFlowStateObjectGroup()).getFlowStateObjectArray();
-			routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
-		}
 	}
 
 	@Override

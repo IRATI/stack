@@ -2,7 +2,7 @@ package rina.ipcprocess.impl.PDUForwardingTable.timertasks;
 
 import java.util.TimerTask;
 
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTable;
+import rina.PDUForwardingTable.api.PDUFTable;
 
 public class ComputePDUFT extends TimerTask{
 	
@@ -15,7 +15,7 @@ public class ComputePDUFT extends TimerTask{
 	@Override
 	public void run() 
 	{
-		this.pduFT.ForwardingTableupdate();
+		this.pduFT.ForwardingTableUpdate();
 	}
 
 }

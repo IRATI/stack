@@ -5,8 +5,12 @@ import java.util.ArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ribdaemon.api.ObjectInstanceGenerator;
+import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateDatabase {
 	private static final Log log = LogFactory.getLog(FlowStateDatabase.class);
@@ -40,10 +44,20 @@ public class FlowStateDatabase {
 	}
 	
 	/*		Methods		*/
-	public boolean addObjectToGroup(FlowStateInternalObject object)
+	public boolean addObjectToGroup(FlowStateInternalObject object, FlowStateRIBObjectGroup fsRIBGroup )
 	{
-		this.isModified = true;
-		return this.flowStateObjectGroup.add(object);
+		boolean check = this.flowStateObjectGroup.add(object);
+		if (check)
+		{
+			this.isModified = true;
+			try {
+				fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), object.getID(), object);
+			} catch (RIBDaemonException e) {
+				e.printStackTrace();
+			}
+		}
+
+		return check;
 	}
 	
 	public FlowStateInternalObject getByPortId(int portId)

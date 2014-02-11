@@ -4,12 +4,12 @@ import rina.ribdaemon.api.RIBObjectNames;
 
 public class FlowStateObject{
 	
-	public static final String FLOW_STATE_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
+	public static final String FLOW_STATE_RIB_OBJECT_CLASS = "flowstateob";
+	
+	protected String ID = RIBObjectNames.SEPARATOR + 
 			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
 			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
 			+ RIBObjectNames.FLOWSTATEOBJECTGROUP + RIBObjectNames.SEPARATOR;
-	
-	public static final String FLOW_STATE_RIB_OBJECT_CLASS = "flowstateob";
 	
 	/* The address of the IPC Process */ 
 	protected long address;
@@ -76,6 +76,10 @@ public class FlowStateObject{
 	public void setAge(int age) {
 		this.age = age;
 	}
+	public String getID()
+	{
+		return this.ID;
+	}
 
 
 
@@ -91,5 +95,7 @@ public class FlowStateObject{
 		this.state  = state;
 		this.sequenceNumber = sequenceNumber;
 		this.age = age;
+		this.ID = this.ID + address + portid + neighborAddress + neighborPortid;
+		
 	}
 }

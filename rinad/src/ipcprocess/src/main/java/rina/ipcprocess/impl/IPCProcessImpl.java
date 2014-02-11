@@ -50,6 +50,7 @@ import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.api.IPCProcess;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
@@ -62,6 +63,7 @@ import rina.registrationmanager.api.RegistrationManager;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
+import rina.PDUForwardingTable.api.*;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.AllocateFlowResponseEvent;
@@ -141,6 +143,9 @@ public class IPCProcessImpl implements IPCProcess {
 	/** The Flow Allocator */
 	private FlowAllocator flowAllocator = null;
 	
+	/** The PDU Forwarding Table */
+	private PDUFTable pduForwardingTable = null;
+	
 	/** The IPC Process name */
 	private ApplicationProcessNamingInformation name = null;
 	
@@ -177,11 +182,13 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
+		pduForwardingTable = new PDUFTImpl(/*TODO: Set maximum age by config*/5000);
 		ribDaemon.setIPCProcess(this);
 		enrollmentTask.setIPCProcess(this);
 		resourceAllocator.setIPCProcess(this);
 		registrationManager.setIPCProcess(this);
 		flowAllocator.setIPCProcess(this);
+		pduForwardingTable.setIPCProcess(this);
 		
 		populateRIB();
 

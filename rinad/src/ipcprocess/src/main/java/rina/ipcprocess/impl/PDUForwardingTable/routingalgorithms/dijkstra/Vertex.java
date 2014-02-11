@@ -1,6 +1,6 @@
 package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
 
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.VertexInt;
+import rina.PDUForwardingTable.api.VertexInt;
 
 
 public class Vertex implements VertexInt{

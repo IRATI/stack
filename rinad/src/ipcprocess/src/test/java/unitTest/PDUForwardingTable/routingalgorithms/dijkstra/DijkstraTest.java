@@ -11,7 +11,7 @@ import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.RoutingAlgorithmInt;
+import rina.PDUForwardingTable.api.RoutingAlgorithmInt;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 

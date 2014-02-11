@@ -2,14 +2,16 @@ package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
 
 import java.util.ArrayList;
 
+import rina.PDUForwardingTable.api.VertexInt;
+
 public class Edge  {
-	  private final Vertex v1;
-	  private final Vertex v2;
+	  private final VertexInt v1;
+	  private final VertexInt v2;
 	  private final int weight;
 //	  private int portV1;
 //	  private int portV2;
 	  
-	  public Edge(Vertex v1, Vertex v2, int weight) {
+	  public Edge(VertexInt v1, VertexInt v2, int weight) {
 	    this.v1 = v1;
 //	    this.portV1 = portV1;
 //	    this.portV2 = portV2;
@@ -33,18 +35,18 @@ public class Edge  {
 //		this.portV2 = portV2;
 //	  }
 
-	  public Vertex getV2() {
+	  public VertexInt getV2() {
 	    return v2;
 	  }
 
-	  public Vertex getV1() {
+	  public VertexInt getV1() {
 	    return v1;
 	  }
 	  public int getWeight() {
 	    return weight;
 	  }
 	  
-	  public boolean isVertexIn(Vertex v)
+	  public boolean isVertexIn(VertexInt v)
 	  {
 		  if (v.equals(v1) || v.equals(v2))
 		  {
@@ -56,7 +58,7 @@ public class Edge  {
 		  }
 	  }
 	  
-	  public Vertex getOtherEndpoint(Vertex v)
+	  public VertexInt getOtherEndpoint(VertexInt v)
 	  {
 		  if (v.equals(v1))
 		  {
@@ -76,9 +78,9 @@ public class Edge  {
 		  }
 	  }
 	  
-	  public ArrayList<Vertex> getEndpoints()
+	  public ArrayList<VertexInt> getEndpoints()
 	  {
-		  ArrayList<Vertex> array = new ArrayList<Vertex>();
+		  ArrayList<VertexInt> array = new ArrayList<VertexInt>();
 		  array.add(v1);
 		  array.add(v2);
 		  return array;

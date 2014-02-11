@@ -256,19 +256,20 @@ public class PDUFTImplTest {
 		IPCProcess ipc = new FakeIPCProcess(cdapSessionManager, rib, fse);
 		impl.setIPCProcess(ipc);
 		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
+		CDAPMessage cdapMessage = null;
 
 		try
 		{
 			
 			objectValue.setByteval(fse.encode(obj1));
-			CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(1, null,
-				null, FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, 0, objectValue, FlowStateObject.FLOW_STATE_RIB_OBJECT_NAME, 0, false);
-			Assert.assertTrue(impl.writeMessageRecieved(cdapMessage, 1));
+			cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(1, null,
+				null, FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, 0, objectValue, obj1.getID(), 0, false);
 		} 
 		catch (Exception e) 
 		{
 			e.printStackTrace();
 		}
+		Assert.assertTrue(impl.writeMessageRecieved(cdapMessage, 1));
 	}
 	
 	@Test
@@ -295,7 +296,7 @@ public class PDUFTImplTest {
 			CDAPMessage cdapMessage = cdapSM.getWriteObjectRequestMessage(1, null,
 					null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, ov,
 					FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
-			impl.writeMessageRecieved(cdapMessage, 1);
+			impl.writeMessageRecieved(cdapMessage, 2);
 		}
 		catch(Exception ex)
 		{
@@ -304,7 +305,6 @@ public class PDUFTImplTest {
 		
 		Assert.assertFalse(rib.waitingResponse);
 	}
-	
 	@Test
 	public void enrollmentToNeighbor_NotCancelTimer_True() {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
@@ -323,5 +323,4 @@ public class PDUFTImplTest {
 		
 		Assert.assertTrue(rib.waitingResponse);
 	}
-	
 }

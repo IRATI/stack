@@ -3,9 +3,9 @@ package unitTest.PDUForwardingTable.timertasks;
 import static org.junit.Assert.*;
 import junit.framework.Assert;
 
+import rina.PDUForwardingTable.api.PDUFTable;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTable;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;

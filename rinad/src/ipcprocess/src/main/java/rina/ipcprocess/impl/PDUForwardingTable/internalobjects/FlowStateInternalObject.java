@@ -1,7 +1,13 @@
 package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
+import rina.ribdaemon.api.RIBObjectNames;
+
 public class FlowStateInternalObject{
 	
+	protected String ID = RIBObjectNames.SEPARATOR + 
+			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
+			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
+			+ RIBObjectNames.FLOWSTATEOBJECTGROUP + RIBObjectNames.SEPARATOR;
 	
 	/* The address of the IPC Process */ 
 	protected long address;
@@ -84,6 +90,10 @@ public class FlowStateInternalObject{
 	public void setAvoidPort(int avoidPort) {
 		this.avoidPort = avoidPort;
 	}
+	public String getID()
+	{
+		return this.ID;
+	}
 	
 	/*		Constructor	*/
 	public FlowStateInternalObject(long address, int portid, long neighbor_address, int neighbor_portid, boolean state, int sequence_number, int age)
@@ -97,6 +107,7 @@ public class FlowStateInternalObject{
 		this.age = age;
 		this.isModified = true;
 		this.avoidPort = -1;
+		this.ID = this.ID + address + portid + neighborAddress + neighborPortid;
 	}
 	public FlowStateInternalObject(FlowStateInternalObject obj)
 	{
@@ -109,6 +120,7 @@ public class FlowStateInternalObject{
 		this.age = obj.getAge();
 		this.isModified = obj.isModified();
 		this.avoidPort = obj.getAvoidPort();
+		this.ID = this.ID + address + portid + neighborAddress + neighborPortid;
 	}
 	
 	public void incrementAge()

@@ -2,7 +2,7 @@ package rina.ipcprocess.impl.PDUForwardingTable.timertasks;
 
 import java.util.TimerTask;
 
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTable;
+import rina.PDUForwardingTable.api.PDUFTable;
 
 public class PropagateFSODB extends TimerTask{
 	

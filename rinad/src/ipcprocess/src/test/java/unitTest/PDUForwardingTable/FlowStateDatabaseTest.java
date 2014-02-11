@@ -9,10 +9,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
+import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
@@ -52,7 +55,10 @@ public class FlowStateDatabaseTest {
 	public void addObjectToGroup_AddObjectCheckModified_True()
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		
 		Assert.assertTrue(db.isModified());
 	}
@@ -61,8 +67,10 @@ public class FlowStateDatabaseTest {
 	public void incrementAge_AddObjectCheckModified_False()
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
 		
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		db.setModified(false);
 		db.incrementAge(3);
 		
@@ -73,7 +81,10 @@ public class FlowStateDatabaseTest {
 	public void incrementAge_AddObjectCheckModified_True()
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		db.setModified(false);
 		
 		db.incrementAge(1);
@@ -123,7 +134,9 @@ public class FlowStateDatabaseTest {
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
 		FlowStateInternalObjectGroup fsg = new FlowStateInternalObjectGroup();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		
 		FlowStateInternalObject tempObj = new FlowStateInternalObject(1,1,2,1, true, 2, 0);
 		fsg.add(tempObj);
@@ -137,7 +150,9 @@ public class FlowStateDatabaseTest {
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
 		FlowStateInternalObjectGroup fsg = new FlowStateInternalObjectGroup();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		
 		FlowStateInternalObject tempObj = new FlowStateInternalObject(1,1,2,1, true, 2, 0);
 		fsg.add(tempObj);
@@ -152,7 +167,9 @@ public class FlowStateDatabaseTest {
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
 		FlowStateInternalObjectGroup fsg = new FlowStateInternalObjectGroup();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		
 		FlowStateInternalObject tempObj = new FlowStateInternalObject(1,1,3,2, true, 2, 0);
 		fsg.add(tempObj);
@@ -166,7 +183,9 @@ public class FlowStateDatabaseTest {
 	{
 		FlowStateDatabase db = new FlowStateDatabase();
 		FlowStateInternalObjectGroup fsg = new FlowStateInternalObjectGroup();
-		db.addObjectToGroup(obj1);
+		FakeRIBDaemon rib = new FakeRIBDaemon();
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		db.addObjectToGroup(obj1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
 		
 		FlowStateInternalObject tempObj = new FlowStateInternalObject(1,1,2,1, true, 0, 0);
 		fsg.add(tempObj);

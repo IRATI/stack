@@ -111,6 +111,7 @@ public class FakeRIBDaemon implements RIBDaemon{
 							}
 						break;
 					case M_READ:
+						log.info("waiting response entra");
 						this.waitingResponse = true;
 						break;
 					default:

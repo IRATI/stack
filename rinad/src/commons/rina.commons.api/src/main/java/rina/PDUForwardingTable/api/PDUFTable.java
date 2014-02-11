@@ -1,9 +1,7 @@
-package rina.ipcprocess.impl.PDUForwardingTable;
+package rina.PDUForwardingTable.api;
 
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.RoutingAlgorithmInt;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.VertexInt;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 
 public interface PDUFTable {
@@ -23,7 +21,7 @@ public interface PDUFTable {
 
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
-	public void ForwardingTableupdate ();
+	public void ForwardingTableUpdate ();
 	
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
