@@ -24,6 +24,8 @@
 #include "utils.h"
 #include "debug.h"
 #include "dtcp.h"
+#include "rmt.h"
+#include "connection.h"
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
@@ -146,6 +148,8 @@ struct dtcp_policies {
 };
 
 struct dtcp {
+        struct dt *            parent;
+
         /*
          * NOTE: The DTCP State Vector can be discarded during long periods of
          *       no traffic
@@ -158,8 +162,6 @@ struct dtcp {
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
-
-        struct dtp *           peer; /* The peering DTP instance */
 };
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
@@ -261,16 +263,24 @@ static struct dtcp_policies default_policies = {
         .reconcile_flow_conflict     = NULL,
 };
 
-struct dtcp * dtcp_create(struct connection * conn,
+struct dtcp * dtcp_create(struct dt *         dt,
+                          struct connection * conn,
                           struct rmt *        rmt)
 {
         struct dtcp * tmp;
+
+        if (!dt) {
+                LOG_ERR("No DT passed, bailing out");
+                return NULL;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
                 LOG_ERR("Cannot create DTCP state-vector");
                 return NULL;
         }
+
+        tmp->parent = dt;
 
         tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
@@ -291,10 +301,7 @@ struct dtcp * dtcp_create(struct connection * conn,
         *tmp->policies = default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer      = NULL;
-
         tmp->conn      = conn;
-
 
         LOG_DBG("Instance %pK created successfully", tmp);
 

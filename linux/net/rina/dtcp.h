@@ -23,14 +23,17 @@
 
 #include "common.h"
 #include "du.h"
-#include "rmt.h"
-#include "connection.h"
+#include "dt.h"
 
 struct dtp;
 struct dtcp;
+struct connection;
+struct rmt;
 
-struct dtcp * dtcp_create(struct connection * conn,
+struct dtcp * dtcp_create(struct dt *         dt,
+                          struct connection * conn,
                           struct rmt *        rmt);
+
 int           dtcp_destroy(struct dtcp * instance);
 
 /* NOTE: Takes the ownership of the passed PDU */
