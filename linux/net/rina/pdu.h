@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,8 +78,8 @@ int                   pci_destination_set(struct pci * pci,
                                           address_t    dst_address);
 int                   pci_source_set(struct pci * pci,
                                      address_t    src_address);
-int                   pci_nxt_seq_send_set(struct pci * pci,
-                                           seq_num_t    nxt_seq_send);
+int                   pci_seq_num_set(struct pci * pci,
+                                      seq_num_t    seq_num);
 int                   pci_qos_id_set(struct pci * pci,
                                      qos_id_t   qos_id);
 int                   pci_type_set(struct pci * pci, pdu_type_t type);
@@ -87,7 +88,7 @@ int                   pci_format(struct pci * pci,
                                  cep_id_t     dst_cep_id,
                                  address_t    src_address,
                                  address_t    dst_address,
-                                 seq_num_t    nxt_seq_send,
+                                 seq_num_t    seq_num,
                                  qos_id_t     qos_id,
                                  pdu_type_t   type);
 
@@ -101,6 +102,7 @@ address_t             pci_destination(const struct pci * pci);
 cep_id_t              pci_cep_source(const struct pci * pci);
 cep_id_t              pci_cep_destination(const struct pci * pci);
 qos_id_t              pci_qos_id(const struct pci * pci);
+seq_num_t             pci_seq_num(const struct pci * pci);
 
 struct pdu;
 
