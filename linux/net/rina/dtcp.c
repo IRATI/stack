@@ -24,6 +24,8 @@
 #include "utils.h"
 #include "debug.h"
 #include "dtcp.h"
+#include "rmt.h"
+#include "connection.h"
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
@@ -110,7 +112,7 @@ struct dtcp_sv {
         uint_t       rcvr_credit;
 
         /* Value of credit in this flow */
-        uint_t       rcvr_rt_wind_edge;
+        seq_num_t    rcvr_rt_wind_edge;
 
         /*
          * Current rate receiver has told sender it may send PDUs
@@ -146,25 +148,36 @@ struct dtcp_policies {
 };
 
 struct dtcp {
+        struct dt *            parent;
+
         /*
          * NOTE: The DTCP State Vector can be discarded during long periods of
          *       no traffic
          */
         struct dtcp_sv *       sv; /* The state-vector */
         struct dtcp_policies * policies;
+        struct connection *    conn;
+        struct rmt *           rmt;
 
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
-
-        struct dtp *           peer; /* The peering DTP instance */
 };
+
+int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
+{
+        LOG_MISSING;
+
+        return 0;
+}
 
 /* FIXME: Mock up code */
 static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
         struct pci * pci;
+
+        LOG_MISSING;
 
         if (!dtcp)
                 return -1;
@@ -206,6 +219,8 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                              dtcp->sv->send_left_wind_edge,
                              dtcp->sv->snd_rt_wind_edge,
                              dtcp->sv->sndr_rate);
+
+        rmt_send(dtcp->rmt, 0, 0, pdu_ctrl);
 
         return -1;
 }
@@ -250,15 +265,24 @@ static struct dtcp_policies default_policies = {
         .reconcile_flow_conflict     = NULL,
 };
 
-struct dtcp * dtcp_create(void)
+struct dtcp * dtcp_create(struct dt *         dt,
+                          struct connection * conn,
+                          struct rmt *        rmt)
 {
         struct dtcp * tmp;
+
+        if (!dt) {
+                LOG_ERR("No DT passed, bailing out");
+                return NULL;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
                 LOG_ERR("Cannot create DTCP state-vector");
                 return NULL;
         }
+
+        tmp->parent = dt;
 
         tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
@@ -279,7 +303,7 @@ struct dtcp * dtcp_create(void)
         *tmp->policies = default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer      = NULL;
+        tmp->conn      = conn;
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
@@ -312,8 +336,8 @@ int dtcp_send(struct dtcp * instance,
         return -1;
 }
 
-int dtcp_notify_seq_rtxq(struct dtcp * instance,
-                         seq_num_t     seq)
+int dtcp_sv_update(struct dtcp * instance,
+                   seq_num_t     seq)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
