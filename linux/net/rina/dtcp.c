@@ -137,6 +137,7 @@ struct dtcp_policies {
         int (* rtt_estimator)(struct dtcp * instance);
         int (* retransmission_timer_expiry)(struct dtcp * instance);
         int (* received_retransmission)(struct dtcp * instance);
+        int (* rcvr_ack)(struct dtcp * instance);
         int (* sending_ack)(struct dtcp * instance);
         int (* sending_ack_list)(struct dtcp * instance);
         int (* initial_credit)(struct dtcp * instance);
@@ -145,6 +146,7 @@ struct dtcp_policies {
         int (* update_credit)(struct dtcp * instance);
         int (* flow_control_overrun)(struct dtcp * instance);
         int (* reconcile_flow_conflict)(struct dtcp * instance);
+        int (* rcvr_flow_control)(struct dtcp * instance, seq_num_t seq);
 };
 
 struct dtcp {
@@ -166,21 +168,39 @@ struct dtcp {
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
-        LOG_MISSING;
+        const struct pci * pci;
+        pdu_type_t   type;
+
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci)
+                return -1;
+
+        type = pci_type(pci);
+
+        if (!pdu_type_is_control(type)) {
+                LOG_ERR("CommonRCVControl policy received a non-control PDU!");
+                return -1;
+        }
+        ASSERT(pdu_type_is_control(type));
+
+        /*
+         * FIXME: missing steps described in the specs
+         * 1- Retrieve the time of this Ack and calculate the RTT with
+         * RTTEstimator policy
+         */
+
+        /* IF it is FlowControl Only */
+        if (type == PDU_TYPE_FC) {
+                LOG_MISSING;
+        }
 
         return 0;
 }
 
-/* FIXME: Mock up code */
-static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
         struct pci * pci;
-
-        LOG_MISSING;
-
-        if (!dtcp)
-                return -1;
 
         pdu_ctrl = pdu_create();
         if (!pdu_ctrl)
@@ -225,6 +245,25 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         return -1;
 }
 
+
+/* FIXME: Mock up code */
+static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+{
+        LOG_MISSING;
+
+        if (!dtcp)
+                return -1;
+
+        /* FIXME: here it goes rcvr_flow_control_policy */
+
+        if (dtcp->conn->policies_params.flow_ctrl &&
+            !dtcp->conn->policies_params.rtx_ctrl) {
+                return dtcp->policies->receiving_flow_control(dtcp);
+        }
+
+        return -1;
+}
+
 static struct dtcp_sv default_sv = {
         .max_pdu_size           = 0,
         .trd                    = 0,
@@ -263,6 +302,8 @@ static struct dtcp_policies default_policies = {
         .update_credit               = NULL,
         .flow_control_overrun        = NULL,
         .reconcile_flow_conflict     = NULL,
+        .rcvr_ack                    = NULL,
+        .rcvr_flow_control           = default_rcvr_flow_control,
 };
 
 struct dtcp * dtcp_create(struct dt *         dt,
