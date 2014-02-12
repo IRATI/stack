@@ -90,9 +90,9 @@ public class FlowStateDatabase {
 			{
 				FlowStateInternalObject obj = objects.get(i);
 				
-				if (objM.getAddress() == obj.getAddress() && objM.getPortid() == obj.getPortid()
+				if (objM.getAddress() == obj.getAddress() /*&& objM.getPortid() == obj.getPortid()*/
 						&& objM.getNeighborAddress() == obj.getNeighborAddress() 
-						&& objM.getNeighborPortid() == obj.getNeighborPortid())
+						/*&& objM.getNeighborPortid() == obj.getNeighborPortid()*/)
 				{
 					continueLoop = false;
 					if (objM.getSequenceNumber() > obj.getSequenceNumber())

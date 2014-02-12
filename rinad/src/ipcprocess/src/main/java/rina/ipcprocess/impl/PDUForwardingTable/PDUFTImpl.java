@@ -87,7 +87,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 100; // 100 ms
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 30000; // 100 ms
 	public final int WAIT_UNTIL_FSODB_PROPAGATION = 100; // 100 ms
 	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
 	
@@ -145,22 +145,18 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		/*	Time to compute PDUFT	*/
 		/* TODO: Descomentar */
 		pduFTComputationTimer = new Timer();
-		if(test)
-		{
-			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
-		}
+
+		pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
 		/*	Time to increment age	*/
 		ageIncrementationTimer = new Timer();
-		if(test)
-		{
-			ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
-		}
+
+		//ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
+
 		/* Timer to propagate modified FSO */
 		fsodbPropagationTimer = new Timer();
-		if(test)
-		{
-			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
-		}
+
+		//fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
+
 		/* Timer to send CDAP*/
 		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
 	}
@@ -389,6 +385,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			ObjectStateMapper  mapper = new ObjectStateMapper();
 			List<FlowStateObject> fsoList = mapper.FSOGMap(db.getFlowStateObjectGroup()).getFlowStateObjectArray();
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
+			log.debug("PDUFT kernel entry list size: " + entryList.size());
 			try {
 				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
 			} catch (PDUForwardingTableException e) {
