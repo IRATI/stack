@@ -1282,8 +1282,8 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
                         nla_get_u32(info->attrs[ICCRQ_ATTR_QOS_ID]);
         if (info->attrs[ICCRQ_ATTR_POLICIES_PARAMS]) {
                 if (parse_conn_policies_params(info->attrs                     \
-                                              [ICCRQ_ATTR_POLICIES_PARAMS],
-                                              &(msg_attrs->cp_params))) {
+                                               [ICCRQ_ATTR_POLICIES_PARAMS],
+                                               &(msg_attrs->cp_params))) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION"
                                                         "_CREATE_REQUEST"));
                         return -1;
@@ -1317,8 +1317,8 @@ rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
                         nla_get_u16(info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID]);
         if (info->attrs[ICCA_ATTR_POLICIES_PARAMS]) {
                 if (parse_conn_policies_params(info->attrs                     \
-                                              [ICCA_ATTR_POLICIES_PARAMS],
-                                              &(msg_attrs->cp_params))) {
+                                               [ICCA_ATTR_POLICIES_PARAMS],
+                                               &(msg_attrs->cp_params))) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECT"
                                                         "ION_CREATE_ARRIVED"));
                         return -1;

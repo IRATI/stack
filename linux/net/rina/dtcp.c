@@ -184,10 +184,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         ASSERT(pdu_type_is_control(type));
 
         /*
-        * FIXME: missing steps described in the specs
-        * 1- Retrieve the time of this Ack and calculate the RTT with
-        * RTTEstimator policy
-        */
+         * FIXME: missing steps described in the specs
+         * 1- Retrieve the time of this Ack and calculate the RTT with
+         * RTTEstimator policy
+         */
 
         /* IF it is FlowControl Only */
         if (type == PDU_TYPE_FC) {
