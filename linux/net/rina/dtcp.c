@@ -168,7 +168,7 @@ struct dtcp {
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
-        struct pci * pci;
+        const struct pci * pci;
         pdu_type_t   type;
 
         pci = pdu_pci_get_ro(pdu);
@@ -191,7 +191,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         /* IF it is FlowControl Only */
         if (type == PDU_TYPE_FC) {
-                LOG_MISSING
+                LOG_MISSING;
         }
 
         return 0;
