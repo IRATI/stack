@@ -21,7 +21,7 @@ public interface PDUFTable {
 
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
-	public void ForwardingTableUpdate ();
+	public void forwardingTableUpdate ();
 	
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 

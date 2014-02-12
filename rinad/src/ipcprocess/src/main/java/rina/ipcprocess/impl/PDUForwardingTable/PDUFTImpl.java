@@ -138,6 +138,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	 */
 	public PDUFTImpl (int maximumAge)
 	{
+		log.debug("PDUFT Created");
 		db = new FlowStateDatabase();
 		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		this.maximumAge = maximumAge;
@@ -177,6 +178,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
 	{
+		log.debug("Algorithm " + routingAlgorithm.getClass() + " setted");
 		this.routingAlgorithm = routingAlgorithm;
 		this.sourceVertex = sourceVertex;
 	}
@@ -206,6 +208,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	 */
 	public void eventHappened(Event event) {
 		if (event.getId().equals(Event.N_MINUS_1_FLOW_DEALLOCATED)){
+			log.debug("Event n-1 flow deallocated treatment");
 			NMinusOneFlowDeallocatedEvent flowDeEvent = (NMinusOneFlowDeallocatedEvent) event;
 			flowDeallocated(flowDeEvent.getPortId());
 			
@@ -222,6 +225,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				}
 			}
 		}else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATED)){
+			log.debug("Event n-1 flow allocated treatment");
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
 			/*	Check if enrolled before flow allocation */
 			if (ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()) != -1)
@@ -231,10 +235,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			}
 			else
 			{
+				log.debug("flow allocation waiting for enrollment");
 				flowAllocatedList.add(flowEvent);
 			}
 		}else if (event.getId().equals(Event.NEIGHBOR_ADDED))
 		{
+			log.debug("Event neighbour added treatment");
 			NeighborAddedEvent neighborAddedEvent = (NeighborAddedEvent) event;
 			Neighbor neighbor= neighborAddedEvent.getNeighbor();
 			ListIterator<NMinusOneFlowAllocatedEvent> iterate = flowAllocatedList.listIterator();
@@ -242,8 +248,11 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			while(!flowFound && iterate.hasNext())
 			{
 				NMinusOneFlowAllocatedEvent flowEvent = iterate.next();
-				if (flowEvent.getFlowInformation().getRemoteAppName() == neighbor.getName() /*TODO:Add port*/)
+				log.debug("flowEvent remote app name: " + flowEvent.getFlowInformation().getRemoteAppName().getProcessName());
+				log.debug("neighbor name: " + neighbor.getName().getProcessName());
+				if (flowEvent.getFlowInformation().getRemoteAppName().getProcessName().equals(neighbor.getName().getProcessName()) /*TODO:Add port*/)
 				{
+					log.debug("found a waiting flow allocation");
 					flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
 							ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
 					flowFound = true;
@@ -257,6 +266,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId)
 	{
+		log.debug("enrollmentToNeighbor function launched");
 		ObjectStateMapper mapper = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateObjectGroup fsg= mapper.FSOGMap(db.getFlowStateObjectGroup());
@@ -264,6 +274,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		// TODO: Que passa quan no tenim flow objects?
 		if (fsg.getFlowStateObjectArray().size() > 0)
 		{
+			log.debug("FSO address: " + fsg.getFlowStateObjectArray().get(0).getAddress() +
+					" port: " +  fsg.getFlowStateObjectArray().get(0).getPortid() +
+					" neighbor adress: " + fsg.getFlowStateObjectArray().get(0).getNeighborAddress() +
+					" neighbourport" + fsg.getFlowStateObjectArray().get(0).getNeighborPortid());
 			try 
 			{	
 				objectValue.setByteval(encoder.encode(fsg));
@@ -284,12 +298,14 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 
 	public boolean flowAllocated(long address, int portId, long neighborAddress, int neighborPortId)
 	{
+		log.debug("flowAllocated function launched");
 		FlowStateInternalObject object = new FlowStateInternalObject(address, portId, neighborAddress, neighborPortId, true, 1, 0);
 		return db.addObjectToGroup(object, fsRIBGroup);
 	}
 	
 	public boolean flowDeallocated(int portId)
 	{
+		log.debug("flowDeallocated function launched");
 		FlowStateInternalObject object = db.getByPortId(portId);
 		if (object == null)
 		{
@@ -308,6 +324,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean propagateFSDB()
 	{
+		log.debug("propagateFSDB function launched");
 		ArrayList<FlowStateInternalObject> modifiedFSOs;
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
@@ -359,11 +376,13 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void updateAge()
 	{
+		log.debug("updateAge function launched");
 		db.incrementAge(maximumAge);
 	}
 	
-	public void ForwardingTableUpdate ()
+	public void forwardingTableUpdate ()
 	{
+		log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
 			ObjectStateMapper  mapper = new ObjectStateMapper();
@@ -399,8 +418,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	}
 
 	@Override
-	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort) {
-		
+	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort) 
+	{
+		log.debug("writeMessageRecieved function launched");
 		if (objectsToModify.getObjClass() == FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS)
 		{
 			try {
@@ -433,6 +453,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort)
 	{
+		log.debug("readMessageRecieved function launched");
 		ObjectStateMapper mapper = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateObjectGroup fsg= mapper.FSOGMap(db.getFlowStateObjectGroup());
