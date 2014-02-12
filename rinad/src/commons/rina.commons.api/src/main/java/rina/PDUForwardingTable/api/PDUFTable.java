@@ -11,7 +11,7 @@ public interface PDUFTable {
 	
 	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId);
 
-	public boolean flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
+	public void flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
 
 	public boolean flowDeallocated(int portId);
 

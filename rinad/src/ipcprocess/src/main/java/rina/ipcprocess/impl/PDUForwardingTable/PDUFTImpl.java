@@ -296,11 +296,11 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		}
 	}
 
-	public boolean flowAllocated(long address, int portId, long neighborAddress, int neighborPortId)
+	public void flowAllocated(long address, int portId, long neighborAddress, int neighborPortId)
 	{
 		log.debug("flowAllocated function launched");
 		FlowStateInternalObject object = new FlowStateInternalObject(address, portId, neighborAddress, neighborPortId, true, 1, 0);
-		return db.addObjectToGroup(object, fsRIBGroup);
+		db.addObjectToGroup(object, fsRIBGroup);
 	}
 	
 	public boolean flowDeallocated(int portId)
@@ -402,7 +402,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		
 		FlowStateInternalObjectGroup intObjectsToModify = mapper.FSOGMap(objectsToModify);
 		
-		db.updateObjects(intObjectsToModify, srcPort);
+		db.updateObjects(intObjectsToModify, srcPort, fsRIBGroup);
 	}
 	
 	private void writeMessageRecieved(FlowStateObject objectToModify, int srcPort)
@@ -414,7 +414,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		
 		FlowStateInternalObjectGroup intObjectsToModify = mapper.FSOGMap(objectsToModify);
 		
-		db.updateObjects(intObjectsToModify, srcPort);
+		db.updateObjects(intObjectsToModify, srcPort, fsRIBGroup);
 	}
 
 	@Override
