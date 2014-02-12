@@ -206,12 +206,25 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	 */
 	public void eventHappened(Event event) {
 		if (event.getId().equals(Event.N_MINUS_1_FLOW_DEALLOCATED)){
-			NMinusOneFlowDeallocatedEvent flowEvent = (NMinusOneFlowDeallocatedEvent) event;
-			flowDeallocated(flowEvent.getPortId());
+			NMinusOneFlowDeallocatedEvent flowDeEvent = (NMinusOneFlowDeallocatedEvent) event;
+			flowDeallocated(flowDeEvent.getPortId());
+			
+			ListIterator<NMinusOneFlowAllocatedEvent> iterate = flowAllocatedList.listIterator();
+			boolean flowFound = false;
+			
+			while(!flowFound && iterate.hasNext())
+			{
+				NMinusOneFlowAllocatedEvent flowEvent = iterate.next();
+				if (flowEvent.getFlowInformation().getPortId() == flowDeEvent.getPortId())
+				{
+					flowFound = true;
+					iterate.remove();
+				}
+			}
 		}else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATED)){
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
 			/*	Check if enrolled before flow allocation */
-			if (flowEvent.getFlowInformation().getRemoteAppName() != null)
+			if (flowEvent.getFlowInformation().getRemoteAppName() )
 			{
 				flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
 					ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
