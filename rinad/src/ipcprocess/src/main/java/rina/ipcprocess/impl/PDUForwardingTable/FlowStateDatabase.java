@@ -108,7 +108,7 @@ public class FlowStateDatabase {
 				
 				i++;
 			}
-			if (continueLoop == true)
+			if (continueLoop)
 			{
 				log.debug("New object added");
 				objM.setAvoidPort(avoidPort);
@@ -116,6 +116,7 @@ public class FlowStateDatabase {
 				try {
 					this.flowStateObjectGroup.add(objM, fsRIBGroup);
 				} catch (RIBDaemonException e) {
+					log.error("could not add the object to the rib");
 					e.printStackTrace();
 				}
 

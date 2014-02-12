@@ -618,7 +618,7 @@ public class IPCProcessImpl implements IPCProcess {
 		{
 			Neighbor n = neighbors.get(i);
 			log.debug("Neighbor " + i + ": " + n.getName());
-			if (n.getName().equals(name))
+			if (n.getName().getProcessName().equals(name.getProcessName()))
 			{
 				address= n.getAddress();
 				end = true;

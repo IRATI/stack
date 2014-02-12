@@ -421,10 +421,18 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort) 
 	{
 		log.debug("writeMessageRecieved function launched");
-		if (objectsToModify.getObjClass() == FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS)
+		log.debug("Object of Class: " + objectsToModify.getObjClass());
+		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			try {
+				log.debug("És un group");
 				FlowStateObjectGroup fsog =  (FlowStateObjectGroup)encoder.decode(objectsToModify.getObjValue().getByteval(), FlowStateObjectGroup.class);
+				log.debug("FSO address: " + fsog.getFlowStateObjectArray().get(0).getAddress() +
+						" port: " +  fsog.getFlowStateObjectArray().get(0).getPortid() +
+						" neighbor adress: " + fsog.getFlowStateObjectArray().get(0).getNeighborAddress() +
+						" neighbourport" + fsog.getFlowStateObjectArray().get(0).getNeighborPortid());
+				
+				
 				writeMessageRecieved(fsog, srcPort);
 				int position = sendCDAPTimers.indexOf(new EnrollmentTimer(srcPort));
 				if (position != -1)
@@ -458,7 +466,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateObjectGroup fsg= mapper.FSOGMap(db.getFlowStateObjectGroup());
 		
-		if (objectsToModify.getObjClass() == FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS)
+		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			int position = sendCDAPTimers.indexOf(new EnrollmentTimer(srcPort));
 			if (position != -1)
