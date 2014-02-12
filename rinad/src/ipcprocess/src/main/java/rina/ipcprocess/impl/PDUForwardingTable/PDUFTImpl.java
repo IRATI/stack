@@ -224,7 +224,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		}else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATED)){
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
 			/*	Check if enrolled before flow allocation */
-			if (flowEvent.getFlowInformation().getRemoteAppName() )
+			if (ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()) != -1)
 			{
 				flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
 					ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
