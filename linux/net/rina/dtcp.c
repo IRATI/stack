@@ -191,7 +191,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         /* IF it is FlowControl Only */
         if (type == PDU_TYPE_FC) {
-                dtcp->sv->
+                LOG_MISSING
         }
         return 0;
 }
