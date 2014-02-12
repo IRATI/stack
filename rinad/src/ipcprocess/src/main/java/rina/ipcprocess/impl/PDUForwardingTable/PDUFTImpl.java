@@ -1,5 +1,14 @@
 package rina.ipcprocess.impl.PDUForwardingTable;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Timer;
+import java.util.ListIterator;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.PDUForwardingTable.api.PDUFTable;
@@ -8,14 +17,14 @@ import rina.PDUForwardingTable.api.VertexInt;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
-import rina.cdap.api.message.CDAPMessage.Flags;
 import rina.encoding.api.Encoder;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.*;
+import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
+import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.*;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.PropagateFSODB;
@@ -25,22 +34,12 @@ import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.events.NeighborAddedEvent;
 import rina.ribdaemon.api.RIBDaemon;
-import rina.ribdaemon.api.RIBObject;
-
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowInformation;
 import eu.irati.librina.Neighbor;
-import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.PDUForwardingTableException;
 import eu.irati.librina.rina;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Timer;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 public class PDUFTImpl implements PDUFTable, EventListener {
 	
@@ -122,6 +121,11 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	protected FlowStateDatabase db = null;
 	protected FlowStateRIBObjectGroup fsRIBGroup = null;
 	
+	/**
+	 * Flow allocated queue
+	 */
+	protected List<NMinusOneFlowAllocatedEvent> flowAllocatedList = null;
+	
 	protected boolean test = false;
 	public void setTest(boolean test)
 	{
@@ -135,6 +139,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public PDUFTImpl (int maximumAge)
 	{
 		db = new FlowStateDatabase();
+		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		this.maximumAge = maximumAge;
 		/*	Time to compute PDUFT	*/
 		/* TODO: Descomentar */
@@ -205,13 +210,34 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			flowDeallocated(flowEvent.getPortId());
 		}else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATED)){
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
-			flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
+			/*	Check if enrolled before flow allocation */
+			if (flowEvent.getFlowInformation().getRemoteAppName() != null)
+			{
+				flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
 					ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
+			}
+			else
+			{
+				flowAllocatedList.add(flowEvent);
+			}
 		}else if (event.getId().equals(Event.NEIGHBOR_ADDED))
 		{
 			NeighborAddedEvent neighborAddedEvent = (NeighborAddedEvent) event;
 			Neighbor neighbor= neighborAddedEvent.getNeighbor();
-			// TODO: Treure el tema del newMember
+			ListIterator<NMinusOneFlowAllocatedEvent> iterate = flowAllocatedList.listIterator();
+			boolean flowFound = false;
+			while(!flowFound && iterate.hasNext())
+			{
+				NMinusOneFlowAllocatedEvent flowEvent = iterate.next();
+				if (flowEvent.getFlowInformation().getRemoteAppName() == neighbor.getName() /*TODO:Add port*/)
+				{
+					flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
+							ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
+					flowFound = true;
+					iterate.remove();
+				}
+			}
+			// TODO: Remove newmember thing
 			enrollmentToNeighbor(neighbor.getName(), neighbor.getAddress(), true , neighbor.getUnderlyingPortId());
 		}
 	}
