@@ -2757,7 +2757,7 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
 
-        /*FIXME: Maybe size should be obtained somehow */
+        /* FIXME: Maybe size should be obtained somehow */
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");

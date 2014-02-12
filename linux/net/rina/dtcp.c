@@ -254,7 +254,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         if (!dtcp)
                 return -1;
 
-        /*FIXME: here it goes rcvr_flow_control_policy */
+        /* FIXME: here it goes rcvr_flow_control_policy */
 
         if (dtcp->conn->policies_params.flow_ctrl &&
             !dtcp->conn->policies_params.rtx_ctrl) {
