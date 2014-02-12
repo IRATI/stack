@@ -59,6 +59,14 @@ struct pci {
         qos_id_t    qos_id;
         pdu_flags_t flags;
         seq_num_t   sequence_number;
+
+        struct {
+                seq_num_t              ack_nack_seq_num;
+                seq_num_t              new_rt_wind_edge;
+                seq_num_t              new_left_wind_edge;
+                seq_num_t              left_wind_edge;
+                seq_num_t              rt_wind_edge;
+        } control;
 };
 
 static bool pci_is_ok(const struct pci * pci)
