@@ -274,6 +274,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		// TODO: Que passa quan no tenim flow objects?
 		if (fsg.getFlowStateObjectArray().size() > 0)
 		{
+			log.debug("Size of the group: " + fsg.getFlowStateObjectArray().size());
 			log.debug("FSO address: " + fsg.getFlowStateObjectArray().get(0).getAddress() +
 					" port: " +  fsg.getFlowStateObjectArray().get(0).getPortid() +
 					" neighbor adress: " + fsg.getFlowStateObjectArray().get(0).getNeighborAddress() +
@@ -425,13 +426,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			try {
-				log.debug("És un group");
 				FlowStateObjectGroup fsog =  (FlowStateObjectGroup)encoder.decode(objectsToModify.getObjValue().getByteval(), FlowStateObjectGroup.class);
+				log.debug("Size of the group: " + fsog.getFlowStateObjectArray().size());
 				log.debug("FSO address: " + fsog.getFlowStateObjectArray().get(0).getAddress() +
 						" port: " +  fsog.getFlowStateObjectArray().get(0).getPortid() +
 						" neighbor adress: " + fsog.getFlowStateObjectArray().get(0).getNeighborAddress() +
 						" neighbourport" + fsog.getFlowStateObjectArray().get(0).getNeighborPortid());
-				
 				
 				writeMessageRecieved(fsog, srcPort);
 				int position = sendCDAPTimers.indexOf(new EnrollmentTimer(srcPort));
