@@ -617,7 +617,8 @@ public class IPCProcessImpl implements IPCProcess {
 		while (!end && i < neighbors.size())
 		{
 			Neighbor n = neighbors.get(i);
-			if (n.getName() == name)
+			log.debug("Neighbor " + i + ": " + n.getName());
+			if (n.getName().equals(name))
 			{
 				address= n.getAddress();
 				end = true;
