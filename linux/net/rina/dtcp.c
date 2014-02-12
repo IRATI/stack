@@ -193,6 +193,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         if (type == PDU_TYPE_FC) {
                 LOG_MISSING
         }
+
         return 0;
 }
 
