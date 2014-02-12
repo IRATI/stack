@@ -290,7 +290,7 @@ int dtp_write(struct dtp * instance,
 
         if (sv->window_based) {
                 if (!sv->window_closed && 
-                    pci_seq_num(pci) < 
+                    pci_sequence_number_get(pci) < 
                     sv->outbound.right_window_edge) {
                         /* 
                          * Call TransmissionControlPolicy
