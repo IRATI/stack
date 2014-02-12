@@ -166,6 +166,8 @@ struct dtcp {
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
+        LOG_MISSING;
+
         return 0;
 }
 
