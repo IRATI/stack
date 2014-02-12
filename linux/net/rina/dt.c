@@ -30,8 +30,8 @@ struct dt {
         struct dtp *    dtp;
         struct dtcp *   dtcp;
 
-        struct rqueue * rexmsn_queue;
-        struct rqueue * closed_window_queue;
+        struct cwq *    cwq;
+        struct rtxq *   rtxq;
 
         spinlock_t      lock;
 };
@@ -46,49 +46,29 @@ struct dt * dt_create(void)
 
         spin_lock_init(&tmp->lock);
 
-        /* FXIME: Only create the queues when they are needed */
-        tmp->rexmsn_queue = rqueue_create();
-        if (!tmp->rexmsn_queue) {
-                LOG_ERR("Failed to create rexmsn queue");
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->closed_window_queue = rqueue_create();
-        if (!tmp->closed_window_queue) {
-                LOG_ERR("Failed to create closed window queue");
-                if (rqueue_destroy(tmp->rexmsn_queue,
-                                   (void (*)(void *)) pdu_destroy))
-                        LOG_ERR("Failed to destroy rexmsn queue");
-                rkfree(tmp);
-                return NULL;
-        }
-
         return tmp;
 }
 
-int dt_destroy(struct dt * sv)
+int dt_destroy(struct dt * dt)
 {
-        if (!sv)
+        if (!dt)
                 return -1;
 
-        if (sv->rexmsn_queue) {
-                if (rqueue_destroy(sv->rexmsn_queue,
-                                   (void (*)(void *)) pdu_destroy)) {
-                        LOG_ERR("Failed to destroy rexmsn queue");
-                        return -1;
-                }
-        }
-
-        if (sv->closed_window_queue) {
-                if (rqueue_destroy(sv->closed_window_queue,
-                                   (void (*)(void *)) pdu_destroy)) {
+        if (dt->cwq) {
+                if (cwq_destroy(dt->cwq)) {
                         LOG_ERR("Failed to destroy closed window queue");
                         return -1;
                 }
         }
 
-        rkfree(sv);
+        if (dt->rtxq) {
+                if (rtxq_destroy(dt->rtxq)) {
+                        LOG_ERR("Failed to destroy rexmsn queue");
+                        return -1;
+                }
+        }
+
+        rkfree(dt);
 
         return 0;
 }
@@ -109,6 +89,20 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
 {
         if (!dt)
                 return -1;
+
+        dt->cwq = cwq_create();
+        if (!dt->cwq) {
+                LOG_ERR("Failed to create closed window queue");
+                return -1;
+        }
+
+        dt->rtxq = rtxq_create();
+        if (!dt->rtxq) {
+                LOG_ERR("Failed to create rexmsn queue");
+                if (cwq_destroy(dt->cwq))
+                        LOG_ERR("Failed to destroy closed window queue");
+                return -1;
+        }
 
         spin_lock(&dt->lock);
         dt->dtcp = dtcp;
@@ -144,3 +138,10 @@ struct dtcp * dt_dtcp(struct dt * dt)
 
         return tmp;
 }
+
+
+struct cwq *  dt_cwq(struct dt * dt) 
+{ return (!dt || !dt->cwq) ? dt->cwq : NULL; }
+
+struct rtxq * dt_rtxq(struct dt * dt)
+{ return (!dt || !dt->rtxq) ? dt->rtxq : NULL; }
