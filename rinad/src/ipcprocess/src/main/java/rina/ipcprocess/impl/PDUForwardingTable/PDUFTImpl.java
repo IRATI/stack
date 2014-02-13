@@ -223,15 +223,20 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			log.debug("Event n-1 flow allocated treatment");
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
 			/*	Check if enrolled before flow allocation */
-			if (ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()) != -1)
-			{
-				flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
-					ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
-			}
-			else
-			{
-				log.debug("flow allocation waiting for enrollment");
-				flowAllocatedList.add(flowEvent);
+			try {
+				if (ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()) != -1)
+				{
+					flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
+						ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
+				}
+				else
+				{
+					log.debug("flow allocation waiting for enrollment");
+					flowAllocatedList.add(flowEvent);
+				}
+			} catch (Exception e) {
+				log.error("Could not allocate the flow, no neighbour found");
+				e.printStackTrace();
 			}
 		}else if (event.getId().equals(Event.NEIGHBOR_ADDED))
 		{
@@ -247,11 +252,16 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				log.debug("neighbor name: " + neighbor.getName().getProcessName());
 				if (flowEvent.getFlowInformation().getRemoteAppName().getProcessName().equals(neighbor.getName().getProcessName()) /*TODO:Add port*/)
 				{
-					log.debug("found a waiting flow allocation");
-					flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
-							ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
-					flowFound = true;
-					iterate.remove();
+					try {
+						flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
+								ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
+						flowFound = true;
+						iterate.remove();
+						log.info("Flow allocated");
+					} catch (Exception e) {
+						log.error("Could not allocate the flow, no neighbour found");
+						e.printStackTrace();
+					}
 				}
 			}
 			// TODO: Remove newmember thing

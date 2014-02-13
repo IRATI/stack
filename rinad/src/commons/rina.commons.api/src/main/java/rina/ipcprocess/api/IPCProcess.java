@@ -38,5 +38,5 @@ public interface IPCProcess {
 	public State getOperationalState();
 	public void setOperationalState(State state);
 	public List<Neighbor> getNeighbors();
-	public long getAdressByname(ApplicationProcessNamingInformation name);
+	public long getAdressByname(ApplicationProcessNamingInformation name) throws Exception;
 }

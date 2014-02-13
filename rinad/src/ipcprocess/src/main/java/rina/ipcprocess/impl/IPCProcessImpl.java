@@ -607,7 +607,7 @@ public class IPCProcessImpl implements IPCProcess {
     }
 
 	@Override
-	public long getAdressByname(ApplicationProcessNamingInformation name) 
+	public long getAdressByname(ApplicationProcessNamingInformation name) throws Exception
 	{
 		List<Neighbor> neighbors = getNeighbors();
 		long address = -1;
@@ -625,7 +625,11 @@ public class IPCProcessImpl implements IPCProcess {
 			}
 			i++;
 		}
-			
+		if (address == -1)
+		{
+			log.error("Application: " + name.getProcessName() + "not found in the neighbours");
+			throw new Exception();
+		}
 		return address;
 	}
 
