@@ -107,7 +107,7 @@ public class FlowStateInternalObject{
 		this.age = age;
 		this.isModified = true;
 		this.avoidPort = -1;
-		this.ID = this.ID + address + portid + neighborAddress + neighborPortid;
+		this.ID = this.ID + address /*+ portid*/ + neighborAddress /*+ neighborPortid*/;
 	}
 	public FlowStateInternalObject(FlowStateInternalObject obj)
 	{
