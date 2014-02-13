@@ -2910,9 +2910,11 @@ int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putListOfPFTEntries(netlinkMessage,
-                        object.getEntries()) < 0) {
-                goto nla_put_failure;
+        if (object.getEntries().size() > 0) {
+                if (putListOfPFTEntries(netlinkMessage,
+                                object.getEntries()) < 0) {
+                        goto nla_put_failure;
+                }
         }
 
         nla_nest_end(netlinkMessage, entries);
