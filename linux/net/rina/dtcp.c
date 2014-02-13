@@ -166,8 +166,6 @@ struct dtcp {
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
 };
 
-
-
 static struct pdu * pdu_control_ack_create(struct dtcp * dtcp,
                                            seq_num_t     last_ctrl_seq_rcvd,
                                            seq_num_t     snd_left_wind_edge,
