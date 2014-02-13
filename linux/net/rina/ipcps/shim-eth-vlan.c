@@ -64,8 +64,8 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        uint16_t vlan_id;
-        char *   interface_name;
+        unsigned int vlan_id;
+        char *       interface_name;
 };
 
 enum port_id_state {
