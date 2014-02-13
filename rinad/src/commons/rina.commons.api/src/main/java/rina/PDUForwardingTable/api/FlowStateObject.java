@@ -1,8 +1,13 @@
 package rina.PDUForwardingTable.api;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.ribdaemon.api.RIBObjectNames;
 
 public class FlowStateObject{
+	
+	private static final Log log = LogFactory.getLog(FlowStateObject.class);
 	
 	public static final String FLOW_STATE_RIB_OBJECT_CLASS = "flowstateob";
 	
@@ -96,6 +101,6 @@ public class FlowStateObject{
 		this.sequenceNumber = sequenceNumber;
 		this.age = age;
 		this.ID = this.ID + address + /*portid +*/ neighborAddress /*+ neighborPortid*/;
-		
+		log.debug("Created object with id: " + this.ID);
 	}
 }

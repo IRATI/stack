@@ -1,8 +1,14 @@
 package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ribdaemon.api.RIBObjectNames;
 
 public class FlowStateInternalObject{
+	
+	private static final Log log = LogFactory.getLog(FlowStateInternalObject.class);
 	
 	protected String ID = RIBObjectNames.SEPARATOR + 
 			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
@@ -108,6 +114,7 @@ public class FlowStateInternalObject{
 		this.isModified = true;
 		this.avoidPort = -1;
 		this.ID = this.ID + address /*+ portid*/ + neighborAddress /*+ neighborPortid*/;
+		log.debug("Created object with id: " + this.ID);
 	}
 	public FlowStateInternalObject(FlowStateInternalObject obj)
 	{
@@ -121,6 +128,7 @@ public class FlowStateInternalObject{
 		this.isModified = obj.isModified();
 		this.avoidPort = obj.getAvoidPort();
 		this.ID = this.ID + address + /*portid*/ + neighborAddress /*+ neighborPortid*/;
+		log.debug("Created object with id: " + this.ID);
 	}
 	
 	public void incrementAge()
