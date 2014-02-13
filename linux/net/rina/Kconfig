@@ -74,7 +74,7 @@ config RINA_PERSONALITY_DEFAULT
 
 menu "KFA"
 config KFA_KFIFO_MULTIPLY_FACTOR
-       int "KFA kfifo multiply factor"
+       int "Per-flow kfifo multiply factor"
        default 1
        help
          No help for the time being
