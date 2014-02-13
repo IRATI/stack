@@ -92,22 +92,22 @@ void rina_personality_exit(void)
         LOG_DBG("Personality layer finalized successfully");
 }
 
-static int is_string_ok(const char * name)
+static bool is_string_ok(const char * name)
 {
         LOG_DBG("Checking name");
 
         if (!name) {
                 LOG_ERR("Name is empty");
-                return 0;
+                return false;
         }
         if (strlen(name) == 0) {
                 LOG_ERR("Name has 0 length");
-                return 0;
+                return false;
         }
 
         LOG_DBG("Name is ok");
 
-        return 1;
+        return true;
 }
 
 static int are_ops_ok(const struct personality_ops * ops)

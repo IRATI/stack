@@ -24,6 +24,8 @@
 #include "utils.h"
 #include "debug.h"
 #include "dtcp.h"
+#include "rmt.h"
+#include "connection.h"
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
@@ -110,7 +112,7 @@ struct dtcp_sv {
         uint_t       rcvr_credit;
 
         /* Value of credit in this flow */
-        uint_t       rcvr_rt_wind_edge;
+        seq_num_t    rcvr_rt_wind_edge;
 
         /*
          * Current rate receiver has told sender it may send PDUs
@@ -124,15 +126,18 @@ struct dtcp_sv {
          * received until a new time unit begins
          */
         uint_t       pdus_rcvd_in_time_unit;
+
+        bool         set_drf_flag;
 };
 
 struct dtcp_policies {
         int (* flow_init)(struct dtcp * instance);
-        int (* sv_update)(struct dtcp * instance);
+        int (* sv_update)(struct dtcp * instance, seq_num_t seq);
         int (* lost_control_pdu)(struct dtcp * instance);
         int (* rtt_estimator)(struct dtcp * instance);
         int (* retransmission_timer_expiry)(struct dtcp * instance);
         int (* received_retransmission)(struct dtcp * instance);
+        int (* rcvr_ack)(struct dtcp * instance);
         int (* sending_ack)(struct dtcp * instance);
         int (* sending_ack_list)(struct dtcp * instance);
         int (* initial_credit)(struct dtcp * instance);
@@ -141,22 +146,123 @@ struct dtcp_policies {
         int (* update_credit)(struct dtcp * instance);
         int (* flow_control_overrun)(struct dtcp * instance);
         int (* reconcile_flow_conflict)(struct dtcp * instance);
+        int (* rcvr_flow_control)(struct dtcp * instance, seq_num_t seq);
 };
 
 struct dtcp {
+        struct dt *            parent;
+
         /*
          * NOTE: The DTCP State Vector can be discarded during long periods of
          *       no traffic
          */
         struct dtcp_sv *       sv; /* The state-vector */
         struct dtcp_policies * policies;
+        struct connection *    conn;
+        struct rmt *           rmt;
 
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
-
-        struct dtp *           peer; /* The peering DTP instance */
 };
+
+int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
+{
+        const struct pci * pci;
+        pdu_type_t   type;
+
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci)
+                return -1;
+
+        type = pci_type(pci);
+
+        if (!pdu_type_is_control(type)) {
+                LOG_ERR("CommonRCVControl policy received a non-control PDU!");
+                return -1;
+        }
+        ASSERT(pdu_type_is_control(type));
+
+        /*
+         * FIXME: missing steps described in the specs
+         * 1- Retrieve the time of this Ack and calculate the RTT with
+         * RTTEstimator policy
+         */
+
+        /* IF it is FlowControl Only */
+        if (type == PDU_TYPE_FC) {
+                LOG_MISSING;
+        }
+
+        return 0;
+}
+
+static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
+{
+        struct pdu * pdu_ctrl;
+        struct pci * pci;
+
+        pdu_ctrl = pdu_create();
+        if (!pdu_ctrl)
+                return -1;
+
+        pci = pci_create();
+        if (!pci) {
+                pdu_destroy(pdu_ctrl);
+                return -1;
+        }
+        if (pci_format(pci,
+                       0,
+                       0,
+                       0,
+                       0,
+                       dtcp->sv->next_snd_ctl_seq,
+                       0,
+                       PDU_TYPE_ACK_AND_FC)) {
+                pdu_destroy(pdu_ctrl);
+                pci_destroy(pci);
+                return -1;
+        }
+
+        if (pdu_pci_set(pdu_ctrl, pci)) {
+                pdu_destroy(pdu_ctrl);
+                pci_destroy(pci);
+                return -1;
+        }
+
+        pdu_control_ack_flow(pdu_ctrl,
+                             dtcp->sv->last_rcv_ctl_seq,
+                             seq,
+                             seq + dtcp->sv->rcvr_credit,
+                             0,
+                             1,
+                             dtcp->sv->send_left_wind_edge,
+                             dtcp->sv->snd_rt_wind_edge,
+                             dtcp->sv->sndr_rate);
+
+        rmt_send(dtcp->rmt, 0, 0, pdu_ctrl);
+
+        return -1;
+}
+
+
+/* FIXME: Mock up code */
+static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+{
+        LOG_MISSING;
+
+        if (!dtcp)
+                return -1;
+
+        /* FIXME: here it goes rcvr_flow_control_policy */
+
+        if (dtcp->conn->policies_params.flow_ctrl &&
+            !dtcp->conn->policies_params.rtx_ctrl) {
+                return dtcp->policies->receiving_flow_control(dtcp);
+        }
+
+        return -1;
+}
 
 static struct dtcp_sv default_sv = {
         .max_pdu_size           = 0,
@@ -178,11 +284,12 @@ static struct dtcp_sv default_sv = {
         .rcvr_rt_wind_edge      = 0,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
+        .set_drf_flag           = false,
 };
 
 static struct dtcp_policies default_policies = {
         .flow_init                   = NULL,
-        .sv_update                   = NULL,
+        .sv_update                   = default_sv_update,
         .lost_control_pdu            = NULL,
         .rtt_estimator               = NULL,
         .retransmission_timer_expiry = NULL,
@@ -195,17 +302,28 @@ static struct dtcp_policies default_policies = {
         .update_credit               = NULL,
         .flow_control_overrun        = NULL,
         .reconcile_flow_conflict     = NULL,
+        .rcvr_ack                    = NULL,
+        .rcvr_flow_control           = default_rcvr_flow_control,
 };
 
-struct dtcp * dtcp_create(void)
+struct dtcp * dtcp_create(struct dt *         dt,
+                          struct connection * conn,
+                          struct rmt *        rmt)
 {
         struct dtcp * tmp;
+
+        if (!dt) {
+                LOG_ERR("No DT passed, bailing out");
+                return NULL;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
                 LOG_ERR("Cannot create DTCP state-vector");
                 return NULL;
         }
+
+        tmp->parent = dt;
 
         tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
@@ -226,7 +344,7 @@ struct dtcp * dtcp_create(void)
         *tmp->policies = default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer      = NULL;
+        tmp->conn      = conn;
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
@@ -249,56 +367,6 @@ int dtcp_destroy(struct dtcp * instance)
         return 0;
 }
 
-
-/* FIXME: Do we really need bind() alike operation ? */
-int dtcp_bind(struct dtcp * instance,
-              struct dtp *  peer)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-        if (!peer) {
-                LOG_ERR("Bad peer passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                if (instance->peer != peer) {
-                        LOG_ERR("This instance is already bound to "
-                                "a different peer, unbind it first !");
-                        return -1;
-                }
-
-                LOG_DBG("This instance is already bound to the same peer ...");
-                return 0;
-        }
-
-        instance->peer = peer;
-
-        return 0;
-}
-
-/* FIXME: Do we really need unbind() alike operation ? */
-int dtcp_unbind(struct dtcp * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                LOG_DBG("Instance %pK unbound from DTP peer %pK",
-                        instance, instance->peer);
-                instance->peer = NULL;
-        } else {
-                LOG_DBG("Instance %pK was not bound to a peer DTP", instance);
-        }
-
-        return 0;
-
-}
-
 int dtcp_send(struct dtcp * instance,
               struct sdu *  sdu)
 {
@@ -307,5 +375,18 @@ int dtcp_send(struct dtcp * instance,
         /* Takes the pdu and enqueue in its internal queues */
 
         return -1;
+}
+
+int dtcp_sv_update(struct dtcp * instance,
+                   seq_num_t     seq)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        instance->sv->send_left_wind_edge = seq;
+
+        return 0;
 }
 

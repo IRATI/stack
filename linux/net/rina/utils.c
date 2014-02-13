@@ -32,8 +32,8 @@
 #include "utils.h"
 #include "debug.h"
 
-int is_value_in_range(int value, int min_value, int max_value)
-{ return ((value >= min_value || value <= max_value) ? 1 : 0); }
+bool is_value_in_range(int value, int min_value, int max_value)
+{ return ((value >= min_value || value <= max_value) ? true : false); }
 
 char * strdup_from_user(const char __user * src)
 {

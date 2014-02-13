@@ -48,14 +48,20 @@ struct dtp_sv {
 
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
-        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
+        int (* transmission_control)(struct dtp * instance);
+        int (* closed_window_queue)(struct dtp * instance);
+        int (* flow_control_overrun)(struct dtp * instance);
+        int (* unknown_flow)(struct dtp * instance);
+        int (* initial_sequence_number)(struct dtp * instance);
+        int (* receiver_inactivity_timer)(struct dtp * instance);
+        int (* sender_inactivitty_timer)(struct dtp * instance);
 };
 
 #define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
 #define TIME_R   200 /* FIXME: Completely bogus value, must be in ms */
 #define TIME_A   300 /* FIXME: Completely bogus value, must be in ms */
-
 struct dtp {
+        struct dt *           parent;
         /*
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
@@ -72,7 +78,6 @@ struct dtp {
                 struct rtimer * a;
         } timers;
 
-        struct dtcp *         peer; /* The peering DTCP instance */
 };
 
 static struct dtp_sv default_sv = {
@@ -86,7 +91,13 @@ static struct dtp_sv default_sv = {
 };
 
 static struct dtp_policies default_policies = {
-        .xxx_fixme_add_policies_here = NULL
+        .transmission_control      = NULL,
+        .closed_window_queue       = NULL,
+        .flow_control_overrun      = NULL,
+        .unknown_flow              = NULL,
+        .initial_sequence_number   = NULL,
+        .receiver_inactivity_timer = NULL,
+        .sender_inactivitty_timer  = NULL,
 };
 
 static void tf_sender_inactivity(void * data)
@@ -98,14 +109,20 @@ static void tf_receiver_inactivity(void * data)
 static void tf_a(void * data)
 { }
 
-struct dtp * dtp_create(struct rmt *        rmt,
+struct dtp * dtp_create(struct dt *         dt,
+                        struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection)
 {
         struct dtp * tmp;
 
+        if (!dt) {
+                LOG_ERR("No DT passed, bailing out");
+                return NULL;
+        }
+
         if (!rmt) {
-                LOG_ERR("No rmt, bailing out");
+                LOG_ERR("No RMT passed, bailing out");
                 return NULL;
         }
 
@@ -115,6 +132,8 @@ struct dtp * dtp_create(struct rmt *        rmt,
                 return NULL;
         }
 
+        tmp->parent = dt;
+
         tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
                 LOG_ERR("Cannot create DTP state-vector");
@@ -122,16 +141,14 @@ struct dtp * dtp_create(struct rmt *        rmt,
                 rkfree(tmp);
                 return NULL;
         }
-
         *tmp->sv            = default_sv;
-
         /* FIXME: fixups to the state-vector should be placed here */
+
         tmp->sv->connection = connection;
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer           = NULL;
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
 
@@ -173,55 +190,6 @@ int dtp_destroy(struct dtp * instance)
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
         return 0;
-}
-
-/* FIXME: Do we really need bind() alike operation ? */
-int dtp_bind(struct dtp *  instance,
-             struct dtcp * peer)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-        if (!peer) {
-                LOG_ERR("Bad peer passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                if (instance->peer != peer) {
-                        LOG_ERR("This instance is already bound to "
-                                "a different DTCP peer, unbind it first !");
-                        return -1;
-                }
-
-                LOG_DBG("This instance is already bound to the same peer ...");
-                return 0;
-        }
-
-        instance->peer = peer;
-
-        return 0;
-}
-
-/* FIXME: Do we really need unbind() alike operation ? */
-int dtp_unbind(struct dtp * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                LOG_DBG("Instance %pK unbound from DTCP peer %pK",
-                        instance, instance->peer);
-                instance->peer = NULL;
-        } else {
-                LOG_DBG("Instance %pK was not bound to a peer DTCP", instance);
-        }
-
-        return 0;
-
 }
 
 #if 0
@@ -411,6 +379,8 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
+
+        ASSERT(instance->sv);
 
         if (kfa_sdu_post(instance->kfa,
                          instance->sv->connection->port_id,

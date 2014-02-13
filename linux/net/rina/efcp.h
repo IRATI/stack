@@ -48,6 +48,7 @@ int                     efcp_container_mgmt_write(struct efcp_container * c,
                                                   port_id_t               port,
                                                   struct sdu *            sdu);
 
+/* FIXME: Rename efcp_connection_*() as efcp_*() */
 cep_id_t                efcp_connection_create(struct efcp_container * cont,
                                                struct connection     * conn);
 int                     efcp_connection_destroy(struct efcp_container * cont,

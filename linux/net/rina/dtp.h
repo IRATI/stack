@@ -25,19 +25,13 @@
 #include "du.h"
 #include "rmt.h"
 #include "kfa.h"
+#include "dt.h"
 
-struct dtcp;
-struct dtp;
-
-struct dtp * dtp_create(struct rmt *        rmt,
+struct dtp * dtp_create(struct dt *         dt,
+                        struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection);
 int          dtp_destroy(struct dtp * instance);
-
-/* FIXME: Do we really need bind() and unbind() alike operations ? */
-int          dtp_bind(struct dtp *  instance,
-                      struct dtcp * peer);
-int          dtp_unbind(struct dtp * instance);
 
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
