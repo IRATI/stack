@@ -120,7 +120,7 @@ public class FlowStateInternalObject{
 		this.age = obj.getAge();
 		this.isModified = obj.isModified();
 		this.avoidPort = obj.getAvoidPort();
-		this.ID = this.ID + address + portid + neighborAddress + neighborPortid;
+		this.ID = this.ID + address + /*portid*/ + neighborAddress /*+ neighborPortid*/;
 	}
 	
 	public void incrementAge()

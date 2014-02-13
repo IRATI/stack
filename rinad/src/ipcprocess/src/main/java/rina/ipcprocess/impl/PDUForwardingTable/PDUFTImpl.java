@@ -88,7 +88,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
 	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 30000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 100; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 9000; // 100 ms
 	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
@@ -142,20 +142,19 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		db = new FlowStateDatabase();
 		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		this.maximumAge = maximumAge;
+		
 		/*	Time to compute PDUFT	*/
 		/* TODO: Descomentar */
 		pduFTComputationTimer = new Timer();
-
 		pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
+		
 		/*	Time to increment age	*/
 		ageIncrementationTimer = new Timer();
-
 		//ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
 
 		/* Timer to propagate modified FSO */
 		fsodbPropagationTimer = new Timer();
-
-		//fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
+		fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
 
 		/* Timer to send CDAP*/
 		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
@@ -281,6 +280,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(portId, null,
 						null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
 				ribDaemon.sendMessage(cdapMessage, portId , null);
+				for (FlowStateInternalObject fsio: db.getFlowStateObjectGroup().getFlowStateObjectArray())
+				{
+					fsio.setAvoidPort(portId);
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -326,16 +329,13 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
 		
-		if (!db.isModified())
-		{
-			return true;
-		}
-		
+	
 		modifiedFSOs = db.getModifiedFSO();
 	
 		for(int i = 0; i < modifiedFSOs.size(); i++)
 		{
 			FlowStateInternalObject object = modifiedFSOs.get(i);
+			log.debug("propagateFSDB(): Object to be propagated: " + object.getID());
 			FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
 			
 			try {
@@ -367,7 +367,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			object.setAvoidPort(NO_AVOID_PORT);
 		}
 		
-		db.setModified(false);
 		return true;
 	}
 	
@@ -391,6 +390,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			} catch (PDUForwardingTableException e) {
 				e.printStackTrace();
 			}
+			db.setModified(false);
 		}
 	}
 	

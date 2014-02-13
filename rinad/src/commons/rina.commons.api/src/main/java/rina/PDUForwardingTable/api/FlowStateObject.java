@@ -95,7 +95,7 @@ public class FlowStateObject{
 		this.state  = state;
 		this.sequenceNumber = sequenceNumber;
 		this.age = age;
-		this.ID = this.ID + address + portid + neighborAddress + neighborPortid;
+		this.ID = this.ID + address + /*portid +*/ neighborAddress /*+ neighborPortid*/;
 		
 	}
 }

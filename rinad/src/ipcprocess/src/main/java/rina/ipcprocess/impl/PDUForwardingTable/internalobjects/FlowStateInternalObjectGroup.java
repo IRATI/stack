@@ -2,14 +2,19 @@ package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateInternalObjectGroup{
-
+	private static final Log log = LogFactory.getLog(PDUFTImpl.class);
+	
 	protected ArrayList<FlowStateInternalObject> flowStateObjectArray = null;
 	
 	/*		Acessors		*/
@@ -82,15 +87,7 @@ public class FlowStateInternalObjectGroup{
 				modifiedFSOs.add(this.flowStateObjectArray.get(i));
 			}
 		}
-		
-		if (modifiedFSOs.isEmpty())
-		{
-			return null;
-		}
-		else
-		{
 			return modifiedFSOs;
-		}
 	}
 	
 	public boolean incrementAge(int maximumAge)
@@ -104,6 +101,7 @@ public class FlowStateInternalObjectGroup{
 			
 			if (object.getAge() >= maximumAge)
 			{
+				log.debug("Old object removed: " + object);
 				this.flowStateObjectArray.remove(i);
 				groupModified = true;
 			}
