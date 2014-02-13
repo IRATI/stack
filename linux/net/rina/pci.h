@@ -119,8 +119,6 @@ cep_id_t              pci_cep_source(const struct pci * pci);
 cep_id_t              pci_cep_destination(const struct pci * pci);
 qos_id_t              pci_qos_id(const struct pci * pci);
 
-
-
 int                   pci_control_ack_seq_num_set(struct pci * pci,
                                                   seq_num_t seq);
 int                   pci_control_new_rt_wind_edge_set(struct pci * pci,
