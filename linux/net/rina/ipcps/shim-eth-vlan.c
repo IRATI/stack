@@ -232,7 +232,7 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static bool vlan_id_is_ok(unsigned int vlan_id)
+static bool vlan_id_is_ok(uint16_t vlan_id)
 {
         if (vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
@@ -258,7 +258,7 @@ static bool vlan_id_is_ok(unsigned int vlan_id)
 }
 
 static string_t * create_vlan_interface_name(string_t *    interface_name,
-                                             unsigned int  vlan_id)
+                                             uint16_t vlan_id)
 {
         char       string_vlan_id[5];
         string_t * complete_interface;
@@ -1060,7 +1060,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         struct ipcp_config *            tmp;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
-        int result;
+        int                             result;
+        unsigned int                    temp_vlan;
 
         ASSERT(data);
         ASSERT(dif_information);
@@ -1078,7 +1079,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         /* Get vlan id */
         result = kstrtouint(dif_information->dif_name->process_name,
-                            10, &(info->vlan_id));
+                            10, &temp_vlan);
+        info->vlan_id = (uint16_t) temp_vlan;
 
         if (result) {
                 ASSERT(dif_information->dif_name->process_name);
