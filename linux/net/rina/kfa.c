@@ -268,7 +268,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
-        LOG_DBG("The flow kfifo is %d bytes long",
+        LOG_DBG("The flow kfifo is %ld bytes long",
                 PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
