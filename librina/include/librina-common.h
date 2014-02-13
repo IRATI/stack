@@ -937,6 +937,11 @@ class Neighbor {
          */
         ApplicationProcessNamingInformation supportingDifName;
 
+        /**
+         * The names of all the supporting DIFs of this neighbor
+         */
+        std::list<ApplicationProcessNamingInformation> supportingDifs;
+
         /** The address */
         unsigned int address;
 
@@ -965,6 +970,10 @@ public:
                 getSupportingDifName() const;
         void setSupportingDifName(
                 const ApplicationProcessNamingInformation& supportingDifName);
+        const std::list<ApplicationProcessNamingInformation>& getSupportingDifs();
+        void setSupportingDifs(
+                        const std::list<ApplicationProcessNamingInformation>& supportingDifs);
+        void addSupoprtingDif(const ApplicationProcessNamingInformation& supportingDif);
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
         unsigned int getAverageRttInMs() const;
