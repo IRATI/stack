@@ -46,7 +46,8 @@ struct dt * dt_create(void)
 
         spin_lock_init(&tmp->lock);
 
-        /* FXIME: Only create the queues when they are needed */
+        /* FIXME: Only create the queues when they are needed */
+
         tmp->rexmsn_queue = rqueue_create();
         if (!tmp->rexmsn_queue) {
                 LOG_ERR("Failed to create rexmsn queue");
@@ -64,57 +65,134 @@ struct dt * dt_create(void)
                 return NULL;
         }
 
+        LOG_DBG("Instance %pK created successfully", tmp);
+
         return tmp;
 }
 
-int dt_destroy(struct dt * sv)
-{
-        if (!sv)
-                return -1;
-
-        if (sv->rexmsn_queue) {
-                if (rqueue_destroy(sv->rexmsn_queue,
-                                   (void (*)(void *)) pdu_destroy)) {
-                        LOG_ERR("Failed to destroy rexmsn queue");
-                        return -1;
-                }
-        }
-
-        if (sv->closed_window_queue) {
-                if (rqueue_destroy(sv->closed_window_queue,
-                                   (void (*)(void *)) pdu_destroy)) {
-                        LOG_ERR("Failed to destroy closed window queue");
-                        return -1;
-                }
-        }
-
-        rkfree(sv);
-
-        return 0;
-}
-
-int dt_dtp_bind(struct dt *  dt, struct dtp * dtp)
+int dt_destroy(struct dt * dt)
 {
         if (!dt)
                 return -1;
 
+        if (dt->dtp) {
+                LOG_ERR("DTP %pK is still bound to instace %pK, "
+                        "unbind it first", dt->dtp, dt);
+                return -1;
+        }
+        if (dt->dtcp) {
+                LOG_ERR("DTCP %pK is still bound to DT %pK, "
+                        "unbind it first", dt->dtcp, dt);
+                return -1;
+        }
+
+        if (dt->rexmsn_queue) {
+                if (rqueue_destroy(dt->rexmsn_queue,
+                                   (void (*)(void *)) pdu_destroy)) {
+                        LOG_ERR("Failed to destroy rexmsn queue for "
+                                "instance %pK", dt);
+                        return -1;
+                }
+                dt->rexmsn_queue = NULL; /* Useful */
+        }
+
+        if (dt->closed_window_queue) {
+                if (rqueue_destroy(dt->closed_window_queue,
+                                   (void (*)(void *)) pdu_destroy)) {
+                        LOG_ERR("Failed to destroy closed window queue for "
+                                "instance %pK" ,dt);
+                        return -1;
+                }
+                dt->closed_window_queue = NULL; /* Useless */
+        }
+
+        rkfree(dt);
+
+        LOG_DBG("Instance %pK destroyed successfully", dt);
+
+        return 0;
+}
+
+int dt_dtp_bind(struct dt * dt, struct dtp * dtp)
+{
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot bind DTP");
+                return -1;
+        }
+        if (!dtp) {
+                LOG_ERR("Cannot bind NULL DTP to instance %pK", dt);
+                return -1;
+        }
+
         spin_lock(&dt->lock);
+        if (!dt->dtp) {
+                LOG_ERR("DTP instance already bound to instance %pK, "
+                        "unbind it first", dt);
+                spin_unlock(&dt->lock);
+                return -1;
+        }
         dt->dtp = dtp;
         spin_unlock(&dt->lock);
 
         return 0;
 }
 
-int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
+struct dtp * dt_dtp_unbind(struct dt * dt)
 {
-        if (!dt)
-                return -1;
+        struct dtp * tmp;
+
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot unbind DTP");
+                return NULL;
+        }
 
         spin_lock(&dt->lock);
+        tmp     = dt->dtp;
+        dt->dtp = NULL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
+{
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot bind DTCP");
+                return -1;
+        }
+        if (!dtcp) {
+                LOG_ERR("Cannot bind NULL DTCP to instance %pK", dt);
+                return -1;
+        }
+
+        spin_lock(&dt->lock);
+        if (dt->dtcp) {
+                LOG_ERR("DTCP instance already bound to instance %pK, "
+                        "unbind it first", dt);
+                spin_unlock(&dt->lock);
+                return -1;
+        }
         dt->dtcp = dtcp;
         spin_unlock(&dt->lock);
 
         return 0;
+}
+
+struct dtcp * dt_dtcp_unbind(struct dt * dt)
+{
+        struct dtcp * tmp;
+
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot unbind DTCP");
+                return NULL;
+        }
+
+        spin_lock(&dt->lock);
+        tmp      = dt->dtcp;
+        dt->dtcp = NULL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
 }
 
 struct dtp * dt_dtp(struct dt * dt)
