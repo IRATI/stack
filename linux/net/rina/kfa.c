@@ -216,8 +216,6 @@ int  kfa_port_id_release(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_port_id_release);
 
-#define MULTIPLY_FACTOR 1
-
 int kfa_flow_bind(struct kfa *           instance,
                   port_id_t              pid,
                   struct ipcp_instance * ipc_process,
@@ -259,8 +257,10 @@ int kfa_flow_bind(struct kfa *           instance,
 
         flow->state = PORT_STATE_ALLOCATED;
 
+        LOG_DBG("Gonna alloc the flow kfifo (multiply-factor is %d)",
+                CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
         if (kfifo_alloc(&flow->sdu_ready,
-                        PAGE_SIZE * MULTIPLY_FACTOR,
+                        PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR,
                         GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", pid);
@@ -268,6 +268,8 @@ int kfa_flow_bind(struct kfa *           instance,
                 spin_unlock(&instance->lock);
                 return -1;
         }
+        LOG_DBG("The flow kfifo is %ld bytes long",
+                PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
