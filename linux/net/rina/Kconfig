@@ -72,6 +72,14 @@ config RINA_PERSONALITY_DEFAULT
 	---help---
 	  No help for the time being
 
+menu "KFA"
+config KFA_KFIFO_MULTIPLY_FACTOR
+       int "KFA kfifo multiply factor"
+       default 1
+       help
+         No help for the time being
+endmenu
+
 endmenu
 
 source "net/rina/rinarp/Kconfig"
