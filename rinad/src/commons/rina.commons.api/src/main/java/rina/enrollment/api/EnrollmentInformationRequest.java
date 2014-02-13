@@ -1,5 +1,9 @@
 package rina.enrollment.api;
 
+import java.util.List;
+
+import eu.irati.librina.ApplicationProcessNamingInformation;
+
 import rina.ribdaemon.api.RIBObjectNames;
 
 /**
@@ -21,6 +25,8 @@ public class EnrollmentInformationRequest {
 	 * to join a DIF
 	 */
 	private long address = 0L;
+	
+	private List<ApplicationProcessNamingInformation> supportingDifs;
 
 	public long getAddress() {
 		return address;
@@ -28,5 +34,14 @@ public class EnrollmentInformationRequest {
 
 	public void setAddress(long address) {
 		this.address = address;
+	}
+
+	public List<ApplicationProcessNamingInformation> getSupportingDifs() {
+		return supportingDifs;
+	}
+
+	public void setSupportingDifs(
+			List<ApplicationProcessNamingInformation> supportingDifs) {
+		this.supportingDifs = supportingDifs;
 	}
 }

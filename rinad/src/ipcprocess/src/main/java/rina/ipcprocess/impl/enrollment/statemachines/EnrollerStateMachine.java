@@ -155,6 +155,11 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 				if (!isValidAddress(eiRequest.getAddress())){
 					requiresInitialization = true;
 				}
+				if (eiRequest.getSupportingDifs() != null) {
+					for(int i=0; i<eiRequest.getSupportingDifs().size(); i++){
+						remotePeer.addSupoprtingDif(eiRequest.getSupportingDifs().get(i));
+					}
+				}
 			}
 		}catch(Exception ex){
 			ex.printStackTrace();
