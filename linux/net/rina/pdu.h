@@ -116,6 +116,23 @@ cep_id_t              pci_cep_source(const struct pci * pci);
 cep_id_t              pci_cep_destination(const struct pci * pci);
 qos_id_t              pci_qos_id(const struct pci * pci);
 
+int                   pci_control_ack_seq_num_set(struct pci * pci,
+                                                  seq_num_t seq);
+int                   pci_control_new_rt_wind_edge_set(struct pci * pci,
+                                                       seq_num_t seq);
+int                   pci_control_rt_wind_edge_set(struct pci * pci,
+                                                   seq_num_t seq);
+int                   pci_control_left_wind_edge_set(struct pci * pci,
+                                                     seq_num_t seq);
+int                   pci_control_new_left_wind_edge_set(struct pci * pci,
+                                                         seq_num_t seq);
+
+seq_num_t             pci_control_ack_seq_num(const struct pci * pci);
+seq_num_t             pci_control_new_rt_wind_edge(const struct pci * pci);
+seq_num_t             pci_control_new_left_wind_edge(const struct pci * pci);
+seq_num_t             pci_control_rt_wind_edge(const struct pci * pci);
+seq_num_t             pci_control_left_wind_edge(const struct pci * pci);
+
 struct pdu;
 
 struct pdu *          pdu_create(void);
@@ -146,24 +163,5 @@ int                   pdu_buffer_disown(struct pdu * pdu);
 int                   pdu_pci_set(struct pdu * pdu, struct pci * pci);
 
 int                   pdu_destroy(struct pdu * pdu);
-
-/* FIXME: Shrink input parameters count */
-int                   pdu_control_ack_create(struct pdu * pdu_ctrl,
-                                             seq_num_t    last_ctrl_seq_rcvd,
-                                             uint_t       snd_left_wind_edge,
-                                             uint_t       snd_rt_wind_edge,
-                                             uint_t       my_left_wind_edge,
-                                             uint_t       my_rt_wind_edge,
-                                             uint_t       my_rcvr_rate);
-/* FIXME: Shrink input parameters count */
-int                   pdu_control_ack_flow(struct pdu * pdu_ctrl,
-                                           seq_num_t    last_ctrl_seq_rcvd,
-                                           seq_num_t    ack_nack_seq,
-                                           uint_t       new_rt_wind_edge,
-                                           uint_t       new_rate,
-                                           uint_t       time_unit,
-                                           uint_t       my_left_wind_edge,
-                                           uint_t       my_rt_wind_edge,
-                                           uint_t       my_rcvr_rate);
 
 #endif
