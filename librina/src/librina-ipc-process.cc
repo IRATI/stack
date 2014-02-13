@@ -638,7 +638,6 @@ ConnectionPoliciesParameters::ConnectionPoliciesParameters() {
         RTXcontrol = false;
         windowBasedFlowControl = false;
         rateBasedFlowControl = false;
-        maxClosedWindowQueueLength = 0;
 }
 
 /*
@@ -646,14 +645,12 @@ ConnectionPoliciesParameters::ConnectionPoliciesParameters(bool DTCPpresent,
                 bool flowControl,
                 bool RTXcontrol,
                 bool windowBasedFlowControl,
-                bool rateBasedFlowControl,
-                unsigned int maxClosedWindowQueueLength) {
+                bool rateBasedFlowControl) {
         this->DTCPpresent = DTCPpresent;
         this->flowControl = flowControl;
         this->RTXcontrol = RTXcontrol;
         this->windowBasedFlowControl = windowBasedFlowControl;
         this->rateBasedFlowControl = rateBasedFlowControl;
-        this->maxClosedWindowQueueLength = maxClosedWindowQueueLength;
 }*/
 
 bool ConnectionPoliciesParameters::isDTCPpresent() const {
@@ -694,14 +691,6 @@ bool ConnectionPoliciesParameters::isRateBasedFlowControl() const {
 
 void ConnectionPoliciesParameters::setRateBasedFlowControl(bool rateBasedFlowControl) {
 	this->rateBasedFlowControl = rateBasedFlowControl;
-}
-
-unsigned int ConnectionPoliciesParameters::getMaxClosedWindowQueueLength() const {
-        return maxClosedWindowQueueLength;
-}
-
-void ConnectionPoliciesParameters::setMaxClosedWindowQueueLength(unsigned int maxClosedWindowQueueLength) {
-        this->maxClosedWindowQueueLength = maxClosedWindowQueueLength;
 }
 
 /* CLASS CONNECTION */
