@@ -1,6 +1,7 @@
 package unitTest.PDUForwardingTable.fakeobjects;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowInformation;
@@ -79,6 +80,12 @@ public class FakeNMinus1FlowManager implements NMinus1FlowManager{
 			IPCProcessDIFRegistrationEvent arg0) throws IPCException {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public boolean isSupportingDIF(ApplicationProcessNamingInformation arg0) {
+		// TODO Auto-generated method stub
+		return false;
 	}
 
 }

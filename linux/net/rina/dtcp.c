@@ -137,7 +137,7 @@ struct dtcp_policies {
         int (* rtt_estimator)(struct dtcp * instance);
         int (* retransmission_timer_expiry)(struct dtcp * instance);
         int (* received_retransmission)(struct dtcp * instance);
-        int (* rcvr_ack)(struct dtcp * instance);
+        int (* rcvr_ack)(struct dtcp * instance, seq_num_t seq);
         int (* sending_ack)(struct dtcp * instance);
         int (* sending_ack_list)(struct dtcp * instance);
         int (* initial_credit)(struct dtcp * instance);
@@ -166,79 +166,142 @@ struct dtcp {
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
 };
 
+static struct pdu * pdu_control_ack_create(struct dtcp * dtcp,
+                                           seq_num_t     last_ctrl_seq_rcvd,
+                                           seq_num_t     snd_left_wind_edge,
+                                           seq_num_t     snd_rt_wind_edge,
+                                           seq_num_t     left_wind_edge,
+                                           seq_num_t     rt_wind_edge)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+
+static struct pdu * pdu_control_ack_flow(struct dtcp * dtcp,
+                                         seq_num_t     last_ctrl_seq_rcvd,
+                                         seq_num_t     ack_nack_seq,
+                                         seq_num_t     new_rt_wind_edge,
+                                         seq_num_t     left_wind_edge,
+                                         seq_num_t     rt_wind_edge)
+{
+        struct pdu * pdu;
+        struct pci * pci;
+
+        LOG_MISSING;
+
+        pdu = pdu_create();
+        if (!pdu)
+                return NULL;
+
+        pci = pci_create();
+        if (!pci) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+        if (pci_format(pci,
+                       dtcp->conn->source_cep_id,
+                       dtcp->conn->destination_cep_id,
+                       dtcp->conn->source_address,
+                       dtcp->conn->destination_address,
+                       dtcp->sv->next_snd_ctl_seq,
+                       0,
+                       PDU_TYPE_ACK_AND_FC)) {
+                pdu_destroy(pdu);
+                pci_destroy(pci);
+                return NULL;
+        }
+
+        if (pdu_pci_set(pdu, pci)) {
+                pdu_destroy(pdu);
+                pci_destroy(pci);
+                return NULL;
+        }
+
+        return pdu;
+}
+
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
         const struct pci * pci;
-        pdu_type_t   type;
+        pdu_type_t         type;
+
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (!dtcp) {
+                LOG_ERR("DTCP instance bogus");
+                pdu_destroy(pdu);
+                return -1;
+        }
 
         pci = pdu_pci_get_ro(pdu);
-        if (!pci)
+        if (!pci) {
+                LOG_ERR("PCI couldn't be retrieved");
+                pdu_destroy(pdu);
                 return -1;
+        }
 
         type = pci_type(pci);
 
         if (!pdu_type_is_control(type)) {
                 LOG_ERR("CommonRCVControl policy received a non-control PDU!");
+                pdu_destroy(pdu);
                 return -1;
         }
-        ASSERT(pdu_type_is_control(type));
 
         /*
-         * FIXME: missing steps described in the specs
-         * 1- Retrieve the time of this Ack and calculate the RTT with
-         * RTTEstimator policy
+         * FIXME: Missing step described in the specs: retrieve the time
+         * of this Ack and calculate the RTT with RTTEstimator policy
          */
 
-        /* IF it is FlowControl Only */
-        if (type == PDU_TYPE_FC) {
-                LOG_MISSING;
+        switch (type) {
+        case PDU_TYPE_FC:
+                break;
+        case PDU_TYPE_ACK:
+                break;
+        case PDU_TYPE_ACK_AND_FC:
+                break;
+        default:
+                break;
         }
 
         return 0;
 }
 
-static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
+static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
-        struct pci * pci;
 
-        pdu_ctrl = pdu_create();
+        LOG_MISSING;
+
+        pdu_ctrl = pdu_control_ack_create(dtcp,
+                                          dtcp->sv->last_rcv_ctl_seq,
+                                          dtcp->sv->send_left_wind_edge,
+                                          dtcp->sv->snd_rt_wind_edge,
+                                          dtcp->sv->rcv_left_wind_edge,
+                                          dtcp->sv->snd_rt_wind_edge);
         if (!pdu_ctrl)
                 return -1;
 
-        pci = pci_create();
-        if (!pci) {
-                pdu_destroy(pdu_ctrl);
-                return -1;
-        }
-        if (pci_format(pci,
-                       0,
-                       0,
-                       0,
-                       0,
-                       dtcp->sv->next_snd_ctl_seq,
-                       0,
-                       PDU_TYPE_ACK_AND_FC)) {
-                pdu_destroy(pdu_ctrl);
-                pci_destroy(pci);
-                return -1;
-        }
+        return -1;
+}
 
-        if (pdu_pci_set(pdu_ctrl, pci)) {
-                pdu_destroy(pdu_ctrl);
-                pci_destroy(pci);
-                return -1;
-        }
+static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
+{
+        struct pdu * pdu_ctrl;
 
-        pdu_control_ack_flow(pdu_ctrl,
-                             dtcp->sv->last_rcv_ctl_seq,
-                             seq,
-                             seq + dtcp->sv->rcvr_credit,
-                             0,
-                             1,
-                             dtcp->sv->send_left_wind_edge,
-                             dtcp->sv->snd_rt_wind_edge,
-                             dtcp->sv->sndr_rate);
+        pdu_ctrl = pdu_control_ack_flow(dtcp,
+                                        dtcp->sv->last_rcv_ctl_seq,
+                                        seq,
+                                        seq + dtcp->sv->rcvr_credit,
+                                        dtcp->sv->send_left_wind_edge,
+                                        dtcp->sv->snd_rt_wind_edge);
+        if (!pdu_ctrl)
+                return -1;
 
         rmt_send(dtcp->rmt, 0, 0, pdu_ctrl);
 
@@ -302,7 +365,7 @@ static struct dtcp_policies default_policies = {
         .update_credit               = NULL,
         .flow_control_overrun        = NULL,
         .reconcile_flow_conflict     = NULL,
-        .rcvr_ack                    = NULL,
+        .rcvr_ack                    = default_rcvr_ack,
         .rcvr_flow_control           = default_rcvr_flow_control,
 };
 

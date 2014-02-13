@@ -257,13 +257,19 @@ int kfa_flow_bind(struct kfa *           instance,
 
         flow->state = PORT_STATE_ALLOCATED;
 
-        if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
+        LOG_DBG("Gonna alloc the flow kfifo (multiply-factor is %d)",
+                CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
+        if (kfifo_alloc(&flow->sdu_ready,
+                        PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR,
+                        GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", pid);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
                 return -1;
         }
+        LOG_DBG("The flow kfifo is %ld bytes long",
+                PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
