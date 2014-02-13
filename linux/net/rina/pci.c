@@ -59,6 +59,14 @@ struct pci {
         qos_id_t    qos_id;
         pdu_flags_t flags;
         seq_num_t   sequence_number;
+
+        struct {
+                seq_num_t ack_nack_seq_num;
+                seq_num_t new_rt_wind_edge;
+                seq_num_t new_left_wind_edge;
+                seq_num_t left_wind_edge;
+                seq_num_t rt_wind_edge;
+        } control;
 };
 
 bool pci_is_ok(const struct pci * pci)
@@ -336,3 +344,78 @@ EXPORT_SYMBOL(pci_cep_source);
 qos_id_t pci_qos_id(const struct pci * pci)
 { return pci ? pci->qos_id : qos_id_bad();  }
 EXPORT_SYMBOL(pci_qos_id);
+
+int pci_control_ack_seq_num_set(struct pci * pci, seq_num_t seq)
+{
+        if (!pci)
+                return -1;
+
+        pci->control.ack_nack_seq_num = seq;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_control_ack_seq_num_set);
+
+int pci_control_new_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
+{
+        if (!pci)
+                return -1;
+
+        pci->control.new_rt_wind_edge = seq;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_control_new_rt_wind_edge_set);
+
+int pci_control_new_left_wind_edge_set(struct pci * pci, seq_num_t seq)
+{
+        if (!pci)
+                return -1;
+
+        pci->control.new_left_wind_edge = seq;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_control_new_left_wind_edge_set);
+
+int pci_control_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
+{
+        if (!pci)
+                return -1;
+
+        pci->control.rt_wind_edge = seq;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_control_rt_wind_edge_set);
+
+int pci_control_left_wind_edge_set(struct pci * pci, seq_num_t seq)
+{
+        if (!pci)
+                return -1;
+
+        pci->control.left_wind_edge = seq;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_control_left_wind_edge_set);
+
+seq_num_t pci_control_ack_seq_num(const struct pci * pci)
+{ return pci ? pci->control.ack_nack_seq_num : 0; }
+EXPORT_SYMBOL(pci_control_ack_seq_num);
+
+seq_num_t pci_control_new_rt_wind_edge(const struct pci * pci)
+{ return pci ? pci->control.new_rt_wind_edge : 0; }
+EXPORT_SYMBOL(pci_control_new_rt_wind_edge);
+
+seq_num_t pci_control_new_left_wind_edge(const struct pci * pci)
+{ return pci ? pci->control.new_left_wind_edge : 0; }
+EXPORT_SYMBOL(pci_control_new_left_wind_edge);
+
+seq_num_t pci_control_rt_wind_edge(const struct pci * pci)
+{ return pci ? pci->control.rt_wind_edge : 0; }
+EXPORT_SYMBOL(pci_control_rt_wind_edge);
+
+seq_num_t pci_control_left_wind_edge(const struct pci * pci)
+{ return pci ? pci->control.left_wind_edge : 0; }
+EXPORT_SYMBOL(pci_control_left_wind_edge);
