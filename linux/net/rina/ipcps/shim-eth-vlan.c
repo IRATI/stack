@@ -64,7 +64,7 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        unsigned int vlan_id;
+        uint16_t     vlan_id;
         char *       interface_name;
 };
 
@@ -1080,8 +1080,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         /* Get vlan id */
         result = kstrtouint(dif_information->dif_name->process_name,
                             10, &temp_vlan);
-        info->vlan_id = (uint16_t) temp_vlan;
-
         if (result) {
                 ASSERT(dif_information->dif_name->process_name);
 
@@ -1089,6 +1087,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         dif_information->dif_name->process_name);
                 return -1;
         }
+        info->vlan_id = (uint16_t) temp_vlan;
 
         if (!vlan_id_is_ok(info->vlan_id)) {
                 LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
