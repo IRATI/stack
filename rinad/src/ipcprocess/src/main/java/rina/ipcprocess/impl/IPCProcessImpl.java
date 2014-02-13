@@ -610,14 +610,15 @@ public class IPCProcessImpl implements IPCProcess {
 	public long getAdressByname(ApplicationProcessNamingInformation name) 
 	{
 		List<Neighbor> neighbors = getNeighbors();
-		long address = 0;
-		int i = -1;
+		long address = -1;
+		int i = 0;
 		boolean end = false;
 		
-		while (!end | i < neighbors.size())
+		while (!end && i < neighbors.size())
 		{
 			Neighbor n = neighbors.get(i);
-			if (n.getName() == name)
+			log.debug("Neighbor " + i + ": " + n.getName());
+			if (n.getName().getProcessName().equals(name.getProcessName()))
 			{
 				address= n.getAddress();
 				end = true;

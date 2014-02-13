@@ -123,7 +123,7 @@ imap_entry_find_by_name(struct ipcp_imap *  map,
                         LOG_ERR("Bad name, bailing out");
                         return NULL;
                 }
-                /*FIXME: Check if we can use the name API */
+                /* FIXME: Check if we can use the name API */
                 if (!strcmp(entry_name->process_name,
                             name->process_name)           &&
                     !strcmp(entry_name->process_instance,

@@ -15,7 +15,7 @@ public class ComputePDUFT extends TimerTask{
 	@Override
 	public void run() 
 	{
-		this.pduFT.ForwardingTableUpdate();
+		this.pduFT.forwardingTableUpdate();
 	}
 
 }

@@ -77,7 +77,6 @@ enum conn_policies_params_attrs_list {
         CPP_ATTR_RTX_CONTROL,
         CPP_ATTR_WINDOW_BASED_FLOW_CONTROL,
         CPP_ATTR_RATE_BASED_FLOW_CONTROL,
-        CPP_ATTR_MAX_CLOSED_WINQ_LENGTH,
         __CPP_ATTR_MAX,
 };
 #define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)

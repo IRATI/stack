@@ -42,7 +42,7 @@ public final class FlowStateMessage {
     public boolean hasAddress() { return hasAddress; }
     public long getAddress() { return address_; }
     
-    // required uint32 portid = 2;
+    // optional uint32 portid = 2;
     public static final int PORTID_FIELD_NUMBER = 2;
     private boolean hasPortid;
     private int portid_ = 0;
@@ -56,7 +56,7 @@ public final class FlowStateMessage {
     public boolean hasNeighborAddress() { return hasNeighborAddress; }
     public long getNeighborAddress() { return neighborAddress_; }
     
-    // required uint32 neighbor_portid = 4;
+    // optional uint32 neighbor_portid = 4;
     public static final int NEIGHBOR_PORTID_FIELD_NUMBER = 4;
     private boolean hasNeighborPortid;
     private int neighborPortid_ = 0;
@@ -87,8 +87,6 @@ public final class FlowStateMessage {
     private void initFields() {
     }
     public final boolean isInitialized() {
-      if (!hasPortid) return false;
-      if (!hasNeighborPortid) return false;
       return true;
     }
     
@@ -408,7 +406,7 @@ public final class FlowStateMessage {
         return this;
       }
       
-      // required uint32 portid = 2;
+      // optional uint32 portid = 2;
       public boolean hasPortid() {
         return result.hasPortid();
       }
@@ -444,7 +442,7 @@ public final class FlowStateMessage {
         return this;
       }
       
-      // required uint32 neighbor_portid = 4;
+      // optional uint32 neighbor_portid = 4;
       public boolean hasNeighborPortid() {
         return result.hasNeighborPortid();
       }
@@ -544,8 +542,8 @@ public final class FlowStateMessage {
     java.lang.String[] descriptorData = {
       "\n\026FlowStateMessage.proto\022\rrina.messages\"" +
       "\234\001\n\021flowStateObject_t\022\017\n\007address\030\001 \001(\004\022\016" +
-      "\n\006portid\030\002 \002(\r\022\030\n\020neighbor_address\030\003 \001(\004" +
-      "\022\027\n\017neighbor_portid\030\004 \002(\r\022\r\n\005state\030\005 \001(\010" +
+      "\n\006portid\030\002 \001(\r\022\030\n\020neighbor_address\030\003 \001(\004" +
+      "\022\027\n\017neighbor_portid\030\004 \001(\r\022\r\n\005state\030\005 \001(\010" +
       "\022\027\n\017sequence_number\030\006 \001(\r\022\013\n\003age\030\007 \001(\rB-" +
       "\n+rina.encoding.impl.googleprotobuf.flow" +
       "state"

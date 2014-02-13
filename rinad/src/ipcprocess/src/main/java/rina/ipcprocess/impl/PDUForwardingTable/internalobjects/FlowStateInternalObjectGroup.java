@@ -2,7 +2,11 @@ package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
 
+import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ribdaemon.api.ObjectInstanceGenerator;
+import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateInternalObjectGroup{
 
@@ -32,10 +36,16 @@ public class FlowStateInternalObjectGroup{
 	 * Add a FlowStateObject to the group
 	 * @param object
 	 * @return 
+	 * @throws RIBDaemonException 
 	 */
-	public boolean add(FlowStateInternalObject object)
+	public void add(FlowStateInternalObject internalObject, FlowStateRIBObjectGroup fsRIBGroup ) throws RIBDaemonException
 	{
-		return flowStateObjectArray.add(object);
+		ObjectStateMapper mapper = new ObjectStateMapper();
+		
+		flowStateObjectArray.add(internalObject);
+		FlowStateObject object = mapper.FSOMap(internalObject);
+		fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), object.getID(), object);
+
 	}
 	
 	/**

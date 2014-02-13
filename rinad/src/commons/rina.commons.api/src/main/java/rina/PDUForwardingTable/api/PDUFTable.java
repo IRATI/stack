@@ -11,7 +11,7 @@ public interface PDUFTable {
 	
 	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId);
 
-	public boolean flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
+	public void flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
 
 	public boolean flowDeallocated(int portId);
 
@@ -21,7 +21,7 @@ public interface PDUFTable {
 
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 
-	public void ForwardingTableUpdate ();
+	public void forwardingTableUpdate ();
 	
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort);
 

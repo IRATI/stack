@@ -47,7 +47,7 @@ public class PDUFTImplTest {
 	{
 		Assert.assertEquals(impl.getClass(), PDUFTImpl.class);
 	}
-	
+	/*
 	@Test
 	public void flowAllocated_AllocateFlow_True()
 	{
@@ -56,7 +56,7 @@ public class PDUFTImplTest {
 		
 		Assert.assertTrue(impl.flowAllocated(1, 1, 2, 1));
 	}
-	
+	*/
 	@Test
 	public void flowdeAllocated_DeAllocateFlow_True()
 	{

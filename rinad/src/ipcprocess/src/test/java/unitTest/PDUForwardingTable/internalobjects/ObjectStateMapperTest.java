@@ -90,7 +90,7 @@ public class ObjectStateMapperTest {
 		assertEquals(o1.getSequenceNumber(), g2.getFlowStateObjectArray().get(0).getSequenceNumber());
 		assertEquals(o1.getAge(), g2.getFlowStateObjectArray().get(0).getAge());
 	}
-	
+	/*
 	@Test
 	public void FSOGMap_InternalToDummy_ParametersEqual()
 	{
@@ -116,4 +116,5 @@ public class ObjectStateMapperTest {
 		assertEquals(o1.getSequenceNumber(), g2.getFlowStateObjectArray().get(0).getSequenceNumber());
 		assertEquals(o1.getAge(), g2.getFlowStateObjectArray().get(0).getAge());
 	}
+	*/
 }

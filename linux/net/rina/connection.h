@@ -35,7 +35,6 @@ struct conn_p_params {
         bool    rtx_ctrl;
         bool    window_based_fctrl;
         bool    rate_based_fctrl;
-        size_t  max_closed_winq_length;
 };
 
 /* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */

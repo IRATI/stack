@@ -686,11 +686,6 @@ class ConnectionPoliciesParameters {
 	/** Indicates if  Flow Control is rate based */
 	bool rateBasedFlowControl;
 
-	/** Indicates the number of PDUs that can be put on the 
-         * ClosedWindowQueue before something must be done
-         */
-	unsigned int maxClosedWindowQueueLength;
-
 public:
 	ConnectionPoliciesParameters();
 	bool operator==(const ConnectionPoliciesParameters &other) const;
@@ -705,8 +700,6 @@ public:
 	void setWindowBasedFlowControl(bool windowBasedFlowControl);
 	bool isRateBasedFlowControl() const;
 	void setRateBasedFlowControl(bool rateBasedFlowControl);
-	unsigned int getMaxClosedWindowQueueLength() const;
-	void setMaxClosedWindowQueueLength(unsigned int maxClosedWindowQueueLength);
 };
 
 /**

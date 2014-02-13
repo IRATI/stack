@@ -87,7 +87,7 @@ public class FlowStateDatabaseTest {
 		
 		Assert.assertTrue(db.isModified());
 	}
-	
+	/*
 	@Test
 	public void updateObjects_NewObjectIsModified_True()
 	{
@@ -189,5 +189,5 @@ public class FlowStateDatabaseTest {
 		
 		Assert.assertNotSame(db.getFlowStateObjectGroup().getFlowStateObjectArray().get(0).getSequenceNumber(), 0);
 	}
-	
+	*/
 }
