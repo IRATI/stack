@@ -88,7 +88,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
 	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 30000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 9000; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 20000; // 100 ms
 	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
@@ -331,6 +331,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		ArrayList<FlowStateInternalObject> modifiedFSOs;
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
+		//TODO: Change for FlowStateObject no internal!
 		ArrayList<FlowStateInternalObjectGroup> groupsToSend = new ArrayList<FlowStateInternalObjectGroup>();
 		
 		modifiedFSOs = db.getModifiedFSO();
@@ -366,10 +367,14 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		{
 			try 
 			{
-				objectValue.setByteval(encoder.encode(mapper.FSOGMap(groupsToSend.get(i))));
-				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(nminusFlowInfo[i].getPortId(), null,
-						null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue,
+				FlowStateObjectGroup fsg= mapper.FSOGMap(groupsToSend.get(i));
+				objectValue.setByteval(encoder.encode(fsg));
+				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(
+						nminusFlowInfo[i].getPortId(), null, null,
+						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, 
 						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
+				
+				log.debug("Object Value sent: " + objectValue);
 				ribDaemon.sendMessage(cdapMessage, nminusFlowInfo[i].getPortId() , null);
 			} catch (Exception e1) {
 				e1.printStackTrace();
@@ -436,6 +441,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			try {
+				log.debug("Object Value recieved: " + objectsToModify.getObjValue());
 				FlowStateObjectGroup fsog =  (FlowStateObjectGroup)encoder.decode(objectsToModify.getObjValue().getByteval(), FlowStateObjectGroup.class);
 				log.debug("Size of the group: " + fsog.getFlowStateObjectArray().size());
 				log.debug("FSO address: " + fsog.getFlowStateObjectArray().get(0).getAddress() +
