@@ -128,6 +128,49 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 			return;
 		}
 		
+		if (cdapMessage.getObjName() != null && cdapMessage.getObjName().equals(ADataUnitPDU.ADataUnitPDUObjectName)) {
+			log.debug("Received A-Data Unit CDAP Message");
+
+			if (cdapMessage.getObjValue() == null || cdapMessage.getObjValue().getByteval() == null) {
+				log.error("Received A-Data Unit CDAP Message with no object value");
+				return;
+			}
+
+			ADataUnitPDU aDataUnit = null;
+			try{
+				aDataUnit = (ADataUnitPDU) ipcProcess.getEncoder().decode(cdapMessage.getObjValue().getByteval(), 
+						ADataUnitPDU.class);
+			} catch(Exception ex){
+				log.error("Problems decoding A-DataUnit PDU: "+ex.getMessage());
+				return;
+			}
+
+			if (aDataUnit.getPayload() == null) {
+				log.error("Receive an A-Data Unit PDU with a null payload");
+				return;
+			}
+
+			if (aDataUnit.getDestinationAddress() == ipcProcess.getAddress().longValue()) {
+				log.debug("This is the destination of the A-Data Unit PDU, decoding CDAP message");
+				try{
+					cdapMessage = cdapSessionManager.messageReceived(aDataUnit.getPayload(), portId);
+				}catch(Exception ex) {
+					log.error("Error decoding CDAP message: " + ex.getMessage());
+					return;
+				}
+			} else {
+				try{
+					log.debug("Relaying A-Data PDU closer to destination");
+					int nextHop = (int) getNextHop(aDataUnit.getDestinationAddress());
+					kernelIPCProcess.writeManagementSDU(encodedCDAPMessage, encodedCDAPMessage.length, nextHop);
+					return;
+				}catch (Exception ex){
+					log.error("Problems relaying A-Data PDU: "+ex.getMessage() + ". Dropping it");
+					return;
+				}
+			}
+		}
+		
 		Opcode opcode = cdapMessage.getOpCode();
 
 		//2 Find the destination of the message and call it
@@ -155,51 +198,6 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 				
 				return;
 			}
-			
-			if (cdapMessage.getObjName() != null && cdapMessage.getObjName().equals(ADataUnitPDU.ADataUnitPDUObjectName)) {
-				log.debug("Received A-Data Unit CDAP Message");
-
-				if (cdapMessage.getObjValue() == null || cdapMessage.getObjValue().getByteval() == null) {
-					log.error("Received A-Data Unit CDAP Message with no object value");
-					return;
-				}
-
-				ADataUnitPDU aDataUnit = null;
-				try{
-					aDataUnit = (ADataUnitPDU) ipcProcess.getEncoder().decode(cdapMessage.getObjValue().getByteval(), 
-							ADataUnitPDU.class);
-				} catch(Exception ex){
-					log.error("Problems decoding A-DataUnit PDU: "+ex.getMessage());
-					return;
-				}
-
-				if (aDataUnit.getPayload() == null) {
-					log.error("Receive an A-Data Unit PDU with a null payload");
-					return;
-				}
-
-				if (aDataUnit.getDestinationAddress() == ipcProcess.getAddress().longValue()) {
-					log.debug("This is the destination of the A-Data Unit PDU, decoding CDAP message");
-					try{
-						cdapMessage = cdapSessionManager.messageReceived(aDataUnit.getPayload(), portId);
-						opcode = cdapMessage.getOpCode();
-					}catch(Exception ex) {
-						log.error("Error decoding CDAP message: " + ex.getMessage());
-						return;
-					}
-				} else {
-					try{
-						log.debug("Relaying A-Data PDU closer to destination");
-						int nextHop = (int) getNextHop(aDataUnit.getDestinationAddress());
-						kernelIPCProcess.writeManagementSDU(encodedCDAPMessage, encodedCDAPMessage.length, nextHop);
-						return;
-					}catch (Exception ex){
-						log.error("Problems relaying A-Data PDU: "+ex.getMessage() + ". Dropping it");
-						return;
-					}
-				}
-			}
-			
 			//All the other request messages (M_READ, M_WRITE, M_CREATE, M_DELETE, M_START, M_STOP, M_CANCELREAD) are 
 			//handled by the RIB
 			else if (opcode.equals(Opcode.M_READ) || opcode.equals(Opcode.M_WRITE) || opcode.equals(Opcode.M_CREATE) || 
