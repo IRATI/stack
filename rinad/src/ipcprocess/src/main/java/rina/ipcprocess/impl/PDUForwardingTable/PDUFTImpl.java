@@ -223,20 +223,13 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			log.debug("Event n-1 flow allocated treatment");
 			NMinusOneFlowAllocatedEvent flowEvent = (NMinusOneFlowAllocatedEvent) event;
 			/*	Check if enrolled before flow allocation */
-			try {
-				if (ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()) != -1)
-				{
-					flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
+			try 
+			{
+				flowAllocated(ipcProcess.getAddress(), flowEvent.getFlowInformation().getPortId(),
 						ipcProcess.getAdressByname(flowEvent.getFlowInformation().getRemoteAppName()), 1);
-				}
-				else
-				{
-					log.debug("flow allocation waiting for enrollment");
-					flowAllocatedList.add(flowEvent);
-				}
 			} catch (Exception e) {
-				log.error("Could not allocate the flow, no neighbour found");
-				e.printStackTrace();
+				log.debug("flow allocation waiting for enrollment");
+				flowAllocatedList.add(flowEvent);
 			}
 		}else if (event.getId().equals(Event.NEIGHBOR_ADDED))
 		{
