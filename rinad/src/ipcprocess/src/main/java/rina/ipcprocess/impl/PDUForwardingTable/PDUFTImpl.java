@@ -400,13 +400,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			} catch (PDUForwardingTableException e) {
 				e.printStackTrace();
 			}
-<<<<<<< HEAD
 			db.setModified(false);
-=======
 			
 			//Set A-Data PDU Forwarding Table in order to be able to relay management PDUs
 			ribDaemon.setPDUForwardingTable(entryList);
->>>>>>> 2b84776d7d827cac695383086ec9af900c6ecf06
 		}
 	}
 	
