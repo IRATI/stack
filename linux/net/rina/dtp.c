@@ -39,7 +39,7 @@ struct dtp_sv {
         bool                window_closed;
         uint_t              max_cwq_len;
         int                 rexmsn_ctrl;
-        
+
         struct {
                 seq_num_t   left_window_edge;
         } inbound;
@@ -277,9 +277,9 @@ int dtp_write(struct dtp * instance,
                 pci_destroy(pci);
                 return -1;
         }
-        /* 
-         * Incrementing here means the PDU cannot 
-         * be just thrown away from this point onwards 
+        /*
+         * Incrementing here means the PDU cannot
+         * be just thrown away from this point onwards
          */
         sv->outbound.next_sequence_to_send++;
 
@@ -289,16 +289,16 @@ int dtp_write(struct dtp * instance,
 
 
         if (sv->window_based) {
-                if (!sv->window_closed && 
-                    pci_sequence_number_get(pci) < 
+                if (!sv->window_closed &&
+                    pci_sequence_number_get(pci) <
                     sv->outbound.right_window_edge) {
-                        /* 
+                        /*
                          * Call TransmissionControlPolicy
                          *
-                         * Might close window 
-                         * 
-                         * What happens when we aren't 
-                         * allowed to add it here? 
+                         * Might close window
+                         *
+                         * What happens when we aren't
+                         * allowed to add it here?
                          */
                 } else {
                         sv->window_closed = true;
@@ -309,7 +309,7 @@ int dtp_write(struct dtp * instance,
                         }
                 }
         }
-       
+
         if (sv->rexmsn_ctrl) {
                 /* Add timer for PDU */
                 /* Put a copy in the rtxq queue */

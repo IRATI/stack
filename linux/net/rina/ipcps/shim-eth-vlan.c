@@ -257,8 +257,8 @@ static bool vlan_id_is_ok(uint16_t vlan_id)
         return true;
 }
 
-static string_t * create_vlan_interface_name(string_t *    interface_name,
-                                             uint16_t vlan_id)
+static string_t * create_vlan_interface_name(string_t * interface_name,
+                                             uint16_t   vlan_id)
 {
         char       string_vlan_id[5];
         string_t * complete_interface;

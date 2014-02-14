@@ -212,9 +212,30 @@ struct dtcp * dt_dtcp(struct dt * dt)
         return tmp;
 }
 
+struct cwq * dt_cwq(struct dt * dt)
+{
+        struct cwq * tmp;
 
-struct cwq *  dt_cwq(struct dt * dt) 
-{ return (!dt || !dt->cwq) ? dt->cwq : NULL; }
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->cwq;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
 
 struct rtxq * dt_rtxq(struct dt * dt)
-{ return (!dt || !dt->rtxq) ? dt->rtxq : NULL; }
+{
+        struct rtxq * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->rtxq;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
