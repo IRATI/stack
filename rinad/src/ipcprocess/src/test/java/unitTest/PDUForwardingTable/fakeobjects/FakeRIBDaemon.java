@@ -5,6 +5,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import eu.irati.librina.IPCException;
+import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.QueryRIBRequestEvent;
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
@@ -359,6 +361,25 @@ public class FakeRIBDaemon implements RIBDaemon{
 
 	@Override
 	public void setIPCProcess(IPCProcess ipcProcess) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public long getNextHop(long arg0) throws IPCException {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void sendADataUnit(long arg0, CDAPMessage arg1,
+			CDAPMessageHandler arg2) throws IPCException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setPDUForwardingTable(PDUForwardingTableEntryList arg0) {
 		// TODO Auto-generated method stub
 		
 	}
