@@ -12,7 +12,7 @@ public class FlowStateObjectGroup {
 			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
 			+ RIBObjectNames.FLOWSTATEOBJECTGROUP;
 	
-	public static final String FLOW_STATE_GROUP_RIB_OBJECT_CLASS = "flowstateobject";
+	public static final String FLOW_STATE_GROUP_RIB_OBJECT_CLASS = "flowstateobjectset";
 	
 	protected List<FlowStateObject> flowStateObjectArray = null;
 	

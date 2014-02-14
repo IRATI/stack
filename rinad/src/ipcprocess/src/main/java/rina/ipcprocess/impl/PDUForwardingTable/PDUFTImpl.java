@@ -374,7 +374,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, 
 						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
 				
-				log.debug("Object Value sent: " + objectValue);
+				log.debug("Object Value sent: " + objectValue.getByteval());
 				ribDaemon.sendMessage(cdapMessage, nminusFlowInfo[i].getPortId() , null);
 			} catch (Exception e1) {
 				e1.printStackTrace();
@@ -441,7 +441,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			try {
-				log.debug("Object Value recieved: " + objectsToModify.getObjValue());
+				log.debug("Object Value recieved: " + objectsToModify.getObjValue().getByteval());
 				FlowStateObjectGroup fsog =  (FlowStateObjectGroup)encoder.decode(objectsToModify.getObjValue().getByteval(), FlowStateObjectGroup.class);
 				log.debug("Size of the group: " + fsog.getFlowStateObjectArray().size());
 				log.debug("FSO address: " + fsog.getFlowStateObjectArray().get(0).getAddress() +

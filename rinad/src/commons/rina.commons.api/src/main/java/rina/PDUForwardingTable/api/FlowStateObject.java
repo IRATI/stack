@@ -9,7 +9,7 @@ public class FlowStateObject{
 	
 	private static final Log log = LogFactory.getLog(FlowStateObject.class);
 	
-	public static final String FLOW_STATE_RIB_OBJECT_CLASS = "flowstateob";
+	public static final String FLOW_STATE_RIB_OBJECT_CLASS = "flowstateobject";
 	
 	protected String ID = RIBObjectNames.SEPARATOR + 
 			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
