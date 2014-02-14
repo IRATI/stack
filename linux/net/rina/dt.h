@@ -41,4 +41,7 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt);
 struct dtp *  dt_dtp(struct dt * dt);
 struct dtcp * dt_dtcp(struct dt * dt);
 
+struct cwq *  dt_cwq(struct dt * dt);
+struct rtxq * dt_rtxq(struct dt * dt);
+
 #endif

@@ -30,8 +30,8 @@ struct dt {
         struct dtp *    dtp;
         struct dtcp *   dtcp;
 
-        struct rqueue * rexmsn_queue;
-        struct rqueue * closed_window_queue;
+        struct cwq *    cwq;
+        struct rtxq *   rtxq;
 
         spinlock_t      lock;
 };
@@ -45,27 +45,6 @@ struct dt * dt_create(void)
                 return NULL;
 
         spin_lock_init(&tmp->lock);
-
-        /* FIXME: Only create the queues when they are needed */
-
-        tmp->rexmsn_queue = rqueue_create();
-        if (!tmp->rexmsn_queue) {
-                LOG_ERR("Failed to create rexmsn queue");
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->closed_window_queue = rqueue_create();
-        if (!tmp->closed_window_queue) {
-                LOG_ERR("Failed to create closed window queue");
-                if (rqueue_destroy(tmp->rexmsn_queue,
-                                   (void (*)(void *)) pdu_destroy))
-                        LOG_ERR("Failed to destroy rexmsn queue");
-                rkfree(tmp);
-                return NULL;
-        }
-
-        LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
 }
@@ -86,24 +65,20 @@ int dt_destroy(struct dt * dt)
                 return -1;
         }
 
-        if (dt->rexmsn_queue) {
-                if (rqueue_destroy(dt->rexmsn_queue,
-                                   (void (*)(void *)) pdu_destroy)) {
-                        LOG_ERR("Failed to destroy rexmsn queue for "
-                                "instance %pK", dt);
+        if (dt->cwq) {
+                if (cwq_destroy(dt->cwq)) {
+                        LOG_ERR("Failed to destroy closed window queue");
                         return -1;
                 }
-                dt->rexmsn_queue = NULL; /* Useful */
+                dt->cwq = NULL; /* Useful */
         }
 
-        if (dt->closed_window_queue) {
-                if (rqueue_destroy(dt->closed_window_queue,
-                                   (void (*)(void *)) pdu_destroy)) {
-                        LOG_ERR("Failed to destroy closed window queue for "
-                                "instance %pK" ,dt);
+        if (dt->rtxq) {
+                if (rtxq_destroy(dt->rtxq)) {
+                        LOG_ERR("Failed to destroy rexmsn queue");
                         return -1;
                 }
-                dt->closed_window_queue = NULL; /* Useless */
+                dt->rtxq = NULL; /* Useless */
         }
 
         rkfree(dt);
@@ -125,8 +100,8 @@ int dt_dtp_bind(struct dt * dt, struct dtp * dtp)
         }
 
         spin_lock(&dt->lock);
-        if (!dt->dtp) {
-                LOG_ERR("DTP instance already bound to instance %pK, "
+        if (dt->dtp) {
+                LOG_ERR("A DTP instance is already bound to instance %pK, "
                         "unbind it first", dt);
                 spin_unlock(&dt->lock);
                 return -1;
@@ -147,6 +122,13 @@ struct dtp * dt_dtp_unbind(struct dt * dt)
         }
 
         spin_lock(&dt->lock);
+        if (!dt->dtp) {
+                LOG_ERR("No DTP instance bound to instance %pK, "
+                        "cannot bind", dt);
+                spin_unlock(&dt->lock);
+                return NULL;
+        }
+
         tmp     = dt->dtp;
         dt->dtp = NULL;
         spin_unlock(&dt->lock);
@@ -167,11 +149,28 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
 
         spin_lock(&dt->lock);
         if (dt->dtcp) {
-                LOG_ERR("DTCP instance already bound to instance %pK, "
+                LOG_ERR("A DTCP instance already bound to instance %pK, "
                         "unbind it first", dt);
                 spin_unlock(&dt->lock);
                 return -1;
         }
+
+        dt->cwq = cwq_create();
+        if (!dt->cwq) {
+                LOG_ERR("Failed to create closed window queue");
+                spin_unlock(&dt->lock);
+                return -1;
+        }
+
+        dt->rtxq = rtxq_create();
+        if (!dt->rtxq) {
+                LOG_ERR("Failed to create rexmsn queue");
+                if (cwq_destroy(dt->cwq))
+                        LOG_ERR("Failed to destroy closed window queue");
+                spin_unlock(&dt->lock);
+                return -1;
+        }
+
         dt->dtcp = dtcp;
         spin_unlock(&dt->lock);
 
@@ -188,6 +187,30 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
         }
 
         spin_lock(&dt->lock);
+        if (!dt->dtcp) {
+                LOG_ERR("No DTCP bound to instance %pK", dt);
+                        spin_unlock(&dt->lock);
+                return NULL;
+        }
+
+        if (dt->cwq) {
+                if (cwq_destroy(dt->cwq)) {
+                        LOG_ERR("Failed to destroy closed window queue");
+                        spin_unlock(&dt->lock);
+                        return NULL;
+                }
+                dt->cwq = NULL;
+        }
+
+        if (dt->rtxq) {
+                if (rtxq_destroy(dt->rtxq)) {
+                        LOG_ERR("Failed to destroy rexmsn queue");
+                        spin_unlock(&dt->lock);
+                        return NULL;
+                }
+                dt->rtxq = NULL;
+        }
+
         tmp      = dt->dtcp;
         dt->dtcp = NULL;
         spin_unlock(&dt->lock);
@@ -218,6 +241,34 @@ struct dtcp * dt_dtcp(struct dt * dt)
 
         spin_lock(&dt->lock);
         tmp = dt->dtcp;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct cwq * dt_cwq(struct dt * dt)
+{
+        struct cwq * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->cwq;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct rtxq * dt_rtxq(struct dt * dt)
+{
+        struct rtxq * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->rtxq;
         spin_unlock(&dt->lock);
 
         return tmp;
