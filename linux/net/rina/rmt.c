@@ -847,22 +847,23 @@ static int receive_worker(void * o)
 
                         if (!sdu) {
                                 LOG_ERR("No SDU to work with");
-                                break;
+                                continue;
                         }
 
                         nothing_to_do = false;
                         pci = sdu_pci_copy(sdu);
                         if (!pci) {
-                                LOG_ERR("No PCI to work with");
-                                break;
+                                LOG_ERR("No PCI to work with, dropping SDU!");
+                                sdu_destroy(sdu);
+                                continue;
                         }
 
                         pdu_type = pci_type(pci);
                         if (!pdu_type_is_ok(pdu_type)) {
-                                LOG_ERR("Wrong PDU type");
+                                LOG_ERR("Wrong PDU type, dropping SDU!");
                                 pci_destroy(pci);
                                 sdu_destroy(sdu);
-                                break;
+                                continue;
                         }
                         LOG_DBG("PDU type: %d", pdu_type);
 
