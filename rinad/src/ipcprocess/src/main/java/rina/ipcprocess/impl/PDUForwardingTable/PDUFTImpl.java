@@ -331,43 +331,50 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		ArrayList<FlowStateInternalObject> modifiedFSOs;
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
+		ArrayList<FlowStateInternalObjectGroup> groupsToSend = new ArrayList<FlowStateInternalObjectGroup>();
 		
-	
 		modifiedFSOs = db.getModifiedFSO();
+		if (modifiedFSOs.size() == 0)
+		{
+			return true;
+		}
+		
+		FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
+		for(int i = 0; i < nminusFlowInfo.length; i++)
+		{
+			groupsToSend.add(new FlowStateInternalObjectGroup());
+		}
 	
 		for(int i = 0; i < modifiedFSOs.size(); i++)
 		{
 			FlowStateInternalObject object = modifiedFSOs.get(i);
 			log.debug("propagateFSDB(): Object to be propagated: " + object.getID());
-			FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
-			
-			try {
-				objectValue.setByteval(encoder.encode(mapper.FSOMap(object)));
-			} catch (Exception e1) {
-				e1.printStackTrace();
-				return false;
-			}
-			
+
 			for(int j = 0; j < nminusFlowInfo.length; j++)
 			{
 				int portId = nminusFlowInfo[j].getPortId();
 				if (object.getAvoidPort() != portId)
 				{
-					try 
-					{
-						CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(portId, null,
-								null, FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, 0, objectValue, object.getID(), 0, false);
-						ribDaemon.sendMessage(cdapMessage, portId , null);
-					} 
-					catch (Exception e) 
-					{
-						e.printStackTrace();
-						return false;
-					}
+					groupsToSend.get(j).addToSend(object);
 				}
 			}
 			object.setModified(false);
 			object.setAvoidPort(NO_AVOID_PORT);
+		}
+		
+		for(int i = 0; i < nminusFlowInfo.length; i++)
+		{
+			try 
+			{
+				objectValue.setByteval(encoder.encode(mapper.FSOGMap(groupsToSend.get(i))));
+				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(nminusFlowInfo[i].getPortId(), null,
+						null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue,
+						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
+				ribDaemon.sendMessage(cdapMessage, nminusFlowInfo[i].getPortId() , null);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+				return false;
+			}
 		}
 		
 		return true;

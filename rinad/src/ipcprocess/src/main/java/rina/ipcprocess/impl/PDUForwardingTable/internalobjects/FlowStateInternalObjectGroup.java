@@ -50,7 +50,17 @@ public class FlowStateInternalObjectGroup{
 		flowStateObjectArray.add(internalObject);
 		FlowStateObject object = mapper.FSOMap(internalObject);
 		fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), object.getID(), object);
-
+	}
+	
+	/**
+	 * Add a FlowStateObject to a group for sending
+	 * @param object
+	 * @return 
+	 * @throws RIBDaemonException 
+	 */
+	public void addToSend(FlowStateInternalObject internalObject)
+	{
+		flowStateObjectArray.add(internalObject);
 	}
 	
 	/**
