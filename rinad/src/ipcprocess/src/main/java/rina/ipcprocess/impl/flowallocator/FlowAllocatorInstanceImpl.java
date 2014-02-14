@@ -448,7 +448,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
 						requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
 						"Application rejected the flow: "+event.getResult(), requestMessage.getInvokeID());
-				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
+				ribDaemon.sendADataUnit(flow.getSourceAddress(), cdapMessage, null);
 			}catch(Exception ex){
 				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
 			}
@@ -586,7 +586,15 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				objectValue.setByteval(this.encoder.encode(flow));
 				requestMessage = cdapSessionManager.getDeleteObjectRequestMessage(
 						underlyingPortId, null, null, "flow", 0, requestMessage.getObjName(), null, 0, false); 
-				this.ribDaemon.sendMessage(requestMessage, underlyingPortId, null);
+				
+				long address = 0;
+				if (ipcProcess.getAddress().longValue() == flow.getSourceAddress()) {
+					address = flow.getDestinationAddress();
+				} else {
+					address = flow.getSourceAddress();
+				}
+				
+				ribDaemon.sendADataUnit(address, requestMessage, null);
 			}catch(Exception ex){
 				log.error("Problems sending M_DELETE flow request");
 			}
@@ -632,7 +640,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		flowAllocator.removeFlowAllocatorInstance(portId);
 
 		try{
-			this.ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
+			ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
 		}catch(Exception ex){
 			log.error(ex.getMessage());
 			ex.printStackTrace();

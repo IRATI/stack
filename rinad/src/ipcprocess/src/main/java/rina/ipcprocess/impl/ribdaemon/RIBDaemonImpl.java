@@ -163,6 +163,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 					log.debug("Relaying A-Data PDU closer to destination");
 					int nextHop = (int) getNextHop(aDataUnit.getDestinationAddress());
 					kernelIPCProcess.writeManagementSDU(encodedCDAPMessage, encodedCDAPMessage.length, nextHop);
+					log.debug("Wrote A-Data PDU to port-id " + nextHop);
 					return;
 				}catch (Exception ex){
 					log.error("Problems relaying A-Data PDU: "+ex.getMessage() + ". Dropping it");
