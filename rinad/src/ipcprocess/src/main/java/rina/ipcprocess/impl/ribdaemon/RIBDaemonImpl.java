@@ -156,7 +156,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 				return;
 			}
 			
-			if (cdapMessage.getObjName().equals(ADataUnitPDU.ADataUnitPDUObjectName)) {
+			if (cdapMessage.getObjName() != null && cdapMessage.getObjName().equals(ADataUnitPDU.ADataUnitPDUObjectName)) {
 				log.debug("Received A-Data Unit CDAP Message");
 
 				if (cdapMessage.getObjValue() == null || cdapMessage.getObjValue().getByteval() == null) {
