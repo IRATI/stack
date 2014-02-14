@@ -350,6 +350,9 @@ int pci_control_ack_seq_num_set(struct pci * pci, seq_num_t seq)
         if (!pci)
                 return -1;
 
+        if (!pdu_type_is_control(pci->type))
+                return -1;
+
         pci->control.ack_nack_seq_num = seq;
 
         return 0;
@@ -359,6 +362,9 @@ EXPORT_SYMBOL(pci_control_ack_seq_num_set);
 int pci_control_new_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
 {
         if (!pci)
+                return -1;
+
+        if (!pdu_type_is_control(pci->type))
                 return -1;
 
         pci->control.new_rt_wind_edge = seq;
@@ -372,6 +378,9 @@ int pci_control_new_left_wind_edge_set(struct pci * pci, seq_num_t seq)
         if (!pci)
                 return -1;
 
+        if (!pdu_type_is_control(pci->type))
+                return -1;
+
         pci->control.new_left_wind_edge = seq;
 
         return 0;
@@ -383,6 +392,9 @@ int pci_control_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
         if (!pci)
                 return -1;
 
+        if (!pdu_type_is_control(pci->type))
+                return -1;
+
         pci->control.rt_wind_edge = seq;
 
         return 0;
@@ -392,6 +404,9 @@ EXPORT_SYMBOL(pci_control_rt_wind_edge_set);
 int pci_control_left_wind_edge_set(struct pci * pci, seq_num_t seq)
 {
         if (!pci)
+                return -1;
+
+        if (!pdu_type_is_control(pci->type))
                 return -1;
 
         pci->control.left_wind_edge = seq;
