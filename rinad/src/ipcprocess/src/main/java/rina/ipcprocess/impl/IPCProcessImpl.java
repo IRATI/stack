@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
+import rina.adataunit.api.ADataUnitPDU;
 import rina.applicationprocess.api.WhatevercastName;
 import rina.utils.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
@@ -29,6 +30,7 @@ import rina.delimiting.api.Delimiter;
 import rina.delimiting.impl.DIFDelimiter;
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.EncoderImpl;
+import rina.encoding.impl.googleprotobuf.adataunit.ADataUnitPDUEncoder;
 import rina.encoding.impl.googleprotobuf.applicationregistration.ApplicationRegistrationEncoder;
 import rina.encoding.impl.googleprotobuf.datatransferconstants.DataTransferConstantsEncoder;
 import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryArrayEncoder;
@@ -332,6 +334,7 @@ public class IPCProcessImpl implements IPCProcess {
           encoder.addEncoder(Neighbor[].class.getName(), new NeighborArrayEncoder());
           encoder.addEncoder(FlowStateObject.class.getName(), new FlowStateEncoder());
           encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
+          encoder.addEncoder(ADataUnitPDU.class.getName(), new ADataUnitPDUEncoder());
           
           return encoder;
 	}
