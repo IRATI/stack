@@ -370,12 +370,15 @@ static int send_worker(void * o)
                         spin_unlock(&tmp->egress.queues->lock);
 
                         if (!pdu)
-                                break;
+                                continue;
 
                         out = false;
                         sdu = sdu_create_pdu_with(pdu);
-                        if (!sdu)
-                                break;
+                        if (!sdu) {
+                                LOG_ERR("Error creating SDU from PDU, dropping PDU!");
+                                pdu_destroy(pdu);
+                                continue;
+                        }
 
                         LOG_DBG("Gonna send SDU to port_id %d", port_id);
                         if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
