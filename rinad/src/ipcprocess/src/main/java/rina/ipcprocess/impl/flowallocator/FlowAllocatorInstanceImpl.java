@@ -284,7 +284,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			requestMessage = cdapMessage;
 			state = FAIState.MESSAGE_TO_PEER_FAI_SENT;
 			
-			ribDaemon.sendMessage(cdapMessage, cdapSessionId, this);
+			ribDaemon.sendADataUnit(flow.getDestinationAddress(), cdapMessage, this);
+			//ribDaemon.sendMessage(cdapMessage, cdapSessionId, this);
 		}catch(Exception ex){
 			log.error("Problems sending M_CREATE <Flow> CDAP message to neighbor: " + ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
@@ -399,8 +400,10 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				objectValue.setByteval(this.encoder.encode(flow));
 				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
 						0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
-				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-				this.ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
+				
+				ribDaemon.sendADataUnit(flow.getSourceAddress(), cdapMessage, null);
+				//ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
+				ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
 			}catch(Exception ex){
 				log.error("Problems requesting RIB Daemon to send CDAP Message: "+ex.getMessage());
 				
