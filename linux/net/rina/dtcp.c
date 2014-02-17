@@ -128,6 +128,12 @@ struct dtcp_sv {
         uint_t       pdus_rcvd_in_time_unit;
 
         bool         set_drf_flag;
+
+        /*
+         * Control of duplicated control PDUs
+         * */
+        uint_t       dup_acks;
+        uint_t       dup_flow_ctl;
 };
 
 struct dtcp_policies {
@@ -223,8 +229,9 @@ static struct pdu * pdu_control_ack_flow(struct dtcp * dtcp,
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
-        const struct pci * pci;
-        pdu_type_t         type;
+        struct pci * pci;
+        pdu_type_t   type;
+        seq_num_t    seq_num;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
@@ -238,8 +245,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return -1;
         }
 
-        pci = pdu_pci_get_ro(pdu);
-        if (!pci) {
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci_is_ok(pci)) {
                 LOG_ERR("PCI couldn't be retrieved");
                 pdu_destroy(pdu);
                 return -1;
@@ -251,6 +258,33 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 LOG_ERR("CommonRCVControl policy received a non-control PDU!");
                 pdu_destroy(pdu);
                 return -1;
+        }
+
+        seq_num = pci_sequence_number_get(pci);
+
+        if (seq_num < dtcp->sv->last_rcv_ctl_seq) {
+                switch (type) {
+                case PDU_TYPE_FC:
+                        dtcp->sv->dup_flow_ctl++;
+                        break;
+                case PDU_TYPE_ACK:
+                        dtcp->sv->dup_acks++;
+                        break;
+                case PDU_TYPE_ACK_AND_FC:
+                        dtcp->sv->dup_acks++;
+                        dtcp->sv->dup_flow_ctl++;
+                        break;
+                default:
+                        break;
+                }
+
+                pdu_destroy(pdu);
+                return 0;
+
+        } else if (seq_num > dtcp->sv->last_rcv_ctl_seq) {
+                dtcp->policies->lost_control_pdu(dtcp); 
+        } else {
+                dtcp->sv->last_rcv_ctl_seq = seq_num;
         }
 
         /*
@@ -269,6 +303,12 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 break;
         }
 
+        return 0;
+}
+
+int default_lost_control_pdu(struct dtcp * dtcp)
+{
+        LOG_MISSING;
         return 0;
 }
 
@@ -348,12 +388,14 @@ static struct dtcp_sv default_sv = {
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
         .set_drf_flag           = false,
+        .dup_acks               = 0,
+        .dup_flow_ctl           = 0,
 };
 
 static struct dtcp_policies default_policies = {
         .flow_init                   = NULL,
         .sv_update                   = default_sv_update,
-        .lost_control_pdu            = NULL,
+        .lost_control_pdu            = default_lost_control_pdu,
         .rtt_estimator               = NULL,
         .retransmission_timer_expiry = NULL,
         .received_retransmission     = NULL,
