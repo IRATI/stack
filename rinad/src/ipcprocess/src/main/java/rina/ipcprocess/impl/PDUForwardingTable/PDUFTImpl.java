@@ -349,7 +349,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		for(int i = 0; i < modifiedFSOs.size(); i++)
 		{
 			FlowStateInternalObject object = modifiedFSOs.get(i);
-			log.debug("propagateFSDB(): Object to be propagated: " + object.getID());
 
 			for(int j = 0; j < nminusFlowInfo.length; j++)
 			{
@@ -368,14 +367,15 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			try 
 			{
 				FlowStateObjectGroup fsg= mapper.FSOGMap(groupsToSend.get(i));
-				objectValue.setByteval(encoder.encode(fsg));
-				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(
-						nminusFlowInfo[i].getPortId(), null, null,
-						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, 
-						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
-				
-				log.debug("Object Value sent: " + objectValue.getByteval());
-				ribDaemon.sendMessage(cdapMessage, nminusFlowInfo[i].getPortId() , null);
+				if (fsg.getFlowStateObjectArray().size() > 0)
+				{
+					objectValue.setByteval(encoder.encode(fsg));
+					CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(
+							nminusFlowInfo[i].getPortId(), null, null,
+							FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, 
+							FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
+					ribDaemon.sendMessage(cdapMessage, nminusFlowInfo[i].getPortId() , null);
+				}
 			} catch (Exception e1) {
 				e1.printStackTrace();
 				return false;
