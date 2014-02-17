@@ -1222,7 +1222,7 @@ static int notify_ipcp_modify_pfte(void *             data,
                 break;
         default:
                 LOG_ERR("Unknown mode for modify PFT operation %d",
-                                attrs->mode);
+                        attrs->mode);
                 rnl_msg_destroy(msg);
                 return -1;
                 break;

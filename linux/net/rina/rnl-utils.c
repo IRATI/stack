@@ -1469,7 +1469,7 @@ rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
 {
         if (info->attrs[RMPFE_ATTR_ENTRIES]) {
                 if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
-                                msg_attrs))
+                                           msg_attrs))
                         goto parse_fail;
         }
 
