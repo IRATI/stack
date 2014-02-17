@@ -29,6 +29,9 @@
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
+        /* SV lock */
+        spinlock_t  lock;
+
         /* Control state */
         uint_t       max_pdu_size;
 
@@ -227,6 +230,44 @@ static struct pdu * pdu_control_ack_flow(struct dtcp * dtcp,
         return pdu;
 }
 
+static int dtcp_rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+/*
+static int dtcp_rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+{
+        LOG_MISSING;
+        return 0;
+}
+*/
+
+static int dtcp_rcv_flow_ctl(struct dtcp * dtcp,
+                             struct pci *  pci,
+                             seq_num_t     seq_num,
+                             struct pdu *  pdu)
+{
+        dtcp->sv->snd_rt_wind_edge = pci_control_new_rt_wind_edge(pci);
+        /* FIXME: add new rate */
+        if (dt_dtp_rcv_flow_ctl(dtcp->parent)) {
+                LOG_ERR("Could not order DTP to post PDUs in CWQ"
+                        " to the RMT");
+                return -1;
+        }
+        return 0;
+}
+
+static int dtcp_rcv_ack_and_flow_ctl(struct dtcp * dtcp,
+                                     struct pci *  pci,
+                                     seq_num_t     seq_num,
+                                     struct pdu *  pdu)
+{
+        LOG_MISSING;
+        return 0;
+}
+
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
         struct pci * pci;
@@ -294,16 +335,14 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_FC:
-                break;
+                return dtcp_rcv_flow_ctl(dtcp, pci, seq_num, pdu);
         case PDU_TYPE_ACK:
-                break;
+                return dtcp_rcv_ack_ctl(dtcp, pdu);
         case PDU_TYPE_ACK_AND_FC:
-                break;
+                return dtcp_rcv_ack_and_flow_ctl(dtcp, pci, seq_num, pdu);
         default:
-                break;
+                return -1;
         }
-
-        return 0;
 }
 
 int default_lost_control_pdu(struct dtcp * dtcp)

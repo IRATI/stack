@@ -273,3 +273,11 @@ struct rtxq * dt_rtxq(struct dt * dt)
 
         return tmp;
 }
+
+/* DTP API for DTCP */
+int dt_dtp_rcv_flow_ctl(struct dt * dt)
+{
+        LOG_MISSING;
+        /* FIXME: should call dtp_rcv_flow_ctl */
+        return 0;
+}
