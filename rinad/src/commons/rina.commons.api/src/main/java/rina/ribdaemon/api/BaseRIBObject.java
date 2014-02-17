@@ -28,8 +28,8 @@ public abstract class BaseRIBObject implements RIBObject{
 	/**
 	 * The attributes of this object: objectName, objectClass, objectInstance, objectValue
 	 */
-	private String objectName = null;
-	private String objectClass = null;
+	private String objectName = " ";
+	private String objectClass = " ";
 	private long objectInstance = 0;
 
 	/**
