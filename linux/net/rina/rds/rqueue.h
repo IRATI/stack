@@ -26,11 +26,11 @@ struct rqueue;
 struct rqueue * rqueue_create(void);
 struct rqueue * rqueue_create_ni(void);
 
-ssize_t         rqueue_length(struct rqueue * queue);
-
-/* NOTE: dtor has the ownership of freeing the passed element */
+/* NOTE: dtor must free the passed element */
 int             rqueue_destroy(struct rqueue * queue,
                                void         (* dtor)(void * data));
+
+ssize_t         rqueue_length(struct rqueue * queue);
 
 /*
  * NOTE: We allow pushing NULL entries but the dtor passed to rqueue_destroy()
