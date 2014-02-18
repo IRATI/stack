@@ -33,8 +33,8 @@ int             rqueue_destroy(struct rqueue * queue,
                                void         (* dtor)(void * data));
 
 /*
- * NOTE: We allow pushing NULL entries in the fifo but the dtor passed to
- *       rfifo_destroy() has to handle them opportunely
+ * NOTE: We allow pushing NULL entries but the dtor passed to rqueue_destroy()
+ * has to handle them opportunely
  */
 int             rqueue_tail_push(struct rqueue * queue,
                                  void *          data);
