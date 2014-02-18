@@ -2675,7 +2675,8 @@ int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building RIBObject Netlink object");
+			"Error building RIBObject Netlink object: %s %s",
+			object.getClazz().c_str(), object.getName().c_str());
 	return -1;
 }
 
@@ -2692,7 +2693,7 @@ int putListOfRIBObjects(
 			goto nla_put_failure;
 		}
 		if (putRIBObject(netlinkMessage, *iterator) < 0) {
-			goto nla_put_failure;
+		        goto nla_put_failure;
 		}
 		nla_nest_end(netlinkMessage, ribObject);
 		i++;
@@ -2910,9 +2911,11 @@ int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putListOfPFTEntries(netlinkMessage,
-                        object.getEntries()) < 0) {
-                goto nla_put_failure;
+        if (object.getEntries().size() > 0) {
+                if (putListOfPFTEntries(netlinkMessage,
+                                object.getEntries()) < 0) {
+                        goto nla_put_failure;
+                }
         }
 
         nla_nest_end(netlinkMessage, entries);

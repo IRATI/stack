@@ -1,5 +1,6 @@
 package rina.utils.apps.echo.client;
 
+import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.Timer;
 
@@ -133,9 +134,13 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 				+ testInformation.getSduSize() + 
 				" bytes in " +testDuration + " ms.");
 		
-		long bandwidthInBps = 1000*testInformation.getNumberOfSDUs()*testInformation.getSduSize()/testDuration;
-		log.info("Send and received at " + bandwidthInBps 
-				+ " Bytes per second ( " +bandwidthInBps*8/1024 + " Kbps)");
+		double timeInSeconds = (double) testDuration/1000;
+		double bandwidthInBpsTx = (double) 2*testInformation.getSdusSent()*testInformation.getSduSize()/timeInSeconds;
+		double bandwidthInBpsRx = (double) 2*testInformation.getSDUsReceived()*testInformation.getSduSize()/timeInSeconds;
+		DecimalFormat df = new DecimalFormat("#.00");
+		log.info("Application-perceived bandwidth: \n    Tx: " + df.format(bandwidthInBpsTx)
+				+ " Bytes per second (" + df.format(bandwidthInBpsTx*8/1024) + " Kbps) \n    Rx: " + df.format(bandwidthInBpsRx) 
+				+ " Bytes per second (" + df.format(bandwidthInBpsRx*8/1024) +  " kbps)");
 	}
 	
 	public synchronized boolean isStopped(){

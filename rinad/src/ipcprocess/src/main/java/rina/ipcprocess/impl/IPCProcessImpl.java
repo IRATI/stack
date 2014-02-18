@@ -17,6 +17,9 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import rina.PDUForwardingTable.api.FlowStateObject;
+import rina.PDUForwardingTable.api.FlowStateObjectGroup;
+import rina.adataunit.api.ADataUnitPDU;
 import rina.applicationprocess.api.WhatevercastName;
 import rina.utils.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
@@ -27,6 +30,7 @@ import rina.delimiting.api.Delimiter;
 import rina.delimiting.impl.DIFDelimiter;
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.EncoderImpl;
+import rina.encoding.impl.googleprotobuf.adataunit.ADataUnitPDUEncoder;
 import rina.encoding.impl.googleprotobuf.applicationregistration.ApplicationRegistrationEncoder;
 import rina.encoding.impl.googleprotobuf.datatransferconstants.DataTransferConstantsEncoder;
 import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryArrayEncoder;
@@ -34,6 +38,8 @@ import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwa
 import rina.encoding.impl.googleprotobuf.enrollment.EnrollmentInformationEncoder;
 import rina.encoding.impl.googleprotobuf.flow.FlowEncoder;
 import rina.encoding.impl.googleprotobuf.flowservice.FlowServiceEncoder;
+import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
+import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.encoding.impl.googleprotobuf.neighbor.NeighborArrayEncoder;
 import rina.encoding.impl.googleprotobuf.neighbor.NeighborEncoder;
 import rina.encoding.impl.googleprotobuf.qoscube.QoSCubeArrayEncoder;
@@ -46,6 +52,9 @@ import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.api.IPCProcess;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
+import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
+import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
@@ -58,6 +67,7 @@ import rina.registrationmanager.api.RegistrationManager;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
+import rina.PDUForwardingTable.api.*;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.AllocateFlowResponseEvent;
@@ -137,6 +147,9 @@ public class IPCProcessImpl implements IPCProcess {
 	/** The Flow Allocator */
 	private FlowAllocator flowAllocator = null;
 	
+	/** The PDU Forwarding Table */
+	private PDUFTable pduForwardingTable = null;
+	
 	/** The IPC Process name */
 	private ApplicationProcessNamingInformation name = null;
 	
@@ -173,11 +186,13 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
+		pduForwardingTable = new PDUFTImpl(/*TODO: Set maximum age by config*/15);
 		ribDaemon.setIPCProcess(this);
 		enrollmentTask.setIPCProcess(this);
 		resourceAllocator.setIPCProcess(this);
 		registrationManager.setIPCProcess(this);
 		flowAllocator.setIPCProcess(this);
+		pduForwardingTable.setIPCProcess(this);
 		
 		populateRIB();
 
@@ -317,6 +332,9 @@ public class IPCProcessImpl implements IPCProcess {
           encoder.addEncoder(ApplicationRegistration.class.getName(), new ApplicationRegistrationEncoder());
           encoder.addEncoder(Neighbor.class.getName(), new NeighborEncoder());
           encoder.addEncoder(Neighbor[].class.getName(), new NeighborArrayEncoder());
+          encoder.addEncoder(FlowStateObject.class.getName(), new FlowStateEncoder());
+          encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
+          encoder.addEncoder(ADataUnitPDU.class.getName(), new ADataUnitPDUEncoder());
           
           return encoder;
 	}
@@ -519,6 +537,8 @@ public class IPCProcessImpl implements IPCProcess {
 						QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME, qosCubes);
 			}
 			
+			/*TODO: Set algorithm by config*/
+			pduForwardingTable.setAlgorithm(new DijkstraAlgorithm(), new Vertex(getAddress()));
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());
@@ -542,22 +562,26 @@ public class IPCProcessImpl implements IPCProcess {
 					+ event.getResult());
 			return;
 		}
-		
-		PDUForwardingTableEntry next = null;
-		Iterator<PDUForwardingTableEntry> iterator = event.getEntries().iterator();
-		Iterator<Long> iterator2 = null;
-		String result = "Contents of the PDU Forwarding Table: \n";
-		while (iterator.hasNext()) {
-			next = iterator.next();
-			result = result + "Addresss: " + next.getAddress() 
-					+ "; QoS id: " + next.getQosId() + "; Port-ids: ";
-			iterator2 = next.getPortIds().iterator();
-			while (iterator2.hasNext()) {
-				result = result + iterator2.next()+ "; ";
+
+		try{
+			PDUForwardingTableEntry next = null;
+			Iterator<PDUForwardingTableEntry> iterator = event.getEntries().iterator();
+			Iterator<Long> iterator2 = null;
+			String result = "Contents of the PDU Forwarding Table: \n";
+			while (iterator.hasNext()) {
+				next = iterator.next();
+				result = result + "Addresss: " + next.getAddress() 
+						+ "; QoS id: " + next.getQosId() + "; Port-ids: ";
+				iterator2 = next.getPortIds().iterator();
+				while (iterator2.hasNext()) {
+					result = result + iterator2.next()+ "; ";
+				}
 			}
+
+			log.info(result);
+		}catch(Exception ex){
+			ex.printStackTrace();
 		}
-		
-		log.info(result);
 	}
 	
 	public synchronized DIFInformation getDIFInformation() {
@@ -580,8 +604,36 @@ public class IPCProcessImpl implements IPCProcess {
      * Returns the list of IPC processes that are part of the DIF this IPC Process is part of
      * @return
      */
-    public List<Neighbor> getNeighbors(){
-            return enrollmentTask.getNeighbors();
+    public List<Neighbor> getNeighbors()
+    {
+        return enrollmentTask.getNeighbors();
     }
+
+	@Override
+	public long getAdressByname(ApplicationProcessNamingInformation name) throws Exception
+	{
+		List<Neighbor> neighbors = getNeighbors();
+		long address = -1;
+		int i = 0;
+		boolean end = false;
+		
+		while (!end && i < neighbors.size())
+		{
+			Neighbor n = neighbors.get(i);
+			log.debug("Neighbor " + i + ": " + n.getName());
+			if (n.getName().getProcessName().equals(name.getProcessName()))
+			{
+				address= n.getAddress();
+				end = true;
+			}
+			i++;
+		}
+		if (address == -1)
+		{
+			log.error("Application: " + name.getProcessName() + "not found in the neighbours");
+			throw new Exception();
+		}
+		return address;
+	}
 
 }

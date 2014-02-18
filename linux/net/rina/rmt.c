@@ -370,12 +370,15 @@ static int send_worker(void * o)
                         spin_unlock(&tmp->egress.queues->lock);
 
                         if (!pdu)
-                                break;
+                                continue;
 
                         out = false;
                         sdu = sdu_create_pdu_with(pdu);
-                        if (!sdu)
-                                break;
+                        if (!sdu) {
+                                LOG_ERR("Error creating SDU from PDU, dropping PDU!");
+                                pdu_destroy(pdu);
+                                continue;
+                        }
 
                         LOG_DBG("Gonna send SDU to port_id %d", port_id);
                         if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
@@ -844,22 +847,23 @@ static int receive_worker(void * o)
 
                         if (!sdu) {
                                 LOG_ERR("No SDU to work with");
-                                break;
+                                continue;
                         }
 
                         nothing_to_do = false;
                         pci = sdu_pci_copy(sdu);
                         if (!pci) {
-                                LOG_ERR("No PCI to work with");
-                                break;
+                                LOG_ERR("No PCI to work with, dropping SDU!");
+                                sdu_destroy(sdu);
+                                continue;
                         }
 
                         pdu_type = pci_type(pci);
                         if (!pdu_type_is_ok(pdu_type)) {
-                                LOG_ERR("Wrong PDU type");
+                                LOG_ERR("Wrong PDU type, dropping SDU!");
                                 pci_destroy(pci);
                                 sdu_destroy(sdu);
-                                break;
+                                continue;
                         }
                         LOG_DBG("PDU type: %d", pdu_type);
 
@@ -1020,6 +1024,12 @@ int rmt_pft_dump(struct rmt *       instance,
                                                   entries) : -1;
 }
 EXPORT_SYMBOL(rmt_pft_dump);
+
+int rmt_pft_flush(struct rmt * instance)
+{
+        return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1;
+}
+EXPORT_SYMBOL(rmt_pft_flush);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 static struct pdu * regression_tests_pdu_create(address_t address)

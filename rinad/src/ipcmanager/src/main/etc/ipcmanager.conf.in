@@ -1,7 +1,7 @@
 {
   "localConfiguration" : {
-    "installationPath" : "/usr/local/irati/share/rinad",
-    "libraryPath" : "/usr/local/irati/lib",
+    "installationPath" : "@pkgdatadir@",
+    "libraryPath" : "@libdir@",
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
     "enrollmentTimeoutInMs" : 10000,

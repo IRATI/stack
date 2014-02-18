@@ -1272,6 +1272,21 @@ void Neighbor::setSupportingDifName(
         this->supportingDifName = supportingDifName;
 }
 
+const std::list<ApplicationProcessNamingInformation>&
+Neighbor::getSupportingDifs() {
+        return supportingDifs;
+}
+
+void Neighbor::setSupportingDifs(
+        const std::list<ApplicationProcessNamingInformation>& supportingDifs) {
+        this->supportingDifs = supportingDifs;
+}
+
+void Neighbor::addSupoprtingDif(
+                const ApplicationProcessNamingInformation& supportingDif) {
+        supportingDifs.push_back(supportingDif);
+}
+
 unsigned int Neighbor::getAddress() const {
         return address;
 }

@@ -189,7 +189,7 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
         spin_lock(&dt->lock);
         if (!dt->dtcp) {
                 LOG_ERR("No DTCP bound to instance %pK", dt);
-                        spin_unlock(&dt->lock);
+                spin_unlock(&dt->lock);
                 return NULL;
         }
 

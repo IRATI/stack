@@ -2,6 +2,7 @@ package rina.resourceallocator.api;
 
 import rina.ipcprocess.api.IPCProcessComponent;
 import eu.irati.librina.AllocateFlowRequestResultEvent;
+import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.FlowDeallocatedEvent;
 import eu.irati.librina.FlowInformation;
@@ -80,4 +81,11 @@ public interface NMinus1FlowManager extends IPCProcessComponent {
 	 * @throws IPCException
 	 */
 	public void processRegistrationNotification(IPCProcessDIFRegistrationEvent evet) throws IPCException;
+	
+	/**
+	 * True if the DIF name is a supoprting DIF, false otherwise
+	 * @param difName
+	 * @return
+	 */
+	public boolean isSupportingDIF(ApplicationProcessNamingInformation difName);
 }
