@@ -439,3 +439,10 @@ int dtp_receive(struct dtp * instance,
 
         return 0;
 }
+
+int dtp_rcv_flow_ctl(struct dtp * instance)
+{
+        LOG_MISSING;
+        return 0;
+}
+EXPORT_SYMBOL(dtp_rcv_flow_ctl);

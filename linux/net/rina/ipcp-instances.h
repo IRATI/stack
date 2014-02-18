@@ -203,6 +203,8 @@ struct ipcp_instance_ops {
         int (* pft_dump)(struct ipcp_instance_data * data,
                          struct list_head *          entries);
 
+        int (* pft_flush)(struct ipcp_instance_data * data);
+
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
 };
 

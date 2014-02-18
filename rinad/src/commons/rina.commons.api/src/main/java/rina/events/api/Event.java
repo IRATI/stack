@@ -16,6 +16,7 @@ public interface Event {
 	public static final String N_MINUS_1_FLOW_ALLOCATION_FAILED = "N minus 1 Flow Allocation Failed";
 	public static final String N_MINUS_1_FLOW_DEALLOCATED = "N minus 1 Flow Deallocated";
 	public static final String NEIGHBOR_DECLARED_DEAD = "Neighbor declared dead";
+	public static final String NEIGHBOR_ADDED = "Neighbor added";
 
 	/**
 	 * The id of the event

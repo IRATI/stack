@@ -14,7 +14,7 @@ import rina.ipcprocess.api.IPCProcessComponent;
  * Specifies the interface of the RIB Daemon
  * @author eduardgrasa
  */
-public interface RIBDaemon extends EventManager, IPCProcessComponent {
+public interface RIBDaemon extends EventManager, IPCProcessComponent, ADataUnitHandler {
 	
 	/**
 	 * Add a RIB object to the RIB

@@ -56,6 +56,18 @@ public final class NeighborMessage {
     public boolean hasAddress() { return hasAddress; }
     public long getAddress() { return address_; }
     
+    // repeated string supportingDifs = 4;
+    public static final int SUPPORTINGDIFS_FIELD_NUMBER = 4;
+    private java.util.List<java.lang.String> supportingDifs_ =
+      java.util.Collections.emptyList();
+    public java.util.List<java.lang.String> getSupportingDifsList() {
+      return supportingDifs_;
+    }
+    public int getSupportingDifsCount() { return supportingDifs_.size(); }
+    public java.lang.String getSupportingDifs(int index) {
+      return supportingDifs_.get(index);
+    }
+    
     private void initFields() {
     }
     public final boolean isInitialized() {
@@ -73,6 +85,9 @@ public final class NeighborMessage {
       }
       if (hasAddress()) {
         output.writeUInt64(3, getAddress());
+      }
+      for (java.lang.String element : getSupportingDifsList()) {
+        output.writeString(4, element);
       }
       getUnknownFields().writeTo(output);
     }
@@ -94,6 +109,15 @@ public final class NeighborMessage {
       if (hasAddress()) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(3, getAddress());
+      }
+      {
+        int dataSize = 0;
+        for (java.lang.String element : getSupportingDifsList()) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeStringSizeNoTag(element);
+        }
+        size += dataSize;
+        size += 1 * getSupportingDifsList().size();
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -237,6 +261,10 @@ public final class NeighborMessage {
           throw new IllegalStateException(
             "build() has already been called on this Builder.");
         }
+        if (result.supportingDifs_ != java.util.Collections.EMPTY_LIST) {
+          result.supportingDifs_ =
+            java.util.Collections.unmodifiableList(result.supportingDifs_);
+        }
         rina.encoding.impl.googleprotobuf.neighbor.NeighborMessage.neighbor_t returnMe = result;
         result = null;
         return returnMe;
@@ -261,6 +289,12 @@ public final class NeighborMessage {
         }
         if (other.hasAddress()) {
           setAddress(other.getAddress());
+        }
+        if (!other.supportingDifs_.isEmpty()) {
+          if (result.supportingDifs_.isEmpty()) {
+            result.supportingDifs_ = new java.util.ArrayList<java.lang.String>();
+          }
+          result.supportingDifs_.addAll(other.supportingDifs_);
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -297,6 +331,10 @@ public final class NeighborMessage {
             }
             case 24: {
               setAddress(input.readUInt64());
+              break;
+            }
+            case 34: {
+              addSupportingDifs(input.readString());
               break;
             }
           }
@@ -364,6 +402,46 @@ public final class NeighborMessage {
         return this;
       }
       
+      // repeated string supportingDifs = 4;
+      public java.util.List<java.lang.String> getSupportingDifsList() {
+        return java.util.Collections.unmodifiableList(result.supportingDifs_);
+      }
+      public int getSupportingDifsCount() {
+        return result.getSupportingDifsCount();
+      }
+      public java.lang.String getSupportingDifs(int index) {
+        return result.getSupportingDifs(index);
+      }
+      public Builder setSupportingDifs(int index, java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  result.supportingDifs_.set(index, value);
+        return this;
+      }
+      public Builder addSupportingDifs(java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  if (result.supportingDifs_.isEmpty()) {
+          result.supportingDifs_ = new java.util.ArrayList<java.lang.String>();
+        }
+        result.supportingDifs_.add(value);
+        return this;
+      }
+      public Builder addAllSupportingDifs(
+          java.lang.Iterable<? extends java.lang.String> values) {
+        if (result.supportingDifs_.isEmpty()) {
+          result.supportingDifs_ = new java.util.ArrayList<java.lang.String>();
+        }
+        super.addAll(values, result.supportingDifs_);
+        return this;
+      }
+      public Builder clearSupportingDifs() {
+        result.supportingDifs_ = java.util.Collections.emptyList();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:rina.messages.neighbor_t)
     }
     
@@ -391,10 +469,11 @@ public final class NeighborMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n protofiles/NeighborMessage.proto\022\rrina" +
-      ".messages\"a\n\nneighbor_t\022\036\n\026applicationPr" +
+      ".messages\"y\n\nneighbor_t\022\036\n\026applicationPr" +
       "ocessName\030\001 \001(\t\022\"\n\032applicationProcessIns" +
-      "tance\030\002 \001(\t\022\017\n\007address\030\003 \001(\004B,\n*rina.enc" +
-      "oding.impl.googleprotobuf.neighbor"
+      "tance\030\002 \001(\t\022\017\n\007address\030\003 \001(\004\022\026\n\016supporti" +
+      "ngDifs\030\004 \003(\tB,\n*rina.encoding.impl.googl" +
+      "eprotobuf.neighbor"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -406,7 +485,7 @@ public final class NeighborMessage {
           internal_static_rina_messages_neighbor_t_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_neighbor_t_descriptor,
-              new java.lang.String[] { "ApplicationProcessName", "ApplicationProcessInstance", "Address", },
+              new java.lang.String[] { "ApplicationProcessName", "ApplicationProcessInstance", "Address", "SupportingDifs", },
               rina.encoding.impl.googleprotobuf.neighbor.NeighborMessage.neighbor_t.class,
               rina.encoding.impl.googleprotobuf.neighbor.NeighborMessage.neighbor_t.Builder.class);
           return null;

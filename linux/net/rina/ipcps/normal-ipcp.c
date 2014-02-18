@@ -704,6 +704,13 @@ static int normal_pft_dump(struct ipcp_instance_data * data,
                             entries);
 }
 
+static int normal_pft_flush(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+
+        return rmt_pft_flush(data->rmt);
+}
+
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
@@ -735,6 +742,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove,
         .pft_dump                  = normal_pft_dump,
+        .pft_flush                 = normal_pft_flush,
         .ipcp_name                 = normal_ipcp_name
 };
 

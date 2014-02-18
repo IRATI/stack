@@ -1467,9 +1467,12 @@ static int
 rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
                                  struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
 {
-        if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
-                                   msg_attrs))
-                goto parse_fail;
+        if (info->attrs[RMPFE_ATTR_ENTRIES]) {
+                if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
+                                           msg_attrs))
+                        goto parse_fail;
+        }
+
         if (info->attrs[RMPFE_ATTR_MODE])
                 msg_attrs->mode =
                         nla_get_u32(info->attrs[RMPFE_ATTR_MODE]);

@@ -189,7 +189,7 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
         spin_lock(&dt->lock);
         if (!dt->dtcp) {
                 LOG_ERR("No DTCP bound to instance %pK", dt);
-                        spin_unlock(&dt->lock);
+                spin_unlock(&dt->lock);
                 return NULL;
         }
 
@@ -272,4 +272,14 @@ struct rtxq * dt_rtxq(struct dt * dt)
         spin_unlock(&dt->lock);
 
         return tmp;
+}
+
+/* DTP API for DTCP */
+int dt_dtp_rcv_flow_ctl(struct dt * dt)
+{
+        LOG_MISSING;
+
+        /* FIXME: should call dtp_rcv_flow_ctl */
+
+        return 0;
 }

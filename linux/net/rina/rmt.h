@@ -75,6 +75,7 @@ int          rmt_pft_remove(struct rmt *       instance,
                             const size_t       count);
 int          rmt_pft_dump(struct rmt *       instance,
                           struct list_head * entries);
+int          rmt_pft_flush(struct rmt * instance);
 
 int          rmt_send(struct rmt * instance,
                       address_t    address,

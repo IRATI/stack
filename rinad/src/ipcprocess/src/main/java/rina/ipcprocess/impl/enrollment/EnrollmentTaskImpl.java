@@ -18,8 +18,6 @@ import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborList;
-import eu.irati.librina.PDUForwardingTableEntry;
-import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -45,6 +43,7 @@ import rina.ipcprocess.impl.events.ConnectivityToNeighborLostEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocationFailedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
+import rina.ipcprocess.impl.events.NeighborAddedEvent;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -551,19 +550,6 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 					log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
 				}
 				
-				//4 Remove PDU forwarding table entry
-				 try{
-					 PDUForwardingTableEntryList list = new PDUForwardingTableEntryList();
-					 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
-					 entry.setAddress(neighbors.get(i).getAddress());
-					 entry.setQosId(1);
-					 entry.addPortId(neighbors.get(i).getUnderlyingPortId());
-					 list.addFirst(entry);
-					 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 1);
-				 } catch (Exception ex) {
-					 log.error("Problems requesting the Kernel to remove a PDU Forwarding Table entry");
-				 }
-				
 				return;
 			}
 		}
@@ -691,17 +677,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			 timer.schedule(task, 200);
 		 }*/
 		 
-		 try{
-			 PDUForwardingTableEntryList list = new PDUForwardingTableEntryList();
-			 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
-			 entry.setAddress(neighbor.getAddress());
-			 entry.setQosId(1);
-			 entry.addPortId(neighbor.getUnderlyingPortId());
-			 list.addFirst(entry);
-			 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 0);
-		 } catch (Exception ex) {
-			 log.error("Problems requesting the Kernel to add a PDU Forwarding Table entry");
-		 }
+		 NeighborAddedEvent event = new NeighborAddedEvent(neighbor, enrollee);
+		 ribDaemon.deliverEvent(event);
 	 }
 	
 	/**
