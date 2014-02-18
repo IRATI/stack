@@ -30,7 +30,7 @@
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
         /* SV lock */
-        spinlock_t  lock;
+        spinlock_t   lock;
 
         /* Control state */
         uint_t       max_pdu_size;
@@ -237,11 +237,11 @@ static int dtcp_rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
 }
 
 /*
-static int dtcp_rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
-{
-        LOG_MISSING;
-        return 0;
-}
+  static int dtcp_rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+  {
+  LOG_MISSING;
+  return 0;
+  }
 */
 
 static int dtcp_rcv_flow_ctl(struct dtcp * dtcp,
@@ -323,7 +323,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return 0;
 
         } else if (seq_num > dtcp->sv->last_rcv_ctl_seq) {
-                dtcp->policies->lost_control_pdu(dtcp); 
+                dtcp->policies->lost_control_pdu(dtcp);
         } else {
                 dtcp->sv->last_rcv_ctl_seq = seq_num;
         }
