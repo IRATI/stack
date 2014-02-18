@@ -472,7 +472,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                                 struct sdu_wpi **           sdu_wpi)
 {
         struct mgmt_data * mgmt_data;
-        int retval;
+        int                retval;
 
         if (!data) {
                 LOG_ERR("Bogus instance data");
@@ -529,7 +529,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 LOG_ERR("There is not enough data in the management queue");
                 retval = -1;
         }
-finish:
+ finish:
         if (atomic_dec_and_test(&mgmt_data->readers) &&
             (mgmt_data->state == MGMT_DATA_DESTROYED))
                 if (mgmt_remove(mgmt_data))
