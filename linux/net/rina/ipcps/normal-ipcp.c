@@ -397,6 +397,11 @@ static int normal_deallocate(struct ipcp_instance_data * data,
 {
         struct normal_flow * flow;
 
+        if (!data) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
         flow = find_flow(data, port_id);
         if (!flow) {
                 LOG_ERR("Could not find flow %d to deallocate", port_id);
@@ -457,6 +462,8 @@ static int mgmt_remove(struct mgmt_data * data)
         if (data->sdu_ready)
                 rfifo_destroy(data->sdu_ready,
                               (void (*)(void *)) sdu_wpi_destroy);
+
+        rkfree(data);
 
         return 0;
 }
@@ -603,6 +610,12 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
         /* FIXME: We should get rid of sdu_wpi ASAP */
         struct sdu_wpi * tmp;
 
+        if (!data) {
+                LOG_ERR("Bogus instance passed");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("Wrong port id");
                 sdu_destroy(sdu);
@@ -620,9 +633,17 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        if (!data->mgmt_data) {
+                LOG_ERR("No mgmt data for IPCP %d", data->id);
+                sdu_destroy(sdu);
+                rkfree(tmp);
+                return -1;
+        }
+
         if (data->mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_ERR("IPCP %d is being destroyed", data->id);
                 sdu_destroy(sdu);
+                rkfree(tmp);
                 return -1;
         }
 
@@ -631,11 +652,13 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
         spin_lock(&data->mgmt_data->lock);
         if (rfifo_push_ni(data->mgmt_data->sdu_ready,
                           tmp)) {
+                sdu_destroy(sdu);
+                rkfree(tmp);
                 spin_unlock(&data->mgmt_data->lock);
                 return -1;
         }
         spin_unlock(&data->mgmt_data->lock);
-        LOG_DBG("Gonna wake up all wait_q: %d", port_id);
+        LOG_DBG("Gonna wake up all waitqueues: %d", port_id);
         wake_up_all(&data->mgmt_data->wait_q);
 
         return 0;
@@ -750,13 +773,17 @@ static struct mgmt_data * normal_mgmt_data_create(void)
 
 static int mgmt_data_destroy(struct mgmt_data * data)
 {
+        if (!data)
+                return -1;
+
         spin_lock(&data->lock);
         data->state = MGMT_DATA_DESTROYED;
-        spin_unlock(&data->lock);
         if ((atomic_read(&data->readers) == 0)) {
+                spin_unlock(&data->lock);
                 mgmt_remove(data);
                 return 0;
         }
+        spin_unlock(&data->lock);
         wake_up_all(&data->wait_q);
 
         return 0;
