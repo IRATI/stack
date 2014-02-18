@@ -44,4 +44,7 @@ struct dtcp * dt_dtcp(struct dt * dt);
 struct cwq *  dt_cwq(struct dt * dt);
 struct rtxq * dt_rtxq(struct dt * dt);
 
+
+/* DTP API for DTCP */
+int           dt_dtp_rcv_flow_ctl(struct dt * dt);
 #endif
