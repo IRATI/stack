@@ -1918,16 +1918,19 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
+        KIPCM_LOCK(kipcm);
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
                 sdu_wpi_destroy(sdu_wpi);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
                 sdu_wpi_destroy(sdu_wpi);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
@@ -1935,18 +1938,20 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
                 sdu_wpi_destroy(sdu_wpi);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+        KIPCM_UNLOCK(kipcm);
 
         if (ipcp->ops->mgmt_sdu_write(ipcp->data,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
                 sdu_wpi_destroy(sdu_wpi);
                 return -1;
-        } else {
-                rkfree(sdu_wpi);
-                return 0;
         }
+
+        rkfree(sdu_wpi);
+        return 0;
 }
 
 int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
@@ -1962,22 +1967,27 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
                 return -1;
         }
 
+        KIPCM_LOCK(kipcm);
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops->mgmt_sdu_read) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+        KIPCM_UNLOCK(kipcm);
 
         return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }
