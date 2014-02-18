@@ -323,7 +323,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return 0;
 
         } else if (seq_num > dtcp->sv->last_rcv_ctl_seq) {
-                dtcp->policies->lost_control_pdu(dtcp); 
+                dtcp->policies->lost_control_pdu(dtcp);
         } else {
                 dtcp->sv->last_rcv_ctl_seq = seq_num;
         }
