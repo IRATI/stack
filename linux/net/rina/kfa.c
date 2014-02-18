@@ -317,7 +317,7 @@ static int kfa_flow_destroy(struct kfa *       instance,
 
         ASSERT(flow);
 
-        LOG_DBG("We are destroying a flow");
+        LOG_DBG("We are destroying flow %d", id);
 
         ipcp = flow->ipc_process;
         kfifo_free(&flow->sdu_ready);
@@ -560,18 +560,17 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
 
-                if (retval) {
-                        LOG_ERR("Wait-event interrupted, returned error %d",
-                                retval);
-                        goto finish;
-                }
-
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
                         spin_unlock(&instance->lock);
                         return -1;
+                }
+                if (retval) {
+                        LOG_ERR("Wait-event interrupted, returned error %d",
+                                retval);
+                        goto finish;
                 }
                 if (flow->state == PORT_STATE_DEALLOCATED) {
                         break;
