@@ -280,11 +280,13 @@ public abstract class BaseEnrollmentStateMachine extends BaseCDAPMessageHandler{
 		//Create or update the neighbor information in the RIB
 		try{
 			remotePeer.setEnrolled(enrolled);
+			remotePeer.setNumberOfEnrollmentAttempts(0);
 			if (enrolled){
 				remotePeer.setUnderlyingPortId(this.getPortId());
 			}else{
 				remotePeer.setUnderlyingPortId(0);
 			}
+			
 			ribDaemon.create(NeighborRIBObject.NEIGHBOR_RIB_OBJECT_CLASS, 
 					NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME + RIBObjectNames.SEPARATOR 
 						+ remotePeer.getName().getProcessName(), 
