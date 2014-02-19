@@ -314,6 +314,7 @@ static int kfa_flow_destroy(struct kfa *       instance,
                             port_id_t          id)
 {
         struct ipcp_instance * ipcp;
+        int                    retval = 0;
 
         ASSERT(flow);
 
@@ -321,17 +322,24 @@ static int kfa_flow_destroy(struct kfa *       instance,
 
         ipcp = flow->ipc_process;
         kfifo_free(&flow->sdu_ready);
-        rkfree(flow);
 
         if (kfa_pmap_remove(instance->flows, id)) {
                 LOG_ERR("Could not remove pending flow with port-id %d", id);
-                return -1;
+                retval = -1;
         }
 
         if (pidm_release(instance->pidm, id)) {
                 LOG_ERR("Could not release pid %d from the map", id);
-                return -1;
+                retval = -1;
         }
+
+        if (flow->rmt) {
+                if (rmt_unbind_n1port(flow->rmt, id)) {
+                        LOG_ERR("Could not unbind port-id %d from RMT queues", id);
+                        retval = -1;
+                }
+        }
+        rkfree(flow);
 
         ASSERT(ipcp);
         ASSERT(ipcp->ops);
@@ -340,10 +348,10 @@ static int kfa_flow_destroy(struct kfa *       instance,
                 if (ipcp->ops->flow_destroy(ipcp->data, id)) {
                         LOG_ERR("Problems destroying the flow "
                                 "on port-id %d", id);
-                        return -1;
+                        retval = -1;
                 }
 
-        return 0;
+        return retval;
 }
 
 int kfa_flow_deallocate(struct kfa * instance,

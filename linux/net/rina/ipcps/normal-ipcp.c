@@ -273,13 +273,8 @@ static int ipcp_flow_notification(struct ipcp_instance_data * data,
         if (kfa_flow_rmt_bind(data->kfa, pid, data->rmt))
                 return -1;
 
-        if (rmt_queue_send_add(data->rmt, pid))
+        if (rmt_bind_n1port(data->rmt, pid))
                 return -1;
-
-        if (rmt_queue_recv_add(data->rmt, pid)) {
-                rmt_queue_send_delete(data->rmt, pid);
-                return -1;
-        }
 
         return 0;
 }
