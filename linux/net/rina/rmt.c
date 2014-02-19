@@ -105,7 +105,7 @@ static struct rmt_qmap * qmap_create(void)
         return tmp;
 }
 
-static int qmap_destroy(struct rmt_qmap * m)
+static int qmap_destroy(struct rmt_qmap * m, struct kfa * kfa)
 {
         struct rmt_queue *  entry;
         struct hlist_node * tmp;
@@ -116,6 +116,7 @@ static int qmap_destroy(struct rmt_qmap * m)
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
+                kfa_flow_rmt_unbind(kfa, entry->port_id);
                 if (queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
@@ -300,15 +301,16 @@ int rmt_destroy(struct rmt * instance)
         }
 
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
-        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues, instance->kfa);
         pft_cache_fini(&instance->ingress.cache);
 
-        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
-        if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+        if (instance->egress.wq)     rwq_destroy(instance->egress.wq);
+        if (instance->egress.queues) qmap_destroy(instance->egress.queues, instance->kfa);
         pft_cache_fini(&instance->egress.cache);
 
         if (instance->pft)            pft_destroy(instance->pft);
 
+        
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
@@ -574,10 +576,21 @@ static int rmt_queue_send_delete(struct rmt * instance,
                 return -1;
         }
 
+        if (!instance->egress.queues) {
+                LOG_ERR("Bogus egress instance passed");
+                return -1;
+        }
+
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Wrong port id");
                 return -1;
         }
+
+        LOG_ERR("LEODEBUG rmt: %pk", instance);
+        LOG_ERR("LEODEBUG rmt->ingress: %pk", &instance->egress);
+        LOG_ERR("LEODEBUG rmt->ingress.queues: %pk", instance->egress.queues);
+        LOG_ERR("LEODEBUG rmt->ingress.queues->queues[rmap_hash(instance->egress.queues->queues, id)]: %pk", 
+        &instance->egress.queues->queues[rmap_hash(instance->egress.queues->queues, id)]);
 
         q = qmap_find(instance->egress.queues, id);
         if (!q) {
@@ -637,6 +650,11 @@ static int rmt_queue_recv_delete(struct rmt * instance,
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!instance->egress.queues) {
+                LOG_ERR("Bogus egress instance passed");
                 return -1;
         }
 
