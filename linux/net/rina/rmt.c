@@ -660,8 +660,10 @@ int rmt_bind_n1port(struct rmt * instance,
         if (rmt_queue_send_add(instance, id))
                 return -1;
 
-        if (rmt_queue_recv_add(instance, id))
+        if (rmt_queue_recv_add(instance, id)){
+                rmt_queue_send_delete(instance, id);
                 return -1;
+        }
 
         return 0;
 }
