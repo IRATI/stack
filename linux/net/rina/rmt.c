@@ -690,7 +690,7 @@ int rmt_unbind_n1port(struct rmt * instance,
 
         if (rmt_queue_send_delete(instance, id))
                 retval = -1;
-        
+
         if (rmt_queue_recv_delete(instance, id))
                 retval = -1;
 
