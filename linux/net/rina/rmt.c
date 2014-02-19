@@ -586,12 +586,6 @@ static int rmt_queue_send_delete(struct rmt * instance,
                 return -1;
         }
 
-        LOG_ERR("LEODEBUG rmt: %pk", instance);
-        LOG_ERR("LEODEBUG rmt->ingress: %pk", &instance->egress);
-        LOG_ERR("LEODEBUG rmt->ingress.queues: %pk", instance->egress.queues);
-        LOG_ERR("LEODEBUG rmt->ingress.queues->queues[rmap_hash(instance->egress.queues->queues, id)]: %pk", 
-        &instance->egress.queues->queues[rmap_hash(instance->egress.queues->queues, id)]);
-
         q = qmap_find(instance->egress.queues, id);
         if (!q) {
                 LOG_ERR("Queue does not exist");
