@@ -281,6 +281,7 @@ public abstract class BaseEnrollmentStateMachine extends BaseCDAPMessageHandler{
 		try{
 			remotePeer.setEnrolled(enrolled);
 			remotePeer.setNumberOfEnrollmentAttempts(0);
+			remotePeer.setLastHeardFromTimeInMs(System.currentTimeMillis());
 			if (enrolled){
 				remotePeer.setUnderlyingPortId(this.getPortId());
 			}else{
