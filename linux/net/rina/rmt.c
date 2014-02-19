@@ -668,7 +668,7 @@ static int rmt_queue_recv_delete(struct rmt * instance,
         return queue_destroy(q);
 }
 
-int rmt_bind_n1port(struct rmt * instance,
+int rmt_n1port_bind(struct rmt * instance,
                     port_id_t    id)
 {
         if (rmt_queue_send_add(instance, id))
@@ -681,9 +681,9 @@ int rmt_bind_n1port(struct rmt * instance,
 
         return 0;
 }
-EXPORT_SYMBOL(rmt_bind_n1port);
+EXPORT_SYMBOL(rmt_n1port_bind);
 
-int rmt_unbind_n1port(struct rmt * instance,
+int rmt_n1port_unbind(struct rmt * instance,
                       port_id_t    id)
 {
         int retval = 0;
@@ -696,7 +696,7 @@ int rmt_unbind_n1port(struct rmt * instance,
 
         return retval;
 }
-EXPORT_SYMBOL(rmt_unbind_n1port);
+EXPORT_SYMBOL(rmt_n1port_unbind);
 
 static struct pci * sdu_pci_copy(const struct sdu * sdu)
 {

@@ -362,8 +362,9 @@ static int kfa_flow_destroy(struct kfa *       instance,
         }
 
         if (flow->rmt) {
-                if (rmt_unbind_n1port(flow->rmt, id)) {
-                        LOG_ERR("Could not unbind port-id %d from RMT queues", id);
+                if (rmt_n1port_unbind(flow->rmt, id)) {
+                        LOG_ERR("Could not unbind port-id %d from "
+                                "RMT queues", id);
                         retval = -1;
                 }
         }
