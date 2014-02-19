@@ -301,16 +301,17 @@ int rmt_destroy(struct rmt * instance)
         }
 
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
-        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues, instance->kfa);
+        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues,
+                                                   instance->kfa);
         pft_cache_fini(&instance->ingress.cache);
 
-        if (instance->egress.wq)     rwq_destroy(instance->egress.wq);
-        if (instance->egress.queues) qmap_destroy(instance->egress.queues, instance->kfa);
+        if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
+        if (instance->egress.queues)  qmap_destroy(instance->egress.queues,
+                                                   instance->kfa);
         pft_cache_fini(&instance->egress.cache);
 
         if (instance->pft)            pft_destroy(instance->pft);
 
-        
         rkfree(instance);
 
         LOG_DBG("Instance %pK finalized successfully", instance);
@@ -377,7 +378,8 @@ static int send_worker(void * o)
                         out = false;
                         sdu = sdu_create_pdu_with(pdu);
                         if (!sdu) {
-                                LOG_ERR("Error creating SDU from PDU, dropping PDU!");
+                                LOG_ERR("Error creating SDU from PDU, "
+                                        "dropping PDU!");
                                 pdu_destroy(pdu);
                                 continue;
                         }
