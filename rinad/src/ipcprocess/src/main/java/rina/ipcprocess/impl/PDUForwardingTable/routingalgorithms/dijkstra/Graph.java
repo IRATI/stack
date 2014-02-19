@@ -57,29 +57,32 @@ public class Graph {
 			
 			for (FlowStateObject f : flowStateObjects)
 			{
-				i = 0;
-				v1Checked = false;
-				v2Checked = false;
-				while((!v1Checked || !v2Checked) && i < vertices.size())
+				if (f.isState())
 				{
-					Vertex v = vertices.get(i);
-					if (v.getAddress() == f.getAddress())
+					i = 0;
+					v1Checked = false;
+					v2Checked = false;
+					while((!v1Checked || !v2Checked) && i < vertices.size())
 					{
-						v1 = v;
-						v1Checked = true;
-//						portV1 = f.getPortid();
+						Vertex v = vertices.get(i);
+						if (v.getAddress() == f.getAddress())
+						{
+							v1 = v;
+							v1Checked = true;
+	//						portV1 = f.getPortid();
+						}
+						if (v.getAddress() == f.getNeighborAddress())
+						{
+							v2 = v;
+							v2Checked = true;
+	//						portV2 = f.getNeighborPortid();
+						}
+						i++;
 					}
-					if (v.getAddress() == f.getNeighborAddress())
+					if (v1Checked && v2Checked && !this.edges.contains(new Edge(v2, v1, 1)))
 					{
-						v2 = v;
-						v2Checked = true;
-//						portV2 = f.getNeighborPortid();
+						this.edges.add(new Edge(v1, v2, 1));			
 					}
-					i++;
-				}
-				if (v1Checked && v2Checked && !this.edges.contains(new Edge(v2, v1, 1)))
-				{
-					this.edges.add(new Edge(v1, v2, 1));			
 				}
 			}
 		}

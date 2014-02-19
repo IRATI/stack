@@ -100,9 +100,10 @@ public class FlowStateInternalObjectGroup{
 			return modifiedFSOs;
 	}
 	
-	public boolean incrementAge(int maximumAge)
+	public boolean incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
 	{
 		boolean groupModified = false;
+		ObjectStateMapper mapper = new ObjectStateMapper();
 		
 		for(int i = 0; i< this.flowStateObjectArray.size(); i++)
 		{
@@ -114,6 +115,7 @@ public class FlowStateInternalObjectGroup{
 				log.debug("Old object removed: " + object);
 				this.flowStateObjectArray.remove(i);
 				groupModified = true;
+				fsRIBGroup.delete(mapper.FSOMap(object));
 			}
 		}
 		return groupModified;

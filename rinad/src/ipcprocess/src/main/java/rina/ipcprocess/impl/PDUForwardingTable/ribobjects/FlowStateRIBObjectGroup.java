@@ -4,11 +4,9 @@ package rina.ipcprocess.impl.PDUForwardingTable.ribobjects;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.resourceallocator.ribobjects.DIFRegistrationRIBObject;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
-import rina.ribdaemon.api.RIBObject;
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.PDUForwardingTable.api.PDUFTable;
@@ -50,5 +48,12 @@ public class FlowStateRIBObjectGroup extends BaseRIBObject{
 		this.addChild(ribObject);
 		getRIBDaemon().addRIBObject(ribObject);
 	}
+	
+	@Override
+	public void delete(Object object) throws RIBDaemonException {
+		FlowStateObject fso = (FlowStateObject)object;
+		getRIBDaemon().removeRIBObject(fso.getID());
+	}
+	
 
 }

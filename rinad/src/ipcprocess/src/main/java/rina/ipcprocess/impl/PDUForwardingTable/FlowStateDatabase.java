@@ -132,9 +132,9 @@ public class FlowStateDatabase {
 	}
 	
 
-	public void incrementAge(int maximumAge)
+	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
 	{
-		boolean modified = this.flowStateInternalObjectGroup.incrementAge(maximumAge);
+		boolean modified = this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup);
 		if (modified)
 		{
 			this.isModified = true;
