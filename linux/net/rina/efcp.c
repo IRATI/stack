@@ -30,6 +30,7 @@
 #include "debug.h"
 #include "efcp.h"
 #include "efcp-utils.h"
+#include "cidm.h"
 #include "dt.h"
 #include "dtp.h"
 #include "dtcp.h"
@@ -547,7 +548,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         ASSERT(tmp->dt);
 
-        cep_id = cidm_allocate(container->cidm);
+        cep_id                    = cidm_allocate(container->cidm);
 
         /* We must ensure that the DTP is instantiated, at least ... */
         tmp->container            = container;
