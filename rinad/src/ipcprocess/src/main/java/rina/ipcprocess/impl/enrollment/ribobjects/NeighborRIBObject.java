@@ -50,7 +50,8 @@ public class NeighborRIBObject extends BaseRIBObject{
 	
 	@Override
 	public synchronized void delete(Object object) throws RIBDaemonException {
-		this.getParent().removeChild(this.getObjectName());
+		getParent().removeChild(this.getObjectName());
+		getRIBDaemon().removeRIBObject(this);
 	}
 	
 	@Override
