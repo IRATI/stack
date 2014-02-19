@@ -538,8 +538,8 @@ static int __queue_send_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_queue_send_add(struct rmt * instance,
-                       port_id_t    id)
+static int rmt_queue_send_add(struct rmt * instance,
+                              port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -563,10 +563,9 @@ int rmt_queue_send_add(struct rmt * instance,
 
         return __queue_send_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_queue_send_add);
 
-int rmt_queue_send_delete(struct rmt * instance,
-                          port_id_t    id)
+static int rmt_queue_send_delete(struct rmt * instance,
+                                 port_id_t    id)
 {
         struct rmt_queue * q;
 
@@ -588,7 +587,6 @@ int rmt_queue_send_delete(struct rmt * instance,
 
         return queue_destroy(q);
 }
-EXPORT_SYMBOL(rmt_queue_send_delete);
 
 static int __queue_recv_add(struct rmt * instance,
                             port_id_t    id)
@@ -606,8 +604,8 @@ static int __queue_recv_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_queue_recv_add(struct rmt * instance,
-                       port_id_t    id)
+static int rmt_queue_recv_add(struct rmt * instance,
+                              port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -631,10 +629,9 @@ int rmt_queue_recv_add(struct rmt * instance,
 
         return __queue_recv_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_queue_recv_add);
 
-int rmt_queue_recv_delete(struct rmt * instance,
-                          port_id_t    id)
+static int rmt_queue_recv_delete(struct rmt * instance,
+                                 port_id_t    id)
 {
         struct rmt_queue * q;
 
@@ -656,7 +653,34 @@ int rmt_queue_recv_delete(struct rmt * instance,
 
         return queue_destroy(q);
 }
-EXPORT_SYMBOL(rmt_queue_recv_delete);
+
+int rmt_bind_n1port(struct rmt * instance,
+                    port_id_t    id)
+{
+        if (rmt_queue_send_add(instance, id))
+                return -1;
+
+        if (rmt_queue_recv_add(instance, id))
+                return -1;
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_bind_n1port);
+
+int rmt_unbind_n1port(struct rmt * instance,
+                      port_id_t    id)
+{
+        int retval = 0;
+
+        if (rmt_queue_send_delete(instance, id))
+                retval = -1;
+        
+        if (rmt_queue_recv_delete(instance, id))
+                retval = -1;
+
+        return retval;
+}
+EXPORT_SYMBOL(rmt_unbind_n1port);
 
 static struct pci * sdu_pci_copy(const struct sdu * sdu)
 {
