@@ -151,7 +151,7 @@ public class PDUFTImplTest {
 		impl.setIPCProcess(ipc);
 		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
 		
-		Assert.assertTrue(impl.propagateFSDB());;
+		Assert.assertFalse(impl.propagateFSDB());;
 	}
 	
 	@Test
@@ -245,7 +245,7 @@ public class PDUFTImplTest {
 	}
 	
 	@Test
-	public void writeMessageRecieved_writeObject_True()
+	public void writeMessageRecieved_NoGroupClass_True()
 	{
 		ObjectStateMapper osm = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
@@ -269,7 +269,7 @@ public class PDUFTImplTest {
 		{
 			e.printStackTrace();
 		}
-		Assert.assertTrue(impl.writeMessageRecieved(cdapMessage, 1));
+		Assert.assertFalse(impl.writeMessageRecieved(cdapMessage, 1));
 	}
 	
 	@Test
