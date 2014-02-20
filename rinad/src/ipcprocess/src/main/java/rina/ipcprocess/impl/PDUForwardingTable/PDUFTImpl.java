@@ -29,6 +29,7 @@ import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.PropagateFSODB;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.SendReadCDAP;
+import rina.ipcprocess.impl.PDUForwardingTable.timertasks.UpdateAge;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.events.NeighborAddedEvent;
@@ -86,9 +87,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 20000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 60000; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 30000; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 5000; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 20000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;
@@ -149,7 +150,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		
 		/*	Time to increment age	*/
 		ageIncrementationTimer = new Timer();
-		//ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
+		ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
 
 		/* Timer to propagate modified FSO */
 		fsodbPropagationTimer = new Timer();
@@ -204,7 +205,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		if (event.getId().equals(Event.N_MINUS_1_FLOW_DEALLOCATED)){
 			log.debug("Event n-1 flow deallocated launched");
 			NMinusOneFlowDeallocatedEvent flowDeEvent = (NMinusOneFlowDeallocatedEvent) event;
-			flowDeallocated(flowDeEvent.getPortId());
 			
 			ListIterator<NMinusOneFlowAllocatedEvent> iterate = flowAllocatedList.listIterator();
 			boolean flowFound = false;
@@ -217,6 +217,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 					flowFound = true;
 					iterate.remove();
 				}
+			}
+			if (!flowFound)
+			{
+				flowDeallocated(flowDeEvent.getPortId());
 			}
 		}else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATED)){
 			log.debug("Event n-1 flow allocated launched");
@@ -349,7 +353,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public void updateAge()
 	{
 		log.info("updateAge function launched");
-		db.incrementAge(maximumAge);
+		try {
+			db.incrementAge(maximumAge, fsRIBGroup);
+		} catch (RIBDaemonException e) {
+			log.error("Error removing an object from the RIB");
+			e.printStackTrace();
+		}
 	}
 	
 	public void forwardingTableUpdate ()

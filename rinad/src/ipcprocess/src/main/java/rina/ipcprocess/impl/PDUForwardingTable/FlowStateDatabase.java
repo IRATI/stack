@@ -132,9 +132,9 @@ public class FlowStateDatabase {
 	}
 	
 
-	public void incrementAge(int maximumAge)
+	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
 	{
-		boolean modified = this.flowStateInternalObjectGroup.incrementAge(maximumAge);
+		boolean modified = this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup);
 		if (modified)
 		{
 			this.isModified = true;
@@ -143,7 +143,7 @@ public class FlowStateDatabase {
 	
 	public void updateObjects(FlowStateObjectGroup groupToModify, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup)
 	{
-		log.debug("Update Objects from DB launched");
+		log.info("Update Objects from DB launched");
 		
 		ObjectStateMapper mapper = new ObjectStateMapper();
 		ArrayList<FlowStateInternalObject> objectsToModify= mapper.FSOGMap(groupToModify).getFlowStateObjectArray();
@@ -161,15 +161,18 @@ public class FlowStateDatabase {
 						&& objM.getNeighborAddress() == obj.getNeighborAddress() 
 						/*&& objM.getNeighborPortid() == obj.getNeighborPortid()*/)
 				{
+					log.debug("Found the object in the DB. Obj: " + objM.getID());
 					continueLoop = false;
 					if (objM.getSequenceNumber() > obj.getSequenceNumber())
 					{
+						log.debug("Update the object: " + obj.getID());
 						obj.setState(objM.isState());
 						obj.setSequenceNumber(objM.getSequenceNumber());
 						obj.setModified(true);
 						obj.setAvoidPort(avoidPort);
 						
 						this.isModified = true;
+						log.debug("Object: " + obj.getID() + "State: " + obj.isState());
 					}
 				}
 				
