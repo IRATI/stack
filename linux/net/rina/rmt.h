@@ -53,16 +53,10 @@ int          rmt_destroy(struct rmt * instance);
 int          rmt_address_set(struct rmt * instance,
                              address_t    address);
 
-int          rmt_queue_send_add(struct rmt * instance,
-                                port_id_t    id);
-int          rmt_queue_send_delete(struct rmt * instance,
-                                   port_id_t    id);
-
-int          rmt_queue_recv_add(struct rmt * instance,
-                                port_id_t    id);
-int          rmt_queue_recv_delete(struct rmt * instance,
-                                   port_id_t    id);
-
+int          rmt_n1port_bind(struct rmt * instance,
+                             port_id_t    id);
+int          rmt_n1port_unbind(struct rmt * instance,
+                               port_id_t    id);
 int          rmt_pft_add(struct rmt *       instance,
                          address_t          destination,
                          qos_id_t           qos_id,

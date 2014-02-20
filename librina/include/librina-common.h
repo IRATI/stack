@@ -960,6 +960,12 @@ class Neighbor {
          */
         long long lastHeardFromTimeInMs;
 
+        /**
+         * The number of times we have tried to re-enroll with the
+         * neighbor after the connectivity has been lost
+         */
+        unsigned int numberOfEnrollmentAttempts;
+
 public:
         Neighbor();
         bool operator==(const Neighbor &other) const;
@@ -984,6 +990,9 @@ public:
         void setLastHeardFromTimeInMs(long long lastHeardFromTimeInMs);
         int getUnderlyingPortId() const;
         void setUnderlyingPortId(int underlyingPortId);
+        unsigned int getNumberOfEnrollmentAttempts() const;
+        void setNumberOfEnrollmentAttempts(
+                        unsigned int numberOfEnrollmentAttempts);
 };
 
 /**

@@ -91,4 +91,6 @@ int          kfa_flow_rmt_bind(struct kfa * instance,
                                port_id_t    pid,
                                struct rmt * rmt);
 
+int          kfa_flow_rmt_unbind(struct kfa * instance,
+                                 port_id_t    pid);
 #endif
