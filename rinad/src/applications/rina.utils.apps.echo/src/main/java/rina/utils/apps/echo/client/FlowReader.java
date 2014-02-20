@@ -7,7 +7,6 @@ import java.util.Timer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.utils.apps.echo.Echo;
 import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
 
@@ -29,13 +28,15 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	private boolean stop;
 	private Timer timer = null;
 	private long latestSDUReceivedTime = 0;
+	private int timeout = 0;
 	
 	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
-	public FlowReader(Flow flow, TestInformation testInformation, Timer timer){
+	public FlowReader(Flow flow, TestInformation testInformation, Timer timer, int timeout){
 		this.flow = flow;
 		this.testInformation = testInformation;
 		this.timer = timer;
+		this.timeout = timeout;
 	}
 	
 	private synchronized void setLatestSDUReceivedTime(long time){
@@ -47,7 +48,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	}
 	
 	public boolean shouldStop(){
-		if (getLatestSDUReceivedTime() + Echo.MAX_TIME_WITH_NO_DATA_IN_MS < 
+		if (getLatestSDUReceivedTime() + timeout < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
 		}
@@ -95,7 +96,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 			stop = true;
 			
 			if (!testInformation.receivedAllSDUs()) {
-				log.info("Cancelling test since more than " + Echo.MAX_TIME_WITH_NO_DATA_IN_MS + 
+				log.info("Cancelling test since more than " + timeout + 
 						" ms have gone bye without receiving an SDU");
 				printStats();
 			}
