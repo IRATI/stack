@@ -387,7 +387,7 @@ static int send_worker(void * o)
                         continue;
                 }
                 
-                LOG_DBG("Gonna send SDU to port_id %d", port_id);
+                LOG_DBG("Gonna send SDU to port-id %d", port_id);
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
                         continue; /* Useless for the moment */
@@ -523,7 +523,7 @@ int rmt_send(struct rmt * instance,
                 else
                         p = pdu;
 
-                LOG_DBG("Gonna send PDU to port_id: %d", pid);
+                LOG_DBG("Gonna send PDU to port-id: %d", pid);
                 if (rmt_send_port_id(instance, pid, p))
                         LOG_ERR("Failed to send a PDU to port-id %d", pid);
         }
