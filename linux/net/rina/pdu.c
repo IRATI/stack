@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "pdu.h"
+#include "pci.h"
 #include "qos.h"
 
 /* FIXME: These externs have to disappear from here */
@@ -40,288 +41,11 @@ struct buffer * buffer_create_from_gfp(gfp_t        flags,
 struct buffer * buffer_dup_gfp(gfp_t                 flags,
                                const struct buffer * b);
 
-struct pci {
-        pdu_type_t  type;
-
-        /* If type == PDU_TYPE_MGMT, all the following fields are useless */
-        address_t   destination;
-        address_t   source;
-
-        /*
-         * FIXME: Group ceps and qos_id together in connection-id struct ?
-         *        (See spec)
-         */
-        struct {
-                cep_id_t source;
-                cep_id_t destination;
-        }           ceps;
-
-        qos_id_t    qos_id;
-        pdu_flags_t flags;
-        seq_num_t   sequence_number;
-};
-
-static bool pci_is_ok(const struct pci * pci)
-{ return pci && pdu_type_is_ok(pci->type) ? true : false; }
-
-static struct pci * pci_create_gfp(gfp_t flags)
-{
-        struct pci * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        return tmp;
-}
-
-struct pci * pci_create(void)
-{ return pci_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(pci_create);
-
-struct pci * pci_create_ni(void)
-{ return pci_create_gfp(GFP_ATOMIC); }
-EXPORT_SYMBOL(pci_create_ni);
-
-int pci_cep_source_set(struct pci * pci,
-                       cep_id_t     src_cep_id)
-{
-        if (!pci)
-                return -1;
-
-        if (!is_cep_id_ok(src_cep_id))
-                return -1;
-
-        pci->ceps.destination = src_cep_id;
-        return 0;
-}
-EXPORT_SYMBOL(pci_cep_source_set);
-
-int pci_cep_destination_set(struct pci * pci,
-                            cep_id_t     dst_cep_id)
-{
-        if (!pci)
-                return -1;
-
-        if (!is_cep_id_ok(dst_cep_id))
-                return -1;
-
-        pci->ceps.source = dst_cep_id;
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_cep_destination_set);
-
-int pci_destination_set(struct pci * pci,
-                        address_t    dst_address)
-{
-        if (!pci)
-                return -1;
-
-        pci->destination = dst_address;
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_destination_set);
-
-int pci_source_set(struct pci * pci,
-                   address_t    src_address)
-{
-        if (!pci)
-                return -1;
-
-        pci->source = src_address;
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_source_set);
-
-int pci_nxt_seq_send_set(struct pci * pci,
-                         seq_num_t    nxt_seq_send)
-{
-        if (!pci)
-                return -1;
-
-        pci->sequence_number = nxt_seq_send;
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_nxt_seq_send_set);
-
-int pci_qos_id_set(struct pci * pci,
-                   qos_id_t     qos_id)
-{
-        if (!pci)
-                return -1;
-
-        pci->qos_id = qos_id;
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_qos_id_set);
-
-int pci_type_set(struct pci * pci, pdu_type_t type)
-{
-        if (!pci)
-                return -1;
-
-        pci->type = type;
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_type_set);
-
-int pci_format(struct pci * pci,
-               cep_id_t     src_cep_id,
-               cep_id_t     dst_cep_id,
-               address_t    src_address,
-               address_t    dst_address,
-               seq_num_t    nxt_seq_send,
-               qos_id_t     qos_id,
-               pdu_type_t   type)
-{
-        if (pci_cep_destination_set(pci, src_cep_id) ||
-            pci_cep_source_set(pci, dst_cep_id)      ||
-            pci_destination_set(pci, dst_address)    ||
-            pci_source_set(pci, src_address)         ||
-            pci_nxt_seq_send_set(pci, nxt_seq_send)  ||
-            pci_qos_id_set(pci, qos_id)              ||
-            pci_type_set(pci, type)) {
-                return -1;
-        }
-
-        return 0;
-}
-EXPORT_SYMBOL(pci_format);
-
-static struct pci * pci_create_from_gfp(gfp_t        flags,
-                                        const void * data)
-{
-        struct pci * tmp;
-
-        if (!data)
-                return NULL;
-
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        if (!memcpy(tmp, data, sizeof(*tmp))) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        if (!pci_is_ok(tmp)) {
-                LOG_ERR("Cannot create PCI from bad data");
-                rkfree(tmp);
-                return NULL;
-        }
-
-        return tmp;
-}
-
-struct pci * pci_create_from(const void * data)
-{ return pci_create_from_gfp(GFP_KERNEL, data); }
-EXPORT_SYMBOL(pci_create_from);
-
-struct pci * pci_create_from_ni(const void * data)
-{ return pci_create_from_gfp(GFP_ATOMIC, data); }
-EXPORT_SYMBOL(pci_create_from_ni);
-
-int pci_destroy(struct pci * pci)
-{
-        if (!pci)
-                return -1;
-
-        rkfree(pci);
-        return 0;
-}
-EXPORT_SYMBOL(pci_destroy);
-
-static struct pci * pci_dup_gfp(gfp_t              flags,
-                                const struct pci * pci)
-{
-        struct pci * tmp;
-
-        if (pci_is_ok(pci))
-                return NULL;
-
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        if (!memcpy(tmp, pci, sizeof(*tmp))) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        ASSERT(pci_is_ok(tmp));
-
-        return tmp;
-}
-
-struct pci * pci_dup(const struct pci * pci)
-{ return pci_dup_gfp(GFP_KERNEL, pci); }
-EXPORT_SYMBOL(pci_dup);
-
-struct pci * pci_dup_ni(const struct pci * pci)
-{ return pci_dup_gfp(GFP_ATOMIC, pci); }
-EXPORT_SYMBOL(pci_dup_ni);
-
-pdu_type_t pci_type(const struct pci * pci)
-{
-        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
-
-        return pci->type;
-}
-EXPORT_SYMBOL(pci_type);
-
-ssize_t pci_length(const struct pci * pci)
-{
-        if (!pci_is_ok(pci))
-                return -1;
-
-        return sizeof(*pci);
-}
-EXPORT_SYMBOL(pci_length);
-
-address_t pci_source(const struct pci * pci)
-{
-        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
-
-        return pci->source;
-}
-EXPORT_SYMBOL(pci_source);
-
-address_t pci_destination(const struct pci * pci)
-{
-        ASSERT(pci); /* FIXME: Should not be an ASSERT ... */
-
-        return pci->destination;
-}
-EXPORT_SYMBOL(pci_destination);
-
-cep_id_t pci_cep_destination(const struct pci * pci)
-{
-        if (!pci)
-                return cep_id_bad();
-
-        return pci->ceps.destination;
-}
-EXPORT_SYMBOL(pci_cep_destination);
-
-cep_id_t pci_cep_source(const struct pci * pci)
-{
-        if (!pci)
-                return cep_id_bad();
-
-        return pci->ceps.source;
-}
-EXPORT_SYMBOL(pci_cep_source);
-
-qos_id_t pci_qos_id(const struct pci * pci)
-{ return pci ? pci->qos_id : qos_id_bad();  }
-EXPORT_SYMBOL(pci_qos_id);
+struct pci *    pci_dup_gfp(gfp_t              flags,
+                            const struct pci * pci);
+
+struct pci *    pci_create_from_gfp(gfp_t        flags,
+                                    const void * data);
 
 struct pdu {
         struct pci *    pci;
@@ -360,6 +84,7 @@ static struct pdu * pdu_create_from_gfp(gfp_t              flags,
         struct pdu *          tmp_pdu;
         const struct buffer * tmp_buff;
         const uint8_t *       ptr;
+        size_t                pci_size;
 
         /* FIXME: This implementation is pure crap, please fix it soon */
 
@@ -369,8 +94,11 @@ static struct pdu * pdu_create_from_gfp(gfp_t              flags,
         tmp_buff = sdu_buffer_ro(sdu);
         ASSERT(tmp_buff);
 
-        if (buffer_length(tmp_buff) < sizeof(struct pci))
+        if (buffer_length(tmp_buff) < pci_length_min())
                 return NULL;
+
+        /* FIXME: We should compute the real PCI length */
+        pci_size = pci_length_min();
 
         tmp_pdu = pdu_create_gfp(flags);
         if (!tmp_pdu)
@@ -379,13 +107,11 @@ static struct pdu * pdu_create_from_gfp(gfp_t              flags,
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
 
-        tmp_pdu->pci    =
-                pci_create_from_gfp(flags, ptr);
-        tmp_pdu->buffer =
-                buffer_create_from_gfp(flags,
-                                       ptr + sizeof(struct pci),
-                                       (buffer_length(sdu->buffer) -
-                                        sizeof(struct pci)));
+        tmp_pdu->pci    = pci_create_from_gfp(flags, ptr);
+        tmp_pdu->buffer = buffer_create_from_gfp(flags,
+                                                 ptr + pci_size,
+                                                 (buffer_length(sdu->buffer) -
+                                                  pci_size));
 
         ASSERT(pdu_is_ok(tmp_pdu));
 
@@ -551,7 +277,7 @@ EXPORT_SYMBOL(pdu_pci_set);
 
 int pdu_destroy(struct pdu * p)
 {
-        if (p)
+        if (!p)
                 return -1;
 
         if (p->pci)    pci_destroy(p->pci);
@@ -562,29 +288,3 @@ int pdu_destroy(struct pdu * p)
         return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);
-
-int pdu_control_ack_create(struct pdu * pdu_ctrl,
-                           seq_num_t    last_ctrl_seq_rcvd,
-                           uint_t       snd_left_wind_edge,
-                           uint_t       snd_rt_wind_edge,
-                           uint_t       my_left_wind_edge,
-                           uint_t       my_rt_wind_edge,
-                           uint_t       my_rcvr_rate)
-{
-        return -1;
-}
-EXPORT_SYMBOL(pdu_control_ack_create);
-
-int pdu_control_ack_flow(struct pdu * pdu_ctrl,
-                         seq_num_t    last_ctrl_seq_rcvd,
-                         seq_num_t    ack_nack_seq,
-                         uint_t       new_rt_wind_edge,
-                         uint_t       new_rate,
-                         uint_t       time_unit,
-                         uint_t       my_left_wind_edge,
-                         uint_t       my_rt_wind_edge,
-                         uint_t       my_rcvr_rate)
-{
-        return -1;
-}
-EXPORT_SYMBOL(pdu_control_ack_flow);

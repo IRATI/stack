@@ -1,5 +1,6 @@
 package rina.ipcprocess.impl.enrollment.statemachines;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -23,6 +24,7 @@ import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
 import rina.ribdaemon.api.RIBObjectNames;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationVector;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborList;
 import eu.irati.librina.rina;
@@ -152,6 +154,11 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 				decode(cdapMessage.getObjValue().getByteval(), EnrollmentInformationRequest.class);
 				if (!isValidAddress(eiRequest.getAddress())){
 					requiresInitialization = true;
+				}
+				if (eiRequest.getSupportingDifs() != null) {
+					for(int i=0; i<eiRequest.getSupportingDifs().size(); i++){
+						remotePeer.addSupoprtingDif(eiRequest.getSupportingDifs().get(i));
+					}
 				}
 			}
 		}catch(Exception ex){
@@ -371,6 +378,14 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 		neighborsArray[0] = new Neighbor();
 		neighborsArray[0].setAddress(ipcProcess.getAddress().longValue());
 		neighborsArray[0].setName(ipcProcess.getName());
+		ApplicationRegistrationVector applicationRegistrations = rina.getExtendedIPCManager().getRegisteredApplications();
+		Iterator<ApplicationProcessNamingInformation> iterator = null;
+		for(int i=0; i<applicationRegistrations.size(); i++) {
+			iterator = applicationRegistrations.get(i).getDIFNames().iterator();
+			while (iterator.hasNext()) {
+				neighborsArray[0].addSupoprtingDif(iterator.next());
+			}
+		}
 		
 		ObjectValue objectValue = new ObjectValue();
 		objectValue.setByteval(encoder.encode(neighborsArray));

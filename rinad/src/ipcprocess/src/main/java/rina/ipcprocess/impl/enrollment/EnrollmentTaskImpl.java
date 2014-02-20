@@ -18,8 +18,6 @@ import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborList;
-import eu.irati.librina.PDUForwardingTableEntry;
-import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -45,6 +43,9 @@ import rina.ipcprocess.impl.events.ConnectivityToNeighborLostEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocationFailedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
+import rina.ipcprocess.impl.events.NeighborAddedEvent;
+import rina.ipcprocess.impl.events.NeighborDeclaredDeadEvent;
+import rina.resourceallocator.api.NMinus1FlowManager;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
@@ -68,13 +69,6 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	private Map<String, BaseEnrollmentStateMachine> enrollmentStateMachines = null;
 	
 	/**
-	 * The list of neighbors
-	 */
-	private List<Neighbor> neighbors = null;
-	private Object neighborsLock = null;
-	
-	
-	/**
 	 * The maximum time to wait between steps of the enrollment sequence (in ms)
 	 */
 	private long timeout = 0;
@@ -93,31 +87,29 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 
 	public EnrollmentTaskImpl(){
 		this.enrollmentStateMachines = new ConcurrentHashMap<String, BaseEnrollmentStateMachine>();
-		this.neighbors = new ArrayList<Neighbor>();
-		this.neighborsLock = new Object();
 		this.timeout = DEFAULT_ENROLLMENT_TIMEOUT_IN_MS;
 		this.portIdsPendingToBeAllocated = new ConcurrentHashMap<Long, EnrollmentRequest>();
 	}
 	
 	public List<Neighbor> getNeighbors() {
-		List<Neighbor> result = null;
-		synchronized(neighborsLock) {
-			result = neighbors;
+		List<Neighbor> result = new ArrayList<Neighbor>();
+		RIBObject ribObject = null;
+		RIBObject childRibObject = null;
+
+		try{
+			ribObject = ribDaemon.read(NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_CLASS, 
+					NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME);
+			if (ribObject != null && ribObject.getChildren() != null){
+				for(int i=0; i<ribObject.getChildren().size(); i++){
+					childRibObject = ribObject.getChildren().get(i);
+					result.add((Neighbor)childRibObject.getObjectValue());
+				}
+			}
+		}catch(Exception ex){
+			ex.printStackTrace();
 		}
-		
+
 		return result;
-	}
-	
-	public void addNeighbor(Neighbor neighbor) {
-		synchronized(neighborsLock) {
-			neighbors.add(neighbor);
-		}
-	}
-	
-	public void removeNeighbor(Neighbor neighbor) {
-		synchronized(neighborsLock) {
-			neighbors.remove(neighbor);
-		}
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -155,6 +147,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		this.ribDaemon.subscribeToEvent(Event.N_MINUS_1_FLOW_DEALLOCATED, this);
 		this.ribDaemon.subscribeToEvent(Event.N_MINUS_1_FLOW_ALLOCATED, this);
 		this.ribDaemon.subscribeToEvent(Event.N_MINUS_1_FLOW_ALLOCATION_FAILED, this);
+		this.ribDaemon.subscribeToEvent(Event.NEIGHBOR_DECLARED_DEAD, this);
 	}
 	
 	public RIBDaemon getRIBDaemon(){
@@ -497,6 +490,31 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		}else if (event.getId().equals(Event.N_MINUS_1_FLOW_ALLOCATION_FAILED)){
 			NMinusOneFlowAllocationFailedEvent flowEvent = (NMinusOneFlowAllocationFailedEvent) event;
 			this.nMinusOneFlowAllocationFailed(flowEvent);
+		}else if (event.getId().equals(Event.NEIGHBOR_DECLARED_DEAD)) {
+			NeighborDeclaredDeadEvent deadEvent = (NeighborDeclaredDeadEvent) event;
+			this.neighborDeclaredDead(deadEvent);
+		}
+	}
+	
+	/**
+	 * If the N-1 flow with the neighbor is still allocated, request its deallocation
+	 * @param deadEvent
+	 */
+	private void neighborDeclaredDead(NeighborDeclaredDeadEvent deadEvent) {
+		Neighbor neighbor = deadEvent.getNeighbor();
+		NMinus1FlowManager flowManager = ipcProcess.getResourceAllocator().getNMinus1FlowManager();
+		try{
+			flowManager.getNMinus1FlowInformation(neighbor.getUnderlyingPortId());
+		} catch(IPCException ex){
+			log.info("The N-1 flow with the dead neighbor has already been deallocated");
+			return;
+		}
+		
+		try{
+			log.info("Requesting the deallocation of the N-1 flow with the dead neibhor");
+			flowManager.deallocateNMinus1Flow(neighbor.getUnderlyingPortId());
+		} catch (IPCException ex){
+			log.error("Problems requesting the deallocation of a N-1 flow: "+ex.getMessage());
 		}
 	}
 	
@@ -550,19 +568,6 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				} catch(Exception ex){
 					log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
 				}
-				
-				//4 Remove PDU forwarding table entry
-				 try{
-					 PDUForwardingTableEntryList list = new PDUForwardingTableEntryList();
-					 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
-					 entry.setAddress(neighbors.get(i).getAddress());
-					 entry.setQosId(1);
-					 entry.addPortId(neighbors.get(i).getUnderlyingPortId());
-					 list.addFirst(entry);
-					 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 1);
-				 } catch (Exception ex) {
-					 log.error("Problems requesting the Kernel to remove a PDU Forwarding Table entry");
-				 }
 				
 				return;
 			}
@@ -691,17 +696,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 			 timer.schedule(task, 200);
 		 }*/
 		 
-		 try{
-			 PDUForwardingTableEntryList list = new PDUForwardingTableEntryList();
-			 PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
-			 entry.setAddress(neighbor.getAddress());
-			 entry.setQosId(1);
-			 entry.addPortId(neighbor.getUnderlyingPortId());
-			 list.addFirst(entry);
-			 rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(list, 0);
-		 } catch (Exception ex) {
-			 log.error("Problems requesting the Kernel to add a PDU Forwarding Table entry");
-		 }
+		 NeighborAddedEvent event = new NeighborAddedEvent(neighbor, enrollee);
+		 ribDaemon.deliverEvent(event);
 	 }
 	
 	/**

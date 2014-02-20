@@ -1,5 +1,9 @@
 package rina.encoding.impl.googleprotobuf.neighbor;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.Neighbor;
 import rina.encoding.api.Encoder;
@@ -24,6 +28,13 @@ public class NeighborEncoder implements Encoder{
 						gpbNeighbor.getApplicationProcessInstance()); 
 		neighbor.setName(namingInfo);
 		neighbor.setAddress(gpbNeighbor.getAddress());
+		List<String> gpbNeighbors = gpbNeighbor.getSupportingDifsList();
+		if (gpbNeighbors != null) {
+			for (int i=0; i<gpbNeighbors.size(); i++){
+				neighbor.addSupoprtingDif(
+						new ApplicationProcessNamingInformation(gpbNeighbors.get(i), ""));
+			}
+		}
 
 		return neighbor;
 	}
@@ -37,10 +48,17 @@ public class NeighborEncoder implements Encoder{
 	}
 	
 	public static neighbor_t convertModelToGPB(Neighbor neighbor){
+		List<String> supportingDifs = new ArrayList<String>();
+		Iterator<ApplicationProcessNamingInformation> iterator = neighbor.getSupportingDifs().iterator();
+		while(iterator.hasNext()){
+			supportingDifs.add(iterator.next().getProcessName());
+		}
+		
 		neighbor_t gpbNeighbor = NeighborMessage.neighbor_t.newBuilder().
 			setApplicationProcessName(neighbor.getName().getProcessName()).
 			setApplicationProcessInstance(neighbor.getName().getProcessInstance()).
 			setAddress(neighbor.getAddress()).
+			addAllSupportingDifs(supportingDifs).
 			build();
 		
 		return gpbNeighbor;

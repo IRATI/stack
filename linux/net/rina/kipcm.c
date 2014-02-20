@@ -23,7 +23,6 @@
 #include <linux/kernel.h>
 #include <linux/export.h>
 #include <linux/kobject.h>
-#include <linux/export.h>
 #include <linux/mutex.h>
 #include <linux/hardirq.h>
 
@@ -490,6 +489,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         LOG_DBG("Assign to dif operation seems ok, gonna complete it");
 
+        /* FIXME: Why replicating if only 0/-1 changes? use a temp var */
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
                                             0,
@@ -537,7 +537,6 @@ static int notify_ipcp_update_dif_config_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
@@ -621,7 +620,6 @@ static int notify_ipcp_register_app_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
@@ -686,7 +684,6 @@ static int notify_ipcp_unregister_app_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
@@ -783,7 +780,6 @@ static int notify_ipcp_conn_create_req(void *             data,
 
         kipcm = (struct kipcm *) data;
         msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_CREATE_REQUEST);
-
         if (!msg)
                 goto fail;
 
@@ -1002,8 +998,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
-        msg = rnl_msg_create(RNL_MSG_ATTRS_CONN_UPDATE_REQUEST);
+        msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_UPDATE_REQUEST);
         if (!msg)
                 goto fail;
 
@@ -1107,8 +1102,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-        msg = rnl_msg_create(RNL_MSG_ATTRS_CONN_DESTROY_REQUEST);
-
+        msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_DESTROY_REQUEST);
         if (!msg)
                 goto fail;
 
@@ -1205,9 +1199,29 @@ static int notify_ipcp_modify_pfte(void *             data,
                 return -1;
         }
 
-        op = attrs->mode ?
-                ipc_process->ops->pft_remove :
-                ipc_process->ops->pft_add;
+        switch(attrs->mode) {
+        case 2:
+                if (ipc_process->ops->pft_flush(ipc_process->data)) {
+                        LOG_ERR("Problems flushing PFT");
+                        rnl_msg_destroy(msg);
+                        return -1;
+                }
+
+                op = ipc_process->ops->pft_add;
+                break;
+        case 1:
+                op = ipc_process->ops->pft_remove;
+                break;
+        case 0:
+                op = ipc_process->ops->pft_add;
+                break;
+        default:
+                LOG_ERR("Unknown mode for modify PFT operation %d",
+                        attrs->mode);
+                rnl_msg_destroy(msg);
+                return -1;
+                break;
+        }
 
         ASSERT(op);
         list_for_each_entry(entry, &attrs->pft_entries, next) {
@@ -1899,16 +1913,19 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
+        KIPCM_LOCK(kipcm);
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
                 sdu_wpi_destroy(sdu_wpi);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
                 sdu_wpi_destroy(sdu_wpi);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
@@ -1916,18 +1933,20 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
                 sdu_wpi_destroy(sdu_wpi);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+        KIPCM_UNLOCK(kipcm);
 
         if (ipcp->ops->mgmt_sdu_write(ipcp->data,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
                 sdu_wpi_destroy(sdu_wpi);
                 return -1;
-        } else {
-                rkfree(sdu_wpi);
-                return 0;
         }
+
+        rkfree(sdu_wpi);
+        return 0;
 }
 
 int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
@@ -1943,22 +1962,27 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
                 return -1;
         }
 
+        KIPCM_LOCK(kipcm);
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops->mgmt_sdu_read) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
+                KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+        KIPCM_UNLOCK(kipcm);
 
         return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
 }

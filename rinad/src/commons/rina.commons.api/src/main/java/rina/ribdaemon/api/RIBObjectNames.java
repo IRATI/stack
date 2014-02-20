@@ -31,6 +31,8 @@ public interface RIBObjectNames {
 	public static final String SEPARATOR = "/";
 	public static final String SYNONYMS = "synonyms";
 	public static final String WHATEVERCAST_NAMES = "whatevercastnames";
+	public static final String ROUTING = "routing";
+	public static final String FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
 	
 	/* Full names */
 	public static final String OPERATIONAL_STATUS_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + RIBObjectNames.DAF + 

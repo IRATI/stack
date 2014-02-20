@@ -257,13 +257,19 @@ int kfa_flow_bind(struct kfa *           instance,
 
         flow->state = PORT_STATE_ALLOCATED;
 
-        if (kfifo_alloc(&flow->sdu_ready, PAGE_SIZE, GFP_ATOMIC)) {
+        LOG_DBG("Gonna alloc the flow kfifo (multiply-factor is %d)",
+                CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
+        if (kfifo_alloc(&flow->sdu_ready,
+                        PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR,
+                        GFP_ATOMIC)) {
                 LOG_ERR("Couldn't create the sdu-ready queue for "
                         "flow on port-id %d", pid);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
                 return -1;
         }
+        LOG_DBG("The flow kfifo is %ld bytes long",
+                PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
@@ -303,29 +309,66 @@ int kfa_flow_rmt_bind(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_rmt_bind);
 
+int kfa_flow_rmt_unbind(struct kfa * instance,
+                        port_id_t    pid)
+{
+        struct ipcp_flow * flow;
+
+        if (!instance)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        spin_lock(&instance->lock);
+
+        flow = kfa_pmap_find(instance->flows, pid);
+        if (!flow) {
+                LOG_ERR("The flow with port-id %d does not exist, "
+                        "cannot unbind rmt", pid);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+        flow->rmt = NULL;
+
+        spin_unlock(&instance->lock);
+
+        return 0;
+}
+EXPORT_SYMBOL(kfa_flow_rmt_unbind);
+
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
                             port_id_t          id)
 {
         struct ipcp_instance * ipcp;
+        int                    retval = 0;
 
         ASSERT(flow);
 
-        LOG_DBG("We are destroying a flow");
+        LOG_DBG("We are destroying flow %d", id);
 
         ipcp = flow->ipc_process;
         kfifo_free(&flow->sdu_ready);
-        rkfree(flow);
 
         if (kfa_pmap_remove(instance->flows, id)) {
                 LOG_ERR("Could not remove pending flow with port-id %d", id);
-                return -1;
+                retval = -1;
         }
 
         if (pidm_release(instance->pidm, id)) {
                 LOG_ERR("Could not release pid %d from the map", id);
-                return -1;
+                retval = -1;
         }
+
+        if (flow->rmt) {
+                if (rmt_n1port_unbind(flow->rmt, id)) {
+                        LOG_ERR("Could not unbind port-id %d from "
+                                "RMT queues", id);
+                        retval = -1;
+                }
+        }
+        rkfree(flow);
 
         ASSERT(ipcp);
         ASSERT(ipcp->ops);
@@ -334,10 +377,10 @@ static int kfa_flow_destroy(struct kfa *       instance,
                 if (ipcp->ops->flow_destroy(ipcp->data, id)) {
                         LOG_ERR("Problems destroying the flow "
                                 "on port-id %d", id);
-                        return -1;
+                        retval = -1;
                 }
 
-        return 0;
+        return retval;
 }
 
 int kfa_flow_deallocate(struct kfa * instance,
@@ -554,18 +597,17 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_lock(&instance->lock);
                 LOG_DBG("Woken up");
 
-                if (retval) {
-                        LOG_ERR("Wait-event interrupted, returned error %d",
-                                retval);
-                        goto finish;
-                }
-
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
                         spin_unlock(&instance->lock);
                         return -1;
+                }
+                if (retval) {
+                        LOG_ERR("Wait-event interrupted, returned error %d",
+                                retval);
+                        goto finish;
                 }
                 if (flow->state == PORT_STATE_DEALLOCATED) {
                         break;

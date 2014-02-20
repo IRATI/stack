@@ -105,7 +105,7 @@ static struct rmt_qmap * qmap_create(void)
         return tmp;
 }
 
-static int qmap_destroy(struct rmt_qmap * m)
+static int qmap_destroy(struct rmt_qmap * m, struct kfa * kfa)
 {
         struct rmt_queue *  entry;
         struct hlist_node * tmp;
@@ -116,6 +116,7 @@ static int qmap_destroy(struct rmt_qmap * m)
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
+                kfa_flow_rmt_unbind(kfa, entry->port_id);
                 if (queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
@@ -300,11 +301,13 @@ int rmt_destroy(struct rmt * instance)
         }
 
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
-        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues,
+                                                   instance->kfa);
         pft_cache_fini(&instance->ingress.cache);
 
         if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
-        if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+        if (instance->egress.queues)  qmap_destroy(instance->egress.queues,
+                                                   instance->kfa);
         pft_cache_fini(&instance->egress.cache);
 
         if (instance->pft)            pft_destroy(instance->pft);
@@ -370,12 +373,16 @@ static int send_worker(void * o)
                         spin_unlock(&tmp->egress.queues->lock);
 
                         if (!pdu)
-                                break;
+                                continue;
 
                         out = false;
                         sdu = sdu_create_pdu_with(pdu);
-                        if (!sdu)
-                                break;
+                        if (!sdu) {
+                                LOG_ERR("Error creating SDU from PDU, "
+                                        "dropping PDU!");
+                                pdu_destroy(pdu);
+                                continue;
+                        }
 
                         LOG_DBG("Gonna send SDU to port_id %d", port_id);
                         if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
@@ -535,8 +542,8 @@ static int __queue_send_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_queue_send_add(struct rmt * instance,
-                       port_id_t    id)
+static int rmt_queue_send_add(struct rmt * instance,
+                              port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -560,15 +567,19 @@ int rmt_queue_send_add(struct rmt * instance,
 
         return __queue_send_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_queue_send_add);
 
-int rmt_queue_send_delete(struct rmt * instance,
-                          port_id_t    id)
+static int rmt_queue_send_delete(struct rmt * instance,
+                                 port_id_t    id)
 {
         struct rmt_queue * q;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!instance->egress.queues) {
+                LOG_ERR("Bogus egress instance passed");
                 return -1;
         }
 
@@ -585,7 +596,6 @@ int rmt_queue_send_delete(struct rmt * instance,
 
         return queue_destroy(q);
 }
-EXPORT_SYMBOL(rmt_queue_send_delete);
 
 static int __queue_recv_add(struct rmt * instance,
                             port_id_t    id)
@@ -603,8 +613,8 @@ static int __queue_recv_add(struct rmt * instance,
         return 0;
 }
 
-int rmt_queue_recv_add(struct rmt * instance,
-                       port_id_t    id)
+static int rmt_queue_recv_add(struct rmt * instance,
+                              port_id_t    id)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -628,15 +638,19 @@ int rmt_queue_recv_add(struct rmt * instance,
 
         return __queue_recv_add(instance, id);
 }
-EXPORT_SYMBOL(rmt_queue_recv_add);
 
-int rmt_queue_recv_delete(struct rmt * instance,
-                          port_id_t    id)
+static int rmt_queue_recv_delete(struct rmt * instance,
+                                 port_id_t    id)
 {
         struct rmt_queue * q;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!instance->egress.queues) {
+                LOG_ERR("Bogus egress instance passed");
                 return -1;
         }
 
@@ -653,7 +667,36 @@ int rmt_queue_recv_delete(struct rmt * instance,
 
         return queue_destroy(q);
 }
-EXPORT_SYMBOL(rmt_queue_recv_delete);
+
+int rmt_n1port_bind(struct rmt * instance,
+                    port_id_t    id)
+{
+        if (rmt_queue_send_add(instance, id))
+                return -1;
+
+        if (rmt_queue_recv_add(instance, id)){
+                rmt_queue_send_delete(instance, id);
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_n1port_bind);
+
+int rmt_n1port_unbind(struct rmt * instance,
+                      port_id_t    id)
+{
+        int retval = 0;
+
+        if (rmt_queue_send_delete(instance, id))
+                retval = -1;
+
+        if (rmt_queue_recv_delete(instance, id))
+                retval = -1;
+
+        return retval;
+}
+EXPORT_SYMBOL(rmt_n1port_unbind);
 
 static struct pci * sdu_pci_copy(const struct sdu * sdu)
 {
@@ -680,7 +723,6 @@ static int process_mgmt_sdu(struct rmt * rmt,
                 sdu_destroy(sdu);
                 return -1;
         }
-        sdu_destroy(sdu);
 
         buffer = pdu_buffer_get_rw(pdu);
         if (!buffer_is_ok(buffer)) {
@@ -845,22 +887,23 @@ static int receive_worker(void * o)
 
                         if (!sdu) {
                                 LOG_ERR("No SDU to work with");
-                                break;
+                                continue;
                         }
 
                         nothing_to_do = false;
                         pci = sdu_pci_copy(sdu);
                         if (!pci) {
-                                LOG_ERR("No PCI to work with");
-                                break;
+                                LOG_ERR("No PCI to work with, dropping SDU!");
+                                sdu_destroy(sdu);
+                                continue;
                         }
 
                         pdu_type = pci_type(pci);
                         if (!pdu_type_is_ok(pdu_type)) {
-                                LOG_ERR("Wrong PDU type");
+                                LOG_ERR("Wrong PDU type, dropping SDU!");
                                 pci_destroy(pci);
                                 sdu_destroy(sdu);
-                                break;
+                                continue;
                         }
                         LOG_DBG("PDU type: %d", pdu_type);
 
@@ -870,6 +913,14 @@ static int receive_worker(void * o)
                         case PDU_TYPE_MGMT:
                                 process_mgmt_sdu(tmp, port_id, sdu);
                                 break;
+
+                        case PDU_TYPE_EFCP:
+                        case PDU_TYPE_CC:
+                        case PDU_TYPE_SACK:
+                        case PDU_TYPE_NACK:
+                        case PDU_TYPE_FC:
+                        case PDU_TYPE_ACK:
+                        case PDU_TYPE_ACK_AND_FC:
                         case PDU_TYPE_DT:
                                 /*
                                  * (FUTURE)
@@ -879,6 +930,7 @@ static int receive_worker(void * o)
                                  */
                                 process_dt_sdu(tmp, port_id, sdu, entry);
                                 break;
+
                         default:
                                 LOG_ERR("Unknown PDU type %d", pdu_type);
                                 sdu_destroy(sdu);
@@ -1012,6 +1064,12 @@ int rmt_pft_dump(struct rmt *       instance,
                                                   entries) : -1;
 }
 EXPORT_SYMBOL(rmt_pft_dump);
+
+int rmt_pft_flush(struct rmt * instance)
+{
+        return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1;
+}
+EXPORT_SYMBOL(rmt_pft_flush);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 static struct pdu * regression_tests_pdu_create(address_t address)

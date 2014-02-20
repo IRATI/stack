@@ -1557,8 +1557,6 @@ int putConnectionPoliciesParametersObject(nl_msg* netlinkMessage,
 	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_WINDOW_BASED_FLOW_CONTROL);
 	if (object.isRateBasedFlowControl())
 	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_RATE_BASED_FLOW_CONTROL);
-	NLA_PUT_U32(netlinkMessage, CPP_ATTR_MAX_CLOSED_WINQ_LENGTH,
-			object.getMaxClosedWindowQueueLength());
 
 	return 0;
 
@@ -1585,9 +1583,6 @@ parseConnectionPoliciesParametersObject(nlattr *nested) {
 	attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type = NLA_FLAG;
 	attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].minlen = 0;
 	attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].maxlen = 0;
-	attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].type = NLA_U32;
-	attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].minlen = 4;
-	attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].maxlen = 4;
 	struct nlattr *attrs[CCP_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, CCP_ATTR_MAX, nested, attr_policy);
@@ -1618,10 +1613,6 @@ parseConnectionPoliciesParametersObject(nlattr *nested) {
 
 	if (attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]) {
 		result->setRateBasedFlowControl(nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]));
-	}
-
-	if (attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH]) {
-		result->setMaxClosedWindowQueueLength(nla_get_u32(attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH]));
 	}
 
 	return result;
@@ -2684,7 +2675,8 @@ int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building RIBObject Netlink object");
+			"Error building RIBObject Netlink object: %s %s",
+			object.getClazz().c_str(), object.getName().c_str());
 	return -1;
 }
 
@@ -2701,7 +2693,7 @@ int putListOfRIBObjects(
 			goto nla_put_failure;
 		}
 		if (putRIBObject(netlinkMessage, *iterator) < 0) {
-			goto nla_put_failure;
+		        goto nla_put_failure;
 		}
 		nla_nest_end(netlinkMessage, ribObject);
 		i++;
@@ -2919,9 +2911,11 @@ int putRmtModifyPDUFTEntriesRequestObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putListOfPFTEntries(netlinkMessage,
-                        object.getEntries()) < 0) {
-                goto nla_put_failure;
+        if (object.getEntries().size() > 0) {
+                if (putListOfPFTEntries(netlinkMessage,
+                                object.getEntries()) < 0) {
+                        goto nla_put_failure;
+                }
         }
 
         nla_nest_end(netlinkMessage, entries);

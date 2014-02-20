@@ -33,18 +33,6 @@ public interface EnrollmentTask extends IPCProcessComponent {
 	public List<Neighbor> getNeighbors();
 	
 	/**
-	 * Add a neighbor
-	 * @param neighbor
-	 */
-	public void addNeighbor(Neighbor neighbor);
-	
-	/**
-	 * Remove a neighbor
-	 * @param neighbor
-	 */
-	public void removeNeighbor(Neighbor neighbor);
-	
-	/**
 	 * A remote IPC process Connect request has been received
 	 * @param cdapMessage
 	 * @param cdapSessionDescriptor

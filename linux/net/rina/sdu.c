@@ -164,7 +164,9 @@ int sdu_destroy(struct sdu * s)
 {
         if (!s) return -1;
 
-        buffer_destroy(s->buffer);
+        if (s->buffer)
+                buffer_destroy(s->buffer);
+
         rkfree(s);
 
         return 0;

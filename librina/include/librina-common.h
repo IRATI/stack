@@ -937,6 +937,11 @@ class Neighbor {
          */
         ApplicationProcessNamingInformation supportingDifName;
 
+        /**
+         * The names of all the supporting DIFs of this neighbor
+         */
+        std::list<ApplicationProcessNamingInformation> supportingDifs;
+
         /** The address */
         unsigned int address;
 
@@ -955,6 +960,12 @@ class Neighbor {
          */
         long long lastHeardFromTimeInMs;
 
+        /**
+         * The number of times we have tried to re-enroll with the
+         * neighbor after the connectivity has been lost
+         */
+        unsigned int numberOfEnrollmentAttempts;
+
 public:
         Neighbor();
         bool operator==(const Neighbor &other) const;
@@ -965,6 +976,10 @@ public:
                 getSupportingDifName() const;
         void setSupportingDifName(
                 const ApplicationProcessNamingInformation& supportingDifName);
+        const std::list<ApplicationProcessNamingInformation>& getSupportingDifs();
+        void setSupportingDifs(
+                        const std::list<ApplicationProcessNamingInformation>& supportingDifs);
+        void addSupoprtingDif(const ApplicationProcessNamingInformation& supportingDif);
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
         unsigned int getAverageRttInMs() const;
@@ -975,6 +990,9 @@ public:
         void setLastHeardFromTimeInMs(long long lastHeardFromTimeInMs);
         int getUnderlyingPortId() const;
         void setUnderlyingPortId(int underlyingPortId);
+        unsigned int getNumberOfEnrollmentAttempts() const;
+        void setNumberOfEnrollmentAttempts(
+                        unsigned int numberOfEnrollmentAttempts);
 };
 
 /**

@@ -23,6 +23,7 @@
 
 #define RINA_PREFIX "rnl"
 
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -511,6 +512,7 @@ static int netlink_notify_callback(struct notifier_block * nb,
                         LOG_WARN("IPC Manager process has been destroyed");
                 } else
                         rnl_ipcm_sock_closed_notif_msg(notify->portid, port);
+
         }
 
         return NOTIFY_DONE;

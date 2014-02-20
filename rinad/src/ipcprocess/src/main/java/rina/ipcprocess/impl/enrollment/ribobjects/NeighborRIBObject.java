@@ -1,7 +1,6 @@
 package rina.ipcprocess.impl.enrollment.ribobjects;
 
 import eu.irati.librina.Neighbor;
-import rina.enrollment.api.EnrollmentTask;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
@@ -11,16 +10,13 @@ import rina.ribdaemon.api.RIBObject;
 public class NeighborRIBObject extends BaseRIBObject{
     
     public static final String NEIGHBOR_RIB_OBJECT_CLASS = "neighbor";
-    
-    private EnrollmentTask enrollmentTask = null;
+   
 	private Neighbor neighbor = null;
 	
 	public NeighborRIBObject(IPCProcess ipcProcess, String objectName, Neighbor neighbor) {
 		super(ipcProcess, NEIGHBOR_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), objectName);
 		setRIBDaemon(ipcProcess.getRIBDaemon());
-		enrollmentTask = ipcProcess.getEnrollmentTask();
-		enrollmentTask.addNeighbor(neighbor);
 		this.neighbor = neighbor;
 	}
 	
@@ -35,33 +31,27 @@ public class NeighborRIBObject extends BaseRIBObject{
 	}
 	
 	@Override
-	public void write(Object object) throws RIBDaemonException {
+	public synchronized void write(Object object) throws RIBDaemonException {
 		if (!(object instanceof Neighbor)){
 			throw new RIBDaemonException(RIBDaemonException.OBJECTCLASS_DOES_NOT_MATCH_OBJECTNAME, 
 					"Object class ("+object.getClass().getName()+") does not match object name "+
-					this.getObjectName());
+							this.getObjectName());
 		}
-		
-		synchronized(this){
-			if (this.neighbor == null) {
-				enrollmentTask.addNeighbor(neighbor);
-				this.neighbor = (Neighbor) object;
-			} else {
-				Neighbor newNeighbor = (Neighbor) object;
-				this.neighbor.setAddress(newNeighbor.getAddress());
-				this.neighbor.setAverageRttInMs(newNeighbor.getAverageRttInMs());
-				this.neighbor.setLastHeardFromTimeInMs(newNeighbor.getLastHeardFromTimeInMs());
-				this.neighbor.setName(newNeighbor.getName());
-				this.neighbor.setSupportingDifName(newNeighbor.getSupportingDifName());
-				this.neighbor.setUnderlyingPortId(newNeighbor.getUnderlyingPortId());
-			}
-		}
+
+		Neighbor newNeighbor = (Neighbor) object;
+		neighbor.setAddress(newNeighbor.getAddress());
+		neighbor.setAverageRttInMs(newNeighbor.getAverageRttInMs());
+		neighbor.setLastHeardFromTimeInMs(newNeighbor.getLastHeardFromTimeInMs());
+		neighbor.setName(newNeighbor.getName());
+		neighbor.setSupportingDifName(newNeighbor.getSupportingDifName());
+		neighbor.setUnderlyingPortId(newNeighbor.getUnderlyingPortId());
+	    neighbor.setEnrolled(newNeighbor.isEnrolled());
 	}
 	
 	@Override
 	public synchronized void delete(Object object) throws RIBDaemonException {
-		this.enrollmentTask.removeNeighbor(neighbor);
-		this.getParent().removeChild(this.getObjectName());
+		getParent().removeChild(this.getObjectName());
+		getRIBDaemon().removeRIBObject(this);
 	}
 	
 	@Override

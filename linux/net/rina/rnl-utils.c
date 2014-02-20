@@ -444,9 +444,7 @@ rnl_ipcm_update_dif_config_req_msg_attrs_destroy(struct rnl_ipcm_update_dif_conf
         if (!attrs)
                 return -1;
 
-        if (attrs->dif_config) {
-                dif_config_destroy(attrs->dif_config);
-        }
+        if (attrs->dif_config) dif_config_destroy(attrs->dif_config);
 
         rkfree(attrs);
         return 0;
@@ -739,8 +737,8 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
         return 0;
 }
 
-static int parse_app_name_info(struct nlattr * name_attr,
-                               struct name *   name_struct)
+static int parse_app_name_info(const struct nlattr * name_attr,
+                               struct name *         name_struct)
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *   attrs[APNI_ATTR_MAX + 1];
@@ -1094,8 +1092,6 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].len  = 0;
         attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type   = NLA_FLAG;
         attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].len    = 0;
-        attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].type    = NLA_U32;
-        attr_policy[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH].len     = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
@@ -1122,9 +1118,6 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->rate_based_fctrl =
                         nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]);
 
-        if (attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH])
-                cpp_struct->max_closed_winq_length =
-                        nla_get_u32(attrs[CPP_ATTR_MAX_CLOSED_WINQ_LENGTH]);
         return 0;
 }
 
@@ -1285,11 +1278,14 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
         if (info->attrs[ICCRQ_ATTR_QOS_ID])
                 msg_attrs->qos_id   =
                         nla_get_u32(info->attrs[ICCRQ_ATTR_QOS_ID]);
-        if (parse_conn_policies_params(info->attrs[ICCRQ_ATTR_POLICIES_PARAMS],
-                                       &msg_attrs->cp_params)) {
-                LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION_"
-                                                "CREATE_REQUEST"));
-                return -1;
+        if (info->attrs[ICCRQ_ATTR_POLICIES_PARAMS]) {
+                if (parse_conn_policies_params(info->attrs                     \
+                                               [ICCRQ_ATTR_POLICIES_PARAMS],
+                                               &(msg_attrs->cp_params))) {
+                        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION"
+                                                        "_CREATE_REQUEST"));
+                        return -1;
+                }
         }
 
         return 0;
@@ -1317,12 +1313,16 @@ rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         if (info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID])
                 msg_attrs->flow_user_ipc_process_id =
                         nla_get_u16(info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID]);
-        if (parse_conn_policies_params(info->attrs[ICCA_ATTR_POLICIES_PARAMS],
-                                       &msg_attrs->cp_params)) {
-                LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION_"
-                                                "CREATE_ARRIVED"));
-                return -1;
+        if (info->attrs[ICCA_ATTR_POLICIES_PARAMS]) {
+                if (parse_conn_policies_params(info->attrs                     \
+                                               [ICCA_ATTR_POLICIES_PARAMS],
+                                               &(msg_attrs->cp_params))) {
+                        LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECT"
+                                                        "ION_CREATE_ARRIVED"));
+                        return -1;
+                }
         }
+
         return 0;
 }
 
@@ -1465,9 +1465,12 @@ static int
 rnl_parse_rmt_modify_fte_req_msg(struct genl_info * info,
                                  struct rnl_rmt_mod_pfte_msg_attrs * msg_attrs)
 {
-        if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
-                                   msg_attrs))
-                goto parse_fail;
+        if (info->attrs[RMPFE_ATTR_ENTRIES]) {
+                if (parse_list_pfte_conf_e(info->attrs[RMPFE_ATTR_ENTRIES],
+                                           msg_attrs))
+                        goto parse_fail;
+        }
+
         if (info->attrs[RMPFE_ATTR_MODE])
                 msg_attrs->mode =
                         nla_get_u32(info->attrs[RMPFE_ATTR_MODE]);
@@ -2129,7 +2132,6 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
         return 0;
 }
 
-
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
@@ -2755,7 +2757,7 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         struct sk_buff * out_msg;
         struct rina_msg_hdr * out_hdr;
 
-        /*FIXME: Maybe size should be obtained somehow */
+        /* FIXME: Maybe size should be obtained somehow */
         out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
         if (!out_msg) {
                 LOG_ERR("Could not allocate memory for message");

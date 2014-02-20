@@ -1,11 +1,13 @@
 package rina.ipcprocess.impl.enrollment.ribobjects;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.Neighbor;
 
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -118,6 +120,22 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 		//Avoid creating myself as a neighbor
 		if (neighbor.getName().getProcessName().equals(
 				getIPCProcess().getName().getProcessName())){
+			return;
+		}
+		
+		//Only create neighbours with whom I have an N-1 DIF in common
+		Iterator<ApplicationProcessNamingInformation> iterator = neighbor.getSupportingDifs().iterator();
+		boolean supportingDifInCommon = false;
+		while (iterator.hasNext()){
+			if (getIPCProcess().getResourceAllocator().getNMinus1FlowManager().isSupportingDIF(iterator.next())){
+				supportingDifInCommon = true;
+				break;
+			}
+		}
+		
+		if (!supportingDifInCommon) {
+			log.info("Ignoring neighbor "+neighbor.getName().getProcessName() + "-" 
+					+ neighbor.getName().getProcessInstance() + "" +" because we don't have an N-1 DIF in common");
 			return;
 		}
 		

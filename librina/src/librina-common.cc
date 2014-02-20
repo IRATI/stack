@@ -1242,6 +1242,7 @@ Neighbor::Neighbor() {
         lastHeardFromTimeInMs = 0;
         enrolled = false;
         underlyingPortId = 0;
+        numberOfEnrollmentAttempts = 0;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{
@@ -1270,6 +1271,21 @@ Neighbor::getSupportingDifName() const {
 void Neighbor::setSupportingDifName(
         const ApplicationProcessNamingInformation& supportingDifName) {
         this->supportingDifName = supportingDifName;
+}
+
+const std::list<ApplicationProcessNamingInformation>&
+Neighbor::getSupportingDifs() {
+        return supportingDifs;
+}
+
+void Neighbor::setSupportingDifs(
+        const std::list<ApplicationProcessNamingInformation>& supportingDifs) {
+        this->supportingDifs = supportingDifs;
+}
+
+void Neighbor::addSupoprtingDif(
+                const ApplicationProcessNamingInformation& supportingDif) {
+        supportingDifs.push_back(supportingDif);
 }
 
 unsigned int Neighbor::getAddress() const {
@@ -1312,6 +1328,14 @@ void Neighbor::setUnderlyingPortId(int underlyingPortId) {
         this->underlyingPortId = underlyingPortId;
 }
 
+unsigned int Neighbor::getNumberOfEnrollmentAttempts() const {
+        return numberOfEnrollmentAttempts;
+}
+
+void Neighbor::setNumberOfEnrollmentAttempts(
+                unsigned int numberOfEnrollmentAttempts) {
+        this->numberOfEnrollmentAttempts = numberOfEnrollmentAttempts;
+}
 
 /* CLAS RIBOBJECT */
 RIBObject::RIBObject(){
