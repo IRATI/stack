@@ -2132,7 +2132,6 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
         return 0;
 }
 
-
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
                             rnl_sn_t         seq_num,
