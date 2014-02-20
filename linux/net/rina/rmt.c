@@ -543,7 +543,8 @@ static int __queue_send_add(struct rmt * instance,
 
         hash_add(instance->egress.queues->queues, &tmp->hlist, id);
 
-        LOG_DBG("Added send queue to rmt %pK for port id %d", instance, id);
+        LOG_DBG("Added send queue to rmt instance %pK for port-id %d",
+                instance, id);
 
         return 0;
 }
@@ -557,7 +558,7 @@ static int rmt_queue_send_add(struct rmt * instance,
         }
 
         if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port id");
+                LOG_ERR("Wrong port-id %d", id);
                 return -1;
         }
 
@@ -590,7 +591,7 @@ static int rmt_queue_send_delete(struct rmt * instance,
         }
 
         if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port id");
+                LOG_ERR("Wrong port-id %d", id);
                 return -1;
         }
 
@@ -614,7 +615,8 @@ static int __queue_recv_add(struct rmt * instance,
 
         hash_add(instance->ingress.queues->queues, &tmp->hlist, id);
 
-        LOG_DBG("Added receive queue to rmt %pK for port id %d", instance, id);
+        LOG_DBG("Added receive queue to rmt instance %pK for port-id %d",
+                instance, id);
 
         return 0;
 }
@@ -628,7 +630,7 @@ static int rmt_queue_recv_add(struct rmt * instance,
         }
 
         if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port id");
+                LOG_ERR("Wrong port-id %d", id);
                 return -1;
         }
 
@@ -661,7 +663,7 @@ static int rmt_queue_recv_delete(struct rmt * instance,
         }
 
         if (!is_port_id_ok(id)) {
-                LOG_ERR("Wrong port id");
+                LOG_ERR("Wrong port-id %d", id);
                 return -1;
         }
 
@@ -968,7 +970,7 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
         if (!is_port_id_ok(from)) {
-                LOG_ERR("Wrong port id");
+                LOG_ERR("Wrong port-id %d", from);
 
                 sdu_destroy(sdu);
                 return -1;
@@ -1179,7 +1181,7 @@ static bool regression_tests_egress_queue(void)
                 rmt_destroy(rmt);
                 return false;
         }
-        LOG_DBG ("Added to qmap");
+        LOG_DBG("Added to qmap");
 
         tmp = qmap_find(rmt->egress.queues, id);
         if (!tmp) {
@@ -1187,7 +1189,6 @@ static bool regression_tests_egress_queue(void)
                 rmt_destroy(rmt);
                 return false;
         }
-
         tmp = NULL;
 
         pdu = regression_tests_pdu_create(address);
@@ -1357,7 +1358,7 @@ static bool regression_tests_ingress_queue(void)
                 rmt_destroy(rmt);
                 return false;
         }
-        LOG_DBG ("Added to qmap");
+        LOG_DBG("Added to qmap");
 
         tmp = qmap_find(rmt->ingress.queues, id);
         if (!tmp) {
