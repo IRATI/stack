@@ -74,7 +74,7 @@ static int queue_destroy(struct rmt_queue * q)
 {
         ASSERT(q);
         ASSERT(q->queue);
-
+        
         LOG_DBG("Destroying queue %pK (port-id = %d)", q, q->port_id);
 
         hash_del(&q->hlist);
@@ -343,7 +343,6 @@ static int send_worker(void * o)
 {
         struct rmt *        tmp;
         struct rmt_queue *  entry;
-        bool                out;
         struct hlist_node * ntmp;
         int                 bucket;
 
@@ -355,39 +354,34 @@ static int send_worker(void * o)
                 return -1;
         }
 
-        out = false;
-        while (!out) {
-                out = true;
-                hash_for_each_safe(tmp->egress.queues->queues,
-                                   bucket,
-                                   ntmp,
-                                   entry,
-                                   hlist) {
-                        struct sdu * sdu;
-                        struct pdu * pdu;
-                        port_id_t    port_id;
-
-                        spin_lock(&tmp->egress.queues->lock);
-                        pdu     = (struct pdu *) rfifo_pop(entry->queue);
-                        port_id = entry->port_id;
-                        spin_unlock(&tmp->egress.queues->lock);
-
-                        if (!pdu)
-                                continue;
-
-                        out = false;
-                        sdu = sdu_create_pdu_with(pdu);
-                        if (!sdu) {
-                                LOG_ERR("Error creating SDU from PDU, "
-                                        "dropping PDU!");
-                                pdu_destroy(pdu);
-                                continue;
-                        }
-
-                        LOG_DBG("Gonna send SDU to port_id %d", port_id);
-                        if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
-                                LOG_ERR("Couldn't write SDU to KFA");
-                        }
+        hash_for_each_safe(tmp->egress.queues->queues,
+                           bucket,
+                           ntmp,
+                           entry,
+                           hlist) {
+                struct sdu * sdu;
+                struct pdu * pdu;
+                port_id_t    port_id;
+                
+                spin_lock(&tmp->egress.queues->lock);
+                pdu     = (struct pdu *) rfifo_pop(entry->queue);
+                port_id = entry->port_id;
+                spin_unlock(&tmp->egress.queues->lock);
+                
+                if (!pdu)
+                        continue;
+                
+                sdu = sdu_create_pdu_with(pdu);
+                if (!sdu) {
+                        LOG_ERR("Error creating SDU from PDU, "
+                                "dropping PDU!");
+                        pdu_destroy(pdu);
+                        continue;
+                }
+                
+                LOG_DBG("Gonna send SDU to port_id %d", port_id);
+                if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
+                        LOG_ERR("Couldn't write SDU to KFA");
                 }
         }
 
@@ -850,8 +844,10 @@ static int process_dt_sdu(struct rmt *       rmt,
 
 static int receive_worker(void * o)
 {
-        struct rmt * tmp;
-        bool         nothing_to_do;
+        struct rmt *        tmp;
+        struct rmt_queue *  entry;
+        int                 bucket;
+        struct hlist_node * ntmp;
 
         LOG_DBG("Receive worker called");
 
@@ -861,85 +857,76 @@ static int receive_worker(void * o)
                 return -1;
         }
 
-        nothing_to_do = false;
-        while (!nothing_to_do) {
-                struct rmt_queue *  entry;
-                int                 bucket;
-                struct hlist_node * ntmp;
+        hash_for_each_safe(tmp->ingress.queues->queues,
+                           bucket,
+                           ntmp,
+                           entry,
+                           hlist) {
+                struct sdu * sdu;
+                port_id_t    port_id;
+                pdu_type_t   pdu_type;
+                struct pci * pci;
 
-                nothing_to_do = true;
-                hash_for_each_safe(tmp->ingress.queues->queues,
-                                   bucket,
-                                   ntmp,
-                                   entry,
-                                   hlist) {
-                        struct sdu * sdu;
-                        port_id_t    port_id;
-                        pdu_type_t   pdu_type;
-                        struct pci * pci;
+                ASSERT(entry);
 
-                        ASSERT(entry);
+                spin_lock(&tmp->ingress.queues->lock);
+                sdu     = (struct sdu *) rfifo_pop(entry->queue);
+                port_id = entry->port_id;
+                spin_unlock(&tmp->ingress.queues->lock);
 
-                        spin_lock(&tmp->ingress.queues->lock);
-                        sdu     = (struct sdu *) rfifo_pop(entry->queue);
-                        port_id = entry->port_id;
-                        spin_unlock(&tmp->ingress.queues->lock);
-
-                        if (!sdu) {
-                                LOG_ERR("No SDU to work with");
-                                continue;
-                        }
-
-                        nothing_to_do = false;
-                        pci = sdu_pci_copy(sdu);
-                        if (!pci) {
-                                LOG_ERR("No PCI to work with, dropping SDU!");
-                                sdu_destroy(sdu);
-                                continue;
-                        }
-
-                        pdu_type = pci_type(pci);
-                        if (!pdu_type_is_ok(pdu_type)) {
-                                LOG_ERR("Wrong PDU type, dropping SDU!");
-                                pci_destroy(pci);
-                                sdu_destroy(sdu);
-                                continue;
-                        }
-                        LOG_DBG("PDU type: %d", pdu_type);
-
-                        /* (FUTURE) PDU ownership is going to be passed on */
-
-                        switch (pdu_type) {
-                        case PDU_TYPE_MGMT:
-                                process_mgmt_sdu(tmp, port_id, sdu);
-                                break;
-
-                        case PDU_TYPE_EFCP:
-                        case PDU_TYPE_CC:
-                        case PDU_TYPE_SACK:
-                        case PDU_TYPE_NACK:
-                        case PDU_TYPE_FC:
-                        case PDU_TYPE_ACK:
-                        case PDU_TYPE_ACK_AND_FC:
-                        case PDU_TYPE_DT:
-                                /*
-                                 * (FUTURE)
-                                 *
-                                 * enqueue PDU in pdus_dt[dest-addr, qos-id]
-                                 * don't process it now ...
-                                 */
-                                process_dt_sdu(tmp, port_id, sdu, entry);
-                                break;
-
-                        default:
-                                LOG_ERR("Unknown PDU type %d", pdu_type);
-                                sdu_destroy(sdu);
-                                break;
-                        }
-                        pci_destroy(pci);
-
-                        /* (FUTURE) foreach_end() */
+                if (!sdu) {
+                        LOG_ERR("No SDU to work with");
+                        continue;
                 }
+
+                pci = sdu_pci_copy(sdu);
+                if (!pci) {
+                        LOG_ERR("No PCI to work with, dropping SDU!");
+                        sdu_destroy(sdu);
+                        continue;
+                }
+
+                pdu_type = pci_type(pci);
+                if (!pdu_type_is_ok(pdu_type)) {
+                        LOG_ERR("Wrong PDU type, dropping SDU!");
+                        pci_destroy(pci);
+                        sdu_destroy(sdu);
+                        continue;
+                }
+                LOG_DBG("PDU type: %d", pdu_type);
+
+                /* (FUTURE) PDU ownership is going to be passed on */
+
+                switch (pdu_type) {
+                case PDU_TYPE_MGMT:
+                        process_mgmt_sdu(tmp, port_id, sdu);
+                        break;
+
+                case PDU_TYPE_EFCP:
+                case PDU_TYPE_CC:
+                case PDU_TYPE_SACK:
+                case PDU_TYPE_NACK:
+                case PDU_TYPE_FC:
+                case PDU_TYPE_ACK:
+                case PDU_TYPE_ACK_AND_FC:
+                case PDU_TYPE_DT:
+                        /*
+                         * (FUTURE)
+                         *
+                         * enqueue PDU in pdus_dt[dest-addr, qos-id]
+                         * don't process it now ...
+                         */
+                        process_dt_sdu(tmp, port_id, sdu, entry);
+                        break;
+
+                default:
+                        LOG_ERR("Unknown PDU type %d", pdu_type);
+                        sdu_destroy(sdu);
+                        break;
+                }
+                pci_destroy(pci);
+
+                /* (FUTURE) foreach_end() */
         }
 
         /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
@@ -1125,6 +1112,7 @@ static struct pdu * regression_tests_pdu_create(address_t address)
 
         return pdu;
 }
+
 static bool regression_tests_egress_queue(void)
 {
         struct rmt *        rmt;
