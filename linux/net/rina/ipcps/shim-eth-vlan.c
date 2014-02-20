@@ -1271,15 +1271,29 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
 }
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
-        .flow_allocate_request  = eth_vlan_flow_allocate_request,
-        .flow_allocate_response = eth_vlan_flow_allocate_response,
-        .flow_deallocate        = eth_vlan_flow_deallocate,
-        .application_register   = eth_vlan_application_register,
-        .application_unregister = eth_vlan_application_unregister,
-        .sdu_write              = eth_vlan_sdu_write,
-        .assign_to_dif          = eth_vlan_assign_to_dif,
-        .update_dif_config      = eth_vlan_update_dif_config,
-        .ipcp_name              = eth_vlan_ipcp_name,
+        .flow_allocate_request     = eth_vlan_flow_allocate_request,
+        .flow_allocate_response    = eth_vlan_flow_allocate_response,
+        .flow_deallocate           = eth_vlan_flow_deallocate,
+        .application_register      = eth_vlan_application_register,
+        .application_unregister    = eth_vlan_application_unregister,
+        .assign_to_dif             = eth_vlan_assign_to_dif,
+        .update_dif_config         = eth_vlan_update_dif_config,
+        .sdu_write                 = eth_vlan_sdu_write,
+        .connection_create         = NULL,
+        .connection_update         = NULL,
+        .connection_destroy        = NULL,
+        .connection_create_arrived = NULL,
+        .flow_binding_ipcp         = NULL,
+        .flow_destroy              = NULL,
+        .sdu_enqueue               = NULL,
+        .mgmt_sdu_write            = NULL,
+        .mgmt_sdu_read             = NULL,
+        .mgmt_sdu_post             = NULL,
+        .pft_add                   = NULL,
+        .pft_remove                = NULL,
+        .pft_dump                  = NULL,
+        .pft_flush                 = NULL,
+        .ipcp_name                 = eth_vlan_ipcp_name,
 };
 
 static struct ipcp_factory_data {

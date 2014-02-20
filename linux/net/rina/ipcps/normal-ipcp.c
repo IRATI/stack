@@ -273,13 +273,8 @@ static int ipcp_flow_notification(struct ipcp_instance_data * data,
         if (kfa_flow_rmt_bind(data->kfa, pid, data->rmt))
                 return -1;
 
-        if (rmt_queue_send_add(data->rmt, pid))
+        if (rmt_n1port_bind(data->rmt, pid))
                 return -1;
-
-        if (rmt_queue_recv_add(data->rmt, pid)) {
-                rmt_queue_send_delete(data->rmt, pid);
-                return -1;
-        }
 
         return 0;
 }
@@ -428,7 +423,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         struct dt_cons * dt_cons;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
-        data->address = dif_information->configuration->address;
+        data->address        = dif_information->configuration->address;
         if (rmt_address_set(data->rmt, data->address))
                 return -1;
 

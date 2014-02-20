@@ -42,13 +42,4 @@ int                efcp_imap_update(struct efcp_imap * map,
 int                efcp_imap_remove(struct efcp_imap * map,
                                     cep_id_t           key);
 
-struct cidm;
-
-struct cidm *       cidm_create(void);
-int                 cidm_destroy(struct cidm * instance);
-
-cep_id_t            cidm_allocate(struct cidm * instance);
-int                 cidm_release(struct cidm * instance,
-                                 cep_id_t      cep_id);
-
 #endif
