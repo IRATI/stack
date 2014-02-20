@@ -371,7 +371,6 @@ static int send_worker(void * o)
                 /* FIXME: Shouldn't we ASSERT() here ? */
                 if (!pdu) {
                         LOG_DBG("No PDU to work in this queue ...");
-                        spin_unlock(&tmp->egress.queues->lock);
                         continue;
                 }
 
@@ -887,7 +886,6 @@ static int receive_worker(void * o)
                 /* FIXME: Shouldn't we ASSERT() here ? */
                 if (!sdu) {
                         LOG_DBG("No SDU to work with in this queue");
-                        spin_unlock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
