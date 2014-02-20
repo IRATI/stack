@@ -76,9 +76,12 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	private Timer timer = null;
 	
+	private int timeout = 0;
+	
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo, 
-			ApplicationProcessNamingInformation clientApNamingInfo){
+			ApplicationProcessNamingInformation clientApNamingInfo, 
+			int timeout){
 		try {
 			rina.initialize(LogHelper.getLibrinaLogLevel(), 
 					LogHelper.getLibrinaLogFile());
@@ -100,6 +103,8 @@ FlowAllocationListener, FlowDeallocationListener {
 		
 		this.echoApNamingInfo = echoApNamingInfo;
 		this.clientApNamingInfo = clientApNamingInfo;
+		this.timeout = timeout;
+		testInformation.setTimeout(timeout);
 		
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
@@ -211,7 +216,7 @@ FlowAllocationListener, FlowDeallocationListener {
 							+ testInformation.toString());
 					
 					CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
-					timer.schedule(timerTask, 2*1000);
+					timer.schedule(timerTask, timeout);
 					
 					buffer = new byte[MAX_SDU_SIZE];
 					bytesRead = flow.readSDU(buffer, buffer.length);
@@ -241,7 +246,7 @@ FlowAllocationListener, FlowDeallocationListener {
 				}
 				
 				//2 Start flowReader
-				flowReader = new FlowReader(flow, this.testInformation, timer);
+				flowReader = new FlowReader(flow, this.testInformation, timer, timeout);
 				this.executorService.execute(flowReader);
 
 				//3 Send SDUs to server

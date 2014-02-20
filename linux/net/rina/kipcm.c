@@ -489,6 +489,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         LOG_DBG("Assign to dif operation seems ok, gonna complete it");
 
+        /* FIXME: Why replicating if only 0/-1 changes? use a temp var */
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
                                             0,
@@ -536,7 +537,6 @@ static int notify_ipcp_update_dif_config_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
@@ -620,7 +620,6 @@ static int notify_ipcp_register_app_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
@@ -685,7 +684,6 @@ static int notify_ipcp_unregister_app_request(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
                 return -1;
@@ -782,7 +780,6 @@ static int notify_ipcp_conn_create_req(void *             data,
 
         kipcm = (struct kipcm *) data;
         msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_CREATE_REQUEST);
-
         if (!msg)
                 goto fail;
 
@@ -1001,8 +998,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-
-        msg = rnl_msg_create(RNL_MSG_ATTRS_CONN_UPDATE_REQUEST);
+        msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_UPDATE_REQUEST);
         if (!msg)
                 goto fail;
 
@@ -1106,8 +1102,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-        msg = rnl_msg_create(RNL_MSG_ATTRS_CONN_DESTROY_REQUEST);
-
+        msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_DESTROY_REQUEST);
         if (!msg)
                 goto fail;
 
