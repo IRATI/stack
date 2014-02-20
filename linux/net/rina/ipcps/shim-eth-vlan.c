@@ -994,9 +994,9 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         unsigned long       flags;
         int                 num_frames;
 
-        spin_lock_irqsave(&rcv_wq_lock, flags);
-
         LOG_DBG("Worker waking up");
+
+        spin_lock_irqsave(&rcv_wq_lock, flags);
 
         num_frames = 0;
         list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
@@ -1007,13 +1007,23 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                         LOG_DBG("Failed to process packet");
 
                 num_frames++;
+
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
                 rkfree(packet);
+
+#ifdef CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMITING
+                BUILD_BUG_ON(CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT <= 0);
+
+                if (num_frames >= CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT)
+                        return;
+#endif
+
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
+
         LOG_DBG("Worker finished for now, processed %d frames", num_frames);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
 }
