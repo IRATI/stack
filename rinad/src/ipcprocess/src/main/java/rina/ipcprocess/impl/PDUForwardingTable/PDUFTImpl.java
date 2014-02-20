@@ -87,8 +87,8 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 3000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 5000; // 100 ms
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 997; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 1001; // 100 ms
 	public final int WAIT_UNTIL_AGE_INCREMENT = 21000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
