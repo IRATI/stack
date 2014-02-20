@@ -105,7 +105,7 @@ static struct rmt_qmap * qmap_create(void)
         return tmp;
 }
 
-static int qmap_destroy(struct rmt_qmap * m)
+static int qmap_destroy(struct rmt_qmap * m, struct kfa * kfa)
 {
         struct rmt_queue *  entry;
         struct hlist_node * tmp;
@@ -116,6 +116,7 @@ static int qmap_destroy(struct rmt_qmap * m)
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
+                kfa_flow_rmt_unbind(kfa, entry->port_id);
                 if (queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
@@ -300,11 +301,13 @@ int rmt_destroy(struct rmt * instance)
         }
 
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
-        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues);
+        if (instance->ingress.queues) qmap_destroy(instance->ingress.queues,
+                                                   instance->kfa);
         pft_cache_fini(&instance->ingress.cache);
 
         if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
-        if (instance->egress.queues)  qmap_destroy(instance->egress.queues);
+        if (instance->egress.queues)  qmap_destroy(instance->egress.queues,
+                                                   instance->kfa);
         pft_cache_fini(&instance->egress.cache);
 
         if (instance->pft)            pft_destroy(instance->pft);
@@ -375,7 +378,8 @@ static int send_worker(void * o)
                         out = false;
                         sdu = sdu_create_pdu_with(pdu);
                         if (!sdu) {
-                                LOG_ERR("Error creating SDU from PDU, dropping PDU!");
+                                LOG_ERR("Error creating SDU from PDU, "
+                                        "dropping PDU!");
                                 pdu_destroy(pdu);
                                 continue;
                         }
@@ -574,6 +578,11 @@ static int rmt_queue_send_delete(struct rmt * instance,
                 return -1;
         }
 
+        if (!instance->egress.queues) {
+                LOG_ERR("Bogus egress instance passed");
+                return -1;
+        }
+
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Wrong port id");
                 return -1;
@@ -640,6 +649,11 @@ static int rmt_queue_recv_delete(struct rmt * instance,
                 return -1;
         }
 
+        if (!instance->egress.queues) {
+                LOG_ERR("Bogus egress instance passed");
+                return -1;
+        }
+
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Wrong port id");
                 return -1;
@@ -654,33 +668,35 @@ static int rmt_queue_recv_delete(struct rmt * instance,
         return queue_destroy(q);
 }
 
-int rmt_bind_n1port(struct rmt * instance,
+int rmt_n1port_bind(struct rmt * instance,
                     port_id_t    id)
 {
         if (rmt_queue_send_add(instance, id))
                 return -1;
 
-        if (rmt_queue_recv_add(instance, id))
+        if (rmt_queue_recv_add(instance, id)){
+                rmt_queue_send_delete(instance, id);
                 return -1;
+        }
 
         return 0;
 }
-EXPORT_SYMBOL(rmt_bind_n1port);
+EXPORT_SYMBOL(rmt_n1port_bind);
 
-int rmt_unbind_n1port(struct rmt * instance,
+int rmt_n1port_unbind(struct rmt * instance,
                       port_id_t    id)
 {
         int retval = 0;
 
         if (rmt_queue_send_delete(instance, id))
                 retval = -1;
-        
+
         if (rmt_queue_recv_delete(instance, id))
                 retval = -1;
 
         return retval;
 }
-EXPORT_SYMBOL(rmt_unbind_n1port);
+EXPORT_SYMBOL(rmt_n1port_unbind);
 
 static struct pci * sdu_pci_copy(const struct sdu * sdu)
 {

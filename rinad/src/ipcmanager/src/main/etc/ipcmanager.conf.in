@@ -9,6 +9,7 @@
     "watchdogPeriodInMs" : 60000,
     "declaredDeadIntervalInMs" : 120000,
     "neighborsEnrollerPeriodInMs" : 10000,
+    "maxEnrollmentRetries" : 3,
     "lengthOfFlowQueues" : 10
   },
   "applicationToDIFMappings" : [ {

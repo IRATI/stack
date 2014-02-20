@@ -1242,6 +1242,7 @@ Neighbor::Neighbor() {
         lastHeardFromTimeInMs = 0;
         enrolled = false;
         underlyingPortId = 0;
+        numberOfEnrollmentAttempts = 0;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{
@@ -1327,6 +1328,14 @@ void Neighbor::setUnderlyingPortId(int underlyingPortId) {
         this->underlyingPortId = underlyingPortId;
 }
 
+unsigned int Neighbor::getNumberOfEnrollmentAttempts() const {
+        return numberOfEnrollmentAttempts;
+}
+
+void Neighbor::setNumberOfEnrollmentAttempts(
+                unsigned int numberOfEnrollmentAttempts) {
+        this->numberOfEnrollmentAttempts = numberOfEnrollmentAttempts;
+}
 
 /* CLAS RIBOBJECT */
 RIBObject::RIBObject(){

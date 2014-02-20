@@ -309,6 +309,34 @@ int kfa_flow_rmt_bind(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_rmt_bind);
 
+int kfa_flow_rmt_unbind(struct kfa * instance,
+                        port_id_t    pid)
+{
+        struct ipcp_flow * flow;
+
+        if (!instance)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        spin_lock(&instance->lock);
+
+        flow = kfa_pmap_find(instance->flows, pid);
+        if (!flow) {
+                LOG_ERR("The flow with port-id %d does not exist, "
+                        "cannot unbind rmt", pid);
+                spin_unlock(&instance->lock);
+                return -1;
+        }
+        flow->rmt = NULL;
+
+        spin_unlock(&instance->lock);
+
+        return 0;
+}
+EXPORT_SYMBOL(kfa_flow_rmt_unbind);
+
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
                             port_id_t          id)
@@ -334,8 +362,9 @@ static int kfa_flow_destroy(struct kfa *       instance,
         }
 
         if (flow->rmt) {
-                if (rmt_unbind_n1port(flow->rmt, id)) {
-                        LOG_ERR("Could not unbind port-id %d from RMT queues", id);
+                if (rmt_n1port_unbind(flow->rmt, id)) {
+                        LOG_ERR("Could not unbind port-id %d from "
+                                "RMT queues", id);
                         retval = -1;
                 }
         }
