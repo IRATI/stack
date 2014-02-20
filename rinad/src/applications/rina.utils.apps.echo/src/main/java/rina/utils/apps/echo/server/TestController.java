@@ -10,7 +10,6 @@ import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
 import rina.cdap.api.message.CDAPMessage.Opcode;
-import rina.utils.apps.echo.Echo;
 import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.protobuf.EchoTestMessageEncoder;
 
@@ -158,7 +157,7 @@ public class TestController implements Runnable {
 	}
 	
 	public boolean shouldStop(){
-		if (getLatestSDUReceivedTime() + Echo.MAX_TIME_WITH_NO_DATA_IN_MS < 
+		if (getLatestSDUReceivedTime() + testInformation.getTimeout() < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
 		}
@@ -172,7 +171,7 @@ public class TestController implements Runnable {
 			stop = true;
 			
 			if (testInformation != null && !testInformation.receivedAllSDUs()) {
-				log.info("Stopping since more than "+ Echo.MAX_TIME_WITH_NO_DATA_IN_MS 
+				log.info("Stopping since more than "+ testInformation.getTimeout() 
 						+ " ms have gone by without receiving SDUs");
 				log.info("Received "+testInformation.getSDUsReceived() 
 						+ " out of " + testInformation.getNumberOfSDUs() + " SDUs");
