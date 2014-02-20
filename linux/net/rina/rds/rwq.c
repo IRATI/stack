@@ -57,6 +57,8 @@ static void rwq_worker(struct work_struct * work)
         return;
 }
 
+#define RWQ_MAX_ACTIVE 16 /* Only temporary */
+
 struct workqueue_struct * rwq_create(const char * name)
 {
         struct workqueue_struct * wq;
@@ -66,7 +68,12 @@ struct workqueue_struct * rwq_create(const char * name)
                 return NULL;
         }
 
-        wq = create_workqueue(name);
+        wq = alloc_workqueue(name,
+                             WQ_UNBOUND      |
+                             WQ_MEM_RECLAIM  |
+                             WQ_HIGHPRI      |
+                             WQ_CPU_INTENSIVE,
+                             RWQ_MAX_ACTIVE)
         if (!wq) {
                 LOG_ERR("Cannot create workqueue '%s'", name);
                 return NULL;
