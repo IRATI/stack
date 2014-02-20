@@ -444,9 +444,7 @@ rnl_ipcm_update_dif_config_req_msg_attrs_destroy(struct rnl_ipcm_update_dif_conf
         if (!attrs)
                 return -1;
 
-        if (attrs->dif_config) {
-                dif_config_destroy(attrs->dif_config);
-        }
+        if (attrs->dif_config) dif_config_destroy(attrs->dif_config);
 
         rkfree(attrs);
         return 0;
@@ -739,8 +737,8 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
         return 0;
 }
 
-static int parse_app_name_info(struct nlattr * name_attr,
-                               struct name *   name_struct)
+static int parse_app_name_info(const struct nlattr * name_attr,
+                               struct name *         name_struct)
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *   attrs[APNI_ATTR_MAX + 1];
