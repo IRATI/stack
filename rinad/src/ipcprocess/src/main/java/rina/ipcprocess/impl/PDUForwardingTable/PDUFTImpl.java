@@ -87,9 +87,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 997; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 1001; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 21000; //3 sec
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 21000; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 3000; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 5000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;
@@ -366,17 +366,18 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		log.info("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
+			log.debug("FSDB is modified, computing new paths");
 			List<FlowStateObject> fsoList = db.getFlowStateObjectGroup().getFlowStateObjectArray();
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
 			try {
 				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
+				db.setModified(false);
+				ribDaemon.setPDUForwardingTable(entryList);
+				log.debug("Entry list set: " + entryList);
 			} catch (PDUForwardingTableException e) {
+				log.error("Error setting the PDU Forwarding table in the kernel");
 				e.printStackTrace();
 			}
-			db.setModified(false);
-			
-			//Set A-Data PDU Forwarding Table in order to be able to relay management PDUs
-			ribDaemon.setPDUForwardingTable(entryList);
 		}
 	}
 	
