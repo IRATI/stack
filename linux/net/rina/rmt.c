@@ -364,12 +364,19 @@ static int send_worker(void * o)
                 port_id_t    port_id;
                 
                 spin_lock(&tmp->egress.queues->lock);
-                pdu     = (struct pdu *) rfifo_pop(entry->queue);
+                pdu = (struct pdu *) rfifo_pop(entry->queue);
+
+                /* FIXME: Shouldn't we ASSERT() here ? */
+                if (!pdu) {
+                        LOG_DBG("No PDU to work in this queue ...");
+                        spin_unlock(&tmp->egress.queues->lock);
+                        continue;
+                }
+
                 port_id = entry->port_id;
                 spin_unlock(&tmp->egress.queues->lock);
                 
-                if (!pdu)
-                        continue;
+                ASSERT(pdu);
                 
                 sdu = sdu_create_pdu_with(pdu);
                 if (!sdu) {
@@ -382,6 +389,7 @@ static int send_worker(void * o)
                 LOG_DBG("Gonna send SDU to port_id %d", port_id);
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
+                        continue; /* Useless for the moment */
                 }
         }
 
@@ -870,14 +878,17 @@ static int receive_worker(void * o)
                 ASSERT(entry);
 
                 spin_lock(&tmp->ingress.queues->lock);
-                sdu     = (struct sdu *) rfifo_pop(entry->queue);
-                port_id = entry->port_id;
-                spin_unlock(&tmp->ingress.queues->lock);
+                sdu = (struct sdu *) rfifo_pop(entry->queue);
 
+                /* FIXME: Shouldn't we ASSERT() here ? */
                 if (!sdu) {
-                        LOG_ERR("No SDU to work with");
+                        LOG_DBG("No SDU to work with in this queue");
+                        spin_unlock(&tmp->ingress.queues->lock);
                         continue;
                 }
+
+                port_id = entry->port_id;
+                spin_unlock(&tmp->ingress.queues->lock);
 
                 pci = sdu_pci_copy(sdu);
                 if (!pci) {
