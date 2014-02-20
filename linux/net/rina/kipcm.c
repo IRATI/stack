@@ -367,7 +367,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         struct rnl_msg *                             msg;
         struct ipcp_instance *                       ipc_process;
         ipc_process_id_t                             ipc_id;
-        struct kipcm * kipcm;
+        struct kipcm *                               kipcm;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
