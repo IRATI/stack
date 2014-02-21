@@ -712,9 +712,24 @@ int kfa_sdu_post(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
-struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance, port_id_t pid)
-{ return kfa_pmap_find(instance->flows, pid); }
-EXPORT_SYMBOL(kfa_find_flow_by_pid);
+#if 0
+struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
+{
+        struct ipcp_flow * tmp;
+        
+        if (!instance)
+                return NULL;
+
+        spin_lock(&instance->lock);
+
+        tmp = kfa_pmap_find(instance->flows, pid);
+
+        spin_unlock(&instance->lock);
+
+        return tmp;
+}
+EXPORT_SYMBOL(kfa_flow_find_by_pid);
+#endif
 
 int kfa_sdu_post_to_user_space(struct kfa * instance,
                                struct sdu * sdu,
