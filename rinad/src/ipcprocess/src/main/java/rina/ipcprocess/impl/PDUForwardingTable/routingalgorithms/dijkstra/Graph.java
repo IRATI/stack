@@ -11,7 +11,7 @@ import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 
 public class Graph {
-	  //private static final Log log = LogFactory.getLog(Graph.class);
+	  private static final Log log = LogFactory.getLog(Graph.class);
 	  private List<Vertex> vertices;
 	  private List<Edge> edges;
 	  private List<FlowStateObject> flowStateObjects;
@@ -24,7 +24,7 @@ public class Graph {
 	    try {
 			initEdges();
 		} catch (Exception e) {
-			//log.error("Vertex not found");
+			log.error("Vertex not found");
 			e.printStackTrace();
 		}
 	  }
@@ -94,6 +94,7 @@ public class Graph {
 			{
 				if (f.isState())
 				{
+					log.debug("Flow state object alive and processed: " + f.getID());
 					int indexOrigin = verticesChecked.indexOf(new VertexChecked(new Vertex(f.getAddress())));
 					int indexDest = verticesChecked.indexOf(new VertexChecked(new Vertex(f.getNeighborAddress())));
 					
