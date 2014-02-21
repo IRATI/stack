@@ -80,3 +80,10 @@ config RINA_RFIFO_REGRESSION_TESTS
         depends on RINA_RDS_REGRESSION_TESTS
 	help
 	  No help for the time being
+
+config RINA_RMEM_REGRESSION_TESTS
+	bool "RMEM regression tests"
+	default n
+        depends on RINA_RDS_REGRESSION_TESTS
+	help
+	  No help for the time being
