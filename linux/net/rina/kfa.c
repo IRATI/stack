@@ -501,9 +501,9 @@ int kfa_flow_sdu_write(struct kfa * instance,
                                                    PORT_STATE_PENDING));
                 if (retval)
                         LOG_ERR("Wait-event interrupted (%d)", retval);
+                LOG_DBG("Write woken up");
                 
                 spin_lock(&instance->lock);
-                LOG_DBG("Write woken up");
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
@@ -718,6 +718,7 @@ int kfa_sdu_post(struct kfa * instance,
                         spin_unlock(&instance->lock);
                         return -1;
                 }
+
                 LOG_DBG("SDU posted to RMT");
                 spin_unlock(&instance->lock);
                 return 0;
@@ -726,7 +727,17 @@ int kfa_sdu_post(struct kfa * instance,
 EXPORT_SYMBOL(kfa_sdu_post);
 
 struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance, port_id_t pid)
-{ return kfa_pmap_find(instance->flows, pid); }
+{
+        struct ipcp_flow * tmp;
+
+        spin_lock(&instance->lock);
+
+        tmp = kfa_pmap_find(instance->flows, pid);
+
+        spin_unlock(&instance->lock);
+
+        return tmp;
+}
 EXPORT_SYMBOL(kfa_find_flow_by_pid);
 
 int kfa_sdu_post_to_user_space(struct kfa * instance,
