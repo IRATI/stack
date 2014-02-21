@@ -68,12 +68,16 @@ struct workqueue_struct * rwq_create(const char * name)
                 return NULL;
         }
 
+#if 1
         wq = alloc_workqueue(name,
                              WQ_UNBOUND      |
                              WQ_MEM_RECLAIM  |
                              WQ_HIGHPRI      |
                              WQ_CPU_INTENSIVE,
                              RWQ_MAX_ACTIVE);
+#else
+        wq = create_workqueue(name);
+#endif
         if (!wq) {
                 LOG_ERR("Cannot create workqueue '%s'", name);
                 return NULL;
