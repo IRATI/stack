@@ -37,7 +37,6 @@
 #include "ipcp-factories.h"
 #include "du.h"
 #include "kfa.h"
-#include "rnl-utils.h"
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
