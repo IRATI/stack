@@ -308,3 +308,12 @@ void rkfree(void * ptr)
         kfree(ptr);
 }
 EXPORT_SYMBOL(rkfree);
+
+#ifdef CONFIG_RINA_RMEM_REGRESSION_TESTS
+bool regression_tests_rmem(void)
+{
+        LOG_MISSING;
+
+        return true;
+}
+#endif
