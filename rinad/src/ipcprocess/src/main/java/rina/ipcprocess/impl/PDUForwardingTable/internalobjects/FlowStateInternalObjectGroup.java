@@ -112,7 +112,7 @@ public class FlowStateInternalObjectGroup{
 			
 			if (object.getAge() >= maximumAge)
 			{
-				log.debug("Old object removed: " + object);
+				log.debug("Old object removed: " + object.getID());
 				this.flowStateObjectArray.remove(i);
 				groupModified = true;
 				fsRIBGroup.delete(mapper.FSOMap(object));
