@@ -38,6 +38,7 @@ import rina.ribdaemon.api.RIBDaemonException;
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowInformation;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.PDUForwardingTableException;
 import eu.irati.librina.rina;
@@ -373,7 +374,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
 				db.setModified(false);
 				ribDaemon.setPDUForwardingTable(entryList);
-				log.debug("Entry list set: " + entryList);
+				for (PDUForwardingTableEntry e : entryList)
+				{
+					log.debug("Entry set in kernel. Address: " + e.getAddress() + "Port: " + e.getPortIds());
+				}
 			} catch (PDUForwardingTableException e) {
 				log.error("Error setting the PDU Forwarding table in the kernel");
 				e.printStackTrace();
