@@ -479,23 +479,25 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
         IRQ_BARRIER;
 
         mgmt_data = data->mgmt_data;
+
         spin_lock(&mgmt_data->lock);
         if (mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_DBG("IPCP %d is being destroyed", data->id);
                 spin_unlock(&mgmt_data->lock);
                 return -1;
         }
+
         atomic_inc(&mgmt_data->readers);
+
         while (rfifo_is_empty(mgmt_data->sdu_ready)) {
-                LOG_DBG("Mgmt read going to sleep...");
                 spin_unlock(&mgmt_data->lock);
 
+                LOG_DBG("Mgmt read going to sleep...");
                 retval = wait_event_interruptible(mgmt_data->wait_q,
                                                   queue_ready(mgmt_data));
 
                 spin_lock(&mgmt_data->lock);
-                if (!mgmt_data  ||
-                    !mgmt_data->sdu_ready) {
+                if (!mgmt_data  || !mgmt_data->sdu_ready) {
                         LOG_ERR("No mgmt data anymore, waitqueue "
                                 "return code was %d", retval);
                         spin_unlock(&data->mgmt_data->lock);
