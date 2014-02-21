@@ -74,11 +74,11 @@ static int efcp_destroy(struct efcp * instance)
         }
 
         if (instance->dt) {
-                struct dtp *  dtp  = dt_dtp(instance->dt);
-                struct dtcp * dtcp = dt_dtcp(instance->dt);
+                struct dtp *  dtp  = dt_dtp_unbind(instance->dt);
+                struct dtcp * dtcp = dt_dtcp_unbind(instance->dt);
 
                 /* FIXME: We should watch for memleaks here ... */
-                if (dtp)  dtp_destroy(dtp);
+                if (dtp) dtp_destroy(dtp);
                 if (dtcp) dtcp_destroy(dtcp);
 
                 dt_destroy(instance->dt);
