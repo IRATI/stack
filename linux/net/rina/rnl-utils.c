@@ -69,6 +69,9 @@ extern struct genl_family rnl_nl_family;
 char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
+char * nla_dup_string(struct nlattr * nla, gfp_t flags)
+{ return kstrdup(nla_get_string(nla), flags); }
+
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
 rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
 {
@@ -822,10 +825,10 @@ static int parse_ipcp_config_entry_value(struct nlattr *            name_attr,
                 return -1;
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_NAME])
-                entry->name = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]), GFP_KERNEL);
+                entry->name = nla_dup_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME], GFP_KERNEL);
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE])
-                entry->value = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]), GFP_KERNEL);
+                entry->value = nla_dup_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE], GFP_KERNEL);
 
         return 0;
 }
@@ -1028,9 +1031,8 @@ static int parse_dif_info(struct nlattr *   dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DINFO_ATTR_DIF_TYPE])
-                dif_info->type =
-                        kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]),
-                                GFP_KERNEL);
+                dif_info->type = nla_dup_string(attrs[DINFO_ATTR_DIF_TYPE],
+                                                GFP_KERNEL);
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)
