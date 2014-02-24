@@ -511,6 +511,31 @@ int dif_config_destroy(struct dif_config * dif_config)
 }
 EXPORT_SYMBOL(dif_config_destroy);
 
+struct dif_info * dif_info_create(void)
+{
+        struct dif_info * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        tmp->dif_name = name_create();
+        if (!tmp->dif_name) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->configuration = dif_config_create();
+        if (!tmp->configuration) {
+                name_destroy(tmp->dif_name);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(dif_info_create);
+
 int dif_info_destroy(struct dif_info * dif_info)
 {
         LOG_DBG("Destroying DIF-info");

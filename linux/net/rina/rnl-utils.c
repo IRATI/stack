@@ -147,23 +147,8 @@ rnl_ipcm_assign_to_dif_req_msg_attrs_create(void)
         if  (!tmp)
                 return NULL;
 
-        tmp->dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
+        tmp->dif_info = dif_info_create();
         if (!tmp->dif_info) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->dif_info->dif_name = name_create();
-        if (!tmp->dif_info->dif_name) {
-                rkfree(tmp->dif_info);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->dif_info->configuration = dif_config_create();
-        if (!tmp->dif_info->configuration) {
-                name_destroy(tmp->dif_info->dif_name);
-                rkfree(tmp->dif_info);
                 rkfree(tmp);
                 return NULL;
         }
@@ -430,11 +415,7 @@ rnl_ipcm_assign_to_dif_req_msg_attrs_destroy(struct rnl_ipcm_assign_to_dif_req_m
                 return -1;
 
         if (attrs->dif_info) {
-                if (attrs->dif_info->dif_name)
-                        name_destroy(attrs->dif_info->dif_name);
-                if (attrs->dif_info->configuration)
-                        dif_config_destroy(attrs->dif_info->configuration);
-                rkfree(attrs->dif_info);
+                dif_info_destroy(attrs->dif_info);
         }
 
         rkfree(attrs);

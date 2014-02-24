@@ -443,7 +443,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct rnl_msg *                              msg;
         struct ipcp_instance *                        ipc_process;
         ipc_process_id_t                              ipc_id;
-
+        
+        int retval = 0;
         ipc_id = 0;
 
         if (!data) {
@@ -459,17 +460,20 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         msg = rnl_msg_create(RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST);
         if (!msg)
+                retval = -1;
                 goto fail;
 
         attrs = msg->attrs;
 
         if (rnl_parse_msg(info, msg))
+                retval = -1;
                 goto fail;
 
         ipc_id      = msg->header.dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
+                retval = -1;
                 goto fail;
         }
         LOG_DBG("Found IPC Process with id %d", ipc_id);
@@ -484,22 +488,16 @@ static int notify_ipcp_assign_dif_request(void *             data,
                         tmp, ipc_id);
                 rkfree(tmp);
 
+                retval = -1;
                 goto fail;
         }
 
         LOG_DBG("Assign to dif operation seems ok, gonna complete it");
 
-        /* FIXME: Why replicating if only 0/-1 changes? use a temp var */
+fail:
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
-                                            0,
-                                            info->snd_seq,
-                                            info->snd_portid);
-
- fail:
-        return assign_to_dif_free_and_reply(msg,
-                                            ipc_id,
-                                            -1,
+                                            retval,
                                             info->snd_seq,
                                             info->snd_portid);
 }
