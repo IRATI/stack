@@ -459,15 +459,17 @@ static int notify_ipcp_assign_dif_request(void *             data,
         }
 
         msg = rnl_msg_create(RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST);
-        if (!msg)
+        if (!msg) {
                 retval = -1;
                 goto fail;
-
+        }
+        
         attrs = msg->attrs;
 
-        if (rnl_parse_msg(info, msg))
+        if (rnl_parse_msg(info, msg)) {
                 retval = -1;
                 goto fail;
+        }
 
         ipc_id      = msg->header.dst_ipc_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);

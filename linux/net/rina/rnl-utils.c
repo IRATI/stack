@@ -70,7 +70,7 @@ char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
 char * nla_dup_string(struct nlattr * nla, gfp_t flags)
-{ return kstrdup(nla_get_string(nla), flags); }
+{ return rkstrdup(nla_get_string(nla), flags); }
 
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
 rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
@@ -945,7 +945,6 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 {
         struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
         struct nlattr *   attrs[DCONF_ATTR_MAX + 1];
-        struct dt_cons *  dt_cons;
 
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len  = 0;
@@ -967,17 +966,13 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                                                       dif_config) < 0)
                         goto parse_fail;
         }
-
+        
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                dt_cons = rkzalloc(sizeof(struct dt_cons),GFP_KERNEL);
-                if (!dt_cons)
+                if (!dif_config->dt_cons)
                         goto parse_fail;
-
-                dif_config->dt_cons = dt_cons;
 
                 if (parse_dt_cons(attrs[DCONF_ATTR_DATA_TRANS_CONS],
                                   dif_config->dt_cons) < 0) {
-                        rkfree(dif_config->dt_cons);
                         goto parse_fail;
                 }
         }
@@ -1014,6 +1009,8 @@ static int parse_dif_info(struct nlattr *   dif_config_attr,
         if (attrs[DINFO_ATTR_DIF_TYPE])
                 dif_info->type = nla_dup_string(attrs[DINFO_ATTR_DIF_TYPE],
                                                 GFP_KERNEL);
+        else
+                dif_info->type = NULL;
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)
