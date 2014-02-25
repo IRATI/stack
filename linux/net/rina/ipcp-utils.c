@@ -64,7 +64,7 @@ static int string_dup_gfp(gfp_t            flags,
          * provoke no consequeunces
          */
         if (src) {
-                *dst = kstrdup(src, flags);
+                *dst = rkstrdup(src, flags);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string "
                                 "in kernel-space");
@@ -445,11 +445,12 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         if (!cfg)
                 return -1;
 
-        if (cfg->entry)
-                if (cfg->entry->name) rkfree(cfg->entry->name);
+        if (!cfg->entry)
+                return -1;
+                
+        if (cfg->entry->name) rkfree(cfg->entry->name);
 
-        if (cfg->entry->value)
-                rkfree(cfg->entry->value);
+        if (cfg->entry->value) rkfree(cfg->entry->value);
 
         rkfree(cfg->entry);
 
@@ -483,6 +484,12 @@ struct dif_config * dif_config_create(void)
         if (!tmp)
                 return NULL;
 
+        tmp->dt_cons = rkzalloc(sizeof(*tmp->dt_cons), GFP_KERNEL);
+        if (!tmp->dt_cons) {
+                rkfree(tmp);
+                return NULL;
+        }
+
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;
@@ -493,7 +500,7 @@ int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
 
-        if (!dif_config)
+        if (!dif_config) 
                 return -1;
 
         list_for_each_entry_safe(pos, nxt,
@@ -510,6 +517,30 @@ int dif_config_destroy(struct dif_config * dif_config)
         return 0;
 }
 EXPORT_SYMBOL(dif_config_destroy);
+
+struct dif_info * dif_info_create(void)
+{
+        struct dif_info * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+        tmp->dif_name = name_create();
+        if (!tmp->dif_name) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->configuration = dif_config_create();
+        if (!tmp->configuration) {
+                name_destroy(tmp->dif_name);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(dif_info_create);
 
 int dif_info_destroy(struct dif_info * dif_info)
 {

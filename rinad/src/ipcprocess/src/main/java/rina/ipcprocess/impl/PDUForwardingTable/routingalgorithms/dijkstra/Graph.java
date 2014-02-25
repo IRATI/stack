@@ -4,9 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.PDUForwardingTable.api.FlowStateObject;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 
 public class Graph {
+	  private static final Log log = LogFactory.getLog(Graph.class);
 	  private List<Vertex> vertices;
 	  private List<Edge> edges;
 	  private List<FlowStateObject> flowStateObjects;
@@ -16,7 +21,12 @@ public class Graph {
 		this.vertices = new ArrayList<Vertex>();
 		this.edges = new ArrayList<Edge>();
 	    initVertices();
-	    initEdges();
+	    try {
+			initEdges();
+		} catch (Exception e) {
+			log.error("Vertex not found");
+			e.printStackTrace();
+		}
 	  }
 
 	  public List<Vertex> getVertices() {
@@ -28,58 +38,91 @@ public class Graph {
 	  }
 	  
 	  private void initVertices()
-	  {
-		  
-		  HashSet<Vertex> notRepeatedOrigin = new HashSet<Vertex>();
-		  HashSet<Vertex> notRepeatedDest = new HashSet<Vertex>();
-		  
+	  {  
 		  for (FlowStateObject e : this.flowStateObjects)
 		  {
 			  Vertex v1 = new Vertex(e.getAddress());
 			  Vertex v2 = new Vertex(e.getNeighborAddress());
-			  notRepeatedOrigin.add(v1);
-			  notRepeatedDest.add(v2);
+			  if (!vertices.contains(v1))
+			  {
+				  vertices.add(v1);
+			  }
+			  if (!vertices.contains(v2))
+			  {
+				  vertices.add(v2);
+			  }
 		  }
-		  notRepeatedOrigin.retainAll(notRepeatedDest);
-		
-		  vertices.addAll(notRepeatedOrigin);
 	  }
 	  
-	  private void initEdges()
+	  private void initEdges() throws Exception
 	  {
-			boolean v1Checked;
-			boolean v2Checked;
-			Vertex v1 = null;
-			Vertex v2 = null;
+		    class VertexChecked{
+		    	public Vertex v;
+		    	public ArrayList<Vertex> connections;
+		    	
+		    	public VertexChecked(Vertex newV)
+		    	{
+		    		v = newV;
+		    		connections = new ArrayList<Vertex>();
+		    	}
+		    	
+		    	@Override
+		    	public boolean equals(Object obj) {
+		    		if (this == obj)
+		    		  return true;
+		    		if (obj == null)
+		    		  return false;
+		    		if (getClass() != obj.getClass())
+		    		  return false;
+		    		VertexChecked other = (VertexChecked) obj;
+		    		if (!v.equals(other.v))
+		    		  return false;
+		    		return true;
+		    	}	
+		    }
+		    ArrayList<VertexChecked> verticesChecked = new ArrayList<VertexChecked>();
+		    
+		    for (Vertex v: vertices)
+		    {
+		    	verticesChecked.add(new VertexChecked(v));	
+		    }
+		    
 //			int portV1 = -1;
 //			int portV2 = -1;
-			int i;
 			
 			for (FlowStateObject f : flowStateObjects)
 			{
-				i = 0;
-				v1Checked = false;
-				v2Checked = false;
-				while((!v1Checked || !v2Checked) && i < vertices.size())
+				if (f.isState())
 				{
-					Vertex v = vertices.get(i);
-					if (v.getAddress() == f.getAddress())
+					log.debug("Flow state object alive and processed: " + f.getID());
+					int indexOrigin = verticesChecked.indexOf(new VertexChecked(new Vertex(f.getAddress())));
+					int indexDest = verticesChecked.indexOf(new VertexChecked(new Vertex(f.getNeighborAddress())));
+					
+					if (indexOrigin != -1 && indexDest != -1)
 					{
-						v1 = v;
-						v1Checked = true;
-//						portV1 = f.getPortid();
+						VertexChecked origin = verticesChecked.get(indexOrigin);
+						VertexChecked dest = verticesChecked.get(indexDest);
+						
+						if (origin.connections.contains(dest.v) && dest.connections.contains(origin.v))
+						{
+							edges.add(new Edge(origin.v,dest.v,1));
+						}
+						else
+						{
+							if(!origin.connections.contains(dest))
+							{
+								origin.connections.add(dest.v);
+							}
+							if (!dest.connections.contains(origin))
+							{
+								dest.connections.add(origin.v);
+							}
+						}
 					}
-					if (v.getAddress() == f.getNeighborAddress())
+					else
 					{
-						v2 = v;
-						v2Checked = true;
-//						portV2 = f.getNeighborPortid();
+						throw new Exception("Vertex not found"); //TODO: VertexNotFound exception
 					}
-					i++;
-				}
-				if (v1Checked && v2Checked && !this.edges.contains(new Edge(v2, v1, 1)))
-				{
-					this.edges.add(new Edge(v1, v2, 1));			
 				}
 			}
 		}

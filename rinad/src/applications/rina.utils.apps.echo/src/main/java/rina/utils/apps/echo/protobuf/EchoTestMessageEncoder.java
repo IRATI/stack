@@ -16,6 +16,7 @@ public class EchoTestMessageEncoder {
 		TestInformation testInformation = new TestInformation();
 		testInformation.setNumberOfSDUs(gpbEchoTest.getSDUcount());
 		testInformation.setSduSize(gpbEchoTest.getSDUsize());
+		testInformation.setTimeout(gpbEchoTest.getTimeout());
 		
 		return testInformation;
 	}
@@ -24,6 +25,7 @@ public class EchoTestMessageEncoder {
 		Echo_test_t gpbEchoTest = Echo_test_t.newBuilder().
 				setSDUcount(testInformation.getNumberOfSDUs()).
 				setSDUsize(testInformation.getSduSize()).
+				setTimeout(testInformation.getTimeout()).
 				build();
 
 		return gpbEchoTest.toByteArray();

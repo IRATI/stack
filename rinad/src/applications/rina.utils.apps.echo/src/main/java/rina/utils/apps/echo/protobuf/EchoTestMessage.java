@@ -49,6 +49,13 @@ public final class EchoTestMessage {
     public boolean hasSDUcount() { return hasSDUcount; }
     public int getSDUcount() { return sDUcount_; }
     
+    // optional uint32 timeout = 3;
+    public static final int TIMEOUT_FIELD_NUMBER = 3;
+    private boolean hasTimeout;
+    private int timeout_ = 0;
+    public boolean hasTimeout() { return hasTimeout; }
+    public int getTimeout() { return timeout_; }
+    
     private void initFields() {
     }
     public final boolean isInitialized() {
@@ -63,6 +70,9 @@ public final class EchoTestMessage {
       }
       if (hasSDUcount()) {
         output.writeUInt32(2, getSDUcount());
+      }
+      if (hasTimeout()) {
+        output.writeUInt32(3, getTimeout());
       }
       getUnknownFields().writeTo(output);
     }
@@ -80,6 +90,10 @@ public final class EchoTestMessage {
       if (hasSDUcount()) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(2, getSDUcount());
+      }
+      if (hasTimeout()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, getTimeout());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -245,6 +259,9 @@ public final class EchoTestMessage {
         if (other.hasSDUcount()) {
           setSDUcount(other.getSDUcount());
         }
+        if (other.hasTimeout()) {
+          setTimeout(other.getTimeout());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -276,6 +293,10 @@ public final class EchoTestMessage {
             }
             case 16: {
               setSDUcount(input.readUInt32());
+              break;
+            }
+            case 24: {
+              setTimeout(input.readUInt32());
               break;
             }
           }
@@ -319,6 +340,24 @@ public final class EchoTestMessage {
         return this;
       }
       
+      // optional uint32 timeout = 3;
+      public boolean hasTimeout() {
+        return result.hasTimeout();
+      }
+      public int getTimeout() {
+        return result.getTimeout();
+      }
+      public Builder setTimeout(int value) {
+        result.hasTimeout = true;
+        result.timeout_ = value;
+        return this;
+      }
+      public Builder clearTimeout() {
+        result.hasTimeout = false;
+        result.timeout_ = 0;
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:rina.messages.Echo_test_t)
     }
     
@@ -346,9 +385,9 @@ public final class EchoTestMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n protofiles/EchoTestMessage.proto\022\rrina" +
-      ".messages\"0\n\013Echo_test_t\022\017\n\007SDUsize\030\001 \001(" +
-      "\r\022\020\n\010SDUcount\030\002 \001(\rB\037\n\035rina.utils.apps.e" +
-      "cho.protobuf"
+      ".messages\"A\n\013Echo_test_t\022\017\n\007SDUsize\030\001 \001(" +
+      "\r\022\020\n\010SDUcount\030\002 \001(\r\022\017\n\007timeout\030\003 \001(\rB\037\n\035" +
+      "rina.utils.apps.echo.protobuf"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -360,7 +399,7 @@ public final class EchoTestMessage {
           internal_static_rina_messages_Echo_test_t_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_Echo_test_t_descriptor,
-              new java.lang.String[] { "SDUsize", "SDUcount", },
+              new java.lang.String[] { "SDUsize", "SDUcount", "Timeout", },
               rina.utils.apps.echo.protobuf.EchoTestMessage.Echo_test_t.class,
               rina.utils.apps.echo.protobuf.EchoTestMessage.Echo_test_t.Builder.class);
           return null;

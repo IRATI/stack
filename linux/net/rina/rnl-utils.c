@@ -69,6 +69,9 @@ extern struct genl_family rnl_nl_family;
 char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
+char * nla_dup_string(struct nlattr * nla, gfp_t flags)
+{ return rkstrdup(nla_get_string(nla), flags); }
+
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
 rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
 {
@@ -144,23 +147,8 @@ rnl_ipcm_assign_to_dif_req_msg_attrs_create(void)
         if  (!tmp)
                 return NULL;
 
-        tmp->dif_info = rkzalloc(sizeof(struct dif_info), GFP_KERNEL);
+        tmp->dif_info = dif_info_create();
         if (!tmp->dif_info) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->dif_info->dif_name = name_create();
-        if (!tmp->dif_info->dif_name) {
-                rkfree(tmp->dif_info);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->dif_info->configuration = dif_config_create();
-        if (!tmp->dif_info->configuration) {
-                name_destroy(tmp->dif_info->dif_name);
-                rkfree(tmp->dif_info);
                 rkfree(tmp);
                 return NULL;
         }
@@ -427,11 +415,7 @@ rnl_ipcm_assign_to_dif_req_msg_attrs_destroy(struct rnl_ipcm_assign_to_dif_req_m
                 return -1;
 
         if (attrs->dif_info) {
-                if (attrs->dif_info->dif_name)
-                        name_destroy(attrs->dif_info->dif_name);
-                if (attrs->dif_info->configuration)
-                        dif_config_destroy(attrs->dif_info->configuration);
-                rkfree(attrs->dif_info);
+                dif_info_destroy(attrs->dif_info);
         }
 
         rkfree(attrs);
@@ -444,9 +428,7 @@ rnl_ipcm_update_dif_config_req_msg_attrs_destroy(struct rnl_ipcm_update_dif_conf
         if (!attrs)
                 return -1;
 
-        if (attrs->dif_config) {
-                dif_config_destroy(attrs->dif_config);
-        }
+        if (attrs->dif_config) dif_config_destroy(attrs->dif_config);
 
         rkfree(attrs);
         return 0;
@@ -739,8 +721,8 @@ static int parse_pdu_fte_list_entry(struct nlattr *       attr,
         return 0;
 }
 
-static int parse_app_name_info(struct nlattr * name_attr,
-                               struct name *   name_struct)
+static int parse_app_name_info(const struct nlattr * name_attr,
+                               struct name *         name_struct)
 {
         struct nla_policy attr_policy[APNI_ATTR_MAX + 1];
         struct nlattr *   attrs[APNI_ATTR_MAX + 1];
@@ -824,10 +806,10 @@ static int parse_ipcp_config_entry_value(struct nlattr *            name_attr,
                 return -1;
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_NAME])
-                entry->name = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME]), GFP_KERNEL);
+                entry->name = nla_dup_string(attrs[IPCP_CONFIG_ENTRY_ATTR_NAME], GFP_KERNEL);
 
         if (attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE])
-                entry->value = kstrdup(nla_get_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE]), GFP_KERNEL);
+                entry->value = nla_dup_string(attrs[IPCP_CONFIG_ENTRY_ATTR_VALUE], GFP_KERNEL);
 
         return 0;
 }
@@ -963,7 +945,6 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 {
         struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
         struct nlattr *   attrs[DCONF_ATTR_MAX + 1];
-        struct dt_cons *  dt_cons;
 
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len  = 0;
@@ -985,17 +966,13 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                                                       dif_config) < 0)
                         goto parse_fail;
         }
-
+        
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                dt_cons = rkzalloc(sizeof(struct dt_cons),GFP_KERNEL);
-                if (!dt_cons)
+                if (!dif_config->dt_cons)
                         goto parse_fail;
-
-                dif_config->dt_cons = dt_cons;
 
                 if (parse_dt_cons(attrs[DCONF_ATTR_DATA_TRANS_CONS],
                                   dif_config->dt_cons) < 0) {
-                        rkfree(dif_config->dt_cons);
                         goto parse_fail;
                 }
         }
@@ -1030,9 +1007,10 @@ static int parse_dif_info(struct nlattr *   dif_config_attr,
                 goto parse_fail;
 
         if (attrs[DINFO_ATTR_DIF_TYPE])
-                dif_info->type =
-                        kstrdup(nla_get_string(attrs[DINFO_ATTR_DIF_TYPE]),
-                                GFP_KERNEL);
+                dif_info->type = nla_dup_string(attrs[DINFO_ATTR_DIF_TYPE],
+                                                GFP_KERNEL);
+        else
+                dif_info->type = NULL;
 
         if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
                                 dif_info->dif_name) < 0)
@@ -2133,7 +2111,6 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
 
         return 0;
 }
-
 
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,

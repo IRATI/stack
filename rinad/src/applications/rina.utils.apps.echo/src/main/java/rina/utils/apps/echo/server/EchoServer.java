@@ -58,6 +58,8 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 	 */
 	private CDAPSessionManager cdapSessionManager = null;
 	
+	//private int timeout = 0;
+	
 	public EchoServer(ApplicationProcessNamingInformation echoApNamingInfo){
 		try {
 			rina.initialize(LogHelper.getLibrinaLogLevel(), 
