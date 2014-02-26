@@ -437,6 +437,7 @@ static int efcp_receive_worker(void * o)
                 return -1;
         }
 
+        receive_data_destroy(tmp);
         return 0;
 }
 
