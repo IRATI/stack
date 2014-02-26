@@ -250,9 +250,12 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 
 void * rkmalloc(size_t size, gfp_t flags)
 {
-        void * ptr = generic_alloc(kmalloc, size, flags);
+        void * ptr;
+
+        ptr = generic_alloc(kmalloc, size, flags);
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        mb_poison(ptr, size);
+        if (ptr)
+                mb_poison(ptr, size);
 #endif
         return ptr;
 }
@@ -262,7 +265,7 @@ void * rkzalloc(size_t size, gfp_t flags)
 { return generic_alloc(kzalloc, size, flags); }
 EXPORT_SYMBOL(rkzalloc);
 
-void rkfree(void * ptr)
+static bool check_block(void * ptr)
 {
 #ifdef CONFIG_RINA_MEMORY_STATS
         size_t                   real_size;
@@ -281,7 +284,7 @@ void rkfree(void * ptr)
 
 #ifdef CONFIG_RINA_MEMORY_STATS
         real_size = *((size_t *) ptr);
-        ptr = ((size_t *) ptr) - 1;
+        ptr       = ((size_t *) ptr) - 1;
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
@@ -292,11 +295,11 @@ void rkfree(void * ptr)
 
         if (!mb_is_header_filler_ok(header)) {
                 LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
-                BUG();
+                return false;
         }
         if (!mb_is_footer_filler_ok(footer)) {
                 LOG_CRIT("Memory block %pK has been corrupted (footer)", ptr);
-                BUG();
+                return false;
         }
 
 #ifdef CONFIG_RINA_MEMORY_POISONING
@@ -305,14 +308,41 @@ void rkfree(void * ptr)
         ptr = header;
 #endif
 
+        return true;
+}
+
+static bool __rkfree(void * ptr)
+{
+        ASSERT(ptr);
+
+        if (!check_block(ptr))
+                return false;
+
         kfree(ptr);
+
+        return true;
+}
+
+void rkfree(void * ptr)
+{
+        ASSERT(ptr);
+
+        if (!__rkfree(ptr))
+                BUG();
 }
 EXPORT_SYMBOL(rkfree);
 
 #ifdef CONFIG_RINA_RMEM_REGRESSION_TESTS
 bool regression_tests_rmem(void)
 {
-        LOG_MISSING;
+        void * tmp;
+
+        tmp = rkmalloc(100);
+        if (!tmp)
+                return false;
+
+        if (!__rkfree(tmp))
+                return false;
 
         return true;
 }
