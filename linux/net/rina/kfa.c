@@ -716,7 +716,7 @@ EXPORT_SYMBOL(kfa_sdu_post);
 struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
 {
         struct ipcp_flow * tmp;
-        
+
         if (!instance)
                 return NULL;
 
