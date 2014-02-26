@@ -1950,8 +1950,8 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
          * the sdu inside sdu_wpi is used to build the pdu and it is 
          * destroyed at sdu_create_pdu_with, called by send_worker
          */
-        rkfree(sdu_wpi->sdu);
-        rkfree(sdu_wpi);
+        sdu_buffer_disown(sdu_wpi->sdu);
+        sdu_wpi_destroy(sdu_wpi);
         return 0;
 }
 

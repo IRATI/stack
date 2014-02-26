@@ -446,12 +446,13 @@ static int efcp_receive(struct efcp * efcp,
         struct receive_data *  data;
         struct rwq_work_item * item;
 
-        if (!efcp) {
-                LOG_ERR("No efcp instance passed");
-                return -1;
-        }
         if (!pdu) {
                 LOG_ERR("No pdu passed");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("No efcp instance passed");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -461,6 +462,7 @@ static int efcp_receive(struct efcp * efcp,
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(efcp_receive_worker, data);
         if (!item) {
+                pdu_destroy(pdu);
                 receive_data_destroy(data);
                 return -1;
         }
@@ -468,8 +470,8 @@ static int efcp_receive(struct efcp * efcp,
         ASSERT(efcp->container->ingress_wq);
 
         if (rwq_work_post(efcp->container->ingress_wq, item)) {
-                receive_data_destroy(data);
                 pdu_destroy(pdu);
+                receive_data_destroy(data);
                 return -1;
         }
 
@@ -484,16 +486,19 @@ int efcp_container_receive(struct efcp_container * container,
 
         if (!container || !pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus input parameters");
+                pdu_destroy(pdu);
                 return -1;
         }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
+                pdu_destroy(pdu);
                 return -1;
         }
 
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
                 LOG_ERR("Cannot find the requested instance");
+                pdu_destroy(pdu);
                 return -1;
         }
 

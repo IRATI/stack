@@ -402,16 +402,17 @@ int dtp_receive(struct dtp * instance,
         struct sdu *    sdu;
         struct buffer * buffer;
 
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Bogus data, bailing out");
+                return -1;
+        }
+
         if (!instance                  ||
             !instance->kfa             ||
             !instance->sv              ||
             !instance->sv->connection) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Bogus data, bailing out");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -432,10 +433,8 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        /*
-         * FIXME: PDU is now useless, it must be destroyed, but its
-         * buffer is within the passed sdu, so pdu_destroy can't be used.
-         */
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
 
         return 0;
 }
