@@ -223,7 +223,7 @@ EXPORT_SYMBOL(sdu_is_ok);
 int sdu_buffer_disown(struct sdu * sdu)
 {
         if (!sdu)
-                return -1; 
+                return -1;
 
         sdu->buffer = NULL;
         return 0;

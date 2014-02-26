@@ -447,7 +447,7 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
 
         if (!cfg->entry)
                 return -1;
-                
+
         if (cfg->entry->name) rkfree(cfg->entry->name);
 
         if (cfg->entry->value) rkfree(cfg->entry->value);
@@ -500,7 +500,7 @@ int dif_config_destroy(struct dif_config * dif_config)
 {
         struct ipcp_config * pos, * nxt;
 
-        if (!dif_config) 
+        if (!dif_config)
                 return -1;
 
         list_for_each_entry_safe(pos, nxt,
