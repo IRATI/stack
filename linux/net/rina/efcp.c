@@ -248,6 +248,7 @@ static int efcp_write_worker(void * o)
 
         if (!is_write_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_write_worker");
+                sdu_destroy(tmp->sdu);
                 write_data_destroy(tmp);
                 return -1;
         }
@@ -258,14 +259,18 @@ static int efcp_write_worker(void * o)
         dtp = dt_dtp(tmp->efcp->dt);
         if (!dtp) {
                 LOG_ERR("No DTP instance available");
+                sdu_destroy(tmp->sdu);
+                write_data_destroy(tmp);
                 return -1;
         }
 
         if (dtp_write(dtp, tmp->sdu)) {
                 LOG_ERR("Could not write SDU to DTP");
+                write_data_destroy(tmp);
                 return -1;
         }
 
+        write_data_destroy(tmp);
         return 0;
 }
 
@@ -275,12 +280,13 @@ static int efcp_write(struct efcp * efcp,
         struct write_data *    tmp;
         struct rwq_work_item * item;
 
-        if (!efcp) {
-                LOG_ERR("Bogus EFCP passed");
-                return -1;
-        }
         if (!sdu) {
                 LOG_ERR("Bogus SDU passed");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("Bogus EFCP passed");
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -313,16 +319,19 @@ int efcp_container_write(struct efcp_container * container,
 
         if (!container || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
                 LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -437,6 +446,7 @@ static int efcp_receive_worker(void * o)
                 return -1;
         }
 
+        receive_data_destroy(tmp);
         return 0;
 }
 
@@ -446,12 +456,13 @@ static int efcp_receive(struct efcp * efcp,
         struct receive_data *  data;
         struct rwq_work_item * item;
 
-        if (!efcp) {
-                LOG_ERR("No efcp instance passed");
-                return -1;
-        }
         if (!pdu) {
                 LOG_ERR("No pdu passed");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("No efcp instance passed");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -461,6 +472,7 @@ static int efcp_receive(struct efcp * efcp,
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(efcp_receive_worker, data);
         if (!item) {
+                pdu_destroy(pdu);
                 receive_data_destroy(data);
                 return -1;
         }
@@ -468,8 +480,8 @@ static int efcp_receive(struct efcp * efcp,
         ASSERT(efcp->container->ingress_wq);
 
         if (rwq_work_post(efcp->container->ingress_wq, item)) {
-                receive_data_destroy(data);
                 pdu_destroy(pdu);
+                receive_data_destroy(data);
                 return -1;
         }
 
@@ -484,16 +496,19 @@ int efcp_container_receive(struct efcp_container * container,
 
         if (!container || !pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus input parameters");
+                pdu_destroy(pdu);
                 return -1;
         }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
+                pdu_destroy(pdu);
                 return -1;
         }
 
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
                 LOG_ERR("Cannot find the requested instance");
+                pdu_destroy(pdu);
                 return -1;
         }
 
