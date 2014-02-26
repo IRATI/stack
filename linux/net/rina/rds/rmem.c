@@ -354,7 +354,7 @@ bool regression_tests_rmem(void)
 {
         void * tmp;
 
-        tmp = rkmalloc(100);
+        tmp = rkmalloc(100, GFP_KERNEL);
         if (!tmp)
                 return false;
 
