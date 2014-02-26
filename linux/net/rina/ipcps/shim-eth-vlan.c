@@ -1286,25 +1286,25 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_deallocate           = eth_vlan_flow_deallocate,
         .flow_binding_ipcp         = NULL,
         .flow_destroy              = NULL,
-        
+
         .application_register      = eth_vlan_application_register,
         .application_unregister    = eth_vlan_application_unregister,
-        
+
         .assign_to_dif             = eth_vlan_assign_to_dif,
         .update_dif_config         = eth_vlan_update_dif_config,
-        
+
         .connection_create         = NULL,
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
-        
+
         .sdu_enqueue               = NULL,
         .sdu_write                 = eth_vlan_sdu_write,
-                
+
         .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
-        
+
         .pft_add                   = NULL,
         .pft_remove                = NULL,
         .pft_dump                  = NULL,

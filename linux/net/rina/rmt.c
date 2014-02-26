@@ -74,7 +74,7 @@ static int queue_destroy(struct rmt_queue * q)
 {
         ASSERT(q);
         ASSERT(q->queue);
-        
+
         LOG_DBG("Destroying queue %pK (port-id = %d)", q, q->port_id);
 
         hash_del(&q->hlist);
@@ -378,7 +378,7 @@ static int send_worker(void * o)
                 spin_unlock(&tmp->egress.queues->lock);
 
                 ASSERT(pdu);
-                
+
                 sdu = sdu_create_pdu_with(pdu);
                 if (!sdu) {
                         LOG_ERR("Error creating SDU from PDU, "
@@ -386,7 +386,7 @@ static int send_worker(void * o)
                         pdu_destroy(pdu);
                         continue;
                 }
-                
+
                 LOG_DBG("Gonna send SDU to port-id %d", port_id);
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");

@@ -493,7 +493,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         while (flow->state == PORT_STATE_PENDING) {
                 spin_unlock(&instance->lock);
-                 
+
                 LOG_DBG("Going to sleep on wait queue %pK (writing)",
                         &flow->wait_queue);
                 retval = wait_event_interruptible(flow->wait_queue,
@@ -502,7 +502,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 if (retval)
                         LOG_ERR("Wait-event interrupted (%d)", retval);
                 LOG_DBG("Write woken up");
-                
+
                 spin_lock(&instance->lock);
 
                 flow = kfa_pmap_find(instance->flows, id);
