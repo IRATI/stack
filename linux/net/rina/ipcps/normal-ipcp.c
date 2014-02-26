@@ -142,6 +142,7 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to this port_id: %d", id);
+                sdu_destroy(sdu);
                 return -1;
         }
         efcp_container_write(data->efcpc, flow->active, sdu);

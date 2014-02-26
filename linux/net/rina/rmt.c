@@ -845,7 +845,6 @@ static int process_dt_sdu(struct rmt *       rmt,
 
                 if (efcp_container_receive(rmt->efcpc, c, pdu)) {
                         LOG_ERR("EFCP container problems");
-                        sdu_destroy(sdu);
                         return -1;
                 }
         }

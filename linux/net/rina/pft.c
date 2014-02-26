@@ -735,6 +735,7 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        rkfree(port_ids);
         rkfree(ports);
         return true;
 }
