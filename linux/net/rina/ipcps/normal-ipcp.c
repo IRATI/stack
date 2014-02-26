@@ -717,29 +717,36 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
-/*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
         .flow_deallocate           = NULL,
+        .flow_binding_ipcp         = ipcp_flow_notification,
+        .flow_destroy              = normal_deallocate,
+                
         .application_register      = NULL,
         .application_unregister    = NULL,
-        .sdu_write                 = normal_sdu_write,
+        
         .assign_to_dif             = normal_assign_to_dif,
         .update_dif_config         = NULL,
+        
         .connection_create         = connection_create_request,
         .connection_update         = connection_update_request,
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
-        .flow_binding_ipcp         = ipcp_flow_notification,
-        .flow_destroy              = normal_deallocate,
+        
+        .sdu_enqueue               = NULL,
+        .sdu_write                 = normal_sdu_write,
+        
         .mgmt_sdu_read             = normal_mgmt_sdu_read,
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
+        
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove,
         .pft_dump                  = normal_pft_dump,
         .pft_flush                 = normal_pft_flush,
+        
         .ipcp_name                 = normal_ipcp_name
 };
 
