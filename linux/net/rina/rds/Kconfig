@@ -53,6 +53,8 @@ config RINA_MEMORY_PTRS_DUMP
 	help
 	  No help for the time being
 
+menu "Regression testing"
+
 config RINA_RDS_REGRESSION_TESTS
 	bool "RDS regression tests"
 	default n
@@ -87,3 +89,5 @@ config RINA_RMEM_REGRESSION_TESTS
         depends on RINA_RDS_REGRESSION_TESTS
 	help
 	  No help for the time being
+
+endmenu
