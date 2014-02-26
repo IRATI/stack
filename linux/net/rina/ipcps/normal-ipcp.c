@@ -142,6 +142,7 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to this port_id: %d", id);
+                sdu_destroy(sdu);
                 return -1;
         }
         efcp_container_write(data->efcpc, flow->active, sdu);
@@ -828,7 +829,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->id      = id;
         instance->data->nl_port = data->nl_port;
-        instance->data->info    = rkzalloc(sizeof(struct normal_info *),
+        instance->data->info    = rkzalloc(sizeof(struct normal_info),
                                            GFP_KERNEL);
         if (!instance->data->info) {
                 LOG_ERR("Could not allocate memory for normal ipcp info");
@@ -946,16 +947,17 @@ static int normal_destroy(struct ipcp_factory_data * data,
                 return -1;
         }
 
-        if (tmp->info->dif_name)
-                name_destroy(tmp->info->dif_name);
-
-        if (tmp->info->name)
-                name_destroy(tmp->info->name);
+        if (tmp->info) {
+                if (tmp->info->dif_name)
+                        name_destroy(tmp->info->dif_name);
+                if (tmp->info->name)
+                        name_destroy(tmp->info->name);
+                rkfree(tmp->info);
+        }
 
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
         mgmt_data_destroy(tmp->mgmt_data);
-        rkfree(tmp->info);
         rkfree(tmp);
         rkfree(instance);
 

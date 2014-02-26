@@ -443,7 +443,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         struct rnl_msg *                              msg;
         struct ipcp_instance *                        ipc_process;
         ipc_process_id_t                              ipc_id;
-        
+
         int retval = 0;
         ipc_id = 0;
 
@@ -463,7 +463,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
                 retval = -1;
                 goto fail;
         }
-        
+
         attrs = msg->attrs;
 
         if (rnl_parse_msg(info, msg)) {
@@ -496,7 +496,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
 
         LOG_DBG("Assign to dif operation seems ok, gonna complete it");
 
-fail:
+ fail:
         return assign_to_dif_free_and_reply(msg,
                                             ipc_id,
                                             retval,
@@ -1013,7 +1013,6 @@ static int notify_ipcp_conn_update_req(void *             data,
         ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipcp)
                 goto fail;
-
 
         if (user_ipc_id) {
                 struct ipcp_instance * user_ipcp;
@@ -1945,13 +1944,13 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
-        /* 
+        /*
          * NOTE: sdu_wpi can't be destroyed because the buffer of
-         * the sdu inside sdu_wpi is used to build the pdu and it is 
+         * the sdu inside sdu_wpi is used to build the pdu and it is
          * destroyed at sdu_create_pdu_with, called by send_worker
          */
-        rkfree(sdu_wpi->sdu);
-        rkfree(sdu_wpi);
+        sdu_buffer_disown(sdu_wpi->sdu);
+        sdu_wpi_destroy(sdu_wpi);
         return 0;
 }
 
