@@ -266,7 +266,6 @@ static int efcp_write_worker(void * o)
 
         if (dtp_write(dtp, tmp->sdu)) {
                 LOG_ERR("Could not write SDU to DTP");
-                sdu_destroy(tmp->sdu);
                 write_data_destroy(tmp);
                 return -1;
         }

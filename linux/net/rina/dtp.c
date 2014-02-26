@@ -233,15 +233,16 @@ int dtp_write(struct dtp * instance,
         struct pci *    pci;
         struct dtp_sv * sv;
 
+        if (!sdu_is_ok(sdu))
+                return -1;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         /* FIXME: Stop SenderInactivityTimer */
-
-        if (!sdu_is_ok(sdu))
-                return -1;
 
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
@@ -265,11 +266,13 @@ int dtp_write(struct dtp * instance,
         pdu = pdu_create();
         if (!pdu) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -315,6 +318,9 @@ int dtp_write(struct dtp * instance,
                 /* Put a copy in the rtxq queue */
         }
 
+
+        sdu_buffer_disown(sdu);
+        sdu_destroy(sdu);
         /* Post SDU to RMT */
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
