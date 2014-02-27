@@ -309,7 +309,7 @@ void rkfree(void * ptr)
 }
 EXPORT_SYMBOL(rkfree);
 
-char * rkstrdup(const char *s, gfp_t flags)
+char * rkstrdup(const char * s, gfp_t flags)
 {
         size_t len;
         char * buf;
@@ -317,10 +317,11 @@ char * rkstrdup(const char *s, gfp_t flags)
         if (!s)
                 return NULL;
 
-        len = strlen(s) +1;
+        len = strlen(s) + 1;
         buf = rkmalloc(len, flags);
         if (buf)
                 memcpy(buf, s, len);
+
         return buf;
 }
 EXPORT_SYMBOL(rkstrdup);

@@ -966,7 +966,7 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                                                       dif_config) < 0)
                         goto parse_fail;
         }
-        
+
         if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
                 if (!dif_config->dt_cons)
                         goto parse_fail;
