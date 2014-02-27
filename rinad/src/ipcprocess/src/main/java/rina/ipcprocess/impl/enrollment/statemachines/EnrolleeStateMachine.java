@@ -60,7 +60,7 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	public EnrolleeStateMachine(IPCProcess ipcProcess, 
 			ApplicationProcessNamingInformation remoteNamingInfo, long timeout){
 		super(ipcProcess.getRIBDaemon(), ipcProcess.getCDAPSessionManager(), ipcProcess.getEncoder(), 
-				remoteNamingInfo, ipcProcess.getEnrollmentTask(), timeout);
+				remoteNamingInfo, ipcProcess.getEnrollmentTask(), timeout, null);
 		this.ipcProcess = ipcProcess;
 		difInformation = ipcProcess.getDIFInformation();
 	}
