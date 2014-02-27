@@ -627,6 +627,13 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//3 Set timer
 		TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, false);
 		timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);
+		
+		//4 Inform IPC Manager
+		try{
+			ipcManager.flowDeallocatedRemotely(portId, 0);
+		}catch(Exception ex){
+			log.error("Error communicating with the IPC Manager: "+ex.getMessage());
+		}
 	}
 	
 	public synchronized void destroyFlowAllocatorInstance(String flowObjectName, boolean requestor) {
