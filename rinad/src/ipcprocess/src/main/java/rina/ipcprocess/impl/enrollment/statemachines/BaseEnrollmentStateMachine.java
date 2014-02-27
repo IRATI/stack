@@ -116,7 +116,9 @@ public abstract class BaseEnrollmentStateMachine extends BaseCDAPMessageHandler{
 		this.enrollmentTask = enrollmentTask;
 		remotePeer = new Neighbor();
 		remotePeer.setName(remoteNamingInfo);
-		remotePeer.setSupportingDifName(supportingDifName);
+		if (supportingDifName != null) {
+			remotePeer.setSupportingDifName(supportingDifName);
+		}
 		this.timeout = timeout;
 		timer = new Timer();
 	}
