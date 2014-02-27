@@ -233,15 +233,16 @@ int dtp_write(struct dtp * instance,
         struct pci *    pci;
         struct dtp_sv * sv;
 
+        if (!sdu_is_ok(sdu))
+                return -1;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 
         /* FIXME: Stop SenderInactivityTimer */
-
-        if (!sdu_is_ok(sdu))
-                return -1;
 
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
@@ -265,11 +266,13 @@ int dtp_write(struct dtp * instance,
         pdu = pdu_create();
         if (!pdu) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -315,6 +318,9 @@ int dtp_write(struct dtp * instance,
                 /* Put a copy in the rtxq queue */
         }
 
+
+        sdu_buffer_disown(sdu);
+        sdu_destroy(sdu);
         /* Post SDU to RMT */
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
@@ -402,16 +408,17 @@ int dtp_receive(struct dtp * instance,
         struct sdu *    sdu;
         struct buffer * buffer;
 
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Bogus data, bailing out");
+                return -1;
+        }
+
         if (!instance                  ||
             !instance->kfa             ||
             !instance->sv              ||
             !instance->sv->connection) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Bogus data, bailing out");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -432,10 +439,8 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        /*
-         * FIXME: PDU is now useless, it must be destroyed, but its
-         * buffer is within the passed sdu, so pdu_destroy can't be used.
-         */
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
 
         return 0;
 }
