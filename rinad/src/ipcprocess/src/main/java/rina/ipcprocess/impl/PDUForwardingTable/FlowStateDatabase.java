@@ -80,6 +80,7 @@ public class FlowStateDatabase {
 				, fsRIBGroup);
 			this.isModified = true;
 		} catch (RIBDaemonException e) {
+			e.getErrorCode();
 			e.printStackTrace();
 		}
 
@@ -143,7 +144,7 @@ public class FlowStateDatabase {
 	
 	public void updateObjects(FlowStateObjectGroup groupToModify, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup)
 	{
-		log.info("Update Objects from DB launched");
+		log.debug("Update Objects from DB launched");
 		
 		ObjectStateMapper mapper = new ObjectStateMapper();
 		ArrayList<FlowStateInternalObject> objectsToModify= mapper.FSOGMap(groupToModify).getFlowStateObjectArray();

@@ -2,13 +2,11 @@ package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 
 public class Graph {
 	  private static final Log log = LogFactory.getLog(Graph.class);
@@ -105,7 +103,9 @@ public class Graph {
 						
 						if (origin.connections.contains(dest.v) && dest.connections.contains(origin.v))
 						{
-							edges.add(new Edge(origin.v,dest.v,1));
+							edges.add(new Edge(origin.v, f.getPortid(), dest.v, f.getNeighborPortid(), 1));
+							origin.connections.remove(dest.v);
+							dest.connections.remove(origin.v);
 						}
 						else
 						{
@@ -123,6 +123,10 @@ public class Graph {
 					{
 						throw new Exception("Vertex not found"); //TODO: VertexNotFound exception
 					}
+				}
+				else
+				{
+					log.debug("Object with false state");
 				}
 			}
 		}

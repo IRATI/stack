@@ -3,7 +3,6 @@ package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ribdaemon.api.RIBObjectNames;
 
 public class FlowStateInternalObject{
