@@ -3,7 +3,6 @@ package rina.ipcprocess.impl.flowallocator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -67,8 +66,6 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	
 	private CDAPSessionManager cdapSessionManager = null;
 	
-	private Timer timer = null;
-	
 	private ExtendedIPCManagerSingleton ipcManager = null;
 	
 	private RegistrationManager registrationManager = null;
@@ -76,7 +73,6 @@ public class FlowAllocatorImpl implements FlowAllocator{
 	public FlowAllocatorImpl(){
 		allocateRequestValidator = new AllocateRequestValidator();
 		flowAllocatorInstances = new ConcurrentHashMap<Integer, FlowAllocatorInstance>();
-		timer = new Timer();
 	}
 
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -308,7 +304,7 @@ public class FlowAllocatorImpl implements FlowAllocator{
 			try{
 				ipcManager.deallocatePortId(event.getPortId());
 			} catch (Exception e) {
-				log.error("Prpblems requesting IPC Manager to deallocate port id "
+				log.error("Problems requesting IPC Manager to deallocate port id "
 						+ event.getPortId() + ". "+e.getMessage());
 			}
 			
@@ -335,10 +331,22 @@ public class FlowAllocatorImpl implements FlowAllocator{
 						+ event.getPortId() + ". "+e.getMessage());
 			}
 			
+			try{
+				ipcManager.notifyflowDeallocated(event, -1);
+			}catch(Exception ex){
+				log.error("Error communicating with the IPC Manager: "+ex.getMessage());
+			}
+			
 			return;
 		}
 		
 		flowAllocatorInstance.submitDeallocate(event);
+		
+		try{
+			ipcManager.notifyflowDeallocated(event, 0);
+		}catch(Exception ex){
+			log.error("Error communicating with the IPC Manager: "+ex.getMessage());
+		}
 	}
 	
 	/**
