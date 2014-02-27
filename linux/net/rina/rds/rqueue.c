@@ -36,19 +36,29 @@ struct rqueue_entry {
 
 struct rqueue {
         struct list_head head;
+        size_t           length;
 };
 
 static struct rqueue * rqueue_create_gfp(gfp_t flags)
 {
-        struct rqueue * tmp;
+        struct rqueue * q;
 
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
+        q = rkmalloc(sizeof(*q), flags);
+        if (!q)
                 return NULL;
 
-        INIT_LIST_HEAD(&tmp->head);
+        INIT_LIST_HEAD(&q->head);
+        q->length = 0;
 
-        return tmp;
+        return q;
+}
+
+ssize_t rqueue_length(struct rqueue * q)
+{
+        if (!q)
+                return -1;
+
+        return q->length;
 }
 
 struct rqueue * rqueue_create(void)
@@ -59,33 +69,37 @@ struct rqueue * rqueue_create_ni(void)
 { return rqueue_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(rqueue_create_ni);
 
-static struct rqueue_entry * entry_create(gfp_t flags, void * e)
+static struct rqueue_entry * entry_create(gfp_t flags, void * data)
 {
-        struct rqueue_entry * tmp;
+        struct rqueue_entry * entry;
 
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
+        entry = rkmalloc(sizeof(*entry), flags);
+        if (!entry)
                 return NULL;
 
-        tmp->data = e;
-        INIT_LIST_HEAD(&tmp->next);
+        entry->data = data;
+        INIT_LIST_HEAD(&entry->next);
 
-        return tmp;
+        return entry;
 }
 
-static int entry_destroy(struct rqueue_entry * e)
+static int entry_destroy(struct rqueue_entry * entry)
 {
-        if (!e)
+        if (!entry)
                 return -1;
 
-        rkfree(e);
+        rkfree(entry);
+
         return 0;
 }
 
-static int __rqueue_destroy(struct rqueue * q,
-                            void         (* dtor)(void * e))
+static int __rqueue_flush(struct rqueue * q,
+                          void         (* dtor)(void * data))
 {
         struct rqueue_entry * pos, * nxt;
+
+        ASSERT(q);
+        ASSERT(dtor);
 
         list_for_each_entry_safe(pos, nxt, &q->head, next) {
                 ASSERT(pos);
@@ -93,6 +107,23 @@ static int __rqueue_destroy(struct rqueue * q,
                 list_del(&pos->next);
                 dtor(pos->data);
                 entry_destroy(pos);
+
+                q->length--;
+        }
+
+        ASSERT(q->length == 0);
+
+        return 0;
+}
+
+static int __rqueue_destroy(struct rqueue * q,
+                            void         (* dtor)(void * data))
+{
+        ASSERT(q);
+
+        if (__rqueue_flush(q, dtor)) {
+                LOG_ERR("Cannot flush queue %pK", q);
+                return -1;
         }
 
         rkfree(q);
@@ -101,7 +132,7 @@ static int __rqueue_destroy(struct rqueue * q,
 }
 
 int rqueue_destroy(struct rqueue * q,
-                   void         (* dtor)(void * e))
+                   void         (* dtor)(void * data))
 {
         if (!q || !dtor) {
                 LOG_ERR("Bogus input parameters, can't destroy rqueue %pK", q);
@@ -112,22 +143,26 @@ int rqueue_destroy(struct rqueue * q,
 }
 EXPORT_SYMBOL(rqueue_destroy);
 
-static int rqueue_head_push_gfp(gfp_t flags, struct rqueue * q, void * e)
+static int rqueue_head_push_gfp(gfp_t           flags,
+                                struct rqueue * q,
+                                void *          data)
 {
-        struct rqueue_entry * tmp;
+        struct rqueue_entry * entry;
 
         if (!q) {
                 LOG_ERR("Cannot head-push on a NULL queue");
                 return -1;
         }
 
-        tmp = entry_create(flags, e);
-        if (!tmp)
+        entry = entry_create(flags, data);
+        if (!entry)
                 return -1;
 
-        list_add(&tmp->next, &q->head);
+        list_add(&entry->next, &q->head);
+        q->length++;
 
-        LOG_DBG("Element %pK head-pushed into queue %pK", e, q);
+        LOG_DBG("Entry %pK head-pushed into queue %pK (length = %d)",
+                entry, q, q->length);
 
         return 0;
 }
@@ -142,8 +177,8 @@ EXPORT_SYMBOL(rqueue_head_push_ni);
 
 void * rqueue_head_pop(struct rqueue * q)
 {
-        struct rqueue_entry * tmp;
-        void *                ret;
+        struct rqueue_entry * entry;
+        void *                data;
 
         if (!q) {
                 LOG_ERR("Cannot head-pop from a NULL queue");
@@ -154,52 +189,59 @@ void * rqueue_head_pop(struct rqueue * q)
                 LOG_WARN("queue %pK is empty, can't head-pop", q);
                 return NULL;
         }
+        ASSERT(q->length > 0);
 
-        tmp = list_first_entry(&q->head, struct rqueue_entry, next);
-        ASSERT(tmp);
+        entry = list_first_entry(&q->head, struct rqueue_entry, next);
+        ASSERT(entry);
 
-        ret = tmp->data;
+        data = entry->data;
 
-        list_del(&tmp->next);
+        list_del(&entry->next);
+        q->length--;
 
-        entry_destroy(tmp);
+        LOG_DBG("Entry %pK head-popped from queue %pK (length = %d)",
+                entry, q, q->length);
 
-        return ret;
+        entry_destroy(entry);
+
+        return data;
 }
 EXPORT_SYMBOL(rqueue_head_pop);
 
-static int rqueue_tail_push_gfp(gfp_t flags, struct rqueue * q, void * e)
+static int rqueue_tail_push_gfp(gfp_t flags, struct rqueue * q, void * data)
 {
-        struct rqueue_entry * tmp;
+        struct rqueue_entry * entry;
 
         if (!q) {
                 LOG_ERR("Cannot tail-push on a NULL queue");
                 return -1;
         }
 
-        tmp = entry_create(flags, e);
-        if (!tmp)
+        entry = entry_create(flags, data);
+        if (!entry)
                 return -1;
 
-        list_add_tail(&tmp->next, &q->head);
+        list_add_tail(&entry->next, &q->head);
+        q->length++;
 
-        LOG_DBG("Element %pK tail-pushed into queue %pK", e, q);
+        LOG_DBG("Entry %pK tail-pushed into queue %pK (length = %d)",
+                entry, q, q->length);
 
         return 0;
 }
 
-int rqueue_tail_push(struct rqueue * q, void * e)
-{ return rqueue_tail_push_gfp(GFP_KERNEL, q, e); }
+int rqueue_tail_push(struct rqueue * q, void * entry)
+{ return rqueue_tail_push_gfp(GFP_KERNEL, q, entry); }
 EXPORT_SYMBOL(rqueue_tail_push);
 
-int rqueue_tail_push_ni(struct rqueue * q, void * e)
-{ return rqueue_tail_push_gfp(GFP_ATOMIC, q, e); }
+int rqueue_tail_push_ni(struct rqueue * q, void * entry)
+{ return rqueue_tail_push_gfp(GFP_ATOMIC, q, entry); }
 EXPORT_SYMBOL(rqueue_tail_push_ni);
 
 void * rqueue_tail_pop(struct rqueue * q)
 {
-        struct rqueue_entry * tmp;
-        void *                ret;
+        struct rqueue_entry * entry;
+        void *                data;
         struct list_head *    h = NULL;
 
         if (!q) {
@@ -211,17 +253,22 @@ void * rqueue_tail_pop(struct rqueue * q)
                 LOG_WARN("queue %pK is empty, can't tail-pop", q);
                 return NULL;
         }
+        ASSERT(q->length > 0);
 
         list_move_tail(&q->head, h);
+        q->length--;
 
-        tmp = ((struct rqueue_entry *) h);
-        ASSERT(tmp);
+        entry = ((struct rqueue_entry *) h);
+        ASSERT(entry);
 
-        ret = tmp->data;
+        LOG_DBG("Entry %pK tail-popped from queue %pK (length = %d)",
+                entry, q, q->length);
 
-        entry_destroy(tmp);
+        data = entry->data;
 
-        return ret;
+        entry_destroy(entry);
+
+        return data;
 }
 EXPORT_SYMBOL(rqueue_tail_pop);
 

@@ -4,7 +4,6 @@ import eu.irati.librina.AllocateFlowResponseEvent;
 import eu.irati.librina.CreateConnectionResponseEvent;
 import eu.irati.librina.CreateConnectionResultEvent;
 import eu.irati.librina.FlowDeallocateRequestEvent;
-import eu.irati.librina.FlowInformation;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.UpdateConnectionResponseEvent;

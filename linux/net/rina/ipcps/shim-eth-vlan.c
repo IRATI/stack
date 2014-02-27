@@ -64,8 +64,8 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        unsigned int  vlan_id;
-        char *        interface_name;
+        uint16_t     vlan_id;
+        char *       interface_name;
 };
 
 enum port_id_state {
@@ -232,7 +232,7 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static bool vlan_id_is_ok(unsigned int vlan_id)
+static bool vlan_id_is_ok(uint16_t vlan_id)
 {
         if (vlan_id > 4095 /* 0xFFF */) {
                 /* Out of bounds */
@@ -257,8 +257,8 @@ static bool vlan_id_is_ok(unsigned int vlan_id)
         return true;
 }
 
-static string_t * create_vlan_interface_name(string_t *    interface_name,
-                                             unsigned int  vlan_id)
+static string_t * create_vlan_interface_name(string_t * interface_name,
+                                             uint16_t   vlan_id)
 {
         char       string_vlan_id[5];
         string_t * complete_interface;
@@ -647,11 +647,12 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         const unsigned char *    dest_hw;
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
+        int                      retval;
 
         ASSERT(data);
         ASSERT(sdu);
 
-        LOG_DBG("Entered the sdu write");
+        LOG_DBG("Entered the sdu-write");
 
         hlen   = LL_RESERVED_SPACE(data->dev);
         tlen   = data->dev->needed_tailroom;
@@ -676,19 +677,21 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
-                LOG_ERR("Failed to get src hw addr");
+                LOG_ERR("Failed to get source HW addr");
                 sdu_destroy(sdu);
                 return -1;
         }
+
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
-                LOG_ERR("Dest hw is not known");
+                LOG_ERR("Destination HW address is unknown");
                 sdu_destroy(sdu);
                 return -1;
         }
 
         skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
         if (skb == NULL) {
+                LOG_ERR("Cannot allocate a skb");
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -706,25 +709,26 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        sdu_destroy(sdu);
+
         skb->dev      = data->dev;
         skb->protocol = htons(ETH_P_RINA);
 
-        if (dev_hard_header(skb, data->dev, ETH_P_RINA,
-                            dest_hw, src_hw, skb->len) < 0) {
+        retval = dev_hard_header(skb, data->dev,
+                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
+        if (retval < 0) {
+                LOG_ERR("Problems in dev_hard_header (%d)", retval);
                 kfree_skb(skb);
-                sdu_destroy(sdu);
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Problems in dev_queue_xmit");
-                kfree_skb(skb);
-                sdu_destroy(sdu);
+        retval = dev_queue_xmit(skb);
+        if (retval != NET_XMIT_SUCCESS) {
+                LOG_ERR("Problems in dev_queue_xmit (%d)", retval);
                 return -1;
         }
 
-        sdu_destroy(sdu);
-        LOG_DBG("Sent a packet");
+        LOG_DBG("Packet sent");
 
         return 0;
 }
@@ -1056,7 +1060,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         struct ipcp_config *            tmp;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
-        int result;
+        int                             result;
+        unsigned int                    temp_vlan;
 
         ASSERT(data);
         ASSERT(dif_information);
@@ -1074,8 +1079,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 
         /* Get vlan id */
         result = kstrtouint(dif_information->dif_name->process_name,
-                            10, &(info->vlan_id));
-
+                            10, &temp_vlan);
         if (result) {
                 ASSERT(dif_information->dif_name->process_name);
 
@@ -1083,6 +1087,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         dif_information->dif_name->process_name);
                 return -1;
         }
+        info->vlan_id = (uint16_t) temp_vlan;
 
         if (!vlan_id_is_ok(info->vlan_id)) {
                 LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
@@ -1104,7 +1109,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         ASSERT(entry->value);
 
                         info->interface_name =
-                                kstrdup(entry->value, GFP_KERNEL);
+                                rkstrdup(entry->value, GFP_KERNEL);
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);
@@ -1266,15 +1271,29 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
 }
 
 static struct ipcp_instance_ops eth_vlan_instance_ops = {
-        .flow_allocate_request  = eth_vlan_flow_allocate_request,
-        .flow_allocate_response = eth_vlan_flow_allocate_response,
-        .flow_deallocate        = eth_vlan_flow_deallocate,
-        .application_register   = eth_vlan_application_register,
-        .application_unregister = eth_vlan_application_unregister,
-        .sdu_write              = eth_vlan_sdu_write,
-        .assign_to_dif          = eth_vlan_assign_to_dif,
-        .update_dif_config      = eth_vlan_update_dif_config,
-        .ipcp_name              = eth_vlan_ipcp_name,
+        .flow_allocate_request     = eth_vlan_flow_allocate_request,
+        .flow_allocate_response    = eth_vlan_flow_allocate_response,
+        .flow_deallocate           = eth_vlan_flow_deallocate,
+        .application_register      = eth_vlan_application_register,
+        .application_unregister    = eth_vlan_application_unregister,
+        .assign_to_dif             = eth_vlan_assign_to_dif,
+        .update_dif_config         = eth_vlan_update_dif_config,
+        .sdu_write                 = eth_vlan_sdu_write,
+        .connection_create         = NULL,
+        .connection_update         = NULL,
+        .connection_destroy        = NULL,
+        .connection_create_arrived = NULL,
+        .flow_binding_ipcp         = NULL,
+        .flow_destroy              = NULL,
+        .sdu_enqueue               = NULL,
+        .mgmt_sdu_write            = NULL,
+        .mgmt_sdu_read             = NULL,
+        .mgmt_sdu_post             = NULL,
+        .pft_add                   = NULL,
+        .pft_remove                = NULL,
+        .pft_dump                  = NULL,
+        .pft_flush                 = NULL,
+        .ipcp_name                 = eth_vlan_ipcp_name,
 };
 
 static struct ipcp_factory_data {
@@ -1294,7 +1313,7 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 
         INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
 
-        LOG_INFO("%s intialized", SHIM_NAME);
+        LOG_INFO("%s initialized", SHIM_NAME);
 
         return 0;
 }
@@ -1463,6 +1482,14 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         if (pos->fspec)
                                 rkfree(pos->fspec);
+
+                        if (pos->handle) {
+                                if (rinarp_remove(pos->handle)) {
+                                        LOG_ERR("Failed to remove " 
+                                                "the entry from the cache");
+                                        return -1;
+                                }
+                        }
 
                         /*
                          * Might cause problems:

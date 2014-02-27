@@ -352,19 +352,20 @@ int pft_add(struct pft *      instance,
         if (!__pft_is_ok(instance))
                 return -1;
 
-        spin_lock(&instance->write_lock);
-
-        if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
-                LOG_ERR("Bogus input parameters");
-                spin_unlock(&instance->write_lock);
+        if (!is_address_ok(destination)) {
+                LOG_ERR("Bogus destination address passed, cannot add");
                 return -1;
         }
-
+        if (!is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus qos-id passed, cannot add");
+                return -1;
+        }
         if (!ports || !count) {
-                LOG_ERR("Bogus output parameters");
-                spin_unlock(&instance->write_lock);
+                LOG_ERR("Bogus output parameters, won't add");
                 return -1;
         }
+
+        spin_lock(&instance->write_lock);
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
@@ -384,6 +385,7 @@ int pft_add(struct pft *      instance,
                         return -1;
                 }
         }
+
         spin_unlock(&instance->write_lock);
 
         return 0;
@@ -401,19 +403,20 @@ int pft_remove(struct pft *      instance,
         if (!__pft_is_ok(instance))
                 return -1;
 
-        spin_lock(&instance->write_lock);
-
-        if (!is_address_ok(destination) || !is_qos_id_ok(qos_id)) {
-                LOG_ERR("Bogus input parameters");
-                spin_unlock(&instance->write_lock);
+        if (!is_address_ok(destination)) {
+                LOG_ERR("Bogus destination address, cannot remove");
                 return -1;
         }
-
+        if (!is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus qos-id, cannot remove");
+                return -1;
+        }
         if (!ports || !count) {
-                LOG_ERR("Bogus output parameters");
-                spin_unlock(&instance->write_lock);
+                LOG_ERR("Bogus output parameters, won't remove");
                 return -1;
         }
+
+        spin_lock(&instance->write_lock);
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
@@ -445,14 +448,16 @@ int pft_nhop(struct pft * instance,
         if (!__pft_is_ok(instance))
                 return -1;
 
-        if (!is_address_ok(destination) ||
-            !is_qos_id_ok(qos_id)) {
-                LOG_ERR("Bogus input parameters");
+        if (!is_address_ok(destination)) {
+                LOG_ERR("Bogus destination address, cannot get NHOP");
                 return -1;
         }
-
+        if (!is_qos_id_ok(qos_id)) {
+                LOG_ERR("Bogus qos-id, cannot get NHOP");
+                return -1;
+        }
         if (!ports || !count) {
-                LOG_ERR("Bogus input parameters");
+                LOG_ERR("Bogus output parameters, won't get NHOP");
                 return -1;
         }
 
@@ -506,7 +511,7 @@ int pft_dump(struct pft *       instance,
                         return -1;
                 }
 
-                list_add_rcu(&entry->next, entries);
+                list_add(&entry->next, entries);
         }
         rcu_read_unlock();
 
@@ -730,6 +735,7 @@ static bool regression_tests_nhop(void)
                 return false;
         }
 
+        rkfree(port_ids);
         rkfree(ports);
         return true;
 }

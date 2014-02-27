@@ -1,7 +1,7 @@
 {
   "localConfiguration" : {
-    "installationPath" : "/usr/local/irati/share/rinad",
-    "libraryPath" : "/usr/local/irati/lib",
+    "installationPath" : "@pkgdatadir@",
+    "libraryPath" : "@libdir@",
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
     "enrollmentTimeoutInMs" : 10000,
@@ -9,6 +9,7 @@
     "watchdogPeriodInMs" : 60000,
     "declaredDeadIntervalInMs" : 120000,
     "neighborsEnrollerPeriodInMs" : 10000,
+    "maxEnrollmentRetries" : 3,
     "lengthOfFlowQueues" : 10
   },
   "applicationToDIFMappings" : [ {

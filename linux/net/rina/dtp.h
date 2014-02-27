@@ -25,18 +25,13 @@
 #include "du.h"
 #include "rmt.h"
 #include "kfa.h"
+#include "dt.h"
 
-struct dtcp;
-struct dtp;
-
-struct dtp * dtp_create(struct rmt *        rmt,
+struct dtp * dtp_create(struct dt *         dt,
+                        struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection);
 int          dtp_destroy(struct dtp * instance);
-
-int          dtp_bind(struct dtp *  instance,
-                      struct dtcp * peer);
-int          dtp_unbind(struct dtp * instance);
 
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
@@ -49,5 +44,10 @@ int          dtp_mgmt_write(struct rmt * rmt,
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,
                          struct pdu * pdu);
+
+/*
+ * DTP work to be done when receiving a flow-crtl PDU, triggered by DTCP via DT
+ */
+int          dtp_rcv_flow_ctl(struct dtp * instance);
 
 #endif

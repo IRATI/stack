@@ -31,6 +31,8 @@ public class TestInformation {
 	
 	private long lastSDUReceivedTime = 0;
 	
+	private int timeout = 0;
+	
 	public TestInformation(){
 	}
 
@@ -90,10 +92,19 @@ public class TestInformation {
 		this.sdusSent = sdusSent;
 	}
 
+	public int getTimeout() {
+		return timeout;
+	}
+
+	public void setTimeout(int timeout) {
+		this.timeout = timeout;
+	}
+
 	public String toString(){
 		String result = "";
 		result = result + "Number of SDUs: " + this.getNumberOfSDUs() + "\n";
 		result = result + "SDU size in bytes: " + this.getSduSize() + "\n";
+		result = result + "Test timeout: " + this.getTimeout() + "\n";
 		
 		return result;
 	}

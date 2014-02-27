@@ -70,8 +70,10 @@ int          kfa_sdu_post(struct kfa * instance,
                           port_id_t    id,
                           struct sdu * sdu);
 
-struct ipcp_flow * kfa_find_flow_by_pid(struct kfa * instance,
+#if 0
+struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance,
                                         port_id_t    pid);
+#endif
 
 /*
  * Used by the RMT to push SDU intended for user
@@ -91,4 +93,6 @@ int          kfa_flow_rmt_bind(struct kfa * instance,
                                port_id_t    pid,
                                struct rmt * rmt);
 
+int          kfa_flow_rmt_unbind(struct kfa * instance,
+                                 port_id_t    pid);
 #endif

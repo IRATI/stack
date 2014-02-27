@@ -1,5 +1,7 @@
 package rina.ipcprocess.impl.resourceallocator.flowmanager;
 
+import java.util.Iterator;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -20,6 +22,8 @@ import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObject;
 import rina.ribdaemon.api.RIBObjectNames;
 import eu.irati.librina.AllocateFlowRequestResultEvent;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationVector;
 import eu.irati.librina.DeallocateFlowResponseEvent;
 import eu.irati.librina.ExtendedIPCManagerSingleton;
 import eu.irati.librina.Flow;
@@ -293,6 +297,26 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 			
 			//TODO remove RIB Daemon entry
 		}
+	}
+	
+	/**
+	 * True if the DIF name is a supoprting DIF, false otherwise
+	 * @param difName
+	 * @return
+	 */
+	public boolean isSupportingDIF(ApplicationProcessNamingInformation difName) {
+		ApplicationRegistrationVector registeredApps = ipcManager.getRegisteredApplications();
+		Iterator<ApplicationProcessNamingInformation> iterator = null;
+		for(int i=0; i<registeredApps.size(); i++) {
+			iterator = registeredApps.get(i).getDIFNames().iterator();
+			while (iterator.hasNext()){
+				if (iterator.next().getProcessName().equals(difName.getProcessName())) {
+					return true;
+				}
+			}
+		}
+		
+		return false;
 	}
 	
 	/**

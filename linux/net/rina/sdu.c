@@ -164,7 +164,9 @@ int sdu_destroy(struct sdu * s)
 {
         if (!s) return -1;
 
-        buffer_destroy(s->buffer);
+        if (s->buffer)
+                buffer_destroy(s->buffer);
+
         rkfree(s);
 
         return 0;
@@ -217,6 +219,16 @@ EXPORT_SYMBOL(sdu_dup_ni);
 bool sdu_is_ok(const struct sdu * s)
 { return (s && buffer_is_ok(s->buffer)) ? true : false; }
 EXPORT_SYMBOL(sdu_is_ok);
+
+int sdu_buffer_disown(struct sdu * sdu)
+{
+        if (!sdu)
+                return -1;
+
+        sdu->buffer = NULL;
+        return 0;
+}
+EXPORT_SYMBOL(sdu_buffer_disown);
 
 struct sdu * sdu_protect(struct sdu * s)
 {

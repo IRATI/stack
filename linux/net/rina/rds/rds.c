@@ -33,6 +33,9 @@ extern bool regression_tests_rfifo(void);
 #ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
 extern bool regression_tests_rtimer(void);
 #endif
+#ifdef CONFIG_RINA_RMEM_REGRESSION_TESTS
+extern bool regression_tests_rmem(void);
+#endif
 
 bool regression_tests_rds(void)
 {
@@ -46,6 +49,10 @@ bool regression_tests_rds(void)
 #endif
 #ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
         if (!regression_tests_rtimer())
+                return false;
+#endif
+#ifdef CONFIG_RINA_RMEM_REGRESSION_TESTS
+        if (!regression_tests_rmem())
                 return false;
 #endif
 

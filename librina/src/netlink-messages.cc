@@ -1471,6 +1471,16 @@ void IpcpConnectionCreateRequestMessage::setSourceAddress(
         this->sourceAddress = sourceAddress;
 }
 
+const ConnectionPoliciesParameters& 
+IpcpConnectionCreateRequestMessage::getConnPoliciesParams() const {
+        return connPoliciesParams;
+}
+
+void IpcpConnectionCreateRequestMessage::setConnPoliciesParams(
+                const ConnectionPoliciesParameters& connPParams) {
+        this->connPoliciesParams = connPParams;
+}
+
 IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
         return 0;
 }

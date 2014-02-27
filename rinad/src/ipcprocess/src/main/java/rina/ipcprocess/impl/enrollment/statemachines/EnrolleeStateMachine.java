@@ -1,9 +1,27 @@
 package rina.ipcprocess.impl.enrollment.statemachines;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.cdap.api.CDAPSessionDescriptor;
+import rina.cdap.api.message.CDAPMessage;
+import rina.cdap.api.message.CDAPMessage.AuthTypes;
+import rina.cdap.api.message.ObjectValue;
+import rina.enrollment.api.EnrollmentInformationRequest;
+import rina.enrollment.api.EnrollmentRequest;
+import rina.ipcprocess.api.IPCProcess;
+import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
+import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
+import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
+import rina.ribdaemon.api.RIBDaemonException;
+import rina.ribdaemon.api.RIBObjectNames;
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationVector;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.IPCException;
@@ -11,24 +29,6 @@ import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborList;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.rina;
-
-import rina.cdap.api.CDAPSessionDescriptor;
-import rina.cdap.api.CDAPSessionManager;
-import rina.cdap.api.message.CDAPMessage;
-import rina.cdap.api.message.CDAPMessage.AuthTypes;
-import rina.cdap.api.message.ObjectValue;
-import rina.encoding.api.Encoder;
-import rina.enrollment.api.EnrollmentInformationRequest;
-import rina.enrollment.api.EnrollmentRequest;
-import rina.enrollment.api.EnrollmentTask;
-import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
-import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
-import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
-import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
-import rina.ribdaemon.api.RIBDaemon;
-import rina.ribdaemon.api.RIBDaemonException;
-import rina.ribdaemon.api.RIBObjectNames;
 
 /**
  * The state machine of the party that wants to 
@@ -137,6 +137,18 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		//Send M_START with EnrollmentInformation object
 		try{
 			EnrollmentInformationRequest eiRequest = new EnrollmentInformationRequest();
+			
+			ApplicationRegistrationVector applicationRegistrations = rina.getExtendedIPCManager().getRegisteredApplications();
+			Iterator<ApplicationProcessNamingInformation> iterator = null;
+			List<ApplicationProcessNamingInformation> difsList = new ArrayList<ApplicationProcessNamingInformation>();
+			for(int i=0; i<applicationRegistrations.size(); i++) {
+				iterator = applicationRegistrations.get(i).getDIFNames().iterator();
+				while (iterator.hasNext()) {
+					difsList.add(iterator.next());
+				}
+			}
+			eiRequest.setSupportingDifs(difsList);
+			
 			Long address = ipcProcess.getAddress();
 			if (address != null){
 				wasDIFMemberBeforeEnrollment = true;

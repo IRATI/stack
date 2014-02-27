@@ -49,7 +49,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_QUERY_RIB_RESPONSE, /* 23 IPC Process -> IPC Manager */
 	RINA_C_RMT_MODIFY_FTE_REQUEST, /* 24 IPC Process (user space) -> Kernel IPC Process (kernel) */
 	RINA_C_RMT_DUMP_FT_REQUEST, /* 25 IPC Process (user space) -> RMT (kernel) */
-	RINA_C_RMT_DUMP_FT_REPLY, /* TODO 26 RMT (kernel) -> IPC Process (user space) */
+	RINA_C_RMT_DUMP_FT_REPLY, /* 26 RMT (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION, /* 27 Kernel (NL layer) -> IPC Manager */
 	RINA_C_IPCM_IPC_MANAGER_PRESENT, /* 28 IPC Manager -> Kernel (NL layer) */
 	RINA_C_IPCP_CONN_CREATE_REQUEST, /* 29 IPC Process Daemon -> EFCP (Kernel) */
@@ -1062,7 +1062,10 @@ class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
         
         /** The qos-id of the connection */
         unsigned int qosId;
-        
+
+        /** The policies parameters */
+        ConnectionPoliciesParameters connPoliciesParams;
+
 public:
         IpcpConnectionCreateRequestMessage();
         unsigned int getDestAddress() const;
@@ -1073,6 +1076,8 @@ public:
         void setQosId(unsigned int qosId);
         unsigned int getSourceAddress() const;
         void setSourceAddress(unsigned int sourceAddress);
+        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
+        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
         IPCEvent* toIPCEvent();
 };
 
@@ -1175,6 +1180,9 @@ class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
         /** The connection's source CEP-id */
         int destCepId;
 
+        /** The policies parameters */
+        ConnectionPoliciesParameters connPoliciesParameters;
+
         /**
          * The id of the IPC Process that will be using the flow
          * (0 if it is an application)
@@ -1195,6 +1203,8 @@ public:
         void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
         int getDestCepId() const;
         void setDestCepId(int sourceCepId);
+        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
+        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
         IPCEvent* toIPCEvent();
 };
 

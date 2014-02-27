@@ -795,12 +795,30 @@ int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
 IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
                 nlmsghdr *hdr);
 
+enum ConnectionPoliciesParametersAttributes {
+	CPP_ATTR_DTCP_PRESENT = 1,
+	CPP_ATTR_FLOW_CONTROL,
+	CPP_ATTR_RTX_CONTROL,
+	CPP_ATTR_WINDOW_BASED_FLOW_CONTROL,
+	CPP_ATTR_RATE_BASED_FLOW_CONTROL,
+	__CCP_ATTR_MAX,
+};
+
+#define CCP_ATTR_MAX (__CCP_ATTR_MAX -1)
+
+int putConnectionPoliciesParametersObject(nl_msg * netlinkMessage,
+                const ConnectionPoliciesParameters& object); 
+
+ConnectionPoliciesParameters *
+parseConnectionPoliciesParametersObject(nlattr *nested);
+
 /* IpcpConnectionCreateRequestMessage CLASS*/
 enum IpcpConnectionCreateRequestMessageAttributes {
         ICCRM_ATTR_PORT_ID = 1,
         ICCRM_ATTR_SRC_ADDRESS,
         ICCRM_ATTR_DEST_ADDRESS,
         ICCRM_ATTR_QOS_ID,
+        ICCRM_ATTR_POLICIES_PARAMETERS,
         __ICCRM_ATTR_MAX,
 };
 
@@ -867,6 +885,7 @@ enum IpcpConnectionCreateArrivedMessageAttributes {
         ICCAM_ATTR_DEST_CEP_ID,
         ICCAM_ATTR_QOS_ID,
         ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        ICCAM_ATTR_POLICIES_PARAMETERS,
         __ICCAM_ATTR_MAX,
 };
 

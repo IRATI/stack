@@ -1,12 +1,12 @@
 package rina.utils.apps.echo.client;
 
+import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.Timer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.utils.apps.echo.Echo;
 import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.utils.FlowDeallocationListener;
 
@@ -28,13 +28,15 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	private boolean stop;
 	private Timer timer = null;
 	private long latestSDUReceivedTime = 0;
+	private int timeout = 0;
 	
 	private static final Log log = LogFactory.getLog(FlowReader.class);
 	
-	public FlowReader(Flow flow, TestInformation testInformation, Timer timer){
+	public FlowReader(Flow flow, TestInformation testInformation, Timer timer, int timeout){
 		this.flow = flow;
 		this.testInformation = testInformation;
 		this.timer = timer;
+		this.timeout = timeout;
 	}
 	
 	private synchronized void setLatestSDUReceivedTime(long time){
@@ -46,7 +48,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 	}
 	
 	public boolean shouldStop(){
-		if (getLatestSDUReceivedTime() + Echo.MAX_TIME_WITH_NO_DATA_IN_MS < 
+		if (getLatestSDUReceivedTime() + timeout < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
 		}
@@ -94,7 +96,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 			stop = true;
 			
 			if (!testInformation.receivedAllSDUs()) {
-				log.info("Cancelling test since more than " + Echo.MAX_TIME_WITH_NO_DATA_IN_MS + 
+				log.info("Cancelling test since more than " + timeout + 
 						" ms have gone bye without receiving an SDU");
 				printStats();
 			}
@@ -133,9 +135,13 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 				+ testInformation.getSduSize() + 
 				" bytes in " +testDuration + " ms.");
 		
-		long bandwidthInBps = 1000*testInformation.getNumberOfSDUs()*testInformation.getSduSize()/testDuration;
-		log.info("Send and received at " + bandwidthInBps 
-				+ " Bytes per second ( " +bandwidthInBps*8/1024 + " Kbps)");
+		double timeInSeconds = (double) testDuration/1000;
+		double bandwidthInBpsTx = (double) 2*testInformation.getSdusSent()*testInformation.getSduSize()/timeInSeconds;
+		double bandwidthInBpsRx = (double) 2*testInformation.getSDUsReceived()*testInformation.getSduSize()/timeInSeconds;
+		DecimalFormat df = new DecimalFormat("#.00");
+		log.info("Application-perceived bandwidth: \n    Tx: " + df.format(bandwidthInBpsTx)
+				+ " Bytes per second (" + df.format(bandwidthInBpsTx*8/1024) + " Kbps) \n    Rx: " + df.format(bandwidthInBpsRx) 
+				+ " Bytes per second (" + df.format(bandwidthInBpsRx*8/1024) +  " kbps)");
 	}
 	
 	public synchronized boolean isStopped(){

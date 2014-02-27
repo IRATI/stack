@@ -23,6 +23,11 @@ public class LocalConfiguration {
 	private int enrollmentTimeoutInMs = 10000;
 	
 	/**
+	 * The maximum number of attempts to re-enroll with a neighbor with whom we've lost connectivity
+	 */
+	private int maxEnrollmentRetries = 3;
+	
+	/**
 	 * The maximum time to wait to complete the flow allocation request 
 	 * once the process has been initiated (in ms)
 	 */
@@ -155,5 +160,13 @@ public class LocalConfiguration {
 		result = result + "   Neighbors enroller period in ms: " + neighborsEnrollerPeriodInMs + "\n";
 		
 		return result;
+	}
+
+	public int getMaxEnrollmentRetries() {
+		return maxEnrollmentRetries;
+	}
+
+	public void setMaxEnrollmentRetries(int maxEnrollmentRetries) {
+		this.maxEnrollmentRetries = maxEnrollmentRetries;
 	}
 }

@@ -271,7 +271,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		
 		try{
 			//5 get the portId of the CDAP session to the destination application process name
-			int cdapSessionId = Utils.mapAddressToPortId(flow.getDestinationAddress(), ipcProcess);
+			int cdapSessionId = (int) ribDaemon.getNextHop(flow.getDestinationAddress());
 
 			//6 Encode the flow object and send it to the destination IPC process
 			ObjectValue objectValue = new ObjectValue();
@@ -284,7 +284,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			requestMessage = cdapMessage;
 			state = FAIState.MESSAGE_TO_PEER_FAI_SENT;
 			
-			ribDaemon.sendMessage(cdapMessage, cdapSessionId, this);
+			ribDaemon.sendADataUnit(flow.getDestinationAddress(), cdapMessage, this);
 		}catch(Exception ex){
 			log.error("Problems sending M_CREATE <Flow> CDAP message to neighbor: " + ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
@@ -399,8 +399,9 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				objectValue.setByteval(this.encoder.encode(flow));
 				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
 						0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
-				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
-				this.ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
+				
+				ribDaemon.sendADataUnit(flow.getSourceAddress(), cdapMessage, null);
+				ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
 			}catch(Exception ex){
 				log.error("Problems requesting RIB Daemon to send CDAP Message: "+ex.getMessage());
 				
@@ -447,7 +448,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
 						requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
 						"Application rejected the flow: "+event.getResult(), requestMessage.getInvokeID());
-				this.ribDaemon.sendMessage(cdapMessage, underlyingPortId, null);
+				ribDaemon.sendADataUnit(flow.getSourceAddress(), cdapMessage, null);
 			}catch(Exception ex){
 				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
 			}
@@ -585,7 +586,15 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				objectValue.setByteval(this.encoder.encode(flow));
 				requestMessage = cdapSessionManager.getDeleteObjectRequestMessage(
 						underlyingPortId, null, null, "flow", 0, requestMessage.getObjName(), null, 0, false); 
-				this.ribDaemon.sendMessage(requestMessage, underlyingPortId, null);
+				
+				long address = 0;
+				if (ipcProcess.getAddress().longValue() == flow.getSourceAddress()) {
+					address = flow.getDestinationAddress();
+				} else {
+					address = flow.getSourceAddress();
+				}
+				
+				ribDaemon.sendADataUnit(address, requestMessage, null);
 			}catch(Exception ex){
 				log.error("Problems sending M_DELETE flow request");
 			}
@@ -618,6 +627,13 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//3 Set timer
 		TearDownFlowTimerTask timerTask = new TearDownFlowTimerTask(this, this.objectName, false);
 		timer.schedule(timerTask, TearDownFlowTimerTask.DELAY);
+		
+		//4 Inform IPC Manager
+		try{
+			ipcManager.flowDeallocatedRemotely(portId, 0);
+		}catch(Exception ex){
+			log.error("Error communicating with the IPC Manager: "+ex.getMessage());
+		}
 	}
 	
 	public synchronized void destroyFlowAllocatorInstance(String flowObjectName, boolean requestor) {
@@ -631,7 +647,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		flowAllocator.removeFlowAllocatorInstance(portId);
 
 		try{
-			this.ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
+			ribDaemon.delete(Flow.FLOW_RIB_OBJECT_CLASS, flowObjectName);
 		}catch(Exception ex){
 			log.error(ex.getMessage());
 			ex.printStackTrace();

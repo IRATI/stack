@@ -30,15 +30,27 @@
 #include "debug.h"
 #include "efcp.h"
 #include "efcp-utils.h"
+#include "cidm.h"
+#include "dt.h"
 #include "dtp.h"
 #include "dtcp.h"
 #include "rmt.h"
 
 struct efcp {
         struct connection *     connection;
-        struct dtp *            dtp;
-        struct dtcp *           dtcp;
-        struct efcp_container * efcpc;
+        struct dt *             dt;
+        struct efcp_container * container;
+};
+
+struct efcp_container {
+        struct efcp_imap *        instances;
+        struct cidm *             cidm;
+        struct dt_cons            dt_cons;
+        struct rmt *              rmt;
+        struct kfa *              kfa;
+
+        struct workqueue_struct * egress_wq;
+        struct workqueue_struct * ingress_wq;
 };
 
 static struct efcp * efcp_create(void)
@@ -61,13 +73,29 @@ static int efcp_destroy(struct efcp * instance)
                 return -1;
         }
 
-        if (instance->dtp)        dtp_unbind(instance->dtp);
-        if (instance->dtcp)       dtcp_unbind(instance->dtcp);
+        if (instance->dt) {
+                struct dtp *  dtp  = dt_dtp_unbind(instance->dt);
+                struct dtcp * dtcp = dt_dtcp_unbind(instance->dt);
 
-        if (instance->dtp)        dtp_destroy(instance->dtp);
-        if (instance->dtcp)       dtcp_destroy(instance->dtcp);
+                /* FIXME: We should watch for memleaks here ... */
+                if (dtp)  dtp_destroy(dtp);
+                if (dtcp) dtcp_destroy(dtcp);
 
-        if (instance->connection) rkfree(instance->connection);
+                dt_destroy(instance->dt);
+        } else
+                LOG_WARN("No DT instance present");
+
+        if (instance->connection) {
+                if (is_cep_id_ok(instance->connection->source_cep_id)) {
+                        ASSERT(instance->container);
+                        ASSERT(instance->container->cidm);
+
+                        cidm_release(instance->container->cidm,
+                                     instance->connection->source_cep_id);
+                }
+
+                rkfree(instance->connection);
+        }
 
         rkfree(instance);
 
@@ -75,16 +103,6 @@ static int efcp_destroy(struct efcp * instance)
 
         return 0;
 }
-
-struct efcp_container {
-        struct efcp_imap *        instances;
-        struct cidm *             cidm;
-        struct dt_cons            dt_cons;
-        struct rmt *              rmt;
-        struct kfa *              kfa;
-        struct workqueue_struct * egress_wq;
-        struct workqueue_struct * ingress_wq;
-};
 
 struct efcp_container * efcp_container_create(struct kfa * kfa)
 {
@@ -142,7 +160,6 @@ int efcp_container_destroy(struct efcp_container * container)
         if (container->cidm)       cidm_destroy(container->cidm);
 
         if (container->egress_wq)  rwq_destroy(container->egress_wq);
-
         if (container->ingress_wq) rwq_destroy(container->ingress_wq);
 
         rkfree(container);
@@ -150,6 +167,22 @@ int efcp_container_destroy(struct efcp_container * container)
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_destroy);
+
+struct efcp * efcp_container_find(struct efcp_container * container,
+                                  cep_id_t                id)
+{
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return NULL;
+        }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot find instance");
+                return NULL;
+        }
+
+        return efcp_imap_find(container->instances, id);
+}
+EXPORT_SYMBOL(efcp_container_find);
 
 int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
                                struct efcp_container * container)
@@ -159,18 +192,6 @@ int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
                 return -1;
         }
 
-#if 0
-        /* FIXME: Why not copying the struct directly ??? */
-        container->dt_cons.address_length = dt_cons->address_length;
-        container->dt_cons.cep_id_length  = dt_cons->cep_id_length;
-        container->dt_cons.length_length  = dt_cons->length_length;
-        container->dt_cons.port_id_length = dt_cons->port_id_length;
-        container->dt_cons.qos_id_length  = dt_cons->qos_id_length;
-        container->dt_cons.seq_num_length = dt_cons->seq_num_length;
-        container->dt_cons.max_pdu_size   = dt_cons->max_pdu_size;
-        container->dt_cons.max_pdu_life   = dt_cons->max_pdu_life;
-        container->dt_cons.dif_integrity  = dt_cons->dif_integrity;
-#endif
         container->dt_cons = *dt_cons;
 
         LOG_DBG("Succesfully set data transfer constants to efcp container");
@@ -217,6 +238,7 @@ static struct write_data * write_data_create(struct efcp * efcp,
 static int efcp_write_worker(void * o)
 {
         struct write_data * tmp;
+        struct dtp *        dtp;
 
         tmp = (struct write_data *) o;
         if (!tmp) {
@@ -226,15 +248,29 @@ static int efcp_write_worker(void * o)
 
         if (!is_write_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_write_worker");
+                sdu_destroy(tmp->sdu);
                 write_data_destroy(tmp);
                 return -1;
         }
 
-        if (dtp_write(tmp->efcp->dtp, tmp->sdu)) {
-                LOG_ERR("Could not send SDU to DTP");
+        ASSERT(tmp->efcp);
+        ASSERT(tmp->efcp->dt);
+
+        dtp = dt_dtp(tmp->efcp->dt);
+        if (!dtp) {
+                LOG_ERR("No DTP instance available");
+                sdu_destroy(tmp->sdu);
+                write_data_destroy(tmp);
                 return -1;
         }
 
+        if (dtp_write(dtp, tmp->sdu)) {
+                LOG_ERR("Could not write SDU to DTP");
+                write_data_destroy(tmp);
+                return -1;
+        }
+
+        write_data_destroy(tmp);
         return 0;
 }
 
@@ -244,12 +280,13 @@ static int efcp_write(struct efcp * efcp,
         struct write_data *    tmp;
         struct rwq_work_item * item;
 
-        if (!efcp) {
-                LOG_ERR("Bogus EFCP passed");
-                return -1;
-        }
         if (!sdu) {
                 LOG_ERR("Bogus SDU passed");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("Bogus EFCP passed");
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -263,9 +300,9 @@ static int efcp_write(struct efcp * efcp,
                 return -1;
         }
 
-        ASSERT(efcp->efcpc->egress_wq);
+        ASSERT(efcp->container->egress_wq);
 
-        if (rwq_work_post(efcp->efcpc->egress_wq, item)) {
+        if (rwq_work_post(efcp->container->egress_wq, item)) {
                 write_data_destroy(tmp);
                 sdu_destroy(sdu);
                 return -1;
@@ -278,37 +315,39 @@ int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
                          struct sdu *            sdu)
 {
-        struct efcp * efcp;
+        struct efcp * tmp;
 
         if (!container || !sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        efcp = efcp_imap_find(container->instances, cep_id);
-        if (!efcp) {
-                LOG_ERR("There is no EFCP bound to this cep_id %d", cep_id);
+        tmp = efcp_imap_find(container->instances, cep_id);
+        if (!tmp) {
+                LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        if (efcp_write(efcp, sdu))
+        if (efcp_write(tmp, sdu))
                 return -1;
 
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_write);
 
+/* FIXME: Goes directly into RMT ... */
 int efcp_container_mgmt_write(struct efcp_container * container,
                               address_t               src_address,
                               port_id_t               port_id,
                               struct sdu *            sdu)
-{
-        return dtp_mgmt_write(container->rmt, src_address, port_id, sdu);
-}
+{ return dtp_mgmt_write(container->rmt, src_address, port_id, sdu); }
 EXPORT_SYMBOL(efcp_container_mgmt_write);
 
 struct receive_data {
@@ -349,6 +388,9 @@ static struct receive_data * receive_data_create(struct efcp * efcp,
 static int efcp_receive_worker(void * o)
 {
         struct receive_data * tmp;
+        struct dtp *          dtp;
+        struct dtcp *         dtcp;
+        pdu_type_t            pdu_type;
 
         tmp = (struct receive_data *) o;
         if (!tmp) {
@@ -358,15 +400,53 @@ static int efcp_receive_worker(void * o)
 
         if (!is_receive_data_ok(tmp)) {
                 LOG_ERR("Wrong data passed to efcp_receive_worker");
+                if (tmp->pdu)
+                        pdu_destroy(tmp->pdu);
+
                 receive_data_destroy(tmp);
                 return -1;
         }
 
-        if (dtp_receive(tmp->efcp->dtp, tmp->pdu)) {
-                LOG_ERR("Could not send SDU to DTP");
+        ASSERT(tmp->efcp);
+        ASSERT(tmp->efcp->dt);
+
+        pdu_type = pci_type(pdu_pci_get_ro(tmp->pdu));
+        if (pdu_type_is_control(pdu_type)) {
+                dtcp = dt_dtcp(tmp->efcp->dt);
+                if (!dtcp) {
+                        LOG_ERR("No DTCP instance available");
+                        pdu_destroy(tmp->pdu);
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+
+                if (dtcp_common_rcv_control(dtcp, tmp->pdu)) {
+                        receive_data_destroy(tmp);
+                        return -1;
+                }
+
+                /* FIXME: The PDU has been consumed ... */
+        }
+
+        /*
+         * FIXME: Based on the previous FIXME, shouldn't the rest of this
+         *        functionbe in the else case ?
+         */
+        dtp = dt_dtp(tmp->efcp->dt);
+        if (!dtp) {
+                LOG_ERR("No DTP instance available");
+                pdu_destroy(tmp->pdu);
+                receive_data_destroy(tmp);
                 return -1;
         }
 
+        if (dtp_receive(dtp, tmp->pdu)) {
+                LOG_ERR("DTP cannot receive this PDU");
+                receive_data_destroy(tmp);
+                return -1;
+        }
+
+        receive_data_destroy(tmp);
         return 0;
 }
 
@@ -376,12 +456,13 @@ static int efcp_receive(struct efcp * efcp,
         struct receive_data *  data;
         struct rwq_work_item * item;
 
-        if (!efcp) {
-                LOG_ERR("No efcp instance passed");
-                return -1;
-        }
         if (!pdu) {
                 LOG_ERR("No pdu passed");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("No efcp instance passed");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -391,15 +472,16 @@ static int efcp_receive(struct efcp * efcp,
         /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(efcp_receive_worker, data);
         if (!item) {
+                pdu_destroy(pdu);
                 receive_data_destroy(data);
                 return -1;
         }
 
-        ASSERT(efcp->efcpc->ingress_wq);
+        ASSERT(efcp->container->ingress_wq);
 
-        if (rwq_work_post(efcp->efcpc->ingress_wq, item)) {
-                receive_data_destroy(data);
+        if (rwq_work_post(efcp->container->ingress_wq, item)) {
                 pdu_destroy(pdu);
+                receive_data_destroy(data);
                 return -1;
         }
 
@@ -412,18 +494,21 @@ int efcp_container_receive(struct efcp_container * container,
 {
         struct efcp * tmp;
 
-        if (!container || !pdu) {
+        if (!container || !pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus input parameters");
+                pdu_destroy(pdu);
                 return -1;
         }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
+                pdu_destroy(pdu);
                 return -1;
         }
 
-        tmp = efcp_container_find(container, cep_id);
+        tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
                 LOG_ERR("Cannot find the requested instance");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -434,15 +519,17 @@ int efcp_container_receive(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_receive);
 
-static int is_connection_ok(const struct connection * connection)
+static bool is_connection_ok(const struct connection * connection)
 {
+        /* FIXME: Add checks for policy params */
+
         if (!connection                                   ||
             !is_cep_id_ok(connection->source_cep_id)      ||
             !is_cep_id_ok(connection->destination_cep_id) ||
             !is_port_id_ok(connection->port_id))
-                return 0;
+                return false;
 
-        return 1;
+        return true;
 }
 
 cep_id_t efcp_connection_create(struct efcp_container * container,
@@ -450,6 +537,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 {
         struct efcp * tmp;
         cep_id_t      cep_id;
+        struct dtp *  dtp;
+        struct dtcp * dtcp;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -466,43 +555,72 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (!tmp)
                 return cep_id_bad();
 
-        cep_id = cidm_allocate(container->cidm);
-
-        /* We must ensure that the DTP is instantiated, at least ... */
-        tmp->efcpc                = container;
-        connection->source_cep_id = cep_id;
-        tmp->connection           = connection;
-
-        /* FIXME: dtp_create() takes ownership of the connection parameter */
-        tmp->dtp                  = dtp_create(container->rmt,
-                                               container->kfa,
-                                               connection);
-        if (!tmp->dtp) {
+        tmp->dt = dt_create();
+        if (!tmp->dt) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
 
-        /*
-         *  FIXME: We need to know if DTCP is needed ...
-         *
-         *  tmp->dtcp = dtcp_create();
-         *  if (!tmp->dtcp) {
-         *      efcp_destroy(tmp);
-         *      return -1;
-         *  }
-         *
-         * No needs to check here, bindings are straightforward
-         * dtp_bind(tmp->dtp,   tmp->dtcp);
-         * dtcp_bind(tmp->dtcp, tmp->dtp);
-         */
+        ASSERT(tmp->dt);
+
+        cep_id                    = cidm_allocate(container->cidm);
+
+        /* We must ensure that the DTP is instantiated, at least ... */
+        tmp->container            = container;
+
+        /* Initial value to avoid problems in case of errors */
+        connection->source_cep_id = cep_id_bad();
+
+        /* FIXME: We change the connection cep-id and we return cep-id ... */
+        connection->source_cep_id = cep_id;
+        tmp->connection           = connection;
+
+        /* FIXME: dtp_create() takes ownership of the connection parameter */
+        dtp = dtp_create(tmp->dt,
+                         container->rmt,
+                         container->kfa,
+                         connection);
+        if (!dtp) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+
+        ASSERT(dtp);
+
+        if (dt_dtp_bind(tmp->dt, dtp)) {
+                dtp_destroy(dtp);
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+
+        dtcp = NULL;
+        if (connection->policies_params.dtcp_present) {
+                dtcp = dtcp_create(tmp->dt, connection, container->rmt);
+                if (!dtcp) {
+                        dtp_destroy(dtp);
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+
+                if (dt_dtcp_bind(tmp->dt, dtcp)) {
+                        dtp_destroy(dtp);
+                        dtcp_destroy(dtcp);
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+        }
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
                           tmp)) {
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
+
                 rkfree(connection);
-                dtp_destroy(tmp->dtp);
+
+                if (dtp)  dtp_destroy(dtp);
+                if (dtcp) dtcp_destroy(dtcp);
+
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
@@ -597,22 +715,6 @@ int efcp_connection_update(struct efcp_container * container,
         return 0;
 }
 EXPORT_SYMBOL(efcp_connection_update);
-
-struct efcp * efcp_container_find(struct efcp_container * container,
-                                  cep_id_t                id)
-{
-        if (!container) {
-                LOG_ERR("Bogus container passed, bailing out");
-                return NULL;
-        }
-        if (!is_cep_id_ok(id)) {
-                LOG_ERR("Bad cep-id, cannot find instance");
-                return NULL;
-        }
-
-        return efcp_imap_find(container->instances, id);
-}
-EXPORT_SYMBOL(efcp_container_find);
 
 int efcp_bind_rmt(struct efcp_container * container,
                   struct rmt *            rmt)

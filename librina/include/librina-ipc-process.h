@@ -668,6 +668,41 @@ public:
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /**
+ * This class defines the policies paramenters for an EFCP connection
+ */
+class ConnectionPoliciesParameters {
+	/** Indicates if DTCP is required */
+	bool DTCPpresent;
+
+	/** Indicates if Flow Control is required */
+	bool flowControl;
+
+	/** Indicates if  Retransmission Control is required */
+	bool RTXcontrol;
+
+	/** Indicates if  Flow Control is window based */
+	bool windowBasedFlowControl;
+
+	/** Indicates if  Flow Control is rate based */
+	bool rateBasedFlowControl;
+
+public:
+	ConnectionPoliciesParameters();
+	bool operator==(const ConnectionPoliciesParameters &other) const;
+	bool operator!=(const ConnectionPoliciesParameters &other) const;
+	bool isDTCPpresent() const;
+	void setDTCPpresent(bool DTCPpresent);
+	bool isFlowControl() const;
+	void setFlowControl(bool flowControl);
+	bool isRTXcontrol() const;
+	void setRTXcontrol(bool RTXcontrol);
+	bool isWindowBasedFlowControl() const;
+	void setWindowBasedFlowControl(bool windowBasedFlowControl);
+	bool isRateBasedFlowControl() const;
+	void setRateBasedFlowControl(bool rateBasedFlowControl);
+};
+
+/**
  * Represents the data to create an EFCP connection
  */
 class Connection {
@@ -699,6 +734,11 @@ class Connection {
         int destCepId;
 
         /**
+         * The EFCP connection policies paramenters 
+         */
+        ConnectionPoliciesParameters connPoliciesParams;
+
+        /**
          * The id of the IPC Process using the flow supported by this
          * connection (0 if it is an application that is not an IPC Process)
          */
@@ -720,6 +760,9 @@ public:
         void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
         int getSourceCepId() const;
         void setSourceCepId(int sourceCepId);
+        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
+        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
+
 };
 
 /**

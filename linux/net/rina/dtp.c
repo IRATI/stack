@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,16 +28,20 @@
 #include "debug.h"
 #include "dtp.h"
 
+/* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
-        uint_t              max_flow_sdu;
+        uint_t              max_flow_sdu_size;
         uint_t              max_flow_pdu_size;
-        uint_t              initial_sequence_number;
         uint_t              seq_number_rollover_threshold;
+        bool                window_based;
+        bool                window_closed;
+        uint_t              max_cwq_len;
+        int                 rexmsn_ctrl;
 
         struct {
-                seq_num_t   last_sequence_delivered;
+                seq_num_t   left_window_edge;
         } inbound;
 
         struct {
@@ -45,42 +50,89 @@ struct dtp_sv {
         } outbound;
 };
 
+/* FIXME: Has to be rearranged */
 struct dtp_policies {
-        int (* xxx_fixme_add_policies_here)(struct dtp * instance);
+        int (* transmission_control)(struct dtp * instance);
+        /* FIXME: What is this policy for? */
+        int (* closed_window_queue)(struct dtp * instance);
+        int (* flow_control_overrun)(struct dtp * instance);
+        int (* unknown_flow)(struct dtp * instance);
+        int (* initial_sequence_number)(struct dtp * instance);
+        int (* receiver_inactivity_timer)(struct dtp * instance);
+        int (* sender_inactivity_timer)(struct dtp * instance);
 };
 
+/* FIXME: Should probably be kept in a different component */
+#define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
+#define TIME_R   200 /* FIXME: Completely bogus value, must be in ms */
+#define TIME_A   300 /* FIXME: Completely bogus value, must be in ms */
 struct dtp {
-        /* NOTE: The DTP State Vector cannot be discarded */
-        struct dtp_sv *       state_vector;
+        struct dt *           parent;
+        /*
+         * NOTE: The DTP State Vector is discarded only after and explicit
+         *       release by the AP or by the system (if the AP crashes).
+         */
+        struct dtp_sv *       sv; /* The state-vector */
+
         struct dtp_policies * policies;
-        struct dtcp *         peer;
         struct rmt *          rmt;
         struct kfa *          kfa;
+
+        struct {
+                struct rtimer * sender_inactivity;
+                struct rtimer * receiver_inactivity;
+                struct rtimer * a;
+        } timers;
+
 };
 
 static struct dtp_sv default_sv = {
         .connection                      = NULL,
-        .max_flow_sdu                    = 0,
+        .max_flow_sdu_size               = 0,
         .max_flow_pdu_size               = 0,
-        .initial_sequence_number         = 0,
         .seq_number_rollover_threshold   = 0,
-        .inbound.last_sequence_delivered = 0,
+        .window_based                    = false,
+        .window_closed                   = false,
+        .rexmsn_ctrl                     = false,
+        .max_cwq_len                     = 0,
+        .inbound.left_window_edge        = 0,
         .outbound.next_sequence_to_send  = 0,
         .outbound.right_window_edge      = 0
 };
 
 static struct dtp_policies default_policies = {
-        .xxx_fixme_add_policies_here = NULL
+        .transmission_control      = NULL,
+        .closed_window_queue       = NULL,
+        .flow_control_overrun      = NULL,
+        .unknown_flow              = NULL,
+        .initial_sequence_number   = NULL,
+        .receiver_inactivity_timer = NULL,
+        .sender_inactivity_timer   = NULL,
 };
 
-struct dtp * dtp_create(struct rmt *        rmt,
+static void tf_sender_inactivity(void * data)
+{ /* Runs the SenderInactivityTimerPolicy */ }
+
+static void tf_receiver_inactivity(void * data)
+{ /* Runs the ReceiverInactivityTimerPolicy */ }
+
+static void tf_a(void * data)
+{ }
+
+struct dtp * dtp_create(struct dt *         dt,
+                        struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection)
 {
         struct dtp * tmp;
 
+        if (!dt) {
+                LOG_ERR("No DT passed, bailing out");
+                return NULL;
+        }
+
         if (!rmt) {
-                LOG_ERR("No rmt, bailing out");
+                LOG_ERR("No RMT passed, bailing out");
                 return NULL;
         }
 
@@ -90,25 +142,37 @@ struct dtp * dtp_create(struct rmt *        rmt,
                 return NULL;
         }
 
-        tmp->state_vector = rkmalloc(sizeof(*tmp->state_vector), GFP_KERNEL);
-        if (!tmp->state_vector) {
+        tmp->parent = dt;
+
+        tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
+        if (!tmp->sv) {
                 LOG_ERR("Cannot create DTP state-vector");
 
                 rkfree(tmp);
                 return NULL;
         }
-
-        *tmp->state_vector            = default_sv;
-
+        *tmp->sv            = default_sv;
         /* FIXME: fixups to the state-vector should be placed here */
-        tmp->state_vector->connection = connection;
 
-        tmp->policies                 = &default_policies;
+        tmp->sv->connection   = connection;
+
+        tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
 
-        tmp->peer                     = NULL;
-        tmp->rmt                      = rmt;
-        tmp->kfa                      = kfa;
+        tmp->rmt            = rmt;
+        tmp->kfa            = kfa;
+
+        tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
+                                                        tmp);
+        tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
+                                                        tmp);
+        tmp->timers.a                   = rtimer_create(tf_a, tmp);
+        if (!tmp->timers.sender_inactivity   ||
+            !tmp->timers.receiver_inactivity ||
+            !tmp->timers.a) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
@@ -122,61 +186,20 @@ int dtp_destroy(struct dtp * instance)
                 return -1;
         }
 
-        /* NOTE: The DTP State Vector cannot be discarded */
-        ASSERT(instance->state_vector);
+        if (instance->timers.sender_inactivity)
+                rtimer_destroy(instance->timers.sender_inactivity);
+        if (instance->timers.receiver_inactivity)
+                rtimer_destroy(instance->timers.receiver_inactivity);
+        if (instance->timers.a)
+                rtimer_destroy(instance->timers.a);
 
-        rkfree(instance->state_vector);
+        if (instance->sv)
+                rkfree(instance->sv);
         rkfree(instance);
-
-        /*
-         * FIXME: RMT is destroyed by EFCP Container, should be fine
-         *        but better check it ...
-         */
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
         return 0;
-}
-
-int dtp_bind(struct dtp *  instance,
-             struct dtcp * peer)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-        if (!peer) {
-                LOG_ERR("Bad peer passed, bailing out");
-                return -1;
-        }
-
-        if (instance->peer) {
-                if (instance->peer != peer) {
-                        LOG_ERR("This instance is already bound to "
-                                "a different peer, unbind it first");
-                        return -1;
-                }
-
-                LOG_DBG("This instance is already bound to the same peer ...");
-                return 0;
-        }
-
-        instance->peer = peer;
-
-        return 0;
-}
-
-int dtp_unbind(struct dtp * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
-                return -1;
-        }
-
-        instance->peer = NULL;
-
-        return 0;
-
 }
 
 #if 0
@@ -210,15 +233,18 @@ int dtp_write(struct dtp * instance,
         struct pci *    pci;
         struct dtp_sv * sv;
 
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
         if (!sdu_is_ok(sdu))
                 return -1;
 
-        sv = instance->state_vector;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        /* FIXME: Stop SenderInactivityTimer */
+
+        sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
 
         pci = pci_create();
@@ -240,11 +266,13 @@ int dtp_write(struct dtp * instance,
         pdu = pdu_create();
         if (!pdu) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
         if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -252,12 +280,55 @@ int dtp_write(struct dtp * instance,
                 pci_destroy(pci);
                 return -1;
         }
+        /*
+         * Incrementing here means the PDU cannot
+         * be just thrown away from this point onwards
+         */
+        sv->outbound.next_sequence_to_send++;
 
+        /* Step 1: Sequencing */
+        /* Step 2: Protection */
+        /* Step 2: Delimiting (fragmentation/reassembly) */
+
+
+        if (sv->window_based) {
+                if (!sv->window_closed &&
+                    pci_sequence_number_get(pci) <
+                    sv->outbound.right_window_edge) {
+                        /*
+                         * Call TransmissionControlPolicy
+                         *
+                         * Might close window
+                         *
+                         * What happens when we aren't
+                         * allowed to add it here?
+                         */
+                } else {
+                        sv->window_closed = true;
+                        if (/*cwq_len < */ sv->max_cwq_len-1) {
+                                /* FIXME: Put PDU on cwq and return */
+                        } else {
+                                /* Call FlowControlOverrunPolicy and return */
+                        }
+                }
+        }
+
+        if (sv->rexmsn_ctrl) {
+                /* Add timer for PDU */
+                /* Put a copy in the rtxq queue */
+        }
+
+
+        sdu_buffer_disown(sdu);
+        sdu_destroy(sdu);
+        /* Post SDU to RMT */
         /* Give the data to RMT now ! */
         return rmt_send(instance->rmt,
                         pci_destination(pci),
                         pci_qos_id(pci),
                         pdu);
+
+        /* FIXME: Start SenderInactivityTimer */
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
@@ -321,6 +392,8 @@ int dtp_mgmt_write(struct rmt * rmt,
         }
 
         /* Give the data to RMT now ! */
+
+        /* FIXME: What about sequencing (and all the other procedures) ? */
         return rmt_send(rmt,
                         pci_destination(pci),
                         pci_cep_destination(pci),
@@ -335,16 +408,17 @@ int dtp_receive(struct dtp * instance,
         struct sdu *    sdu;
         struct buffer * buffer;
 
-        if (!instance                            ||
-            !instance->kfa                       ||
-            !instance->state_vector              ||
-            !instance->state_vector->connection) {
-                LOG_ERR("Bogus instance passed, bailing out");
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Bogus data, bailing out");
                 return -1;
         }
 
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Bogus data, bailing out");
+        if (!instance                  ||
+            !instance->kfa             ||
+            !instance->sv              ||
+            !instance->sv->connection) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -355,18 +429,25 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
+        ASSERT(instance->sv);
+
         if (kfa_sdu_post(instance->kfa,
-                         instance->state_vector->connection->port_id,
+                         instance->sv->connection->port_id,
                          sdu)) {
                 LOG_ERR("Could not post SDU to KFA");
                 pdu_destroy(pdu);
                 return -1;
         }
 
-        /*
-         * FIXME: PDU is now useless, it must be destroyed, but its
-         * buffer is within the passed sdu, so pdu_destroy can't be used.
-         */
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
 
         return 0;
 }
+
+int dtp_rcv_flow_ctl(struct dtp * instance)
+{
+        LOG_MISSING;
+        return 0;
+}
+EXPORT_SYMBOL(dtp_rcv_flow_ctl);

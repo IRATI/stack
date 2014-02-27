@@ -64,7 +64,7 @@ static int string_dup_gfp(gfp_t            flags,
          * provoke no consequeunces
          */
         if (src) {
-                *dst = kstrdup(src, flags);
+                *dst = rkstrdup(src, flags);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string "
                                 "in kernel-space");
@@ -288,13 +288,13 @@ bool name_is_ok(const struct name * n)
 { return (n && n->process_name); }
 EXPORT_SYMBOL(name_is_ok);
 
-static int __name_is_equal(const struct name * a,
-                           const struct name * b)
+bool name_is_equal(const struct name * a,
+                   const struct name * b)
 {
         if (a == b)
-                return 0;
+                return true;
         if (!a || !b)
-                return -1;
+                return false;
 
         ASSERT(a != b);
         ASSERT(a != NULL);
@@ -302,19 +302,16 @@ static int __name_is_equal(const struct name * a,
 
         /* Now compare field by field */
         if (NAME_CMP_FIELD(a, b, process_name))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, process_instance))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, entity_name))
-                return -1;
+                return false;
         if (NAME_CMP_FIELD(a, b, entity_instance))
-                return -1;
+                return false;
 
-        return 0;
+        return true;
 }
-
-bool name_is_equal(const struct name * a, const struct name * b)
-{ return !__name_is_equal(a, b) ? true : false; }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"
@@ -448,11 +445,12 @@ int ipcp_config_destroy(struct ipcp_config * cfg)
         if (!cfg)
                 return -1;
 
-        if (cfg->entry)
-                if (cfg->entry->name) rkfree(cfg->entry->name);
+        if (!cfg->entry)
+                return -1;
 
-        if (cfg->entry->value)
-                rkfree(cfg->entry->value);
+        if (cfg->entry->name) rkfree(cfg->entry->name);
+
+        if (cfg->entry->value) rkfree(cfg->entry->value);
 
         rkfree(cfg->entry);
 
@@ -486,6 +484,12 @@ struct dif_config * dif_config_create(void)
         if (!tmp)
                 return NULL;
 
+        tmp->dt_cons = rkzalloc(sizeof(*tmp->dt_cons), GFP_KERNEL);
+        if (!tmp->dt_cons) {
+                rkfree(tmp);
+                return NULL;
+        }
+
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;
@@ -513,6 +517,30 @@ int dif_config_destroy(struct dif_config * dif_config)
         return 0;
 }
 EXPORT_SYMBOL(dif_config_destroy);
+
+struct dif_info * dif_info_create(void)
+{
+        struct dif_info * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+        tmp->dif_name = name_create();
+        if (!tmp->dif_name) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->configuration = dif_config_create();
+        if (!tmp->configuration) {
+                name_destroy(tmp->dif_name);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(dif_info_create);
 
 int dif_info_destroy(struct dif_info * dif_info)
 {

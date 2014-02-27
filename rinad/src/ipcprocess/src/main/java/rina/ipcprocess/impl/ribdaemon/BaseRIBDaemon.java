@@ -2,11 +2,16 @@ package rina.ipcprocess.impl.ribdaemon;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import eu.irati.librina.IPCException;
+import eu.irati.librina.PDUForwardingTableEntry;
+import eu.irati.librina.PDUForwardingTableEntryList;
 
 import rina.events.api.Event;
 import rina.events.api.EventListener;
@@ -27,9 +32,42 @@ public abstract class BaseRIBDaemon implements RIBDaemon{
         
         protected Map<String, List<EventListener>> eventListeners = null;
         
+        private Object aDataPDUForwardingTableLock = null;
+        
+        private PDUForwardingTableEntryList aDataPduForwardingTable = null;
+        
         public BaseRIBDaemon(){
-                this.eventListeners = new HashMap<String, List<EventListener>>();
+                eventListeners = new HashMap<String, List<EventListener>>();
+                aDataPDUForwardingTableLock = new Object();
         }
+        
+    	/** Set the new A-Data PDU Forwarding Table */
+    	public void setPDUForwardingTable(PDUForwardingTableEntryList entries) {
+    		synchronized(aDataPDUForwardingTableLock) {
+    			aDataPduForwardingTable = entries;
+    		}
+    	}
+    	
+    	/** Get the port-id of the N-1 flow to reach the destination address*/
+    	public long getNextHop(long destinationAddress) throws IPCException {
+    		synchronized(aDataPDUForwardingTableLock) {
+    			if (aDataPduForwardingTable == null) {
+    				throw new IPCException("A-Data PDU Forwarding Table is empty");
+    			}
+    			
+    			Iterator<PDUForwardingTableEntry> iterator = aDataPduForwardingTable.iterator();
+    			PDUForwardingTableEntry next = null;
+    			while(iterator.hasNext()) {
+    				next = iterator.next();
+    				if (next.getAddress() == destinationAddress){
+    					return next.getPortIds().getFirst();
+    				}
+    			}
+    			
+    			throw new IPCException("No entry in the A-Data PDU Forwarding Table for address "
+    							+ destinationAddress);
+    		}
+    	}
         
         /**
          * Subscribe to a single event
