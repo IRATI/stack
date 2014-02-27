@@ -241,7 +241,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	 * @return
 	 */
 	private BaseEnrollmentStateMachine createEnrollmentStateMachine(
-			ApplicationProcessNamingInformation apNamingInfo, int portId, boolean enrollee) throws Exception{
+			ApplicationProcessNamingInformation apNamingInfo, int portId, boolean enrollee, 
+			ApplicationProcessNamingInformation supportingDifName) throws Exception{
 		BaseEnrollmentStateMachine enrollmentStateMachine = null;
 
 		if (apNamingInfo.getEntityName() == null || apNamingInfo.getEntityName().equals("") ||
@@ -251,7 +252,7 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 						apNamingInfo, timeout);
 			}else{
 				enrollmentStateMachine = new EnrollerStateMachine(ipcProcess, 
-						apNamingInfo, timeout);
+						apNamingInfo, timeout, supportingDifName);
 			}
 
 			synchronized(this){
@@ -388,10 +389,14 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		
 		//3 Initiate the enrollment
 		try{
-
+			FlowInformation flowInformation = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getNMinus1FlowInformation(cdapSessionDescriptor.getPortId());
+			if (flowInformation == null) {
+				throw new IPCException("Could not find the information of N-1 flow identified by port-id " 
+						+ cdapSessionDescriptor.getPortId());
+			}
 			EnrollerStateMachine enrollmentStateMachine = (EnrollerStateMachine) this.createEnrollmentStateMachine(
 					cdapSessionDescriptor.getDestinationApplicationProcessNamingInfo(), 
-					cdapSessionDescriptor.getPortId(), false);
+					cdapSessionDescriptor.getPortId(), false, flowInformation.getDifName());
 			enrollmentStateMachine.connect(cdapMessage, cdapSessionDescriptor.getPortId());
 		}catch(Exception ex){
 			log.error(ex.getMessage());
@@ -589,7 +594,8 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 		//1 Tell the enrollment task to create a new Enrollment state machine
 		try{
 			enrollmentStateMachine = (EnrolleeStateMachine) this.createEnrollmentStateMachine(
-					request.getNeighbor().getName(), flowEvent.getFlowInformation().getPortId(), true);
+					request.getNeighbor().getName(), flowEvent.getFlowInformation().getPortId(), true, 
+					flowEvent.getFlowInformation().getDifName());
 		}catch(Exception ex){
 			//Should never happen, fix it!
 			log.error(ex);
