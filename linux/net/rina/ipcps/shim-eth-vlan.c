@@ -1483,6 +1483,14 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->fspec)
                                 rkfree(pos->fspec);
 
+                        if (pos->handle) {
+                                if (rinarp_remove(pos->handle)) {
+                                        LOG_ERR("Failed to remove" 
+                                                "the entry from the cache");
+                                        return -1;
+                                }
+                        }
+
                         /*
                          * Might cause problems:
                          * The packet type might still be in use by receivers
