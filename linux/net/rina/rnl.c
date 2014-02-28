@@ -23,7 +23,6 @@
 
 #define RINA_PREFIX "rnl"
 
-
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -161,7 +160,6 @@ static struct nla_policy iatdr_policy[IATDR_ATTR_MAX + 1] = {
 static struct nla_policy iudcr_policy[IUDCR_ATTR_MAX + 1] = {
         [IUDCR_ATTR_DIF_CONFIGURATION] = NLA_INIT_NESTED,
 };
-
 
 static struct nla_policy idrn_policy[IDRN_ATTR_MAX + 1] = {
         [IDRN_ATTR_IPC_PROCESS_NAME] = NLA_INIT_NESTED,
@@ -496,7 +494,8 @@ struct sock_closed_notif_item {
         rnl_port_t ipcmanagerport;
 };
 
-static int socket_closed_worker(void * o) {
+static int socket_closed_worker(void * o)
+{
         struct sock_closed_notif_item * item_data;
 
         LOG_DBG("RNL socket notification worker called");
@@ -508,7 +507,7 @@ static int socket_closed_worker(void * o) {
         }
 
         rnl_ipcm_sock_closed_notif_msg(item_data->portid,
-                        item_data->ipcmanagerport);
+                                       item_data->ipcmanagerport);
 
         rkfree(item_data);
         return 0;
@@ -522,10 +521,10 @@ static int netlink_notify_callback(struct notifier_block * nb,
                                    unsigned long           state,
                                    void *                  notification)
 {
-        struct netlink_notify * notify = notification;
-        rnl_port_t              port;
+        struct netlink_notify *         notify = notification;
+        rnl_port_t                      port;
         struct sock_closed_notif_item * item_data;
-        struct rwq_work_item * item;
+        struct rwq_work_item *          item;
 
         if (state != NETLINK_URELEASE)
                 return NOTIFY_DONE;
@@ -544,20 +543,23 @@ static int netlink_notify_callback(struct notifier_block * nb,
                 } else {
                         item_data = rkzalloc(sizeof(*item_data), GFP_ATOMIC);
                         if (!item_data) {
-                                LOG_DBG("Could not malloc memory for item_data");
+                                LOG_DBG("Could not malloc memory for "
+                                        "item_data");
                                 return NOTIFY_DONE;
                         }
                         item_data->ipcmanagerport = port;
-                        item_data->portid = notify->portid;
+                        item_data->portid         = notify->portid;
 
-                        item = rwq_work_create_ni(socket_closed_worker, item_data);
+                        item = rwq_work_create_ni(socket_closed_worker,
+                                                  item_data);
                         if (!item) {
                                 LOG_ERR("Error creating work item");
                                 rkfree(item_data);
                                 return NOTIFY_DONE;
                         }
 
-                        if (rwq_work_post(rnl_sock_closed_notifier_data.wq, item)) {
+                        if (rwq_work_post(rnl_sock_closed_notifier_data.wq,
+                                          item)) {
                                 LOG_ERR("Could not post item to work queue");
                                 rkfree(item_data);
                                 return NOTIFY_DONE;
@@ -677,9 +679,8 @@ void rnl_exit(void)
 
         ASSERT(!default_set);
 
-        if (rnl_sock_closed_notifier_data.wq) {
+        if (rnl_sock_closed_notifier_data.wq)
                 rwq_destroy(rnl_sock_closed_notifier_data.wq);
-        }
 
         LOG_DBG("NetLink layer finalized successfully");
 }
