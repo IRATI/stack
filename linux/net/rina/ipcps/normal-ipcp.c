@@ -480,6 +480,10 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
         IRQ_BARRIER;
 
         mgmt_data = data->mgmt_data;
+        if (!mgmt_data) {
+                LOG_ERR("No normal_mgmt data in ipc process: %d", data->id);
+                return -1;
+        }
         spin_lock(&mgmt_data->lock);
         if (mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_DBG("IPCP %d is being destroyed", data->id);
@@ -494,7 +498,6 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 retval = wait_event_interruptible(mgmt_data->wait_q,
                                                   queue_ready(mgmt_data));
 
-                spin_lock(&mgmt_data->lock);
                 if (!mgmt_data  ||
                     !mgmt_data->sdu_ready) {
                         LOG_ERR("No mgmt data anymore, waitqueue "
@@ -502,6 +505,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                         spin_unlock(&data->mgmt_data->lock);
                         return -1;
                 }
+                spin_lock(&mgmt_data->lock);
                 if (retval) {
                         LOG_DBG("Mgmt queue waken up by interruption, "
                                 "returned error %d", retval);
@@ -763,6 +767,7 @@ static struct mgmt_data * normal_mgmt_data_create(void)
                 return NULL;
         }
 
+        data->state = MGMT_DATA_READY;
         data->sdu_ready = rfifo_create();
         if (!data->sdu_ready) {
                 LOG_ERR("Could not create MGMT SDUs queue");
