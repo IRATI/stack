@@ -283,10 +283,5 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	@Override
 	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
-		if (flowReader != null) {
-			flowReader.stop();
-		}
-		
-		System.exit(0);
 	}
 }

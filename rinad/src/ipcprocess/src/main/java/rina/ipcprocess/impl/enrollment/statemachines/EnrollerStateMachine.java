@@ -42,9 +42,11 @@ public class EnrollerStateMachine extends BaseEnrollmentStateMachine{
 	private IPCProcess ipcProcess = null;
 	
 	public EnrollerStateMachine(IPCProcess ipcProcess, 
-			ApplicationProcessNamingInformation remoteNamingInfo, long timeout){
+			ApplicationProcessNamingInformation remoteNamingInfo, long timeout, 
+			ApplicationProcessNamingInformation supportingDifName){
 		super(ipcProcess.getRIBDaemon(), ipcProcess.getCDAPSessionManager(), ipcProcess.getEncoder(), 
-				remoteNamingInfo, ipcProcess.getEnrollmentTask(), timeout);
+				remoteNamingInfo, ipcProcess.getEnrollmentTask(), timeout, 
+				supportingDifName);
 		this.ipcProcess = ipcProcess;
 	}
 	
