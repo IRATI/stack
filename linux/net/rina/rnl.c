@@ -30,8 +30,11 @@
 #include "rnl.h"
 #include "rnl-utils.h"
 #include "rnl-workarounds.h"
+#include "rds/rwq.h"
 
 #define NETLINK_RINA "rina"
+
+#define RNL_WQ_NAME "rnl-wq"
 
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
@@ -484,6 +487,33 @@ rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
 }
 EXPORT_SYMBOL(rnl_get_next_seqn);
 
+static struct rnl_notifier_data {
+        struct workqueue_struct * wq;
+} rnl_sock_closed_notifier_data;
+
+struct sock_closed_notif_item {
+        int portid;
+        rnl_port_t ipcmanagerport;
+};
+
+static int socket_closed_worker(void * o) {
+        struct sock_closed_notif_item * item_data;
+
+        LOG_DBG("RNL socket notification worker called");
+
+        item_data = (struct sock_closed_notif_item *) o;
+        if (!item_data) {
+                LOG_ERR("No data passed to the worker!");
+                return -1;
+        }
+
+        rnl_ipcm_sock_closed_notif_msg(item_data->portid,
+                        item_data->ipcmanagerport);
+
+        rkfree(item_data);
+        return 0;
+}
+
 /*
  * Invoked when an event related to a NL socket occurs. We're only interested
  * in socket closed events.
@@ -494,6 +524,8 @@ static int netlink_notify_callback(struct notifier_block * nb,
 {
         struct netlink_notify * notify = notification;
         rnl_port_t              port;
+        struct sock_closed_notif_item * item_data;
+        struct rwq_work_item * item;
 
         if (state != NETLINK_URELEASE)
                 return NOTIFY_DONE;
@@ -508,10 +540,31 @@ static int netlink_notify_callback(struct notifier_block * nb,
                 /* Check if the IPC Manager is the process that died */
                 if (port == notify->portid) {
                         rnl_set_ipc_manager_port(0);
-
                         LOG_WARN("IPC Manager process has been destroyed");
-                } else
-                        rnl_ipcm_sock_closed_notif_msg(notify->portid, port);
+                } else {
+                        item_data = rkzalloc(sizeof(*item_data), GFP_ATOMIC);
+                        if (!item_data) {
+                                LOG_DBG("Could not malloc memory for item_data");
+                                return NOTIFY_DONE;
+                        }
+                        item_data->ipcmanagerport = port;
+                        item_data->portid = notify->portid;
+
+                        item = rwq_work_create_ni(socket_closed_worker, item_data);
+                        if (!item) {
+                                LOG_ERR("Error creating work item");
+                                rkfree(item_data);
+                                return NOTIFY_DONE;
+                        }
+
+                        if (rwq_work_post(rnl_sock_closed_notifier_data.wq, item)) {
+                                LOG_ERR("Could not post item to work queue");
+                                rkfree(item_data);
+                                return NOTIFY_DONE;
+                        }
+
+                        LOG_DBG("Queued work item successfully!");
+                }
 
         }
 
@@ -588,6 +641,12 @@ int rnl_init(void)
         ipcm_port.ipc_manager_port = 0;
         spin_lock_init(&ipcm_port.lock);
 
+        rnl_sock_closed_notifier_data.wq = rwq_create(RNL_WQ_NAME);
+        if (!rnl_sock_closed_notifier_data.wq) {
+                LOG_ERR("Cannot create RNL work queue, bailing out");
+                return -1;
+        }
+
         LOG_DBG("NetLink layer initialized successfully");
 
         return 0;
@@ -617,6 +676,10 @@ void rnl_exit(void)
          */
 
         ASSERT(!default_set);
+
+        if (rnl_sock_closed_notifier_data.wq) {
+                rwq_destroy(rnl_sock_closed_notifier_data.wq);
+        }
 
         LOG_DBG("NetLink layer finalized successfully");
 }
