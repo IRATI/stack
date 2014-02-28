@@ -3,8 +3,6 @@ package rina.configuration;
 import java.util.List;
 import java.util.Map;
 
-import eu.irati.librina.Neighbor;
-
 /**
  * Contains enough information to create an IPC Process
  * @author eduardgrasa
@@ -16,7 +14,7 @@ public class IPCProcessToCreate {
 	private String applicationProcessName = null;
 	private String applicationProcessInstance = null;
 	private String difName = null;
-	private List<Neighbor> neighbors = null;
+	private List<NeighborData> neighbors = null;
 	private List<String> difsToRegisterAt = null;
 	private String hostname = null;
 	private List<SDUProtectionOption> sduProtectionOptions = null;
@@ -62,11 +60,11 @@ public class IPCProcessToCreate {
 		this.difName = difName;
 	}
 	
-	public List<Neighbor> getNeighbors() {
+	public List<NeighborData> getNeighbors() {
 		return neighbors;
 	}
 	
-	public void setNeighbors(List<Neighbor> neighbors) {
+	public void setNeighbors(List<NeighborData> neighbors) {
 		this.neighbors = neighbors;
 	}
 	
