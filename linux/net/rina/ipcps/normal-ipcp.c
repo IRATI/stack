@@ -529,11 +529,9 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
         if (atomic_dec_and_test(&mgmt_data->readers) &&
             (mgmt_data->state == MGMT_DATA_DESTROYED)) {
                 spin_unlock(&mgmt_data->lock);
-                if (mgmt_remove(mgmt_data)) {
+                if (mgmt_remove(mgmt_data)) 
                         LOG_ERR("Could not destroy mgmt_data");
-                        spin_lock(&mgmt_data->lock);
-                        return retval;
-                }
+                return retval;
         }
 
         spin_unlock(&mgmt_data->lock);
