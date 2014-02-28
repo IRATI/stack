@@ -80,7 +80,7 @@ public class FlowStateDatabase {
 				, fsRIBGroup);
 			this.isModified = true;
 		} catch (RIBDaemonException e) {
-			e.getErrorCode();
+			log.debug("Error Code: " + e.getErrorCode());
 			e.printStackTrace();
 		}
 

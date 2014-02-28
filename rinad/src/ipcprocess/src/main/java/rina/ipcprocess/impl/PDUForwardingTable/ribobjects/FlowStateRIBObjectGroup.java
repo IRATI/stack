@@ -53,6 +53,7 @@ public class FlowStateRIBObjectGroup extends BaseRIBObject{
 	public void delete(Object object) throws RIBDaemonException {
 		FlowStateObject fso = (FlowStateObject)object;
 		getRIBDaemon().removeRIBObject(fso.getID());
+		this.removeChild(fso.getID());
 	}
 	
 

@@ -124,10 +124,6 @@ public class Graph {
 						throw new Exception("Vertex not found"); //TODO: VertexNotFound exception
 					}
 				}
-				else
-				{
-					log.debug("Object with false state");
-				}
 			}
 		}
 	  
