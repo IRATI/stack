@@ -159,39 +159,58 @@ static void poison(void * ptr, size_t size)
 #endif
 
 #if CONFIG_RINA_MEMORY_STATS
-#if 0
-static size_t mem_stats[] = {
-        0 /* 2 <<  0 */,
-        0 /* 2 <<  1 */,
-        0 /* 2 <<  2 */,
-        0 /* 2 <<  3 */,
-        0 /* 2 <<  4 */,
-        0 /* 2 <<  5 */,
-        0 /* 2 <<  6 */,
-        0 /* 2 <<  7 */,
-        0 /* 2 <<  8 */,
-        0 /* 2 <<  9 */,
-        0 /* 2 << 10 */,
-        0 /* 2 << 11 */,
-        0 /* 2 << 12 */,
-        0 /* 2 << 13 */,
-        0 /* 2 << 14 */,
-        0 /* 2 << 15 */,
-        0 /* 2 << 16 */,
-        0 /* 2 << 17 */,
-        0 /* 2 << 18 */,
-        0 /* 2 << 19 */,
-        0 /* 2 << 20 */,
+static atomic_t mem_stats[] = {
+        ATOMIC_INIT(0) /* 2 ^  0 */,
+        ATOMIC_INIT(0) /* 2 ^  1 */,
+        ATOMIC_INIT(0) /* 2 ^  2 */,
+        ATOMIC_INIT(0) /* 2 ^  3 */,
+        ATOMIC_INIT(0) /* 2 ^  4 */,
+        ATOMIC_INIT(0) /* 2 ^  5 */,
+        ATOMIC_INIT(0) /* 2 ^  6 */,
+        ATOMIC_INIT(0) /* 2 ^  7 */,
+        ATOMIC_INIT(0) /* 2 ^  8 */,
+        ATOMIC_INIT(0) /* 2 ^  9 */,
+        ATOMIC_INIT(0) /* 2 ^ 10 */,
+        ATOMIC_INIT(0) /* 2 ^ 11 */,
+        ATOMIC_INIT(0) /* 2 ^ 12 */,
+        ATOMIC_INIT(0) /* 2 ^ 13 */,
+        ATOMIC_INIT(0) /* 2 ^ 14 */,
+        ATOMIC_INIT(0) /* 2 ^ 15 */,
+        ATOMIC_INIT(0) /* 2 ^ 16 */,
+        ATOMIC_INIT(0) /* 2 ^ 17 */,
+        ATOMIC_INIT(0) /* 2 ^ 18 */,
+        ATOMIC_INIT(0) /* 2 ^ 19 */,
+        ATOMIC_INIT(0) /* 2 ^ 20 */,
 };
 
-#define BLOCKS_COUNT ARRAY_SIZE(block_count)
+#define BLOCKS_COUNT (ARRAY_SIZE(mem_stats) / sizeof(atomic_t))
+
+#if 0
+static void stats_dump(void)
+{
+        size_t s;
+
+        LOG_DBG("Memory stats:");
+        for (s = 0; s < BLOCKS_COUNT; s++)
+                LOG_DBG("  %02d %08d %zd", s, 2 ^ s, atomic_read(&mem_stat[s]);
+}
+#endif
+
+static size_t size2bin(size_t size)
+{
+        size_t bin = 0;
+
+        if (bin > BLOCKS_COUNT)
+                bin = BLOCKS_COUNT;
+
+        return bin;
+}
 
 static void stats_inc(size_t size)
-{ }
+{ atomic_inc(&mem_stats[size2bin(size)]); }
 
 static void stats_dec(size_t size)
-{ }
-#endif
+{ atomic_dec(&mem_stats[size2bin(size)]); }
 #endif
 
 static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
@@ -224,13 +243,8 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
         }
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
-        if (!ptr) {
-                LOG_ERR("Cannot tamper a NULL memory block");
-                return ptr;
-        }
-
 #ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
-        LOG_DBG("The requested block is at %pK, size %zd, real-size %zd",
+        LOG_DBG("Tampering block at %pK, size %zd, real-size %zd",
                 ptr, size, real_size);
 #endif
 
@@ -258,6 +272,8 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
         LOG_DBG("generic_alloc(%zd) = %pK", size, ptr);
 #endif
+
+        stats_inc(size);
 
         return ptr;
 }
@@ -321,6 +337,8 @@ static bool generic_free(void * ptr)
 #endif
         ptr = header;
 #endif
+        
+        stats_dec(ksize(ptr));
 
         kfree(ptr);
 

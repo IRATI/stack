@@ -6,7 +6,7 @@
 
 config RINA_MEMORY_STATS
 	bool "Memory allocation/deallocation stats"
-	default n
+	default y
         depends on RINA_DEBUG
 	help
 	  No help for the time being
