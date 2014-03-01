@@ -1314,14 +1314,14 @@ static bool regression_tests_process_mgmt_sdu(struct rmt * rmt,
 
 static bool regression_tests_ingress_queue(void)
 {
-        struct rmt *           rmt;
-        struct rmt_queue *     tmp;
-        port_id_t              id;
-        struct sdu *           sdu;
-        struct pdu *           pdu;
-        address_t              address;
-        const char *           name;
-        bool                   nothing_to_do;
+        struct rmt *       rmt;
+        struct rmt_queue * tmp;
+        port_id_t          id;
+        struct sdu *       sdu;
+        struct pdu *       pdu;
+        address_t          address;
+        const char *       name;
+        bool               nothing_to_do;
 
         address = 17;
 
