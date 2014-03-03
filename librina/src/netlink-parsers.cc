@@ -2665,25 +2665,12 @@ int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
 }
 
 int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
-        int error = 0;
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
                         object.getClazz().c_str());
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
                         object.getName().c_str());
-
-        // FIXME: find the cause why libnl returns -ENOMEM here
-        do {
-                uint64_t __tmp = object.getInstance();
-                do {
-                        error = nla_put(netlinkMessage,
-                                        RIBO_ATTR_OBJECT_INSTANCE,
-                                        sizeof(uint64_t), &__tmp);
-                        if (error < 0) {
-                                LOG_WARN("Erorr putting object instance %d %lu",
-                                                error, __tmp);
-                        }
-                } while(0);
-        } while(0);
+        NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
+                        object.getInstance());
 
 	return 0;
 

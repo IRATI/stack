@@ -15,6 +15,7 @@
  */
 
 #define RINA_PREFIX "ipc-process"
+#define PAGE_SIZE 4096
 
 #include "logs.h"
 #include "librina-ipc-process.h"
@@ -593,7 +594,9 @@ void ExtendedIPCManager::queryRIBResponse(
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try{
-		rinaManager->sendMessage(&responseMessage);
+	        //FIXME, compute maximum message size dynamically
+		rinaManager->sendMessageOfMaxSize(&responseMessage,
+		                2*PAGE_SIZE);
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}
