@@ -5,10 +5,18 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
+import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
+import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ribdaemon.api.RIBDaemonException;
+import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
+import unitTest.PDUForwardingTable.fakeobjects.FakeIPCProcess;
+import unitTest.PDUForwardingTable.fakeobjects.FakeRIBDaemon;
 
 public class FlowStateInternalObjectGroupTest {
+	
 /*
 	@Test
 	public void add_AddObject_Added()
@@ -177,29 +185,7 @@ public class FlowStateInternalObjectGroupTest {
 		
 		assertEquals(g1.getModifiedFSO(), null);
 	}
-	
-	@Test
-	public void incrementAge_2Objects_Incremented()
-	{
-		long address = 1;
-		int portId = 1;
-		long neighborAddress = 2;
-		int neigborPortID = 1;
-		boolean state = true;
-		int sequenceNumber = 1;
-		int age = 1;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
-		age = 30;
-		FlowStateInternalObject o2 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
-		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		
-		g1.add(o1);
-		g1.add(o2);
-		g1.incrementAge(200);
-		
-		assertEquals(g1.getFlowStateObjectArray().get(0).getAge(), 2);
-		assertEquals(g1.getFlowStateObjectArray().get(1).getAge(), 31);
-	}
+	*/
 	
 	@Test
 	public void incrementAge_2ObjectsIncremented_false()
@@ -208,19 +194,55 @@ public class FlowStateInternalObjectGroupTest {
 		int portId = 1;
 		long neighborAddress = 2;
 		int neigborPortID = 1;
-		boolean state = true;
-		int sequenceNumber = 1;
-		int age = 1;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
-		age = 30;
-		FlowStateInternalObject o2 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
+		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 1);
+		FlowStateInternalObject o2 = new FlowStateInternalObject(neighborAddress, neigborPortID, address, portId, true, 1, 31);
 		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		
-		g1.add(o1);
-		g1.add(o2);
-		
-		assertEquals(g1.incrementAge(200), false);
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
+		try 
+		{
+			ribD.addRIBObject(fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+			g1.add(o2, fsRIBGroup);
+			
+			assertFalse(g1.incrementAge(200, fsRIBGroup));
+		} catch (RIBDaemonException e) {
+			e.printStackTrace();
+		}
 	}
+	
+	@Test
+	public void incrementAge_2Objects_Incremented()
+	{
+		long address = 1;
+		int portId = 1;
+		long neighborAddress = 2;
+		int neigborPortID = 1;
+		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 1);
+		FlowStateInternalObject o2 = new FlowStateInternalObject(neighborAddress, neigborPortID, address, portId, true, 1, 30);
+		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
+		try 
+		{
+			ribD.addRIBObject(fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+			g1.add(o2, fsRIBGroup);
+			g1.incrementAge(200, fsRIBGroup);
+		} catch (RIBDaemonException e) {
+			e.printStackTrace();
+		}
+		
+		assertEquals(g1.getFlowStateObjectArray().get(0).getAge(), 2);
+		assertEquals(g1.getFlowStateObjectArray().get(1).getAge(), 31);
+	}
+	
 	
 	@Test
 	public void incrementAge_EraseObjectMaximumAge_EmptyList()
@@ -229,40 +251,121 @@ public class FlowStateInternalObjectGroupTest {
 		int portId = 1;
 		long neighborAddress = 2;
 		int neigborPortID = 1;
-		boolean state = true;
-		int sequenceNumber = 1;
-		int age = 30;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
+		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
 		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		
-		g1.add(o1);
-		g1.incrementAge(31);
-		
-		assertEquals(g1.getFlowStateObjectArray().size(), 0);
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
+		try 
+		{
+			ribD.addRIBObject(fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+			g1.incrementAge(200, fsRIBGroup);
+		} catch (RIBDaemonException e) {
+			e.printStackTrace();
+		}
+		assertTrue(g1.getFlowStateObjectArray().isEmpty());
 	}
 	
+	@Test
 	public void incrementAge_EraseObjectMaximumAge_true()
 	{
 		long address = 1;
 		int portId = 1;
 		long neighborAddress = 2;
 		int neigborPortID = 1;
-		boolean state = true;
-		int sequenceNumber = 1;
-		int age = 30;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
+		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
 		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
 		
-		g1.add(o1);
-		
-		assertEquals(g1.incrementAge(31), true);
+		try 
+		{
+			ribD.addRIBObject(fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+			
+			assertTrue(g1.incrementAge(200, fsRIBGroup));
+		} catch (RIBDaemonException e) {
+			e.printStackTrace();
+		}
 	}
 	
+	@Test
 	public void incrementAge_EmptyList_false()
 	{
 		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
 		
-		assertEquals(g1.incrementAge(31), false);
+		try {
+			assertFalse(g1.incrementAge(31, fsRIBGroup));
+		} catch (RIBDaemonException e) {
+			e.printStackTrace();
+		}
 	}
-	*/
+	
+	@Test
+	public void incrementAge_RIBObjectErased_false()
+	{
+		long address = 1;
+		int portId = 1;
+		long neighborAddress = 2;
+		int neigborPortID = 1;
+		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
+		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
+		
+		try 
+		{
+			ribD.addRIBObject(fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+			
+			g1.incrementAge(31, fsRIBGroup);
+		} catch (RIBDaemonException e) 
+		{
+			e.printStackTrace();
+		}
+		
+		
+	}
+	
+	@Test
+	public void incrementAge_RIBObjectErasedObjectAdded_True()
+	{
+		long address = 1;
+		int portId = 1;
+		long neighborAddress = 2;
+		int neigborPortID = 1;
+		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
+		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
+		
+		try 
+		{
+			ribD.addRIBObject(fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+			g1.incrementAge(31, fsRIBGroup);
+			g1.add(o1,fsRIBGroup);
+		} catch (RIBDaemonException e) 
+		{
+			e.printStackTrace();
+		}
+		assertEquals(ribD.rib.size(),2);
+	}
 }

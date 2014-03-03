@@ -3,6 +3,9 @@ package rina.ribdaemon.api;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.encoding.api.Encoder;
@@ -22,6 +25,8 @@ import rina.ipcprocess.api.IPCProcess;
  */
 public abstract class BaseRIBObject implements RIBObject{
 
+	private static final Log log = LogFactory.getLog(BaseRIBObject.class);
+	
 	private Encoder encoder = null;
 	private RIBDaemon ribDaemon = null;
 
@@ -150,6 +155,7 @@ public abstract class BaseRIBObject implements RIBObject{
 		for(int i= 0; i<children.size(); i++){
 			child = children.get(i);
 			if (child.getObjectName().equals(objectName)){
+				log.debug("child found, removing");
 				children.remove(child);
 				child.setParent(null);
 				return;

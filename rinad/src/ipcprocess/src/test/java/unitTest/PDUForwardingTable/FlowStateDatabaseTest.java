@@ -12,12 +12,12 @@ import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ribdaemon.api.RIBDaemonException;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
 import unitTest.PDUForwardingTable.fakeobjects.FakeIPCProcess;
 import unitTest.PDUForwardingTable.fakeobjects.FakeRIBDaemon;
+
 
 public class FlowStateDatabaseTest {
 
@@ -82,15 +82,18 @@ public class FlowStateDatabaseTest {
 	@Test
 	public void incrementAge_AddObjectCheckModified_True()
 	{
+		PDUFTImpl impl = new PDUFTImpl(2147483647);
+		FakeRIBDaemon ribD =new FakeRIBDaemon();
+		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
+		impl.setIPCProcess(ipcp);
 		FlowStateDatabase db = new FlowStateDatabase();
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
+		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
 		
-		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
+		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), fsRIBGroup);
 		db.setModified(false);
 		
 		try {
-			db.incrementAge(1, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
+			db.incrementAge(1, fsRIBGroup);
 		} catch (RIBDaemonException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
