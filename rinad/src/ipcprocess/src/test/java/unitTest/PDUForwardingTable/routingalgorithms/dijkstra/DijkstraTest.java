@@ -153,6 +153,34 @@ public class DijkstraTest {
 	}
 	
 	@Test
+	public void getPDUTForwardingTable_LinearGraphPorts_True()
+	{
+		long address = 1;
+		int portId = 1;
+		long neighborAddress = 2;
+		int neighborPortID = 2;
+		boolean state = true;
+		int sequenceNumber = 1;
+		int age = 1;
+		
+		ArrayList<FlowStateObject> a = new ArrayList<FlowStateObject>();
+		//	Flow	node 1 and node 2
+		FlowStateObject o1 = new FlowStateObject(address, portId, neighborAddress, neighborPortID, state, sequenceNumber, age);
+		FlowStateObject o2 = new FlowStateObject(neighborAddress, neighborPortID, address, portId, state, sequenceNumber, age);
+		a.add(o1);
+		a.add(o2);
+		//	Dijkstra Algorithm
+		Vertex source = new Vertex(o1.getAddress()); 
+		RoutingAlgorithmInt algorithm = new DijkstraAlgorithm();
+		PDUForwardingTableEntryList PDUFT = algorithm.getPDUTForwardingTable(a, source);
+
+		PDUForwardingTableEntry e1 = PDUFT.getFirst();
+		
+		assertEquals(e1.getAddress(), 2);
+		assertEquals(e1.getPortIds().getFirst(), 1);
+	}
+	
+	@Test
 	public void getPDUTForwardingTable_MultiGraphEntries_True()
 	{
 		long address = 1;
