@@ -236,6 +236,7 @@ int dtp_write(struct dtp * instance,
         struct dtp_sv * sv;
         struct dt *     dt;
         struct cwq *    cwq;
+        struct rtxq *   rtxq;
         int             ret;
 
         if (!sdu_is_ok(sdu))
@@ -327,9 +328,7 @@ int dtp_write(struct dtp * instance,
                         cwq = dt_cwq(dt);
                         if (!cwq) {
                                 LOG_ERR("Failed to get cwq");
-                                sdu_buffer_disown(sdu);
                                 pdu_destroy(pdu);
-                                sdu_destroy(sdu);
                                 return -1;
                         }
 
@@ -343,22 +342,29 @@ int dtp_write(struct dtp * instance,
         }
 
         if (sv->rexmsn_ctrl) {
-                /* Add timer for PDU */
-                /* Put a copy in the rtxq queue */
+                /* FIXME: Add timer for PDU */
+                rtxq = dt_rtxq(dt);
+                if (!rtxq) {
+                        LOG_ERR("Failed to get rtxq");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                
         }
 
 
         /* Post SDU to RMT */
-        /* Give the data to RMT now ! */
         ret = rmt_send(instance->rmt,
                        pci_destination(pci),
                        pci_qos_id(pci),
                        pdu);
 
-        /* Start SenderInactivityTimer */
-        rtimer_start(instance->timers.sender_inactivity, 
-                     2*(TIME_MPL+TIME_R+TIME_A));
-
+        if (rtimer_start(instance->timers.sender_inactivity, 
+                         2*(TIME_MPL+TIME_R+TIME_A))) {
+                LOG_ERR("Failed to start timer");
+                return -1;
+        }
+        
         return ret;
 }
 
