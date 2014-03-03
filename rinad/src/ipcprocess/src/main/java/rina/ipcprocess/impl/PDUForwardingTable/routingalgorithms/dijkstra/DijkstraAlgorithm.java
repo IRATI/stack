@@ -17,12 +17,34 @@ import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 
 public class DijkstraAlgorithm implements RoutingAlgorithmInt{
+	public class PredecessorInfo
+	{
+		public VertexInt predecessor;
+		public int portId;
 		
+		public PredecessorInfo(VertexInt nPredecessor, Edge edge)
+		{
+			predecessor = nPredecessor;
+			if (edge.getV1().equals(nPredecessor))
+			{
+				portId = edge.getPortV1();
+			}
+			else
+			{
+				portId = edge.getPortV2();
+			}
+		}
+		public PredecessorInfo (VertexInt nPredecessor)
+		{
+			predecessor = nPredecessor;
+			portId = -1;
+		}
+	}
 	private List<VertexInt> nodes;
 	private List<Edge> edges;
 	private Set<VertexInt> settledNodes;
 	private Set<VertexInt> unSettledNodes;
-	private Map<VertexInt, VertexInt> predecessors;
+	private Map<VertexInt, PredecessorInfo> predecessors;
 	private Map<VertexInt, Integer> distance;
 	  
 	public void execute(VertexInt source) 
@@ -30,7 +52,7 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 		settledNodes = new HashSet<VertexInt>();
 		unSettledNodes = new HashSet<VertexInt>();
 		distance = new HashMap<VertexInt, Integer>();
-		predecessors = new HashMap<VertexInt, VertexInt>();
+		predecessors = new HashMap<VertexInt, PredecessorInfo>();
 		distance.put(source, 0);
 		unSettledNodes.add(source);
 		while (unSettledNodes.size() > 0) 
@@ -52,7 +74,7 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 		    {
 				distance.put(target, getShortestDistance(node) +  e.getWeight());
 		        
-		        predecessors.put(target, node);
+		        predecessors.put(target, new PredecessorInfo(node, e));
 		        unSettledNodes.add(target);
 		    }
 		 }
@@ -115,29 +137,34 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 	   * This method returns the path from the source to the selected target and
 	   * NULL if no path exists
 	   */
-	  public LinkedList<VertexInt> getPath(VertexInt target) {
-		    LinkedList<VertexInt> path = new LinkedList<VertexInt>();
-		    VertexInt step = target;
+	  public LinkedList<PredecessorInfo> getPath(VertexInt target) 
+	  {
+		  LinkedList<PredecessorInfo> path = new LinkedList<PredecessorInfo>();
+		  PredecessorInfo current = new PredecessorInfo(target);
 		    // check if a path exists
-	    if (predecessors.get(step) == null) {
-	      return null;
-	    }
-	    path.add(step);
-	    while (predecessors.get(step) != null) {
-	      step = predecessors.get(step);
-	      path.add(step);
-	    }
-	    // Put it into the correct order
-		    Collections.reverse(path);
-		    return path;
+	      if (predecessors.get(current.predecessor) == null) {
+	        return null;
+	      }
+	      path.add(current);
+	      while (predecessors.get(current.predecessor) != null) {
+	        current = predecessors.get(current.predecessor);
+	        path.add(current);
+	      }
+	      // Put it into the correct order
+		  Collections.reverse(path);
+		  return path;
 	  }
 	  
-	  public VertexInt getNextNode(VertexInt target, VertexInt source) 
+	  public PredecessorInfo getNextNode(VertexInt target, VertexInt source) 
 	  {
-		  VertexInt step = target;
-		  while (predecessors.get(step) != null && predecessors.get(step) != source) 
+		  PredecessorInfo step = new PredecessorInfo(target);
+		  while (predecessors.get(step.predecessor) != null && predecessors.get(step.predecessor) != source) 
 		  {
-			  step = predecessors.get(step);
+			  step = predecessors.get(step.predecessor);
+		  }
+		  if (step.predecessor.equals(target))
+		  {
+			  return null;
 		  }
 		  return step;
 	  }
@@ -155,8 +182,11 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 		  {
 			  if(v.getAddress() != source.getAddress())
 			  {
-				  VertexInt nextNode = getNextNode(v, source);
-				  int portId = -1;
+				  PredecessorInfo nextNode = getNextNode(v, source);
+				  
+				  
+				  /*int portId = -1;
+				  
 				  for (FlowStateObject e : fsoList)
 				  {
 					  if (e.getNeighborAddress() == nextNode.getAddress() && e.getAddress() == source.getAddress())
@@ -164,12 +194,12 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 						  // TODO: Weights for each FlowStateObject
 						  portId = e.getPortid();
 					  }
-				  }
-				  if (portId != -1)
+				  }*/
+				  if (nextNode != null)
 				  {
 					  PDUForwardingTableEntry entry = new PDUForwardingTableEntry();
 					  entry.setAddress(v.getAddress());
-					  entry.addPortId(portId);
+					  entry.addPortId(nextNode.portId);
 					  entry.setQosId(1);
 					  pduftEntryList.addLast(entry);
 				  }
