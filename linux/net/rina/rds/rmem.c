@@ -158,7 +158,7 @@ static void poison(void * ptr, size_t size)
 }
 #endif
 
-#if CONFIG_RINA_MEMORY_STATS
+#ifdef CONFIG_RINA_MEMORY_STATS
 static atomic_t mem_stats[] = {
         ATOMIC_INIT(0) /* 2 ^  0 */,
         ATOMIC_INIT(0) /* 2 ^  1 */,
@@ -273,7 +273,9 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
         LOG_DBG("generic_alloc(%zd) = %pK", size, ptr);
 #endif
 
+#ifdef CONFIG_RINA_MEMORY_STATS
         stats_inc(size);
+#endif
 
         return ptr;
 }
@@ -337,8 +339,10 @@ static bool generic_free(void * ptr)
 #endif
         ptr = header;
 #endif
-        
+
+#ifdef CONFIG_RINA_MEMORY_STATS
         stats_dec(ksize(ptr));
+#endif
 
         kfree(ptr);
 
