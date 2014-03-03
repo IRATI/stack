@@ -89,8 +89,8 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
 	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 21000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 3000; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 5000; //3 sec
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 1000; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 31000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;
@@ -304,7 +304,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean propagateFSDB()
 	{
-		log.info("propagateFSDB function launched");
+		log.debug("propagateFSDB function launched");
 
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
@@ -353,7 +353,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void updateAge()
 	{
-		log.info("updateAge function launched");
+		log.debug("updateAge function launched");
 		try {
 			db.incrementAge(maximumAge, fsRIBGroup);
 		} catch (RIBDaemonException e) {
@@ -364,7 +364,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void forwardingTableUpdate ()
 	{
-		log.info("forwardingTableUpdate function launched");
+		log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
 			log.debug("FSDB is modified, computing new paths");
@@ -376,7 +376,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				ribDaemon.setPDUForwardingTable(entryList);
 				for (PDUForwardingTableEntry e : entryList)
 				{
-					log.debug("Entry set in kernel. Address: " + e.getAddress() + "Port: " + e.getPortIds());
+					log.debug("Entry set in kernel. Address: " + e.getAddress() + " Port: " + e.getPortIds().getFirst());
 				}
 			} catch (PDUForwardingTableException e) {
 				log.error("Error setting the PDU Forwarding table in the kernel");

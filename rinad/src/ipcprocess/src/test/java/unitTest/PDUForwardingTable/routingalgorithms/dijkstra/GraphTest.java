@@ -64,9 +64,7 @@ public class GraphTest {
 		int age = 1;
 		
 		FlowStateObject o1 = new FlowStateObject(address, portId, neighborAddress, neigborPortID, state, sequenceNumber, age);
-		address = 2;
-		neighborAddress = 1;
-		FlowStateObject o2 = new FlowStateObject(address, portId, neighborAddress, neigborPortID, false, sequenceNumber, age);
+		FlowStateObject o2 = new FlowStateObject(neighborAddress, neigborPortID, address, portId, false, sequenceNumber, age);
 		ArrayList<FlowStateObject> a = new ArrayList<FlowStateObject>();
 		a.add(o1);
 		a.add(o2);

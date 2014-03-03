@@ -1,6 +1,7 @@
 package unitTest.PDUForwardingTable.fakeobjects;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,6 +31,8 @@ import rina.encoding.api.Encoder;
 public class FakeRIBDaemon implements RIBDaemon{
 	
 	private static final Log log = LogFactory.getLog(FakeRIBDaemon.class);
+	
+	public ConcurrentHashMap rib = new ConcurrentHashMap<String, RIBObject>();
 	public FlowStateObject recoveredObject = null;
 	public FlowStateObjectGroup recoveredObjectGroup = null;
 	public boolean waitingResponse = false;
@@ -67,9 +70,9 @@ public class FakeRIBDaemon implements RIBDaemon{
 	}
 
 	@Override
-	public void addRIBObject(RIBObject ribObject) throws RIBDaemonException {
-		// TODO Auto-generated method stub
-		
+	public void addRIBObject(RIBObject ribObject) throws RIBDaemonException 
+	{
+		rib.put(ribObject.getObjectName(), ribObject);
 	}
 
 	@Override
@@ -80,7 +83,11 @@ public class FakeRIBDaemon implements RIBDaemon{
 
 	@Override
 	public void removeRIBObject(String objectName) throws RIBDaemonException {
-		// TODO Auto-generated method stub
+		if(!rib.containsKey(objectName))
+		{
+			throw new RIBDaemonException(RIBDaemonException.OBJECTNAME_NOT_PRESENT_IN_THE_RIB);
+		}
+		rib.remove(objectName);
 		
 	}
 

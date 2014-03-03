@@ -8,32 +8,32 @@ public class Edge  {
 	  private final VertexInt v1;
 	  private final VertexInt v2;
 	  private final int weight;
-//	  private int portV1;
-//	  private int portV2;
+	  private int portV1;
+	  private int portV2;
 	  
-	  public Edge(VertexInt v1, VertexInt v2, int weight) {
+	  public Edge(VertexInt v1, int portV1, VertexInt v2, int portV2, int weight) {
 	    this.v1 = v1;
-//	    this.portV1 = portV1;
-//	    this.portV2 = portV2;
+	    this.portV1 = portV1;
+	    this.portV2 = portV2;
 	    this.v2 = v2;
 	    this.weight = weight;
 	  }
 
-//	  public int getPortV1() {
-//		return portV1;
-//	  }
-//
-//	  public void setPortV1(int portV1) {
-//		this.portV1 = portV1;
-//	  }
-//
-//	  public int getPortV2() {
-//		return portV2;
-//	  }
-//
-//	  public void setPortV2(int portV2) {
-//		this.portV2 = portV2;
-//	  }
+	  public int getPortV1() {
+		return portV1;
+	  }
+
+	  public void setPortV1(int portV1) {
+		this.portV1 = portV1;
+	  }
+
+	  public int getPortV2() {
+		return portV2;
+	  }
+
+	  public void setPortV2(int portV2) {
+		this.portV2 = portV2;
+	  }
 
 	  public VertexInt getV2() {
 	    return v2;
