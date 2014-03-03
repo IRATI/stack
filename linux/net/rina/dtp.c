@@ -236,6 +236,7 @@ int dtp_write(struct dtp * instance,
         struct dtp_sv * sv;
         struct dt *     dt;
         struct cwq *    cwq;
+        int             ret;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -246,7 +247,12 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
-        /* FIXME: Stop SenderInactivityTimer */
+        /* Stop SenderInactivityTimer */
+        if (rtimer_stop(instance->timers.sender_inactivity)) {
+                LOG_ERR("Failed to stop timer");
+                sdu_destroy(sdu);
+                return -1;
+        }
 
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
@@ -255,8 +261,10 @@ int dtp_write(struct dtp * instance,
         ASSERT(dt);
 
         pci = pci_create();
-        if (!pci)
+        if (!pci) {
+                sdu_destroy(sdu);
                 return -1;
+        }
 
         if (pci_format(pci,
                        sv->connection->source_cep_id,
@@ -267,6 +275,7 @@ int dtp_write(struct dtp * instance,
                        sv->connection->qos_id,
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -284,6 +293,9 @@ int dtp_write(struct dtp * instance,
         }
 
         if (pdu_pci_set(pdu, pci)) {
+                sdu_buffer_disown(sdu);
+                pdu_destroy(pdu);
+                sdu_destroy(sdu);
                 pci_destroy(pci);
                 return -1;
         }
@@ -336,12 +348,16 @@ int dtp_write(struct dtp * instance,
         sdu_destroy(sdu);
         /* Post SDU to RMT */
         /* Give the data to RMT now ! */
-        return rmt_send(instance->rmt,
-                        pci_destination(pci),
-                        pci_qos_id(pci),
-                        pdu);
+        ret = rmt_send(instance->rmt,
+                       pci_destination(pci),
+                       pci_qos_id(pci),
+                       pdu);
 
-        /* FIXME: Start SenderInactivityTimer */
+        /* Start SenderInactivityTimer */
+        rtimer_start(instance->timers.sender_inactivity, 
+                     2*(TIME_MPL+TIME_R+TIME_A));
+
+        return ret;
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
