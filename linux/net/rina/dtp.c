@@ -27,6 +27,8 @@
 #include "utils.h"
 #include "debug.h"
 #include "dtp.h"
+#include "dt.h"
+#include "dt-utils.h"
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
@@ -232,6 +234,8 @@ int dtp_write(struct dtp * instance,
         struct pdu *    pdu;
         struct pci *    pci;
         struct dtp_sv * sv;
+        struct dt *     dt;
+        struct cwq *    cwq;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -246,6 +250,9 @@ int dtp_write(struct dtp * instance,
 
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
+
+        dt = instance->parent;
+        ASSERT(dt);
 
         pci = pci_create();
         if (!pci)
@@ -299,14 +306,20 @@ int dtp_write(struct dtp * instance,
                          * Call TransmissionControlPolicy
                          *
                          * Might close window
-                         *
-                         * What happens when we aren't
-                         * allowed to add it here?
                          */
                 } else {
-                        sv->window_closed = true;
-                        if (/*cwq_len < */ sv->max_cwq_len-1) {
-                                /* FIXME: Put PDU on cwq and return */
+                        cwq = dt_cwq(dt);
+                        if (!cwq) {
+                                LOG_ERR("Failed to get cwq");
+                                sdu_buffer_disown(sdu);
+                                pdu_destroy(pdu);
+                                sdu_destroy(sdu);
+                                return -1;
+                        }
+
+                        if (cwq_size(cwq) < sv->max_cwq_len-1) {
+                                cwq_push(cwq, pdu);
+                                return 0;
                         } else {
                                 /* Call FlowControlOverrunPolicy and return */
                         }

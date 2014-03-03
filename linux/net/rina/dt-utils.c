@@ -126,6 +126,13 @@ bool cwq_is_empty(struct cwq * queue)
         return ret;
 }
 
+size_t cwq_size(struct cwq * queue)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+
 struct rtxq {
         int filler_to_be_removed;
 };
