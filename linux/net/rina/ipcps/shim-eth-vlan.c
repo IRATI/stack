@@ -629,6 +629,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
                         LOG_ERR("Failed to remove the entry from the cache");
                         return -1;
                 }
+                data->handle = NULL;
         }
 
         name_destroy(data->app_name);
@@ -1485,7 +1486,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         if (pos->handle) {
                                 if (rinarp_remove(pos->handle)) {
-                                        LOG_ERR("Failed to remove " 
+                                        LOG_ERR("Failed to remove "
                                                 "the entry from the cache");
                                         return -1;
                                 }

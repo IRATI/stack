@@ -106,7 +106,6 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 				}
 			}
 		}catch(Exception ex){
-			ex.printStackTrace();
 		}
 
 		return result;

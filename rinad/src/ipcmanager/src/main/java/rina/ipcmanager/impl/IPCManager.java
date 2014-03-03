@@ -32,8 +32,11 @@ import eu.irati.librina.rina;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -45,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import rina.utils.LogHelper;
 import rina.configuration.IPCProcessToCreate;
+import rina.configuration.NeighborData;
 import rina.configuration.RINAConfiguration;
 import rina.ipcmanager.impl.console.IPCManagerConsole;
 import rina.ipcmanager.impl.helpers.ApplicationRegistrationManager;
@@ -184,7 +188,9 @@ public class IPCManager {
 		ApplicationProcessNamingInformation processNamingInfo = null;
 		IPCProcess ipcProcess = null;
 		List<String> difsToRegisterAt = null;
+		List<NeighborData> neighbors = null;
 		IPCEvent event = null;
+		Map<IPCProcess, List<NeighborData>> pendingEnrollments = new HashMap<IPCProcess, List<NeighborData>>();
 		
 		for(int i=0; i<configuration.getIpcProcessesToCreate().size(); i++){
 			ipcProcessToCreate = configuration.getIpcProcessesToCreate().get(i);
@@ -259,9 +265,34 @@ public class IPCManager {
 				}
 			}
 			
-			if (ipcProcessToCreate.getNeighbors() != null && 
-					ipcProcessToCreate.getNeighbors().size() > 0){
-				//TODO cause enrollment to be initiated
+			neighbors = ipcProcessToCreate.getNeighbors();
+			if (neighbors != null && neighbors.size() > 0){
+				pendingEnrollments.put(ipcProcess, neighbors);
+			}
+		}
+		
+		if (!pendingEnrollments.isEmpty()) {
+			Iterator<Entry<IPCProcess, List<NeighborData>>> iterator = pendingEnrollments.entrySet().iterator();
+			Entry<IPCProcess, List<NeighborData>> currentEntry = null;
+			NeighborData currentNeighbor = null;
+			while (iterator.hasNext()) {
+				currentEntry = iterator.next();
+				neighbors = currentEntry.getValue();
+				ipcProcess = currentEntry.getKey();
+				for(int i=0; i<neighbors.size(); i++) {
+					currentNeighbor = neighbors.get(i);
+					try{
+						requestEnrollmentToDIF(
+								ipcProcess.getId(), currentNeighbor.getDifName(), 
+								currentNeighbor.getSupportingDifName(), 
+								currentNeighbor.getApName(), 
+								currentNeighbor.getApInstance());
+					}catch(Exception ex){
+						log.error("Error requesting enrollment of IPC Process " + ipcProcess.getId() 
+								+ " to neighbor " + currentNeighbor.getApName() 
+								+ " using N-1 DIF "+currentNeighbor.getSupportingDifName());
+					}
+				}
 			}
 		}
 	}
