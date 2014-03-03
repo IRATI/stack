@@ -481,9 +481,10 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
 
         mgmt_data = data->mgmt_data;
         if (!mgmt_data) {
-                LOG_ERR("No normal_mgmt data in ipc process: %d", data->id);
+                LOG_ERR("No normal_mgmt data in IPC Process %d", data->id);
                 return -1;
         }
+
         spin_lock(&mgmt_data->lock);
         if (mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_DBG("IPCP %d is being destroyed", data->id);
@@ -498,13 +499,13 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 retval = wait_event_interruptible(mgmt_data->wait_q,
                                                   queue_ready(mgmt_data));
 
-                if (!mgmt_data  ||
-                    !mgmt_data->sdu_ready) {
+                if (!mgmt_data  || !mgmt_data->sdu_ready) {
                         LOG_ERR("No mgmt data anymore, waitqueue "
                                 "return code was %d", retval);
                         spin_unlock(&data->mgmt_data->lock);
                         return -1;
                 }
+
                 spin_lock(&mgmt_data->lock);
                 if (retval) {
                         LOG_DBG("Mgmt queue waken up by interruption, "
@@ -529,6 +530,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 LOG_ERR("There is not enough data in the management queue");
                 retval = -1;
         }
+
  finish:
         if (atomic_dec_and_test(&mgmt_data->readers) &&
             (mgmt_data->state == MGMT_DATA_DESTROYED)) {
