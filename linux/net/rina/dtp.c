@@ -238,6 +238,7 @@ int dtp_write(struct dtp * instance,
         struct cwq *    cwq;
         struct rtxq *   rtxq;
         int             ret;
+        struct pdu *    cpdu;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -308,6 +309,7 @@ int dtp_write(struct dtp * instance,
          * Incrementing here means the PDU cannot
          * be just thrown away from this point onwards
          */
+        /* Probably needs to be revised */
         sv->outbound.next_sequence_to_send++;
 
         /* Step 1: Sequencing */
@@ -333,7 +335,11 @@ int dtp_write(struct dtp * instance,
                         }
 
                         if (cwq_size(cwq) < sv->max_cwq_len-1) {
-                                cwq_push(cwq, pdu);
+                                if (cwq_push(cwq, pdu)) {
+                                        LOG_ERR("Failed to push to cwq");
+                                        pdu_destroy(pdu);
+                                        return -1;
+                                }
                                 return 0;
                         } else {
                                 /* Call FlowControlOverrunPolicy and return */
@@ -349,7 +355,19 @@ int dtp_write(struct dtp * instance,
                         pdu_destroy(pdu);
                         return -1;
                 }
-                
+
+                cpdu = pdu_dup(pdu);
+                if (!cpdu) {
+                        LOG_ERR("Failed to copy PDU");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+
+                if (rtxq_push(rtxq, cpdu)) {
+                        LOG_ERR("Couldn't push to rtxq");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
         }
 
 
