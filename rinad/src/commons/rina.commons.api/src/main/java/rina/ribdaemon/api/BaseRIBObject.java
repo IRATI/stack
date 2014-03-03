@@ -161,7 +161,6 @@ public abstract class BaseRIBObject implements RIBObject{
 				return;
 			}
 		}
-
 		throw new RIBDaemonException(RIBDaemonException.CHILD_NOT_FOUND);
 	}
 
