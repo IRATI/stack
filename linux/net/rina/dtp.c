@@ -299,6 +299,10 @@ int dtp_write(struct dtp * instance,
                 pci_destroy(pci);
                 return -1;
         }
+
+        sdu_buffer_disown(sdu);
+        sdu_destroy(sdu);
+
         /*
          * Incrementing here means the PDU cannot
          * be just thrown away from this point onwards
@@ -344,8 +348,6 @@ int dtp_write(struct dtp * instance,
         }
 
 
-        sdu_buffer_disown(sdu);
-        sdu_destroy(sdu);
         /* Post SDU to RMT */
         /* Give the data to RMT now ! */
         ret = rmt_send(instance->rmt,
