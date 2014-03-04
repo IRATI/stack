@@ -768,7 +768,7 @@ static struct mgmt_data * normal_mgmt_data_create(void)
                 return NULL;
         }
 
-        data->state = MGMT_DATA_READY;
+        data->state     = MGMT_DATA_READY;
         data->sdu_ready = rfifo_create();
         if (!data->sdu_ready) {
                 LOG_ERR("Could not create MGMT SDUs queue");
