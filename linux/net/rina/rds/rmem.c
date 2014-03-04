@@ -200,10 +200,10 @@ static void stats_dump(void)
 static size_t size2bin(size_t size)
 {
         size_t bin = 0;
-        
+
         if (bin > BLOCKS_COUNT)
                 bin = BLOCKS_COUNT;
-        
+
         return bin;
 }
 
