@@ -54,10 +54,12 @@ struct dtp_sv {
 
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
-        int (* transmission_control)(struct dtp * instance);
+        int (* transmission_control)(struct dtp * instance,
+                                     struct sdu * sdu);
         /* FIXME: What is this policy for? */
         int (* closed_window_queue)(struct dtp * instance);
-        int (* flow_control_overrun)(struct dtp * instance);
+        int (* flow_control_overrun)(struct dtp * instance,
+                                     struct sdu * sdu);
         int (* unknown_flow)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
@@ -231,14 +233,15 @@ static int apply_policy_RexmsnQ(struct dtp * dtp,
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
-        struct pdu *    pdu;
-        struct pci *    pci;
-        struct dtp_sv * sv;
-        struct dt *     dt;
-        struct cwq *    cwq;
-        struct rtxq *   rtxq;
-        int             ret;
-        struct pdu *    cpdu;
+        struct pdu *          pdu;
+        struct pci *          pci;
+        struct dtp_sv *       sv;
+        struct dt *           dt;
+        struct cwq *          cwq;
+        struct rtxq *         rtxq;
+        int                   ret;
+        struct pdu *          cpdu;
+        struct dtp_policies * policies;
 
         if (!sdu_is_ok(sdu))
                 return -1;
@@ -261,6 +264,9 @@ int dtp_write(struct dtp * instance,
 
         dt = instance->parent;
         ASSERT(dt);
+
+        policies = instance->policies;
+        ASSERT(policies);
 
         pci = pci_create();
         if (!pci) {
@@ -320,12 +326,12 @@ int dtp_write(struct dtp * instance,
         if (sv->window_based) {
                 if (!sv->window_closed &&
                     pci_sequence_number_get(pci) <
+                    /* Should probably be kept in DTCP SV*/
                     sv->outbound.right_window_edge) {
                         /*
-                         * Call TransmissionControlPolicy
-                         *
                          * Might close window
                          */
+                        policies->transmission_control(instance, sdu);
                 } else {
                         cwq = dt_cwq(dt);
                         if (!cwq) {
@@ -342,7 +348,8 @@ int dtp_write(struct dtp * instance,
                                 }
                                 return 0;
                         } else {
-                                /* Call FlowControlOverrunPolicy and return */
+                                policies->flow_control_overrun(instance, sdu);
+                                return 0;
                         }
                 }
         }
