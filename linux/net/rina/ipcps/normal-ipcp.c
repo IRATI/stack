@@ -750,15 +750,6 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .ipcp_name                 = normal_ipcp_name
 };
 
-static void sdu_wpi_destructor(void * data)
-{
-        struct sdu_wpi * s = data;
-
-        if (sdu_wpi_destroy(s)) {
-                LOG_ERR("Could not destroy SDU-WPI");
-        }
-}
-
 static struct mgmt_data * normal_mgmt_data_create(void)
 {
         struct mgmt_data * data;
@@ -769,11 +760,10 @@ static struct mgmt_data * normal_mgmt_data_create(void)
                 return NULL;
         }
 
-        data->state = MGMT_DATA_READY;
+        data->state     = MGMT_DATA_READY;
         data->sdu_ready = rfifo_create();
         if (!data->sdu_ready) {
                 LOG_ERR("Could not create MGMT SDUs queue");
-                rfifo_destroy(data->sdu_ready, sdu_wpi_destructor);
                 rkfree(data);
                 return NULL;
         }
