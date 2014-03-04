@@ -192,17 +192,18 @@ static void stats_dump(void)
 
         LOG_DBG("Memory stats:");
         for (s = 0; s < BLOCKS_COUNT; s++)
-                LOG_DBG("  %02d %08d %zd", s, 2 ^ s, atomic_read(&mem_stat[s]);
+                LOG_DBG("  %02d %08d %zd",
+                        s, 2 ^ s, atomic_read(&mem_stat[s]));
 }
 #endif
 
 static size_t size2bin(size_t size)
 {
         size_t bin = 0;
-
+        
         if (bin > BLOCKS_COUNT)
                 bin = BLOCKS_COUNT;
-
+        
         return bin;
 }
 

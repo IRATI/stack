@@ -383,7 +383,7 @@ static int send_worker(void * o)
                 if (!sdu) {
                         LOG_ERR("Error creating SDU from PDU, "
                                 "dropping PDU!");
-			spin_lock(&tmp->egress.queues->lock);
+                        spin_lock(&tmp->egress.queues->lock);
                         pdu_destroy(pdu);
                         continue;
                 }
@@ -391,7 +391,7 @@ static int send_worker(void * o)
                 LOG_DBG("Gonna send SDU to port-id %d", port_id);
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
-			spin_lock(&tmp->egress.queues->lock);
+                        spin_lock(&tmp->egress.queues->lock);
                         continue; /* Useless for the moment */
                 }
 
