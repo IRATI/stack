@@ -192,7 +192,8 @@ static void stats_dump(void)
 
         LOG_DBG("Memory stats:");
         for (s = 0; s < BLOCKS_COUNT; s++)
-                LOG_DBG("  %02d %08d %zd", s, 2 ^ s, atomic_read(&mem_stat[s]);
+                LOG_DBG("  %02d %08d %zd",
+                        s, 2 ^ s, atomic_read(&mem_stat[s]));
 }
 #endif
 
