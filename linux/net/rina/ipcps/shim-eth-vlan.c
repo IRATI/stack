@@ -201,7 +201,6 @@ find_flow_by_gha(struct ipcp_instance_data * data,
                 return NULL;
 
         list_for_each_entry(flow, &data->flows, list) {
-        		gha_dump(flow->dest_ha);
                 if (gha_is_equal(addr, flow->dest_ha)) {
                         return flow;
                 }
@@ -837,8 +836,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         spin_lock(&data->lock);
-
-        gha_dump(ghaddr);
 
         flow = find_flow_by_gha(data, ghaddr);
 
