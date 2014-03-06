@@ -1,6 +1,5 @@
 package rina.ipcmanager.impl.console;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -160,9 +159,8 @@ public class IPCManagerConsole implements Runnable{
 						done = true;
 						timer.cancel();
 						in.close();
-						inps.close();
+						out.flush();
 						out.close();
-						outs.close();
 					}else if (splittedCommand[0].trim().equalsIgnoreCase("help")){
 						Iterator<String> iterator = commands.keySet().iterator();
 						int i = 0;
@@ -190,14 +188,18 @@ public class IPCManagerConsole implements Runnable{
 
 				try {
 					log.debug("Finishing IPC Manager console session");
+					socket.shutdownInput();
+					socket.shutdownOutput();
 					socket.close();
+					log.debug("Socket closed");
 					socket = null;
-				} catch (IOException e) {
+				} catch (Exception e) {
+					log.error("Error closing socket: "+e.getMessage());
 					e.printStackTrace();
 				}
 
 			}
-		}catch(IOException e){
+		}catch(Exception e){
 			log.error(e.getMessage());
 		}
 	}
