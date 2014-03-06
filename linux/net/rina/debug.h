@@ -38,7 +38,7 @@
                                  __FUNCTION__);                         \
                         BUG();                                          \
                 }                                                       \
-        } while(0)
+        } while (0)
 
 int  rina_debug_init(void);
 void rina_debug_exit(void);

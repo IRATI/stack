@@ -32,12 +32,38 @@
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 struct memblock_header {
         size_t  inner_length;
-        uint8_t filler[BITS_PER_LONG / 8];
+        uint8_t filler[BITS_PER_LONG / 8]; /* Mah ... */
 };
 
 struct memblock_footer {
-        uint8_t filler[BITS_PER_LONG / 8];
+        uint8_t filler[BITS_PER_LONG / 8]; /* Mah ... */
 };
+
+static void * inner2outer(void * ptr)
+{
+        ASSERT(ptr);
+
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        return (struct memblock_header *)
+                ((uint8_t *) ptr - sizeof(struct memblock_header));
+#else
+        return ptr;
+#endif
+}
+
+#if 0
+static void * outer2inner(void * ptr)
+{
+        ASSERT(ptr);
+
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        return (struct memblock_header *)
+                ((uint8_t *) ptr + sizeof(struct memblock_header));
+#else
+        return ptr;
+#endif
+}
+#endif
 
 static void mb_filler_init(uint8_t * f, size_t length)
 {
@@ -105,7 +131,7 @@ static bool mb_is_footer_filler_ok(const struct memblock_footer * m)
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_POISONING
-static void mb_poison(void * ptr, size_t size)
+static void poison(void * ptr, size_t size)
 {
         size_t    i;
         uint8_t * p;
@@ -134,43 +160,65 @@ static void mb_poison(void * ptr, size_t size)
 }
 #endif
 
-#if 0
-static size_t mem_stats[] = {
-        0 /* 2 <<  0 */,
-        0 /* 2 <<  1 */,
-        0 /* 2 <<  2 */,
-        0 /* 2 <<  3 */,
-        0 /* 2 <<  4 */,
-        0 /* 2 <<  5 */,
-        0 /* 2 <<  6 */,
-        0 /* 2 <<  7 */,
-        0 /* 2 <<  8 */,
-        0 /* 2 <<  9 */,
-        0 /* 2 << 10 */,
-        0 /* 2 << 11 */,
-        0 /* 2 << 12 */,
-        0 /* 2 << 13 */,
-        0 /* 2 << 14 */,
-        0 /* 2 << 15 */,
-        0 /* 2 << 16 */,
-        0 /* 2 << 17 */,
-        0 /* 2 << 18 */,
-        0 /* 2 << 19 */,
-        0 /* 2 << 20 */,
+#ifdef CONFIG_RINA_MEMORY_STATS
+static atomic_t mem_stats[] = {
+        ATOMIC_INIT(0) /* 2 ^  0 */,
+        ATOMIC_INIT(0) /* 2 ^  1 */,
+        ATOMIC_INIT(0) /* 2 ^  2 */,
+        ATOMIC_INIT(0) /* 2 ^  3 */,
+        ATOMIC_INIT(0) /* 2 ^  4 */,
+        ATOMIC_INIT(0) /* 2 ^  5 */,
+        ATOMIC_INIT(0) /* 2 ^  6 */,
+        ATOMIC_INIT(0) /* 2 ^  7 */,
+        ATOMIC_INIT(0) /* 2 ^  8 */,
+        ATOMIC_INIT(0) /* 2 ^  9 */,
+        ATOMIC_INIT(0) /* 2 ^ 10 */,
+        ATOMIC_INIT(0) /* 2 ^ 11 */,
+        ATOMIC_INIT(0) /* 2 ^ 12 */,
+        ATOMIC_INIT(0) /* 2 ^ 13 */,
+        ATOMIC_INIT(0) /* 2 ^ 14 */,
+        ATOMIC_INIT(0) /* 2 ^ 15 */,
+        ATOMIC_INIT(0) /* 2 ^ 16 */,
+        ATOMIC_INIT(0) /* 2 ^ 17 */,
+        ATOMIC_INIT(0) /* 2 ^ 18 */,
+        ATOMIC_INIT(0) /* 2 ^ 19 */,
+        ATOMIC_INIT(0) /* 2 ^ 20 */,
 };
 
-#define BLOCKS_COUNT ARRAY_SIZE(block_count)
+#define BLOCKS_COUNT (ARRAY_SIZE(mem_stats) / sizeof(atomic_t))
+
+#if 0
+static void stats_dump(void)
+{
+        size_t s;
+
+        LOG_DBG("Memory stats:");
+        for (s = 0; s < BLOCKS_COUNT; s++)
+                LOG_DBG("  %02d %08d %zd",
+                        s, 2 ^ s, atomic_read(&mem_stat[s]));
+}
+#endif
+
+static size_t size2bin(size_t size)
+{
+        size_t bin = 0;
+
+        if (bin > BLOCKS_COUNT)
+                bin = BLOCKS_COUNT;
+
+        return bin;
+}
 
 static void stats_inc(size_t size)
-{ }
+{ atomic_inc(&mem_stats[size2bin(size)]); }
 
 static void stats_dec(size_t size)
-{ }
+{ atomic_dec(&mem_stats[size2bin(size)]); }
 #endif
 
 static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
-                            size_t size,
-                            gfp_t flags)
+                            size_t    size,
+                            gfp_t     flags)
 {
         size_t                   real_size;
         void *                   ptr;
@@ -179,46 +227,29 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
         struct memblock_footer * footer;
 #endif
 
-        ASSERT(alloc_func);
-
-#ifdef CONFIG_RINA_MEMORY_CHECKS
-        /* Should this be transformed into an assertion ? */
         if (!size) {
                 /* We will consider 0 bytes allocations as meaningless */
                 LOG_ERR("Allocating 0 bytes is meaningless");
                 return NULL;
         }
-#endif
 
         real_size = size;
-
-#ifdef CONFIG_RINA_MEMORY_STATS
-        real_size += sizeof(size_t);
-#endif
-
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         real_size += sizeof(*header) + sizeof(*footer);
 #endif
 
+        ASSERT(alloc_func);
         ptr = alloc_func(real_size, flags);
         if (!ptr) {
                 LOG_ERR("Cannot allocate %zd bytes", size);
                 return NULL;
         }
 
-#ifdef CONFIG_RINA_MEMORY_STATS
-        *((size_t *) ptr) = size;
-        ptr = ((size_t *) ptr) + 1;
-#endif
-
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
 #ifdef CONFIG_RINA_MEMORY_TAMPERING_VERBOSE
-        LOG_DBG("The requested block is at %pK, size %zd", ptr, real_size);
+        LOG_DBG("Tampering block at %pK, size %zd, real-size %zd",
+                ptr, size, real_size);
 #endif
-        if (!ptr) {
-                LOG_ERR("Cannot tamper a NULL memory block");
-                return ptr;
-        }
 
         header               =
                 (struct memblock_header *) ptr;
@@ -242,7 +273,11 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
-        LOG_DBG("rkmalloc(%zd) = %pK", size, ptr);
+        LOG_DBG("generic_alloc(%zd) = %pK", size, ptr);
+#endif
+
+#ifdef CONFIG_RINA_MEMORY_STATS
+        stats_inc(size);
 #endif
 
         return ptr;
@@ -250,9 +285,12 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 
 void * rkmalloc(size_t size, gfp_t flags)
 {
-        void * ptr = generic_alloc(kmalloc, size, flags);
+        void * ptr;
+
+        ptr = generic_alloc(kmalloc, size, flags);
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        mb_poison(ptr, size);
+        if (ptr)
+                poison(ptr, size);
 #endif
         return ptr;
 }
@@ -262,50 +300,72 @@ void * rkzalloc(size_t size, gfp_t flags)
 { return generic_alloc(kzalloc, size, flags); }
 EXPORT_SYMBOL(rkzalloc);
 
-void rkfree(void * ptr)
-{
-#ifdef CONFIG_RINA_MEMORY_STATS
-        size_t                   real_size;
-#endif
-
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
+static bool tamper_check(void * ptr)
+{
         struct memblock_header * header;
         struct memblock_footer * footer;
+
+        ASSERT(ptr);
+
+        header = (struct memblock_header *) ptr;
+        footer = (struct memblock_footer *)
+                ((uint8_t *) ptr + sizeof(*header) + header->inner_length);
+
+        if (!mb_is_header_filler_ok(header)) {
+                LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
+                return false;
+        }
+        if (!mb_is_footer_filler_ok(footer)) {
+                LOG_CRIT("Memory block %pK has been corrupted (footer)", ptr);
+                return false;
+        }
+
+        return true;
+}
 #endif
 
-#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
-        LOG_DBG("rkfree(%pK)", ptr);
+static bool generic_free(void * ptr)
+{
+#ifdef CONFIG_RINA_MEMORY_TAMPERING
+        struct memblock_header * header;
 #endif
 
         ASSERT(ptr);
 
-#ifdef CONFIG_RINA_MEMORY_STATS
-        real_size = *((size_t *) ptr);
-        ptr = ((size_t *) ptr) - 1;
-#endif
-
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
-        header = (struct memblock_header *)
-                ((uint8_t *) ptr - sizeof(*header));
-        footer = (struct memblock_footer *)
-                ((uint8_t *) ptr + header->inner_length);
-
-        if (!mb_is_header_filler_ok(header)) {
-                LOG_CRIT("Memory block %pK has been corrupted (header)", ptr);
-                BUG();
-        }
-        if (!mb_is_footer_filler_ok(footer)) {
-                LOG_CRIT("Memory block %pK has been corrupted (footer)", ptr);
-                BUG();
-        }
-
+        header = inner2outer(ptr);
+        if (!tamper_check(header))
+                return false;
 #ifdef CONFIG_RINA_MEMORY_POISONING
-        mb_poison(ptr, header->inner_length);
+        poison(ptr, header->inner_length);
 #endif
         ptr = header;
 #endif
 
+#ifdef CONFIG_RINA_MEMORY_STATS
+        stats_dec(ksize(ptr));
+#endif
+
         kfree(ptr);
+
+#ifdef CONFIG_RINA_MEMORY_PTRS_DUMP
+        LOG_DBG("generic_free(%pK)", ptr);
+#endif
+        return true;
+}
+
+static bool __rkfree(void * ptr)
+{
+        ASSERT(ptr);
+
+        return generic_free(ptr);
+}
+
+void rkfree(void * ptr)
+{
+        if (!__rkfree(ptr))
+                BUG();
 }
 EXPORT_SYMBOL(rkfree);
 
@@ -329,7 +389,18 @@ EXPORT_SYMBOL(rkstrdup);
 #ifdef CONFIG_RINA_RMEM_REGRESSION_TESTS
 bool regression_tests_rmem(void)
 {
-        LOG_MISSING;
+        void * tmp;
+
+        LOG_DBG("RMem regression tests");
+
+        LOG_DBG("Regression test #1.1");
+
+        tmp = rkmalloc(100, GFP_KERNEL);
+        if (!tmp)
+                return false;
+
+        if (!__rkfree(tmp))
+                return false;
 
         return true;
 }

@@ -480,28 +480,34 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
         IRQ_BARRIER;
 
         mgmt_data = data->mgmt_data;
+        if (!mgmt_data) {
+                LOG_ERR("No normal_mgmt data in IPC Process %d", data->id);
+                return -1;
+        }
+
         spin_lock(&mgmt_data->lock);
         if (mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_DBG("IPCP %d is being destroyed", data->id);
                 spin_unlock(&mgmt_data->lock);
                 return -1;
         }
+
         atomic_inc(&mgmt_data->readers);
+
         while (rfifo_is_empty(mgmt_data->sdu_ready)) {
-                LOG_DBG("Mgmt read going to sleep...");
                 spin_unlock(&mgmt_data->lock);
 
+                LOG_DBG("Mgmt read going to sleep...");
                 retval = wait_event_interruptible(mgmt_data->wait_q,
                                                   queue_ready(mgmt_data));
 
-                spin_lock(&mgmt_data->lock);
-                if (!mgmt_data  ||
-                    !mgmt_data->sdu_ready) {
+                if (!mgmt_data  || !mgmt_data->sdu_ready) {
                         LOG_ERR("No mgmt data anymore, waitqueue "
                                 "return code was %d", retval);
-                        spin_unlock(&data->mgmt_data->lock);
                         return -1;
                 }
+
+                spin_lock(&mgmt_data->lock);
                 if (retval) {
                         LOG_DBG("Mgmt queue waken up by interruption, "
                                 "returned error %d", retval);
@@ -525,11 +531,12 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 LOG_ERR("There is not enough data in the management queue");
                 retval = -1;
         }
+
  finish:
         if (atomic_dec_and_test(&mgmt_data->readers) &&
             (mgmt_data->state == MGMT_DATA_DESTROYED)) {
                 spin_unlock(&mgmt_data->lock);
-                if (mgmt_remove(mgmt_data)) 
+                if (mgmt_remove(mgmt_data))
                         LOG_ERR("Could not destroy mgmt_data");
                 return retval;
         }
@@ -718,40 +725,38 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
-/*  FIXME: register ops */
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
         .flow_deallocate           = NULL,
+        .flow_binding_ipcp         = ipcp_flow_notification,
+        .flow_destroy              = normal_deallocate,
+
         .application_register      = NULL,
         .application_unregister    = NULL,
-        .sdu_write                 = normal_sdu_write,
+
         .assign_to_dif             = normal_assign_to_dif,
         .update_dif_config         = NULL,
+
         .connection_create         = connection_create_request,
         .connection_update         = connection_update_request,
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
-        .flow_binding_ipcp         = ipcp_flow_notification,
-        .flow_destroy              = normal_deallocate,
+
+        .sdu_enqueue               = NULL,
+        .sdu_write                 = normal_sdu_write,
+
         .mgmt_sdu_read             = normal_mgmt_sdu_read,
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
+
         .pft_add                   = normal_pft_add,
         .pft_remove                = normal_pft_remove,
         .pft_dump                  = normal_pft_dump,
         .pft_flush                 = normal_pft_flush,
+
         .ipcp_name                 = normal_ipcp_name
 };
-
-static void sdu_wpi_destructor(void * data)
-{
-        struct sdu_wpi * s = data;
-
-        if (sdu_wpi_destroy(s)) {
-                LOG_ERR("Could not destroy SDU-WPI");
-        }
-}
 
 static struct mgmt_data * normal_mgmt_data_create(void)
 {
@@ -763,10 +768,10 @@ static struct mgmt_data * normal_mgmt_data_create(void)
                 return NULL;
         }
 
+        data->state     = MGMT_DATA_READY;
         data->sdu_ready = rfifo_create();
         if (!data->sdu_ready) {
                 LOG_ERR("Could not create MGMT SDUs queue");
-                rfifo_destroy(data->sdu_ready, sdu_wpi_destructor);
                 rkfree(data);
                 return NULL;
         }

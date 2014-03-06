@@ -131,9 +131,9 @@ public class DirectoryForwardingTableEntrySetRIBObject extends BaseRIBObject imp
 			NotificationPolicy notificationObject = null;
 			
 			//Only notify if we're not in the enrollment phase
-			if (getIPCProcess().getOperationalState() == IPCProcess.State.ASSIGNED_TO_DIF){
+			//if (getIPCProcess().getOperationalState() == IPCProcess.State.ASSIGNED_TO_DIF){
 				notificationObject = new NotificationPolicy(new int[]{cdapSessionDescriptor.getPortId()});
-			}
+			//}
 			
 			this.getRIBDaemon().create(DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
 					DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME,

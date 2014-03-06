@@ -367,7 +367,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         struct rnl_msg *                             msg;
         struct ipcp_instance *                       ipc_process;
         ipc_process_id_t                             ipc_id;
-        struct kipcm * kipcm;
+        struct kipcm *                               kipcm;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -764,7 +764,7 @@ static int notify_ipcp_conn_create_req(void *             data,
         port_id_t                                   port_id;
         cep_id_t                                    src_cep;
 
-        ipc_id = 0;
+        ipc_id  = 0;
         port_id = 0;
         src_cep = 0;
 
@@ -869,7 +869,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         port_id_t                                       port_id;
         cep_id_t                                        src_cep;
 
-        ipc_id = 0;
+        ipc_id  = 0;
         port_id = 0;
         src_cep = 0;
 
@@ -984,7 +984,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         ipc_process_id_t                            user_ipc_id;
         port_id_t                                   port_id;
 
-        ipc_id = 0;
+        ipc_id  = 0;
         port_id = 0;
 
         if (!data) {
@@ -1011,6 +1011,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         ipc_id      = msg->header.dst_ipc_id;
         user_ipc_id = attrs->flow_user_ipc_process_id;
         ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
+
         if (!ipcp)
                 goto fail;
 
@@ -1087,7 +1088,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         ipc_process_id_t                             ipc_id;
         port_id_t                                    port_id;
 
-        ipc_id = 0;
+        ipc_id  = 0;
         port_id = 0;
 
         if (!data) {
@@ -1240,7 +1241,6 @@ static int notify_ipcp_modify_pfte(void *             data,
         rnl_msg_destroy(msg);
 
         return 0;
-
 }
 
 static int ipcp_dump_pft_free_and_reply(struct rnl_msg *   msg,
