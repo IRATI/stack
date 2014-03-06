@@ -45,23 +45,25 @@ static void * inner2outer(void * ptr)
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         return (struct memblock_header *)
-                ((uint8_t *) ptr + sizeof(struct memblock_header));
+                ((uint8_t *) ptr - sizeof(struct memblock_header));
 #else
         return ptr;
 #endif
 }
 
+#if 0
 static void * outer2inner(void * ptr)
 {
         ASSERT(ptr);
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING
         return (struct memblock_header *)
-                ((uint8_t *) ptr - sizeof(struct memblock_header));
+                ((uint8_t *) ptr + sizeof(struct memblock_header));
 #else
         return ptr;
 #endif
 }
+#endif
 
 static void mb_filler_init(uint8_t * f, size_t length)
 {
