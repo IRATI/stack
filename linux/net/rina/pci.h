@@ -35,6 +35,8 @@
 #define PDU_FLAGS_CARRY_COMPLETE_SDU  0x03
 #define PDU_FLAGS_CARRY_MULTIPLE_SDUS 0x07
 #define PDU_FLAGS_DATA_RUN            0x80
+/* To be truely defined; internal to stack, needs to be discussed */
+#define PDU_FLAGS_BAD                 0xFF
 
 typedef uint8_t pdu_flags_t;
 
@@ -118,6 +120,7 @@ address_t             pci_destination(const struct pci * pci);
 cep_id_t              pci_cep_source(const struct pci * pci);
 cep_id_t              pci_cep_destination(const struct pci * pci);
 qos_id_t              pci_qos_id(const struct pci * pci);
+pdu_flags_t           pci_flags_get(const struct pci * pci);
 
 /* For Control PDUs */
 int                   pci_control_ack_seq_num_set(struct pci * pci,

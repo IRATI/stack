@@ -345,6 +345,16 @@ qos_id_t pci_qos_id(const struct pci * pci)
 { return pci ? pci->qos_id : qos_id_bad();  }
 EXPORT_SYMBOL(pci_qos_id);
 
+pdu_flags_t pci_flags_get(const struct pci * pci)
+{ 
+        
+        if (!pci)
+                return PDU_FLAGS_BAD;
+
+        return pci->flags;
+}
+EXPORT_SYMBOL(pci_flags_get);
+
 int pci_control_ack_seq_num_set(struct pci * pci, seq_num_t seq)
 {
         if (!pci)

@@ -63,11 +63,10 @@ struct dtp_sv {
 struct dtp_policies {
         int (* transmission_control)(struct dtp * instance,
                                      struct sdu * sdu);
-        /* FIXME: What is this policy for? */
-        int (* closed_window_queue)(struct dtp * instance);
         int (* flow_control_overrun)(struct dtp * instance,
                                      struct sdu * sdu);
-        int (* unknown_flow)(struct dtp * instance);
+        int (* unknown_flow)(struct dtp * instance,
+                             struct pdu * pdu);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
         int (* sender_inactivity_timer)(struct dtp * instance);
@@ -114,7 +113,6 @@ static struct dtp_sv default_sv = {
 
 static struct dtp_policies default_policies = {
         .transmission_control      = NULL,
-        .closed_window_queue       = NULL,
         .flow_control_overrun      = NULL,
         .unknown_flow              = NULL,
         .initial_sequence_number   = NULL,
@@ -475,8 +473,11 @@ EXPORT_SYMBOL(dtp_mgmt_write);
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
-        struct sdu *    sdu;
-        struct buffer * buffer;
+        struct sdu *          sdu;
+        struct buffer *       buffer;
+        struct dtp_policies * policies;
+        struct pci *          pci;
+        struct dtp_sv *       sv;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -492,10 +493,36 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
+        policies = instance->policies;
+        ASSERT(policies);
 
-        /* Inserting some schnitzels here */
+        sv = instance->sv;
+        ASSERT(sv); /* State Vector must not be NULL */
+
+        if (sv->state == FLOW_NULL) {
+                policies->unknown_flow(instance, pdu);
+                return 0;
+        }
+
         
+        if (!pdu_pci_present(pdu)) {
+                LOG_DBG("Couldn't find PCI in PDU");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        pci = pdu_pci_get_rw(pdu);
 
+        /* Stop ReceiverInactivityTimer */
+        if (rtimer_stop(instance->timers.receiver_inactivity)) {
+                LOG_ERR("Failed to stop timer");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+
+        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
+                
+        }
 
 
 
