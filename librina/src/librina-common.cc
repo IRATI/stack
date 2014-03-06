@@ -1210,6 +1210,13 @@ void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 }
 
 void DIFConfiguration::addQoSCube(const QoSCube& qosCube) {
+        std::list<QoSCube>::const_iterator iterator;
+        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+            if (iterator->getId() == qosCube.getId()) {
+                    return;
+            }
+        }
+
         qosCubes.push_back(qosCube);
 }
 
