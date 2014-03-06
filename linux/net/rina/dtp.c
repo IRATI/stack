@@ -390,12 +390,12 @@ int dtp_write(struct dtp * instance,
                        pci_qos_id(pci),
                        pdu);
 
-        if (rtimer_start(instance->timers.sender_inactivity, 
-                         2*(TIME_MPL+TIME_R+TIME_A))) {
+        if (rtimer_start(instance->timers.sender_inactivity,
+                         2 * (TIME_MPL + TIME_R + TIME_A))) {
                 LOG_ERR("Failed to start timer");
                 return -1;
         }
-        
+
         return ret;
 }
 
@@ -504,7 +504,6 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-        
         if (!pdu_pci_present(pdu)) {
                 LOG_DBG("Couldn't find PCI in PDU");
                 pdu_destroy(pdu);
@@ -519,12 +518,9 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
-                
+                LOG_MISSING;
         }
-
-
 
         buffer = pdu_buffer_get_rw(pdu);
         sdu    = sdu_create_buffer_with(buffer);
