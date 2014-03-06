@@ -147,7 +147,6 @@ struct rtxq * rtxq_create(void)
         return tmp;
 }
 
-
 int rtxq_destroy(struct rtxq * q)
 {
         if (!q)
@@ -157,3 +156,28 @@ int rtxq_destroy(struct rtxq * q)
 
         return 0;
 }
+
+int rtxq_push(struct rtxq *  q,
+              struct pdu *   pdu)
+{
+        if (!q || !pdu)
+                return -1;
+
+        LOG_MISSING;
+
+        return -1;
+}
+
+int rtxq_set_pop(struct rtxq *      q,
+                 seq_num_t          from,
+                 seq_num_t          to,
+                 struct list_head * p)
+{
+        if (!q)
+                return -1;
+
+        LOG_MISSING;
+
+        return -1;
+}
+
