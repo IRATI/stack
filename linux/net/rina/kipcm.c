@@ -1940,6 +1940,7 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         if (ipcp->ops->mgmt_sdu_write(ipcp->data,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
+                sdu_buffer_disown(sdu_wpi->sdu);
                 sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
