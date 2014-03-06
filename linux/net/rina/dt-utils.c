@@ -132,7 +132,6 @@ size_t cwq_size(struct cwq * queue)
         return 0;
 }
 
-
 struct rtxq {
         int filler_to_be_removed;
 };
