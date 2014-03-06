@@ -30,6 +30,12 @@
 #include "dt.h"
 #include "dt-utils.h"
 
+enum flow_state {
+        FLOW_NULL = 1,
+        FLOW_ACTIVE,
+        FLOW_PORT_ID_TRANSITION
+};
+
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         /* Configuration values */
@@ -41,6 +47,7 @@ struct dtp_sv {
         bool                window_closed;
         uint_t              max_cwq_len;
         int                 rexmsn_ctrl;
+        enum flow_state     state;
 
         struct {
                 seq_num_t   left_window_edge;
@@ -98,6 +105,7 @@ static struct dtp_sv default_sv = {
         .window_based                    = false,
         .window_closed                   = false,
         .rexmsn_ctrl                     = false,
+        .state                           = FLOW_NULL,
         .max_cwq_len                     = 0,
         .inbound.left_window_edge        = 0,
         .outbound.next_sequence_to_send  = 0,
@@ -151,7 +159,6 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
                 LOG_ERR("Cannot create DTP state-vector");
-
                 rkfree(tmp);
                 return NULL;
         }
@@ -207,6 +214,7 @@ int dtp_destroy(struct dtp * instance)
 }
 
 #if 0
+/* FIXME: Seems unneeded? */
 static int apply_policy_CsldWinQ(struct dtp * dtp,
                                  struct sdu * sdu)
 {
@@ -483,6 +491,13 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
+
+
+        /* Inserting some schnitzels here */
+        
+
+
+
 
         buffer = pdu_buffer_get_rw(pdu);
         sdu    = sdu_create_buffer_with(buffer);
