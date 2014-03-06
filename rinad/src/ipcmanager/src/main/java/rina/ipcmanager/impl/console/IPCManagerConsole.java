@@ -65,7 +65,6 @@ public class IPCManagerConsole implements Runnable{
 		
 		lock = new ReentrantLock();
 		responsesQueue = new LinkedBlockingQueue<IPCEvent>();
-		timer = new Timer();
 	}
 	
 	public void scheduleTask(TimerTask task, long delay) {
@@ -148,10 +147,10 @@ public class IPCManagerConsole implements Runnable{
 				Scanner in = new Scanner(inps);
 				PrintWriter out = new PrintWriter(outs, true);
 
-				out.println("Welcome to the IPC Manager console. Type one or more commands.");
-				out.print(PROMPT);
-				out.flush();
+				printStringPromptAndFlush(out, "Welcome to the IPC Manager console. Type one or more commands.");
 
+				timer = new Timer();
+				
 				boolean done = false;
 				while (!done && in.hasNextLine()) {
 					textCommand = in.nextLine();
@@ -159,6 +158,11 @@ public class IPCManagerConsole implements Runnable{
 
 					if (splittedCommand[0].trim().equalsIgnoreCase("exit")) {
 						done = true;
+						timer.cancel();
+						in.close();
+						inps.close();
+						out.close();
+						outs.close();
 					}else if (splittedCommand[0].trim().equalsIgnoreCase("help")){
 						Iterator<String> iterator = commands.keySet().iterator();
 						int i = 0;
@@ -171,9 +175,7 @@ public class IPCManagerConsole implements Runnable{
 								out.print("\n");
 							}
 						}
-						out.print("\n");
-						out.print(PROMPT);
-						out.flush();
+						printStringPromptAndFlush(out, "\n");
 					}else{
 						command = commands.get(splittedCommand[0]);
 						if (command == null){
@@ -182,9 +184,7 @@ public class IPCManagerConsole implements Runnable{
 							answer = command.execute(splittedCommand);
 						}
 						
-						out.println(answer);
-						out.print(PROMPT);
-						out.flush();
+						printStringPromptAndFlush(out, answer);
 					}
 				}
 
@@ -200,6 +200,12 @@ public class IPCManagerConsole implements Runnable{
 		}catch(IOException e){
 			log.error(e.getMessage());
 		}
+	}
+	
+	private void printStringPromptAndFlush(PrintWriter out, String str){
+		out.println(str);
+		out.print(PROMPT);
+		out.flush();
 	}
 
 }
