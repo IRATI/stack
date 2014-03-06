@@ -346,8 +346,8 @@ qos_id_t pci_qos_id(const struct pci * pci)
 EXPORT_SYMBOL(pci_qos_id);
 
 pdu_flags_t pci_flags_get(const struct pci * pci)
-{ 
-        
+{
+
         if (!pci)
                 return PDU_FLAGS_BAD;
 
