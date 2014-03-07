@@ -253,10 +253,7 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        flow->state = PORT_STATE_ALLOCATED;
-
-        LOG_DBG("Deprecated flow kfifo (multiply-factor is %d)",
-                CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
+        flow->state     = PORT_STATE_ALLOCATED;
         flow->sdu_ready = rfifo_create_ni();
         if (!flow->sdu_ready) {
                 kfa_pmap_remove(instance->flows, pid);
