@@ -50,6 +50,7 @@ struct dtp_sv {
         enum flow_state     state;
         
         seq_num_t           max_seq_nr_rcv;
+        int                 dropped_pdus;
 
         struct {
                 seq_num_t   left_window_edge;
@@ -455,6 +456,7 @@ int dtp_receive(struct dtp * instance,
         struct dtp_policies * policies;
         struct pci *          pci;
         struct dtp_sv *       sv;
+        seq_num_t             seq_num;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -495,10 +497,39 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
-                sv->max_seq_nr_rcv = pci_sequence_number_get(pci);
-        }
+        seq_num = pci_sequence_number_get(pci);
 
+        if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
+                sv->max_seq_nr_rcv = seq_num;
+
+                LOG_MISSING;
+        } else if (seq_num < sv->inbound.left_window_edge) {
+                pdu_destroy(pdu);
+                sv->dropped_pdus++;
+                /* Send an ACK/Flow Control PDU with current window values */
+                LOG_MISSING;
+                return 0;
+        } else if (sv->inbound.left_window_edge < seq_num &&
+                   seq_num < sv->max_seq_nr_rcv) {
+                /* Check if it is a duplicate in the gaps */
+                LOG_MISSING;
+
+
+        } else if (seq_num == (sv->max_seq_nr_rcv + 1)) {
+                LOG_MISSING;
+
+
+        } else if (seq_num > (sv->max_seq_nr_rcv + 1)) {
+                LOG_MISSING;
+
+        } else {
+                /* Something went wrong! */
+                pdu_destroy(pdu);
+                LOG_ERR("Something is horribly wrong on receiving");
+                return -1;
+        }
+        
+        
         buffer = pdu_buffer_get_rw(pdu);
         sdu    = sdu_create_buffer_with(buffer);
         if (!sdu) {
