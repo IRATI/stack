@@ -57,8 +57,7 @@ struct ipcp_flow {
 
         enum flow_state        state;
         struct ipcp_instance * ipc_process;
-        /* FIXME: To be wiped out */
-        struct kfifo           sdu_ready;
+        struct rfifo *         sdu_ready;
         wait_queue_head_t      wait_queue;
         atomic_t               readers;
         atomic_t               writers;
@@ -125,10 +124,9 @@ int kfa_flow_create(struct kfa *     instance,
                 return-1;
         }
 
-        flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
-        if (!flow) {
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow)
                 return -1;
-        }
 
         flow->state = PORT_STATE_PENDING;
         atomic_set(&flow->readers, 0);
@@ -255,21 +253,14 @@ int kfa_flow_bind(struct kfa *           instance,
                 return -1;
         }
 
-        flow->state = PORT_STATE_ALLOCATED;
-
-        LOG_DBG("Gonna alloc the flow kfifo (multiply-factor is %d)",
-                CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
-        if (kfifo_alloc(&flow->sdu_ready,
-                        PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR,
-                        GFP_ATOMIC)) {
-                LOG_ERR("Couldn't create the sdu-ready queue for "
-                        "flow on port-id %d", pid);
+        flow->state     = PORT_STATE_ALLOCATED;
+        flow->sdu_ready = rfifo_create_ni();
+        if (!flow->sdu_ready) {
+                kfa_pmap_remove(instance->flows, pid);
                 rkfree(flow);
                 spin_unlock(&instance->lock);
                 return -1;
         }
-        LOG_DBG("The flow kfifo is %ld bytes long",
-                PAGE_SIZE * CONFIG_KFA_KFIFO_MULTIPLY_FACTOR);
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
@@ -350,7 +341,10 @@ static int __kfa_flow_destroy(struct kfa *       instance,
         LOG_DBG("We are destroying flow %d", id);
 
         ipcp = flow->ipc_process;
-        kfifo_free(&flow->sdu_ready);
+        if (rfifo_destroy(flow->sdu_ready, (void (*) (void *)) sdu_destroy)) {
+                LOG_ERR("Fifo in flow %d has not been destroyed", id);
+                retval = -1;
+        }
 
         if (kfa_pmap_remove(instance->flows, id)) {
                 LOG_ERR("Could not remove pending flow with port-id %d", id);
@@ -550,12 +544,12 @@ int kfa_flow_sdu_write(struct kfa * instance,
         return retval;
 }
 
-static int queue_ready(struct ipcp_flow * flow)
+static bool queue_ready(struct ipcp_flow * flow)
 {
         if (flow->state == PORT_STATE_DEALLOCATED ||
-            !kfifo_is_empty(&flow->sdu_ready))
-                return 1;
-        return 0;
+            !rfifo_is_empty(flow->sdu_ready))
+                return true;
+        return false;
 }
 
 int kfa_flow_sdu_read(struct kfa *  instance,
@@ -597,7 +591,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         atomic_inc(&flow->readers);
 
-        while (kfifo_is_empty(&flow->sdu_ready)) {
+        while (rfifo_is_empty(flow->sdu_ready)) {
                 spin_unlock(&instance->lock);
 
                 LOG_DBG("Going to sleep on wait queue %pK (reading)",
@@ -625,14 +619,14 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                         break;
         }
 
-        if (kfifo_is_empty(&flow->sdu_ready)) {
+        if (rfifo_is_empty(flow->sdu_ready)) {
                 retval = -1;
                 goto finish;
         }
 
-        if (kfifo_out(&flow->sdu_ready, sdu, sizeof(struct sdu *)) <
-            sizeof(struct sdu *)) {
-                LOG_ERR("There is not enough data in port-id %d fifo",
+        *sdu = rfifo_pop(flow->sdu_ready);
+        if (!sdu_is_ok(*sdu)) {
+                LOG_ERR("There is not a valid in port-id %d fifo",
                         id);
                 retval = -1;
         }
@@ -682,15 +676,7 @@ int kfa_sdu_post(struct kfa * instance,
         }
 
         if (!flow->rmt) {
-                if (kfifo_avail(&flow->sdu_ready) < (sizeof(struct sdu *))) {
-                        LOG_ERR("There is no space in the port-id %d fifo",
-                                id);
-                        spin_unlock(&instance->lock);
-                        return -1;
-                }
-                if (kfifo_in(&flow->sdu_ready,
-                             &sdu,
-                             sizeof(struct sdu *)) != sizeof(struct sdu *)) {
+                if (rfifo_push_ni(flow->sdu_ready, sdu)) {
                         LOG_ERR("Could not write %zd bytes into "
                                 "port-id %d fifo",
                                 sizeof(struct sdu *), id);
