@@ -535,6 +535,26 @@ throw (NetlinkException)
 	sendReceiveLock.unlock();
 }
 
+void RINAManager::sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
+                size_t maxSize) throw (NetlinkException) {
+        sendReceiveLock.lock();
+
+        try{
+                netlinkPortIdMap.updateMessageOrPortIdMap(
+                                netlinkMessage, true);
+                if (netlinkMessage->isRequestMessage()){
+                        netlinkMessage->setSequenceNumber(
+                                        netlinkManager->getSequenceNumber());
+                }
+                netlinkManager->sendMessageOfMaxSize(netlinkMessage, maxSize);
+        }catch (NetlinkException &e) {
+                sendReceiveLock.unlock();
+                throw e;
+        }
+
+        sendReceiveLock.unlock();
+}
+
 void RINAManager::netlinkMessageArrived(
 		BaseNetlinkMessage * message){
 	sendReceiveLock.lock();

@@ -2665,17 +2665,17 @@ int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
 }
 
 int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
-	NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
-				object.getClazz().c_str());
-	NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
-					object.getName().c_str());
-	NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
-					object.getInstance());
+        NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
+                        object.getClazz().c_str());
+        NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
+                        object.getName().c_str());
+        NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
+                        object.getInstance());
 
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building RIBObject Netlink object: %s %s",
+			"Error building RIBObject Netlink message attribute: %s %s",
 			object.getClazz().c_str(), object.getName().c_str());
 	return -1;
 }
@@ -2702,7 +2702,7 @@ int putListOfRIBObjects(
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building RIBObject Netlink object");
+			"Error building list of RIBobjects Netlink message attribute");
 	return -1;
 }
 
@@ -2726,7 +2726,7 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building RIBObject Netlink object");
+			"Error building Query RIB Response Netlink message");
 	return -1;
 }
 

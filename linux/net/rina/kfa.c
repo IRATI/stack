@@ -120,17 +120,13 @@ int kfa_flow_create(struct kfa *     instance,
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
-
         if (!is_port_id_ok(pid)) {
                 LOG_ERR("Bogus PID passed, bailing out");
                 return-1;
         }
 
-        spin_lock(&instance->lock);
-
         flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
         if (!flow) {
-                spin_unlock(&instance->lock);
                 return -1;
         }
 
@@ -140,9 +136,12 @@ int kfa_flow_create(struct kfa *     instance,
 
         init_waitqueue_head(&flow->wait_queue);
 
+        spin_lock(&instance->lock);
+
         if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
                 LOG_ERR("Could not map flow and port-id %d", pid);
                 rkfree(flow);
+
                 spin_unlock(&instance->lock);
                 return -1;
         }
@@ -183,6 +182,7 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
         return pid;
 }
 EXPORT_SYMBOL(kfa_port_id_reserve);
+
 int  kfa_port_id_release(struct kfa * instance,
                          port_id_t    port_id)
 {
@@ -337,9 +337,10 @@ int kfa_flow_rmt_unbind(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_rmt_unbind);
 
-static int kfa_flow_destroy(struct kfa *       instance,
-                            struct ipcp_flow * flow,
-                            port_id_t          id)
+/* NOTE: Add instance-locking IFF exporting to API */
+static int __kfa_flow_destroy(struct kfa *       instance,
+                              struct ipcp_flow * flow,
+                              port_id_t          id)
 {
         struct ipcp_instance * ipcp;
         int                    retval = 0;
@@ -412,7 +413,7 @@ int kfa_flow_deallocate(struct kfa * instance,
 
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0)) {
-                if (kfa_flow_destroy(instance, flow, id))
+                if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 spin_unlock(&instance->lock);
                 return 0;
@@ -459,20 +460,20 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus sdu, bailing out");
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        spin_lock(&instance->lock);
+        LOG_DBG("Trying to write SDU to port-id %d", id);
 
-        if (!is_port_id_ok(id)) {
-                LOG_ERR("Bogus port-id, bailing out");
-                spin_unlock(&instance->lock);
-                sdu_destroy(sdu);
-                return -1;
-        }
+        spin_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
@@ -481,30 +482,28 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
                 spin_unlock(&instance->lock);
                 sdu_destroy(sdu);
                 return -1;
         }
+
         atomic_inc(&flow->writers);
 
         while (flow->state == PORT_STATE_PENDING) {
-                LOG_DBG("Write is going to sleep on wait queue %pK",
-                        &flow->wait_queue);
                 spin_unlock(&instance->lock);
+
+                LOG_DBG("Going to sleep on wait queue %pK (writing)",
+                        &flow->wait_queue);
                 retval = wait_event_interruptible(flow->wait_queue,
                                                   (flow->state !=
                                                    PORT_STATE_PENDING));
-
-                spin_lock(&instance->lock);
+                if (retval)
+                        LOG_ERR("Wait-event interrupted (%d)", retval);
                 LOG_DBG("Write woken up");
 
-                if (retval) {
-                        LOG_ERR("Wait-event interrupted, returned error %d",
-                                retval);
-                }
+                spin_lock(&instance->lock);
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
@@ -538,10 +537,12 @@ int kfa_flow_sdu_write(struct kfa * instance,
         }
 
  finish:
+        LOG_DBG("Finishing (write)");
+
         if (atomic_dec_and_test(&flow->writers) &&
             (atomic_read(&flow->readers) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
-                if (kfa_flow_destroy(instance, flow, id))
+                if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
 
         spin_unlock(&instance->lock);
@@ -574,9 +575,15 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
+        if (!sdu) {
+                LOG_ERR("Bogus output sdu parameter passed, bailing out");
+                return -1;
+        }
 
         LOG_DBG("Trying to read SDU from port-id %d", id);
+
         spin_lock(&instance->lock);
+
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
@@ -587,15 +594,21 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
                 return -1;
         }
+
         atomic_inc(&flow->readers);
+
         while (kfifo_is_empty(&flow->sdu_ready)) {
-                LOG_DBG("Going to sleep on wait queue %pK", &flow->wait_queue);
                 spin_unlock(&instance->lock);
+
+                LOG_DBG("Going to sleep on wait queue %pK (reading)",
+                        &flow->wait_queue);
                 retval = wait_event_interruptible(flow->wait_queue,
                                                   queue_ready(flow));
+                if (retval)
+                        LOG_ERR("Wait-event interrupted (%d)", retval);
 
                 spin_lock(&instance->lock);
-                LOG_DBG("Woken up");
+                LOG_DBG("Read Woken up");
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
@@ -604,14 +617,12 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                         spin_unlock(&instance->lock);
                         return -1;
                 }
-                if (retval) {
-                        LOG_ERR("Wait-event interrupted, returned error %d",
-                                retval);
+
+                if (retval)
                         goto finish;
-                }
-                if (flow->state == PORT_STATE_DEALLOCATED) {
+
+                if (flow->state == PORT_STATE_DEALLOCATED)
                         break;
-                }
         }
 
         if (kfifo_is_empty(&flow->sdu_ready)) {
@@ -627,10 +638,12 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         }
 
  finish:
+        LOG_DBG("Finishing (read)");
+
         if (atomic_dec_and_test(&flow->readers) &&
             (atomic_read(&flow->writers) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
-                if (kfa_flow_destroy(instance, flow, id))
+                if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
 
         spin_unlock(&instance->lock);
@@ -705,6 +718,7 @@ int kfa_sdu_post(struct kfa * instance,
                         spin_unlock(&instance->lock);
                         return -1;
                 }
+
                 LOG_DBG("SDU posted to RMT");
                 spin_unlock(&instance->lock);
                 return 0;

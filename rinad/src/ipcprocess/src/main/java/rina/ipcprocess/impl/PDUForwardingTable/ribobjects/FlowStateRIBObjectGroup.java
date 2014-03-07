@@ -57,13 +57,6 @@ public class FlowStateRIBObjectGroup extends BaseRIBObject{
 	public void delete(Object object) throws RIBDaemonException 
 	{
 		FlowStateObject fso = (FlowStateObject)object;
-		/*
-		List<RIBObject> ribObjects = getRIBDaemon().getRIBObjects();
-		int index = ribObjects.indexOf(new FlowStateRIBObject(fso, getIPCProcess(), fso.getID()));
-		
-		FlowStateRIBObject ribObject = (FlowStateRIBObject)ribObjects.get(index);
-		ribObject.delete(objectValue)
-		*/
 		this.removeChild(fso.getID());
 		getRIBDaemon().removeRIBObject(fso.getID());
 	}

@@ -73,6 +73,10 @@ class NetlinkManager{
 
 	/** Creates the Netlink socket and binds it to the netlinkPid */
 	void initialize() throw(NetlinkException);
+
+	/** Send a Netlink message */
+	void _sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)
+	        throw(NetlinkException);
 public:
 	/**
 	 * Creates an instance of a Netlink socket and binds it to the local port
@@ -103,6 +107,9 @@ public:
 	unsigned int getSequenceNumber();
 
 	void sendMessage(BaseNetlinkMessage * message) throw(NetlinkException);
+
+	void sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize)
+	        throw(NetlinkException);
 
 	BaseNetlinkMessage *  getMessage() throw(NetlinkException);
 };

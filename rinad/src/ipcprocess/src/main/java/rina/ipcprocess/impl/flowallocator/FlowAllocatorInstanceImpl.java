@@ -286,6 +286,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			
 			ribDaemon.sendADataUnit(flow.getDestinationAddress(), cdapMessage, this);
 		}catch(Exception ex){
+			ex.printStackTrace();
 			log.error("Problems sending M_CREATE <Flow> CDAP message to neighbor: " + ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
 			releasePortId();

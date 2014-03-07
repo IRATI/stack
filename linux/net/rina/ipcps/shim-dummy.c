@@ -688,25 +688,32 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_request     = dummy_flow_allocate_request,
         .flow_allocate_response    = dummy_flow_allocate_response,
         .flow_deallocate           = dummy_flow_deallocate,
+        .flow_binding_ipcp         = NULL,
+        .flow_destroy              = NULL,
+
         .application_register      = dummy_application_register,
         .application_unregister    = dummy_application_unregister,
+
         .assign_to_dif             = dummy_assign_to_dif,
         .update_dif_config         = dummy_update_dif_config,
-        .sdu_write                 = dummy_sdu_write,
+
         .connection_create         = NULL,
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
-        .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
+
         .sdu_enqueue               = NULL,
-        .mgmt_sdu_write            = NULL,
+        .sdu_write                 = dummy_sdu_write,
+
         .mgmt_sdu_read             = NULL,
+        .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
+
         .pft_add                   = NULL,
         .pft_remove                = NULL,
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
+
         .ipcp_name                 = dummy_ipcp_name,
 };
 

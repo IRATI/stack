@@ -292,7 +292,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 
 	public void flowAllocated(long address, int portId, long neighborAddress, int neighborPortId)
 	{
-		log.info("flowAllocated function launched");
+		log.info("flowAllocated function launched PortID:" + portId);
 		db.addObjectToGroup(address, portId, neighborAddress, neighborPortId, fsRIBGroup);
 	}
 	

@@ -995,9 +995,9 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         unsigned long       flags;
         int                 num_frames;
 
-        spin_lock_irqsave(&rcv_wq_lock, flags);
-
         LOG_DBG("Worker waking up");
+
+        spin_lock_irqsave(&rcv_wq_lock, flags);
 
         num_frames = 0;
         list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
@@ -1008,13 +1008,23 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                         LOG_DBG("Failed to process packet");
 
                 num_frames++;
+
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
                 rkfree(packet);
+
+#ifdef CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMITING
+                BUILD_BUG_ON(CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT <= 0);
+
+                if (num_frames >= CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT)
+                        return;
+#endif
+
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
+
         LOG_DBG("Worker finished for now, processed %d frames", num_frames);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
 }
@@ -1275,25 +1285,32 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_request     = eth_vlan_flow_allocate_request,
         .flow_allocate_response    = eth_vlan_flow_allocate_response,
         .flow_deallocate           = eth_vlan_flow_deallocate,
+        .flow_binding_ipcp         = NULL,
+        .flow_destroy              = NULL,
+
         .application_register      = eth_vlan_application_register,
         .application_unregister    = eth_vlan_application_unregister,
+
         .assign_to_dif             = eth_vlan_assign_to_dif,
         .update_dif_config         = eth_vlan_update_dif_config,
-        .sdu_write                 = eth_vlan_sdu_write,
+
         .connection_create         = NULL,
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
-        .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
+
         .sdu_enqueue               = NULL,
-        .mgmt_sdu_write            = NULL,
+        .sdu_write                 = eth_vlan_sdu_write,
+
         .mgmt_sdu_read             = NULL,
+        .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
+
         .pft_add                   = NULL,
         .pft_remove                = NULL,
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
+
         .ipcp_name                 = eth_vlan_ipcp_name,
 };
 

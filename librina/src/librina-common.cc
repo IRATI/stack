@@ -1210,6 +1210,13 @@ void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 }
 
 void DIFConfiguration::addQoSCube(const QoSCube& qosCube) {
+        std::list<QoSCube>::const_iterator iterator;
+        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+            if (iterator->getId() == qosCube.getId()) {
+                    return;
+            }
+        }
+
         qosCubes.push_back(qosCube);
 }
 
@@ -1367,7 +1374,7 @@ bool RIBObject::operator!=(const RIBObject &other) const{
 	return !(*this == other);
 }
 
-long long RIBObject::generateObjectInstance(){
+unsigned long RIBObject::generateObjectInstance(){
 	//TODO generate instance properly
 	return 0;
 }
@@ -1380,11 +1387,11 @@ void RIBObject::setClazz(const std::string& clazz) {
 	this->clazz = clazz;
 }
 
-long long RIBObject::getInstance() const {
+unsigned long RIBObject::getInstance() const {
 	return instance;
 }
 
-void RIBObject::setInstance(long long instance) {
+void RIBObject::setInstance(unsigned long instance) {
 	this->instance = instance;
 }
 
