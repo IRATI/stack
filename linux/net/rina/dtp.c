@@ -306,7 +306,6 @@ int dtp_write(struct dtp * instance,
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
-
         if (sv->window_based) {
                 if (!sv->window_closed &&
                     pci_sequence_number_get(pci) <
@@ -360,7 +359,6 @@ int dtp_write(struct dtp * instance,
                         return -1;
                 }
         }
-
 
         /* Post SDU to RMT */
         ret = rmt_send(instance->rmt,
@@ -514,10 +512,8 @@ int dtp_receive(struct dtp * instance,
                 /* Check if it is a duplicate in the gaps */
                 LOG_MISSING;
 
-
         } else if (seq_num == (sv->max_seq_nr_rcv + 1)) {
                 LOG_MISSING;
-
 
         } else if (seq_num > (sv->max_seq_nr_rcv + 1)) {
                 LOG_MISSING;
@@ -528,8 +524,7 @@ int dtp_receive(struct dtp * instance,
                 LOG_ERR("Something is horribly wrong on receiving");
                 return -1;
         }
-        
-        
+
         buffer = pdu_buffer_get_rw(pdu);
         sdu    = sdu_create_buffer_with(buffer);
         if (!sdu) {
