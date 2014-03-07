@@ -48,6 +48,8 @@ struct dtp_sv {
         uint_t              max_cwq_len;
         int                 rexmsn_ctrl;
         enum flow_state     state;
+        
+        seq_num_t           max_seq_nr_rcv;
 
         struct {
                 seq_num_t   left_window_edge;
@@ -210,31 +212,6 @@ int dtp_destroy(struct dtp * instance)
 
         return 0;
 }
-
-#if 0
-/* FIXME: Seems unneeded? */
-static int apply_policy_CsldWinQ(struct dtp * dtp,
-                                 struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-
-static int apply_policy_RexmsnQ(struct dtp * dtp,
-                                struct sdu * sdu)
-{
-        ASSERT(dtp);
-        ASSERT(sdu);
-
-        LOG_MISSING;
-
-        return 0;
-}
-#endif
 
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
@@ -519,7 +496,7 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
-                LOG_MISSING;
+                sv->max_seq_nr_rcv = pci_sequence_number_get(pci);
         }
 
         buffer = pdu_buffer_get_rw(pdu);
