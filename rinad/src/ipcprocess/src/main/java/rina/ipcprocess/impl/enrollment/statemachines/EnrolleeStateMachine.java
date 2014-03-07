@@ -18,6 +18,7 @@ import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.AddressRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
+import rina.ipcprocess.impl.registrationmanager.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
 import rina.ribdaemon.api.RIBDaemonException;
 import rina.ribdaemon.api.RIBObjectNames;
 import eu.irati.librina.ApplicationProcessNamingInformation;
@@ -518,6 +519,14 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 		
 		//Create or update the neighbor information in the RIB
 		createOrUpdateNeighborInformation(true);
+		
+		//Send DirectoryForwardingTableEntries
+		try {
+			sendCreateInformation(DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
+					DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
+		} catch (Exception e) {
+			log.error("Problems sending DirectoryForwardingTableEntries to new neighbor: "+e.getMessage());
+		}
 		
 		enrollmentTask.enrollmentCompleted(remotePeer, true);
 		

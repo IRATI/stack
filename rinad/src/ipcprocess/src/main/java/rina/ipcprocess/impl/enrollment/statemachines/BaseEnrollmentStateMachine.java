@@ -1,5 +1,7 @@
 package rina.ipcprocess.impl.enrollment.statemachines;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -7,18 +9,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationVector;
 import eu.irati.librina.Neighbor;
+import eu.irati.librina.rina;
 
 import rina.cdap.api.BaseCDAPMessageHandler;
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
+import rina.cdap.api.message.ObjectValue;
 import rina.encoding.api.Encoder;
 import rina.enrollment.api.EnrollmentTask;
+import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborRIBObject;
 import rina.ipcprocess.impl.enrollment.ribobjects.NeighborSetRIBObject;
+import rina.ipcprocess.impl.registrationmanager.ribobjects.DirectoryForwardingTableEntrySetRIBObject;
 import rina.ribdaemon.api.RIBDaemon;
+import rina.ribdaemon.api.RIBObject;
 import rina.ribdaemon.api.RIBObjectNames;
 
 /**
@@ -299,5 +307,65 @@ public abstract class BaseEnrollmentStateMachine extends BaseCDAPMessageHandler{
 		}catch(Exception ex){
 			ex.printStackTrace();
 		}
+	}
+	
+	/**
+	 * Send all the DIF dynamic information
+	 * @throws Exception
+	 */
+	protected void sendDIFDynamicInformation(IPCProcess ipcProcess) throws Exception{
+		//Send DirectoryForwardingTableEntries
+		sendCreateInformation(DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_SET_RIB_OBJECT_CLASS, 
+				DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME);
+		
+		//Send neighbors (including myself)
+		RIBObject neighborSet = ribDaemon.read(
+				NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_CLASS, 
+				NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME);
+		List<RIBObject> neighbors = neighborSet.getChildren();
+		
+		Neighbor[] neighborsArray = new Neighbor[neighbors.size() + 1];
+		for(int i=1; i<=neighbors.size(); i++){
+			neighborsArray[i] = (Neighbor) neighbors.get(i-1).getObjectValue();
+		}
+		
+		neighborsArray[0] = new Neighbor();
+		neighborsArray[0].setAddress(ipcProcess.getAddress().longValue());
+		neighborsArray[0].setName(ipcProcess.getName());
+		ApplicationRegistrationVector applicationRegistrations = rina.getExtendedIPCManager().getRegisteredApplications();
+		Iterator<ApplicationProcessNamingInformation> iterator = null;
+		for(int i=0; i<applicationRegistrations.size(); i++) {
+			iterator = applicationRegistrations.get(i).getDIFNames().iterator();
+			while (iterator.hasNext()) {
+				neighborsArray[0].addSupoprtingDif(iterator.next());
+			}
+		}
+		
+		ObjectValue objectValue = new ObjectValue();
+		objectValue.setByteval(encoder.encode(neighborsArray));
+		CDAPMessage cdapMessage = cdapSessionManager.getCreateObjectRequestMessage(
+				this.portId, null, null, neighborSet.getObjectClass(), 
+				0, NeighborSetRIBObject.NEIGHBOR_SET_RIB_OBJECT_NAME, objectValue, 0, false);
+		sendCDAPMessage(cdapMessage);
+	}
+	
+	/**
+	 * Gets the object value from the RIB and send it as a CDAP Mesage
+	 * @param objectClass the class of the object to be send
+	 * @param objectName the name of the object to be send
+	 * @param suffix the suffix to send after enrollment info
+	 * @throws Exception
+	 */
+	protected void sendCreateInformation(String objectClass, String objectName) throws Exception{
+		RIBObject ribObject = null;
+		CDAPMessage cdapMessage = null;
+		ObjectValue objectValue = null;
+		
+		ribObject = ribDaemon.read(objectClass, objectName);
+		objectValue = new ObjectValue();
+		objectValue.setByteval(encoder.encode(ribObject.getObjectValue()));
+		cdapMessage = cdapSessionManager.getCreateObjectRequestMessage(this.portId, null, null, objectClass, 
+				ribObject.getObjectInstance(), objectName, objectValue, 0, false);
+		sendCDAPMessage(cdapMessage);
 	}
 }
