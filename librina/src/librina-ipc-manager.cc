@@ -423,7 +423,8 @@ throw (DisconnectFromNeighborException) {
 }
 
 unsigned int IPCProcess::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName)
+		const ApplicationProcessNamingInformation& applicationName,
+		unsigned short regIpcProcessId)
 throw (IpcmRegisterApplicationException) {
 	if (!difMember){
 		throw IpcmRegisterApplicationException(

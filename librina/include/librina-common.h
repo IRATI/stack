@@ -531,6 +531,12 @@ class ApplicationRegistrationInformation {
         /** The name of the application being registered */
         ApplicationProcessNamingInformation appName;
 
+        /**
+         * The id of the IPC process being registered (0 if it is
+         * an application
+         */
+        unsigned short ipcProcessId;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -547,6 +553,8 @@ public:
 	ApplicationRegistrationType getRegistrationType() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
+        unsigned short getIpcProcessId() const;
+        void setIpcProcessId(unsigned short ipcProcessId);
 };
 
 /**
