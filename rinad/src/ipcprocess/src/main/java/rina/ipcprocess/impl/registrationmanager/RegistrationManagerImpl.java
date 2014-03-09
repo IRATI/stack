@@ -134,6 +134,7 @@ public class RegistrationManagerImpl implements RegistrationManager {
 		registeredApplications.put(appToRegister.getEncodedString(), 
 				event.getApplicationRegistrationInformation());
 		log.info("Successfully registered application "+appToRegister.getEncodedString() 
+				+ ", with IPC Process id " + appToRegister.getEncodedString()
 				+ ". Notifying the IPC Manager and informing neighbours");
 		
 		try {
@@ -221,6 +222,8 @@ public class RegistrationManagerImpl implements RegistrationManager {
 				registeredApplications.get(apNamingInfo.getEncodedString());
 		
 		if (info == null) {
+			log.debug("Could not find a registered application with code : "
+					+ apNamingInfo.getEncodedString());
 			return 0;
 		}
 		
