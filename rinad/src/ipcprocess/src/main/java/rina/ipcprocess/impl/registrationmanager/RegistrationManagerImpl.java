@@ -134,7 +134,7 @@ public class RegistrationManagerImpl implements RegistrationManager {
 		registeredApplications.put(appToRegister.getEncodedString(), 
 				event.getApplicationRegistrationInformation());
 		log.info("Successfully registered application "+appToRegister.getEncodedString() 
-				+ ", with IPC Process id " + appToRegister.getEncodedString()
+				+ ", with IPC Process id " + event.getApplicationRegistrationInformation().getIpcProcessId()
 				+ ". Notifying the IPC Manager and informing neighbours");
 		
 		try {
