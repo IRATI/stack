@@ -1,18 +1,21 @@
 package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
+import java.util.Timer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.timertasks.KillFlowStateObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateInternalObjectGroup{
-	private static final Log log = LogFactory.getLog(PDUFTImpl.class);
+	//private static final Log log = LogFactory.getLog(FlowStateInternalObjectGroup.class);
+	
+	protected static final int WAIT_UNTIL_REMOVE_OBJECT = 23000;
 	
 	protected ArrayList<FlowStateInternalObject> flowStateObjectArray = null;
 	
@@ -102,7 +105,6 @@ public class FlowStateInternalObjectGroup{
 	public boolean incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
 	{
 		boolean groupModified = false;
-		ObjectStateMapper mapper = new ObjectStateMapper();
 		
 		for(int i = 0; i< this.flowStateObjectArray.size(); i++)
 		{
@@ -111,10 +113,10 @@ public class FlowStateInternalObjectGroup{
 			
 			if (object.getAge() >= maximumAge)
 			{
-				log.debug("Old object removed: " + object.getID());
-				this.flowStateObjectArray.remove(i);
+				Timer killFlowStateObjectTimer = new Timer();
+				killFlowStateObjectTimer.schedule(new KillFlowStateObject(flowStateObjectArray, fsRIBGroup, flowStateObjectArray.get(i)), 
+						WAIT_UNTIL_REMOVE_OBJECT);
 				groupModified = true;
-				fsRIBGroup.delete(mapper.FSOMap(object));
 			}
 		}
 		return groupModified;
