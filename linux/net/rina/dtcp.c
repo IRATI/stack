@@ -156,6 +156,7 @@ struct dtcp_policies {
         int (* flow_control_overrun)(struct dtcp * instance);
         int (* reconcile_flow_conflict)(struct dtcp * instance);
         int (* rcvr_flow_control)(struct dtcp * instance, seq_num_t seq);
+        int (* rate_reduction)(struct dtcp * instance);
 };
 
 struct dtcp {
@@ -230,21 +231,21 @@ static struct pdu * pdu_control_ack_flow(struct dtcp * dtcp,
         return pdu;
 }
 
-static int dtcp_rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+static int rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
 {
         LOG_MISSING;
         return 0;
 }
 
 /*
-  static int dtcp_rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+  static int rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
   {
   LOG_MISSING;
   return 0;
   }
 */
 
-static int dtcp_rcv_flow_ctl(struct dtcp * dtcp,
+static int rcv_flow_ctl(struct dtcp * dtcp,
                              struct pci *  pci,
                              seq_num_t     seq_num,
                              struct pdu *  pdu)
@@ -259,10 +260,10 @@ static int dtcp_rcv_flow_ctl(struct dtcp * dtcp,
         return 0;
 }
 
-static int dtcp_rcv_ack_and_flow_ctl(struct dtcp * dtcp,
-                                     struct pci *  pci,
-                                     seq_num_t     seq_num,
-                                     struct pdu *  pdu)
+static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
+                                struct pci *  pci,
+                                seq_num_t     seq_num,
+                                struct pdu *  pdu)
 {
         LOG_MISSING;
         return 0;
@@ -335,19 +336,31 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_FC:
-                return dtcp_rcv_flow_ctl(dtcp, pci, seq_num, pdu);
+                return rcv_flow_ctl(dtcp, pci, seq_num, pdu);
         case PDU_TYPE_ACK:
-                return dtcp_rcv_ack_ctl(dtcp, pdu);
+                return rcv_ack_ctl(dtcp, pdu);
         case PDU_TYPE_ACK_AND_FC:
-                return dtcp_rcv_ack_and_flow_ctl(dtcp, pci, seq_num, pdu);
+                return rcv_ack_and_flow_ctl(dtcp, pci, seq_num, pdu);
         default:
                 return -1;
         }
 }
 
-int default_lost_control_pdu(struct dtcp * dtcp)
+static int default_lost_control_pdu(struct dtcp * dtcp)
 {
-        LOG_MISSING;
+        struct pdu * pdu_ctrl;
+
+        pdu_ctrl = pdu_control_ack_create(dtcp,
+                                          dtcp->sv->last_rcv_ctl_seq,
+                                          dtcp->sv->send_left_wind_edge,
+                                          dtcp->sv->snd_rt_wind_edge,
+                                          dtcp->sv->rcv_left_wind_edge,
+                                          dtcp->sv->snd_rt_wind_edge);
+        if (!pdu_ctrl) {
+                LOG_ERR("Failed Lost Control PDU");
+                return -1;
+        }
+
         return 0;
 }
 
@@ -362,7 +375,7 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                                           dtcp->sv->send_left_wind_edge,
                                           dtcp->sv->snd_rt_wind_edge,
                                           dtcp->sv->rcv_left_wind_edge,
-                                          dtcp->sv->snd_rt_wind_edge);
+                                          dtcp->sv->rcvr_rt_wind_edge);
         if (!pdu_ctrl)
                 return -1;
 
@@ -387,23 +400,49 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
         return -1;
 }
 
-
-/* FIXME: Mock up code */
-static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+static int default_rate_reduction(struct dtcp * instance)
 {
         LOG_MISSING;
+
+        return 0;
+}
+
+static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
+{
+        int retval = 0;
 
         if (!dtcp)
                 return -1;
 
         /* FIXME: here it goes rcvr_flow_control_policy */
+        if (dtcp->conn->policies_params.flow_ctrl) {
+                if (dtcp->conn->policies_params.window_based_fctrl)
+                        if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
+                                LOG_ERR("Failed Rcvr Flow Control");
+                                retval = -1;
+                        }
 
-        if (dtcp->conn->policies_params.flow_ctrl &&
-            !dtcp->conn->policies_params.rtx_ctrl) {
-                return dtcp->policies->receiving_flow_control(dtcp);
+                if (dtcp->conn->policies_params.rate_based_fctrl)
+                        if (dtcp->policies->rate_reduction(dtcp)) {
+                                LOG_ERR("Failed Rate Reduction");
+                                retval = -1;
+                        }
         }
 
-        return -1;
+        if (dtcp->conn->policies_params.rtx_ctrl)
+                if (dtcp->policies->rcvr_ack(dtcp, seq)) {
+                        LOG_ERR("Failed Rcvr Ack");
+                        retval = -1;
+                }
+
+        if (dtcp->conn->policies_params.flow_ctrl &&
+            !dtcp->conn->policies_params.rtx_ctrl)
+                if (dtcp->policies->receiving_flow_control(dtcp)) {
+                        LOG_ERR("Failed Receiving Flow Control");
+                        retval = -1;
+                }
+
+        return retval;
 }
 
 static struct dtcp_sv default_sv = {
@@ -448,6 +487,7 @@ static struct dtcp_policies default_policies = {
         .reconcile_flow_conflict     = NULL,
         .rcvr_ack                    = default_rcvr_ack,
         .rcvr_flow_control           = default_rcvr_flow_control,
+        .rate_reduction              = default_rate_reduction,
 };
 
 struct dtcp * dtcp_create(struct dt *         dt,
@@ -529,7 +569,18 @@ int dtcp_sv_update(struct dtcp * instance,
                 return -1;
         }
 
-        instance->sv->send_left_wind_edge = seq;
+        if (instance->policies->sv_update(instance, seq))
+                return -1;
+
+        return 0;
+}
+
+int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp)
+{
+        if (!dtcp)
+                return -1;
+
+        LOG_MISSING;
 
         return 0;
 }
