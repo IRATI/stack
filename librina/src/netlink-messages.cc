@@ -717,6 +717,7 @@ IPCEvent* AppGetDIFPropertiesResponseMessage::toIPCEvent(){
 IpcmRegisterApplicationRequestMessage::IpcmRegisterApplicationRequestMessage():
                 BaseNetlinkMessage(
 			RINA_C_IPCM_REGISTER_APPLICATION_REQUEST) {
+        regIpcProcessId = 0;
 }
 
 const ApplicationProcessNamingInformation&
@@ -739,11 +740,22 @@ void IpcmRegisterApplicationRequestMessage::setDifName(
 	this->difName = difName;
 }
 
+unsigned short IpcmRegisterApplicationRequestMessage::
+getRegIpcProcessId() const {
+        return regIpcProcessId;
+}
+
+void IpcmRegisterApplicationRequestMessage::
+setRegIpcProcessId(unsigned short regIpcProcessId) {
+        this->regIpcProcessId = regIpcProcessId;
+}
+
 IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 	ApplicationRegistrationInformation information =
 		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	information.setDIFName(difName);
 	information.setApplicationName(applicationName);
+	information.setIpcProcessId(regIpcProcessId);
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					information,
@@ -1645,6 +1657,16 @@ int IpcpConnectionCreateArrivedMessage::getDestCepId() const {
 
 void IpcpConnectionCreateArrivedMessage::setDestCepId(int destCepId) {
         this->destCepId = destCepId;
+}
+
+const ConnectionPoliciesParameters& IpcpConnectionCreateArrivedMessage::
+getConnPoliciesParams() const {
+        return connPoliciesParameters;
+}
+
+void IpcpConnectionCreateArrivedMessage::setConnPoliciesParams(
+                const ConnectionPoliciesParameters& connPParams) {
+        this->connPoliciesParameters = connPParams;
 }
 
 IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {

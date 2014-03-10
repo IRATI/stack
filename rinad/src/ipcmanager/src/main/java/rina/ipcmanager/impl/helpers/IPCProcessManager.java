@@ -402,6 +402,7 @@ public class IPCProcessManager {
 		ApplicationRegistrationInformation arInfo = new ApplicationRegistrationInformation(
 				ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
 		arInfo.setApplicationName(ipcProcess.getName());
+		arInfo.setIpcProcessId(ipcProcessId);
 		arInfo.setDIFName(difNamingInfo);
 		ApplicationRegistrationRequestEvent event = 
 				new ApplicationRegistrationRequestEvent(arInfo, 0);

@@ -1014,6 +1014,7 @@ int testIpcmRegisterApplicationRequestMessage() {
 
 	message->setDifName(*difName);
 	message->setApplicationName(*applicationName);
+	message->setRegIpcProcessId(123);
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
@@ -1051,6 +1052,11 @@ int testIpcmRegisterApplicationRequestMessage() {
 		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
+	} else if (message->getRegIpcProcessId() !=
+	                recoveredMessage->getRegIpcProcessId()) {
+	        std::cout << "RegIpcProcessId on original and recovered "
+	                        << "messages are different\n";
+	        returnValue = -1;
 	}
 
 	if (returnValue == 0) {
