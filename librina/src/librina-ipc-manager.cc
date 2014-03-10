@@ -423,7 +423,8 @@ throw (DisconnectFromNeighborException) {
 }
 
 unsigned int IPCProcess::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName)
+		const ApplicationProcessNamingInformation& applicationName,
+		unsigned short regIpcProcessId)
 throw (IpcmRegisterApplicationException) {
 	if (!difMember){
 		throw IpcmRegisterApplicationException(
@@ -438,6 +439,7 @@ throw (IpcmRegisterApplicationException) {
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
 	message.setDifName(difInformation.getDifName());
+	message.setRegIpcProcessId(regIpcProcessId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);

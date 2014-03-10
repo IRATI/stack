@@ -67,7 +67,8 @@ public class ApplicationRegistrationManager {
 		try{
 			ipcProcess = getIPCProcessToRegisterAt(event);
 			handle = ipcProcess.registerApplication(event.
-					getApplicationRegistrationInformation().getApplicationName());
+					getApplicationRegistrationInformation().getApplicationName(), 
+					event.getApplicationRegistrationInformation().getIpcProcessId());
 			pendingRegistrations.put(handle, 
 					new PendingRegistration(event, ipcProcess, ipcProcessId));
 			log.debug("Requested registration of application "+applicationName.toString() 

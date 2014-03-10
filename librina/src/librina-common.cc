@@ -635,7 +635,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
-	this->flowRequestorIpcProcessId = 0;
+	this->flowRequestorIpcProcessId = ipcProcessId;
 	this->portId = portId;
 	this->ipcProcessId = ipcProcessId;
 }
@@ -729,11 +729,13 @@ int FlowDeallocatedEvent::getCode() const{
 /* CLASS APPLICATION REGISTRATION INFORMATION */
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
+	ipcProcessId = 0;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType){
 	this->applicationRegistrationType = applicationRegistrationType;
+	ipcProcessId = 0;
 }
 
 ApplicationRegistrationType
@@ -759,6 +761,15 @@ const ApplicationProcessNamingInformation&
 void ApplicationRegistrationInformation::setApplicationName(
                 const ApplicationProcessNamingInformation& appName) {
         this->appName = appName;
+}
+
+unsigned short ApplicationRegistrationInformation::getIpcProcessId() const {
+        return ipcProcessId;
+}
+
+void ApplicationRegistrationInformation::setIpcProcessId(
+                unsigned short ipcProcessId) {
+        this->ipcProcessId = ipcProcessId;
 }
 
 /* CLASS APPLICATION REGISTRATION REQUEST */
@@ -1210,6 +1221,13 @@ void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
 }
 
 void DIFConfiguration::addQoSCube(const QoSCube& qosCube) {
+        std::list<QoSCube>::const_iterator iterator;
+        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+            if (iterator->getId() == qosCube.getId()) {
+                    return;
+            }
+        }
+
         qosCubes.push_back(qosCube);
 }
 
