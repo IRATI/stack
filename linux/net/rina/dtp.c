@@ -51,6 +51,7 @@ struct dtp_sv {
         
         seq_num_t           max_seq_nr_rcv;
         int                 dropped_pdus;
+        bool                set_drf_flag;        
 
         struct {
                 seq_num_t   left_window_edge;
@@ -356,6 +357,7 @@ int dtp_write(struct dtp * instance,
                 if (rtxq_push(rtxq, cpdu)) {
                         LOG_ERR("Couldn't push to rtxq");
                         pdu_destroy(pdu);
+                        pdu_destroy(cpdu);
                         return -1;
                 }
         }
@@ -455,6 +457,7 @@ int dtp_receive(struct dtp * instance,
         struct pci *          pci;
         struct dtp_sv *       sv;
         seq_num_t             seq_num;
+        struct dtcp *         dtcp;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -475,6 +478,8 @@ int dtp_receive(struct dtp * instance,
 
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
+
+        dtcp = dt_dtcp(instance->parent);
 
         if (sv->state == FLOW_NULL) {
                 policies->unknown_flow(instance, pdu);
@@ -499,19 +504,29 @@ int dtp_receive(struct dtp * instance,
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 sv->max_seq_nr_rcv = seq_num;
-
-                LOG_MISSING;
+                sv->set_drf_flag = true;
+                policies->initial_sequence_number(instance);
+                if (dtcp) {
+                        /* SV Update */
+                        LOG_MISSING;
+                }
         } else if (seq_num < sv->inbound.left_window_edge) {
                 pdu_destroy(pdu);
                 sv->dropped_pdus++;
                 /* Send an ACK/Flow Control PDU with current window values */
                 LOG_MISSING;
-                return 0;
         } else if (sv->inbound.left_window_edge < seq_num &&
                    seq_num < sv->max_seq_nr_rcv) {
                 /* Check if it is a duplicate in the gaps */
+                /* if / else for this */
                 LOG_MISSING;
 
+                if (dtcp) {
+                        /* SV Update */
+                        LOG_MISSING;
+                } else {
+                        sv->inbound.left_window_edge = sv->max_seq_nr_rcv;
+                }
         } else if (seq_num == (sv->max_seq_nr_rcv + 1)) {
                 LOG_MISSING;
 
@@ -544,6 +559,13 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
+
+        /* Start ReceiverInactivityTimer */
+        if (rtimer_start(instance->timers.receiver_inactivity,
+                         3 * (TIME_MPL + TIME_R + TIME_A))) {
+                LOG_ERR("Failed to start timer");
+                return -1;
+        }
 
         return 0;
 }
