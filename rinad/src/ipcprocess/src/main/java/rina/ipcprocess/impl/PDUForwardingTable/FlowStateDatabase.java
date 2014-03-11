@@ -116,7 +116,7 @@ public class FlowStateDatabase {
 			for(int i = 0; i < flowStateInternalObjectGroup.getModifiedFSO().size(); i++)
 			{
 				FlowStateInternalObject object = flowStateInternalObjectGroup.getModifiedFSO().get(i);
-				log.debug("modified Object: " + object);
+				log.debug("modified Object: " + object.getID());
 	
 				for(int j = 0; j < flows.length; j++)
 				{

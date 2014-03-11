@@ -304,7 +304,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean propagateFSDB()
 	{
-		log.debug("propagateFSDB function launched");
+		//log.debug("propagateFSDB function launched");
 
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
@@ -354,7 +354,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void updateAge()
 	{
-		log.debug("updateAge function launched");
+		//log.debug("updateAge function launched");
 		try {
 			db.incrementAge(maximumAge, fsRIBGroup);
 		} catch (RIBDaemonException e) {
@@ -365,7 +365,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void forwardingTableUpdate ()
 	{
-		log.debug("forwardingTableUpdate function launched");
+		//log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
 			log.debug("FSDB is modified, computing new paths");
