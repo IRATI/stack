@@ -67,10 +67,6 @@ struct dtp_policies {
         int (* sender_inactivity_timer)(struct dtp * instance);
 };
 
-/* FIXME: Should probably be kept in a different component */
-#define TIME_MPL 100 /* FIXME: Completely bogus value, must be in ms */
-#define TIME_R   200 /* FIXME: Completely bogus value, must be in ms */
-#define TIME_A   300 /* FIXME: Completely bogus value, must be in ms */
 struct dtp {
         struct dt *           parent;
         /*
@@ -360,7 +356,7 @@ int dtp_write(struct dtp * instance,
                        pdu);
 
         if (rtimer_start(instance->timers.sender_inactivity,
-                         2 * (TIME_MPL + TIME_R + TIME_A))) {
+                         2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
                 return -1;
         }
@@ -448,6 +444,7 @@ int dtp_receive(struct dtp * instance,
         struct dtp_sv *       sv;
         seq_num_t             seq_num;
         struct dtcp *         dtcp;
+        struct dt *           dt;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -469,7 +466,10 @@ int dtp_receive(struct dtp * instance,
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
 
-        dtcp = dt_dtcp(instance->parent);
+        dt = instance->parent;
+        ASSERT(dt);
+
+        dtcp = dt_dtcp(dt);
 
         if (!pdu_pci_present(pdu)) {
                 LOG_DBG("Couldn't find PCI in PDU");
@@ -547,7 +547,7 @@ int dtp_receive(struct dtp * instance,
 
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
-                         3 * (TIME_MPL + TIME_R + TIME_A))) {
+                         3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
                 return -1;
         }
