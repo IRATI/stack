@@ -34,18 +34,18 @@
 struct dtp_sv {
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
-        uint_t              max_flow_sdu_size;
-        uint_t              max_flow_pdu_size;
+
         uint_t              seq_number_rollover_threshold;
+        int                 dropped_pdus;
+        seq_num_t           max_seq_nr_rcv;
+        uint_t              max_cwq_len;
+        bool                set_drf_flag;
+        timeout_t           a;
+
         bool                window_based;
         bool                window_closed;
-        uint_t              max_cwq_len;
         int                 rexmsn_ctrl;
-        
-        seq_num_t           max_seq_nr_rcv;
-        int                 dropped_pdus;
-        bool                set_drf_flag;        
-
+    
         struct {
                 seq_num_t   left_window_edge;
         } inbound;
@@ -93,13 +93,15 @@ struct dtp {
 
 static struct dtp_sv default_sv = {
         .connection                      = NULL,
-        .max_flow_sdu_size               = 0,
-        .max_flow_pdu_size               = 0,
         .seq_number_rollover_threshold   = 0,
+        .dropped_pdus                    = 0,
+        .max_seq_nr_rcv                  = 0,
+        .max_cwq_len                     = 0,
+        .set_drf_flag                    = false,
+        .a                               = 0,
         .window_based                    = false,
         .window_closed                   = false,
         .rexmsn_ctrl                     = false,
-        .max_cwq_len                     = 0,
         .inbound.left_window_edge        = 0,
         .outbound.next_sequence_to_send  = 0,
         .outbound.right_window_edge      = 0
@@ -434,8 +436,7 @@ int dtp_mgmt_write(struct rmt * rmt,
                         pci_cep_destination(pci),
                         pdu);
 
-};
-EXPORT_SYMBOL(dtp_mgmt_write);
+}
 
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
@@ -554,9 +555,10 @@ int dtp_receive(struct dtp * instance,
         return 0;
 }
 
-int dtp_rcv_flow_ctl(struct dtp * instance)
+bool dtp_drf_flag(struct dtp * instance)
 {
-        LOG_MISSING;
-        return 0;
+        if (!instance || !instance->sv)
+                return false;
+
+        return instance->sv->set_drf_flag;
 }
-EXPORT_SYMBOL(dtp_rcv_flow_ctl);
