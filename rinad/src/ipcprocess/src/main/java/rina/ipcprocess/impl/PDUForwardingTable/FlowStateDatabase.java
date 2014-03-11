@@ -116,12 +116,14 @@ public class FlowStateDatabase {
 			for(int i = 0; i < flowStateInternalObjectGroup.getModifiedFSO().size(); i++)
 			{
 				FlowStateInternalObject object = flowStateInternalObjectGroup.getModifiedFSO().get(i);
+				log.debug("modified Object: " + object);
 	
 				for(int j = 0; j < flows.length; j++)
 				{
 					int portId = flows[j].getPortId();
 					if (object.getAvoidPort() != portId)
 					{
+						log.debug("Sent to port: " + portId);
 						groupsToSend.get(j).addToSend(object);
 					}
 				}
