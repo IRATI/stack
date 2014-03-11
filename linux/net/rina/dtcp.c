@@ -32,9 +32,6 @@ struct dtcp_sv {
         /* SV lock */
         spinlock_t   lock;
 
-        /* Control state */
-        uint_t       max_pdu_size;
-
         /* TimeOuts */
 
         /*
@@ -87,7 +84,6 @@ struct dtcp_sv {
 
         /* Inbound */
         seq_num_t    last_rcv_data_ack;
-        seq_num_t    rcv_left_wind_edge;
 
         /* Time (ms) over which the rate is computed */
         uint_t       time_unit;
@@ -129,8 +125,6 @@ struct dtcp_sv {
          * received until a new time unit begins
          */
         uint_t       pdus_rcvd_in_time_unit;
-
-        bool         set_drf_flag;
 
         /*
          * Control of duplicated control PDUs
@@ -176,27 +170,51 @@ struct dtcp {
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
 };
 
-static struct pdu * pdu_control_ack_create(struct dtcp * dtcp,
-                                           seq_num_t     last_ctrl_seq_rcvd,
-                                           seq_num_t     snd_left_wind_edge,
-                                           seq_num_t     snd_rt_wind_edge,
-                                           seq_num_t     left_wind_edge,
-                                           seq_num_t     rt_wind_edge)
+static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
+                                 seq_num_t last_rcv_ctrl_seq)
+{
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock(&dtcp->sv->lock);
+        dtcp->sv->last_rcv_ctl_seq = last_rcv_ctrl_seq;
+        spin_lock(&dtcp->sv->lock);
+
+        return 0;
+}
+
+static int dup_flow_ctrl_inc(struct dtcp * dtcp)
+{
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        dtcp->sv->dup_flow_ctl++;
+
+        return 0;
+}
+
+static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
+                                        seq_num_t     last_ctrl_seq_rcvd,
+                                        seq_num_t     snd_left_wind_edge,
+                                        seq_num_t     snd_rt_wind_edge,
+                                        seq_num_t     left_wind_edge,
+                                        seq_num_t     rt_wind_edge)
 {
         LOG_MISSING;
 
         return NULL;
 }
 
-static struct pdu * pdu_control_ack_flow(struct dtcp * dtcp,
-                                         seq_num_t     last_ctrl_seq_rcvd,
-                                         seq_num_t     ack_nack_seq,
-                                         seq_num_t     new_rt_wind_edge,
-                                         seq_num_t     left_wind_edge,
-                                         seq_num_t     rt_wind_edge)
+static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
+                                      seq_num_t     last_ctrl_seq_rcvd,
+                                      seq_num_t     ack_nack_seq,
+                                      seq_num_t     new_rt_wind_edge,
+                                      seq_num_t     left_wind_edge,
+                                      seq_num_t     rt_wind_edge)
 {
         struct pdu * pdu;
         struct pci * pci;
+        seq_num_t    seq;
 
         LOG_MISSING;
 
@@ -209,14 +227,30 @@ static struct pdu * pdu_control_ack_flow(struct dtcp * dtcp,
                 pdu_destroy(pdu);
                 return NULL;
         }
+        spin_lock(&dtcp->sv->lock);
+        seq = dtcp->sv->next_snd_ctl_seq;
+        dtcp->sv->next_snd_ctl_seq++;
+        spin_unlock(&dtcp->sv->lock);
         if (pci_format(pci,
                        dtcp->conn->source_cep_id,
                        dtcp->conn->destination_cep_id,
                        dtcp->conn->source_address,
                        dtcp->conn->destination_address,
-                       dtcp->sv->next_snd_ctl_seq,
+                       seq,
                        0,
                        PDU_TYPE_ACK_AND_FC)) {
+                pdu_destroy(pdu);
+                pci_destroy(pci);
+                return NULL;
+        }
+
+        if (pci_control_ack_seq_num_set(pci, ack_nack_seq)) {
+                pdu_destroy(pdu);
+                pci_destroy(pci);
+                return NULL;
+        }
+
+        if (pci_last_control_seq_num_rcvd_set(pci, last_ctrl_seq_rcvd)) {
                 pdu_destroy(pdu);
                 pci_destroy(pci);
                 return NULL;
@@ -246,9 +280,9 @@ static int rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
 */
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
-                             struct pci *  pci,
-                             seq_num_t     seq_num,
-                             struct pdu *  pdu)
+                        struct pci *  pci,
+                        seq_num_t     seq_num,
+                        struct pdu *  pdu)
 {
         dtcp->sv->snd_rt_wind_edge = pci_control_new_rt_wind_edge(pci);
         /* FIXME: add new rate */
@@ -307,14 +341,14 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         if (seq_num < dtcp->sv->last_rcv_ctl_seq) {
                 switch (type) {
                 case PDU_TYPE_FC:
-                        dtcp->sv->dup_flow_ctl++;
+                        dup_flow_ctrl_inc(dtcp);
                         break;
                 case PDU_TYPE_ACK:
                         dtcp->sv->dup_acks++;
                         break;
                 case PDU_TYPE_ACK_AND_FC:
                         dtcp->sv->dup_acks++;
-                        dtcp->sv->dup_flow_ctl++;
+                        dup_flow_ctrl_inc(dtcp);
                         break;
                 default:
                         break;
@@ -326,7 +360,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         } else if (seq_num > dtcp->sv->last_rcv_ctl_seq) {
                 dtcp->policies->lost_control_pdu(dtcp);
         } else {
-                dtcp->sv->last_rcv_ctl_seq = seq_num;
+                if (last_rcv_ctrl_seq_set(dtcp, seq_num))
+                        return -1;
         }
 
         /*
@@ -350,12 +385,12 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
 {
         struct pdu * pdu_ctrl;
 
-        pdu_ctrl = pdu_control_ack_create(dtcp,
-                                          dtcp->sv->last_rcv_ctl_seq,
-                                          dtcp->sv->send_left_wind_edge,
-                                          dtcp->sv->snd_rt_wind_edge,
-                                          dtcp->sv->rcv_left_wind_edge,
-                                          dtcp->sv->snd_rt_wind_edge);
+        pdu_ctrl = pdu_ctrl_ack_create(dtcp,
+                                       dtcp->sv->last_rcv_ctl_seq,
+                                       dtcp->sv->send_left_wind_edge,
+                                       dtcp->sv->snd_rt_wind_edge,
+                                       dt_sv_rcv_lft_win(dtcp->parent),
+                                       dtcp->sv->snd_rt_wind_edge);
         if (!pdu_ctrl) {
                 LOG_ERR("Failed Lost Control PDU");
                 return -1;
@@ -370,12 +405,12 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 
         LOG_MISSING;
 
-        pdu_ctrl = pdu_control_ack_create(dtcp,
-                                          dtcp->sv->last_rcv_ctl_seq,
-                                          dtcp->sv->send_left_wind_edge,
-                                          dtcp->sv->snd_rt_wind_edge,
-                                          dtcp->sv->rcv_left_wind_edge,
-                                          dtcp->sv->rcvr_rt_wind_edge);
+        pdu_ctrl = pdu_ctrl_ack_create(dtcp,
+                                       dtcp->sv->last_rcv_ctl_seq,
+                                       dtcp->sv->send_left_wind_edge,
+                                       dtcp->sv->snd_rt_wind_edge,
+                                       dt_sv_rcv_lft_win(dtcp->parent),
+                                       dtcp->sv->rcvr_rt_wind_edge);
         if (!pdu_ctrl)
                 return -1;
 
@@ -386,12 +421,12 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
 
-        pdu_ctrl = pdu_control_ack_flow(dtcp,
-                                        dtcp->sv->last_rcv_ctl_seq,
-                                        seq,
-                                        seq + dtcp->sv->rcvr_credit,
-                                        dtcp->sv->send_left_wind_edge,
-                                        dtcp->sv->snd_rt_wind_edge);
+        pdu_ctrl = pdu_ctrl_ack_flow(dtcp,
+                                     dtcp->sv->last_rcv_ctl_seq,
+                                     seq,
+                                     seq + dtcp->sv->rcvr_credit,
+                                     dtcp->sv->send_left_wind_edge,
+                                     dtcp->sv->snd_rt_wind_edge);
         if (!pdu_ctrl)
                 return -1;
 
@@ -446,7 +481,6 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 }
 
 static struct dtcp_sv default_sv = {
-        .max_pdu_size           = 0,
         .trd                    = 0,
         .pdus_per_time_unit     = 0,
         .next_snd_ctl_seq       = 0,
@@ -455,7 +489,6 @@ static struct dtcp_sv default_sv = {
         .send_left_wind_edge    = 0,
         .data_retransmit_max    = 0,
         .last_rcv_data_ack      = 0,
-        .rcv_left_wind_edge     = 0,
         .time_unit              = 0,
         .sndr_credit            = 0,
         .snd_rt_wind_edge       = 0,
@@ -465,7 +498,6 @@ static struct dtcp_sv default_sv = {
         .rcvr_rt_wind_edge      = 0,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
-        .set_drf_flag           = false,
         .dup_acks               = 0,
         .dup_flow_ctl           = 0,
 };
@@ -585,3 +617,29 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp)
         return 0;
 }
 
+seq_num_t dtcp_rcv_rt_win(struct dtcp * instance)
+{
+        seq_num_t tmp;
+
+        if (!instance || !instance->sv)
+                return 0;
+
+        spin_lock(&instance->sv->lock);
+        tmp = instance->sv->rcvr_rt_wind_edge;
+        spin_unlock(&instance->sv->lock);
+
+        return tmp;
+}
+seq_num_t dtcp_snd_rt_win(struct dtcp * instance)
+{
+        seq_num_t tmp;
+
+        if (!instance || !instance->sv)
+                return 0;
+
+        spin_lock(&instance->sv->lock);
+        tmp = instance->sv->snd_rt_wind_edge;
+        spin_unlock(&instance->sv->lock);
+
+        return tmp;
+}
