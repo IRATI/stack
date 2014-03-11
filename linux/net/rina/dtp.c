@@ -29,6 +29,7 @@
 #include "dtp.h"
 #include "dt.h"
 #include "dt-utils.h"
+#include "dtcp.h"
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
@@ -38,6 +39,7 @@ struct dtp_sv {
         uint_t              seq_number_rollover_threshold;
         int                 dropped_pdus;
         seq_num_t           max_seq_nr_rcv;
+        seq_num_t           nxt_seq;
         uint_t              max_cwq_len;
         bool                set_drf_flag;
         timeout_t           a;
@@ -45,15 +47,6 @@ struct dtp_sv {
         bool                window_based;
         bool                window_closed;
         int                 rexmsn_ctrl;
-    
-        struct {
-                seq_num_t   left_window_edge;
-        } inbound;
-
-        struct {
-                seq_num_t   next_sequence_to_send;
-                seq_num_t   right_window_edge;
-        } outbound;
 };
 
 /* FIXME: Has to be rearranged */
@@ -98,9 +91,6 @@ static struct dtp_sv default_sv = {
         .window_based                    = false,
         .window_closed                   = false,
         .rexmsn_ctrl                     = false,
-        .inbound.left_window_edge        = 0,
-        .outbound.next_sequence_to_send  = 0,
-        .outbound.right_window_edge      = 0
 };
 
 static struct dtp_policies default_policies = {
@@ -209,6 +199,7 @@ int dtp_write(struct dtp * instance,
         struct pci *          pci;
         struct dtp_sv *       sv;
         struct dt *           dt;
+        struct dtcp *         dtcp;
         struct cwq *          cwq;
         struct rtxq *         rtxq;
         int                   ret;
@@ -237,6 +228,8 @@ int dtp_write(struct dtp * instance,
         dt = instance->parent;
         ASSERT(dt);
 
+        dtcp = dt_dtcp(dt);
+
         policies = instance->policies;
         ASSERT(policies);
 
@@ -251,7 +244,7 @@ int dtp_write(struct dtp * instance,
                        sv->connection->destination_cep_id,
                        sv->connection->source_address,
                        sv->connection->destination_address,
-                       sv->outbound.next_sequence_to_send,
+                       sv->nxt_seq,
                        sv->connection->qos_id,
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
@@ -288,17 +281,16 @@ int dtp_write(struct dtp * instance,
          * be just thrown away from this point onwards
          */
         /* Probably needs to be revised */
-        sv->outbound.next_sequence_to_send++;
+        sv->nxt_seq++;
 
         /* Step 1: Sequencing */
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
-        if (sv->window_based) {
+        if (dtcp && sv->window_based) {
                 if (!sv->window_closed &&
                     pci_sequence_number_get(pci) <
-                    /* Should probably be kept in DTCP SV*/
-                    sv->outbound.right_window_edge) {
+                    dtcp_snd_rt_win(dtcp)) {
                         /*
                          * Might close window
                          */
@@ -325,7 +317,7 @@ int dtp_write(struct dtp * instance,
                 }
         }
 
-        if (sv->rexmsn_ctrl) {
+        if (dtcp && sv->rexmsn_ctrl) {
                 /* FIXME: Add timer for PDU */
                 rtxq = dt_rtxq(dt);
                 if (!rtxq) {
@@ -495,12 +487,12 @@ int dtp_receive(struct dtp * instance,
                         /* SV Update */
                         LOG_MISSING;
                 }
-        } else if (seq_num < sv->inbound.left_window_edge) {
+        } else if (seq_num < dt_sv_rcv_lft_win(dt)) {
                 pdu_destroy(pdu);
                 sv->dropped_pdus++;
                 /* Send an ACK/Flow Control PDU with current window values */
                 LOG_MISSING;
-        } else if (sv->inbound.left_window_edge < seq_num &&
+        } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
                    seq_num < sv->max_seq_nr_rcv) {
                 /* Check if it is a duplicate in the gaps */
                 /* if / else for this */
@@ -510,8 +502,13 @@ int dtp_receive(struct dtp * instance,
                         /* SV Update */
                         LOG_MISSING;
                 } else {
-                        sv->inbound.left_window_edge = sv->max_seq_nr_rcv;
+                        if (dt_sv_rcv_lft_win_set(dt, sv->max_seq_nr_rcv)) {
+                                LOG_ERR("Failed to set new left window edge");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
                 }
+                LOG_MISSING;
         } else if (seq_num == (sv->max_seq_nr_rcv + 1)) {
                 LOG_MISSING;
 
