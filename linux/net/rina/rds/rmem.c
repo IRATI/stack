@@ -188,8 +188,8 @@ static atomic_t mem_stats[] = {
 #define BLOCKS_COUNT (ARRAY_SIZE(mem_stats) / sizeof(atomic_t))
 
 static unsigned long mem_stats_j = 0;
-#define MEM_STATS_INTERVAL      msecs_to_jiffies(2000)
-#define MEM_STATS_BANNER "MEMSTAT "
+#define MEM_STATS_INTERVAL msecs_to_jiffies(CONFIG_RINA_MEMORY_STATS_INTERVAL)
+#define MEM_STATS_BANNER   "MEMSTAT "
 
 static void mem_stats_dump(void)
 {

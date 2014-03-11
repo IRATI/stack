@@ -11,6 +11,13 @@ config RINA_MEMORY_STATS
 	help
 	  No help for the time being
 
+config RINA_MEMORY_STATS_INTERVAL
+        depends on RINA_MEMORY_STATS
+	int "Rate limit mem-stat dumps (in msecs)"
+        default 2000
+        help
+          No help for the time being
+
 config RINA_MEMORY_DEBUG
 	bool "Memory allocation/deallocation extra checks"
 	default y
