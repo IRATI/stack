@@ -117,7 +117,7 @@ AS_IF([test "$build_bindings_java" = "yes"],[
     JNI_CPPFLAGS=""
     for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
     do
-            JNI_CPPFLAGS="$JNI_CPPFLAGS $JNI_INCLUDE_DIR"
+            JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR"
     done
     AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
     AX_PROG_JAR

@@ -187,21 +187,38 @@ static atomic_t mem_stats[] = {
 
 #define BLOCKS_COUNT (ARRAY_SIZE(mem_stats) / sizeof(atomic_t))
 
-#if 0
-static void stats_dump(void)
+static unsigned long mem_stats_j = 0;
+#define MEM_STATS_INTERVAL      msecs_to_jiffies(2000)
+#define MEM_STATS_BANNER "MEMSTAT "
+
+static void mem_stats_dump(void)
 {
         size_t s;
 
-        LOG_DBG("Memory stats:");
+        if (jiffies < mem_stats_j + MEM_STATS_INTERVAL)
+                return;
+        LOG_INFO(MEM_STATS_BANNER "BEG %d",
+                        jiffies_to_msecs(jiffies));
         for (s = 0; s < BLOCKS_COUNT; s++)
-                LOG_DBG("  %02d %08d %zd",
-                        s, 2 ^ s, atomic_read(&mem_stat[s]));
+                LOG_INFO(MEM_STATS_BANNER "%d %d",
+                        s, atomic_read(&mem_stats[s]));
+        LOG_INFO(MEM_STATS_BANNER "END");
+
+        mem_stats_j = jiffies;
 }
-#endif
 
 static size_t size2bin(size_t size)
 {
         size_t bin = 0;
+
+        if (!size)
+                return 0;
+        size--;
+
+        while (size) {
+                size >>= 1;
+                bin++;
+        }
 
         if (bin > BLOCKS_COUNT)
                 bin = BLOCKS_COUNT;
@@ -209,10 +226,10 @@ static size_t size2bin(size_t size)
         return bin;
 }
 
-static void stats_inc(size_t size)
+static void mem_stats_inc(size_t size)
 { atomic_inc(&mem_stats[size2bin(size)]); }
 
-static void stats_dec(size_t size)
+static void mem_stats_dec(size_t size)
 { atomic_dec(&mem_stats[size2bin(size)]); }
 #endif
 
@@ -277,7 +294,8 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_STATS
-        stats_inc(size);
+        mem_stats_inc(size);
+        mem_stats_dump();
 #endif
 
         return ptr;
@@ -344,7 +362,8 @@ static bool generic_free(void * ptr)
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_STATS
-        stats_dec(ksize(ptr));
+        mem_stats_dec(ksize(ptr));
+        mem_stats_dump();
 #endif
 
         kfree(ptr);

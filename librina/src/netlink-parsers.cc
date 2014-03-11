@@ -2096,6 +2096,11 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, difName);
 
+	if (object.getRegIpcProcessId() != 0) {
+	        nla_put_u16(netlinkMessage, IRAR_ATTR_REG_IPC_ID,
+	                        object.getRegIpcProcessId());
+	}
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -3857,6 +3862,9 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IRAR_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[IRAR_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[IRAR_ATTR_REG_IPC_ID].type = NLA_U16;
+	attr_policy[IRAR_ATTR_REG_IPC_ID].minlen = 2;
+	attr_policy[IRAR_ATTR_REG_IPC_ID].maxlen = 2;
 	struct nlattr *attrs[IRAR_ATTR_MAX + 1];
 
 	/*
@@ -3868,9 +3876,8 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			IRAR_ATTR_MAX, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmRegisterApplicationRequestMessage information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing IpcmRegisterApplicationRequestMessage information from Netlink message: %d",
+		         err);
 		return 0;
 	}
 
@@ -3902,6 +3909,11 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 			result->setDifName(*difName);
 			delete difName;
 		}
+	}
+
+	if (attrs[IRAR_ATTR_REG_IPC_ID]) {
+	      result->setRegIpcProcessId(
+	                      nla_get_u16(attrs[IRAR_ATTR_REG_IPC_ID]));
 	}
 
 	return result;
