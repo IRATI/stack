@@ -30,9 +30,12 @@
 /* FIXME: Move RNL structure to RNL placeholder files */
 /* FIXME: More params to be added */
 struct conn_p_params {
+        /* FIXME: Anyone using this variable? To be removed */
         bool    dtcp_present;
+        /* FIXME: Same for this one, you can AND window and rate */
         bool    flow_ctrl;
         bool    rtx_ctrl;
+        /* FIXME: Rename to window_based and rate_based? */
         bool    window_based_fctrl;
         bool    rate_based_fctrl;
 };
@@ -50,6 +53,7 @@ struct connection {
 
         qos_id_t             qos_id;
 
+        /* FIXME: Are we sure about the next fixme? */
         /* FIXME: Add the list of policies associated with this connection */
         struct conn_p_params policies_params;
 };
