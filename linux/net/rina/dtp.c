@@ -30,12 +30,6 @@
 #include "dt.h"
 #include "dt-utils.h"
 
-enum flow_state {
-        FLOW_NULL = 1,
-        FLOW_ACTIVE,
-        FLOW_PORT_ID_TRANSITION
-};
-
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         /* Configuration values */
@@ -47,7 +41,6 @@ struct dtp_sv {
         bool                window_closed;
         uint_t              max_cwq_len;
         int                 rexmsn_ctrl;
-        enum flow_state     state;
         
         seq_num_t           max_seq_nr_rcv;
         int                 dropped_pdus;
@@ -67,10 +60,8 @@ struct dtp_sv {
 struct dtp_policies {
         int (* transmission_control)(struct dtp * instance,
                                      struct sdu * sdu);
-        int (* flow_control_overrun)(struct dtp * instance,
-                                     struct sdu * sdu);
-        int (* unknown_flow)(struct dtp * instance,
-                             struct pdu * pdu);
+        int (* closed_window_overrun)(struct dtp * instance,
+                                      struct sdu * sdu);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
         int (* sender_inactivity_timer)(struct dtp * instance);
@@ -108,7 +99,6 @@ static struct dtp_sv default_sv = {
         .window_based                    = false,
         .window_closed                   = false,
         .rexmsn_ctrl                     = false,
-        .state                           = FLOW_ACTIVE,
         .max_cwq_len                     = 0,
         .inbound.left_window_edge        = 0,
         .outbound.next_sequence_to_send  = 0,
@@ -117,8 +107,7 @@ static struct dtp_sv default_sv = {
 
 static struct dtp_policies default_policies = {
         .transmission_control      = NULL,
-        .flow_control_overrun      = NULL,
-        .unknown_flow              = NULL,
+        .closed_window_overrun     = NULL,
         .initial_sequence_number   = NULL,
         .receiver_inactivity_timer = NULL,
         .sender_inactivity_timer   = NULL,
@@ -332,7 +321,7 @@ int dtp_write(struct dtp * instance,
                                 }
                                 return 0;
                         } else {
-                                policies->flow_control_overrun(instance, sdu);
+                                policies->closed_window_overrun(instance, sdu);
                                 return 0;
                         }
                 }
@@ -480,11 +469,6 @@ int dtp_receive(struct dtp * instance,
         ASSERT(sv); /* State Vector must not be NULL */
 
         dtcp = dt_dtcp(instance->parent);
-
-        if (sv->state == FLOW_NULL) {
-                policies->unknown_flow(instance, pdu);
-                return 0;
-        }
 
         if (!pdu_pci_present(pdu)) {
                 LOG_DBG("Couldn't find PCI in PDU");
