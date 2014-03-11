@@ -323,6 +323,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 					FlowStateObjectGroup fsg= mapper.FSOGMap(groupsToSend.get(i));
 					if (fsg.getFlowStateObjectArray().size() > 0)
 					{
+						log.debug("Group sent: " + fsg.getFlowStateObjectArray());
 						objectValue.setByteval(encoder.encode(fsg));
 						CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(
 								nminusFlowInfo[i].getPortId(), null, null,
