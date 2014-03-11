@@ -55,6 +55,7 @@ struct dtp_policies {
                                      struct sdu * sdu);
         int (* closed_window_overrun)(struct dtp * instance,
                                       struct sdu * sdu);
+        int (* flow_control_overrun)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
         int (* sender_inactivity_timer)(struct dtp * instance);
@@ -96,6 +97,7 @@ static struct dtp_sv default_sv = {
 static struct dtp_policies default_policies = {
         .transmission_control      = NULL,
         .closed_window_overrun     = NULL,
+        .flow_control_overrun      = NULL,
         .initial_sequence_number   = NULL,
         .receiver_inactivity_timer = NULL,
         .sender_inactivity_timer   = NULL,
@@ -276,6 +278,7 @@ int dtp_write(struct dtp * instance,
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
 
+        /* Step 1: Sequencing */
         /*
          * Incrementing here means the PDU cannot
          * be just thrown away from this point onwards
@@ -283,7 +286,6 @@ int dtp_write(struct dtp * instance,
         /* Probably needs to be revised */
         sv->nxt_seq++;
 
-        /* Step 1: Sequencing */
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
