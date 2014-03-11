@@ -377,3 +377,15 @@ seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 
         return tmp;
 }
+
+int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
+{
+    if (!dt || !dt->sv)
+            return -1;
+
+    spin_lock(&dt->lock);
+    dt->sv->rcv_left_window_edge = rcv_lft_win;
+    spin_unlock(&dt->lock);
+
+    return 0;
+}

@@ -285,12 +285,9 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pdu *  pdu)
 {
         dtcp->sv->snd_rt_wind_edge = pci_control_new_rt_wind_edge(pci);
-        /* FIXME: add new rate */
-        if (dt_dtp_rcv_flow_ctl(dtcp->parent)) {
-                LOG_ERR("Could not order DTP to post PDUs in CWQ"
-                        " to the RMT");
-                return -1;
-        }
+
+        LOG_MISSING;
+
         return 0;
 }
 
@@ -360,8 +357,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         } else if (seq_num > dtcp->sv->last_rcv_ctl_seq) {
                 dtcp->policies->lost_control_pdu(dtcp);
         } else {
-                if (last_rcv_ctrl_seq_set(dtcp, seq_num))
+                if (last_rcv_ctrl_seq_set(dtcp, seq_num)) {
+                        pdu_destroy(pdu);
                         return -1;
+                }
         }
 
         /*
