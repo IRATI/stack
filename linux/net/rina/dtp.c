@@ -38,7 +38,7 @@ struct dtp_sv {
         struct connection * connection; /* FIXME: Are we really sure ??? */
 
         uint_t              seq_number_rollover_threshold;
-        int                 dropped_pdus;
+        uint_t              dropped_pdus;
         seq_num_t           max_seq_nr_rcv;
         seq_num_t           nxt_seq;
         uint_t              max_cwq_len;
@@ -46,7 +46,7 @@ struct dtp_sv {
         timeout_t           a;
 
         bool                window_based;
-        int                 rexmsn_ctrl;
+        bool                rexmsn_ctrl;
 };
 
 /* FIXME: Has to be rearranged */
@@ -136,6 +136,28 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         spin_unlock(&sv->lock);
 
         return tmp;
+}
+
+static uint_t dropped_pdus(struct dtp_sv * sv)
+{
+        uint_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->dropped_pdus;
+        spin_unlock(&sv->lock);
+        
+        return tmp;
+}
+
+static void dropped_pdus_inc(struct dtp_sv * sv)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->dropped_pdus++;
+        spin_unlock(&sv->lock);
 }
 
 static uint_t max_cwq_len_get(struct dtp_sv * sv)
@@ -332,6 +354,8 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+
+        /* FIXME: Check if we need to set DRF */
 
         pdu = pdu_create();
         if (!pdu) {
@@ -558,14 +582,22 @@ int dtp_receive(struct dtp * instance,
                 drf_flag_set(sv, true);
                 policies->initial_sequence_number(instance);
                 if (dtcp) {
-                        /* SV Update */
-                        LOG_MISSING;
+                        if (dtcp_sv_update(dtcp, seq_num)) {
+                                LOG_ERR("Failed to update dtcp sv");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
                 }
         } else if (seq_num < dt_sv_rcv_lft_win(dt)) {
                 pdu_destroy(pdu);
-                sv->dropped_pdus++;
+                dropped_pdus_inc(sv);
+                LOG_DBG("Dropped a PDU, total: %d", sv->dropped_pdus);
                 /* Send an ACK/Flow Control PDU with current window values */
-                LOG_MISSING;
+                if (dtcp_ack_flow_control_pdu_send(dtcp)) {
+                        LOG_ERR("Failed to send ack / flow control pdu");
+                        return -1;
+                }
+                return 0;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
                    seq_num < max_seq_nr_rcv(sv)) {
                 /* Check if it is a duplicate in the gaps */
@@ -573,19 +605,35 @@ int dtp_receive(struct dtp * instance,
                 LOG_MISSING;
 
                 if (dtcp) {
-                        /* SV Update */
-                        LOG_MISSING;
+                        if (dtcp_sv_update(dtcp, seq_num)) {
+                                LOG_ERR("Failed to update dtcp sv");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
                 } else {
                         if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
-                                LOG_ERR("Failed to set new left window edge");
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
                                 pdu_destroy(pdu);
                                 return -1;
                         }
                 }
-                LOG_MISSING;
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
-                LOG_MISSING;
-
+                max_seq_nr_rcv_set(sv, seq_num + 1);
+                if (dtcp) {
+                        if (dtcp_sv_update(dtcp, seq_num)) {
+                                LOG_ERR("Failed to update dtcp sv");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
+                } else {
+                        if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
+                }
         } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
                 LOG_MISSING;
 
