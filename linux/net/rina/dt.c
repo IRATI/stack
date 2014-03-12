@@ -26,17 +26,18 @@
 #include "dt.h"
 #include "dt-utils.h"
 
-struct sv {
+struct dt_sv {
         uint_t    max_flow_pdu_size;
         uint_t    max_flow_sdu_size;
         timeout_t MPL;
         timeout_t R;
         timeout_t A;
         seq_num_t rcv_left_window_edge;
+        bool      window_closed;
 };
 
 struct dt {
-        struct sv *     sv;
+        struct dt_sv *  sv;
         struct dtp *    dtp;
         struct dtcp *   dtcp;
 
@@ -46,6 +47,16 @@ struct dt {
         spinlock_t      lock;
 };
 
+static struct dt_sv default_sv = {
+        .max_flow_pdu_size    = 0,
+        .max_flow_sdu_size    = 0,
+        .MPL                  = 0,
+        .R                    = 0,
+        .A                    = 0,
+        .rcv_left_window_edge = 0,
+        .window_closed        = false,
+};
+
 struct dt * dt_create(void)
 {
         struct dt * tmp;
@@ -53,6 +64,14 @@ struct dt * dt_create(void)
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
+
+        tmp->sv = rkzalloc(sizeof(*tmp->sv), GFP_KERNEL);
+        if (!tmp->sv) {
+                rkfree(tmp);
+                return NULL;
+        }
+        
+        *tmp->sv = default_sv;
 
         spin_lock_init(&tmp->lock);
 
@@ -91,6 +110,7 @@ int dt_destroy(struct dt * dt)
                 dt->rtxq = NULL; /* Useless */
         }
 
+        rkfree(dt->sv);
         rkfree(dt);
 
         LOG_DBG("Instance %pK destroyed successfully", dt);
@@ -284,16 +304,6 @@ struct rtxq * dt_rtxq(struct dt * dt)
         return tmp;
 }
 
-/* DTP API for DTCP */
-int dt_dtp_rcv_flow_ctl(struct dt * dt)
-{
-        LOG_MISSING;
-
-        /* FIXME: should call dtp_rcv_flow_ctl */
-
-        return 0;
-}
-
 uint_t dt_sv_max_pdu_size(struct dt * dt)
 {
         uint_t tmp;
@@ -389,3 +399,30 @@ int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 
     return 0;
 }
+
+bool dt_sv_window_closed(struct dt * dt)
+{
+        bool tmp;
+
+        if (!dt || !dt->sv)
+                return false;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->window_closed;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_sv_window_closed_set(struct dt * dt, bool closed)
+{
+        if (!dt || !dt->sv)
+                return -1;
+
+        spin_lock(&dt->lock);
+        dt->sv->window_closed = closed;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
