@@ -42,11 +42,10 @@ struct dtp_sv {
         seq_num_t           max_seq_nr_rcv;
         seq_num_t           nxt_seq;
         uint_t              max_cwq_len;
-        bool                set_drf_flag;
+        bool                drf_flag;
         timeout_t           a;
 
         bool                window_based;
-        bool                window_closed;
         int                 rexmsn_ctrl;
 };
 
@@ -83,16 +82,15 @@ struct dtp {
 };
 
 static struct dtp_sv default_sv = {
-        .connection                      = NULL,
-        .seq_number_rollover_threshold   = 0,
-        .dropped_pdus                    = 0,
-        .max_seq_nr_rcv                  = 0,
-        .max_cwq_len                     = 0,
-        .set_drf_flag                    = false,
-        .a                               = 0,
-        .window_based                    = false,
-        .window_closed                   = false,
-        .rexmsn_ctrl                     = false,
+        .connection                    = NULL,
+        .seq_number_rollover_threshold = 0,
+        .dropped_pdus                  = 0,
+        .max_seq_nr_rcv                = 0,
+        .max_cwq_len                   = 0,
+        .drf_flag                      = false,
+        .a                             = 0,
+        .window_based                  = false,
+        .rexmsn_ctrl                   = false,
 };
 
 static struct dtp_policies default_policies = {
@@ -103,6 +101,29 @@ static struct dtp_policies default_policies = {
         .receiver_inactivity_timer = NULL,
         .sender_inactivity_timer   = NULL,
 };
+
+bool dtp_drf_flag(struct dtp * instance)
+{
+        bool flag;
+
+        if (!instance || !instance->sv)
+                return false;
+        
+        spin_lock(&instance->sv->lock);
+        flag = instance->sv->drf_flag;
+        spin_unlock(&instance->sv->lock);
+
+        return flag;
+}
+
+static void drf_flag_set(struct dtp_sv * sv, bool flag)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->drf_flag = flag;
+        spin_unlock(&sv->lock);
+}
 
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
@@ -115,6 +136,41 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         spin_unlock(&sv->lock);
 
         return tmp;
+}
+
+static uint_t max_cwq_len_get(struct dtp_sv * sv)
+{
+        uint_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->max_cwq_len;
+        spin_unlock(&sv->lock);
+        
+        return tmp;
+}
+
+static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
+{
+        seq_num_t tmp;
+        
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->max_seq_nr_rcv;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
+static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->max_seq_nr_rcv = nr;
+        spin_unlock(&sv->lock);
 }
 
 static void tf_sender_inactivity(void * data)
@@ -321,7 +377,7 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
 
-                        if (cwq_size(cwq) < sv->max_cwq_len-1) {
+                        if (cwq_size(cwq) < max_cwq_len_get(sv)-1) {
                                 if (cwq_push(cwq, pdu)) {
                                         LOG_ERR("Failed to push to cwq");
                                         pdu_destroy(pdu);
@@ -498,8 +554,8 @@ int dtp_receive(struct dtp * instance,
         seq_num = pci_sequence_number_get(pci);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
-                sv->max_seq_nr_rcv = seq_num;
-                sv->set_drf_flag = true;
+                max_seq_nr_rcv_set(sv, seq_num);
+                drf_flag_set(sv, true);
                 policies->initial_sequence_number(instance);
                 if (dtcp) {
                         /* SV Update */
@@ -511,7 +567,7 @@ int dtp_receive(struct dtp * instance,
                 /* Send an ACK/Flow Control PDU with current window values */
                 LOG_MISSING;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
-                   seq_num < sv->max_seq_nr_rcv) {
+                   seq_num < max_seq_nr_rcv(sv)) {
                 /* Check if it is a duplicate in the gaps */
                 /* if / else for this */
                 LOG_MISSING;
@@ -520,17 +576,17 @@ int dtp_receive(struct dtp * instance,
                         /* SV Update */
                         LOG_MISSING;
                 } else {
-                        if (dt_sv_rcv_lft_win_set(dt, sv->max_seq_nr_rcv)) {
+                        if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
                                 LOG_ERR("Failed to set new left window edge");
                                 pdu_destroy(pdu);
                                 return -1;
                         }
                 }
                 LOG_MISSING;
-        } else if (seq_num == (sv->max_seq_nr_rcv + 1)) {
+        } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
                 LOG_MISSING;
 
-        } else if (seq_num > (sv->max_seq_nr_rcv + 1)) {
+        } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
                 LOG_MISSING;
 
         } else {
@@ -570,19 +626,6 @@ int dtp_receive(struct dtp * instance,
         return 0;
 }
 
-bool dtp_drf_flag(struct dtp * instance)
-{
-        bool flag;
-
-        if (!instance || !instance->sv)
-                return false;
-        
-        spin_lock(&instance->sv->lock);
-        flag = instance->sv->set_drf_flag;
-        spin_unlock(&instance->sv->lock);
-
-        return flag;
-}
 
 
 
