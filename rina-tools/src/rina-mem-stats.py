@@ -1,3 +1,5 @@
+#!@PYTHON@
+
 #
 # rina-mem-stats
 #
