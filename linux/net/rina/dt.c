@@ -33,6 +33,7 @@ struct sv {
         timeout_t R;
         timeout_t A;
         seq_num_t rcv_left_window_edge;
+        bool      window_closed;
 };
 
 struct dt {
@@ -389,3 +390,30 @@ int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 
     return 0;
 }
+
+bool dt_sv_window_closed(struct dt * dt)
+{
+        bool tmp;
+
+        if (!dt || !dt->sv)
+                return false;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->window_closed;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_sv_window_closed_set(struct dt * dt, bool closed)
+{
+        if (!dt || !dt->sv)
+                return -1;
+
+        spin_lock(&dt->lock);
+        dt->sv->window_closed = closed;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
