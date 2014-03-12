@@ -33,6 +33,7 @@
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
+        spinlock_t lock;
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
 
@@ -103,6 +104,19 @@ static struct dtp_policies default_policies = {
         .sender_inactivity_timer   = NULL,
 };
 
+static seq_num_t nxt_seq_get(struct dtp_sv * sv)
+{
+        seq_num_t tmp;
+
+        ASSERT(sv);
+        
+        spin_lock(&sv->lock);
+        tmp = sv->nxt_seq++;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
 
@@ -145,6 +159,8 @@ struct dtp * dtp_create(struct dt *         dt,
         }
         *tmp->sv            = default_sv;
         /* FIXME: fixups to the state-vector should be placed here */
+
+        spin_lock_init(&tmp->sv->lock);
 
         tmp->sv->connection   = connection;
 
@@ -241,12 +257,19 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 
+        /* Step 1: Sequencing */
+        /*
+         * Incrementing here means the PDU cannot
+         * be just thrown away from this point onwards
+         */
+        /* Probably needs to be revised */
+
         if (pci_format(pci,
                        sv->connection->source_cep_id,
                        sv->connection->destination_cep_id,
                        sv->connection->source_address,
                        sv->connection->destination_address,
-                       sv->nxt_seq,
+                       nxt_seq_get(sv),
                        sv->connection->qos_id,
                        PDU_TYPE_DT)) {
                 pci_destroy(pci);
@@ -278,19 +301,12 @@ int dtp_write(struct dtp * instance,
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
 
-        /* Step 1: Sequencing */
-        /*
-         * Incrementing here means the PDU cannot
-         * be just thrown away from this point onwards
-         */
-        /* Probably needs to be revised */
-        sv->nxt_seq++;
 
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
         if (dtcp && sv->window_based) {
-                if (!sv->window_closed &&
+                if (!dt_sv_window_closed(dt) &&
                     pci_sequence_number_get(pci) <
                     dtcp_snd_rt_win(dtcp)) {
                         /*
@@ -556,8 +572,17 @@ int dtp_receive(struct dtp * instance,
 
 bool dtp_drf_flag(struct dtp * instance)
 {
+        bool flag;
+
         if (!instance || !instance->sv)
                 return false;
+        
+        spin_lock(&instance->sv->lock);
+        flag = instance->sv->set_drf_flag;
+        spin_unlock(&instance->sv->lock);
 
-        return instance->sv->set_drf_flag;
+        return flag;
 }
+
+
+
