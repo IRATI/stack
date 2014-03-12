@@ -111,12 +111,13 @@ public class FlowStateInternalObjectGroup{
 			FlowStateInternalObject object = this.flowStateObjectArray.get(i);
 			object.incrementAge();
 			
-			if (object.getAge() >= maximumAge)
+			if (object.getAge() >= maximumAge || !object.isBeingErased)
 			{
 				Timer killFlowStateObjectTimer = new Timer();
 				killFlowStateObjectTimer.schedule(new KillFlowStateObject(flowStateObjectArray, fsRIBGroup, flowStateObjectArray.get(i)), 
 						WAIT_UNTIL_REMOVE_OBJECT);
 				groupModified = true;
+				object.setBeingErased(true);
 			}
 		}
 		return groupModified;
