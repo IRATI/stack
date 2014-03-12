@@ -157,9 +157,10 @@ public class TestController implements Runnable {
 	}
 	
 	public boolean shouldStop(){
-		log.debug("Should stop, getLatestSDUReceivedTime " + getLatestSDUReceivedTime());
-		log.debug("Should stop, testInformation.getTimeout() " + testInformation.getTimeout());
-		log.debug("Should stop, Calendar.getInstance().getTimeInMillis() " + Calendar.getInstance().getTimeInMillis());
+		if (testInformation == null) {
+			return false;
+		}
+
 		if (getLatestSDUReceivedTime() + testInformation.getTimeout() < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
