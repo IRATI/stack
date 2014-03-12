@@ -239,6 +239,13 @@ static void mem_stats_dec(size_t size)
 { atomic_dec(&mem_stats[size2bin(size)]); }
 #endif
 
+void rms_dump()
+{
+#ifdef CONFIG_RINA_MEMORY_STATS
+        mem_stats_dump();
+#endif
+}
+
 static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
                             size_t    size,
                             gfp_t     flags)
