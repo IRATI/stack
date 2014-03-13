@@ -45,6 +45,6 @@ int          dtp_mgmt_write(struct rmt * rmt,
 int          dtp_receive(struct dtp * instance,
                          struct pdu * pdu);
 
-pdu_flags_t  dtp_drf_flag(struct dtp * instance);
+bool         dtp_drf_flag(struct dtp * instance);
 
 #endif
