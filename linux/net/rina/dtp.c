@@ -78,7 +78,6 @@ struct dtp {
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
-
 };
 
 static struct dtp_sv default_sv = {
@@ -108,7 +107,7 @@ bool dtp_drf_flag(struct dtp * instance)
 
         if (!instance || !instance->sv)
                 return false;
-        
+
         spin_lock(&instance->sv->lock);
         flag = instance->sv->drf_flag;
         spin_unlock(&instance->sv->lock);
@@ -130,7 +129,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         seq_num_t tmp;
 
         ASSERT(sv);
-        
+
         spin_lock(&sv->lock);
         tmp = sv->nxt_seq++;
         spin_unlock(&sv->lock);
@@ -138,6 +137,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         return tmp;
 }
 
+#if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
 {
         uint_t tmp;
@@ -147,9 +147,10 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
         spin_lock(&sv->lock);
         tmp = sv->dropped_pdus;
         spin_unlock(&sv->lock);
-        
+
         return tmp;
 }
+#endif
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
@@ -169,14 +170,14 @@ static uint_t max_cwq_len_get(struct dtp_sv * sv)
         spin_lock(&sv->lock);
         tmp = sv->max_cwq_len;
         spin_unlock(&sv->lock);
-        
+
         return tmp;
 }
 
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
 {
         seq_num_t tmp;
-        
+
         ASSERT(sv);
 
         spin_lock(&sv->lock);
@@ -380,7 +381,6 @@ int dtp_write(struct dtp * instance,
 
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
-
 
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
@@ -673,7 +673,3 @@ int dtp_receive(struct dtp * instance,
 
         return 0;
 }
-
-
-
-

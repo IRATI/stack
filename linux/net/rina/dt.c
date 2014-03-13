@@ -70,7 +70,7 @@ struct dt * dt_create(void)
                 rkfree(tmp);
                 return NULL;
         }
-        
+
         *tmp->sv = default_sv;
 
         spin_lock_init(&tmp->lock);
@@ -390,14 +390,14 @@ seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 
 int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 {
-    if (!dt || !dt->sv)
-            return -1;
+        if (!dt || !dt->sv)
+                return -1;
 
-    spin_lock(&dt->lock);
-    dt->sv->rcv_left_window_edge = rcv_lft_win;
-    spin_unlock(&dt->lock);
+        spin_lock(&dt->lock);
+        dt->sv->rcv_left_window_edge = rcv_lft_win;
+        spin_unlock(&dt->lock);
 
-    return 0;
+        return 0;
 }
 
 bool dt_sv_window_closed(struct dt * dt)

@@ -8,13 +8,35 @@
 
 import re
 import sys
+import matplotlib.pyplot as plt
+import argparse
 
-if len(sys.argv) < 2:
-    print("Usage: mem-stats.py LOG_FILE")
-    quit()
+def extract_points(records, idx):
+    times = []
+    values = []
+    for r in records:
+        try:
+            t = r['t']
+            y = r[idx]
+            times.append(t)
+            values.append(y)
+        except KeyError:
+            pass
 
-file_name      = sys.argv[1]
-fin            = open(file_name, 'r')
+    return times, values
+
+
+# command line arguments definition and processing
+parser = argparse.ArgumentParser(description = 'Show RINA memory usage statistics')
+parser.add_argument('-i', '--input', help = 'The log file from which you want to extract the memory statistics', required = True, metavar = 'INPUT_LOG')
+parser.add_argument('-p', '--plot', help = 'Show a plot of the memory stats', action = 'store_true')
+parser.add_argument('-l', '--list', help = 'Show a list of the collected memory stats records', action = 'store_true')
+args = parser.parse_args()
+
+
+# extract the stats from the input log
+fin = open(args.input, 'r')
+
 memstat_banner = 'MEMSTAT '
 records        = []
 
@@ -32,7 +54,7 @@ while True:
             m = re.search('[0-9]+', msg)
             if m:
                 try:
-                    cur['t'] = int(m.group(0))
+                    cur['t'] = float(m.group(0))/1000
                 except ValueError:
                     pass
         elif msg.startswith('END'):
@@ -49,24 +71,39 @@ while True:
 
 fin.close();
 
-lr = None
-for r in records:
-    try:
-        t = r['t']
-        print('Time %f (seconds)' % (t/1000, ))
-        for k in r.keys():
-            if k != 't':
-                if lr:
-                    diff = str(r[k] - lr[k])
-                    if r[k] >= lr[k]:
-                        diff = '+' + diff
-                else:
-                    diff = '?'
-                print('\t(%d bytes) ==> %d items [%s]' %
-                      (pow(2, k), r[k], diff))
-        print('')
-        lr = r
-    except KeyError:
-        pass
+# show a list, if the user wants it
+if args.list:
+    lr = None
+    for r in records:
+        try:
+            t = r['t']
+            print('Time %f (seconds)' % (t, ))
+            for k in r.keys():
+                if k != 't':
+                    if lr:
+                        diff = str(r[k] - lr[k])
+                        if r[k] >= lr[k]:
+                            diff = '+' + diff
+                    else:
+                        diff = '?'
+                    print('\t(%d bytes) ==> %d items [%s]' % (pow(2, k), r[k], diff))
+            print('')
+            lr = r
+        except KeyError:
+            pass
 
-# more elaborations here
+
+# show a plot, if the user wants it
+if args.plot:
+    labels = []
+    idx = 0
+    while 1:
+        times, values = extract_points(records, idx)
+        if len(times) == 0:
+            break
+        plt.plot(times, values)
+        labels.append(str(pow(2, idx)) + '-bin')
+        idx += 1
+
+    plt.legend(labels)
+    plt.show()
