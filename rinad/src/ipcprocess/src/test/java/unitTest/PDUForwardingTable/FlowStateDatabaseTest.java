@@ -79,28 +79,6 @@ public class FlowStateDatabaseTest {
 		Assert.assertFalse(db.isModified());
 	}
 	
-	@Test
-	public void incrementAge_AddObjectCheckModified_True()
-	{
-		PDUFTImpl impl = new PDUFTImpl(2147483647);
-		FakeRIBDaemon ribD =new FakeRIBDaemon();
-		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipcp);
-		FlowStateDatabase db = new FlowStateDatabase();
-		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
-		
-		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), fsRIBGroup);
-		db.setModified(false);
-		
-		try {
-			db.incrementAge(1, fsRIBGroup);
-		} catch (RIBDaemonException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		Assert.assertTrue(db.isModified());
-	}
 	/*
 	@Test
 	public void updateObjects_NewObjectIsModified_True()

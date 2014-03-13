@@ -7,6 +7,7 @@ import java.util.Timer;
 //import org.apache.commons.logging.LogFactory;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
+import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.KillFlowStateObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
@@ -102,9 +103,8 @@ public class FlowStateInternalObjectGroup{
 			return modifiedFSOs;
 	}
 	
-	public boolean incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
+	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup, FlowStateDatabase db) throws RIBDaemonException
 	{
-		boolean groupModified = false;
 		
 		for(int i = 0; i< this.flowStateObjectArray.size(); i++)
 		{
@@ -114,12 +114,10 @@ public class FlowStateInternalObjectGroup{
 			if (object.getAge() >= maximumAge && !object.isBeingErased)
 			{
 				Timer killFlowStateObjectTimer = new Timer();
-				killFlowStateObjectTimer.schedule(new KillFlowStateObject(flowStateObjectArray, fsRIBGroup, flowStateObjectArray.get(i)), 
+				killFlowStateObjectTimer.schedule(new KillFlowStateObject(fsRIBGroup, flowStateObjectArray.get(i), db), 
 						WAIT_UNTIL_REMOVE_OBJECT);
-				groupModified = true;
 				object.setBeingErased(true);
 			}
 		}
-		return groupModified;
 	}
 }

@@ -6,6 +6,7 @@ import java.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
@@ -17,12 +18,14 @@ public class KillFlowStateObject extends TimerTask{
 	ArrayList<FlowStateInternalObject> flowObjectList = null;
 	FlowStateInternalObject objectToRemove = null;
 	FlowStateRIBObjectGroup fsRIBGroup = null;
+	FlowStateDatabase database = null;
 	
-	public KillFlowStateObject(ArrayList<FlowStateInternalObject> flowList, FlowStateRIBObjectGroup fsRIB, FlowStateInternalObject object)
+	public KillFlowStateObject(FlowStateRIBObjectGroup fsRIB, FlowStateInternalObject object, FlowStateDatabase db)
 	{
-		flowObjectList = flowList;
+		flowObjectList = db.getFlowStateInternalObjectGroup().getFlowStateObjectArray();
 		objectToRemove = object;
 		fsRIBGroup = fsRIB;
+		database = db;
 	}
 
 	@Override
@@ -33,6 +36,7 @@ public class KillFlowStateObject extends TimerTask{
 		flowObjectList.remove(objectToRemove);
 		try {
 			fsRIBGroup.delete(mapper.FSOMap(objectToRemove));
+			database.setModified(true);
 			log.debug("Old object removed: " + objectToRemove.getID());
 		} catch (RIBDaemonException e) {
 			log.error("Object could not be removed from the RIB");
