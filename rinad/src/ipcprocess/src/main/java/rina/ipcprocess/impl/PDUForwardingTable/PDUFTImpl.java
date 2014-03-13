@@ -132,6 +132,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	{
 		this.test = test;
 	}
+	public FlowStateDatabase getDB()
+	{
+		return this.db;
+	}
 	
 	
 	/**
