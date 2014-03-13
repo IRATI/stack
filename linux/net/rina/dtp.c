@@ -78,7 +78,6 @@ struct dtp {
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
-
 };
 
 static struct dtp_sv default_sv = {
@@ -138,6 +137,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         return tmp;
 }
 
+#if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
 {
         uint_t tmp;
@@ -150,6 +150,7 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
         return tmp;
 }
+#endif
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
@@ -380,7 +381,6 @@ int dtp_write(struct dtp * instance,
 
         sdu_buffer_disown(sdu);
         sdu_destroy(sdu);
-
 
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
@@ -673,7 +673,3 @@ int dtp_receive(struct dtp * instance,
 
         return 0;
 }
-
-
-
-
