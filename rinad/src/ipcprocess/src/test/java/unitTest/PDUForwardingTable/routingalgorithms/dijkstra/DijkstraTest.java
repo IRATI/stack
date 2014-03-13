@@ -20,7 +20,7 @@ public class DijkstraTest {
 	static {
 		System.loadLibrary("rina_java");
 	}
-/*	
+	
 	@Test
 	public void getPDUTForwardingTable_NoFSO_size0()
 	{		
@@ -71,7 +71,7 @@ public class DijkstraTest {
 
 		assertEquals(PDUFT.size(), 2);
 	}
-	*/
+
 	@Test
 	public void getPDUTForwardingTable_StateFalseNoEntries_True()
 	{

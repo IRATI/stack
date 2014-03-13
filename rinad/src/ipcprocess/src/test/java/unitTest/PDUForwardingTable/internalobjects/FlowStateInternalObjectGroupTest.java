@@ -245,57 +245,6 @@ public class FlowStateInternalObjectGroupTest {
 	
 	
 	@Test
-	public void incrementAge_EraseObjectMaximumAge_EmptyList()
-	{
-		long address = 1;
-		int portId = 1;
-		long neighborAddress = 2;
-		int neigborPortID = 1;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
-		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		PDUFTImpl impl = new PDUFTImpl(2147483647);
-		FakeRIBDaemon ribD =new FakeRIBDaemon();
-		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipcp);
-		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
-		try 
-		{
-			ribD.addRIBObject(fsRIBGroup);
-			g1.add(o1,fsRIBGroup);
-			g1.incrementAge(200, fsRIBGroup);
-		} catch (RIBDaemonException e) {
-			e.printStackTrace();
-		}
-		assertTrue(g1.getFlowStateObjectArray().isEmpty());
-	}
-	
-	@Test
-	public void incrementAge_EraseObjectMaximumAge_true()
-	{
-		long address = 1;
-		int portId = 1;
-		long neighborAddress = 2;
-		int neigborPortID = 1;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
-		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		PDUFTImpl impl = new PDUFTImpl(2147483647);
-		FakeRIBDaemon ribD =new FakeRIBDaemon();
-		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipcp);
-		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
-		
-		try 
-		{
-			ribD.addRIBObject(fsRIBGroup);
-			g1.add(o1,fsRIBGroup);
-			
-			assertTrue(g1.incrementAge(200, fsRIBGroup));
-		} catch (RIBDaemonException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	@Test
 	public void incrementAge_EmptyList_false()
 	{
 		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
@@ -310,62 +259,5 @@ public class FlowStateInternalObjectGroupTest {
 		} catch (RIBDaemonException e) {
 			e.printStackTrace();
 		}
-	}
-	
-	@Test
-	public void incrementAge_RIBObjectErased_false()
-	{
-		long address = 1;
-		int portId = 1;
-		long neighborAddress = 2;
-		int neigborPortID = 1;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
-		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		PDUFTImpl impl = new PDUFTImpl(2147483647);
-		FakeRIBDaemon ribD =new FakeRIBDaemon();
-		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipcp);
-		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
-		
-		try 
-		{
-			ribD.addRIBObject(fsRIBGroup);
-			g1.add(o1,fsRIBGroup);
-			
-			g1.incrementAge(31, fsRIBGroup);
-		} catch (RIBDaemonException e) 
-		{
-			e.printStackTrace();
-		}
-		
-		
-	}
-	
-	@Test
-	public void incrementAge_RIBObjectErasedObjectAdded_True()
-	{
-		long address = 1;
-		int portId = 1;
-		long neighborAddress = 2;
-		int neigborPortID = 1;
-		FlowStateInternalObject o1 = new FlowStateInternalObject(address, portId, neighborAddress, neigborPortID, true, 1, 199);
-		FlowStateInternalObjectGroup g1 = new FlowStateInternalObjectGroup();
-		PDUFTImpl impl = new PDUFTImpl(2147483647);
-		FakeRIBDaemon ribD =new FakeRIBDaemon();
-		FakeIPCProcess ipcp = new FakeIPCProcess(new FakeCDAPSessionManager(), ribD , new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipcp);
-		FlowStateRIBObjectGroup fsRIBGroup = new FlowStateRIBObjectGroup(impl, ipcp);
-		
-		try 
-		{
-			ribD.addRIBObject(fsRIBGroup);
-			g1.add(o1,fsRIBGroup);
-			g1.incrementAge(31, fsRIBGroup);
-			g1.add(o1,fsRIBGroup);
-		} catch (RIBDaemonException e) 
-		{
-			e.printStackTrace();
-		}
-		assertEquals(ribD.rib.size(),2);
 	}
 }

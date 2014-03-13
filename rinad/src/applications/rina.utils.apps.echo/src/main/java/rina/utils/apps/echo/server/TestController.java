@@ -157,6 +157,10 @@ public class TestController implements Runnable {
 	}
 	
 	public boolean shouldStop(){
+		if (testInformation == null) {
+			return false;
+		}
+
 		if (getLatestSDUReceivedTime() + testInformation.getTimeout() < 
 				Calendar.getInstance().getTimeInMillis()) {
 			return true;
