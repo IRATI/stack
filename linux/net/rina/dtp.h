@@ -45,9 +45,6 @@ int          dtp_mgmt_write(struct rmt * rmt,
 int          dtp_receive(struct dtp * instance,
                          struct pdu * pdu);
 
-/*
- * DTP work to be done when receiving a flow-crtl PDU, triggered by DTCP via DT
- */
-int          dtp_rcv_flow_ctl(struct dtp * instance);
+pdu_flags_t  dtp_drf_flag(struct dtp * instance);
 
 #endif

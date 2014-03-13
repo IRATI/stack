@@ -21,6 +21,8 @@
 #ifndef RINA_DT_H
 #define RINA_DT_H
 
+#include "common.h"
+
 struct dtp;
 struct dtcp;
 struct dt;
@@ -44,7 +46,12 @@ struct dtcp * dt_dtcp(struct dt * dt);
 struct cwq *  dt_cwq(struct dt * dt);
 struct rtxq * dt_rtxq(struct dt * dt);
 
-
-/* DTP API for DTCP */
-int           dt_dtp_rcv_flow_ctl(struct dt * dt);
+/* Accessors to the DT state vector */
+uint_t        dt_sv_max_pdu_size(struct dt * dt);
+uint_t        dt_sv_max_sdu_size(struct dt * dt);
+seq_num_t     dt_sv_rcv_lft_win(struct dt * dt);
+int           dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win);
+timeout_t     dt_sv_mpl(struct dt * dt);
+timeout_t     dt_sv_r(struct dt * dt);
+timeout_t     dt_sv_a(struct dt * dt);
 #endif

@@ -26,7 +26,17 @@
 #include "dt.h"
 #include "dt-utils.h"
 
+struct sv {
+        uint_t    max_flow_pdu_size;
+        uint_t    max_flow_sdu_size;
+        timeout_t MPL;
+        timeout_t R;
+        timeout_t A;
+        seq_num_t rcv_left_window_edge;
+};
+
 struct dt {
+        struct sv *     sv;
         struct dtp *    dtp;
         struct dtcp *   dtcp;
 
@@ -282,4 +292,100 @@ int dt_dtp_rcv_flow_ctl(struct dt * dt)
         /* FIXME: should call dtp_rcv_flow_ctl */
 
         return 0;
+}
+
+uint_t dt_sv_max_pdu_size(struct dt * dt)
+{
+        uint_t tmp;
+
+        if (!dt || !dt->sv)
+                return 0;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->max_flow_pdu_size;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+uint_t dt_sv_max_sdu_size(struct dt * dt)
+{
+        uint_t tmp;
+
+        if (!dt || !dt->sv)
+                return 0;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->max_flow_sdu_size;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+timeout_t dt_sv_mpl(struct dt * dt)
+{
+        uint_t tmp;
+
+        if (!dt || !dt->sv)
+                return 0;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->MPL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+timeout_t dt_sv_r(struct dt * dt)
+{
+        uint_t tmp;
+
+        if (!dt || !dt->sv)
+                return 0;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->R;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+timeout_t dt_sv_a(struct dt * dt)
+{
+        uint_t tmp;
+
+        if (!dt || !dt->sv)
+                return 0;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->A;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
+{
+        seq_num_t tmp;
+
+        if (!dt || !dt->sv)
+                return 0;
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->rcv_left_window_edge;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
+{
+    if (!dt || !dt->sv)
+            return -1;
+
+    spin_lock(&dt->lock);
+    dt->sv->rcv_left_window_edge = rcv_lft_win;
+    spin_unlock(&dt->lock);
+
+    return 0;
 }
