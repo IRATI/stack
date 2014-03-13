@@ -108,7 +108,7 @@ bool dtp_drf_flag(struct dtp * instance)
 
         if (!instance || !instance->sv)
                 return false;
-        
+
         spin_lock(&instance->sv->lock);
         flag = instance->sv->drf_flag;
         spin_unlock(&instance->sv->lock);
@@ -130,7 +130,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         seq_num_t tmp;
 
         ASSERT(sv);
-        
+
         spin_lock(&sv->lock);
         tmp = sv->nxt_seq++;
         spin_unlock(&sv->lock);
@@ -147,7 +147,7 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
         spin_lock(&sv->lock);
         tmp = sv->dropped_pdus;
         spin_unlock(&sv->lock);
-        
+
         return tmp;
 }
 
@@ -169,14 +169,14 @@ static uint_t max_cwq_len_get(struct dtp_sv * sv)
         spin_lock(&sv->lock);
         tmp = sv->max_cwq_len;
         spin_unlock(&sv->lock);
-        
+
         return tmp;
 }
 
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
 {
         seq_num_t tmp;
-        
+
         ASSERT(sv);
 
         spin_lock(&sv->lock);

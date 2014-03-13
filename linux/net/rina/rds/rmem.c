@@ -198,10 +198,10 @@ static void mem_stats_dump(void)
         if (jiffies < mem_stats_j + MEM_STATS_INTERVAL)
                 return;
         LOG_INFO(MEM_STATS_BANNER "BEG %d",
-                        jiffies_to_msecs(jiffies));
+                 jiffies_to_msecs(jiffies));
         for (s = 0; s < BLOCKS_COUNT; s++)
                 LOG_INFO(MEM_STATS_BANNER "%d %d",
-                        s, atomic_read(&mem_stats[s]));
+                         s, atomic_read(&mem_stats[s]));
         LOG_INFO(MEM_STATS_BANNER "END");
 
         mem_stats_j = jiffies;
