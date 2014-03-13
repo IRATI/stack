@@ -131,7 +131,7 @@ int                   pci_control_rt_wind_edge_set(struct pci * pci,
                                                    seq_num_t    seq);
 int                   pci_control_left_wind_edge_set(struct pci * pci,
                                                      seq_num_t    seq);
-int                   pci_last_control_seq_num_rcvd_set(struct pci * pci,
+int                   pci_control_last_seq_num_rcvd_set(struct pci * pci,
                                                         seq_num_t    seq);
 int                   pci_control_new_left_wind_edge_set(struct pci * pci,
                                                          seq_num_t    seq);
@@ -140,6 +140,6 @@ seq_num_t             pci_control_new_rt_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_new_left_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_rt_wind_edge(const struct pci * pci);
 seq_num_t             pci_control_left_wind_edge(const struct pci * pci);
-seq_num_t             pci_last_control_seq_num_rcvd(struct pci * pci);
+seq_num_t             pci_control_last_seq_num_rcvd(struct pci * pci);
 
 #endif

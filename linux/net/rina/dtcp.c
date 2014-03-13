@@ -250,7 +250,7 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
                 return NULL;
         }
 
-        if (pci_last_control_seq_num_rcvd_set(pci, last_ctrl_seq_rcvd)) {
+        if (pci_control_last_seq_num_rcvd_set(pci, last_ctrl_seq_rcvd)) {
                 pdu_destroy(pdu);
                 pci_destroy(pci);
                 return NULL;
