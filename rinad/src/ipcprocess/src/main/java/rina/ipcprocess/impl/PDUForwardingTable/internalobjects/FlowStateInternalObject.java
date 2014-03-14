@@ -40,6 +40,8 @@ public class FlowStateInternalObject{
 	
 	protected int avoidPort;
 	
+	protected boolean isBeingErased;
+	
 	/*		Acessors	*/
 	public long getAddress() {
 		return address;
@@ -99,7 +101,12 @@ public class FlowStateInternalObject{
 	{
 		return this.ID;
 	}
-	
+	public boolean isBeingErased() {
+		return isBeingErased;
+	}
+	public void setBeingErased(boolean isBeingErased) {
+		this.isBeingErased = isBeingErased;
+	}
 	/*		Constructor	*/
 	public FlowStateInternalObject(long address, int portid, long neighbor_address, int neighbor_portid, boolean state, int sequence_number, int age)
 	{
@@ -112,21 +119,8 @@ public class FlowStateInternalObject{
 		this.age = age;
 		this.isModified = true;
 		this.avoidPort = -1;
+		this.isBeingErased = false;
 		this.ID = this.ID + address /*+ portid*/ + neighborAddress /*+ neighborPortid*/;
-		log.debug("Created object with id: " + this.ID);
-	}
-	public FlowStateInternalObject(FlowStateInternalObject obj)
-	{
-		this.address = obj.getAddress();
-		this.portid = obj.getPortid();
-		this.neighborAddress = obj.getNeighborAddress();
-		this.neighborPortid = obj.getNeighborPortid();
-		this.state = obj.isState();
-		this.sequenceNumber = obj.getSequenceNumber();
-		this.age = obj.getAge();
-		this.isModified = obj.isModified();
-		this.avoidPort = obj.getAvoidPort();
-		this.ID = this.ID + address + /*portid*/ + neighborAddress /*+ neighborPortid*/;
 		log.debug("Created object with id: " + this.ID);
 	}
 	

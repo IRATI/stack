@@ -88,9 +88,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 21000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 1000; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 31000; //3 sec
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 5000; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 3000; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 11000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;
@@ -131,6 +131,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public void setTest(boolean test)
 	{
 		this.test = test;
+	}
+	public FlowStateDatabase getDB()
+	{
+		return this.db;
 	}
 	
 	
@@ -304,7 +308,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean propagateFSDB()
 	{
-		log.debug("propagateFSDB function launched");
+		//log.debug("propagateFSDB function launched");
 
 		ObjectValue objectValue = new ObjectValue();
 		ObjectStateMapper mapper = new  ObjectStateMapper();
@@ -323,6 +327,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 					FlowStateObjectGroup fsg= mapper.FSOGMap(groupsToSend.get(i));
 					if (fsg.getFlowStateObjectArray().size() > 0)
 					{
+						log.debug("Group sent: " + fsg.getFlowStateObjectArray());
 						objectValue.setByteval(encoder.encode(fsg));
 						CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(
 								nminusFlowInfo[i].getPortId(), null, null,
@@ -353,7 +358,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void updateAge()
 	{
-		log.debug("updateAge function launched");
+		//log.debug("updateAge function launched");
 		try {
 			db.incrementAge(maximumAge, fsRIBGroup);
 		} catch (RIBDaemonException e) {
@@ -364,7 +369,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void forwardingTableUpdate ()
 	{
-		log.debug("forwardingTableUpdate function launched");
+		//log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
 			log.debug("FSDB is modified, computing new paths");
