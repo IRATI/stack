@@ -10,11 +10,11 @@ import re
 import sys
 import matplotlib.pyplot as plt
 
-
 # input
 labels = []
 pairs_set = []
 pairs = []
+
 while 1:
     line = sys.stdin.readline()
     if line == '':
@@ -36,9 +36,9 @@ while 1:
                 pairs['values'].append(int(m.group(2)))
             except ValueError:
                 pass
+
 if len(pairs):
     pairs_set.append(pairs)
-
 
 # generate plots
 for pairs in pairs_set:

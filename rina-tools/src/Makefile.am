@@ -30,4 +30,15 @@ rina-mem-stats: rina-mem-stats.py Makefile
 	mv $@.tmp $@
 
 bin_PROGRAMS += rina-mem-stats
+
+rina-show-plots: rina-show-plots.py Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.py >$@.tmp
+	chmod a-w $@.tmp
+	chmod a+x $@.tmp
+	mv $@.tmp $@
+
+bin_PROGRAMS += rina-show-plots
 endif
