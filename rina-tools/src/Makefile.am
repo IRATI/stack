@@ -18,7 +18,8 @@ edit = $(SED)						\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
         -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'	\
         -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'		\
-        -e 's|@PYTHON[@]|$(PYTHON)|g'
+        -e 's|@PYTHON[@]|$(PYTHON)|g'			\
+        -e 's|@SHELL[@]|$(SHELL)|g'
 
 rina-mem-stats: rina-mem-stats.py Makefile
 	rm -f $@ $@.tmp
@@ -42,3 +43,14 @@ rina-show-plots: rina-show-plots.py Makefile
 
 bin_PROGRAMS += rina-show-plots
 endif
+
+rina-bug-report: rina-bug-report.in Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	chmod a+x $@.tmp
+	mv $@.tmp $@
+
+bin_PROGRAMS += rina-bug-report
