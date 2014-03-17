@@ -8,7 +8,6 @@
 
 import re
 import sys
-import matplotlib.pyplot as plt
 import argparse
 
 def extract_points(records, idx):
@@ -29,8 +28,7 @@ def extract_points(records, idx):
 # command line arguments definition and processing
 parser = argparse.ArgumentParser(description = 'Show RINA memory usage statistics')
 parser.add_argument('-i', '--input', help = 'The log file from which you want to extract the memory statistics', required = True, metavar = 'INPUT_LOG')
-parser.add_argument('-p', '--plot', help = 'Show a plot of the memory stats', action = 'store_true')
-parser.add_argument('-l', '--list', help = 'Show a list of the collected memory stats records', action = 'store_true')
+parser.add_argument('-l', '--list', help = 'Show list of the collected memory stats records in a pretty way, instead of raw output', action = 'store_true')
 args = parser.parse_args()
 
 
@@ -54,7 +52,7 @@ while True:
             m = re.search('[0-9]+', msg)
             if m:
                 try:
-                    cur['t'] = float(m.group(0))/1000
+                    cur['t'] = int(m.group(0))
                 except ValueError:
                     pass
         elif msg.startswith('END'):
@@ -71,7 +69,9 @@ while True:
 
 fin.close();
 
-# show a list, if the user wants it
+# pretty print the collected data, if the user wants it,
+# otherwise go for raw output, which is going to be
+# fed to another script
 if args.list:
     lr = None
     for r in records:
@@ -91,19 +91,13 @@ if args.list:
             lr = r
         except KeyError:
             pass
-
-
-# show a plot, if the user wants it
-if args.plot:
-    labels = []
+else:
     idx = 0
     while 1:
         times, values = extract_points(records, idx)
         if len(times) == 0:
             break
-        plt.plot(times, values)
-        labels.append(str(pow(2, idx)) + '-bin')
+        print str(pow(2, idx)) + '-bin'
+        for i in range(len(times)):
+            print times[i], values[i]
         idx += 1
-
-    plt.legend(labels)
-    plt.show()
