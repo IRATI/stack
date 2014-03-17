@@ -185,7 +185,7 @@ static atomic_t mem_stats[] = {
         ATOMIC_INIT(0) /* 2 ^ 20 */,
 };
 
-#define BLOCKS_COUNT (ARRAY_SIZE(mem_stats) / sizeof(atomic_t))
+#define BLOCKS_COUNT ARRAY_SIZE(mem_stats)
 
 static DEFINE_SPINLOCK(mem_stats_lock);
 static unsigned long mem_stats_j = 0;
@@ -194,7 +194,7 @@ static unsigned long mem_stats_j = 0;
 
 static void mem_stats_dump(void)
 {
-        size_t s;
+        size_t        s;
         unsigned long flags;
 
         spin_lock_irqsave(&mem_stats_lock, flags);
@@ -205,8 +205,7 @@ static void mem_stats_dump(void)
         mem_stats_j = jiffies;
         spin_unlock_irqrestore(&mem_stats_lock, flags);
 
-        LOG_INFO(MEM_STATS_BANNER "BEG %d",
-                 jiffies_to_msecs(jiffies));
+        LOG_INFO(MEM_STATS_BANNER "BEG %d", jiffies_to_msecs(jiffies));
         for (s = 0; s < BLOCKS_COUNT; s++)
                 LOG_INFO(MEM_STATS_BANNER "%d %d",
                          s, atomic_read(&mem_stats[s]));
@@ -219,8 +218,8 @@ static size_t size2bin(size_t size)
 
         if (!size)
                 return 0;
-        size--;
 
+        size--;
         while (size) {
                 size >>= 1;
                 bin++;
