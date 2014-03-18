@@ -1,5 +1,5 @@
 /*
- *  VMPI - LL (VirtIO)
+ *  VMPI
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,9 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/kernel.h>
+#ifndef VMPI_H
+#define VMPI_H
 
-#define RINA_PREFIX "vmpi-ll-virtio"
-
-#include "logs.h"
-#include "vmpi.h"
+#endif
