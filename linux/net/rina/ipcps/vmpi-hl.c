@@ -23,3 +23,4 @@
 #define RINA_PREFIX "vmpi-hl"
 
 #include "logs.h"
+#include "vmpi.h"
