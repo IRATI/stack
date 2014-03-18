@@ -1,5 +1,5 @@
 /*
- *  Shim IPC Process for Hypervisors (using XEN)
+ *  Shim IPC Process for Hypervisors
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -109,7 +109,7 @@ static void __exit mod_exit(void)
 module_init(mod_init);
 module_exit(mod_exit);
 
-MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors (using XEN)");
+MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 
 MODULE_LICENSE("GPL");
 
