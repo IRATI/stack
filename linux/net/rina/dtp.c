@@ -311,14 +311,14 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-
+#if 0
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 sdu_destroy(sdu);
                 return -1;
         }
-
+#endif
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
 
@@ -444,13 +444,13 @@ int dtp_write(struct dtp * instance,
                        pci_destination(pci),
                        pci_qos_id(pci),
                        pdu);
-
+#if 0
         if (rtimer_start(instance->timers.sender_inactivity,
                          2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
                 return -1;
         }
-
+#endif
         return ret;
 }
 
@@ -568,6 +568,7 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
+#if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -643,7 +644,7 @@ int dtp_receive(struct dtp * instance,
                 LOG_ERR("Something is horribly wrong on receiving");
                 return -1;
         }
-
+#endif
         buffer = pdu_buffer_get_rw(pdu);
         sdu    = sdu_create_buffer_with(buffer);
         if (!sdu) {
@@ -663,13 +664,13 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
-
+#if 0
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
                          3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
                 return -1;
         }
-
+#endif
         return 0;
 }
