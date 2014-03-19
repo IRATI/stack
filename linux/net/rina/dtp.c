@@ -23,6 +23,8 @@
 
 #define RINA_PREFIX "dtp"
 
+#define DTP_FULL_FLEDGED 0
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -289,6 +291,7 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
+
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
@@ -311,7 +314,7 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-#if 0
+#ifdef DTP_FULL_FLEDGED
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -444,7 +447,7 @@ int dtp_write(struct dtp * instance,
                        pci_destination(pci),
                        pci_qos_id(pci),
                        pdu);
-#if 0
+#ifdef DTP_FULL_FLEDGED
         if (rtimer_start(instance->timers.sender_inactivity,
                          2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
@@ -568,7 +571,7 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-#if 0
+#ifdef DTP_FULL_FLEDGED
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -664,7 +667,7 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
-#if 0
+#ifdef DTP_FULL_FLEDGED
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
                          3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
