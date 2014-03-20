@@ -200,7 +200,7 @@ static void mem_stats_dump(void)
 
         spin_lock_irqsave(&mem_stats_lock, flags);
         if (mem_stats_j && time_before(now,
-                    mem_stats_j + MEM_STATS_INTERVAL)) {
+                                       mem_stats_j + MEM_STATS_INTERVAL)) {
                 spin_unlock_irqrestore(&mem_stats_lock, flags);
                 return;
         }
