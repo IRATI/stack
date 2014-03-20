@@ -196,16 +196,18 @@ static void mem_stats_dump(void)
 {
         size_t        s;
         unsigned long flags;
+        unsigned long now = jiffies;
 
         spin_lock_irqsave(&mem_stats_lock, flags);
-        if (jiffies < mem_stats_j + MEM_STATS_INTERVAL) {
+        if (mem_stats_j && time_before(now,
+                                       mem_stats_j + MEM_STATS_INTERVAL)) {
                 spin_unlock_irqrestore(&mem_stats_lock, flags);
                 return;
         }
-        mem_stats_j = jiffies;
+        mem_stats_j = now;
         spin_unlock_irqrestore(&mem_stats_lock, flags);
 
-        LOG_INFO(MEM_STATS_BANNER "BEG %d", jiffies_to_msecs(jiffies));
+        LOG_INFO(MEM_STATS_BANNER "BEG %d", jiffies_to_msecs(now));
         for (s = 0; s < BLOCKS_COUNT; s++)
                 LOG_INFO(MEM_STATS_BANNER "%d %d",
                          s, atomic_read(&mem_stats[s]));

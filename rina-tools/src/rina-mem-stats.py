@@ -26,7 +26,10 @@ def extract_points(records, idx):
 
 
 # command line arguments definition and processing
-parser = argparse.ArgumentParser(description = 'Show RINA memory usage statistics')
+parser = argparse.ArgumentParser(description = 'Show RINA memory usage statistics',
+                                 epilog = 'Report bugs to <@PACKAGE_BUGREPORT@>',
+                                 version = '@PACKAGE_VERSION@',
+                                 add_help = True)
 parser.add_argument('-i', '--input', help = 'The log file from which you want to extract the memory statistics', required = True, metavar = 'INPUT_LOG')
 parser.add_argument('-l', '--list', help = 'Show list of the collected memory stats records in a pretty way, instead of raw output', action = 'store_true')
 args = parser.parse_args()
