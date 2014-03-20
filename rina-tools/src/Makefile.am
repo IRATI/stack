@@ -32,6 +32,7 @@ rina-mem-stats: rina-mem-stats.py Makefile
 
 bin_PROGRAMS += rina-mem-stats
 
+if HAVE_PYTHON_MATPLOT_LIB
 rina-show-plots: rina-show-plots.py Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -42,6 +43,7 @@ rina-show-plots: rina-show-plots.py Makefile
 	mv $@.tmp $@
 
 bin_PROGRAMS += rina-show-plots
+endif
 endif
 
 rina-bug-report: rina-bug-report.in Makefile
