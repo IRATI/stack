@@ -270,6 +270,7 @@ static int push_pdus_rmt(struct dtcp * dtcp)
                 LOG_ERR("No Closed Window Queue");
                 return -1;
         }
+
         while (!cwq_is_empty(q) &&
                (snd_lft_win(dtcp) < snd_rt_wind_edge(dtcp))) {
                 struct pdu * pdu;
@@ -279,8 +280,7 @@ static int push_pdus_rmt(struct dtcp * dtcp)
                         return 0;
 
                 /* FIXME: We must update the last seq num sent */
-                if (pdu_send(dtcp,
-                             pdu))
+                if (pdu_send(dtcp, pdu))
                         LOG_ERR("Problems sending PDU");
         }
 
@@ -365,13 +365,13 @@ static int rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
         return 0;
 }
 
-/*
-  static int rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
-  {
-  LOG_MISSING;
-  return 0;
-  }
-*/
+#if 0
+static int rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+{
+        LOG_MISSING;
+        return 0;
+}
+#endif
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pci *  pci,
@@ -473,7 +473,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
-         * of this Ack and calculate the RTT with RTTEstimator policy
+         *        of this Ack and calculate the RTT with RTTEstimator policy
          */
 
         switch (type) {
@@ -593,7 +593,7 @@ static struct dtcp_sv default_sv = {
         .next_snd_ctl_seq       = 0,
         .last_rcv_ctl_seq       = 0,
         .last_snd_data_ack      = 0,
-        .snd_lft_win    = 0,
+        .snd_lft_win            = 0,
         .data_retransmit_max    = 0,
         .last_rcv_data_ack      = 0,
         .time_unit              = 0,
