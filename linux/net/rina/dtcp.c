@@ -259,7 +259,7 @@ static seq_num_t snd_lft_win(struct dtcp * dtcp)
         return tmp;
 }
 
-static int push_pdus_rmt(struct dtcp * dtcp, seq_num_t seq_num)
+static int push_pdus_rmt(struct dtcp * dtcp)
 {
         struct cwq * q;
 
@@ -270,19 +270,18 @@ static int push_pdus_rmt(struct dtcp * dtcp, seq_num_t seq_num)
                 LOG_ERR("No Closed Window Queue");
                 return -1;
         }
-        while (dt_sv_last_seq_num_sent(dtcp->parent) <
-               snd_rt_wind_edge(dtcp)) {
+        while (!cwq_is_empty(q) &&
+               (snd_lft_win(dtcp) < snd_rt_wind_edge(dtcp))) {
                 struct pdu * pdu;
-
-                if (cwq_is_empty(q))
-                        return 0;
 
                 pdu = cwq_pop(q);
                 if (!pdu)
                         return 0;
 
-                pdu_send(dtcp,
-                         pdu);
+                /* FIXME: We must update the last seq num sent */
+                if (pdu_send(dtcp,
+                             pdu))
+                        LOG_ERR("Problems sending PDU");
         }
 
         return 0;
@@ -376,20 +375,26 @@ static int rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pci *  pci,
-                        seq_num_t     seq_num,
                         struct pdu *  pdu)
 {
+        struct cwq * q;
+
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        if (!cwq_is_empty(dt_cwq(dtcp->parent)) &&
-            (snd_lft_win(dtcp) < snd_rt_wind_edge(dtcp))) {
-                push_pdus_rmt(dtcp, seq_num);
-        }
+        push_pdus_rmt(dtcp);
 
-        LOG_MISSING;
+        q = dt_cwq(dtcp->parent);
+        if (!q) {
+                LOG_ERR("No Closed Window Queue");
+                return -1;
+        }
+        if (!cwq_is_empty(q) &&
+            (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
+                dt_sv_window_closed_set(dtcp->parent, false);
+        }
 
         return 0;
 }
@@ -473,7 +478,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_FC:
-                return rcv_flow_ctl(dtcp, pci, seq_num, pdu);
+                return rcv_flow_ctl(dtcp, pci, pdu);
         case PDU_TYPE_ACK:
                 return rcv_ack_ctl(dtcp, pdu);
         case PDU_TYPE_ACK_AND_FC:
