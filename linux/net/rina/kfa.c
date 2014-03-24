@@ -341,10 +341,16 @@ static int __kfa_flow_destroy(struct kfa *       instance,
         LOG_DBG("We are destroying flow %d", id);
 
         ipcp = flow->ipc_process;
-        if (rfifo_destroy(flow->sdu_ready, (void (*) (void *)) sdu_destroy)) {
-                LOG_ERR("Fifo in flow %d has not been destroyed", id);
-                retval = -1;
-        }
+
+        /* FIXME: Should we ASSERT() here ? */
+        if (!flow->sdu_ready)
+                LOG_WARN("Instance %pK SDU-ready FIFO is NULL", instance);
+        else
+                if (rfifo_destroy(flow->sdu_ready,
+                                  (void (*) (void *)) sdu_destroy)) {
+                        LOG_ERR("Flow %d FIFO has not been destroyed", id);
+                        retval = -1;
+                }
 
         if (kfa_pmap_remove(instance->flows, id)) {
                 LOG_ERR("Could not remove pending flow with port-id %d", id);
