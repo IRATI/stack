@@ -727,9 +727,7 @@ struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
                 return NULL;
 
         spin_lock(&instance->lock);
-
         tmp = kfa_pmap_find(instance->flows, pid);
-
         spin_unlock(&instance->lock);
 
         return tmp;
