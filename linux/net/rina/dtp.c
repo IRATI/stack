@@ -23,8 +23,6 @@
 
 #define RINA_PREFIX "dtp"
 
-#define DTP_FULL_FLEDGED 0
-
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -117,13 +115,13 @@ bool dtp_drf_flag(struct dtp * instance)
         return flag;
 }
 
-#if DTP_FULL_FLEDGED
-static void drf_flag_set(struct dtp_sv * sv, bool flag)
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
+static void drf_flag_set(struct dtp_sv * sv, bool value)
 {
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        sv->drf_flag = flag;
+        sv->drf_flag = value;
         spin_unlock(&sv->lock);
 }
 #endif
@@ -141,7 +139,8 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         return tmp;
 }
 
-#if DTP_FULL_FLEDGED
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
+#if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
 {
         uint_t tmp;
@@ -154,7 +153,7 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
         return tmp;
 }
-
+#endif
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
@@ -179,7 +178,7 @@ static uint_t max_cwq_len_get(struct dtp_sv * sv)
         return tmp;
 }
 
-#if 0
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
 {
         seq_num_t tmp;
@@ -296,7 +295,6 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
-
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
@@ -319,7 +317,7 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-#if DTP_FULL_FLEDGED
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -452,7 +450,7 @@ int dtp_write(struct dtp * instance,
                        pci_destination(pci),
                        pci_qos_id(pci),
                        pdu);
-#if DTP_FULL_FLEDGED
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         if (rtimer_start(instance->timers.sender_inactivity,
                          2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
@@ -542,7 +540,7 @@ int dtp_receive(struct dtp * instance,
         struct dtp_sv *       sv;
         struct dtcp *         dtcp;
         struct dt *           dt;
-#if DTP_FULL_FLEDGED
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         seq_num_t             seq_num;
 #endif
 
@@ -578,7 +576,7 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-#if DTP_FULL_FLEDGED
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -674,7 +672,7 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
-#if DTP_FULL_FLEDGED
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
                          3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
