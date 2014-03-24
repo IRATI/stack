@@ -531,6 +531,12 @@ class ApplicationRegistrationInformation {
         /** The name of the application being registered */
         ApplicationProcessNamingInformation appName;
 
+        /**
+         * The id of the IPC process being registered (0 if it is
+         * an application
+         */
+        unsigned short ipcProcessId;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -547,6 +553,8 @@ public:
 	ApplicationRegistrationType getRegistrationType() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
+        unsigned short getIpcProcessId() const;
+        void setIpcProcessId(unsigned short ipcProcessId);
 };
 
 /**
@@ -1014,13 +1022,13 @@ class RIBObject{
 	std::string name;
 
 	/** A synonim for clazz+name (unique within the RIB) */
-	long long instance;
+	unsigned long instance;
 
 	/** The value of the object */
 	RIBObjectValue value;
 
 	/** Geneartes a unique object instance */
-	long long generateObjectInstance();
+	unsigned long generateObjectInstance();
 
 public:
 	RIBObject();
@@ -1030,8 +1038,8 @@ public:
 	bool operator!=(const RIBObject &other) const;
 	const std::string& getClazz() const;
 	void setClazz(const std::string& clazz);
-	long long getInstance() const;
-	void setInstance(long long instance);
+	unsigned long getInstance() const;
+	void setInstance(unsigned long  instance);
 	const std::string& getName() const;
 	void setName(const std::string& name);
 	RIBObjectValue getValue() const;

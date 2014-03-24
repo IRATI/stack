@@ -40,6 +40,20 @@ config RINA_SHIM_ETH_VLAN
 	help
 	  No help for the time being
 
+config RINA_SHIM_ETH_VLAN_BURST_LIMITING
+	bool "Ethernet burst limiting"
+	default n
+        depends on RINA_SHIM_ETH_VLAN
+        help
+	  No help for the time being
+
+config RINA_SHIM_ETH_VLAN_BURST_LIMIT
+       depends on RINA_SHIM_ETH_VLAN_BURST_LIMITING
+       int "Receiver burst limit frames count"
+       default 50
+       help
+         No help for the time being
+
 config RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 	bool "Perform regression testing upon loading"
 	default n

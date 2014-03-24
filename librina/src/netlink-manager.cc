@@ -117,6 +117,67 @@ void NetlinkManager::initialize() throw (NetlinkException) {
 	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
 
+void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)
+throw(NetlinkException) {
+        struct rinaHeader* myHeader;
+
+        message->setSourcePortId(localPort);
+        message->setFamily(family);
+        if (!netlinkMessage){
+                LOG_ERR("%s",
+                                NetlinkException::error_allocating_netlink_message.c_str());
+                throw NetlinkException(
+                                NetlinkException::error_allocating_netlink_message);
+        }
+
+        int flags = 0;
+        //FIXME, apparently messages directed to the kernel without the
+        //NLM_F_REQUEST flag set don't reach its destination
+        if (message->isRequestMessage() || message->getDestPortId() == 0){
+                flags = NLM_F_REQUEST;
+        }
+
+        myHeader = (rinaHeader*) genlmsg_put(netlinkMessage, localPort,
+                        message->getSequenceNumber(),family, sizeof(struct rinaHeader),
+                        flags, message->getOperationCode(),
+                        RINA_GENERIC_NETLINK_FAMILY_VERSION);
+        if (!myHeader){
+                nlmsg_free(netlinkMessage);
+                LOG_ERR("%s",
+                                NetlinkException::error_generating_netlink_message.c_str());
+                throw NetlinkException(
+                                NetlinkException::error_generating_netlink_message);
+        }
+        myHeader->sourceIPCProcessId = message->getSourceIpcProcessId();
+        myHeader->destIPCProcessId = message->getDestIpcProcessId();
+
+        int result = putBaseNetlinkMessage(netlinkMessage, message);
+        if (result < 0) {
+                nlmsg_free(netlinkMessage);
+                LOG_ERR("%s %d",
+                                NetlinkException::error_generating_netlink_message.c_str(),
+                                result);
+                throw NetlinkException(
+                                NetlinkException::error_generating_netlink_message);
+        }
+
+        //Set destination and send the message
+        nl_socket_set_peer_port(socket, message->getDestPortId());
+        result = nl_send(socket, netlinkMessage);
+        if (result < 0) {
+                nlmsg_free(netlinkMessage);
+                LOG_ERR("%s %d %d",
+                                NetlinkException::error_sending_netlink_message.c_str(),
+                                result, message->getDestPortId());
+                throw NetlinkException(
+                                NetlinkException::error_sending_netlink_message);
+        }
+        LOG_DBG("Sent message of %d bytes. %s", result,
+                        message->toString().c_str());
+        //Cleanup
+        nlmsg_free(netlinkMessage);
+}
+
 unsigned int NetlinkManager::getLocalPort(){
 	return localPort;
 }
@@ -126,67 +187,27 @@ unsigned int NetlinkManager::getSequenceNumber(){
 }
 
 void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
-		throw (NetlinkException) {
-	//Generate the message
-	struct nl_msg* netlinkMessage;
-	struct rinaHeader* myHeader;
+throw (NetlinkException) {
+        struct nl_msg* netlinkMessage;
 
-	message->setSourcePortId(localPort);
-	message->setFamily(family);
-	netlinkMessage = nlmsg_alloc();
-	if (!netlinkMessage){
-		LOG_ERR("%s",
-				NetlinkException::error_allocating_netlink_message.c_str());
-		throw NetlinkException(
-				NetlinkException::error_allocating_netlink_message);
-	}
+        netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                throw NetlinkException("Error allocating Netlink Message structure");
+        }
 
-	int flags = 0;
-	//FIXME, apparently messages directed to the kernel without the
-	//NLM_F_REQUEST flag set don't reach its destination
-	if (message->isRequestMessage() || message->getDestPortId() == 0){
-		flags = NLM_F_REQUEST;
-	}
+        _sendMessage(message, netlinkMessage);
+}
 
-	myHeader = (rinaHeader*) genlmsg_put(netlinkMessage, localPort,
-			message->getSequenceNumber(),family, sizeof(struct rinaHeader),
-			flags, message->getOperationCode(),
-			RINA_GENERIC_NETLINK_FAMILY_VERSION);
-	if (!myHeader){
-		nlmsg_free(netlinkMessage);
-		LOG_ERR("%s",
-				NetlinkException::error_generating_netlink_message.c_str());
-		throw NetlinkException(
-				NetlinkException::error_generating_netlink_message);
-	}
-	myHeader->sourceIPCProcessId = message->getSourceIpcProcessId();
-	myHeader->destIPCProcessId = message->getDestIpcProcessId();
+void NetlinkManager::sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize)
+throw(NetlinkException) {
+        struct nl_msg* netlinkMessage;
 
-	int result = putBaseNetlinkMessage(netlinkMessage, message);
-	if (result < 0) {
-		nlmsg_free(netlinkMessage);
-		LOG_ERR("%s %d",
-				NetlinkException::error_generating_netlink_message.c_str(),
-				result);
-		throw NetlinkException(
-				NetlinkException::error_generating_netlink_message);
-	}
+        netlinkMessage = nlmsg_alloc_size(maxSize);
+        if (!netlinkMessage) {
+                throw NetlinkException("Error allocating Netlink Message structure");
+        }
 
-	//Set destination and send the message
-	nl_socket_set_peer_port(socket, message->getDestPortId());
-	result = nl_send(socket, netlinkMessage);
-	if (result < 0) {
-		nlmsg_free(netlinkMessage);
-		LOG_ERR("%s %d %d",
-				NetlinkException::error_sending_netlink_message.c_str(),
-				result, message->getDestPortId());
-		throw NetlinkException(
-				NetlinkException::error_sending_netlink_message);
-	}
-	LOG_DBG("Sent message of %d bytes. %s", result,
-			message->toString().c_str());
-	//Cleanup
-	nlmsg_free(netlinkMessage);
+        _sendMessage(message, netlinkMessage);
 }
 
 BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {

@@ -80,6 +80,7 @@ public class FlowStateDatabase {
 				, fsRIBGroup);
 			this.isModified = true;
 		} catch (RIBDaemonException e) {
+			log.debug("Error Code: " + e.getErrorCode());
 			e.printStackTrace();
 		}
 
@@ -115,12 +116,14 @@ public class FlowStateDatabase {
 			for(int i = 0; i < flowStateInternalObjectGroup.getModifiedFSO().size(); i++)
 			{
 				FlowStateInternalObject object = flowStateInternalObjectGroup.getModifiedFSO().get(i);
+				log.debug("Check modified object: " + object.getID() + " to be sent");
 	
 				for(int j = 0; j < flows.length; j++)
 				{
 					int portId = flows[j].getPortId();
 					if (object.getAvoidPort() != portId)
 					{
+						log.debug("Sent to port: " + portId);
 						groupsToSend.get(j).addToSend(object);
 					}
 				}
@@ -134,16 +137,12 @@ public class FlowStateDatabase {
 
 	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
 	{
-		boolean modified = this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup);
-		if (modified)
-		{
-			this.isModified = true;
-		}
+		this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup, this);
 	}
 	
 	public void updateObjects(FlowStateObjectGroup groupToModify, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup)
 	{
-		log.info("Update Objects from DB launched");
+		log.debug("Update Objects from DB launched");
 		
 		ObjectStateMapper mapper = new ObjectStateMapper();
 		ArrayList<FlowStateInternalObject> objectsToModify= mapper.FSOGMap(groupToModify).getFlowStateObjectArray();

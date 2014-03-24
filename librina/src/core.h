@@ -131,8 +131,12 @@ public:
 	RINAManager(unsigned int netlinkPort);
 	~RINAManager();
 
-	/** Sends a NL message*/
+	/** Sends a NL message of default maximum size (PAGE SIZE) */
 	void sendMessage(BaseNetlinkMessage * netlinkMessage)
+	throw (NetlinkException);
+
+	/** Sends a NL message of specified maximum size */
+	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage, size_t maxSize)
 	throw (NetlinkException);
 
 	/**

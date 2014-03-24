@@ -1,19 +1,22 @@
 package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 
 import java.util.ArrayList;
+import java.util.Timer;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+//import org.apache.commons.logging.Log;
+//import org.apache.commons.logging.LogFactory;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
+import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.timertasks.KillFlowStateObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateInternalObjectGroup{
-	private static final Log log = LogFactory.getLog(PDUFTImpl.class);
+	//private static final Log log = LogFactory.getLog(FlowStateInternalObjectGroup.class);
+	
+	protected static final int WAIT_UNTIL_REMOVE_OBJECT = 23000;
 	
 	protected ArrayList<FlowStateInternalObject> flowStateObjectArray = null;
 	
@@ -100,24 +103,21 @@ public class FlowStateInternalObjectGroup{
 			return modifiedFSOs;
 	}
 	
-	public boolean incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
+	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup, FlowStateDatabase db) throws RIBDaemonException
 	{
-		boolean groupModified = false;
-		ObjectStateMapper mapper = new ObjectStateMapper();
 		
 		for(int i = 0; i< this.flowStateObjectArray.size(); i++)
 		{
 			FlowStateInternalObject object = this.flowStateObjectArray.get(i);
 			object.incrementAge();
 			
-			if (object.getAge() >= maximumAge)
+			if (object.getAge() >= maximumAge && !object.isBeingErased)
 			{
-				log.debug("Old object removed: " + object.getID());
-				this.flowStateObjectArray.remove(i);
-				groupModified = true;
-				fsRIBGroup.delete(mapper.FSOMap(object));
+				Timer killFlowStateObjectTimer = new Timer();
+				killFlowStateObjectTimer.schedule(new KillFlowStateObject(fsRIBGroup, flowStateObjectArray.get(i), db), 
+						WAIT_UNTIL_REMOVE_OBJECT);
+				object.setBeingErased(true);
 			}
 		}
-		return groupModified;
 	}
 }

@@ -628,10 +628,8 @@ public class IPCProcessImpl implements IPCProcess {
 			}
 			i++;
 		}
-		if (address == -1)
-		{
-			log.error("Application: " + name.getProcessName() + "not found in the neighbours");
-			throw new Exception();
+		if (address == -1) {
+			throw new Exception("Application: " + name.getProcessName() + "not found in the neighbours");
 		}
 		return address;
 	}

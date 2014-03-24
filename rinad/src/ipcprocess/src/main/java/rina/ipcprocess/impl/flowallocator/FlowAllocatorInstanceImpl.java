@@ -286,6 +286,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			
 			ribDaemon.sendADataUnit(flow.getDestinationAddress(), cdapMessage, this);
 		}catch(Exception ex){
+			ex.printStackTrace();
 			log.error("Problems sending M_CREATE <Flow> CDAP message to neighbor: " + ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
 			releasePortId();
@@ -326,6 +327,10 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		connection.setSourceAddress(connection.getDestAddress());
 		connection.setDestAddress(aux);
 		connection.setDestCepId(connection.getSourceCepId());
+		connection.setFlowUserIpcProcessId(
+				ipcProcess.getRegistrationManager().getRegIPCProcessId(
+						flow.getDestinationNamingInfo()));
+		log.debug("Target application IPC Process id is: "+connection.getFlowUserIpcProcessId());
 		flow.getConnections().add(connection);
 		
 		//2 TODO Check if the source application process has access to the destination application process. If not send negative M_CREATE_R 

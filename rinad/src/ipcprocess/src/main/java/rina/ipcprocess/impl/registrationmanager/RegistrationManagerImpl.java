@@ -7,6 +7,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.ApplicationRegistrationInformation;
 import eu.irati.librina.ApplicationRegistrationRequestEvent;
 import eu.irati.librina.ApplicationUnregistrationRequestEvent;
 import eu.irati.librina.rina;
@@ -30,14 +31,14 @@ public class RegistrationManagerImpl implements RegistrationManager {
 	private RIBDaemon ribDaemon = null;
 	
 	/** The registered applications */
-	private Map<String, ApplicationProcessNamingInformation> registeredApplications = null;
+	private Map<String, ApplicationRegistrationInformation> registeredApplications = null;
 
 	/**
 	 * @param args
 	 */
 	public RegistrationManagerImpl() {
 		directoryForwardingTable  = new ConcurrentHashMap<String, DirectoryForwardingTableEntry>();
-		registeredApplications = new ConcurrentHashMap<String, ApplicationProcessNamingInformation>();
+		registeredApplications = new ConcurrentHashMap<String, ApplicationRegistrationInformation>();
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -130,8 +131,10 @@ public class RegistrationManagerImpl implements RegistrationManager {
 			return;
 		}
 		
-		registeredApplications.put(appToRegister.getEncodedString(), appToRegister);
+		registeredApplications.put(appToRegister.getEncodedString(), 
+				event.getApplicationRegistrationInformation());
 		log.info("Successfully registered application "+appToRegister.getEncodedString() 
+				+ ", with IPC Process id " + event.getApplicationRegistrationInformation().getIpcProcessId()
 				+ ". Notifying the IPC Manager and informing neighbours");
 		
 		try {
@@ -170,7 +173,7 @@ public class RegistrationManagerImpl implements RegistrationManager {
 			return;
 		}
 		
-		ApplicationProcessNamingInformation unregisteredApp = 
+		ApplicationRegistrationInformation unregisteredApp = 
 				registeredApplications.remove(
 						event.getApplicationName().getEncodedString());
 		
@@ -185,14 +188,15 @@ public class RegistrationManagerImpl implements RegistrationManager {
 			return;
 		}
 		
-		log.info("Successfully unregistered application "+unregisteredApp.getEncodedString() 
+		log.info("Successfully unregistered application "+ unregisteredApp.getApplicationName().getEncodedString() 
 				+ ". Notifying the IPC Manager and informing neighbours");
 		
 		try {
 			rina.getExtendedIPCManager().unregisterApplicationResponse(event, 0);
 		}catch (Exception ex) {
 			log.error("Problems communicating with the IPC Manager: "+ex.getMessage());
-			registeredApplications.put(unregisteredApp.getEncodedString(), unregisteredApp);
+			registeredApplications.put(unregisteredApp.getApplicationName().getEncodedString(), 
+					unregisteredApp);
 			return;
 		}
 		
@@ -200,11 +204,30 @@ public class RegistrationManagerImpl implements RegistrationManager {
 			NotificationPolicy notificationPolicy = new NotificationPolicy(new int[0]);
 			ribDaemon.delete(DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_TABLE_ENTRY_RIB_OBJECT_CLASS, 
 					DirectoryForwardingTableEntrySetRIBObject.DIRECTORY_FORWARDING_ENTRY_SET_RIB_OBJECT_NAME 
-					+ RIBObjectNames.SEPARATOR + unregisteredApp.getEncodedString(), null, notificationPolicy);
+					+ RIBObjectNames.SEPARATOR + unregisteredApp.getApplicationName().getEncodedString(),
+					null, notificationPolicy);
 		}catch(RIBDaemonException ex){
 			log.error("Error calling RIB Daemon to disseminate application unregistration: " 
 					+ ex.getMessage());
 		}
+	}
+	
+	public int getRegIPCProcessId(ApplicationProcessNamingInformation apNamingInfo) {
+		if (apNamingInfo == null) {
+			log.error("Bogus apNamingInfo passed");
+			return 0;
+		}
+		
+		ApplicationRegistrationInformation info = 
+				registeredApplications.get(apNamingInfo.getEncodedString());
+		
+		if (info == null) {
+			log.debug("Could not find a registered application with code : "
+					+ apNamingInfo.getEncodedString());
+			return 0;
+		}
+		
+		return info.getIpcProcessId();
 	}
 
 }
