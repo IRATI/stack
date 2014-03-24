@@ -65,8 +65,12 @@ EXPORT_SYMBOL(rfifo_create_ni);
 int rfifo_destroy(struct rfifo * f,
                   void        (* dtor)(void * e))
 {
-        if (!f || !dtor) {
-                LOG_ERR("Bogus input parameters, can't destroy rfifo %pK", f);
+        if (!f) {
+                LOG_ERR("Bogus input parameters, can't destroy NULL");
+                return -1;
+        }
+        if (!dtor) {
+                LOG_ERR("Bogus input parameters, no destructor provided");
                 return -1;
         }
 
