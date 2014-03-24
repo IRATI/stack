@@ -41,7 +41,6 @@ public class EchoClient implements  ApplicationRegistrationListener,
 FlowAllocationListener, FlowDeallocationListener {
 	
 	public static final int MAX_SDU_SIZE = 10000;
-	public static final int MAX_NUM_OF_SDUS = 10000;
 	public static final String TEST_OBJECT_CLASS = "Echo test";
 	public static final String TEST_OBJECT_NAME = "/rina/utils/apps/echo/test";
 	
@@ -91,9 +90,6 @@ FlowAllocationListener, FlowDeallocationListener {
 		}
 		
 		testInformation = new TestInformation();
-		if (numberOfSdus > MAX_NUM_OF_SDUS) {
-			numberOfSdus = MAX_NUM_OF_SDUS;
-		}
 		testInformation.setNumberOfSDUs(numberOfSdus);
 		
 		if (sduSize > MAX_SDU_SIZE) {
