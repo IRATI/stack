@@ -117,6 +117,7 @@ bool dtp_drf_flag(struct dtp * instance)
         return flag;
 }
 
+#if DTP_FULL_FLEDGED
 static void drf_flag_set(struct dtp_sv * sv, bool flag)
 {
         ASSERT(sv);
@@ -125,6 +126,7 @@ static void drf_flag_set(struct dtp_sv * sv, bool flag)
         sv->drf_flag = flag;
         spin_unlock(&sv->lock);
 }
+#endif
 
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
@@ -139,7 +141,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         return tmp;
 }
 
-#if 0
+#if DTP_FULL_FLEDGED
 static uint_t dropped_pdus(struct dtp_sv * sv)
 {
         uint_t tmp;
@@ -152,7 +154,7 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
         return tmp;
 }
-#endif
+
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
@@ -162,6 +164,7 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         sv->dropped_pdus++;
         spin_unlock(&sv->lock);
 }
+#endif
 
 static uint_t max_cwq_len_get(struct dtp_sv * sv)
 {
@@ -176,6 +179,7 @@ static uint_t max_cwq_len_get(struct dtp_sv * sv)
         return tmp;
 }
 
+#if 0
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
 {
         seq_num_t tmp;
@@ -197,6 +201,7 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
         sv->max_seq_nr_rcv = nr;
         spin_unlock(&sv->lock);
 }
+#endif
 
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
@@ -314,7 +319,7 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-#ifdef DTP_FULL_FLEDGED
+#if DTP_FULL_FLEDGED
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -447,7 +452,7 @@ int dtp_write(struct dtp * instance,
                        pci_destination(pci),
                        pci_qos_id(pci),
                        pdu);
-#ifdef DTP_FULL_FLEDGED
+#if DTP_FULL_FLEDGED
         if (rtimer_start(instance->timers.sender_inactivity,
                          2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
@@ -535,9 +540,11 @@ int dtp_receive(struct dtp * instance,
         struct dtp_policies * policies;
         struct pci *          pci;
         struct dtp_sv *       sv;
-        seq_num_t             seq_num;
         struct dtcp *         dtcp;
         struct dt *           dt;
+#if DTP_FULL_FLEDGED
+        seq_num_t             seq_num;
+#endif
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -571,7 +578,7 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-#ifdef DTP_FULL_FLEDGED
+#if DTP_FULL_FLEDGED
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -667,7 +674,7 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
-#ifdef DTP_FULL_FLEDGED
+#if DTP_FULL_FLEDGED
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
                          3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
