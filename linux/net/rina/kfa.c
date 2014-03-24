@@ -341,9 +341,12 @@ static int __kfa_flow_destroy(struct kfa *       instance,
         LOG_DBG("We are destroying flow %d", id);
 
         ipcp = flow->ipc_process;
-        if (rfifo_destroy(flow->sdu_ready, (void (*) (void *)) sdu_destroy)) {
-                LOG_ERR("Fifo in flow %d has not been destroyed", id);
-                retval = -1;
+        if (flow->sdu_ready) {
+                if (rfifo_destroy(flow->sdu_ready,
+                                  (void (*) (void *)) sdu_destroy)) {
+                        LOG_ERR("Fifo in flow %d has not been destroyed", id);
+                        retval = -1;
+                }
         }
 
         if (kfa_pmap_remove(instance->flows, id)) {
