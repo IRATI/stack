@@ -227,8 +227,8 @@ static size_t size2bin(size_t size)
                 bin++;
         }
 
-        if (bin > BLOCKS_COUNT)
-                bin = BLOCKS_COUNT;
+        if (bin >= BLOCKS_COUNT)
+                bin = BLOCKS_COUNT - 1;
 
         return bin;
 }
