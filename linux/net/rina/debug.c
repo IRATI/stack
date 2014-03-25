@@ -75,6 +75,12 @@ void rina_debug_exit(void)
         LOG_DBG("Debugging facilities finalized successfully");
 }
 
+/* FIXME: Please fix this crap soon */
+void rina_stack_dump(void)
+{
+        dump_stack();
+}
+
 #else
 
 int rina_debug_init(void)
@@ -85,13 +91,5 @@ int rina_debug_init(void)
 
 void rina_debug_exit(void)
 { }
-
-/* FIXME: Please fix this crap soon */
-void rina_stack_dump(void)
-{
-#ifdef CONFIG_RINA_DEBUG
-        dump_stack();
-#endif
-}
 
 #endif
