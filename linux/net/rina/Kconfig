@@ -77,7 +77,7 @@ endmenu
 source "net/rina/rinarp/Kconfig"
 
 menuconfig IPC_PROCESSES
-	bool "IPC Processes support"
+	bool "IPC Processes"
         default y
 
 if IPC_PROCESSES
