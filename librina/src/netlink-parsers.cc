@@ -2676,6 +2676,8 @@ int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
                         object.getName().c_str());
         NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
                         object.getInstance());
+        NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_DISPLAY_VALUE,
+                                object.getDisplayableValue().c_str());
 
 	return 0;
 
@@ -5027,6 +5029,9 @@ RIBObject * parseRIBObject(nlattr *nested){
 	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U64;
 	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].minlen = 8;
 	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].maxlen = 8;
+	attr_policy[RIBO_ATTR_OBJECT_DISPLAY_VALUE].type = NLA_STRING;
+	attr_policy[RIBO_ATTR_OBJECT_DISPLAY_VALUE].minlen = 0;
+	attr_policy[RIBO_ATTR_OBJECT_DISPLAY_VALUE].maxlen = 65535;
 	struct nlattr *attrs[RIBO_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, RIBO_ATTR_MAX, nested, attr_policy);
@@ -5052,6 +5057,11 @@ RIBObject * parseRIBObject(nlattr *nested){
 	if (attrs[RIBO_ATTR_OBJECT_INSTANCE]){
 		result->setInstance(
 				nla_get_u64(attrs[RIBO_ATTR_OBJECT_INSTANCE]));
+	}
+
+	if (attrs[RIBO_ATTR_OBJECT_DISPLAY_VALUE]){
+	        result->setDisplayableValue(
+	                        nla_get_string(attrs[RIBO_ATTR_OBJECT_DISPLAY_VALUE]));
 	}
 
 	return result;

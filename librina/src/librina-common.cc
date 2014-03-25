@@ -14,6 +14,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <ostream>
+#include <sstream>
+
 #define RINA_PREFIX "common"
 
 #include "logs.h"
@@ -200,10 +203,15 @@ std::string ApplicationProcessNamingInformation::getEncodedString() {
                         "-" + entityName + "-" + entityInstance;
 }
 
-std::string ApplicationProcessNamingInformation::toString() {
-	return "Process name: " + processName + "; Process instance: "
-			+ processInstance + "; Entity name: " + entityName
-			+ "; Entity instance: " + entityInstance;
+const std::string ApplicationProcessNamingInformation::toString(){
+        std::stringstream ss;
+
+        ss<<"Process name: "<<processName;
+        ss<<"; Process instance: "<<processInstance<<std::endl;
+        ss<<"Entity name: "<<entityName;
+        ss<<"; Entity instance: "<<entityInstance<<std::endl;
+
+        return ss.str();
 }
 
 /* CLASS FLOW SPECIFICATION */
@@ -559,6 +567,21 @@ void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
 	this->undetectedBitErrorRate = undetectedBitErrorRate;
 }
 
+const std::string QoSCube::toString() {
+        std::stringstream ss;
+        ss<<"Name: "<<name<<"; Id: "<<id;
+        ss<<"; Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;
+        ss<<"In oder delivery: "<<orderedDelivery;
+        ss<<"; Partial delivery allowed: "<<partialDelivery<<std::endl;
+        ss<<"Max allowed gap between SDUs: "<<maxAllowableGap;
+        ss<<"; Undetected bit error rate: "<<undetectedBitErrorRate<<std::endl;
+        ss<<"Average bandwidth (bytes/s): "<<averageBandwidth;
+        ss<<"; Average SDU bandwidth (bytes/s): "<<averageSDUBandwidth<<std::endl;
+        ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
+        ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
+        return ss.str();
+}
+
 /* CLASS DIF PROPERTIES */
 DIFProperties::DIFProperties(
 		const ApplicationProcessNamingInformation& DIFName, int maxSDUSize) {
@@ -770,6 +793,17 @@ unsigned short ApplicationRegistrationInformation::getIpcProcessId() const {
 void ApplicationRegistrationInformation::setIpcProcessId(
                 unsigned short ipcProcessId) {
         this->ipcProcessId = ipcProcessId;
+}
+
+const std::string ApplicationRegistrationInformation::toString(){
+        std::stringstream ss;
+
+        ss<<"Application name: "<<appName.toString()<<std::endl;
+        ss<<"Registration type: "<<applicationRegistrationType;
+        ss<<"; DIF name: "<<difName.getProcessName();
+        ss<<"; IPC Process id: "<<ipcProcessId;
+
+        return ss.str();
 }
 
 /* CLASS APPLICATION REGISTRATION REQUEST */
@@ -1162,6 +1196,23 @@ bool DataTransferConstants::isInitialized() {
         return true;
 }
 
+const std::string DataTransferConstants::toString(){
+        std::stringstream ss;
+
+        ss<<"Address length (bytes): "<<addressLength;
+        ss<<"; CEP-id length (bytes): "<<cepIdLength;
+        ss<<"; Length length (bytes): "<<lengthLength<<std::endl;
+        ss<<"Port-id length (bytes): "<<portIdLength;
+        ss<<"; Qos-id length (bytes): "<<qosIdLenght;
+        ss<<"; Seq number length(bytes): "<<sequenceNumberLength<<std::endl;
+        ss<<"Max PDU lifetime: "<<maxPDULifetime;
+        ss<<"; Max PDU size: "<<maxPDUSize;
+        ss<<"; Integrity?: "<<DIFIntegrity;
+        ss<<"; Initialized?: "<<isInitialized();
+
+        return ss.str();
+}
+
 /* CLASS DIF INFORMATION */
 const ApplicationProcessNamingInformation& DIFInformation::getDifName()
 		const {
@@ -1355,6 +1406,26 @@ void Neighbor::setNumberOfEnrollmentAttempts(
         this->numberOfEnrollmentAttempts = numberOfEnrollmentAttempts;
 }
 
+const std::string Neighbor::toString(){
+        std::stringstream ss;
+
+        ss<<"Address: "<<address;
+        ss<<"; Average RTT(ms): "<<averageRTTInMs;
+        ss<<"; Is enrolled: "<<enrolled<<std::endl;
+        ss<<"Name: "<<name.toString()<<std::endl;
+        ss<<"Supporting DIF in common: "<<supportingDifName.getProcessName();
+        ss<<"; N-1 port-id: "<<underlyingPortId<<std::endl;
+        ss<<"List of supporting DIFs: ";
+        for (std::list<ApplicationProcessNamingInformation>::iterator it = supportingDifs.begin();
+                        it != supportingDifs.end(); it++)
+           ss<< it->getProcessName() << "; ";
+        ss<<std::endl;
+        ss<<"Last heard from time (ms): "<<lastHeardFromTimeInMs;
+        ss<<"; Number of enrollment attempts: "<<numberOfEnrollmentAttempts;
+
+        return ss.str();
+}
+
 /* CLAS RIBOBJECT */
 RIBObject::RIBObject(){
 	instance = generateObjectInstance();
@@ -1421,6 +1492,16 @@ RIBObjectValue RIBObject::getValue() const {
 void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
+
+
+const std::string& RIBObject::getDisplayableValue() const {
+        return displayableValue;
+}
+
+void RIBObject::setDisplayableValue(const std::string& displayableValue) {
+        this->displayableValue = displayableValue;
+}
+
 
 /* INITIALIZATION OPERATIONS */
 
