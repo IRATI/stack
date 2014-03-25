@@ -14,6 +14,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <ostream>
+#include <sstream>
+
 #define RINA_PREFIX "ipc-process"
 #define PAGE_SIZE 4096
 
@@ -763,6 +766,17 @@ void Connection::setSourceCepId(int sourceCepId) {
         this->sourceCepId = sourceCepId;
 }
 
+const std::string Connection::toString() {
+        std::stringstream ss;
+        ss<<"Source address: "<<sourceAddress;
+        ss<<"; Source cep-id: "<<sourceCepId;
+        ss<<"; Dest address: "<<destAddress;
+        ss<<"; Dest cep-id: "<<destCepId<<std::endl;
+        ss<<"Por-id: "<<portId<<"; QoS-id: "<<qosId;
+        ss<<"; Flow user IPC Process id: "<<flowUserIpcProcessId<<std::endl;
+        return ss.str();
+}
+
 /* CLASS PDU FORWARDING TABLE ENTRY */
 PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
@@ -816,6 +830,18 @@ void PDUForwardingTableEntry::setQosId(unsigned int qosId) {
         this->qosId = qosId;
 }
 
+const std::string PDUForwardingTableEntry::toString() {
+        std::stringstream ss;
+
+        ss<<"Address: "<<address<<" QoS-id: "<<qosId;
+        ss<<"List of N-1 port-ids: ";
+        for (std::list<unsigned int>::iterator it = portIds.begin();
+                        it != portIds.end(); it++)
+                ss<< *it << "; ";
+        ss<<std::endl;
+
+        return ss.str();
+}
 
 /* CLASS READ MANAGEMENT SDU RESULT */
 ReadManagementSDUResult::ReadManagementSDUResult() {

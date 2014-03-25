@@ -322,6 +322,20 @@ void FlowSpecification::setUndetectedBitErrorRate(
 	this->undetectedBitErrorRate = undetectedBitErrorRate;
 }
 
+const std::string FlowSpecification::toString() {
+        std::stringstream ss;
+        ss<<"Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;
+        ss<<"In oder delivery: "<<orderedDelivery;
+        ss<<"; Partial delivery allowed: "<<partialDelivery<<std::endl;
+        ss<<"Max allowed gap between SDUs: "<<maxAllowableGap;
+        ss<<"; Undetected bit error rate: "<<undetectedBitErrorRate<<std::endl;
+        ss<<"Average bandwidth (bytes/s): "<<averageBandwidth;
+        ss<<"; Average SDU bandwidth (bytes/s): "<<averageSDUBandwidth<<std::endl;
+        ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
+        ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
+        return ss.str();
+}
+
 bool FlowSpecification::operator==(const FlowSpecification &other) const {
 	if (averageBandwidth != other.getAverageBandwidth()) {
 		return false;
@@ -430,6 +444,18 @@ FlowInformation::getRemoteAppName() const {
 void FlowInformation::setRemoteAppName(
 		const ApplicationProcessNamingInformation& remoteAppName) {
 	this->remoteAppName = remoteAppName;
+}
+
+const std::string FlowInformation::toString(){
+        std::stringstream ss;
+
+        ss<<"Local app name: "<<localAppName.toString()<<std::endl;
+        ss<<"Remote app name: "<<remoteAppName.toString()<<std::endl;
+        ss<<"Flow specification: "<<flowSpecification.toString()<<std::endl;
+        ss<<"DIF name: "<<difName.getProcessName();
+        ss<<"Port-id: "<<portId;;
+
+        return ss.str();
 }
 
 /* CLASS QoS CUBE */

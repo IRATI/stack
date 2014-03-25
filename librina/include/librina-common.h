@@ -175,6 +175,7 @@ public:
 	void setPeakSduBandwidthDuration(unsigned int peakSduBandwidthDuration);
 	double getUndetectedBitErrorRate() const;
 	void setUndetectedBitErrorRate(double undetectedBitErrorRate);
+	const std::string toString();
 };
 
 /**
@@ -212,6 +213,7 @@ public:
 	const ApplicationProcessNamingInformation& getRemoteAppName() const;
 	void setRemoteAppName(
 			const ApplicationProcessNamingInformation& remoteAppName);
+	const std::string toString();
 };
 
 /**
