@@ -210,7 +210,7 @@ static void mem_stats_dump(void)
         LOG_INFO(MEM_STATS_BANNER "BEG %u", jiffies_to_msecs(now));
         for (s = 0; s < BLOCKS_COUNT; s++)
                 LOG_INFO(MEM_STATS_BANNER "%d %u",
-                         (int)s, atomic_read(&mem_stats[s]));
+                         (int) s, atomic_read(&mem_stats[s]));
         LOG_INFO(MEM_STATS_BANNER "END");
 }
 
