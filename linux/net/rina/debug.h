@@ -43,4 +43,6 @@
 int  rina_debug_init(void);
 void rina_debug_exit(void);
 
+void rina_stack_dump(void);
+
 #endif

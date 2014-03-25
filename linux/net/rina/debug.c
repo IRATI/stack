@@ -86,4 +86,12 @@ int rina_debug_init(void)
 void rina_debug_exit(void)
 { }
 
+/* FIXME: Please fix this crap soon */
+void rina_stack_dump(void)
+{
+#ifdef CONFIG_RINA_DEBUG
+        dump_stack();
+#endif
+}
+
 #endif
