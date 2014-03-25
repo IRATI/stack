@@ -86,6 +86,8 @@ int rina_debug_init(void)
 void rina_debug_exit(void)
 { }
 
+#endif
+
 /* FIXME: Please fix this crap soon */
 void rina_stack_dump(void)
 {
@@ -93,5 +95,3 @@ void rina_stack_dump(void)
         dump_stack();
 #endif
 }
-
-#endif

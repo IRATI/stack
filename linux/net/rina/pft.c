@@ -62,8 +62,10 @@ static struct pft_port_entry * pft_pe_create_ni(port_id_t port_id)
 static struct pft_port_entry * pft_pe_create(port_id_t port_id)
 { return pft_pe_create_gfp(GFP_KERNEL, port_id); }
 
+#ifdef CONFIG_RINA_DEBUG
 static bool pft_pe_is_ok(struct pft_port_entry * pe)
 { return pe ? true : false;  }
+#endif
 
 static void pft_pe_destroy(struct pft_port_entry * pe)
 {
@@ -117,8 +119,10 @@ static struct pft_entry * pfte_create(address_t destination,
                                       qos_id_t  qos_id)
 { return pfte_create_gfp(GFP_KERNEL, destination, qos_id); }
 
+#ifdef CONFIG_RINA_DEBUG
 static bool pfte_is_ok(struct pft_entry * entry)
 { return entry ? true : false; }
+#endif
 
 static void pfte_destroy(struct pft_entry * entry)
 {
