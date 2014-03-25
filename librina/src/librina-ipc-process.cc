@@ -599,7 +599,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	try{
 	        //FIXME, compute maximum message size dynamically
 		rinaManager->sendMessageOfMaxSize(&responseMessage,
-		                2*PAGE_SIZE);
+		                5*PAGE_SIZE);
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}

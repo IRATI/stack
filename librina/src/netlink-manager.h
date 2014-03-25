@@ -72,7 +72,7 @@ class NetlinkManager{
 	int family;
 
 	/** Creates the Netlink socket and binds it to the netlinkPid */
-	void initialize() throw(NetlinkException);
+	void initialize(bool ipcManager) throw(NetlinkException);
 
 	/** Send a Netlink message */
 	void _sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)

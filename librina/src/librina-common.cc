@@ -209,7 +209,7 @@ const std::string ApplicationProcessNamingInformation::toString(){
         ss<<"Process name: "<<processName;
         ss<<"; Process instance: "<<processInstance<<std::endl;
         ss<<"Entity name: "<<entityName;
-        ss<<"; Entity instance: "<<entityInstance<<std::endl;
+        ss<<"; Entity instance: "<<entityInstance;
 
         return ss.str();
 }
@@ -451,9 +451,9 @@ const std::string FlowInformation::toString(){
 
         ss<<"Local app name: "<<localAppName.toString()<<std::endl;
         ss<<"Remote app name: "<<remoteAppName.toString()<<std::endl;
-        ss<<"Flow specification: "<<flowSpecification.toString()<<std::endl;
         ss<<"DIF name: "<<difName.getProcessName();
-        ss<<"Port-id: "<<portId;;
+        ss<<"; Port-id: "<<portId<<std::endl;
+        ss<<"Flow specification: "<<flowSpecification.toString();
 
         return ss.str();
 }
@@ -825,8 +825,7 @@ const std::string ApplicationRegistrationInformation::toString(){
         std::stringstream ss;
 
         ss<<"Application name: "<<appName.toString()<<std::endl;
-        ss<<"Registration type: "<<applicationRegistrationType;
-        ss<<"; DIF name: "<<difName.getProcessName();
+        ss<<"DIF name: "<<difName.getProcessName();
         ss<<"; IPC Process id: "<<ipcProcessId;
 
         return ss.str();
