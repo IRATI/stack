@@ -7,8 +7,6 @@ Description: RINA support libraries
 Version: @PACKAGE_VERSION@
 URL: http://irati.eu
 Requires: libnl-3.0 >= @LIBNL_MIN_VERSION@, libnl-genl-3.0 >= @LIBNL_MIN_VERSION@
-#Conflicts: foobar <= 4.5
 Libs: -L${libdir} -lrina
 Libs.private: -lpthread @LIBNL3_LIBS@ @LIBNLGENL3_LIBS@
 Cflags: -I${includedir} @LIBNL3_CFLAGS@ @LIBNLGENL3_CFLAGS@
-
