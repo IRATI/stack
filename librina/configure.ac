@@ -68,12 +68,12 @@ LT_INIT
 
 PKG_PROG_PKG_CONFIG([0.26])
 
-PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.1],, [
-    AC_MSG_ERROR([Your system lacks of libnl-3 support])
+PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= 3.2.14],, [
+    AC_MSG_ERROR([Your system lacks of libnl-3 support (>= 3.2.14)])
 ])
 
-PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= 3.1],, [
-    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support])
+PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= 3.2.14],, [
+    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support (>= 3.2.14)])
 ])
 
 AC_CHECK_LIB([pthread], [pthread_create],,[
