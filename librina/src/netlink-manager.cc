@@ -96,7 +96,12 @@ void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
 	nl_socket_disable_seq_check(socket);
 	nl_socket_disable_auto_ack(socket);
 	if (ipcManager) {
-	        nl_socket_set_buffer_size(socket, 0, 0);
+	        result = nl_socket_set_msg_buf_size(socket, 5*4096);
+	        if (result != 0) {
+	                LOG_CRIT("Could not allocate enough memory to receive msg buffer: %d"
+	                                , result);
+	                throw NetlinkException(NetlinkException::error_connecting_netlink_socket);
+	        }
 	}
 
 	result = genl_connect(socket);
