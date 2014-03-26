@@ -9,7 +9,7 @@ import eu.irati.librina.TimerExpiredEvent;
  */
 public class CancelCommandTimerTask extends TimerTask {
 	
-	public static final int INTERVAL_IN_SECONDS = 5;
+	public static final int INTERVAL_IN_SECONDS = 10;
 	private IPCManagerConsole console = null;
 	long pendingRequestId = -1;
 	
