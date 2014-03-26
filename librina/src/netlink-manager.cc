@@ -72,7 +72,7 @@ NetlinkManager::NetlinkManager() throw (NetlinkException) {
 	this->localPort = getpid();
 	LOG_DBG("Netlink Manager constructor called, using local port = %d",
 			localPort);
-	initialize();
+	initialize(false);
 }
 
 NetlinkManager::NetlinkManager(unsigned int localPort)
@@ -80,7 +80,7 @@ NetlinkManager::NetlinkManager(unsigned int localPort)
 	this->localPort = localPort;
 	LOG_DBG("Netlink Manager constructor called, with netlink pid = %d",
 			localPort);
-	initialize();
+	initialize(true);
 }
 
 NetlinkManager::~NetlinkManager() {
@@ -88,13 +88,23 @@ NetlinkManager::~NetlinkManager() {
 	nl_socket_free(socket);
 }
 
-void NetlinkManager::initialize() throw (NetlinkException) {
+void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
+        int result = 0;
+
 	socket = nl_socket_alloc();
 	nl_socket_set_local_port(socket, localPort);
 	nl_socket_disable_seq_check(socket);
 	nl_socket_disable_auto_ack(socket);
+	if (ipcManager) {
+	        result = nl_socket_set_msg_buf_size(socket, 5*4096);
+	        if (result != 0) {
+	                LOG_CRIT("Could not allocate enough memory to receive msg buffer: %d"
+	                                , result);
+	                throw NetlinkException(NetlinkException::error_connecting_netlink_socket);
+	        }
+	}
 
-	int result = genl_connect(socket);
+	result = genl_connect(socket);
 	if (result == 0) {
 		LOG_INFO("Netlink socket connected to local port %d ",
 				nl_socket_get_local_port(socket));

@@ -134,7 +134,7 @@ void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 	this->responseMessage = responseMessage;
 }
 
-std::string BaseNetlinkMessage::toString(){
+const std::string BaseNetlinkMessage::toString(){
 	std::stringstream ss;
 	ss << "Family: " << family << "; Operation code: "
 			<< operationCode << "; Source port: " << sourcePortId

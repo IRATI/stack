@@ -84,7 +84,7 @@ public class QueryIPCProcessRIBCommand extends ConsoleCommand{
 			result = result + "Object name: " + ribObject.getName() + "\n";
 			result = result + "Object class: " + ribObject.getClazz() + "\n";
 			result = result + "Object instance: " + ribObject.getInstance() + "\n";
-			//TODO add  object value
+			result = result + "Object value: " + ribObject.getDisplayableValue() + "\n";
 			result = result + "\n";
 		}
 		
