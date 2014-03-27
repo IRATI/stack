@@ -116,7 +116,7 @@ public class FlowStateDatabase {
 			for(int i = 0; i < flowStateInternalObjectGroup.getModifiedFSO().size(); i++)
 			{
 				FlowStateInternalObject object = flowStateInternalObjectGroup.getModifiedFSO().get(i);
-				log.debug("Check modified object: " + object.getID() + " to be sent");
+				log.debug("Check modified object: " + object.getID() + " to be sent with age: " + object.getAge() + " and Status: " + object.isState());
 	
 				for(int j = 0; j < flows.length; j++)
 				{
@@ -165,6 +165,7 @@ public class FlowStateDatabase {
 					if (objM.getSequenceNumber() > obj.getSequenceNumber())
 					{
 						log.debug("Update the object: " + obj.getID());
+						obj.setAge(objM.getAge());
 						obj.setState(objM.isState());
 						obj.setSequenceNumber(objM.getSequenceNumber());
 						obj.setModified(true);
