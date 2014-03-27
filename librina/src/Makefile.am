@@ -64,6 +64,7 @@ EXTRA_DIST +=					\
 
 edit = $(SED)							\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
+	-e 's|@LIBNL_MIN_VERSION[@]|$(LIBNL_MIN_VERSION)|g'     \
 	-e 's|@LIBNL3_LIBS[@]|$(LIBNL3_LIBS)|g'			\
 	-e 's|@LIBNLGENL3_LIBS[@]|$(LIBNLGENL3_LIBS)|g'		\
 	-e 's|@LIBNL3_CFLAGS[@]|$(LIBNL3_CFLAGS)|g'		\
