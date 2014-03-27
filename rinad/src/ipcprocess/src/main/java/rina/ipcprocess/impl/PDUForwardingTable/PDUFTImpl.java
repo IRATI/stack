@@ -372,12 +372,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		//log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
+			db.setModified(false);
 			log.debug("FSDB is modified, computing new paths");
 			List<FlowStateObject> fsoList = db.getFlowStateObjectGroup().getFlowStateObjectArray();
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
 			try {
 				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
-				db.setModified(false);
 				ribDaemon.setPDUForwardingTable(entryList);
 				for (PDUForwardingTableEntry e : entryList)
 				{
