@@ -107,7 +107,7 @@ public class Main {
 			}else if (args[i].equals(ARGUMENT_SEPARATOR + TIME)){
 				try{
 					time = Integer.parseInt(args[i+1]);
-					if (time < 10){
+					if (time < 1){
 						showErrorAndExit(TIME);
 					}
 				}catch(Exception ex){

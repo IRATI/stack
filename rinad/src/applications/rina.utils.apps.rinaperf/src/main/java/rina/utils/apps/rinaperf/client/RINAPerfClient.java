@@ -351,8 +351,6 @@ FlowAllocationListener, FlowDeallocationListener {
 					double goodputInMbps = goodput*8/(1024*1024);
 					log.info("RINAperf goodput: "+goodput+" bytes per second ( " + 
 							goodputInMbps + " Mbps)");
-					double sduLoss = (double) (sentSDUs - sdusReceived)*100/sentSDUs;
-					log.info("SDU Loss (%): "+sduLoss+" %");
 				} else {
 					log.error("Problems decoding TestInformation object");
 				}
