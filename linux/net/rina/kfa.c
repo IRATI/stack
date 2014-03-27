@@ -553,8 +553,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
 static bool queue_ready(struct ipcp_flow * flow)
 {
         if (flow->state == PORT_STATE_DEALLOCATED ||
-            flow->state != PORT_STATE_PENDING ||
-            !rfifo_is_empty(flow->sdu_ready))
+            (flow->state != PORT_STATE_PENDING &&
+             !rfifo_is_empty(flow->sdu_ready)))
                 return true;
         return false;
 }
