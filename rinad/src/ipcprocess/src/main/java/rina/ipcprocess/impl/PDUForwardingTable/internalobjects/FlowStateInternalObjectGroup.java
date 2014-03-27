@@ -112,10 +112,10 @@ public class FlowStateInternalObjectGroup{
 		{
 			FlowStateInternalObject object = this.flowStateObjectArray.get(i);
 			object.incrementAge();
-			log.debug("Object age: " +object.getAge());
 			
-			if (object.getAge() >= 10 && !object.isBeingErased)
+			if (object.getAge() >= maximumAge && !object.isBeingErased)
 			{
+				log.debug("Object to erase age: " +object.getAge());
 				Timer killFlowStateObjectTimer = new Timer();
 				killFlowStateObjectTimer.schedule(new KillFlowStateObject(fsRIBGroup, flowStateObjectArray.get(i), db), 
 						WAIT_UNTIL_REMOVE_OBJECT);

@@ -358,7 +358,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void updateAge()
 	{
-		log.debug("updateAge function launched");
+		//log.debug("updateAge function launched");
 		try {
 			db.incrementAge(maximumAge, fsRIBGroup);
 		} catch (RIBDaemonException e) {
