@@ -88,9 +88,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 5000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 3000; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 11000; //3 sec
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 100; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 100; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;
@@ -358,7 +358,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void updateAge()
 	{
-		//log.debug("updateAge function launched");
+		log.debug("updateAge function launched");
 		try {
 			db.incrementAge(maximumAge, fsRIBGroup);
 		} catch (RIBDaemonException e) {

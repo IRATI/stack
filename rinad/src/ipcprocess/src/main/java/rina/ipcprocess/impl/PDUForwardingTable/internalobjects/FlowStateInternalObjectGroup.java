@@ -3,8 +3,10 @@ package rina.ipcprocess.impl.PDUForwardingTable.internalobjects;
 import java.util.ArrayList;
 import java.util.Timer;
 
-//import org.apache.commons.logging.Log;
-//import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
@@ -14,7 +16,7 @@ import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateInternalObjectGroup{
-	//private static final Log log = LogFactory.getLog(FlowStateInternalObjectGroup.class);
+	private static final Log log = LogFactory.getLog(FlowStateInternalObjectGroup.class);
 	
 	protected static final int WAIT_UNTIL_REMOVE_OBJECT = 23000;
 	
@@ -110,8 +112,9 @@ public class FlowStateInternalObjectGroup{
 		{
 			FlowStateInternalObject object = this.flowStateObjectArray.get(i);
 			object.incrementAge();
+			log.debug("Object age: " +object.getAge());
 			
-			if (object.getAge() >= maximumAge && !object.isBeingErased)
+			if (object.getAge() >= 10 && !object.isBeingErased)
 			{
 				Timer killFlowStateObjectTimer = new Timer();
 				killFlowStateObjectTimer.schedule(new KillFlowStateObject(fsRIBGroup, flowStateObjectArray.get(i), db), 
