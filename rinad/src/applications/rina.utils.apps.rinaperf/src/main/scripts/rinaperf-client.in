@@ -12,6 +12,7 @@ ME="echo-client"
 ROLE="client"
 SDUSIZE="100"
 TIME="10"
+RATE="1000"
 
 function dump_help() {
     echo "$ME [OPTIONS...]"
@@ -20,6 +21,7 @@ function dump_help() {
     echo "  -r, --role [STRING]         set role (default $ROLE)"
     echo "  -s, --sdu-size [NUMBER]     set SDU size (default $SDUSIZE)"
     echo "  -t, --time [NUMBER]         set test time in ms (default $TIME)"
+    echo "  -a, --rate [NUMBER]         set test maximum rate in kbps (default $RATE)"
     echo "  -h, --help                  print this help, then exit"
 }
 
@@ -67,6 +69,17 @@ while test $# -gt 0; do
             fi
             shift
             ;;
+            
+        --rate|-a)
+            shift
+            if test $# -gt 0; then
+                export RATE=$1
+            else
+                dump_hint "No max rate specified"
+                exit 1
+            fi
+            shift
+            ;; 
 
         *)
             dump_hint "Unknown option"
@@ -75,4 +88,4 @@ while test $# -gt 0; do
     esac
 done
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/rinaperf/rina.utils.apps.rinaperf-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -time $TIME
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/rinaperf/rina.utils.apps.rinaperf-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -time $TIME -rate $RATE

@@ -14,11 +14,11 @@ public class RINAPerf{
 	
 	public RINAPerf(boolean server, ApplicationProcessNamingInformation serverNamingInfo, 
 			ApplicationProcessNamingInformation clientNamingInfo, int sduSize, 
-			int time){
+			int time, int rate){
 		if (server){
 			RINAPerfServer = new RINAPerfServer(serverNamingInfo);
 		}else{
-			RINAPerfClient = new RINAPerfClient(sduSize, serverNamingInfo, clientNamingInfo, time);
+			RINAPerfClient = new RINAPerfClient(sduSize, serverNamingInfo, clientNamingInfo, time, rate);
 		}
 	}
 	
