@@ -1,0 +1,8 @@
+package rina.messages;
+option java_package="rina.utils.apps.echo.protobuf";
+
+message Echo_test_t {
+        optional uint32 SDUsize = 1;    // Size of one SDU
+        optional uint32 SDUcount = 2;   // Number of SDUs per direction per flow
+        optional uint32 timeout = 3;   // test timeout in ms
+}
