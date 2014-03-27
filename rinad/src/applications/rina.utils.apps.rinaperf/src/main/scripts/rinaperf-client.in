@@ -75,4 +75,4 @@ while test $# -gt 0; do
     esac
 done
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/echo/rina.utils.apps.echo-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -time $TIME
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/rinaperf/rina.utils.apps.rinaperf-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -time $TIME
