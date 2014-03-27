@@ -75,6 +75,7 @@ FlowAllocationListener, FlowDeallocationListener {
 	private int time = 0;
 	
 	private boolean stop = false;
+	private Object stopLock = new Object();
 	
 	public RINAPerfClient(int sduSize, 
 			ApplicationProcessNamingInformation rinaperfApNamingInfo, 
@@ -111,12 +112,19 @@ FlowAllocationListener, FlowDeallocationListener {
 		executorService.execute(ipcEventConsumer);
 	}
 	
-	public synchronized boolean isStop(){
-		return stop;
+	public boolean isStop(){
+		boolean result = false;
+		synchronized(stopLock) {
+			result = stop;
+		}
+		return result;
 	}
 	
-	public synchronized void stop(){
-		this.stop = true;
+	public void stop(){
+		synchronized(stopLock) {
+			stop = true;
+			log.info("Stopping test "+isStop());
+		}
 	}
 	
 	public void execute(){
@@ -210,7 +218,7 @@ FlowAllocationListener, FlowDeallocationListener {
 					cdapMessage.setInvokeID(1);
 					buffer = this.cdapSessionManager.encodeCDAPMessage(cdapMessage);
 					flow.writeSDU(buffer, buffer.length);
-					log.info("Requested echo server to start a test with the following parameters: \n" 
+					log.info("Requested RINAperf server to start a test with the following parameters: \n" 
 							+ testInformation.toString());
 					
 					CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
@@ -230,7 +238,7 @@ FlowAllocationListener, FlowDeallocationListener {
 						throw new Exception("Echo server rejected the test");
 					}
 					
-					log.info("Echo server accepted the test, starting...");
+					log.info("RINAperf server accepted the test, starting...");
 				} catch(Exception ex) {
 					log.error("Error initiating test: "+ex.getMessage() 
 							+ ". Deallocating flow and terminating");
@@ -255,6 +263,7 @@ FlowAllocationListener, FlowDeallocationListener {
 						sentSDUs ++;
 					}catch(Exception ex){
 						log.error("Error writing SDU to port-id "+flow.getPortId());
+						break;
 					}
 				}
 				log.info("Test completed, sent " + sentSDUs + " SDUs in "+time+" seconds");
@@ -279,11 +288,13 @@ FlowAllocationListener, FlowDeallocationListener {
 						if (testInfo != null) {
 							int sdusReceived = testInfo.getSdusSent();
 							log.info("Server received "+sdusReceived + " SDUs of "+ 
-									testInformation.getSduSize() + " in "+testInformation.getTime()+" seconds");
-							double goodput = (double) sdusReceived*testInformation.getSduSize()*1000/testInformation.getTime();
+									testInformation.getSduSize() + " bytes in "+testInformation.getTime()+" seconds");
+							double goodput = (double) sdusReceived*testInformation.getSduSize()/testInformation.getTime();
 							double goodputInMbps = goodput*8/(1024*1024);
 							log.info("RINAperf goodput: "+goodput+" bytes per second ( " + 
 										goodputInMbps + " Mbps)");
+							double sduLoss = (double) (sentSDUs - sdusReceived)*100/sentSDUs;
+							log.info("SDU Loss (%): "+sduLoss+" %");
 						} else {
 							log.error("Problems decoding TestInformation object");
 						}
@@ -302,6 +313,7 @@ FlowAllocationListener, FlowDeallocationListener {
 					}
 				}
 				
+				System.exit(0);
 			} else {
 				log.error("Problems allocating flow to control AE: " + rinaperfApNamingInfo.toString());
 				
