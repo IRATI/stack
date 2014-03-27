@@ -23,6 +23,7 @@
   <modules>
 	<module>rina.utils.apps.echo</module>
 	<module>rina.utils.apps.rinaband</module>
+        <module>rina.utils.apps.rinaperf</module>
   </modules>
 
 <dependencies>
