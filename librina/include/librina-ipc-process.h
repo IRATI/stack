@@ -762,7 +762,7 @@ public:
         void setSourceCepId(int sourceCepId);
         const ConnectionPoliciesParameters& getConnPoliciesParams() const;
         void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
-
+        const std::string toString();
 };
 
 /**
@@ -788,6 +788,7 @@ public:
         void addPortId(unsigned int portId);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
+        const std::string toString();
 };
 
 /**

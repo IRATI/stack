@@ -25,6 +25,7 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		int qosId = 1;
 		Connection connection = new Connection();
 		connection.setQosId(qosId);
+		connection.setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
 		connections.add(connection);
 		flow.setConnections(connections);
 		

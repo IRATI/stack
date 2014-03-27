@@ -28,9 +28,9 @@ public class FlowStateRIBObjectGroup extends BaseRIBObject{
 	}
 	@Override
 	public Object getObjectValue(){
-		String[] result = new String[this.getChildren().size()];
+		Object[] result = new Object[this.getChildren().size()];
 		for(int i=0; i<result.length; i++){
-			result[i] = (String) this.getChildren().get(i).getObjectValue();
+			result[i] = this.getChildren().get(i).getObjectValue();
 		}
 		return result;
 	}

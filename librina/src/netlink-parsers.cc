@@ -2096,6 +2096,11 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 	}
 	nla_nest_end(netlinkMessage, difName);
 
+	if (object.getRegIpcProcessId() != 0) {
+	        nla_put_u16(netlinkMessage, IRAR_ATTR_REG_IPC_ID,
+	                        object.getRegIpcProcessId());
+	}
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -2671,6 +2676,8 @@ int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
                         object.getName().c_str());
         NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
                         object.getInstance());
+        NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_DISPLAY_VALUE,
+                                object.getDisplayableValue().c_str());
 
 	return 0;
 
@@ -3857,6 +3864,9 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IRAR_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[IRAR_ATTR_DIF_NAME].maxlen = 0;
+	attr_policy[IRAR_ATTR_REG_IPC_ID].type = NLA_U16;
+	attr_policy[IRAR_ATTR_REG_IPC_ID].minlen = 2;
+	attr_policy[IRAR_ATTR_REG_IPC_ID].maxlen = 2;
 	struct nlattr *attrs[IRAR_ATTR_MAX + 1];
 
 	/*
@@ -3868,9 +3878,8 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			IRAR_ATTR_MAX, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmRegisterApplicationRequestMessage information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing IpcmRegisterApplicationRequestMessage information from Netlink message: %d",
+		         err);
 		return 0;
 	}
 
@@ -3902,6 +3911,11 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 			result->setDifName(*difName);
 			delete difName;
 		}
+	}
+
+	if (attrs[IRAR_ATTR_REG_IPC_ID]) {
+	      result->setRegIpcProcessId(
+	                      nla_get_u16(attrs[IRAR_ATTR_REG_IPC_ID]));
 	}
 
 	return result;
@@ -5015,6 +5029,9 @@ RIBObject * parseRIBObject(nlattr *nested){
 	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U64;
 	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].minlen = 8;
 	attr_policy[RIBO_ATTR_OBJECT_INSTANCE].maxlen = 8;
+	attr_policy[RIBO_ATTR_OBJECT_DISPLAY_VALUE].type = NLA_STRING;
+	attr_policy[RIBO_ATTR_OBJECT_DISPLAY_VALUE].minlen = 0;
+	attr_policy[RIBO_ATTR_OBJECT_DISPLAY_VALUE].maxlen = 65535;
 	struct nlattr *attrs[RIBO_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, RIBO_ATTR_MAX, nested, attr_policy);
@@ -5040,6 +5057,11 @@ RIBObject * parseRIBObject(nlattr *nested){
 	if (attrs[RIBO_ATTR_OBJECT_INSTANCE]){
 		result->setInstance(
 				nla_get_u64(attrs[RIBO_ATTR_OBJECT_INSTANCE]));
+	}
+
+	if (attrs[RIBO_ATTR_OBJECT_DISPLAY_VALUE]){
+	        result->setDisplayableValue(
+	                        nla_get_string(attrs[RIBO_ATTR_OBJECT_DISPLAY_VALUE]));
 	}
 
 	return result;

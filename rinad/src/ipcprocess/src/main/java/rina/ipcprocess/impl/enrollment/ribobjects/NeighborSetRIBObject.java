@@ -126,8 +126,11 @@ public class NeighborSetRIBObject extends BaseRIBObject{
 		//Only create neighbours with whom I have an N-1 DIF in common
 		Iterator<ApplicationProcessNamingInformation> iterator = neighbor.getSupportingDifs().iterator();
 		boolean supportingDifInCommon = false;
+		ApplicationProcessNamingInformation supportingDifName = null;
 		while (iterator.hasNext()){
-			if (getIPCProcess().getResourceAllocator().getNMinus1FlowManager().isSupportingDIF(iterator.next())){
+			supportingDifName = iterator.next();
+			if (getIPCProcess().getResourceAllocator().getNMinus1FlowManager().isSupportingDIF(supportingDifName)){
+				neighbor.setSupportingDifName(supportingDifName);
 				supportingDifInCommon = true;
 				break;
 			}

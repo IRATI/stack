@@ -13,14 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 
 public class DijkstraAlgorithm implements RoutingAlgorithmInt{
-	private static final Log log = LogFactory.getLog(DijkstraAlgorithm.class);
 	public class PredecessorInfo
 	{
 		public VertexInt predecessor;
@@ -28,8 +24,6 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 		
 		public PredecessorInfo(VertexInt nPredecessor, Edge edge)
 		{
-			log.debug("Edge with address: " + edge.getV1().getAddress() + " Port: " + edge.getPortV1() + " neighbourAddress: " 
-		+ edge.getV2().getAddress() + " NeighbourPort: " + edge.getPortV2());
 			predecessor = nPredecessor;
 			if (edge.getV1().equals(nPredecessor))
 			{
@@ -39,7 +33,6 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 			{
 				portId = edge.getPortV2();
 			}
-			log.debug("Port id chosen: " + portId);
 		}
 		public PredecessorInfo (VertexInt nPredecessor)
 		{

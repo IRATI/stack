@@ -87,7 +87,7 @@ struct rinaHeader{
 /**
  * Base class for Netlink messages to be sent or received
  */
-class BaseNetlinkMessage: public StringConvertable {
+class BaseNetlinkMessage {
 	/**
 	 * The identity of the Generic RINA Netlink family - dynamically allocated
 	 * by the Netlink controller
@@ -153,7 +153,7 @@ public:
 	void setRequestMessage(bool requestMessage);
 	bool isResponseMessage() const;
 	void setResponseMessage(bool responseMessage);
-	std::string toString();
+	const std::string toString();
 };
 
 class BaseNetlinkResponseMessage: public BaseNetlinkMessage {
@@ -558,6 +558,9 @@ class IpcmRegisterApplicationRequestMessage:
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
+	/** The id of the IPC Process being registered (0 if it is an app) */
+	unsigned short regIpcProcessId;
+
 	/** The DIF name where the application wants to register */
 	ApplicationProcessNamingInformation difName;
 
@@ -568,6 +571,8 @@ public:
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
+	unsigned short getRegIpcProcessId() const;
+	void setRegIpcProcessId(unsigned short regIpcProcessId);
 	IPCEvent* toIPCEvent();
 };
 

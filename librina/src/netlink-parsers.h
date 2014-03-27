@@ -390,6 +390,7 @@ AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
 enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
 	IRAR_ATTR_DIF_NAME,
+	IRAR_ATTR_REG_IPC_ID,
 	__IRAR_ATTR_MAX,
 };
 
@@ -746,6 +747,7 @@ enum RIBObjectAttributes {
 	RIBO_ATTR_OBJECT_CLASS = 1,
 	RIBO_ATTR_OBJECT_NAME,
 	RIBO_ATTR_OBJECT_INSTANCE,
+	RIBO_ATTR_OBJECT_DISPLAY_VALUE,
 	__RIBO_ATTR_MAX,
 };
 

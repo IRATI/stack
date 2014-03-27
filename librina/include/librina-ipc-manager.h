@@ -535,11 +535,14 @@ public:
 	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be registered
+	 * @param regIpcProcessId The id of the registered IPC process (0 if it
+	 * is an application)
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 * @returns the handle to the response message
 	 */
 	unsigned int registerApplication(
-			const ApplicationProcessNamingInformation& applicationName)
+			const ApplicationProcessNamingInformation& applicationName,
+			unsigned short regIpcProcessId)
 	throw (IpcmRegisterApplicationException);
 
 	/**

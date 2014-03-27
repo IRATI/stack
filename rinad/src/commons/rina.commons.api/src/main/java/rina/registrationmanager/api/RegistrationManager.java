@@ -17,6 +17,14 @@ public interface RegistrationManager extends IPCProcessComponent {
 	public long getAddress(ApplicationProcessNamingInformation apNamingInfo);
 	
 	/**
+	 * Returns the IPC Process id (0 if not an IPC Process) of the registered 
+	 * application, or -1 if the app is not registered
+	 * @param apNamingInfo
+	 * @return
+	 */
+	public int getRegIPCProcessId(ApplicationProcessNamingInformation apNamingInfo);
+	
+	/**
 	 * Add an entry to the directory forwarding table
 	 * @param entry
 	 */

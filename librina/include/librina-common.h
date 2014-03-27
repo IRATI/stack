@@ -42,19 +42,9 @@ namespace rina {
 std::string getVersion();
 
 /**
- * A class that can be printed as a String
- */
-class StringConvertable {
-public:
-	virtual std::string toString() = 0;
-	virtual ~StringConvertable() {
-	}
-};
-
-/**
  * Contains application naming information
  */
-class ApplicationProcessNamingInformation: public StringConvertable {
+class ApplicationProcessNamingInformation {
 	/**
 	 * The process_name identifies an application process within the
 	 * application process namespace. This value is required, it
@@ -106,7 +96,7 @@ public:
 	void setProcessName(const std::string& processName);
 	std::string getProcessNamePlusInstance();
 	std::string getEncodedString();
-	std::string toString();
+	const std::string toString();
 };
 
 /**
@@ -185,6 +175,7 @@ public:
 	void setPeakSduBandwidthDuration(unsigned int peakSduBandwidthDuration);
 	double getUndetectedBitErrorRate() const;
 	void setUndetectedBitErrorRate(double undetectedBitErrorRate);
+	const std::string toString();
 };
 
 /**
@@ -222,6 +213,7 @@ public:
 	const ApplicationProcessNamingInformation& getRemoteAppName() const;
 	void setRemoteAppName(
 			const ApplicationProcessNamingInformation& remoteAppName);
+	const std::string toString();
 };
 
 /**
@@ -303,6 +295,7 @@ public:
 	void setPeakSduBandwidthDuration(unsigned int peakSduBandwidthDuration);
 	double getUndetectedBitErrorRate() const;
 	void setUndetectedBitErrorRate(double undetectedBitErrorRate);
+	const std::string toString();
 };
 
 /**
@@ -531,6 +524,12 @@ class ApplicationRegistrationInformation {
         /** The name of the application being registered */
         ApplicationProcessNamingInformation appName;
 
+        /**
+         * The id of the IPC process being registered (0 if it is
+         * an application
+         */
+        unsigned short ipcProcessId;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -547,6 +546,9 @@ public:
 	ApplicationRegistrationType getRegistrationType() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
+        unsigned short getIpcProcessId() const;
+        void setIpcProcessId(unsigned short ipcProcessId);
+        const std::string toString();
 };
 
 /**
@@ -861,6 +863,7 @@ public:
         unsigned short getSequenceNumberLength() const;
         void setSequenceNumberLength(unsigned short sequenceNumberLength);
         bool isInitialized();
+        const std::string toString();
 };
 
 /**
@@ -993,6 +996,7 @@ public:
         unsigned int getNumberOfEnrollmentAttempts() const;
         void setNumberOfEnrollmentAttempts(
                         unsigned int numberOfEnrollmentAttempts);
+        const std::string toString();
 };
 
 /**
@@ -1019,6 +1023,12 @@ class RIBObject{
 	/** The value of the object */
 	RIBObjectValue value;
 
+	/**
+	 * The value of the object, encoded in an string for
+	 * displayable purposes
+	 */
+	std::string displayableValue;
+
 	/** Geneartes a unique object instance */
 	unsigned long generateObjectInstance();
 
@@ -1036,6 +1046,8 @@ public:
 	void setName(const std::string& name);
 	RIBObjectValue getValue() const;
 	void setValue(RIBObjectValue value);
+        const std::string& getDisplayableValue() const;
+        void setDisplayableValue(const std::string& displayableValue);
 };
 
 /**
