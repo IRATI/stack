@@ -160,7 +160,9 @@ public class TestController implements Runnable {
 		if (!stop) {
 			stop = true;
 			log.info("Test terminated, received "+sdusReceived+" SDUs");
-			testInformation.setSdusSent(getReceivedSDUs());
+			if (testInformation != null) {
+				testInformation.setSdusSent(getReceivedSDUs());
+			}
 
 			try{
 				ObjectValue objectValue = new ObjectValue();

@@ -1,5 +1,6 @@
 package rina.utils.apps.rinaperf.client;
 
+import java.util.Calendar;
 import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -72,15 +73,13 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	private Timer timer = null;
 	
-	private int time = 0;
-	
 	private boolean stop = false;
 	private Object stopLock = new Object();
 	
 	public RINAPerfClient(int sduSize, 
 			ApplicationProcessNamingInformation rinaperfApNamingInfo, 
 			ApplicationProcessNamingInformation clientApNamingInfo, 
-			int time){
+			int time, int rate){
 		try {
 			rina.initialize(LogHelper.getLibrinaLogLevel(), 
 					LogHelper.getLibrinaLogFile());
@@ -98,8 +97,9 @@ FlowAllocationListener, FlowDeallocationListener {
 		
 		this.rinaperfApNamingInfo = rinaperfApNamingInfo;
 		this.clientApNamingInfo = clientApNamingInfo;
-		this.time = time;
+		
 		testInformation.setTime(time);
+		testInformation.setRate(rate);
 		
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
@@ -123,7 +123,6 @@ FlowAllocationListener, FlowDeallocationListener {
 	public void stop(){
 		synchronized(stopLock) {
 			stop = true;
-			log.info("Stopping test "+isStop());
 		}
 	}
 	
@@ -198,136 +197,179 @@ FlowAllocationListener, FlowDeallocationListener {
 
 		if (event.getSequenceNumber() == handle){
 			if (event.getPortId() > 0){
-				try{
-					flow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
-							event.getPortId(), event.getDIFName());
-				}catch(Exception ex){
-					log.error(ex.getMessage());
-					System.exit(-1);
-				}
-				
-				ipcEventConsumer.addFlowDeallocationListener(this, event.getPortId());
-				
-				byte[] buffer = null;
-				int bytesRead = 0;
-				try{
-					ObjectValue objectValue = new ObjectValue();
-					objectValue.setByteval(EchoTestMessageEncoder.encode(this.testInformation));
-					CDAPMessage cdapMessage = CDAPMessage.getStartObjectRequestMessage(
-							null, null, TEST_OBJECT_CLASS, objectValue, 0, TEST_OBJECT_NAME, 0);
-					cdapMessage.setInvokeID(1);
-					buffer = this.cdapSessionManager.encodeCDAPMessage(cdapMessage);
-					flow.writeSDU(buffer, buffer.length);
-					log.info("Requested RINAperf server to start a test with the following parameters: \n" 
-							+ testInformation.toString());
-					
-					CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
-					timer.schedule(timerTask, time*1000);
-					
-					buffer = new byte[MAX_SDU_SIZE];
-					bytesRead = flow.readSDU(buffer, buffer.length);
-					timerTask.cancel();
-					byte[] sdu = new byte[bytesRead];
-					for(int i=0; i<sdu.length; i++) {
-						sdu[i] = buffer[i];
-					}
-					cdapMessage = cdapSessionManager.decodeCDAPMessage(sdu);
-					if (cdapMessage.getOpCode() != Opcode.M_START_R) {
-						throw new Exception("Received wrong CDAP message code: "+cdapMessage.getOpCode());
-					} else if (cdapMessage.getResult() != 0) {
-						throw new Exception("Echo server rejected the test");
-					}
-					
-					log.info("RINAperf server accepted the test, starting...");
-				} catch(Exception ex) {
-					log.error("Error initiating test: "+ex.getMessage() 
-							+ ". Deallocating flow and terminating");
-					try {
-						rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
-					} catch(Exception e) {
-						log.error("Problems requesting flow deallocation " +e.getMessage());
-						System.exit(-1);
-					}
-					return;
-				}
-
-				StopTestTimerTask stopTask = new StopTestTimerTask(this);
-				timer.schedule(stopTask, time*1000);
-				
-				//3 Send SDUs to server
-				buffer = new byte[testInformation.getSduSize()];
-				int sentSDUs = 0;
-				while(!isStop()) {
-					try{
-						flow.writeSDU(buffer, buffer.length);
-						sentSDUs ++;
-					}catch(Exception ex){
-						log.error("Error writing SDU to port-id "+flow.getPortId());
-						break;
-					}
-				}
-				log.info("Test completed, sent " + sentSDUs + " SDUs in "+time+" seconds");
-				log.info("Waiting for stats from the server");
-				
-				CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
-				timer.schedule(timerTask, 5000);
-				
-				try{
-					buffer = new byte[MAX_SDU_SIZE];
-					bytesRead = flow.readSDU(buffer, buffer.length);
-					timerTask.cancel();
-					byte[] sdu = new byte[bytesRead];
-					for(int i=0; i<sdu.length; i++) {
-						sdu[i] = buffer[i];
-					}
-		
-					CDAPMessage cdapMessage = cdapSessionManager.decodeCDAPMessage(sdu);
-					if (cdapMessage.getObjValue() != null && 
-							cdapMessage.getObjValue().getByteval() != null) {
-						TestInformation testInfo = EchoTestMessageEncoder.decode(cdapMessage.getObjValue().getByteval());
-						if (testInfo != null) {
-							int sdusReceived = testInfo.getSdusSent();
-							log.info("Server received "+sdusReceived + " SDUs of "+ 
-									testInformation.getSduSize() + " bytes in "+testInformation.getTime()+" seconds");
-							double goodput = (double) sdusReceived*testInformation.getSduSize()/testInformation.getTime();
-							double goodputInMbps = goodput*8/(1024*1024);
-							log.info("RINAperf goodput: "+goodput+" bytes per second ( " + 
-										goodputInMbps + " Mbps)");
-							double sduLoss = (double) (sentSDUs - sdusReceived)*100/sentSDUs;
-							log.info("SDU Loss (%): "+sduLoss+" %");
-						} else {
-							log.error("Problems decoding TestInformation object");
-						}
-					} else {
-						log.error("Received bogus CDAP message from server");
-					}
-				} catch (Exception ex) {
-					log.error(ex.getMessage());
-				}
-				
-				if (flow.isAllocated()) {
-					try{
-						rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
-					} catch (Exception ex) {
-						log.error("Problems deallocating flow: "+ex.getMessage());
-					}
-				}
-				
+				flow = commitPendingFlow(event);
+				negotiateTestWithServer(flow);
+				int sentSDUs = sendSDUs(flow);
+				waitForStatsAndTerminate(flow, sentSDUs);
 				System.exit(0);
 			} else {
-				log.error("Problems allocating flow to control AE: " + rinaperfApNamingInfo.toString());
-				
-				try{
-					rina.getIpcManager().withdrawPendingFlow(event.getSequenceNumber());
-				} catch (Exception ex) {
-					log.error(ex.getMessage());
-				}
-				
+				withdrawPendingFlow(event);
 				System.exit(-1);
 			}
 		}
 	}
 	
+	private Flow commitPendingFlow(AllocateFlowRequestResultEvent event) {
+		Flow allocatedFlow = null;
+		
+		try{
+			allocatedFlow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
+					event.getPortId(), event.getDIFName());
+		}catch(Exception ex){
+			log.error(ex.getMessage());
+			System.exit(-1);
+		}
+		
+		ipcEventConsumer.addFlowDeallocationListener(this, event.getPortId());
+		
+		return allocatedFlow;
+	}
+	
+	private void withdrawPendingFlow(AllocateFlowRequestResultEvent event) {
+		log.error("Problems allocating flow to control AE: " + rinaperfApNamingInfo.toString());
+		
+		try{
+			rina.getIpcManager().withdrawPendingFlow(event.getSequenceNumber());
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+		}
+	}
+	
+	private void negotiateTestWithServer(Flow flow) {
+		byte[] buffer = null;
+		int bytesRead = 0;
+		try{
+			ObjectValue objectValue = new ObjectValue();
+			objectValue.setByteval(EchoTestMessageEncoder.encode(testInformation));
+			CDAPMessage cdapMessage = CDAPMessage.getStartObjectRequestMessage(
+					null, null, TEST_OBJECT_CLASS, objectValue, 0, TEST_OBJECT_NAME, 0);
+			cdapMessage.setInvokeID(1);
+			buffer = cdapSessionManager.encodeCDAPMessage(cdapMessage);
+			flow.writeSDU(buffer, buffer.length);
+			log.info("Requested RINAperf server to start a test with the following parameters: \n" 
+					+ testInformation.toString());
+			
+			CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
+			timer.schedule(timerTask, 5000);
+			
+			buffer = new byte[MAX_SDU_SIZE];
+			bytesRead = flow.readSDU(buffer, buffer.length);
+			timerTask.cancel();
+			byte[] sdu = new byte[bytesRead];
+			for(int i=0; i<sdu.length; i++) {
+				sdu[i] = buffer[i];
+			}
+			cdapMessage = cdapSessionManager.decodeCDAPMessage(sdu);
+			if (cdapMessage.getOpCode() != Opcode.M_START_R) {
+				throw new Exception("Received wrong CDAP message code: "+cdapMessage.getOpCode());
+			} else if (cdapMessage.getResult() != 0) {
+				throw new Exception("Echo server rejected the test");
+			}
+			
+			log.info("RINAperf server accepted the test, starting...");
+		} catch(Exception ex) {
+			log.error("Error initiating test: "+ex.getMessage() 
+					+ ". Deallocating flow and terminating");
+			try {
+				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
+			} catch(Exception e) {
+				log.error("Problems requesting flow deallocation " +e.getMessage());
+				System.exit(-1);
+			}
+			
+			System.exit(-1);
+		}
+	}
+	
+	private int sendSDUs(Flow flow) {
+		StopTestTimerTask stopTask = new StopTestTimerTask(this);
+		timer.schedule(stopTask, testInformation.getTime()*1000);
+		
+		//Calculate rate
+		/* B/ms = packet size in bytes / time unit in millis
+           send it every x ms
+
+           Kbps --> KB/s = /8 
+           LB/s --> B/s = *1024
+           B/s --> B/ms = /1000
+
+           time to send packet at max rate = packet size / B/ms
+
+           Get current time, check if we are allowed to send it
+           We can send after startTime + numOfPacketsSend*timeToSend
+		 */
+		double byteMillisRate = testInformation.getRate() * 1024 / 8000;
+        double timeToSend = testInformation.getSduSize() / byteMillisRate;
+        long firstSDUSentTime = 0;
+
+		//3 Send SDUs to server
+		byte[] buffer = new byte[testInformation.getSduSize()];
+		int sentSDUs = 0;
+		firstSDUSentTime = Calendar.getInstance().getTimeInMillis();
+		while(!isStop()) {
+			try{
+				flow.writeSDU(buffer, buffer.length);
+				sentSDUs ++;
+				while (Calendar.getInstance().getTimeInMillis() < 
+						firstSDUSentTime + sentSDUs * timeToSend) {
+                 }
+			}catch(Exception ex){
+				log.error("Error writing SDU to port-id "+flow.getPortId());
+				break;
+			}
+		}
+		
+		log.info("Test completed, sent " + sentSDUs + " SDUs in "+ 
+				testInformation.getTime()+" seconds");
+		log.info("Waiting for stats from the server");
+		
+		return sentSDUs;
+	}
+	
+	private void waitForStatsAndTerminate(Flow flow, int sentSDUs) {
+		CancelTestTimerTask timerTask = new CancelTestTimerTask(this);
+		timer.schedule(timerTask, 5000);
+
+		try{
+			byte[] buffer = new byte[MAX_SDU_SIZE];
+			int bytesRead = flow.readSDU(buffer, buffer.length);
+			timerTask.cancel();
+			byte[] sdu = new byte[bytesRead];
+			for(int i=0; i<sdu.length; i++) {
+				sdu[i] = buffer[i];
+			}
+
+			CDAPMessage cdapMessage = cdapSessionManager.decodeCDAPMessage(sdu);
+			if (cdapMessage.getObjValue() != null && 
+					cdapMessage.getObjValue().getByteval() != null) {
+				TestInformation testInfo = EchoTestMessageEncoder.decode(cdapMessage.getObjValue().getByteval());
+				if (testInfo != null) {
+					int sdusReceived = testInfo.getSdusSent();
+					log.info("Server received "+sdusReceived + " SDUs of "+ 
+							testInformation.getSduSize() + " bytes in "+testInformation.getTime()+" seconds");
+					double goodput = (double) sdusReceived*testInformation.getSduSize()/testInformation.getTime();
+					double goodputInMbps = goodput*8/(1024*1024);
+					log.info("RINAperf goodput: "+goodput+" bytes per second ( " + 
+							goodputInMbps + " Mbps)");
+				} else {
+					log.error("Problems decoding TestInformation object");
+				}
+			} else {
+				log.error("Received bogus CDAP message from server");
+			}
+		} catch (Exception ex) {
+			log.error(ex.getMessage());
+		}
+		
+		if (flow.isAllocated()) {
+			try{
+				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
+			} catch (Exception ex) {
+				log.error("Problems deallocating flow: "+ex.getMessage());
+			}
+		}
+	}
+
 	@Override
 	public void dispatchFlowDeallocatedEvent(FlowDeallocatedEvent event) {
 	}
