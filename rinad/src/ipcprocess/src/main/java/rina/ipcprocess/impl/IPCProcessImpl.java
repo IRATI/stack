@@ -192,6 +192,7 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator.setIPCProcess(this);
 		registrationManager.setIPCProcess(this);
 		flowAllocator.setIPCProcess(this);
+		log.debug("hola");
 		pduForwardingTable.setIPCProcess(this);
 		
 		populateRIB();

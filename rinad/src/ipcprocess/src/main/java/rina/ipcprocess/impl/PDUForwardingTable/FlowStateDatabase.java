@@ -29,11 +29,6 @@ public class FlowStateDatabase {
 	 */
 	protected boolean isModified = false;
 	
-	/**
-	 * Address of this ipcprocess
-	 */
-	long address;
-	
 	/*		Accessors		*/
 	public boolean isModified()
 	{
@@ -46,10 +41,7 @@ public class FlowStateDatabase {
 	public FlowStateInternalObjectGroup getFlowStateInternalObjectGroup() {
 		return flowStateInternalObjectGroup;
 	}
-	public void setAddress(long address)
-	{
-		this.address = address;
-	}
+
 	/*		Constructors		*/
 	public FlowStateDatabase()
 	{
@@ -149,7 +141,7 @@ public class FlowStateDatabase {
 		this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup, this);
 	}
 	
-	public void updateObjects(FlowStateObjectGroup newObjectGroup, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup)
+	public void updateObjects(FlowStateObjectGroup newObjectGroup, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup, long address)
 	{
 		log.debug("Update Objects from DB launched");
 		
@@ -171,7 +163,7 @@ public class FlowStateDatabase {
 				{
 					log.debug("Found the object in the DB. Obj: " + newObj.getID());
 					continueLoop = false;
-					if (newObj.getAddress() == this.address)
+					if (newObj.getAddress() == address)
 					{
 						log.debug("Object is self generated, updating sequence number of " + oldObj.getID());
 						oldObj.setSequenceNumber(newObj.getSequenceNumber() + 1);
@@ -195,7 +187,7 @@ public class FlowStateDatabase {
 			}
 			if (continueLoop)
 			{
-				if (newObj.getAddress() == this.address)
+				if (newObj.getAddress() == address)
 				{
 					log.debug("Object is self origin, discart object " + newObj.getID());
 				}

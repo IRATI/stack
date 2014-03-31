@@ -167,7 +167,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
 		this.ipcProcess = ipcProcess;
-		db.setAddress(ipcProcess.getAddress());
 		//ipcManager = rina.getExtendedIPCManager();
 		ribDaemon = ipcProcess.getRIBDaemon();
 		encoder = ipcProcess.getEncoder();
@@ -399,7 +398,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		{
 			try {
 				FlowStateObjectGroup fsog =  (FlowStateObjectGroup)encoder.decode(objectsToModify.getObjValue().getByteval(), FlowStateObjectGroup.class);			
-				db.updateObjects(fsog, srcPort, fsRIBGroup);
+				db.updateObjects(fsog, srcPort, fsRIBGroup, ipcProcess.getAddress());
 				int position = sendCDAPTimers.indexOf(new EnrollmentTimer(srcPort));
 				if (position != -1)
 				{
