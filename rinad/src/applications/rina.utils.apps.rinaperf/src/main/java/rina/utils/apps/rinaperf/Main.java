@@ -48,6 +48,7 @@ public class Main {
 	public static final String CAPINSTANCE = "cinstance";
 	public static final String CAPNAME = "capname";
 	public static final String TIME = "time";
+	public static final String RATE = "rate";
 	
 	public static final int DEFAULT_SDU_SIZE_IN_BYTES = 1500;
 	public static final String DEFAULT_ROLE = SERVER;
@@ -55,12 +56,14 @@ public class Main {
 	public static final String DEFAULT_CLIENT_AP_NAME = "rina.utils.apps.rinaperf.client";
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	public static final int DEFAULT_TIME_IN_SECONDS = 10;
+	public static final int DEFAULT_RATE_IN_KBPS = 1000;
 	
 	public static final String USAGE = "java -jar rina.utils.apps.rinaperf [-role] (client|server)" +
 			"[-sapname] serverApName [-sinstance] serverApInstance [-capname] clientApName " + 
-			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-time] testDurationInSeconds";
+			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-time] testDurationInSeconds " +
+			"[-rate] rate_in_kbps";
 	public static final String DEFAULTS = "The defaults are: role=server;  sapname=rina.utils.apps.rinaperf.server; " + 
-			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; time=10";
+			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; time=10; rate=1000";
 	
 	public static void main(String[] args){
 		System.out.println(Arrays.toString(args));
@@ -72,6 +75,7 @@ public class Main {
 		String serverApInstance = DEFAULT_AP_INSTANCE;
 		String clientApInstance = DEFAULT_AP_INSTANCE;
 		int time = DEFAULT_TIME_IN_SECONDS;
+		int rate = DEFAULT_RATE_IN_KBPS;
 		
 		int i=0;
 		while(i<args.length){
@@ -103,11 +107,20 @@ public class Main {
 			}else if (args[i].equals(ARGUMENT_SEPARATOR + TIME)){
 				try{
 					time = Integer.parseInt(args[i+1]);
-					if (time < 10){
+					if (time < 1){
 						showErrorAndExit(TIME);
 					}
 				}catch(Exception ex){
 					showErrorAndExit(TIME);
+				}
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + RATE)){
+				try{
+					rate = Integer.parseInt(args[i+1]);
+					if (rate <= 0){
+						showErrorAndExit(RATE);
+					}
+				}catch(Exception ex){
+					showErrorAndExit(RATE);
 				}
 			}else{
 				System.out.println("Wrong argument.\nUsage: "
@@ -124,7 +137,7 @@ public class Main {
 				new ApplicationProcessNamingInformation(clientApName, clientApInstance);
 		
 		RINAPerf rinaPerf = new RINAPerf(server, serverAPNamingInfo, clientApNamingInfo,
-				sduSizeInBytes, time);
+				sduSizeInBytes, time, rate);
 		rinaPerf.execute();
 	}
 	

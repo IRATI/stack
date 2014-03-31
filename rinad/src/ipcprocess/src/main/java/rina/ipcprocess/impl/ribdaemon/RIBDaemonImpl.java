@@ -450,7 +450,6 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 					sdu = cdapSessionManager.encodeCDAPMessage(aDataUnitMessage);
 				} else {
 					portId = sessionId;
-					this.cdapSessionManager.getCDAPSession(portId).getSessionDescriptor();
 					sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
 				}
 				
