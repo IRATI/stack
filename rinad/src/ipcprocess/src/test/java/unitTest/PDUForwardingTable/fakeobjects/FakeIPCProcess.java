@@ -92,7 +92,7 @@ public class FakeIPCProcess implements IPCProcess{
 	@Override
 	public Long getAddress() {
 		// TODO Auto-generated method stub
-		return null;
+		return (long) 1;
 	}
 
 	@Override

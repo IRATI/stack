@@ -167,6 +167,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
 		this.ipcProcess = ipcProcess;
+		db.setAddress(ipcProcess.getAddress());
 		//ipcManager = rina.getExtendedIPCManager();
 		ribDaemon = ipcProcess.getRIBDaemon();
 		encoder = ipcProcess.getEncoder();
