@@ -67,9 +67,9 @@ public class FlowStateDatabase {
 	
 	public void setAvoidPort(int avoidPort)
 	{
-		for (FlowStateInternalObject fsio: flowStateInternalObjectGroup.getFlowStateObjectArray())
+		for (FlowStateInternalObject fso: flowStateInternalObjectGroup.getFlowStateObjectArray())
 		{
-			fsio.setAvoidPort(avoidPort);
+			fso.setAvoidPort(avoidPort);
 		}
 	}
 	

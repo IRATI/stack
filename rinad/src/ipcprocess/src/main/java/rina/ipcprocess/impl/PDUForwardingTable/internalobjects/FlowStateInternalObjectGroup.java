@@ -5,7 +5,6 @@ import java.util.Timer;
 
 import org.apache.commons.logging.Log;
 
-import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import rina.PDUForwardingTable.api.FlowStateObject;
@@ -20,23 +19,23 @@ public class FlowStateInternalObjectGroup{
 	
 	protected static final int WAIT_UNTIL_REMOVE_OBJECT = 23000;
 	
-	protected ArrayList<FlowStateInternalObject> flowStateObjectArray = null;
+	protected ArrayList<FlowStateObject> flowStateObjectArray = null;
 	
 	/*		Acessors		*/
-	public ArrayList<FlowStateInternalObject> getFlowStateObjectArray() {
+	public ArrayList<FlowStateObject> getFlowStateObjectArray() {
 		return flowStateObjectArray;
 	}
 	public void setFlowStateObjectArray(
-			ArrayList<FlowStateInternalObject> flowStateObjectArray) {
+			ArrayList<FlowStateObject> flowStateObjectArray) {
 		this.flowStateObjectArray = flowStateObjectArray;
 	}
 
 	/*		Constructors		*/
 	public FlowStateInternalObjectGroup()
 	{
-		flowStateObjectArray = new ArrayList<FlowStateInternalObject>();
+		flowStateObjectArray = new ArrayList<FlowStateObject>();
 	}
-	public FlowStateInternalObjectGroup(ArrayList<FlowStateInternalObject> objects)
+	public FlowStateInternalObjectGroup(ArrayList<FlowStateObject> objects)
 	{
 		flowStateObjectArray = objects;
 	}
@@ -48,13 +47,10 @@ public class FlowStateInternalObjectGroup{
 	 * @return 
 	 * @throws RIBDaemonException 
 	 */
-	public void add(FlowStateInternalObject internalObject, FlowStateRIBObjectGroup fsRIBGroup ) throws RIBDaemonException
+	public void add(FlowStateObject fsObject, FlowStateRIBObjectGroup fsRIBGroup ) throws RIBDaemonException
 	{
-		ObjectStateMapper mapper = new ObjectStateMapper();
-		
-		flowStateObjectArray.add(internalObject);
-		FlowStateObject object = mapper.FSOMap(internalObject);
-		fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), object.getID(), object);
+		flowStateObjectArray.add(fsObject);
+		fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), fsObject.getID(), fsObject);
 	}
 	
 	/**
@@ -63,7 +59,7 @@ public class FlowStateInternalObjectGroup{
 	 * @return 
 	 * @throws RIBDaemonException 
 	 */
-	public void addToSend(FlowStateInternalObject internalObject)
+	public void addToSend(FlowStateObject internalObject)
 	{
 		flowStateObjectArray.add(internalObject);
 	}
@@ -73,10 +69,10 @@ public class FlowStateInternalObjectGroup{
 	 * @param portId
 	 * @return the flow state object
 	 */
-	public FlowStateInternalObject getByPortId(int portId)
+	public FlowStateObject getByPortId(int portId)
 	{
 		int i = 0;
-		while (i < this.flowStateObjectArray.size() && this.flowStateObjectArray.get(i).portid != portId)
+		while (i < this.flowStateObjectArray.size() && this.flowStateObjectArray.get(i).getPortid() != portId)
 		{
 			i++;
 		}
@@ -91,10 +87,9 @@ public class FlowStateInternalObjectGroup{
 		}
 	}
 	
-	public ArrayList<FlowStateInternalObject> getModifiedFSO()
+	public ArrayList<FlowStateObject> getModifiedFSO()
 	{
-		ArrayList<FlowStateInternalObject> modifiedFSOs = new ArrayList<FlowStateInternalObject>();
-		
+		ArrayList<FlowStateObject> modifiedFSOs = new ArrayList<FlowStateObject>();
 		for(int i = 0; i< this.flowStateObjectArray.size(); i++)
 		{
 			if (this.flowStateObjectArray.get(i).isModified())
@@ -102,18 +97,17 @@ public class FlowStateInternalObjectGroup{
 				modifiedFSOs.add(this.flowStateObjectArray.get(i));
 			}
 		}
-			return modifiedFSOs;
+		return modifiedFSOs;
 	}
 	
 	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup, FlowStateDatabase db) throws RIBDaemonException
 	{
-		
 		for(int i = 0; i< this.flowStateObjectArray.size(); i++)
 		{
-			FlowStateInternalObject object = this.flowStateObjectArray.get(i);
-			object.incrementAge();
+			FlowStateObject object = this.flowStateObjectArray.get(i);
+			object.setAge(object.getAge()+1);
 			
-			if (object.getAge() >= maximumAge && !object.isBeingErased)
+			if (object.getAge() >= maximumAge && !object.isBeingErased())
 			{
 				log.debug("Object to erase age: " +object.getAge());
 				Timer killFlowStateObjectTimer = new Timer();
