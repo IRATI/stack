@@ -1,28 +1,31 @@
 package rina.ipcprocess.impl.PDUForwardingTable;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.FlowInformation;
 
+import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.encoding.api.Encoder;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.PDUForwardingTable.timertasks.KillFlowStateObject;
+import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class FlowStateDatabase {
 	private static final Log log = LogFactory.getLog(FlowStateDatabase.class);
 	protected final int NO_AVOID_PORT = -1;
+	protected final int WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
 	/**
 	 * The FlowStateObjectGroup
 	 */
-	protected FlowStateInternalObjectGroup flowStateInternalObjectGroup = null;
+	protected FlowStateObjectGroup flowStateObjectGroup = null;
 	
 	/**
 	 * Bit to know if the FSDB has been modified
@@ -38,36 +41,27 @@ public class FlowStateDatabase {
 	{
 		this.isModified = isModified;
 	}
-	public FlowStateInternalObjectGroup getFlowStateInternalObjectGroup() {
-		return flowStateInternalObjectGroup;
+	public FlowStateObjectGroup getFlowStateObjectGroup() {
+		return flowStateObjectGroup;
 	}
 
 	/*		Constructors		*/
 	public FlowStateDatabase()
 	{
-		this.flowStateInternalObjectGroup = new FlowStateInternalObjectGroup();
+		this.flowStateObjectGroup = new FlowStateObjectGroup();
 		this.isModified = false;
 	}
-	
-	/*		Methods		*/
-	public FlowStateObjectGroup getFlowStateObjectGroup() {
-		ObjectStateMapper mapper =  new ObjectStateMapper();
-		return mapper.FSOGMap(flowStateInternalObjectGroup);
-	}
-	
 	public boolean isEmpty()
 	{
-		return flowStateInternalObjectGroup.getFlowStateObjectArray().size() == 0;
+		return flowStateObjectGroup.getFlowStateObjectArray().size() == 0;
 	}
-	
 	public byte[] encode (Encoder encoder) throws Exception
 	{
 		return encoder.encode(getFlowStateObjectGroup());
 	}
-	
 	public void setAvoidPort(int avoidPort)
 	{
-		for (FlowStateInternalObject fso: flowStateInternalObjectGroup.getFlowStateObjectArray())
+		for (FlowStateObject fso: flowStateObjectGroup.getFlowStateObjectArray())
 		{
 			fso.setAvoidPort(avoidPort);
 		}
@@ -75,21 +69,44 @@ public class FlowStateDatabase {
 	
 	public void addObjectToGroup(long address, int portId, long neighborAddress, int neighborPortId, FlowStateRIBObjectGroup fsRIBGroup )
 	{
-		
+		FlowStateObject newObject = new FlowStateObject(address, portId, neighborAddress, neighborPortId, true, 1, 0);
 		try {
-			this.flowStateInternalObjectGroup.add(new FlowStateInternalObject(address, portId, neighborAddress, neighborPortId, true, 1, 0)
-				, fsRIBGroup);
+			this.flowStateObjectGroup.getFlowStateObjectArray().add(newObject);
+			fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), newObject.getID(), newObject);
 			this.isModified = true;
 		} catch (RIBDaemonException e) {
 			log.debug("Error Code: " + e.getErrorCode());
 			e.printStackTrace();
 		}
-
+	}
+	
+	/**
+	 * Get the object given its port
+	 * @param portId
+	 * @return the flow state object
+	 */
+	private FlowStateObject getByPortId(int portId)
+	{
+		int i = 0;
+		List<FlowStateObject> flowStateObjectArray = flowStateObjectGroup.getFlowStateObjectArray();
+		while (i < flowStateObjectArray.size() && flowStateObjectArray.get(i).getPortid() != portId)
+		{
+			i++;
+		}
+		
+		if (i == flowStateObjectArray.size())
+		{
+			return null;
+		}
+		else
+		{
+			return flowStateObjectArray.get(i);
+		}
 	}
 	
 	public boolean deprecateObject(int portId, int maximumAge)
 	{
-		FlowStateInternalObject object = flowStateInternalObjectGroup.getByPortId(portId);
+		FlowStateObject object = getByPortId(portId);
 		if (object == null)
 		{
 			return false;
@@ -104,19 +121,33 @@ public class FlowStateDatabase {
 		return true;
 	}
 	
-	public ArrayList<FlowStateInternalObjectGroup> prepareForPropagation(FlowInformation[] flows)
+	private ArrayList<FlowStateObject> getModifiedFSO()
 	{
-		ArrayList<FlowStateInternalObjectGroup> groupsToSend = new ArrayList<FlowStateInternalObjectGroup>();
-		if(flowStateInternalObjectGroup.getModifiedFSO().size() > 0)
+		List<FlowStateObject> flowStateObjectArray = flowStateObjectGroup.getFlowStateObjectArray();
+		ArrayList<FlowStateObject> modifiedFSOs = new ArrayList<FlowStateObject>();
+		for(int i = 0; i< flowStateObjectArray.size(); i++)
+		{
+			if (flowStateObjectArray.get(i).isModified())
+			{
+				modifiedFSOs.add(flowStateObjectArray.get(i));
+			}
+		}
+		return modifiedFSOs;
+	}
+	
+	public ArrayList<FlowStateObjectGroup> prepareForPropagation(FlowInformation[] flows)
+	{
+		ArrayList<FlowStateObjectGroup> groupsToSend = new ArrayList<FlowStateObjectGroup>();
+		if(!getModifiedFSO().isEmpty())
 		{
 			for(int i = 0; i < flows.length; i++)
 			{
-				groupsToSend.add(new FlowStateInternalObjectGroup());
+				groupsToSend.add(new FlowStateObjectGroup());
 			}
 		
-			for(int i = 0; i < flowStateInternalObjectGroup.getModifiedFSO().size(); i++)
+			for(int i = 0; i < getModifiedFSO().size(); i++)
 			{
-				FlowStateInternalObject object = flowStateInternalObjectGroup.getModifiedFSO().get(i);
+				FlowStateObject object = getModifiedFSO().get(i);
 				log.debug("Check modified object: " + object.getID() + " to be sent with age: " + object.getAge() + " and Status: " + object.isState());
 	
 				for(int j = 0; j < flows.length; j++)
@@ -125,7 +156,7 @@ public class FlowStateDatabase {
 					if (object.getAvoidPort() != portId)
 					{
 						log.debug("Sent to port: " + portId);
-						groupsToSend.get(j).addToSend(object);
+						groupsToSend.get(j).getFlowStateObjectArray().add(object);
 					}
 				}
 				object.setModified(false);
@@ -135,27 +166,39 @@ public class FlowStateDatabase {
 		return groupsToSend;
 	}
 	
-
 	public void incrementAge(int maximumAge, FlowStateRIBObjectGroup fsRIBGroup) throws RIBDaemonException
 	{
-		this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup, this);
+		List<FlowStateObject> flowStateObjectArray = flowStateObjectGroup.getFlowStateObjectArray();
+		for(int i = 0; i< flowStateObjectArray.size(); i++)
+		{
+			FlowStateObject object = flowStateObjectArray.get(i);
+			object.setAge(object.getAge()+1);
+			
+			if (object.getAge() >= maximumAge && !object.isBeingErased())
+			{
+				log.debug("Object to erase age: " +object.getAge());
+				Timer killFlowStateObjectTimer = new Timer();
+				killFlowStateObjectTimer.schedule(new KillFlowStateObject(fsRIBGroup, flowStateObjectArray.get(i), this), 
+						WAIT_UNTIL_REMOVE_OBJECT);
+				object.setBeingErased(true);
+			}
+		}
 	}
 	
 	public void updateObjects(FlowStateObjectGroup newObjectGroup, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup, long address)
 	{
 		log.debug("Update Objects from DB launched");
 		
-		ObjectStateMapper mapper = new ObjectStateMapper();
-		ArrayList<FlowStateInternalObject> newObjectInternalGroup= mapper.FSOGMap(newObjectGroup).getFlowStateObjectArray();
-		ArrayList<FlowStateInternalObject> objects = this.flowStateInternalObjectGroup.getFlowStateObjectArray();
+		List<FlowStateObject> newObjects= newObjectGroup.getFlowStateObjectArray();
+		List<FlowStateObject> oldObjects = this.flowStateObjectGroup.getFlowStateObjectArray();
 		boolean continueLoop = true;
 		int i = 0;
 		
-		for(FlowStateInternalObject newObj : newObjectInternalGroup)
+		for(FlowStateObject newObj : newObjects)
 		{
-			while (continueLoop && i < objects.size())
+			while (continueLoop && i < oldObjects.size())
 			{
-				FlowStateInternalObject oldObj = objects.get(i);
+				FlowStateObject oldObj = oldObjects.get(i);
 				
 				if (newObj.getAddress() == oldObj.getAddress() /*&& objM.getPortid() == obj.getPortid()*/
 						&& newObj.getNeighborAddress() == oldObj.getNeighborAddress() 
@@ -197,7 +240,9 @@ public class FlowStateDatabase {
 					newObj.setAvoidPort(avoidPort);
 					newObj.setModified(true);
 					try {
-						this.flowStateInternalObjectGroup.add(newObj, fsRIBGroup);
+						flowStateObjectGroup.getFlowStateObjectArray().add(newObj);
+						fsRIBGroup.create(FlowStateObject.FLOW_STATE_RIB_OBJECT_CLASS, ObjectInstanceGenerator.getObjectInstance(), newObj.getID(), newObj);
+
 					} catch (RIBDaemonException e) {
 						log.error("could not add the object to the rib");
 						e.printStackTrace();

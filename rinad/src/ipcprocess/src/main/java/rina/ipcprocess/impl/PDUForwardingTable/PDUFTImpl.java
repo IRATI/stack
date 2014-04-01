@@ -22,8 +22,6 @@ import rina.encoding.api.Encoder;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;
@@ -311,12 +309,10 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		//log.debug("propagateFSDB function launched");
 
 		ObjectValue objectValue = new ObjectValue();
-		ObjectStateMapper mapper = new  ObjectStateMapper();
-		//TODO: Change for FlowStateObject no internal!
 		
 		FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
 		
-		ArrayList<FlowStateInternalObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
+		ArrayList<FlowStateObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
 
 		if (groupsToSend.size() > 0)
 		{
@@ -324,7 +320,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 			{
 				try 
 				{
-					FlowStateObjectGroup fsg= mapper.FSOGMap(groupsToSend.get(i));
+					FlowStateObjectGroup fsg= groupsToSend.get(i);
 					if (fsg.getFlowStateObjectArray().size() > 0)
 					{
 						log.debug("Group sent: " + fsg.getFlowStateObjectArray());
@@ -418,9 +414,8 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort)
 	{
 		log.info("readMessageRecieved function launched");
-		ObjectStateMapper mapper = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
-		FlowStateObjectGroup fsg= mapper.FSOGMap(db.getFlowStateInternalObjectGroup());
+		FlowStateObjectGroup fsg= db.getFlowStateObjectGroup();
 		
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{

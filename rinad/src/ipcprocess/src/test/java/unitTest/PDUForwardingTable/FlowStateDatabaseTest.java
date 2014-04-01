@@ -2,16 +2,14 @@ package unitTest.PDUForwardingTable;
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
 
+import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ribdaemon.api.RIBDaemonException;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
@@ -21,11 +19,10 @@ import unitTest.PDUForwardingTable.fakeobjects.FakeRIBDaemon;
 
 public class FlowStateDatabaseTest {
 
-	private static final Log log = LogFactory.getLog(FlowStateDatabaseTest.class);
-	FlowStateInternalObject obj1 = null;
-	FlowStateInternalObject obj2 = null;
-	FlowStateInternalObject obj3 = null;
-	FlowStateInternalObject obj4 = null;
+	FlowStateObject obj1 = null;
+	FlowStateObject obj2 = null;
+	FlowStateObject obj3 = null;
+	FlowStateObject obj4 = null;
 	
 	static {
 		System.loadLibrary("rina_java");
@@ -34,10 +31,10 @@ public class FlowStateDatabaseTest {
 	@Before
 	public void set()
 	{
-		obj1 = new FlowStateInternalObject(1,1,2,1, true, 1, 0);
-		obj2 = new FlowStateInternalObject(2,1,1,1, true, 1, 0);
-		obj3 = new FlowStateInternalObject(1,2,3,2, true, 1, 0);
-		obj4 = new FlowStateInternalObject(3,2,1,2, true, 1, 0);
+		obj1 = new FlowStateObject(1,1,2,1, true, 1, 0);
+		obj2 = new FlowStateObject(2,1,1,1, true, 1, 0);
+		obj3 = new FlowStateObject(1,2,3,2, true, 1, 0);
+		obj4 = new FlowStateObject(3,2,1,2, true, 1, 0);
 	}
 	
 	@Test

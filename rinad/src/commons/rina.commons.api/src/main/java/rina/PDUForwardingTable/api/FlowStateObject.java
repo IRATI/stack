@@ -44,6 +44,9 @@ public class FlowStateObject{
 	/* The object has been marked for propagation */
 	protected boolean isModified;
 	
+	/* Avoid port in the next propagation */
+	protected int avoidPort;
+	
 	/* The object is being erased */
 	protected boolean isBeingErased;
 		
@@ -105,6 +108,12 @@ public class FlowStateObject{
 	}
 	public void setBeingErased(boolean isBeingErased) {
 		this.isBeingErased = isBeingErased;
+	}
+	public int getAvoidPort() {
+		return avoidPort;
+	}
+	public void setAvoidPort(int avoidPort) {
+		this.avoidPort = avoidPort;
 	}
 	
 	/*		Constructor	*/

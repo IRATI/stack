@@ -1,6 +1,6 @@
 package rina.ipcprocess.impl.PDUForwardingTable.timertasks;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
@@ -14,14 +14,14 @@ import rina.ribdaemon.api.RIBDaemonException;
 public class KillFlowStateObject extends TimerTask{
 	private static final Log log = LogFactory.getLog(KillFlowStateObject.class);
 	
-	ArrayList<FlowStateObject> flowObjectList = null;
+	List<FlowStateObject> flowObjectList = null;
 	FlowStateObject objectToRemove = null;
 	FlowStateRIBObjectGroup fsRIBGroup = null;
 	FlowStateDatabase database = null;
 	
 	public KillFlowStateObject(FlowStateRIBObjectGroup fsRIB, FlowStateObject object, FlowStateDatabase db)
 	{
-		flowObjectList = db.getFlowStateInternalObjectGroup().getFlowStateObjectArray();
+		flowObjectList = db.getFlowStateObjectGroup().getFlowStateObjectArray();
 		objectToRemove = object;
 		fsRIBGroup = fsRIB;
 		database = db;

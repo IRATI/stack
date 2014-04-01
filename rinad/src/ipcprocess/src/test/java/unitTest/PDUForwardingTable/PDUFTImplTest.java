@@ -2,7 +2,6 @@ package unitTest.PDUForwardingTable;
 
 
 import java.util.ArrayList;
-import java.util.Timer;
 
 import junit.framework.Assert;
 
@@ -19,11 +18,8 @@ import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObject;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
-import rina.ipcprocess.impl.PDUForwardingTable.timertasks.SendReadCDAP;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
 import unitTest.PDUForwardingTable.fakeobjects.FakeIPCProcess;
 import unitTest.PDUForwardingTable.fakeobjects.FakeRIBDaemon;
@@ -217,14 +213,13 @@ public class PDUFTImplTest {
 	@Test
 	public void writeMessageRecieved_writeGroup_True()
 	{
-		ObjectStateMapper osm = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateGroupEncoder fse = new FlowStateGroupEncoder();
 		FakeCDAPSessionManager cdapSessionManager = new FakeCDAPSessionManager();
 		FakeRIBDaemon rib = new FakeRIBDaemon();
-		FlowStateInternalObject obj1 = new FlowStateInternalObject(1,1,2,1, true, 1, 0);
+		FlowStateObject obj1 = new FlowStateObject(1,1,2,1, true, 1, 0);
 		ArrayList<FlowStateObject> fsoL = new ArrayList<FlowStateObject>();
-		fsoL.add(osm.FSOMap(obj1));
+		fsoL.add(obj1);
 		IPCProcess ipc = new FakeIPCProcess(cdapSessionManager, rib, fse);
 		impl.setIPCProcess(ipc);
 		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
@@ -247,12 +242,11 @@ public class PDUFTImplTest {
 	@Test
 	public void writeMessageRecieved_NoGroupClass_True()
 	{
-		ObjectStateMapper osm = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateEncoder fse = new FlowStateEncoder();
 		FakeCDAPSessionManager cdapSessionManager = new FakeCDAPSessionManager();
 		FakeRIBDaemon rib = new FakeRIBDaemon();
-		FlowStateObject obj1 = osm.FSOMap(new FlowStateInternalObject(1,1,2,1, true, 1, 0));
+		FlowStateObject obj1 = new FlowStateObject(1,1,2,1, true, 1, 0);
 		IPCProcess ipc = new FakeIPCProcess(cdapSessionManager, rib, fse);
 		impl.setIPCProcess(ipc);
 		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
@@ -275,7 +269,6 @@ public class PDUFTImplTest {
 	@Test
 	public void enrollmentToNeighborWriteMessageRecieved_cancelTimer_False() {
 		ObjectValue ov = new ObjectValue();
-		ObjectStateMapper osm = new ObjectStateMapper();
 		Encoder encoder = new FlowStateGroupEncoder();
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		FakeCDAPSessionManager cdapSM = new FakeCDAPSessionManager();
@@ -287,8 +280,8 @@ public class PDUFTImplTest {
 		
 		impl.flowAllocated(1, 1, 2, 1);
 		impl.enrollmentToNeighbor(new ApplicationProcessNamingInformation(), 3, false, 2);
-		FlowStateInternalObject object = new FlowStateInternalObject(1, 1, 2, 1, true, 2, 0);
-		al.add(osm.FSOMap(object));
+		FlowStateObject object = new FlowStateObject(1, 1, 2, 1, true, 2, 0);
+		al.add(object);
 		fsog.setFlowStateObjectArray(al);
 		try
 		{
