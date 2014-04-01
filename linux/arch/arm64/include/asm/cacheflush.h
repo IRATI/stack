@@ -116,15 +116,13 @@ extern void flush_dcache_page(struct page *);
 static inline void __flush_icache_all(void)
 {
 	asm("ic	ialluis");
+	dsb();
 }
 
 #define flush_dcache_mmap_lock(mapping) \
 	spin_lock_irq(&(mapping)->tree_lock)
 #define flush_dcache_mmap_unlock(mapping) \
 	spin_unlock_irq(&(mapping)->tree_lock)
-
-#define flush_icache_user_range(vma,page,addr,len) \
-	flush_dcache_page(page)
 
 /*
  * We don't appear to need to do anything here.  In fact, if we did, we'd
