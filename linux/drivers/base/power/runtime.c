@@ -258,7 +258,8 @@ static int __rpm_callback(int (*cb)(struct device *), struct device *dev)
  * Check if the device's runtime PM status allows it to be suspended.  If
  * another idle notification has been started earlier, return immediately.  If
  * the RPM_ASYNC flag is set then queue an idle-notification request; otherwise
- * run the ->runtime_idle() callback directly.
+ * run the ->runtime_idle() callback directly. If the ->runtime_idle callback
+ * doesn't exist or if it returns 0, call rpm_suspend with the RPM_AUTO flag.
  *
  * This function must be called under dev->power.lock with interrupts disabled.
  */
@@ -293,11 +294,8 @@ static int rpm_idle(struct device *dev, int rpmflags)
 	/* Pending requests need to be canceled. */
 	dev->power.request = RPM_REQ_NONE;
 
-	if (dev->power.no_callbacks) {
-		/* Assume ->runtime_idle() callback would have suspended. */
-		retval = rpm_suspend(dev, rpmflags);
+	if (dev->power.no_callbacks)
 		goto out;
-	}
 
 	/* Carry out an asynchronous or a synchronous idle notification. */
 	if (rpmflags & RPM_ASYNC) {
@@ -306,7 +304,8 @@ static int rpm_idle(struct device *dev, int rpmflags)
 			dev->power.request_pending = true;
 			queue_work(pm_wq, &dev->power.work);
 		}
-		goto out;
+		trace_rpm_return_int(dev, _THIS_IP_, 0);
+		return 0;
 	}
 
 	dev->power.idle_notification = true;
@@ -326,14 +325,14 @@ static int rpm_idle(struct device *dev, int rpmflags)
 		callback = dev->driver->pm->runtime_idle;
 
 	if (callback)
-		__rpm_callback(callback, dev);
+		retval = __rpm_callback(callback, dev);
 
 	dev->power.idle_notification = false;
 	wake_up_all(&dev->power.wait_queue);
 
  out:
 	trace_rpm_return_int(dev, _THIS_IP_, retval);
-	return retval;
+	return retval ? retval : rpm_suspend(dev, rpmflags | RPM_AUTO);
 }
 
 /**

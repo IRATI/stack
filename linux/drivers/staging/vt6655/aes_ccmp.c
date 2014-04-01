@@ -46,7 +46,7 @@
  * SBOX Table
  */
 
-unsigned char sbox_table[256] =
+static unsigned char sbox_table[256] =
 {
 	0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
 	0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
@@ -66,7 +66,7 @@ unsigned char sbox_table[256] =
 	0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
 };
 
-unsigned char dot2_table[256] = {
+static unsigned char dot2_table[256] = {
 	0x00, 0x02, 0x04, 0x06, 0x08, 0x0a, 0x0c, 0x0e, 0x10, 0x12, 0x14, 0x16, 0x18, 0x1a, 0x1c, 0x1e,
 	0x20, 0x22, 0x24, 0x26, 0x28, 0x2a, 0x2c, 0x2e, 0x30, 0x32, 0x34, 0x36, 0x38, 0x3a, 0x3c, 0x3e,
 	0x40, 0x42, 0x44, 0x46, 0x48, 0x4a, 0x4c, 0x4e, 0x50, 0x52, 0x54, 0x56, 0x58, 0x5a, 0x5c, 0x5e,
@@ -85,7 +85,7 @@ unsigned char dot2_table[256] = {
 	0xfb, 0xf9, 0xff, 0xfd, 0xf3, 0xf1, 0xf7, 0xf5, 0xeb, 0xe9, 0xef, 0xed, 0xe3, 0xe1, 0xe7, 0xe5
 };
 
-unsigned char dot3_table[256] = {
+static unsigned char dot3_table[256] = {
 	0x00, 0x03, 0x06, 0x05, 0x0c, 0x0f, 0x0a, 0x09, 0x18, 0x1b, 0x1e, 0x1d, 0x14, 0x17, 0x12, 0x11,
 	0x30, 0x33, 0x36, 0x35, 0x3c, 0x3f, 0x3a, 0x39, 0x28, 0x2b, 0x2e, 0x2d, 0x24, 0x27, 0x22, 0x21,
 	0x60, 0x63, 0x66, 0x65, 0x6c, 0x6f, 0x6a, 0x69, 0x78, 0x7b, 0x7e, 0x7d, 0x74, 0x77, 0x72, 0x71,
@@ -110,7 +110,7 @@ unsigned char dot3_table[256] = {
 
 /*---------------------  Export Functions  --------------------------*/
 
-void xor_128(unsigned char *a, unsigned char *b, unsigned char *out)
+static void xor_128(unsigned char *a, unsigned char *b, unsigned char *out)
 {
 	unsigned long *dwPtrA = (unsigned long *)a;
 	unsigned long *dwPtrB = (unsigned long *)b;
@@ -122,7 +122,7 @@ void xor_128(unsigned char *a, unsigned char *b, unsigned char *out)
 	(*dwPtrOut++) = (*dwPtrA++) ^ (*dwPtrB++);
 }
 
-void xor_32(unsigned char *a, unsigned char *b, unsigned char *out)
+static void xor_32(unsigned char *a, unsigned char *b, unsigned char *out)
 {
 	unsigned long *dwPtrA = (unsigned long *)a;
 	unsigned long *dwPtrB = (unsigned long *)b;
@@ -131,7 +131,7 @@ void xor_32(unsigned char *a, unsigned char *b, unsigned char *out)
 	(*dwPtrOut++) = (*dwPtrA++) ^ (*dwPtrB++);
 }
 
-void AddRoundKey(unsigned char *key, int round)
+static void AddRoundKey(unsigned char *key, int round)
 {
 	unsigned char sbox_key[4];
 	unsigned char rcon_table[10] = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
@@ -149,7 +149,7 @@ void AddRoundKey(unsigned char *key, int round)
 	xor_32(&key[12], &key[8], &key[12]);
 }
 
-void SubBytes(unsigned char *in, unsigned char *out)
+static void SubBytes(unsigned char *in, unsigned char *out)
 {
 	int i;
 
@@ -158,7 +158,7 @@ void SubBytes(unsigned char *in, unsigned char *out)
 	}
 }
 
-void ShiftRows(unsigned char *in, unsigned char *out)
+static void ShiftRows(unsigned char *in, unsigned char *out)
 {
 	out[0]  = in[0];
 	out[1]  = in[5];
@@ -178,7 +178,7 @@ void ShiftRows(unsigned char *in, unsigned char *out)
 	out[15] = in[11];
 }
 
-void MixColumns(unsigned char *in, unsigned char *out)
+static void MixColumns(unsigned char *in, unsigned char *out)
 {
 	out[0] = dot2_table[in[0]] ^ dot3_table[in[1]] ^ in[2] ^ in[3];
 	out[1] = in[0] ^ dot2_table[in[1]] ^ dot3_table[in[2]] ^ in[3];
@@ -186,7 +186,7 @@ void MixColumns(unsigned char *in, unsigned char *out)
 	out[3] = dot3_table[in[0]] ^ in[1] ^ in[2] ^ dot2_table[in[3]];
 }
 
-void AESv128(unsigned char *key, unsigned char *data, unsigned char *ciphertext)
+static void AESv128(unsigned char *key, unsigned char *data, unsigned char *ciphertext)
 {
 	int  i;
 	int  round;
@@ -205,7 +205,7 @@ void AESv128(unsigned char *key, unsigned char *data, unsigned char *ciphertext)
 			SubBytes(ciphertext, TmpdataA);
 			ShiftRows(TmpdataA, TmpdataB);
 			xor_128(TmpdataB, abyRoundKey, ciphertext);
-		} else // round 1 ~ 9
+		} else /* round 1 ~ 9 */
 		{
 			SubBytes(ciphertext, TmpdataA);
 			ShiftRows(TmpdataA, TmpdataB);
@@ -249,7 +249,7 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	unsigned char *pbyIV;
 	unsigned char *pbyPayload;
 	unsigned short wHLen = 22;
-	unsigned short wPayloadSize = wFrameSize - 8 - 8 - 4 - WLAN_HDR_ADDR3_LEN;//8 is IV, 8 is MIC, 4 is CRC
+	unsigned short wPayloadSize = wFrameSize - 8 - 8 - 4 - WLAN_HDR_ADDR3_LEN;/* 8 is IV, 8 is MIC, 4 is CRC */
 	bool bA4 = false;
 	unsigned char byTmp;
 	unsigned short wCnt;
@@ -259,13 +259,13 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	if (WLAN_GET_FC_TODS(*(unsigned short *)pbyFrame) &&
 	    WLAN_GET_FC_FROMDS(*(unsigned short *)pbyFrame)) {
 		bA4 = true;
-		pbyIV += 6;             // 6 is 802.11 address4
+		pbyIV += 6;             /* 6 is 802.11 address4 */
 		wHLen += 6;
 		wPayloadSize -= 6;
 	}
-	pbyPayload = pbyIV + 8; //IV-length
+	pbyPayload = pbyIV + 8; /* IV-length */
 
-	abyNonce[0]  = 0x00; //now is 0, if Qos here will be priority
+	abyNonce[0]  = 0x00; /* now is 0, if Qos here will be priority */
 	memcpy(&(abyNonce[1]), pMACHeader->abyAddr2, ETH_ALEN);
 	abyNonce[7]  = pbyIV[7];
 	abyNonce[8]  = pbyIV[6];
@@ -274,13 +274,13 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	abyNonce[11] = pbyIV[1];
 	abyNonce[12] = pbyIV[0];
 
-	//MIC_IV
+	/* MIC_IV */
 	MIC_IV[0] = 0x59;
 	memcpy(&(MIC_IV[1]), &(abyNonce[0]), 13);
 	MIC_IV[14] = (unsigned char)(wPayloadSize >> 8);
 	MIC_IV[15] = (unsigned char)(wPayloadSize & 0xff);
 
-	//MIC_HDR1
+	/* MIC_HDR1 */
 	MIC_HDR1[0] = (unsigned char)(wHLen >> 8);
 	MIC_HDR1[1] = (unsigned char)(wHLen & 0xff);
 	byTmp = (unsigned char)(pMACHeader->wFrameCtl & 0xff);
@@ -291,7 +291,7 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	memcpy(&(MIC_HDR1[4]), pMACHeader->abyAddr1, ETH_ALEN);
 	memcpy(&(MIC_HDR1[10]), pMACHeader->abyAddr2, ETH_ALEN);
 
-	//MIC_HDR2
+	/* MIC_HDR2 */
 	memcpy(&(MIC_HDR2[0]), pMACHeader->abyAddr3, ETH_ALEN);
 	byTmp = (unsigned char)(pMACHeader->wSeqCtl & 0xff);
 	MIC_HDR2[6] = byTmp & 0x0f;
@@ -309,7 +309,7 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	MIC_HDR2[14] = 0x00;
 	MIC_HDR2[15] = 0x00;
 
-	//CCMP
+	/* CCMP */
 	AESv128(pbyRxKey, MIC_IV, abyMIC);
 	for (kk = 0; kk < 16; kk++) {
 		abyTmp[kk] = MIC_HDR1[kk] ^ abyMIC[kk];
@@ -341,9 +341,9 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 		memcpy(pbyPayload, abyPlainText, 16);
 		wCnt++;
 		pbyPayload += 16;
-	} //for wPayloadSize
+	} /* for wPayloadSize */
 
-	//last payload
+	/* last payload */
 	memcpy(&(abyLastCipher[0]), pbyPayload, jj);
 	for (ii = jj; ii < 16; ii++) {
 		abyLastCipher[ii] = 0x00;
@@ -359,7 +359,7 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	memcpy(pbyPayload, abyPlainText, jj);
 	pbyPayload += jj;
 
-	//for MIC calculation
+	/* for MIC calculation */
 	for (ii = jj; ii < 16; ii++) {
 		abyPlainText[ii] = 0x00;
 	}
@@ -368,8 +368,8 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	}
 	AESv128(pbyRxKey, abyTmp, abyMIC);
 
-	//=>above is the calculate MIC
-	//--------------------------------------------
+	/* =>above is the calculate MIC */
+	/* -------------------------------------------- */
 
 	wCnt = 0;
 	abyCTRPLD[14] = (unsigned char)(wCnt >> 8);
@@ -378,12 +378,11 @@ bool AESbGenCCMP(unsigned char *pbyRxKey, unsigned char *pbyFrame, unsigned shor
 	for (kk = 0; kk < 8; kk++) {
 		abyTmp[kk] = abyTmp[kk] ^ pbyPayload[kk];
 	}
-	//=>above is the dec-MIC from packet
-	//--------------------------------------------
+	/* =>above is the dec-MIC from packet */
+	/* -------------------------------------------- */
 
-	if (!memcmp(abyMIC, abyTmp, 8)) {
+	if (!memcmp(abyMIC, abyTmp, 8))
 		return true;
-	} else {
+	else
 		return false;
-	}
 }

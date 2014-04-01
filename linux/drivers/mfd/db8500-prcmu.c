@@ -465,7 +465,7 @@ static DEFINE_SPINLOCK(clk_mgt_lock);
 
 #define CLK_MGT_ENTRY(_name, _branch, _clk38div)[PRCMU_##_name] = \
 	{ (PRCM_##_name##_MGT), 0 , _branch, _clk38div}
-struct clk_mgt clk_mgt[PRCMU_NUM_REG_CLOCKS] = {
+static struct clk_mgt clk_mgt[PRCMU_NUM_REG_CLOCKS] = {
 	CLK_MGT_ENTRY(SGACLK, PLL_DIV, false),
 	CLK_MGT_ENTRY(UARTCLK, PLL_FIX, true),
 	CLK_MGT_ENTRY(MSP02CLK, PLL_FIX, true),
@@ -1724,9 +1724,9 @@ static long round_clock_rate(u8 clock, unsigned long rate)
 
 /* CPU FREQ table, may be changed due to if MAX_OPP is supported. */
 static struct cpufreq_frequency_table db8500_cpufreq_table[] = {
-	{ .frequency = 200000, .index = ARM_EXTCLK,},
-	{ .frequency = 400000, .index = ARM_50_OPP,},
-	{ .frequency = 800000, .index = ARM_100_OPP,},
+	{ .frequency = 200000, .driver_data = ARM_EXTCLK,},
+	{ .frequency = 400000, .driver_data = ARM_50_OPP,},
+	{ .frequency = 800000, .driver_data = ARM_100_OPP,},
 	{ .frequency = CPUFREQ_TABLE_END,}, /* To be used for MAX_OPP. */
 	{ .frequency = CPUFREQ_TABLE_END,},
 };
@@ -1901,7 +1901,7 @@ static int set_armss_rate(unsigned long rate)
 		return -EINVAL;
 
 	/* Set the new arm opp. */
-	return db8500_prcmu_set_arm_opp(db8500_cpufreq_table[i].index);
+	return db8500_prcmu_set_arm_opp(db8500_cpufreq_table[i].driver_data);
 }
 
 static int set_plldsi_rate(unsigned long rate)
@@ -2318,7 +2318,7 @@ unlock_and_return:
 /**
  * prcmu_ac_sleep_req - called when ARM no longer needs to talk to modem
  */
-void prcmu_ac_sleep_req()
+void prcmu_ac_sleep_req(void)
 {
 	u32 val;
 
@@ -3070,7 +3070,7 @@ static struct db8500_thsens_platform_data db8500_thsens_data = {
 	.num_trips = 4,
 };
 
-static struct mfd_cell common_prcmu_devs[] = {
+static const struct mfd_cell common_prcmu_devs[] = {
 	{
 		.name = "ux500_wdt",
 		.platform_data = &db8500_wdt_pdata,
@@ -3079,7 +3079,7 @@ static struct mfd_cell common_prcmu_devs[] = {
 	},
 };
 
-static struct mfd_cell db8500_prcmu_devs[] = {
+static const struct mfd_cell db8500_prcmu_devs[] = {
 	{
 		.name = "db8500-prcmu-regulators",
 		.of_compatible = "stericsson,db8500-prcmu-regulator",
@@ -3091,6 +3091,10 @@ static struct mfd_cell db8500_prcmu_devs[] = {
 		.of_compatible = "stericsson,cpufreq-ux500",
 		.platform_data = &db8500_cpufreq_table,
 		.pdata_size = sizeof(db8500_cpufreq_table),
+	},
+	{
+		.name = "cpuidle-dbx500",
+		.of_compatible = "stericsson,cpuidle-dbx500",
 	},
 	{
 		.name = "db8500-thermal",
@@ -3105,7 +3109,7 @@ static void db8500_prcmu_update_cpufreq(void)
 {
 	if (prcmu_has_arm_maxopp()) {
 		db8500_cpufreq_table[3].frequency = 1000000;
-		db8500_cpufreq_table[3].index = ARM_MAX_OPP;
+		db8500_cpufreq_table[3].driver_data = ARM_MAX_OPP;
 	}
 }
 

@@ -19,7 +19,10 @@
 #define __ASM_ARCH_PM_CORE_H __FILE__
 
 #include <linux/of.h>
-#include <mach/regs-pmu.h>
+#include <mach/map.h>
+
+#define S5P_EINT_WAKEUP_MASK			(S5P_VA_PMU + 0x0604)
+#define S5P_WAKEUP_MASK				(S5P_VA_PMU + 0x0608)
 
 #ifdef CONFIG_PINCTRL_EXYNOS
 extern u32 exynos_get_eint_wake_mask(void);
@@ -34,12 +37,7 @@ static inline void s3c_pm_debug_init_uart(void)
 
 static inline void s3c_pm_arch_prepare_irqs(void)
 {
-	u32 eintmask = s3c_irqwake_eintmask;
-
-	if (of_have_populated_dt())
-		eintmask = exynos_get_eint_wake_mask();
-
-	__raw_writel(eintmask, S5P_EINT_WAKEUP_MASK);
+	__raw_writel(exynos_get_eint_wake_mask(), S5P_EINT_WAKEUP_MASK);
 	__raw_writel(s3c_irqwake_intmask & ~(1 << 31), S5P_WAKEUP_MASK);
 }
 
@@ -68,5 +66,10 @@ static inline void samsung_pm_saved_gpios(void)
 {
 	/* nothing here yet */
 }
+
+/* Compatibility definitions to make plat-samsung/pm.c compile */
+#define IRQ_EINT_BIT(x)		1
+#define s3c_irqwake_intallow	0
+#define s3c_irqwake_eintallow	0
 
 #endif /* __ASM_ARCH_PM_CORE_H */

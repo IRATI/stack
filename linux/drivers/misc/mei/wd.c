@@ -31,12 +31,6 @@
 static const u8 mei_start_wd_params[] = { 0x02, 0x12, 0x13, 0x10 };
 static const u8 mei_stop_wd_params[] = { 0x02, 0x02, 0x14, 0x10 };
 
-const u8 mei_wd_state_independence_msg[3][4] = {
-	{0x05, 0x02, 0x51, 0x10},
-	{0x05, 0x02, 0x52, 0x10},
-	{0x07, 0x02, 0x01, 0x10}
-};
-
 /*
  * AMT Watchdog Device
  */
@@ -66,7 +60,7 @@ static void mei_wd_set_start_timeout(struct mei_device *dev, u16 timeout)
 int mei_wd_host_init(struct mei_device *dev)
 {
 	struct mei_cl *cl = &dev->wd_cl;
-	int i;
+	int id;
 	int ret;
 
 	mei_cl_init(cl, dev);
@@ -76,19 +70,19 @@ int mei_wd_host_init(struct mei_device *dev)
 
 
 	/* check for valid client id */
-	i = mei_me_cl_by_uuid(dev, &mei_wd_guid);
-	if (i < 0) {
+	id = mei_me_cl_by_uuid(dev, &mei_wd_guid);
+	if (id < 0) {
 		dev_info(&dev->pdev->dev, "wd: failed to find the client\n");
-		return -ENOENT;
+		return id;
 	}
 
-	cl->me_client_id = dev->me_clients[i].client_id;
+	cl->me_client_id = dev->me_clients[id].client_id;
 
 	ret = mei_cl_link(cl, MEI_WD_HOST_CLIENT_ID);
 
 	if (ret < 0) {
 		dev_info(&dev->pdev->dev, "wd: failed link client\n");
-		return -ENOENT;
+		return ret;
 	}
 
 	cl->state = MEI_FILE_CONNECTING;
@@ -121,6 +115,7 @@ int mei_wd_send(struct mei_device *dev)
 	hdr.me_addr = dev->wd_cl.me_client_id;
 	hdr.msg_complete = 1;
 	hdr.reserved = 0;
+	hdr.internal = 0;
 
 	if (!memcmp(dev->wd_data, mei_start_wd_params, MEI_WD_HDR_SIZE))
 		hdr.length = MEI_WD_START_MSG_SIZE;

@@ -1469,10 +1469,10 @@ static irqreturn_t r8a66597_irq(int irq, void *_r8a66597)
 	u16 savepipe;
 	u16 mask0;
 
+	spin_lock(&r8a66597->lock);
+
 	if (r8a66597_is_sudmac(r8a66597))
 		r8a66597_sudmac_irq(r8a66597);
-
-	spin_lock(&r8a66597->lock);
 
 	intsts0 = r8a66597_read(r8a66597, INTSTS0);
 	intenb0 = r8a66597_read(r8a66597, INTENB0);
@@ -1822,7 +1822,7 @@ static const struct usb_gadget_ops r8a66597_gadget_ops = {
 
 static int __exit r8a66597_remove(struct platform_device *pdev)
 {
-	struct r8a66597		*r8a66597 = dev_get_drvdata(&pdev->dev);
+	struct r8a66597		*r8a66597 = platform_get_drvdata(pdev);
 
 	usb_del_gadget_udc(&r8a66597->gadget);
 	del_timer_sync(&r8a66597->timer);
@@ -1833,7 +1833,7 @@ static int __exit r8a66597_remove(struct platform_device *pdev)
 	r8a66597_free_request(&r8a66597->ep[0].ep, r8a66597->ep0_req);
 
 	if (r8a66597->pdata->on_chip) {
-		clk_disable(r8a66597->clk);
+		clk_disable_unprepare(r8a66597->clk);
 		clk_put(r8a66597->clk);
 	}
 
@@ -1909,8 +1909,8 @@ static int __init r8a66597_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&r8a66597->lock);
-	dev_set_drvdata(&pdev->dev, r8a66597);
-	r8a66597->pdata = pdev->dev.platform_data;
+	platform_set_drvdata(pdev, r8a66597);
+	r8a66597->pdata = dev_get_platdata(&pdev->dev);
 	r8a66597->irq_sense_low = irq_trigger == IRQF_TRIGGER_LOW;
 
 	r8a66597->gadget.ops = &r8a66597_gadget_ops;
@@ -1931,7 +1931,7 @@ static int __init r8a66597_probe(struct platform_device *pdev)
 			ret = PTR_ERR(r8a66597->clk);
 			goto clean_up;
 		}
-		clk_enable(r8a66597->clk);
+		clk_prepare_enable(r8a66597->clk);
 	}
 
 	if (r8a66597->pdata->sudmac) {
@@ -1964,9 +1964,9 @@ static int __init r8a66597_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&ep->queue);
 		ep->ep.name = r8a66597_ep_name[i];
 		ep->ep.ops = &r8a66597_ep_ops;
-		ep->ep.maxpacket = 512;
+		usb_ep_set_maxpacket_limit(&ep->ep, 512);
 	}
-	r8a66597->ep[0].ep.maxpacket = 64;
+	usb_ep_set_maxpacket_limit(&r8a66597->ep[0].ep, 64);
 	r8a66597->ep[0].pipenum = 0;
 	r8a66597->ep[0].fifoaddr = CFIFO;
 	r8a66597->ep[0].fifosel = CFIFOSEL;
@@ -1996,7 +1996,7 @@ clean_up3:
 	free_irq(irq, r8a66597);
 clean_up2:
 	if (r8a66597->pdata->on_chip) {
-		clk_disable(r8a66597->clk);
+		clk_disable_unprepare(r8a66597->clk);
 		clk_put(r8a66597->clk);
 	}
 clean_up:

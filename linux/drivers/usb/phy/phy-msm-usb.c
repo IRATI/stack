@@ -40,8 +40,6 @@
 #include <linux/usb/msm_hsusb_hw.h>
 #include <linux/regulator/consumer.h>
 
-#include <mach/clk.h>
-
 #define MSM_USB_BASE	(motg->regs)
 #define DRIVER_NAME	"msm_otg"
 
@@ -160,32 +158,6 @@ put_3p3:
 	regulator_put(hsusb_3p3);
 	return rc;
 }
-
-#ifdef CONFIG_PM_SLEEP
-#define USB_PHY_SUSP_DIG_VOL  500000
-static int msm_hsusb_config_vddcx(int high)
-{
-	int max_vol = USB_PHY_VDD_DIG_VOL_MAX;
-	int min_vol;
-	int ret;
-
-	if (high)
-		min_vol = USB_PHY_VDD_DIG_VOL_MIN;
-	else
-		min_vol = USB_PHY_SUSP_DIG_VOL;
-
-	ret = regulator_set_voltage(hsusb_vddcx, min_vol, max_vol);
-	if (ret) {
-		pr_err("%s: unable to set the voltage for regulator "
-			"HSUSB_VDDCX\n", __func__);
-		return ret;
-	}
-
-	pr_debug("%s: min_vol:%d max_vol:%d\n", __func__, min_vol, max_vol);
-
-	return ret;
-}
-#endif
 
 static int msm_hsusb_ldo_set_mode(int on)
 {
@@ -308,33 +280,30 @@ static void ulpi_init(struct msm_otg *motg)
 
 static int msm_otg_link_clk_reset(struct msm_otg *motg, bool assert)
 {
-	int ret;
+	int ret = 0;
 
-	if (assert) {
-		ret = clk_reset(motg->clk, CLK_RESET_ASSERT);
-		if (ret)
-			dev_err(motg->phy.dev, "usb hs_clk assert failed\n");
-	} else {
-		ret = clk_reset(motg->clk, CLK_RESET_DEASSERT);
-		if (ret)
-			dev_err(motg->phy.dev, "usb hs_clk deassert failed\n");
-	}
+	if (!motg->pdata->link_clk_reset)
+		return ret;
+
+	ret = motg->pdata->link_clk_reset(motg->clk, assert);
+	if (ret)
+		dev_err(motg->phy.dev, "usb link clk reset %s failed\n",
+			assert ? "assert" : "deassert");
+
 	return ret;
 }
 
 static int msm_otg_phy_clk_reset(struct msm_otg *motg)
 {
-	int ret;
+	int ret = 0;
 
-	ret = clk_reset(motg->phy_reset_clk, CLK_RESET_ASSERT);
-	if (ret) {
-		dev_err(motg->phy.dev, "usb phy clk assert failed\n");
+	if (!motg->pdata->phy_clk_reset)
 		return ret;
-	}
-	usleep_range(10000, 12000);
-	ret = clk_reset(motg->phy_reset_clk, CLK_RESET_DEASSERT);
+
+	ret = motg->pdata->phy_clk_reset(motg->phy_reset_clk);
 	if (ret)
-		dev_err(motg->phy.dev, "usb phy clk deassert failed\n");
+		dev_err(motg->phy.dev, "usb phy clk reset failed\n");
+
 	return ret;
 }
 
@@ -445,7 +414,32 @@ static int msm_otg_reset(struct usb_phy *phy)
 #define PHY_SUSPEND_TIMEOUT_USEC	(500 * 1000)
 #define PHY_RESUME_TIMEOUT_USEC	(100 * 1000)
 
-#ifdef CONFIG_PM_SLEEP
+#ifdef CONFIG_PM
+
+#define USB_PHY_SUSP_DIG_VOL  500000
+static int msm_hsusb_config_vddcx(int high)
+{
+	int max_vol = USB_PHY_VDD_DIG_VOL_MAX;
+	int min_vol;
+	int ret;
+
+	if (high)
+		min_vol = USB_PHY_VDD_DIG_VOL_MIN;
+	else
+		min_vol = USB_PHY_SUSP_DIG_VOL;
+
+	ret = regulator_set_voltage(hsusb_vddcx, min_vol, max_vol);
+	if (ret) {
+		pr_err("%s: unable to set the voltage for regulator "
+			"HSUSB_VDDCX\n", __func__);
+		return ret;
+	}
+
+	pr_debug("%s: min_vol:%d max_vol:%d\n", __func__, min_vol, max_vol);
+
+	return ret;
+}
+
 static int msm_otg_suspend(struct msm_otg *motg)
 {
 	struct usb_phy *phy = &motg->phy;
@@ -514,13 +508,13 @@ static int msm_otg_suspend(struct msm_otg *motg)
 			motg->pdata->otg_control == OTG_PMIC_CONTROL)
 		writel(readl(USB_PHY_CTRL) | PHY_RETEN, USB_PHY_CTRL);
 
-	clk_disable(motg->pclk);
-	clk_disable(motg->clk);
+	clk_disable_unprepare(motg->pclk);
+	clk_disable_unprepare(motg->clk);
 	if (motg->core_clk)
-		clk_disable(motg->core_clk);
+		clk_disable_unprepare(motg->core_clk);
 
 	if (!IS_ERR(motg->pclk_src))
-		clk_disable(motg->pclk_src);
+		clk_disable_unprepare(motg->pclk_src);
 
 	if (motg->pdata->phy_type == SNPS_28NM_INTEGRATED_PHY &&
 			motg->pdata->otg_control == OTG_PMIC_CONTROL) {
@@ -552,12 +546,12 @@ static int msm_otg_resume(struct msm_otg *motg)
 		return 0;
 
 	if (!IS_ERR(motg->pclk_src))
-		clk_enable(motg->pclk_src);
+		clk_prepare_enable(motg->pclk_src);
 
-	clk_enable(motg->pclk);
-	clk_enable(motg->clk);
+	clk_prepare_enable(motg->pclk);
+	clk_prepare_enable(motg->clk);
 	if (motg->core_clk)
-		clk_enable(motg->core_clk);
+		clk_prepare_enable(motg->core_clk);
 
 	if (motg->pdata->phy_type == SNPS_28NM_INTEGRATED_PHY &&
 			motg->pdata->otg_control == OTG_PMIC_CONTROL) {
@@ -669,6 +663,7 @@ static void msm_otg_start_host(struct usb_phy *phy, int on)
 			pdata->setup_gpio(OTG_STATE_A_HOST);
 #ifdef CONFIG_USB
 		usb_add_hcd(hcd, hcd->irq, IRQF_SHARED);
+		device_wakeup_enable(hcd->self.controller);
 #endif
 	} else {
 		dev_dbg(phy->dev, "host off\n");
@@ -1419,7 +1414,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	struct usb_phy *phy;
 
 	dev_info(&pdev->dev, "msm_otg probe\n");
-	if (!pdev->dev.platform_data) {
+	if (!dev_get_platdata(&pdev->dev)) {
 		dev_err(&pdev->dev, "No platform data given. Bailing out\n");
 		return -ENODEV;
 	}
@@ -1436,7 +1431,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	motg->pdata = pdev->dev.platform_data;
+	motg->pdata = dev_get_platdata(&pdev->dev);
 	phy = &motg->phy;
 	phy->dev = &pdev->dev;
 
@@ -1468,7 +1463,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 		if (IS_ERR(motg->pclk_src))
 			goto put_clk;
 		clk_set_rate(motg->pclk_src, INT_MAX);
-		clk_enable(motg->pclk_src);
+		clk_prepare_enable(motg->pclk_src);
 	} else
 		motg->pclk_src = ERR_PTR(-ENOENT);
 
@@ -1511,8 +1506,8 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 		goto free_regs;
 	}
 
-	clk_enable(motg->clk);
-	clk_enable(motg->pclk);
+	clk_prepare_enable(motg->clk);
+	clk_prepare_enable(motg->pclk);
 
 	ret = msm_hsusb_init_vddcx(motg, 1);
 	if (ret) {
@@ -1532,7 +1527,7 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	}
 
 	if (motg->core_clk)
-		clk_enable(motg->core_clk);
+		clk_prepare_enable(motg->core_clk);
 
 	writel(0, USB_USBINTR);
 	writel(0, USB_OTGSC);
@@ -1579,8 +1574,8 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 free_irq:
 	free_irq(motg->irq, motg);
 disable_clks:
-	clk_disable(motg->pclk);
-	clk_disable(motg->clk);
+	clk_disable_unprepare(motg->pclk);
+	clk_disable_unprepare(motg->clk);
 ldo_exit:
 	msm_hsusb_ldo_init(motg, 0);
 vddcx_exit:
@@ -1593,7 +1588,7 @@ put_core_clk:
 	clk_put(motg->pclk);
 put_pclk_src:
 	if (!IS_ERR(motg->pclk_src)) {
-		clk_disable(motg->pclk_src);
+		clk_disable_unprepare(motg->pclk_src);
 		clk_put(motg->pclk_src);
 	}
 put_clk:
@@ -1643,12 +1638,12 @@ static int msm_otg_remove(struct platform_device *pdev)
 	if (cnt >= PHY_SUSPEND_TIMEOUT_USEC)
 		dev_err(phy->dev, "Unable to suspend PHY\n");
 
-	clk_disable(motg->pclk);
-	clk_disable(motg->clk);
+	clk_disable_unprepare(motg->pclk);
+	clk_disable_unprepare(motg->clk);
 	if (motg->core_clk)
-		clk_disable(motg->core_clk);
+		clk_disable_unprepare(motg->core_clk);
 	if (!IS_ERR(motg->pclk_src)) {
-		clk_disable(motg->pclk_src);
+		clk_disable_unprepare(motg->pclk_src);
 		clk_put(motg->pclk_src);
 	}
 	msm_hsusb_ldo_init(motg, 0);
@@ -1737,22 +1732,18 @@ static int msm_otg_pm_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_PM
 static const struct dev_pm_ops msm_otg_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(msm_otg_pm_suspend, msm_otg_pm_resume)
 	SET_RUNTIME_PM_OPS(msm_otg_runtime_suspend, msm_otg_runtime_resume,
 				msm_otg_runtime_idle)
 };
-#endif
 
 static struct platform_driver msm_otg_driver = {
 	.remove = msm_otg_remove,
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
-#ifdef CONFIG_PM
 		.pm = &msm_otg_dev_pm_ops,
-#endif
 	},
 };
 

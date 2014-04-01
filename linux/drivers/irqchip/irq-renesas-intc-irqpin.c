@@ -18,6 +18,7 @@
  */
 
 #include <linux/init.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
@@ -148,8 +149,9 @@ static void intc_irqpin_read_modify_write(struct intc_irqpin_priv *p,
 static void intc_irqpin_mask_unmask_prio(struct intc_irqpin_priv *p,
 					 int irq, int do_mask)
 {
-	int bitfield_width = 4; /* PRIO assumed to have fixed bitfield width */
-	int shift = (7 - irq) * bitfield_width; /* PRIO assumed to be 32-bit */
+	/* The PRIO register is assumed to be 32-bit with fixed 4-bit fields. */
+	int bitfield_width = 4;
+	int shift = 32 - (irq + 1) * bitfield_width;
 
 	intc_irqpin_read_modify_write(p, INTC_IRQPIN_REG_PRIO,
 				      shift, bitfield_width,
@@ -158,8 +160,9 @@ static void intc_irqpin_mask_unmask_prio(struct intc_irqpin_priv *p,
 
 static int intc_irqpin_set_sense(struct intc_irqpin_priv *p, int irq, int value)
 {
+	/* The SENSE register is assumed to be 32-bit. */
 	int bitfield_width = p->config.sense_bitfield_width;
-	int shift = (7 - irq) * bitfield_width; /* SENSE assumed to be 32-bit */
+	int shift = 32 - (irq + 1) * bitfield_width;
 
 	dev_dbg(&p->pdev->dev, "sense irq = %d, mode = %d\n", irq, value);
 
@@ -347,8 +350,14 @@ static int intc_irqpin_probe(struct platform_device *pdev)
 	}
 
 	/* deal with driver instance configuration */
-	if (pdata)
+	if (pdata) {
 		memcpy(&p->config, pdata, sizeof(*pdata));
+	} else {
+		of_property_read_u32(pdev->dev.of_node, "sense-bitfield-width",
+				     &p->config.sense_bitfield_width);
+		p->config.control_parent = of_property_read_bool(pdev->dev.of_node,
+								 "control-parent");
+	}
 	if (!p->config.sense_bitfield_width)
 		p->config.sense_bitfield_width = 4; /* default to 4 bits */
 

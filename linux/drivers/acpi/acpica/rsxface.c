@@ -41,7 +41,8 @@
  * POSSIBILITY OF SUCH DAMAGES.
  */
 
-#include <linux/export.h>
+#define EXPORT_ACPI_INTERFACES
+
 #include <acpi/acpi.h>
 #include "accommon.h"
 #include "acresrc.h"
@@ -402,6 +403,7 @@ acpi_resource_to_address64(struct acpi_resource *resource,
 		break;
 
 	default:
+
 		return (AE_BAD_PARAMETER);
 	}
 

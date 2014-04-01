@@ -90,7 +90,7 @@ int __init mem_reserve(unsigned long start, unsigned long end, int must_exist)
 
 
 /*
- * Initialize the bootmem system and give it all the memory we have available.
+ * Initialize the bootmem system and give it all low memory we have available.
  */
 
 void __init bootmem_init(void)
@@ -142,9 +142,14 @@ void __init bootmem_init(void)
 
 	/* Add all remaining memory pieces into the bootmem map */
 
-	for (i=0; i<sysmem.nr_banks; i++)
-		free_bootmem(sysmem.bank[i].start,
-			     sysmem.bank[i].end - sysmem.bank[i].start);
+	for (i = 0; i < sysmem.nr_banks; i++) {
+		if (sysmem.bank[i].start >> PAGE_SHIFT < max_low_pfn) {
+			unsigned long end = min(max_low_pfn << PAGE_SHIFT,
+						sysmem.bank[i].end);
+			free_bootmem(sysmem.bank[i].start,
+				     end - sysmem.bank[i].start);
+		}
+	}
 
 }
 
@@ -173,39 +178,16 @@ void __init zones_init(void)
 
 void __init mem_init(void)
 {
-	unsigned long codesize, reservedpages, datasize, initsize;
-	unsigned long highmemsize, tmp, ram;
-
-	max_mapnr = num_physpages = max_low_pfn - ARCH_PFN_OFFSET;
+	max_mapnr = max_low_pfn - ARCH_PFN_OFFSET;
 	high_memory = (void *) __va(max_low_pfn << PAGE_SHIFT);
-	highmemsize = 0;
 
 #ifdef CONFIG_HIGHMEM
 #error HIGHGMEM not implemented in init.c
 #endif
 
-	totalram_pages += free_all_bootmem();
+	free_all_bootmem();
 
-	reservedpages = ram = 0;
-	for (tmp = 0; tmp < max_mapnr; tmp++) {
-		ram++;
-		if (PageReserved(mem_map+tmp))
-			reservedpages++;
-	}
-
-	codesize =  (unsigned long) _etext - (unsigned long) _stext;
-	datasize =  (unsigned long) _edata - (unsigned long) _sdata;
-	initsize =  (unsigned long) __init_end - (unsigned long) __init_begin;
-
-	printk("Memory: %luk/%luk available (%ldk kernel code, %ldk reserved, "
-	       "%ldk data, %ldk init %ldk highmem)\n",
-	       nr_free_pages() << (PAGE_SHIFT-10),
-	       ram << (PAGE_SHIFT-10),
-	       codesize >> 10,
-	       reservedpages << (PAGE_SHIFT-10),
-	       datasize >> 10,
-	       initsize >> 10,
-	       highmemsize >> 10);
+	mem_init_print_info(NULL);
 }
 
 #ifdef CONFIG_BLK_DEV_INITRD
@@ -214,11 +196,11 @@ extern int initrd_is_mapped;
 void free_initrd_mem(unsigned long start, unsigned long end)
 {
 	if (initrd_is_mapped)
-		free_reserved_area(start, end, 0, "initrd");
+		free_reserved_area((void *)start, (void *)end, -1, "initrd");
 }
 #endif
 
 void free_initmem(void)
 {
-	free_initmem_default(0);
+	free_initmem_default(-1);
 }
