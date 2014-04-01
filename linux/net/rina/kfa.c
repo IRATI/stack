@@ -553,10 +553,9 @@ int kfa_flow_sdu_write(struct kfa * instance,
 static int queue_ready(struct ipcp_flow * flow)
 {
         if (flow->state == PORT_STATE_DEALLOCATED ||
-            (flow->state != PORT_STATE_PENDING &&
-             !rfifo_is_empty(flow->sdu_ready)))
-                return true;
-        return false;
+            !kfifo_is_empty(&flow->sdu_ready))
+                return 1;
+        return 0;
 }
 
 int kfa_flow_sdu_read(struct kfa *  instance,
@@ -598,8 +597,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         atomic_inc(&flow->readers);
 
-        while (flow->state == PORT_STATE_PENDING ||
-               rfifo_is_empty(flow->sdu_ready)) {
+        while (kfifo_is_empty(&flow->sdu_ready)) {
                 spin_unlock(&instance->lock);
 
                 LOG_DBG("Going to sleep on wait queue %pK (reading)",
