@@ -312,7 +312,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		
 		ArrayList<FlowStateObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
 		
-		if (groupsToSend.size() > 0)
+		if (!groupsToSend.isEmpty())
 		{
 			for(int i = 0; i < nminusFlowInfo.length; i++)
 			{
