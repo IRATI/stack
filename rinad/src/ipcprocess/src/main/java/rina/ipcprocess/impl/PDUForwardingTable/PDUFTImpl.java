@@ -309,18 +309,13 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		ObjectValue objectValue = new ObjectValue();
 		
 		FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
-		log.debug("nminusFloxInfo length: " + nminusFlowInfo.length);
 		
 		ArrayList<FlowStateObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
-		log.debug("groupsToSend size: " + groupsToSend.size());
-		log.debug("group size: " + db.getFlowStateObjectGroup().getFlowStateObjectArray().size());
 		
 		if (groupsToSend.size() > 0)
 		{
-			log.debug("hola1");
 			for(int i = 0; i < nminusFlowInfo.length; i++)
 			{
-				log.debug("hola2");
 				try 
 				{
 					FlowStateObjectGroup fsg= groupsToSend.get(i);
