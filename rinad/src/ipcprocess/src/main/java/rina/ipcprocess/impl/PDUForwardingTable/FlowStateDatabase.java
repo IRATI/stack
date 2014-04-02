@@ -212,6 +212,7 @@ public class FlowStateDatabase {
 						oldObj.setSequenceNumber(newObj.getSequenceNumber() + 1);
 						oldObj.setModified(true);
 						this.isModified = true;
+						oldObj.setAvoidPort(NO_AVOID_PORT);
 					}
 					if (newObj.getSequenceNumber() > oldObj.getSequenceNumber())
 					{
@@ -232,7 +233,7 @@ public class FlowStateDatabase {
 			{
 				if (newObj.getAddress() == address)
 				{
-					log.debug("Object is self origin, discart object " + newObj.getID());
+					log.debug("Object has orgin myself, discart object " + newObj.getID());
 				}
 				else
 				{
