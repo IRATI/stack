@@ -14,14 +14,7 @@ public class FlowStateObjectEncoderTest {
 	
 	@Before
 	public void setup(){
-		flowStateObject = new FlowStateObject();
-		flowStateObject.setAddress(1);
-		flowStateObject.setPortid(1);
-		flowStateObject.setNeighborAddress(2);
-		flowStateObject.setNeighborPortid(1);
-		flowStateObject.setState(true);
-		flowStateObject.setSequenceNumber(1);
-		flowStateObject.setAge(1);
+		flowStateObject = new FlowStateObject(1,1,2,1,true,1,1);
 		
 		flowStateEncoder = new FlowStateEncoder();
 	}

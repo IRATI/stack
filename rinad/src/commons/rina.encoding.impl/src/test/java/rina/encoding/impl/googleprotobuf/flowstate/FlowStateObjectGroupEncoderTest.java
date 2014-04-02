@@ -21,24 +21,11 @@ public class FlowStateObjectGroupEncoderTest {
 	@Before
 	public void setup(){
 		List<FlowStateObject> flowStateObjectList = new ArrayList<FlowStateObject>();
-		FlowStateObject flowStateObject1 = new FlowStateObject();
-		flowStateObject1.setAddress(1);
-		flowStateObject1.setPortid(1);
-		flowStateObject1.setNeighborAddress(2);
-		flowStateObject1.setNeighborPortid(1);
-		flowStateObject1.setState(true);
-		flowStateObject1.setSequenceNumber(1);
-		flowStateObject1.setAge(1);
+		FlowStateObject flowStateObject1 = new FlowStateObject(1,1,2,1,true,1,1);
 		flowStateObjectList.add(flowStateObject1);
 		
-		FlowStateObject flowStateObject2 = new FlowStateObject();
-		flowStateObject2.setAddress(1);
-		flowStateObject2.setPortid(1);
-		flowStateObject2.setNeighborAddress(2);
-		flowStateObject2.setNeighborPortid(1);
-		flowStateObject2.setState(true);
-		flowStateObject2.setSequenceNumber(1);
-		flowStateObject2.setAge(1);
+		FlowStateObject flowStateObject2 = new FlowStateObject(1,1,2,1,true,1,1);
+
 		flowStateObjectList.add(flowStateObject2);
 		
 		flowStateObjectGroup = new FlowStateObjectGroup(flowStateObjectList);

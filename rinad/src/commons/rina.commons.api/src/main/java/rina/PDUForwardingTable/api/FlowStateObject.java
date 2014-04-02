@@ -127,7 +127,7 @@ public class FlowStateObject{
 		this.sequenceNumber = sequenceNumber;
 		this.age = age;
 		this.ID = this.ID + address + /*portid +*/ neighborAddress /*+ neighborPortid*/;
-		this.isModified = false;
+		this.isModified = true;
 		this.isBeingErased = false;
 		log.debug("Created object with id: " + this.ID);
 	}

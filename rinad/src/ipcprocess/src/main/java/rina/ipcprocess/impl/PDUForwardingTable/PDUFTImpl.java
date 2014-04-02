@@ -145,6 +145,15 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		db = new FlowStateDatabase();
 		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		this.maximumAge = maximumAge;
+	}
+	
+	public void setIPCProcess(IPCProcess ipcProcess){
+		this.ipcProcess = ipcProcess;
+		ribDaemon = ipcProcess.getRIBDaemon();
+		encoder = ipcProcess.getEncoder();
+		cdapSessionManager = ipcProcess.getCDAPSessionManager();
+		populateRIB();
+		subscribeToEvents();
 		
 		/*	Time to compute PDUFT	*/
 		/* TODO: Descomentar */
@@ -161,17 +170,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 
 		/* Timer to send CDAP*/
 		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
-	}
-	
-	public void setIPCProcess(IPCProcess ipcProcess){
-		this.ipcProcess = ipcProcess;
-		//ipcManager = rina.getExtendedIPCManager();
-		ribDaemon = ipcProcess.getRIBDaemon();
-		encoder = ipcProcess.getEncoder();
-		cdapSessionManager = ipcProcess.getCDAPSessionManager();
-		//registrationManager = ipcProcess.getRegistrationManager();
-		populateRIB();
-		subscribeToEvents();
 	}
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
@@ -311,13 +309,18 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		ObjectValue objectValue = new ObjectValue();
 		
 		FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
+		log.debug("nminusFloxInfo length: " + nminusFlowInfo.length);
 		
 		ArrayList<FlowStateObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
-
+		log.debug("groupsToSend size: " + groupsToSend.size());
+		log.debug("group size: " + db.getFlowStateObjectGroup().getFlowStateObjectArray().size());
+		
 		if (groupsToSend.size() > 0)
 		{
+			log.debug("hola1");
 			for(int i = 0; i < nminusFlowInfo.length; i++)
 			{
+				log.debug("hola2");
 				try 
 				{
 					FlowStateObjectGroup fsg= groupsToSend.get(i);
