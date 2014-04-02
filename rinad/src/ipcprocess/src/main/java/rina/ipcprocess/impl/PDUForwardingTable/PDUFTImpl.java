@@ -145,6 +145,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		db = new FlowStateDatabase();
 		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		this.maximumAge = maximumAge;
+		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
@@ -156,20 +157,19 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		subscribeToEvents();
 		
 		/*	Time to compute PDUFT	*/
-		/* TODO: Descomentar */
-		pduFTComputationTimer = new Timer();
-		pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
-		
-		/*	Time to increment age	*/
-		ageIncrementationTimer = new Timer();
-		ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
-
-		/* Timer to propagate modified FSO */
-		fsodbPropagationTimer = new Timer();
-		fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
-
-		/* Timer to send CDAP*/
-		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
+		if(!test)
+		{
+			pduFTComputationTimer = new Timer();
+			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
+			
+			/*	Time to increment age	*/
+			ageIncrementationTimer = new Timer();
+			ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
+	
+			/* Timer to propagate modified FSO */
+			fsodbPropagationTimer = new Timer();
+			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
+		}
 	}
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
@@ -260,18 +260,17 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				}
 			}
 			// TODO: Remove newmember thing
-			enrollmentToNeighbor(neighbor.getName(), neighbor.getAddress(), true , neighbor.getUnderlyingPortId());
+			enrollmentToNeighbor(neighbor.getAddress(), true , neighbor.getUnderlyingPortId());
 		}
 	}
 	
-	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId)
+	public void enrollmentToNeighbor(long address, boolean newMember, int portId)
 	{
 		ObjectValue objectValue = new ObjectValue();
-		
 		if (!db.isEmpty())
 		{
 			try 
-			{	
+			{							
 				objectValue.setByteval(db.encode(encoder));
 				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(portId, null,
 						null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
@@ -304,8 +303,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean propagateFSDB()
 	{
-		//log.debug("propagateFSDB function launched");
-
 		ObjectValue objectValue = new ObjectValue();
 		
 		FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();

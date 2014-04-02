@@ -9,7 +9,7 @@ public interface PDUFTable {
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex);
 	
-	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId);
+	public void enrollmentToNeighbor(long address, boolean newMember, int portId);
 
 	public void flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
 
