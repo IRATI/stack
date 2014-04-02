@@ -214,7 +214,7 @@ public class FlowStateDatabase {
 						this.isModified = true;
 						oldObj.setAvoidPort(NO_AVOID_PORT);
 					}
-					if (newObj.getSequenceNumber() > oldObj.getSequenceNumber())
+					if (newObj.getSequenceNumber() >= oldObj.getSequenceNumber())
 					{
 						log.debug("Update the object: " + oldObj.getID());
 						oldObj.setAge(newObj.getAge());
