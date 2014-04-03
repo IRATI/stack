@@ -19,6 +19,8 @@
 
 #include <linux/compat.h>
 #include <linux/mutex.h>
+#include <linux/sched.h>
+#include <linux/socket.h>
 
 #include "vmpi-host-impl.h"
 #include "vmpi-host-test.h"

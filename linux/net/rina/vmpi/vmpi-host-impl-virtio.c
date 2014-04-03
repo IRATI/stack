@@ -28,6 +28,7 @@
 #include <linux/file.h>
 #include <linux/slab.h>
 #include <linux/aio.h>
+#include <linux/sched.h>
 
 #include "vhost.h"
 

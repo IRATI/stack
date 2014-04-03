@@ -20,6 +20,7 @@
 #include <linux/uio.h>
 #include <linux/aio.h>
 #include <linux/compat.h>
+#include <linux/fs.h>
 
 #include "vmpi.h"
 #include "vmpi-host-test.h"
