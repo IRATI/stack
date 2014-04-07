@@ -563,6 +563,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         ASSERT(tmp->dt);
 
+        /* FIXME: Initialization of dt required */
+
         cep_id                    = cidm_allocate(container->cidm);
 
         /* We must ensure that the DTP is instantiated, at least ... */

@@ -52,10 +52,12 @@ uint_t        dt_sv_max_sdu_size(struct dt * dt);
 seq_num_t     dt_sv_rcv_lft_win(struct dt * dt);
 int           dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win);
 timeout_t     dt_sv_mpl(struct dt * dt);
+int           dt_sv_mpl_set(struct dt * dt, timeout_t mpl);
 timeout_t     dt_sv_r(struct dt * dt);
 timeout_t     dt_sv_a(struct dt * dt);
 bool          dt_sv_window_closed(struct dt * dt);
 int           dt_sv_window_closed_set(struct dt * dt, bool closed);
 seq_num_t     dt_sv_last_seq_num_sent(struct dt * dt);
+timeout_t     dt_sv_tr(struct dt * dt);
 
 #endif

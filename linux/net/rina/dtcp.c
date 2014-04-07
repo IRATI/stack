@@ -142,6 +142,7 @@ struct dtcp_policies {
         int (* retransmission_timer_expiry)(struct dtcp * instance);
         int (* received_retransmission)(struct dtcp * instance);
         int (* rcvr_ack)(struct dtcp * instance, seq_num_t seq);
+        int (* sender_ack)(struct dtcp * instance, seq_num_t seq);
         int (* sending_ack)(struct dtcp * instance);
         int (* sending_ack_list)(struct dtcp * instance);
         int (* initial_credit)(struct dtcp * instance);
@@ -359,19 +360,24 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
         return pdu;
 }
 
-static int rcv_ack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 {
-        LOG_MISSING;
+        struct rtxq * q;
+
+        q = dt_rtxq(dtcp->parent);
+        if (!q) {
+                LOG_ERR("Couldn't find the Retransmission queue");
+                return -1;
+        }
+        rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
         return 0;
 }
 
-#if 0
-static int rcv_nack_ctl(struct dtcp * dtcp, struct pdu * pdu)
+static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
 {
         LOG_MISSING;
         return 0;
 }
-#endif
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pci *  pci,
@@ -391,7 +397,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                 LOG_ERR("No Closed Window Queue");
                 return -1;
         }
-        if (!cwq_is_empty(q) &&
+        if (cwq_is_empty(q) &&
             (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
                 dt_sv_window_closed_set(dtcp->parent, false);
         }
@@ -466,7 +472,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 if (dtcp->policies->lost_control_pdu(dtcp)) {
                         /* What else could we do here? */
                         pdu_destroy(pdu);
-                        return -1;
+                        return 0;
                 }
         }
         last_rcv_ctrl_seq_set(dtcp, seq_num);
@@ -477,10 +483,14 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
          */
 
         switch (type) {
+        case PDU_TYPE_ACK:
+                return dtcp->policies->sender_ack(dtcp,
+                                                  pci_control_ack_seq_num(pdu_pci_get_ro(pdu)));
+        case PDU_TYPE_NACK:
+                return rcv_nack_ctl(dtcp,
+                                    pci_control_ack_seq_num(pdu_pci_get_ro(pdu)));
         case PDU_TYPE_FC:
                 return rcv_flow_ctl(dtcp, pci, pdu);
-        case PDU_TYPE_ACK:
-                return rcv_ack_ctl(dtcp, pdu);
         case PDU_TYPE_ACK_AND_FC:
                 return rcv_ack_and_flow_ctl(dtcp, pci, seq_num, pdu);
         default:
@@ -616,6 +626,7 @@ static struct dtcp_policies default_policies = {
         .rtt_estimator               = NULL,
         .retransmission_timer_expiry = NULL,
         .received_retransmission     = NULL,
+        .sender_ack                  = default_sender_ack,
         .sending_ack                 = NULL,
         .sending_ack_list            = NULL,
         .initial_credit              = NULL,

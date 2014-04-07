@@ -35,17 +35,19 @@ struct dt_sv {
         seq_num_t rcv_left_window_edge;
         bool      window_closed;
         seq_num_t last_seq_num_sent;
+        timeout_t tr;
 };
 
 struct dt {
-        struct dt_sv *  sv;
-        struct dtp *    dtp;
-        struct dtcp *   dtcp;
+        struct dt_sv *      sv;
+        struct dtp *        dtp;
+        struct dtcp *       dtcp;
+        struct connection * connection;
 
-        struct cwq *    cwq;
-        struct rtxq *   rtxq;
+        struct cwq *        cwq;
+        struct rtxq *       rtxq;
 
-        spinlock_t      lock;
+        spinlock_t          lock;
 };
 
 static struct dt_sv default_sv = {
@@ -193,7 +195,7 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
                 return -1;
         }
 
-        dt->rtxq = rtxq_create();
+        dt->rtxq = rtxq_create(dt);
         if (!dt->rtxq) {
                 LOG_ERR("Failed to create rexmsn queue");
                 if (cwq_destroy(dt->cwq))
@@ -436,6 +438,34 @@ seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
 
         spin_lock(&dt->lock);
         tmp = dt->sv->last_seq_num_sent;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+timeout_t dt_sv_tr(struct dt * dt)
+{
+        timeout_t tmp;
+
+        ASSERT(dt);
+        ASSERT(dt->sv);
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->tr;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct connection * dt_connection(struct dt * dt)
+{
+        struct connection * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->connection;
         spin_unlock(&dt->lock);
 
         return tmp;

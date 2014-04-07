@@ -52,9 +52,9 @@ struct dtp_sv {
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
         int (* transmission_control)(struct dtp * instance,
-                                     struct sdu * sdu);
-        int (* closed_window_overrun)(struct dtp * instance,
-                                      struct sdu * sdu);
+                                     struct pdu * pdu);
+        int (* closed_window)(struct dtp * instance,
+                                      struct pdu * pdu);
         int (* flow_control_overrun)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
@@ -92,9 +92,54 @@ static struct dtp_sv default_sv = {
         .rexmsn_ctrl                   = false,
 };
 
+static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
+{
+        struct cwq *    cwq;
+        struct dt *     dt;
+
+        ASSERT(dtp);
+        ASSERT(pdu_is_ok(pdu));
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        cwq = dt_cwq(dt);
+        if (!cwq) {
+                LOG_ERR("Failed to get cwq");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (cwq_size(cwq) < max_cwq_len_get(dtp->sv)-1) {
+                if (cwq_push(cwq, pdu)) {
+                        LOG_ERR("Failed to push to cwq");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                return 0;
+        }
+
+        return -1;
+}
+
+static int default_transmission(struct dtp * dtp, struct pdu * pdu)
+{
+        struct cwq *    cwq;
+        struct dt *     dt;
+
+        ASSERT(dtp);
+        ASSERT(pdu_is_ok(pdu));
+
+        /* Post SDU to RMT */
+        return rmt_send(dtp->rmt,
+                        pci_destination(pdu_pci_get_ro(pdu)),
+                        pci_qos_id(pdu_pci_get_ro(pdu)),
+                        pdu);
+}
+
 static struct dtp_policies default_policies = {
-        .transmission_control      = NULL,
-        .closed_window_overrun     = NULL,
+        .transmission_control      = default_transmission,
+        .closed_window             = default_closed_window,
         .flow_control_overrun      = NULL,
         .initial_sequence_number   = NULL,
         .receiver_inactivity_timer = NULL,
@@ -305,7 +350,7 @@ int dtp_write(struct dtp * instance,
         struct dtcp *         dtcp;
         struct cwq *          cwq;
         struct rtxq *         rtxq;
-        int                   ret;
+        int                   ret = 0;
         struct pdu *          cpdu;
         struct dtp_policies * policies;
 
@@ -391,58 +436,58 @@ int dtp_write(struct dtp * instance,
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
-        if (dtcp && sv->window_based) {
-                if (!dt_sv_window_closed(dt) &&
-                    pci_sequence_number_get(pci) <
-                    dtcp_snd_rt_win(dtcp)) {
-                        /*
-                         * Might close window
-                         */
-                        policies->transmission_control(instance, sdu);
-                } else {
-                        cwq = dt_cwq(dt);
-                        if (!cwq) {
-                                LOG_ERR("Failed to get cwq");
+        /*
+         * FIXME : The two ways of carrying out flow control
+         * could exist at once, thus reconciliation should be
+         * the first and default case if both are present.
+         */
+
+        if (dtcp) {
+                if (sv->window_based) {
+                        if (!dt_sv_window_closed(dt) &&
+                            pci_sequence_number_get(pci) <
+                            dtcp_snd_rt_win(dtcp)) {
+                                /*
+                                 * Might close window
+                                 */
+                                if (policies->transmission_control(instance,
+                                                                   pdu)) {
+                                        LOG_ERR("Problems with transmission "
+                                                "control");
+                                        ret = -1;
+                                }
+                        } else {
+                                dt_sv_window_closed_set(dt, true);
+                                if (policies->closed_window(instance, pdu)) {
+                                        LOG_ERR("Problems with the "
+                                                "closed window policy");
+                                        ret = -1;
+                                }
+                        }
+                }
+                if (sv->rexmsn_ctrl) {
+                        /* FIXME: Add timer for PDU */
+                        rtxq = dt_rtxq(dt);
+                        if (!rtxq) {
+                                LOG_ERR("Failed to get rtxq");
                                 pdu_destroy(pdu);
                                 return -1;
                         }
 
-                        if (cwq_size(cwq) < max_cwq_len_get(sv)-1) {
-                                if (cwq_push(cwq, pdu)) {
-                                        LOG_ERR("Failed to push to cwq");
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
-                                return 0;
-                        } else {
-                                policies->closed_window_overrun(instance, sdu);
-                                return 0;
+                        cpdu = pdu_dup(pdu);
+                        if (!cpdu) {
+                                LOG_ERR("Failed to copy PDU");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
+
+                        if (rtxq_push(rtxq, cpdu)) {
+                                LOG_ERR("Couldn't push to rtxq");
+                                pdu_destroy(pdu);
+                                return -1;
                         }
                 }
-        }
-
-        if (dtcp && sv->rexmsn_ctrl) {
-                /* FIXME: Add timer for PDU */
-                rtxq = dt_rtxq(dt);
-                if (!rtxq) {
-                        LOG_ERR("Failed to get rtxq");
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-
-                cpdu = pdu_dup(pdu);
-                if (!cpdu) {
-                        LOG_ERR("Failed to copy PDU");
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-
-                if (rtxq_push(rtxq, cpdu)) {
-                        LOG_ERR("Couldn't push to rtxq");
-                        pdu_destroy(pdu);
-                        pdu_destroy(cpdu);
-                        return -1;
-                }
+                return ret;
         }
 
         /* Post SDU to RMT */
