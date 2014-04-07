@@ -14,11 +14,6 @@
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
 */
 
 /*
@@ -1496,7 +1491,7 @@ struct ni_board_struct {
 	unsigned short pwm_up_count;	\
 	unsigned short pwm_down_count;	\
 	\
-	short ai_fifo_buffer[0x2000];				\
+	unsigned short ai_fifo_buffer[0x2000];			\
 	uint8_t eeprom_buffer[M_SERIES_EEPROM_SIZE]; \
 	uint32_t serial_number; \
 	\

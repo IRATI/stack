@@ -48,7 +48,7 @@
  *
  * @inode: pointer to inode structure
  * @file: pointer to file structure
- e
+ *
  * returns 0 on success, <0 on error
  */
 static int mei_open(struct inode *inode, struct file *file)
@@ -60,48 +60,45 @@ static int mei_open(struct inode *inode, struct file *file)
 
 	int err;
 
-	err = -ENODEV;
 	if (!misc->parent)
-		goto out;
+		return -ENODEV;
 
 	pdev = container_of(misc->parent, struct pci_dev, dev);
 
 	dev = pci_get_drvdata(pdev);
 	if (!dev)
-		goto out;
+		return -ENODEV;
 
 	mutex_lock(&dev->device_lock);
-	err = -ENOMEM;
-	cl = mei_cl_allocate(dev);
-	if (!cl)
-		goto out_unlock;
+
+	cl = NULL;
 
 	err = -ENODEV;
 	if (dev->dev_state != MEI_DEV_ENABLED) {
 		dev_dbg(&dev->pdev->dev, "dev_state != MEI_ENABLED  dev_state = %s\n",
 		    mei_dev_state_str(dev->dev_state));
-		goto out_unlock;
-	}
-	err = -EMFILE;
-	if (dev->open_handle_count >= MEI_MAX_OPEN_HANDLE_COUNT) {
-		dev_err(&dev->pdev->dev, "open_handle_count exceded %d",
-			MEI_MAX_OPEN_HANDLE_COUNT);
-		goto out_unlock;
+		goto err_unlock;
 	}
 
+	err = -ENOMEM;
+	cl = mei_cl_allocate(dev);
+	if (!cl)
+		goto err_unlock;
+
+	/* open_handle_count check is handled in the mei_cl_link */
 	err = mei_cl_link(cl, MEI_HOST_CLIENT_ID_ANY);
 	if (err)
-		goto out_unlock;
+		goto err_unlock;
 
 	file->private_data = cl;
+
 	mutex_unlock(&dev->device_lock);
 
 	return nonseekable_open(inode, file);
 
-out_unlock:
+err_unlock:
 	mutex_unlock(&dev->device_lock);
 	kfree(cl);
-out:
 	return err;
 }
 
@@ -144,10 +141,6 @@ static int mei_release(struct inode *inode, struct file *file)
 	    cl->host_client_id,
 	    cl->me_client_id);
 
-	if (dev->open_handle_count > 0) {
-		clear_bit(cl->host_client_id, dev->host_clients_map);
-		dev->open_handle_count--;
-	}
 	mei_cl_unlink(cl);
 
 
@@ -165,10 +158,7 @@ static int mei_release(struct inode *inode, struct file *file)
 
 	file->private_data = NULL;
 
-	if (cb) {
-		mei_io_cb_free(cb);
-		cb = NULL;
-	}
+	mei_io_cb_free(cb);
 
 	kfree(cl);
 out:
@@ -194,7 +184,6 @@ static ssize_t mei_read(struct file *file, char __user *ubuf,
 	struct mei_cl_cb *cb_pos = NULL;
 	struct mei_cl_cb *cb = NULL;
 	struct mei_device *dev;
-	int i;
 	int rets;
 	int err;
 
@@ -204,24 +193,16 @@ static ssize_t mei_read(struct file *file, char __user *ubuf,
 
 	dev = cl->dev;
 
+
 	mutex_lock(&dev->device_lock);
 	if (dev->dev_state != MEI_DEV_ENABLED) {
 		rets = -ENODEV;
 		goto out;
 	}
 
-	if ((cl->sm_state & MEI_WD_STATE_INDEPENDENCE_MSG_SENT) == 0) {
-		/* Do not allow to read watchdog client */
-		i = mei_me_cl_by_uuid(dev, &mei_wd_guid);
-		if (i >= 0) {
-			struct mei_me_client *me_client = &dev->me_clients[i];
-			if (cl->me_client_id == me_client->client_id) {
-				rets = -EBADF;
-				goto out;
-			}
-		}
-	} else {
-		cl->sm_state &= ~MEI_WD_STATE_INDEPENDENCE_MSG_SENT;
+	if (length == 0) {
+		rets = 0;
+		goto out;
 	}
 
 	if (cl == &dev->iamthif_cl) {
@@ -229,19 +210,21 @@ static ssize_t mei_read(struct file *file, char __user *ubuf,
 		goto out;
 	}
 
-	if (cl->read_cb && cl->read_cb->buf_idx > *offset) {
+	if (cl->read_cb) {
 		cb = cl->read_cb;
-		goto copy_buffer;
-	} else if (cl->read_cb && cl->read_cb->buf_idx > 0 &&
-		   cl->read_cb->buf_idx <= *offset) {
-		cb = cl->read_cb;
-		rets = 0;
-		goto free;
-	} else if ((!cl->read_cb || !cl->read_cb->buf_idx) && *offset > 0) {
-		/*Offset needs to be cleaned for contiguous reads*/
+		/* read what left */
+		if (cb->buf_idx > *offset)
+			goto copy_buffer;
+		/* offset is beyond buf_idx we have no more data return 0 */
+		if (cb->buf_idx > 0 && cb->buf_idx <= *offset) {
+			rets = 0;
+			goto free;
+		}
+		/* Offset needs to be cleaned for contiguous reads*/
+		if (cb->buf_idx == 0 && *offset > 0)
+			*offset = 0;
+	} else if (*offset > 0) {
 		*offset = 0;
-		rets = 0;
-		goto out;
 	}
 
 	err = mei_cl_read_start(cl, length);
@@ -262,19 +245,16 @@ static ssize_t mei_read(struct file *file, char __user *ubuf,
 		mutex_unlock(&dev->device_lock);
 
 		if (wait_event_interruptible(cl->rx_wait,
-			(MEI_READ_COMPLETE == cl->reading_state ||
-			 MEI_FILE_INITIALIZING == cl->state ||
-			 MEI_FILE_DISCONNECTED == cl->state ||
-			 MEI_FILE_DISCONNECTING == cl->state))) {
+				MEI_READ_COMPLETE == cl->reading_state ||
+				mei_cl_is_transitioning(cl))) {
+
 			if (signal_pending(current))
 				return -EINTR;
 			return -ERESTARTSYS;
 		}
 
 		mutex_lock(&dev->device_lock);
-		if (MEI_FILE_INITIALIZING == cl->state ||
-		    MEI_FILE_DISCONNECTED == cl->state ||
-		    MEI_FILE_DISCONNECTING == cl->state) {
+		if (mei_cl_is_transitioning(cl)) {
 			rets = -EBUSY;
 			goto out;
 		}
@@ -363,8 +343,14 @@ static ssize_t mei_write(struct file *file, const char __user *ubuf,
 		rets = -ENODEV;
 		goto out;
 	}
-	if (length > dev->me_clients[id].props.max_msg_length || length <= 0) {
-		rets = -EMSGSIZE;
+
+	if (length == 0) {
+		rets = 0;
+		goto out;
+	}
+
+	if (length > dev->me_clients[id].props.max_msg_length) {
+		rets = -EFBIG;
 		goto out;
 	}
 
@@ -417,18 +403,11 @@ static ssize_t mei_write(struct file *file, const char __user *ubuf,
 		goto out;
 
 	rets = copy_from_user(write_cb->request_buffer.data, ubuf, length);
-	if (rets)
+	if (rets) {
+		dev_err(&dev->pdev->dev, "failed to copy data from userland\n");
+		rets = -EFAULT;
 		goto out;
-
-	cl->sm_state = 0;
-	if (length == 4 &&
-	    ((memcmp(mei_wd_state_independence_msg[0],
-				 write_cb->request_buffer.data, 4) == 0) ||
-	     (memcmp(mei_wd_state_independence_msg[1],
-				 write_cb->request_buffer.data, 4) == 0) ||
-	     (memcmp(mei_wd_state_independence_msg[2],
-				 write_cb->request_buffer.data, 4) == 0)))
-		cl->sm_state |= MEI_WD_STATE_INDEPENDENCE_MSG_SENT;
+	}
 
 	if (cl == &dev->iamthif_cl) {
 		rets = mei_amthif_write(dev, write_cb);
@@ -515,11 +494,11 @@ static int mei_ioctl_connect_client(struct file *file,
 			rets = -ENODEV;
 			goto end;
 		}
-		clear_bit(cl->host_client_id, dev->host_clients_map);
 		mei_cl_unlink(cl);
 
 		kfree(cl);
 		cl = NULL;
+		dev->iamthif_open_count++;
 		file->private_data = &dev->iamthif_cl;
 
 		client = &data->out_client_properties;
@@ -590,7 +569,7 @@ static long mei_ioctl(struct file *file, unsigned int cmd, unsigned long data)
 	dev_dbg(&dev->pdev->dev, "copy connect data from user\n");
 	if (copy_from_user(connect_data, (char __user *)data,
 				sizeof(struct mei_connect_client_data))) {
-		dev_dbg(&dev->pdev->dev, "failed to copy data from userland\n");
+		dev_err(&dev->pdev->dev, "failed to copy data from userland\n");
 		rets = -EFAULT;
 		goto out;
 	}
@@ -648,24 +627,32 @@ static unsigned int mei_poll(struct file *file, poll_table *wait)
 	unsigned int mask = 0;
 
 	if (WARN_ON(!cl || !cl->dev))
-		return mask;
+		return POLLERR;
 
 	dev = cl->dev;
 
 	mutex_lock(&dev->device_lock);
 
-	if (dev->dev_state != MEI_DEV_ENABLED)
-		goto out;
-
-
-	if (cl == &dev->iamthif_cl) {
-		mask = mei_amthif_poll(dev, file, wait);
+	if (!mei_cl_is_connected(cl)) {
+		mask = POLLERR;
 		goto out;
 	}
 
 	mutex_unlock(&dev->device_lock);
+
+
+	if (cl == &dev->iamthif_cl)
+		return mei_amthif_poll(dev, file, wait);
+
 	poll_wait(file, &cl->tx_wait, wait);
+
 	mutex_lock(&dev->device_lock);
+
+	if (!mei_cl_is_connected(cl)) {
+		mask = POLLERR;
+		goto out;
+	}
+
 	if (MEI_WRITE_COMPLETE == cl->writing_state)
 		mask |= (POLLIN | POLLRDNORM);
 

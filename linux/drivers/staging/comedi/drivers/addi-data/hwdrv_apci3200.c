@@ -15,10 +15,6 @@ This program is free software; you can redistribute it and/or modify it under th
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-
-You should also find the complete GPL in the COPYING file accompanying this source code.
-
 @endverbatim
 */
 /*
@@ -627,16 +623,11 @@ static int apci3200_do_insn_bits(struct comedi_device *dev,
 				 unsigned int *data)
 {
 	struct addi_private *devpriv = dev->private;
-	unsigned int mask = data[0];
-	unsigned int bits = data[1];
 
 	s->state = inl(devpriv->i_IobaseAddon) & 0xf;
-	if (mask) {
-		s->state &= ~mask;
-		s->state |= (bits & mask);
 
+	if (comedi_dio_update_state(s, data))
 		outl(s->state, devpriv->i_IobaseAddon);
-	}
 
 	data[1] = s->state;
 
@@ -2599,8 +2590,8 @@ static int i_APCI3200_CommandAnalogInput(struct comedi_device *dev,
 static int i_APCI3200_InterruptHandleEos(struct comedi_device *dev)
 {
 	struct addi_private *devpriv = dev->private;
+	struct comedi_subdevice *s = dev->read_subdev;
 	unsigned int ui_StatusRegister = 0;
-	struct comedi_subdevice *s = &dev->subdevices[0];
 
 	/* BEGIN JK 18.10.2004: APCI-3200 Driver update 0.7.57 -> 0.7.68 */
 	/* comedi_async *async = s->async; */

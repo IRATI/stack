@@ -45,7 +45,7 @@ Retry Counter Definition
 Hardware ECC Definition
 ***************************************************************************/
 #define HW_ECC_SUPPORTED    1	   /* Hardware ECC Supported */
-/* No difinition for Software ECC */
+/* No definition for Software ECC */
 
 /***************************************************************************
 SmartMedia Command & Status Definition
@@ -168,7 +168,7 @@ SmartMedia Model & Attribute
 /***************************************************************************
 Struct Definition
 ***************************************************************************/
-struct SSFDCTYPE {
+struct keucr_media_info {
 	BYTE Model;
 	BYTE Attribute;
 	BYTE MaxZones;
@@ -177,47 +177,25 @@ struct SSFDCTYPE {
 	WORD MaxLogBlocks;
 };
 
-typedef struct SSFDCTYPE_T {
-	BYTE Model;
-	BYTE Attribute;
-	BYTE MaxZones;
-	BYTE MaxSectors;
-	WORD MaxBlocks;
-	WORD MaxLogBlocks;
-} *SSFDCTYPE_T;
-
-struct ADDRESS {
+struct keucr_media_address {
 	BYTE Zone;	/* Zone Number */
 	BYTE Sector;	/* Sector(512byte) Number on Block */
 	WORD PhyBlock;	/* Physical Block Number on Zone */
 	WORD LogBlock;	/* Logical Block Number of Zone */
 };
 
-typedef struct ADDRESS_T {
-	BYTE Zone;	/* Zone Number */
-	BYTE Sector;	/* Sector(512byte) Number on Block */
-	WORD PhyBlock;	/* Physical Block Number on Zone */
-	WORD LogBlock;	/* Logical Block Number of Zone */
-} *ADDRESS_T;
-
-struct CIS_AREA {
+struct keucr_media_area {
 	BYTE Sector;	/* Sector(512byte) Number on Block */
 	WORD PhyBlock;	/* Physical Block Number on Zone 0 */
 };
 
-
-extern BYTE IsSSFDCCompliance;
-extern BYTE IsXDCompliance;
-
-extern DWORD	ErrXDCode;
-extern DWORD	ErrCode;
 extern WORD	ReadBlock;
 extern WORD	WriteBlock;
 extern DWORD	MediaChange;
 
-extern struct SSFDCTYPE  Ssfdc;
-extern struct ADDRESS    Media;
-extern struct CIS_AREA   CisArea;
+extern struct keucr_media_info    Ssfdc;
+extern struct keucr_media_address Media;
+extern struct keucr_media_area    CisArea;
 
 /*
  * SMILMain.c

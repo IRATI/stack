@@ -617,10 +617,7 @@ int rnl_init(void)
          */
         set_netlink_non_root_send_flag();
 
-        ret = genl_register_family_with_ops(&rnl_nl_family,
-                                            nl_ops,
-                                            ARRAY_SIZE(nl_ops));
-
+        ret = genl_register_family_with_ops(&rnl_nl_family, nl_ops);
         if (ret != 0) {
                 LOG_ERR("Cannot register Netlink family and ops (error=%i), "
                         "bailing out", ret);

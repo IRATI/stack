@@ -15,7 +15,6 @@ rina_wrap_CPPFLAGS = $(CPPFLAGS_EXTRA)
 bin_PROGRAMS       += rina-wrap
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-wrap
 
-if HAVE_PYTHON
 edit = $(SED)							\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
         -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'		\
@@ -24,6 +23,7 @@ edit = $(SED)							\
         -e 's|@PYTHON[@]|$(PYTHON)|g'				\
         -e 's|@SHELL[@]|$(SHELL)|g'
 
+if HAVE_PYTHON
 rina-mem-stats: rina-mem-stats.py Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \

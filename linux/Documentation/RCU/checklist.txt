@@ -202,8 +202,8 @@ over a rather long period of time, but improvements are always welcome!
 	updater uses call_rcu_sched() or synchronize_sched(), then
 	the corresponding readers must disable preemption, possibly
 	by calling rcu_read_lock_sched() and rcu_read_unlock_sched().
-	If the updater uses synchronize_srcu() or call_srcu(),
-	the the corresponding readers must use srcu_read_lock() and
+	If the updater uses synchronize_srcu() or call_srcu(), then
+	the corresponding readers must use srcu_read_lock() and
 	srcu_read_unlock(), and with the same srcu_struct.  The rules for
 	the expedited primitives are the same as for their non-expedited
 	counterparts.  Mixing things up will result in confusion and
@@ -353,12 +353,6 @@ over a rather long period of time, but improvements are always welcome!
 	don't need to sleep in read-side critical sections, you should be
 	using RCU rather than SRCU, because RCU is almost always faster
 	and easier to use than is SRCU.
-
-	If you need to enter your read-side critical section in a
-	hardirq or exception handler, and then exit that same read-side
-	critical section in the task that was interrupted, then you need
-	to srcu_read_lock_raw() and srcu_read_unlock_raw(), which avoid
-	the lockdep checking that would otherwise this practice illegal.
 
 	Also unlike other forms of RCU, explicit initialization
 	and cleanup is required via init_srcu_struct() and

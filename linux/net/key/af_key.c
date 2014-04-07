@@ -45,7 +45,7 @@ struct netns_pfkey {
 static DEFINE_MUTEX(pfkey_mutex);
 
 #define DUMMY_MARK 0
-static struct xfrm_mark dummy_mark = {0, 0};
+static const struct xfrm_mark dummy_mark = {0, 0};
 struct pfkey_sock {
 	/* struct sock must be the first member of struct pfkey_sock */
 	struct sock	sk;
@@ -338,7 +338,7 @@ static int pfkey_error(const struct sadb_msg *orig, int err, struct sock *sk)
 	return 0;
 }
 
-static u8 sadb_ext_min_len[] = {
+static const u8 sadb_ext_min_len[] = {
 	[SADB_EXT_RESERVED]		= (u8) 0,
 	[SADB_EXT_SA]			= (u8) sizeof(struct sadb_sa),
 	[SADB_EXT_LIFETIME_CURRENT]	= (u8) sizeof(struct sadb_lifetime),
@@ -433,12 +433,13 @@ static inline int verify_sec_ctx_len(const void *p)
 	return 0;
 }
 
-static inline struct xfrm_user_sec_ctx *pfkey_sadb2xfrm_user_sec_ctx(const struct sadb_x_sec_ctx *sec_ctx)
+static inline struct xfrm_user_sec_ctx *pfkey_sadb2xfrm_user_sec_ctx(const struct sadb_x_sec_ctx *sec_ctx,
+								     gfp_t gfp)
 {
 	struct xfrm_user_sec_ctx *uctx = NULL;
 	int ctx_size = sec_ctx->sadb_x_ctx_len;
 
-	uctx = kmalloc((sizeof(*uctx)+ctx_size), GFP_KERNEL);
+	uctx = kmalloc((sizeof(*uctx)+ctx_size), gfp);
 
 	if (!uctx)
 		return NULL;
@@ -1098,7 +1099,8 @@ static struct xfrm_state * pfkey_msg2xfrm_state(struct net *net,
 
 	x->id.proto = proto;
 	x->id.spi = sa->sadb_sa_spi;
-	x->props.replay_window = sa->sadb_sa_replay;
+	x->props.replay_window = min_t(unsigned int, sa->sadb_sa_replay,
+					(sizeof(x->replay.bitmap) * 8));
 	if (sa->sadb_sa_flags & SADB_SAFLAGS_NOECN)
 		x->props.flags |= XFRM_STATE_NOECN;
 	if (sa->sadb_sa_flags & SADB_SAFLAGS_DECAP_DSCP)
@@ -1123,7 +1125,7 @@ static struct xfrm_state * pfkey_msg2xfrm_state(struct net *net,
 
 	sec_ctx = ext_hdrs[SADB_X_EXT_SEC_CTX - 1];
 	if (sec_ctx != NULL) {
-		struct xfrm_user_sec_ctx *uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx);
+		struct xfrm_user_sec_ctx *uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx, GFP_KERNEL);
 
 		if (!uctx)
 			goto out;
@@ -1196,10 +1198,6 @@ static struct xfrm_state * pfkey_msg2xfrm_state(struct net *net,
 
 	x->props.family = pfkey_sadb_addr2xfrm_addr((struct sadb_address *) ext_hdrs[SADB_EXT_ADDRESS_SRC-1],
 						    &x->props.saddr);
-	if (!x->props.family) {
-		err = -EAFNOSUPPORT;
-		goto out;
-	}
 	pfkey_sadb_addr2xfrm_addr((struct sadb_address *) ext_hdrs[SADB_EXT_ADDRESS_DST-1],
 				  &x->id.daddr);
 
@@ -1343,6 +1341,12 @@ static int pfkey_getspi(struct sock *sk, struct sk_buff *skb, const struct sadb_
 		max_spi = range->sadb_spirange_max;
 	}
 
+	err = verify_spi_info(x->id.proto, min_spi, max_spi);
+	if (err) {
+		xfrm_state_put(x);
+		return err;
+	}
+
 	err = xfrm_alloc_spi(x, min_spi, max_spi);
 	resp_skb = err ? ERR_PTR(err) : pfkey_xfrm_state2msg(x);
 
@@ -1383,10 +1387,9 @@ static int pfkey_acquire(struct sock *sk, struct sk_buff *skb, const struct sadb
 		return 0;
 
 	spin_lock_bh(&x->lock);
-	if (x->km.state == XFRM_STATE_ACQ) {
+	if (x->km.state == XFRM_STATE_ACQ)
 		x->km.state = XFRM_STATE_ERROR;
-		wake_up(&net->xfrm.km_waitq);
-	}
+
 	spin_unlock_bh(&x->lock);
 	xfrm_state_put(x);
 	return 0;
@@ -1788,7 +1791,9 @@ static int pfkey_dump_sa(struct pfkey_sock *pfk)
 
 static void pfkey_dump_sa_done(struct pfkey_sock *pfk)
 {
-	xfrm_state_walk_done(&pfk->dump.u.state);
+	struct net *net = sock_net(&pfk->sk);
+
+	xfrm_state_walk_done(&pfk->dump.u.state, net);
 }
 
 static int pfkey_dump(struct sock *sk, struct sk_buff *skb, const struct sadb_msg *hdr, void * const *ext_hdrs)
@@ -1864,7 +1869,7 @@ static u32 gen_reqid(struct net *net)
 			reqid = IPSEC_MANUAL_REQID_MAX+1;
 		xfrm_policy_walk_init(&walk, XFRM_POLICY_TYPE_MAIN);
 		rc = xfrm_policy_walk(net, &walk, check_reqid, (void*)&reqid);
-		xfrm_policy_walk_done(&walk);
+		xfrm_policy_walk_done(&walk, net);
 		if (rc != -EEXIST)
 			return reqid;
 	} while (reqid != start);
@@ -2081,6 +2086,7 @@ static int pfkey_xfrm_policy2msg(struct sk_buff *skb, const struct xfrm_policy *
 			pol->sadb_x_policy_type = IPSEC_POLICY_NONE;
 	}
 	pol->sadb_x_policy_dir = dir+1;
+	pol->sadb_x_policy_reserved = 0;
 	pol->sadb_x_policy_id = xp->index;
 	pol->sadb_x_policy_priority = xp->priority;
 
@@ -2204,10 +2210,6 @@ static int pfkey_spdadd(struct sock *sk, struct sk_buff *skb, const struct sadb_
 
 	sa = ext_hdrs[SADB_EXT_ADDRESS_SRC-1];
 	xp->family = pfkey_sadb_addr2xfrm_addr(sa, &xp->selector.saddr);
-	if (!xp->family) {
-		err = -EINVAL;
-		goto out;
-	}
 	xp->selector.family = xp->family;
 	xp->selector.prefixlen_s = sa->sadb_address_prefixlen;
 	xp->selector.proto = pfkey_proto_to_xfrm(sa->sadb_address_proto);
@@ -2230,14 +2232,14 @@ static int pfkey_spdadd(struct sock *sk, struct sk_buff *skb, const struct sadb_
 
 	sec_ctx = ext_hdrs[SADB_X_EXT_SEC_CTX - 1];
 	if (sec_ctx != NULL) {
-		struct xfrm_user_sec_ctx *uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx);
+		struct xfrm_user_sec_ctx *uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx, GFP_KERNEL);
 
 		if (!uctx) {
 			err = -ENOBUFS;
 			goto out;
 		}
 
-		err = security_xfrm_policy_alloc(&xp->security, uctx);
+		err = security_xfrm_policy_alloc(&xp->security, uctx, GFP_KERNEL);
 		kfree(uctx);
 
 		if (err)
@@ -2334,12 +2336,12 @@ static int pfkey_spddelete(struct sock *sk, struct sk_buff *skb, const struct sa
 
 	sec_ctx = ext_hdrs[SADB_X_EXT_SEC_CTX - 1];
 	if (sec_ctx != NULL) {
-		struct xfrm_user_sec_ctx *uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx);
+		struct xfrm_user_sec_ctx *uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx, GFP_KERNEL);
 
 		if (!uctx)
 			return -ENOMEM;
 
-		err = security_xfrm_policy_alloc(&pol_ctx, uctx);
+		err = security_xfrm_policy_alloc(&pol_ctx, uctx, GFP_KERNEL);
 		kfree(uctx);
 		if (err)
 			return err;
@@ -2491,6 +2493,7 @@ static int pfkey_migrate(struct sock *sk, struct sk_buff *skb,
 	struct xfrm_selector sel;
 	struct xfrm_migrate m[XFRM_MAX_DEPTH];
 	struct xfrm_kmaddress k;
+	struct net *net = sock_net(sk);
 
 	if (!present_and_same_family(ext_hdrs[SADB_EXT_ADDRESS_SRC - 1],
 				     ext_hdrs[SADB_EXT_ADDRESS_DST - 1]) ||
@@ -2564,7 +2567,7 @@ static int pfkey_migrate(struct sock *sk, struct sk_buff *skb,
 	}
 
 	return xfrm_migrate(&sel, dir, XFRM_POLICY_TYPE_MAIN, m, i,
-			    kma ? &k : NULL);
+			    kma ? &k : NULL, net);
 
  out:
 	return err;
@@ -2665,7 +2668,9 @@ static int pfkey_dump_sp(struct pfkey_sock *pfk)
 
 static void pfkey_dump_sp_done(struct pfkey_sock *pfk)
 {
-	xfrm_policy_walk_done(&pfk->dump.u.policy);
+	struct net *net = sock_net((struct sock *)pfk);
+
+	xfrm_policy_walk_done(&pfk->dump.u.policy, net);
 }
 
 static int pfkey_spddump(struct sock *sk, struct sk_buff *skb, const struct sadb_msg *hdr, void * const *ext_hdrs)
@@ -2736,7 +2741,7 @@ static int pfkey_spdflush(struct sock *sk, struct sk_buff *skb, const struct sad
 
 typedef int (*pfkey_handler)(struct sock *sk, struct sk_buff *skb,
 			     const struct sadb_msg *hdr, void * const *ext_hdrs);
-static pfkey_handler pfkey_funcs[SADB_MAX + 1] = {
+static const pfkey_handler pfkey_funcs[SADB_MAX + 1] = {
 	[SADB_RESERVED]		= pfkey_reserved,
 	[SADB_GETSPI]		= pfkey_getspi,
 	[SADB_UPDATE]		= pfkey_add,
@@ -3137,7 +3142,9 @@ static int pfkey_send_acquire(struct xfrm_state *x, struct xfrm_tmpl *t, struct 
 	pol->sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
 	pol->sadb_x_policy_dir = XFRM_POLICY_OUT + 1;
+	pol->sadb_x_policy_reserved = 0;
 	pol->sadb_x_policy_id = xp->index;
+	pol->sadb_x_policy_priority = xp->priority;
 
 	/* Set sadb_comb's. */
 	if (x->id.proto == IPPROTO_AH)
@@ -3233,8 +3240,8 @@ static struct xfrm_policy *pfkey_compile_policy(struct sock *sk, int opt,
 		}
 		if ((*dir = verify_sec_ctx_len(p)))
 			goto out;
-		uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx);
-		*dir = security_xfrm_policy_alloc(&xp->security, uctx);
+		uctx = pfkey_sadb2xfrm_user_sec_ctx(sec_ctx, GFP_ATOMIC);
+		*dir = security_xfrm_policy_alloc(&xp->security, uctx, GFP_ATOMIC);
 		kfree(uctx);
 
 		if (*dir)
@@ -3525,6 +3532,7 @@ static int pfkey_send_migrate(const struct xfrm_selector *sel, u8 dir, u8 type,
 	pol->sadb_x_policy_exttype = SADB_X_EXT_POLICY;
 	pol->sadb_x_policy_type = IPSEC_POLICY_IPSEC;
 	pol->sadb_x_policy_dir = dir + 1;
+	pol->sadb_x_policy_reserved = 0;
 	pol->sadb_x_policy_id = 0;
 	pol->sadb_x_policy_priority = 0;
 
@@ -3572,6 +3580,7 @@ static int pfkey_sendmsg(struct kiocb *kiocb,
 	struct sk_buff *skb = NULL;
 	struct sadb_msg *hdr = NULL;
 	int err;
+	struct net *net = sock_net(sk);
 
 	err = -EOPNOTSUPP;
 	if (msg->msg_flags & MSG_OOB)
@@ -3594,9 +3603,9 @@ static int pfkey_sendmsg(struct kiocb *kiocb,
 	if (!hdr)
 		goto out;
 
-	mutex_lock(&xfrm_cfg_mutex);
+	mutex_lock(&net->xfrm.xfrm_cfg_mutex);
 	err = pfkey_process(sk, skb, hdr);
-	mutex_unlock(&xfrm_cfg_mutex);
+	mutex_unlock(&net->xfrm.xfrm_cfg_mutex);
 
 out:
 	if (err && hdr && pfkey_error(hdr, err, sk) == 0)
@@ -3619,7 +3628,6 @@ static int pfkey_recvmsg(struct kiocb *kiocb,
 	if (flags & ~(MSG_PEEK|MSG_DONTWAIT|MSG_TRUNC|MSG_CMSG_COMPAT))
 		goto out;
 
-	msg->msg_namelen = 0;
 	skb = skb_recv_datagram(sk, flags, flags & MSG_DONTWAIT, &err);
 	if (skb == NULL)
 		goto out;

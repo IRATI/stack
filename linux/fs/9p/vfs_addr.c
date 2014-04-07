@@ -148,13 +148,14 @@ static int v9fs_release_page(struct page *page, gfp_t gfp)
  * @offset: offset in the page
  */
 
-static void v9fs_invalidate_page(struct page *page, unsigned long offset)
+static void v9fs_invalidate_page(struct page *page, unsigned int offset,
+				 unsigned int length)
 {
 	/*
 	 * If called with zero offset, we should release
 	 * the private state assocated with the page
 	 */
-	if (offset == 0)
+	if (offset == 0 && length == PAGE_CACHE_SIZE)
 		v9fs_fscache_invalidate_page(page);
 }
 
@@ -200,6 +201,8 @@ static int v9fs_vfs_writepage_locked(struct page *page)
 static int v9fs_vfs_writepage(struct page *page, struct writeback_control *wbc)
 {
 	int retval;
+
+	p9_debug(P9_DEBUG_VFS, "page %p\n", page);
 
 	retval = v9fs_vfs_writepage_locked(page);
 	if (retval < 0) {
@@ -281,6 +284,9 @@ static int v9fs_write_begin(struct file *filp, struct address_space *mapping,
 	pgoff_t index = pos >> PAGE_CACHE_SHIFT;
 	struct inode *inode = mapping->host;
 
+
+	p9_debug(P9_DEBUG_VFS, "filp %p, mapping %p\n", filp, mapping);
+
 	v9inode = V9FS_I(inode);
 start:
 	page = grab_cache_page_write_begin(mapping, index, flags);
@@ -310,6 +316,8 @@ static int v9fs_write_end(struct file *filp, struct address_space *mapping,
 {
 	loff_t last_pos = pos + copied;
 	struct inode *inode = page->mapping->host;
+
+	p9_debug(P9_DEBUG_VFS, "filp %p, mapping %p\n", filp, mapping);
 
 	if (unlikely(copied < len)) {
 		/*

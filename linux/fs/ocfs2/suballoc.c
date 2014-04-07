@@ -113,12 +113,6 @@ static int ocfs2_claim_suballoc_bits(struct ocfs2_alloc_context *ac,
 				     struct ocfs2_suballoc_result *res);
 static int ocfs2_test_bg_bit_allocatable(struct buffer_head *bg_bh,
 					 int nr);
-static inline int ocfs2_block_group_set_bits(handle_t *handle,
-					     struct inode *alloc_inode,
-					     struct ocfs2_group_desc *bg,
-					     struct buffer_head *group_bh,
-					     unsigned int bit_off,
-					     unsigned int num_bits);
 static int ocfs2_relink_block_group(handle_t *handle,
 				    struct inode *alloc_inode,
 				    struct buffer_head *fe_bh,
@@ -481,7 +475,7 @@ ocfs2_block_group_alloc_contig(struct ocfs2_super *osb, handle_t *handle,
 
 	bg_bh = sb_getblk(osb->sb, bg_blkno);
 	if (!bg_bh) {
-		status = -EIO;
+		status = -ENOMEM;
 		mlog_errno(status);
 		goto bail;
 	}
@@ -661,7 +655,7 @@ ocfs2_block_group_alloc_discontig(handle_t *handle,
 
 	bg_bh = sb_getblk(osb->sb, bg_blkno);
 	if (!bg_bh) {
-		status = -EIO;
+		status = -ENOMEM;
 		mlog_errno(status);
 		goto bail;
 	}
@@ -1343,7 +1337,7 @@ static int ocfs2_block_group_find_clear_bits(struct ocfs2_super *osb,
 	return status;
 }
 
-static inline int ocfs2_block_group_set_bits(handle_t *handle,
+int ocfs2_block_group_set_bits(handle_t *handle,
 					     struct inode *alloc_inode,
 					     struct ocfs2_group_desc *bg,
 					     struct buffer_head *group_bh,
@@ -1388,8 +1382,6 @@ static inline int ocfs2_block_group_set_bits(handle_t *handle,
 	ocfs2_journal_dirty(handle, group_bh);
 
 bail:
-	if (status)
-		mlog_errno(status);
 	return status;
 }
 
@@ -1422,7 +1414,7 @@ static int ocfs2_relink_block_group(handle_t *handle,
 	int status;
 	/* there is a really tiny chance the journal calls could fail,
 	 * but we wouldn't want inconsistent blocks in *any* case. */
-	u64 fe_ptr, bg_ptr, prev_bg_ptr;
+	u64 bg_ptr, prev_bg_ptr;
 	struct ocfs2_dinode *fe = (struct ocfs2_dinode *) fe_bh->b_data;
 	struct ocfs2_group_desc *bg = (struct ocfs2_group_desc *) bg_bh->b_data;
 	struct ocfs2_group_desc *prev_bg = (struct ocfs2_group_desc *) prev_bg_bh->b_data;
@@ -1437,51 +1429,44 @@ static int ocfs2_relink_block_group(handle_t *handle,
 		(unsigned long long)le64_to_cpu(bg->bg_blkno),
 		(unsigned long long)le64_to_cpu(prev_bg->bg_blkno));
 
-	fe_ptr = le64_to_cpu(fe->id2.i_chain.cl_recs[chain].c_blkno);
 	bg_ptr = le64_to_cpu(bg->bg_next_group);
 	prev_bg_ptr = le64_to_cpu(prev_bg->bg_next_group);
 
 	status = ocfs2_journal_access_gd(handle, INODE_CACHE(alloc_inode),
 					 prev_bg_bh,
 					 OCFS2_JOURNAL_ACCESS_WRITE);
-	if (status < 0) {
-		mlog_errno(status);
-		goto out_rollback;
-	}
+	if (status < 0)
+		goto out;
 
 	prev_bg->bg_next_group = bg->bg_next_group;
 	ocfs2_journal_dirty(handle, prev_bg_bh);
 
 	status = ocfs2_journal_access_gd(handle, INODE_CACHE(alloc_inode),
 					 bg_bh, OCFS2_JOURNAL_ACCESS_WRITE);
-	if (status < 0) {
-		mlog_errno(status);
-		goto out_rollback;
-	}
+	if (status < 0)
+		goto out_rollback_prev_bg;
 
 	bg->bg_next_group = fe->id2.i_chain.cl_recs[chain].c_blkno;
 	ocfs2_journal_dirty(handle, bg_bh);
 
 	status = ocfs2_journal_access_di(handle, INODE_CACHE(alloc_inode),
 					 fe_bh, OCFS2_JOURNAL_ACCESS_WRITE);
-	if (status < 0) {
-		mlog_errno(status);
-		goto out_rollback;
-	}
+	if (status < 0)
+		goto out_rollback_bg;
 
 	fe->id2.i_chain.cl_recs[chain].c_blkno = bg->bg_blkno;
 	ocfs2_journal_dirty(handle, fe_bh);
 
-out_rollback:
-	if (status < 0) {
-		fe->id2.i_chain.cl_recs[chain].c_blkno = cpu_to_le64(fe_ptr);
-		bg->bg_next_group = cpu_to_le64(bg_ptr);
-		prev_bg->bg_next_group = cpu_to_le64(prev_bg_ptr);
-	}
-
-	if (status)
+out:
+	if (status < 0)
 		mlog_errno(status);
 	return status;
+
+out_rollback_bg:
+	bg->bg_next_group = cpu_to_le64(bg_ptr);
+out_rollback_prev_bg:
+	prev_bg->bg_next_group = cpu_to_le64(prev_bg_ptr);
+	goto out;
 }
 
 static inline int ocfs2_block_group_reasonably_empty(struct ocfs2_group_desc *bg,
@@ -1595,7 +1580,7 @@ static int ocfs2_block_group_search(struct inode *inode,
 	return ret;
 }
 
-static int ocfs2_alloc_dinode_update_counts(struct inode *inode,
+int ocfs2_alloc_dinode_update_counts(struct inode *inode,
 				       handle_t *handle,
 				       struct buffer_head *di_bh,
 				       u32 num_bits,

@@ -30,6 +30,7 @@
 #define DBG_EXTENT	0x00000020
 #define DBG_BITMAP	0x00000040
 #define DBG_ATTR_MOD	0x00000080
+#define DBG_ACL_MOD	0x00000100
 
 #if 0
 #define DBG_MASK	(DBG_EXTENT|DBG_INODE|DBG_BNODE_MOD)
@@ -126,6 +127,14 @@ struct hfs_bnode {
 #define HFS_BNODE_DELETED	4
 
 /*
+ * Attributes file states
+ */
+#define HFSPLUS_EMPTY_ATTR_TREE		0
+#define HFSPLUS_CREATING_ATTR_TREE	1
+#define HFSPLUS_VALID_ATTR_TREE		2
+#define HFSPLUS_FAILED_ATTR_TREE	3
+
+/*
  * HFS+ superblock info (built from Volume Header on disk)
  */
 
@@ -140,6 +149,7 @@ struct hfsplus_sb_info {
 	struct hfs_btree *ext_tree;
 	struct hfs_btree *cat_tree;
 	struct hfs_btree *attr_tree;
+	atomic_t attr_tree_state;
 	struct inode *alloc_file;
 	struct inode *hidden_dir;
 	struct nls_table *nls;
@@ -232,6 +242,7 @@ struct hfsplus_inode_info {
 	 */
 	sector_t fs_blocks;
 	u8 userflags;		/* BSD user file flags */
+	u32 subfolders;		/* Subfolder count (HFSX only) */
 	struct list_head open_dir_list;
 	loff_t phys_size;
 
@@ -379,6 +390,7 @@ int hfsplus_block_allocate(struct super_block *, u32, u32, u32 *);
 int hfsplus_block_free(struct super_block *, u32, u32);
 
 /* btree.c */
+u32 hfsplus_calc_btree_clump_size(u32, u32, u64, int);
 struct hfs_btree *hfs_btree_open(struct super_block *, u32);
 void hfs_btree_close(struct hfs_btree *);
 int hfs_btree_write(struct hfs_btree *);
@@ -495,11 +507,8 @@ int hfsplus_uni2asc(struct super_block *,
 		const struct hfsplus_unistr *, char *, int *);
 int hfsplus_asc2uni(struct super_block *,
 		struct hfsplus_unistr *, int, const char *, int);
-int hfsplus_hash_dentry(const struct dentry *dentry,
-		const struct inode *inode, struct qstr *str);
-int hfsplus_compare_dentry(const struct dentry *parent,
-		const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
+int hfsplus_hash_dentry(const struct dentry *dentry, struct qstr *str);
+int hfsplus_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name);
 
 /* wrapper.c */

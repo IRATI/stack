@@ -31,6 +31,13 @@
 #include <linux/sysrq.h>
 #include <uapi/linux/serial_core.h>
 
+#ifdef CONFIG_SERIAL_CORE_CONSOLE
+#define uart_console(port) \
+	((port)->cons && (port)->cons->index == (port)->line)
+#else
+#define uart_console(port)      (0)
+#endif
+
 struct uart_port;
 struct serial_struct;
 struct device;
@@ -59,7 +66,6 @@ struct uart_ops {
 	void		(*set_ldisc)(struct uart_port *, int new);
 	void		(*pm)(struct uart_port *, unsigned int state,
 			      unsigned int oldstate);
-	int		(*set_wake)(struct uart_port *, unsigned int state);
 
 	/*
 	 * Return a string describing the type of the port

@@ -93,9 +93,10 @@ enum {
 	SNDRV_HWDEP_IFACE_SB_RC,	/* SB Extigy/Audigy2NX remote control */
 	SNDRV_HWDEP_IFACE_HDA,		/* HD-audio */
 	SNDRV_HWDEP_IFACE_USB_STREAM,	/* direct access to usb stream */
+	SNDRV_HWDEP_IFACE_FW_DICE,	/* TC DICE FireWire device */
 
 	/* Don't forget to change the following: */
-	SNDRV_HWDEP_IFACE_LAST = SNDRV_HWDEP_IFACE_USB_STREAM
+	SNDRV_HWDEP_IFACE_LAST = SNDRV_HWDEP_IFACE_FW_DICE
 };
 
 struct snd_hwdep_info {
@@ -816,6 +817,8 @@ typedef int __bitwise snd_ctl_elem_iface_t;
 #define SNDRV_CTL_POWER_D3		0x0300	/* Off */
 #define SNDRV_CTL_POWER_D3hot		(SNDRV_CTL_POWER_D3|0x0000)	/* Off, with power */
 #define SNDRV_CTL_POWER_D3cold		(SNDRV_CTL_POWER_D3|0x0001)	/* Off, without power */
+
+#define SNDRV_CTL_ELEM_ID_NAME_MAXLEN	44
 
 struct snd_ctl_elem_id {
 	unsigned int numid;		/* numeric identifier, zero = invalid */
