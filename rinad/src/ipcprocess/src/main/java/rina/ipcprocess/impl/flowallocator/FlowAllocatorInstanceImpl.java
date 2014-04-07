@@ -286,7 +286,6 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			
 			ribDaemon.sendADataUnit(flow.getDestinationAddress(), cdapMessage, this);
 		}catch(Exception ex){
-			ex.printStackTrace();
 			log.error("Problems sending M_CREATE <Flow> CDAP message to neighbor: " + ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
 			releasePortId();
@@ -601,7 +600,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				
 				ribDaemon.sendADataUnit(address, requestMessage, null);
 			}catch(Exception ex){
-				log.error("Problems sending M_DELETE flow request");
+				log.error("Problems sending M_DELETE flow request: "+ex.getMessage());
 			}
 
 			//3 Wait 2*MPL before tearing down the flow

@@ -55,7 +55,6 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 #include <linux/types.h>
-#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/wireless.h>
 #include <linux/netdevice.h>
@@ -1122,8 +1121,7 @@ static void prism2sta_inf_hostscanresults(wlandevice_t *wlandev,
 
 	kfree(hw->scanresults);
 
-	hw->scanresults = kmalloc(sizeof(hfa384x_InfFrame_t), GFP_ATOMIC);
-	memcpy(hw->scanresults, inf, sizeof(hfa384x_InfFrame_t));
+	hw->scanresults = kmemdup(inf, sizeof(hfa384x_InfFrame_t), GFP_ATOMIC);
 
 	if (nbss == 0)
 		nbss = -1;
@@ -1280,7 +1278,7 @@ void prism2sta_processing_defer(struct work_struct *data)
 				     HFA384x_RID_CURRENTSSID, result);
 				return;
 			}
-			prism2mgmt_bytestr2pstr((hfa384x_bytestr_t *) &ssid,
+			prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *) &ssid,
 						(p80211pstrd_t *) &
 						wlandev->ssid);
 
@@ -1362,7 +1360,7 @@ void prism2sta_processing_defer(struct work_struct *data)
 				 HFA384x_RID_CURRENTSSID, result);
 			return;
 		}
-		prism2mgmt_bytestr2pstr((hfa384x_bytestr_t *) &ssid,
+		prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *) &ssid,
 					(p80211pstrd_t *) &wlandev->ssid);
 
 		hw->link_status = HFA384x_LINK_CONNECTED;
@@ -2038,7 +2036,7 @@ void prism2sta_commsqual_defer(struct work_struct *data)
 			 HFA384x_RID_CURRENTSSID, result);
 		return;
 	}
-	prism2mgmt_bytestr2pstr((hfa384x_bytestr_t *) &ssid,
+	prism2mgmt_bytestr2pstr((struct hfa384x_bytestr *) &ssid,
 				(p80211pstrd_t *) &wlandev->ssid);
 
 	/* Reschedule timer */

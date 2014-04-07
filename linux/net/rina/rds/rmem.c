@@ -207,10 +207,10 @@ static void mem_stats_dump(void)
         mem_stats_j = now;
         spin_unlock_irqrestore(&mem_stats_lock, flags);
 
-        LOG_INFO(MEM_STATS_BANNER "BEG %d", jiffies_to_msecs(now));
+        LOG_INFO(MEM_STATS_BANNER "BEG %u", jiffies_to_msecs(now));
         for (s = 0; s < BLOCKS_COUNT; s++)
-                LOG_INFO(MEM_STATS_BANNER "%d %d",
-                         s, atomic_read(&mem_stats[s]));
+                LOG_INFO(MEM_STATS_BANNER "%d %u",
+                         (int) s, atomic_read(&mem_stats[s]));
         LOG_INFO(MEM_STATS_BANNER "END");
 }
 
@@ -227,8 +227,8 @@ static size_t size2bin(size_t size)
                 bin++;
         }
 
-        if (bin > BLOCKS_COUNT)
-                bin = BLOCKS_COUNT;
+        if (bin >= BLOCKS_COUNT)
+                bin = BLOCKS_COUNT - 1;
 
         return bin;
 }

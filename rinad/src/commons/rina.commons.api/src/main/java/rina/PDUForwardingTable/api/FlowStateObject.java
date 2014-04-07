@@ -103,4 +103,14 @@ public class FlowStateObject{
 		this.ID = this.ID + address + /*portid +*/ neighborAddress /*+ neighborPortid*/;
 		log.debug("Created object with id: " + this.ID);
 	}
+	
+	public String toString() {
+		String result = "";
+		result = result + "Address: " + address + "; Neighbor address: "+neighborAddress + "\n";
+		result = result + "Port-id: " + portid + "; Neighbor port-id: " + neighborPortid + "\n";
+		result = result + "State: " + state + "; Sequence number: " + sequenceNumber +
+				"; Age: "+ age;
+		
+		return result;
+	}
 }

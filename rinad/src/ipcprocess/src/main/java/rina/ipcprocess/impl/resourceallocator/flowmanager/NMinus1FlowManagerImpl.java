@@ -232,9 +232,11 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 		
 		ipcManager.flowDeallocationResult(event.getPortId(), success);
 		
+		/*
 		if (!success) {
 			return;
 		}
+		*/
 		
 		cleanFlowAndNotify(event.getPortId());
 	}

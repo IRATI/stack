@@ -106,13 +106,6 @@ static bool name_is_initialized(struct name * dst)
 
         return false;
 }
-#else
-static bool name_is_initialized(struct name * dst)
-{
-        ASSERT(dst);
-
-        return true;
-}
 #endif
 
 struct name * name_init_with(struct name * dst,

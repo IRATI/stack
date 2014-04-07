@@ -208,6 +208,52 @@ CLEANFILES    += applications/rina.utils.apps.echo/src/main/resources/log4j.prop
 BUILT_SOURCES += applications/rina.utils.apps.echo/src/main/resources/log4j.properties
 EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/resources/log4j.properties.in
 
+applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server: \
+	applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	chmod a+x $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server
+BUILT_SOURCES += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server
+EXTRA_DIST    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server.in
+bin_SCRIPTS   += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server
+
+applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client: \
+	applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	chmod a+x $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client
+BUILT_SOURCES += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client
+EXTRA_DIST    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client.in
+bin_SCRIPTS   += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client
+
+applications/rina.utils.apps.rinaperf/src/main/resources/log4j.properties: \
+	applications/rina.utils.apps.rinaperf/src/main/resources/log4j.properties.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES    += applications/rina.utils.apps.rinaperf/src/main/resources/log4j.properties
+BUILT_SOURCES += applications/rina.utils.apps.rinaperf/src/main/resources/log4j.properties
+EXTRA_DIST    += applications/rina.utils.apps.rinapef/src/main/resources/log4j.properties.in
+
 pom.xml: pom.xml.in \
 	Makefile
 	rm -f $@ $@.tmp

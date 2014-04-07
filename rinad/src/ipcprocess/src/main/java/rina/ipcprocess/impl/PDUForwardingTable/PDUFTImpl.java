@@ -88,9 +88,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public final int WAIT_UNTIL_READ_CDAP = 5000;  //5 sec
 	public final int WAIT_UNTIL_ERROR = 5000;  //5 sec
-	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 5000; // 100 ms
-	public final int WAIT_UNTIL_FSODB_PROPAGATION = 3000; // 100 ms
-	public final int WAIT_UNTIL_AGE_INCREMENT = 11000; //3 sec
+	public final int WAIT_UNTIL_PDUFT_COMPUTATION = 100; // 100 ms
+	public final int WAIT_UNTIL_FSODB_PROPAGATION = 100; // 100 ms
+	public final int WAIT_UNTIL_AGE_INCREMENT = 3000; //3 sec
 	
 	protected Timer pduFTComputationTimer = null;
 	protected Timer ageIncrementationTimer = null;
@@ -372,12 +372,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		//log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
+			db.setModified(false);
 			log.debug("FSDB is modified, computing new paths");
 			List<FlowStateObject> fsoList = db.getFlowStateObjectGroup().getFlowStateObjectArray();
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
 			try {
 				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
-				db.setModified(false);
 				ribDaemon.setPDUForwardingTable(entryList);
 				for (PDUForwardingTableEntry e : entryList)
 				{
@@ -398,7 +398,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		{
 			try {
 				FlowStateObjectGroup fsog =  (FlowStateObjectGroup)encoder.decode(objectsToModify.getObjValue().getByteval(), FlowStateObjectGroup.class);			
-				db.updateObjects(fsog, srcPort, fsRIBGroup);
+				db.updateObjects(fsog, srcPort, fsRIBGroup, ipcProcess.getAddress());
 				int position = sendCDAPTimers.indexOf(new EnrollmentTimer(srcPort));
 				if (position != -1)
 				{

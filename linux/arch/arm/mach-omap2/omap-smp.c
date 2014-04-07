@@ -1,5 +1,5 @@
 /*
- * OMAP4 SMP source file. It contains platform specific fucntions
+ * OMAP4 SMP source file. It contains platform specific functions
  * needed for the linux smp kernel.
  *
  * Copyright (C) 2009 Texas Instruments, Inc.
@@ -39,8 +39,6 @@
 
 #define OMAP5_CORE_COUNT	0x2
 
-u16 pm44xx_errata;
-
 /* SCU base address */
 static void __iomem *scu_base;
 
@@ -51,7 +49,7 @@ void __iomem *omap4_get_scu_base(void)
 	return scu_base;
 }
 
-static void __cpuinit omap4_secondary_init(unsigned int cpu)
+static void omap4_secondary_init(unsigned int cpu)
 {
 	/*
 	 * Configure ACTRL and enable NS SMP bit access on CPU1 on HS device.
@@ -66,13 +64,20 @@ static void __cpuinit omap4_secondary_init(unsigned int cpu)
 							4, 0, 0, 0, 0, 0);
 
 	/*
+	 * Configure the CNTFRQ register for the secondary cpu's which
+	 * indicates the frequency of the cpu local timers.
+	 */
+	if (soc_is_omap54xx() || soc_is_dra7xx())
+		set_cntfreq();
+
+	/*
 	 * Synchronise with the boot thread.
 	 */
 	spin_lock(&boot_lock);
 	spin_unlock(&boot_lock);
 }
 
-static int __cpuinit omap4_boot_secondary(unsigned int cpu, struct task_struct *idle)
+static int omap4_boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	static struct clockdomain *cpu1_clkdm;
 	static bool booted;
@@ -87,7 +92,7 @@ static int __cpuinit omap4_boot_secondary(unsigned int cpu, struct task_struct *
 
 	/*
 	 * Update the AuxCoreBoot0 with boot state for secondary core.
-	 * omap_secondary_startup() routine will hold the secondary core till
+	 * omap4_secondary_startup() routine will hold the secondary core till
 	 * the AuxCoreBoot1 register is updated with cpu state
 	 * A barrier is added to ensure that write buffer is drained
 	 */
@@ -200,7 +205,7 @@ static void __init omap4_smp_init_cpus(void)
 
 static void __init omap4_smp_prepare_cpus(unsigned int max_cpus)
 {
-	void *startup_addr = omap_secondary_startup;
+	void *startup_addr = omap4_secondary_startup;
 	void __iomem *base = omap_get_wakeupgen_base();
 
 	/*
@@ -210,10 +215,8 @@ static void __init omap4_smp_prepare_cpus(unsigned int max_cpus)
 	if (scu_base)
 		scu_enable(scu_base);
 
-	if (cpu_is_omap446x()) {
-		startup_addr = omap_secondary_startup_4460;
-		pm44xx_errata |= PM_OMAP4_ROM_SMP_BOOT_ERRATUM_GICD;
-	}
+	if (cpu_is_omap446x())
+		startup_addr = omap4460_secondary_startup;
 
 	/*
 	 * Write the address of secondary startup routine into the

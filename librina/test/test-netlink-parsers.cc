@@ -894,6 +894,7 @@ int testIpcmQueryRIBResponseMessage() {
 	ribObject->setClazz("/test/clazz1");
 	ribObject->setName("/test/name1");
 	ribObject->setInstance(1234);
+	ribObject->setDisplayableValue("This is my value");
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
@@ -901,6 +902,7 @@ int testIpcmQueryRIBResponseMessage() {
 	ribObject->setClazz("/test/clazz2");
 	ribObject->setName("/test/name2");
 	ribObject->setInstance(343241);
+	ribObject->setDisplayableValue("This is my value2");
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
@@ -961,7 +963,12 @@ int testIpcmQueryRIBResponseMessage() {
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}
+				}else if (ribObject.getDisplayableValue().compare("This is my value") != 0){
+                                        std::cout << "RIB Object display value on original and recovered messages"
+                                                        << " are different\n";
+                                        returnValue = -1;
+                                        break;
+                                }
 
 				i++;
 			}else if (i == 1){
@@ -980,7 +987,12 @@ int testIpcmQueryRIBResponseMessage() {
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}
+				} else if (ribObject.getDisplayableValue().compare("This is my value2") != 0){
+                                        std::cout << "RIB Object display value on original and recovered messages"
+                                                        << " are different\n";
+                                        returnValue = -1;
+                                        break;
+                                }
 			}
 		}
 	}

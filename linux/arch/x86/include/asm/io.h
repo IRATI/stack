@@ -237,7 +237,7 @@ memcpy_toio(volatile void __iomem *dst, const void *src, size_t count)
 
 static inline void flush_write_buffers(void)
 {
-#if defined(CONFIG_X86_OOSTORE) || defined(CONFIG_X86_PPRO_FENCE)
+#if defined(CONFIG_X86_PPRO_FENCE)
 	asm volatile("lock; addl $0,0(%%esp)": : :"memory");
 #endif
 }
@@ -344,5 +344,12 @@ extern bool xen_biovec_phys_mergeable(const struct bio_vec *vec1,
 #endif	/* CONFIG_XEN */
 
 #define IO_SPACE_LIMIT 0xffff
+
+#ifdef CONFIG_MTRR
+extern int __must_check arch_phys_wc_add(unsigned long base,
+					 unsigned long size);
+extern void arch_phys_wc_del(int handle);
+#define arch_phys_wc_add arch_phys_wc_add
+#endif
 
 #endif /* _ASM_X86_IO_H */

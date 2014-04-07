@@ -54,7 +54,8 @@ extern u8 acpi_gbl_default_address_spaces[];
 
 /* Local prototypes */
 
-static void acpi_ev_orphan_ec_reg_method(void);
+static void
+acpi_ev_orphan_ec_reg_method(struct acpi_namespace_node *ec_device_node);
 
 static acpi_status
 acpi_ev_reg_run(acpi_handle obj_handle,
@@ -216,16 +217,11 @@ acpi_ev_address_space_dispatch(union acpi_operand_object *region_obj,
 		if (!(region_obj->region.flags & AOPOBJ_SETUP_COMPLETE)) {
 			region_obj->region.flags |= AOPOBJ_SETUP_COMPLETE;
 
-			if (region_obj2->extra.region_context) {
-
-				/* The handler for this region was already installed */
-
-				ACPI_FREE(region_context);
-			} else {
-				/*
-				 * Save the returned context for use in all accesses to
-				 * this particular region
-				 */
+			/*
+			 * Save the returned context for use in all accesses to
+			 * the handler for this particular region
+			 */
+			if (!(region_obj2->extra.region_context)) {
 				region_obj2->extra.region_context =
 				    region_context;
 			}
@@ -401,6 +397,14 @@ acpi_ev_detach_region(union acpi_operand_object *region_obj,
 						 handler_obj->address_space.
 						 context, region_context);
 
+				/*
+				 * region_context should have been released by the deactivate
+				 * operation. We don't need access to it anymore here.
+				 */
+				if (region_context) {
+					*region_context = NULL;
+				}
+
 				/* Init routine may fail, Just ignore errors */
 
 				if (ACPI_FAILURE(status)) {
@@ -532,7 +536,7 @@ acpi_ev_execute_reg_method(union acpi_operand_object *region_obj, u32 function)
 	}
 
 	info->prefix_node = region_obj2->extra.method_REG;
-	info->pathname = NULL;
+	info->relative_pathname = NULL;
 	info->parameters = args;
 	info->flags = ACPI_IGNORE_RETURN_VALUE;
 
@@ -569,10 +573,10 @@ acpi_ev_execute_reg_method(union acpi_operand_object *region_obj, u32 function)
 	status = acpi_ns_evaluate(info);
 	acpi_ut_remove_reference(args[1]);
 
-      cleanup2:
+cleanup2:
 	acpi_ut_remove_reference(args[0]);
 
-      cleanup1:
+cleanup1:
 	ACPI_FREE(info);
 	return_ACPI_STATUS(status);
 }
@@ -612,7 +616,7 @@ acpi_ev_execute_reg_methods(struct acpi_namespace_node *node,
 	/* Special case for EC: handle "orphan" _REG methods with no region */
 
 	if (space_id == ACPI_ADR_SPACE_EC) {
-		acpi_ev_orphan_ec_reg_method();
+		acpi_ev_orphan_ec_reg_method(node);
 	}
 
 	return_ACPI_STATUS(status);
@@ -681,7 +685,7 @@ acpi_ev_reg_run(acpi_handle obj_handle,
  *
  * FUNCTION:    acpi_ev_orphan_ec_reg_method
  *
- * PARAMETERS:  None
+ * PARAMETERS:  ec_device_node      - Namespace node for an EC device
  *
  * RETURN:      None
  *
@@ -693,37 +697,27 @@ acpi_ev_reg_run(acpi_handle obj_handle,
  *              detected by providing a _REG method object underneath the
  *              Embedded Controller device."
  *
- *              To quickly access the EC device, we use the EC_ID that appears
- *              within the ECDT. Otherwise, we would need to perform a time-
- *              consuming namespace walk, executing _HID methods to find the
- *              EC device.
+ *              To quickly access the EC device, we use the ec_device_node used
+ *              during EC handler installation. Otherwise, we would need to
+ *              perform a time consuming namespace walk, executing _HID
+ *              methods to find the EC device.
+ *
+ *  MUTEX:      Assumes the namespace is locked
  *
  ******************************************************************************/
 
-static void acpi_ev_orphan_ec_reg_method(void)
+static void
+acpi_ev_orphan_ec_reg_method(struct acpi_namespace_node *ec_device_node)
 {
-	struct acpi_table_ecdt *table;
+	acpi_handle reg_method;
+	struct acpi_namespace_node *next_node;
 	acpi_status status;
 	struct acpi_object_list args;
 	union acpi_object objects[2];
-	struct acpi_namespace_node *ec_device_node;
-	struct acpi_namespace_node *reg_method;
-	struct acpi_namespace_node *next_node;
 
 	ACPI_FUNCTION_TRACE(ev_orphan_ec_reg_method);
 
-	/* Get the ECDT (if present in system) */
-
-	status = acpi_get_table(ACPI_SIG_ECDT, 0,
-				ACPI_CAST_INDIRECT_PTR(struct acpi_table_header,
-						       &table));
-	if (ACPI_FAILURE(status)) {
-		return_VOID;
-	}
-
-	/* We need a valid EC_ID string */
-
-	if (!(*table->id)) {
+	if (!ec_device_node) {
 		return_VOID;
 	}
 
@@ -731,22 +725,11 @@ static void acpi_ev_orphan_ec_reg_method(void)
 
 	(void)acpi_ut_release_mutex(ACPI_MTX_NAMESPACE);
 
-	/* Get a handle to the EC device referenced in the ECDT */
-
-	status = acpi_get_handle(NULL,
-				 ACPI_CAST_PTR(char, table->id),
-				 ACPI_CAST_PTR(acpi_handle, &ec_device_node));
-	if (ACPI_FAILURE(status)) {
-		goto exit;
-	}
-
 	/* Get a handle to a _REG method immediately under the EC device */
 
-	status = acpi_get_handle(ec_device_node,
-				 METHOD_NAME__REG, ACPI_CAST_PTR(acpi_handle,
-								 &reg_method));
+	status = acpi_get_handle(ec_device_node, METHOD_NAME__REG, &reg_method);
 	if (ACPI_FAILURE(status)) {
-		goto exit;
+		goto exit;	/* There is no _REG method present */
 	}
 
 	/*
@@ -754,19 +737,20 @@ static void acpi_ev_orphan_ec_reg_method(void)
 	 * this scope with the Embedded Controller space ID. Otherwise, it
 	 * will already have been executed. Note, this allows for Regions
 	 * with other space IDs to be present; but the code below will then
-	 * execute the _REG method with the EC space ID argument.
+	 * execute the _REG method with the embedded_control space_ID argument.
 	 */
 	next_node = acpi_ns_get_next_node(ec_device_node, NULL);
 	while (next_node) {
 		if ((next_node->type == ACPI_TYPE_REGION) &&
 		    (next_node->object) &&
 		    (next_node->object->region.space_id == ACPI_ADR_SPACE_EC)) {
-			goto exit;	/* Do not execute _REG */
+			goto exit;	/* Do not execute the _REG */
 		}
+
 		next_node = acpi_ns_get_next_node(ec_device_node, next_node);
 	}
 
-	/* Evaluate the _REG(EC,Connect) method */
+	/* Evaluate the _REG(embedded_control,Connect) method */
 
 	args.count = 2;
 	args.pointer = objects;
@@ -777,7 +761,7 @@ static void acpi_ev_orphan_ec_reg_method(void)
 
 	status = acpi_evaluate_object(reg_method, NULL, &args, NULL);
 
-      exit:
+exit:
 	/* We ignore all errors from above, don't care */
 
 	status = acpi_ut_acquire_mutex(ACPI_MTX_NAMESPACE);

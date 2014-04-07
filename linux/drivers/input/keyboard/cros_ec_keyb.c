@@ -38,6 +38,7 @@
  * @row_shift: log2 or number of rows, rounded up
  * @keymap_data: Matrix keymap data used to convert to keyscan values
  * @ghost_filter: true to enable the matrix key-ghosting filter
+ * @old_kb_state: bitmap of keys pressed last scan
  * @dev: Device pointer
  * @idev: Input device
  * @ec: Top level ChromeOS device to use to talk to EC
@@ -49,6 +50,7 @@ struct cros_ec_keyb {
 	int row_shift;
 	const struct matrix_keymap_data *keymap_data;
 	bool ghost_filter;
+	uint8_t *old_kb_state;
 
 	struct device *dev;
 	struct input_dev *idev;
@@ -135,6 +137,7 @@ static void cros_ec_keyb_process(struct cros_ec_keyb *ckdev,
 	struct input_dev *idev = ckdev->idev;
 	int col, row;
 	int new_state;
+	int old_state;
 	int num_cols;
 
 	num_cols = len;
@@ -153,18 +156,19 @@ static void cros_ec_keyb_process(struct cros_ec_keyb *ckdev,
 		for (row = 0; row < ckdev->rows; row++) {
 			int pos = MATRIX_SCAN_CODE(row, col, ckdev->row_shift);
 			const unsigned short *keycodes = idev->keycode;
-			int code;
 
-			code = keycodes[pos];
 			new_state = kb_state[col] & (1 << row);
-			if (!!new_state != test_bit(code, idev->key)) {
+			old_state = ckdev->old_kb_state[col] & (1 << row);
+			if (new_state != old_state) {
 				dev_dbg(ckdev->dev,
 					"changed: [r%d c%d]: byte %02x\n",
 					row, col, new_state);
 
-				input_report_key(idev, code, new_state);
+				input_report_key(idev, keycodes[pos],
+						 new_state);
 			}
 		}
+		ckdev->old_kb_state[col] = kb_state[col];
 	}
 	input_sync(ckdev->idev);
 }
@@ -206,33 +210,6 @@ static int cros_ec_keyb_work(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-/* Clear any keys in the buffer */
-static void cros_ec_keyb_clear_keyboard(struct cros_ec_keyb *ckdev)
-{
-	uint8_t old_state[ckdev->cols];
-	uint8_t new_state[ckdev->cols];
-	unsigned long duration;
-	int i, ret;
-
-	/*
-	 * Keep reading until we see that the scan state does not change.
-	 * That indicates that we are done.
-	 *
-	 * Assume that the EC keyscan buffer is at most 32 deep.
-	 */
-	duration = jiffies;
-	ret = cros_ec_keyb_get_state(ckdev, new_state);
-	for (i = 1; !ret && i < 32; i++) {
-		memcpy(old_state, new_state, sizeof(old_state));
-		ret = cros_ec_keyb_get_state(ckdev, new_state);
-		if (0 == memcmp(old_state, new_state, sizeof(old_state)))
-			break;
-	}
-	duration = jiffies - duration;
-	dev_info(ckdev->dev, "Discarded %d keyscan(s) in %dus\n", i,
-		jiffies_to_usecs(duration));
-}
-
 static int cros_ec_keyb_probe(struct platform_device *pdev)
 {
 	struct cros_ec_device *ec = dev_get_drvdata(pdev->dev.parent);
@@ -253,6 +230,9 @@ static int cros_ec_keyb_probe(struct platform_device *pdev)
 					    &ckdev->cols);
 	if (err)
 		return err;
+	ckdev->old_kb_state = devm_kzalloc(&pdev->dev, ckdev->cols, GFP_KERNEL);
+	if (!ckdev->old_kb_state)
+		return -ENOMEM;
 
 	idev = devm_input_allocate_device(&pdev->dev);
 	if (!idev)
@@ -299,6 +279,33 @@ static int cros_ec_keyb_probe(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM_SLEEP
+/* Clear any keys in the buffer */
+static void cros_ec_keyb_clear_keyboard(struct cros_ec_keyb *ckdev)
+{
+	uint8_t old_state[ckdev->cols];
+	uint8_t new_state[ckdev->cols];
+	unsigned long duration;
+	int i, ret;
+
+	/*
+	 * Keep reading until we see that the scan state does not change.
+	 * That indicates that we are done.
+	 *
+	 * Assume that the EC keyscan buffer is at most 32 deep.
+	 */
+	duration = jiffies;
+	ret = cros_ec_keyb_get_state(ckdev, new_state);
+	for (i = 1; !ret && i < 32; i++) {
+		memcpy(old_state, new_state, sizeof(old_state));
+		ret = cros_ec_keyb_get_state(ckdev, new_state);
+		if (0 == memcmp(old_state, new_state, sizeof(old_state)))
+			break;
+	}
+	duration = jiffies - duration;
+	dev_info(ckdev->dev, "Discarded %d keyscan(s) in %dus\n", i,
+		jiffies_to_usecs(duration));
+}
+
 static int cros_ec_keyb_resume(struct device *dev)
 {
 	struct cros_ec_keyb *ckdev = dev_get_drvdata(dev);

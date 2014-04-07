@@ -427,7 +427,6 @@ static void pump_transfers(unsigned long data)
 	dws->tx_end = dws->tx + transfer->len;
 	dws->rx = transfer->rx_buf;
 	dws->rx_end = dws->rx + transfer->len;
-	dws->cs_change = transfer->cs_change;
 	dws->len = dws->cur_transfer->len;
 	if (chip != dws->prev_chip)
 		cs_change = 1;
@@ -457,19 +456,7 @@ static void pump_transfers(unsigned long data)
 	}
 	if (transfer->bits_per_word) {
 		bits = transfer->bits_per_word;
-
-		switch (bits) {
-		case 8:
-		case 16:
-			dws->n_bytes = dws->dma_width = bits >> 3;
-			break;
-		default:
-			printk(KERN_ERR "MRST SPI0: unsupported bits:"
-				"%db\n", bits);
-			message->status = -EIO;
-			goto early_exit;
-		}
-
+		dws->n_bytes = dws->dma_width = bits >> 3;
 		cr0 = (bits - 1)
 			| (chip->type << SPI_FRF_OFFSET)
 			| (spi->mode << SPI_MODE_OFFSET)
@@ -629,15 +616,14 @@ static int dw_spi_setup(struct spi_device *spi)
 	struct dw_spi_chip *chip_info = NULL;
 	struct chip_data *chip;
 
-	if (spi->bits_per_word != 8 && spi->bits_per_word != 16)
-		return -EINVAL;
-
 	/* Only alloc on first setup */
 	chip = spi_get_ctldata(spi);
 	if (!chip) {
-		chip = kzalloc(sizeof(struct chip_data), GFP_KERNEL);
+		chip = devm_kzalloc(&spi->dev, sizeof(struct chip_data),
+				GFP_KERNEL);
 		if (!chip)
 			return -ENOMEM;
+		spi_set_ctldata(spi, chip);
 	}
 
 	/*
@@ -660,16 +646,12 @@ static int dw_spi_setup(struct spi_device *spi)
 		chip->enable_dma = chip_info->enable_dma;
 	}
 
-	if (spi->bits_per_word <= 8) {
+	if (spi->bits_per_word == 8) {
 		chip->n_bytes = 1;
 		chip->dma_width = 1;
-	} else if (spi->bits_per_word <= 16) {
+	} else if (spi->bits_per_word == 16) {
 		chip->n_bytes = 2;
 		chip->dma_width = 2;
-	} else {
-		/* Never take >16b case for MRST SPIC */
-		dev_err(&spi->dev, "invalid wordsize\n");
-		return -EINVAL;
 	}
 	chip->bits_per_word = spi->bits_per_word;
 
@@ -686,7 +668,6 @@ static int dw_spi_setup(struct spi_device *spi)
 			| (spi->mode  << SPI_MODE_OFFSET)
 			| (chip->tmode << SPI_TMOD_OFFSET);
 
-	spi_set_ctldata(spi, chip);
 	return 0;
 }
 
@@ -795,18 +776,16 @@ static void spi_hw_init(struct dw_spi *dws)
 	}
 }
 
-int dw_spi_add_host(struct dw_spi *dws)
+int dw_spi_add_host(struct device *dev, struct dw_spi *dws)
 {
 	struct spi_master *master;
 	int ret;
 
 	BUG_ON(dws == NULL);
 
-	master = spi_alloc_master(dws->parent_dev, 0);
-	if (!master) {
-		ret = -ENOMEM;
-		goto exit;
-	}
+	master = spi_alloc_master(dev, 0);
+	if (!master)
+		return -ENOMEM;
 
 	dws->master = master;
 	dws->type = SSI_MOTO_SPI;
@@ -816,7 +795,7 @@ int dw_spi_add_host(struct dw_spi *dws)
 	snprintf(dws->name, sizeof(dws->name), "dw_spi%d",
 			dws->bus_num);
 
-	ret = request_irq(dws->irq, dw_spi_irq, IRQF_SHARED,
+	ret = devm_request_irq(dev, dws->irq, dw_spi_irq, IRQF_SHARED,
 			dws->name, dws);
 	if (ret < 0) {
 		dev_err(&master->dev, "can not get IRQ\n");
@@ -824,6 +803,7 @@ int dw_spi_add_host(struct dw_spi *dws)
 	}
 
 	master->mode_bits = SPI_CPOL | SPI_CPHA;
+	master->bits_per_word_mask = SPI_BPW_MASK(8) | SPI_BPW_MASK(16);
 	master->bus_num = dws->bus_num;
 	master->num_chipselect = dws->num_cs;
 	master->cleanup = dw_spi_cleanup;
@@ -854,7 +834,7 @@ int dw_spi_add_host(struct dw_spi *dws)
 	}
 
 	spi_master_set_devdata(master, dws);
-	ret = spi_register_master(master);
+	ret = devm_spi_register_master(dev, master);
 	if (ret) {
 		dev_err(&master->dev, "problem registering spi master\n");
 		goto err_queue_alloc;
@@ -869,10 +849,8 @@ err_queue_alloc:
 		dws->dma_ops->dma_exit(dws);
 err_diable_hw:
 	spi_enable_chip(dws, 0);
-	free_irq(dws->irq, dws);
 err_free_master:
 	spi_master_put(master);
-exit:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dw_spi_add_host);
@@ -888,18 +866,14 @@ void dw_spi_remove_host(struct dw_spi *dws)
 	/* Remove the queue */
 	status = destroy_queue(dws);
 	if (status != 0)
-		dev_err(&dws->master->dev, "dw_spi_remove: workqueue will not "
-			"complete, message memory not freed\n");
+		dev_err(&dws->master->dev,
+			"dw_spi_remove: workqueue will not complete, message memory not freed\n");
 
 	if (dws->dma_ops && dws->dma_ops->dma_exit)
 		dws->dma_ops->dma_exit(dws);
 	spi_enable_chip(dws, 0);
 	/* Disable clk */
 	spi_set_clk(dws, 0);
-	free_irq(dws->irq, dws);
-
-	/* Disconnect from the SPI framework */
-	spi_unregister_master(dws->master);
 }
 EXPORT_SYMBOL_GPL(dw_spi_remove_host);
 

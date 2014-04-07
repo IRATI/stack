@@ -72,6 +72,10 @@ public abstract class BaseRIBObject implements RIBObject{
 		result.setName(objectName);
 		result.setClazz(objectClass);
 		result.setInstance(objectInstance);
+		if (getObjectValue() != null) {
+			result.setDisplayableValue(getObjectValue().toString());
+		}
+		
 		return result;
 	}
 

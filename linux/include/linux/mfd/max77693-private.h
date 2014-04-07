@@ -85,6 +85,19 @@ enum max77693_pmic_reg {
 	MAX77693_PMIC_REG_END,
 };
 
+/* MAX77693 CHG_CNFG_00 register */
+#define CHG_CNFG_00_CHG_MASK		0x1
+#define CHG_CNFG_00_BUCK_MASK		0x4
+
+/* MAX77693 CHG_CNFG_09 Register */
+#define CHG_CNFG_09_CHGIN_ILIM_MASK	0x7F
+
+/* MAX77693 CHG_CTRL Register */
+#define SAFEOUT_CTRL_SAFEOUT1_MASK	0x3
+#define SAFEOUT_CTRL_SAFEOUT2_MASK	0xC
+#define SAFEOUT_CTRL_ENSAFEOUT1_MASK	0x40
+#define SAFEOUT_CTRL_ENSAFEOUT2_MASK	0x80
+
 /* Slave addr = 0x4A: MUIC */
 enum max77693_muic_reg {
 	MAX77693_MUIC_REG_ID		= 0x00,
@@ -310,7 +323,6 @@ struct max77693_dev {
 
 	int irq;
 	int irq_gpio;
-	bool wakeup;
 	struct mutex irqlock;
 	int irq_masks_cur[MAX77693_IRQ_GROUP_NR];
 	int irq_masks_cache[MAX77693_IRQ_GROUP_NR];

@@ -450,7 +450,6 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 					sdu = cdapSessionManager.encodeCDAPMessage(aDataUnitMessage);
 				} else {
 					portId = sessionId;
-					this.cdapSessionManager.getCDAPSession(portId).getSessionDescriptor();
 					sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
 				}
 				
@@ -460,8 +459,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 				log.debug("Sent CDAP Message to "+destination+" through underlying portId "
 						+portId+": "+ cdapMessage.toString());
 			}catch(Exception ex){
-				log.error("Problems sending CDAP message");
-				if (ex.getMessage().equals("Flow closed")){
+				if (ex.getMessage() != null && ex.getMessage().equals("Flow closed")){
 					cdapSessionManager.removeCDAPSession(portId);
 				}
 				throw new RIBDaemonException(RIBDaemonException.PROBLEMS_SENDING_CDAP_MESSAGE, ex);

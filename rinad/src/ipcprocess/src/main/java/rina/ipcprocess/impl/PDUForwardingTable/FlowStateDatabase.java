@@ -41,6 +41,7 @@ public class FlowStateDatabase {
 	public FlowStateInternalObjectGroup getFlowStateInternalObjectGroup() {
 		return flowStateInternalObjectGroup;
 	}
+
 	/*		Constructors		*/
 	public FlowStateDatabase()
 	{
@@ -116,7 +117,7 @@ public class FlowStateDatabase {
 			for(int i = 0; i < flowStateInternalObjectGroup.getModifiedFSO().size(); i++)
 			{
 				FlowStateInternalObject object = flowStateInternalObjectGroup.getModifiedFSO().get(i);
-				log.debug("Check modified object: " + object.getID() + " to be sent");
+				log.debug("Check modified object: " + object.getID() + " to be sent with age: " + object.getAge() + " and Status: " + object.isState());
 	
 				for(int j = 0; j < flows.length; j++)
 				{
@@ -140,38 +141,45 @@ public class FlowStateDatabase {
 		this.flowStateInternalObjectGroup.incrementAge(maximumAge, fsRIBGroup, this);
 	}
 	
-	public void updateObjects(FlowStateObjectGroup groupToModify, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup)
+	public void updateObjects(FlowStateObjectGroup newObjectGroup, int avoidPort, FlowStateRIBObjectGroup fsRIBGroup, long address)
 	{
 		log.debug("Update Objects from DB launched");
 		
 		ObjectStateMapper mapper = new ObjectStateMapper();
-		ArrayList<FlowStateInternalObject> objectsToModify= mapper.FSOGMap(groupToModify).getFlowStateObjectArray();
+		ArrayList<FlowStateInternalObject> newObjectInternalGroup= mapper.FSOGMap(newObjectGroup).getFlowStateObjectArray();
 		ArrayList<FlowStateInternalObject> objects = this.flowStateInternalObjectGroup.getFlowStateObjectArray();
 		boolean continueLoop = true;
 		int i = 0;
 		
-		for(FlowStateInternalObject objM : objectsToModify)
+		for(FlowStateInternalObject newObj : newObjectInternalGroup)
 		{
 			while (continueLoop && i < objects.size())
 			{
-				FlowStateInternalObject obj = objects.get(i);
+				FlowStateInternalObject oldObj = objects.get(i);
 				
-				if (objM.getAddress() == obj.getAddress() /*&& objM.getPortid() == obj.getPortid()*/
-						&& objM.getNeighborAddress() == obj.getNeighborAddress() 
+				if (newObj.getAddress() == oldObj.getAddress() /*&& objM.getPortid() == obj.getPortid()*/
+						&& newObj.getNeighborAddress() == oldObj.getNeighborAddress() 
 						/*&& objM.getNeighborPortid() == obj.getNeighborPortid()*/)
 				{
-					log.debug("Found the object in the DB. Obj: " + objM.getID());
+					log.debug("Found the object in the DB. Obj: " + newObj.getID());
 					continueLoop = false;
-					if (objM.getSequenceNumber() > obj.getSequenceNumber())
+					if (newObj.getAddress() == address)
 					{
-						log.debug("Update the object: " + obj.getID());
-						obj.setState(objM.isState());
-						obj.setSequenceNumber(objM.getSequenceNumber());
-						obj.setModified(true);
-						obj.setAvoidPort(avoidPort);
+						log.debug("Object is self generated, updating sequence number of " + oldObj.getID());
+						oldObj.setSequenceNumber(newObj.getSequenceNumber() + 1);
+						oldObj.setModified(true);
+						this.isModified = true;
+					}
+					if (newObj.getSequenceNumber() > oldObj.getSequenceNumber())
+					{
+						log.debug("Update the object: " + oldObj.getID());
+						oldObj.setAge(newObj.getAge());
+						oldObj.setState(newObj.isState());
+						oldObj.setSequenceNumber(newObj.getSequenceNumber());
+						oldObj.setModified(true);
+						oldObj.setAvoidPort(avoidPort);
 						
 						this.isModified = true;
-						log.debug("Object: " + obj.getID() + "State: " + obj.isState());
 					}
 				}
 				
@@ -179,17 +187,23 @@ public class FlowStateDatabase {
 			}
 			if (continueLoop)
 			{
-				log.debug("New object added");
-				objM.setAvoidPort(avoidPort);
-				objM.setModified(true);
-				try {
-					this.flowStateInternalObjectGroup.add(objM, fsRIBGroup);
-				} catch (RIBDaemonException e) {
-					log.error("could not add the object to the rib");
-					e.printStackTrace();
+				if (newObj.getAddress() == address)
+				{
+					log.debug("Object is self origin, discart object " + newObj.getID());
 				}
-
-				this.isModified = true;
+				else
+				{
+					log.debug("New object added");
+					newObj.setAvoidPort(avoidPort);
+					newObj.setModified(true);
+					try {
+						this.flowStateInternalObjectGroup.add(newObj, fsRIBGroup);
+					} catch (RIBDaemonException e) {
+						log.error("could not add the object to the rib");
+						e.printStackTrace();
+					}
+					this.isModified = true;
+				}
 			}
 			continueLoop = true;
 			i = 0;
