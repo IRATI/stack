@@ -17,7 +17,7 @@ public class SendReadCDAPTest {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		Timer timer = new Timer();
 		
-		timer.schedule(new SendReadCDAP(3, new FakeCDAPSessionManager(), rib, 1), 1);
+		timer.schedule(new SendReadCDAP(3, new FakeCDAPSessionManager(), rib, 1, null), 1);
 		try {
 		    Thread.sleep(500);
 		} catch(InterruptedException ex) {

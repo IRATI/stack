@@ -2,7 +2,6 @@ package rina.PDUForwardingTable.api;
 
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
-import eu.irati.librina.ApplicationProcessNamingInformation;
 
 public interface PDUFTable {
 	public void setIPCProcess(IPCProcess ipcProcess);

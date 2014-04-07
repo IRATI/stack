@@ -137,6 +137,7 @@ public class FlowStateDatabase {
 	
 	public ArrayList<FlowStateObjectGroup> prepareForPropagation(FlowInformation[] flows)
 	{
+		log.debug("prepareForPropagation()");
 		ArrayList<FlowStateObjectGroup> groupsToSend = new ArrayList<FlowStateObjectGroup>();
 		if(!getModifiedFSO().isEmpty())
 		{
@@ -208,7 +209,7 @@ public class FlowStateDatabase {
 					continueLoop = false;
 					if (newObj.getAddress() == address)
 					{
-						log.debug("Object is self generated, updating sequence number of " + oldObj.getID());
+						log.debug("Object is self generated, updating sequence number of " + oldObj.getID() + " to seqnum: " + oldObj.getSequenceNumber());
 						oldObj.setSequenceNumber(newObj.getSequenceNumber() + 1);
 						oldObj.setModified(true);
 						this.isModified = true;
@@ -216,7 +217,7 @@ public class FlowStateDatabase {
 					}
 					if (newObj.getSequenceNumber() >= oldObj.getSequenceNumber())
 					{
-						log.debug("Update the object: " + oldObj.getID());
+						log.debug("Update the object: " + oldObj.getID() + " with seq num: " + oldObj.getSequenceNumber());
 						oldObj.setAge(newObj.getAge());
 						oldObj.setState(newObj.isState());
 						oldObj.setSequenceNumber(newObj.getSequenceNumber());
