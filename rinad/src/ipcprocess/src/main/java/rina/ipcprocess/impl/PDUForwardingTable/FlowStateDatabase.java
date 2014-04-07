@@ -137,7 +137,7 @@ public class FlowStateDatabase {
 	
 	public ArrayList<FlowStateObjectGroup> prepareForPropagation(FlowInformation[] flows)
 	{
-		log.debug("prepareForPropagation()");
+		//log.debug("prepareForPropagation()");
 		ArrayList<FlowStateObjectGroup> groupsToSend = new ArrayList<FlowStateObjectGroup>();
 		if(!getModifiedFSO().isEmpty())
 		{
