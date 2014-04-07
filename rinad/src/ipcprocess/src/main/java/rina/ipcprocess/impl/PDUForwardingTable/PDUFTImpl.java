@@ -320,6 +320,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		{
 			for(int i = 0; i < nminusFlowInfo.length; i++)
 			{
+				log.debug("Flow info num:" + i + " corresponding to neighbor: " + nminusFlowInfo[i].getRemoteAppName() + " and port: " + nminusFlowInfo[i].getPortId());
 				try 
 				{
 					FlowStateObjectGroup fsg= groupsToSend.get(i);

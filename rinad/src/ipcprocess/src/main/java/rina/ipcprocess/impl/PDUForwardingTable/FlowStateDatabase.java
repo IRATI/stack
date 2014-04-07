@@ -209,11 +209,12 @@ public class FlowStateDatabase {
 					continueLoop = false;
 					if (newObj.getAddress() == address)
 					{
-						log.debug("Object is self generated, updating sequence number of " + oldObj.getID() + " to seqnum: " + oldObj.getSequenceNumber());
 						oldObj.setSequenceNumber(oldObj.getSequenceNumber() + 1);
 						oldObj.setModified(true);
 						this.isModified = true;
 						oldObj.setAvoidPort(NO_AVOID_PORT);
+						log.debug("Object is self generated, updating sequence number of " + oldObj.getID() + " to seqnum: " 
+								+ oldObj.getSequenceNumber());
 					}
 					if (newObj.getSequenceNumber() >= oldObj.getSequenceNumber())
 					{
