@@ -3,13 +3,14 @@ Packages required to install the stack into Debian/Linux 7.0 (wheezy):
 1) Update libnl/libnl-genl (>= 3.2.14 required):
 
   1.a) Add 'deb http://ftp.de.debian.org/debian jessie main' in
-   /etc/apt/sources.list
+       /etc/apt/sources.list
   1.b) Run 'apt-get update'
   1.c) Run 'apt-get install libnl-genl-3-dev'
 
-2) Fullfil the following requirements (YMMV) by running
-   apt-get install <package> OR compiling the packages from sources (in that
-   case, syste-wide installation is assumed):
+2) Fullfil the following requirements by running
+   'apt-get install <package>' OR compiling the packages from sources. In the
+   latter, system-wide installation is assumed (please follow per-package
+   installation instructions):
 
   * To compile the kernel parts:
      * kernel-package 
