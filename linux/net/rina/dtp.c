@@ -92,10 +92,23 @@ static struct dtp_sv default_sv = {
         .rexmsn_ctrl                   = false,
 };
 
+static uint_t max_cwq_len_get(struct dtp_sv * sv)
+{
+        uint_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->max_cwq_len;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
 static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 {
-        struct cwq *    cwq;
-        struct dt *     dt;
+        struct cwq * cwq;
+        struct dt *  dt;
 
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
@@ -124,8 +137,6 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 
 static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
-        struct cwq *    cwq;
-        struct dt *     dt;
 
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
@@ -209,19 +220,6 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         spin_unlock(&sv->lock);
 }
 #endif
-
-static uint_t max_cwq_len_get(struct dtp_sv * sv)
-{
-        uint_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_cwq_len;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
 
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
