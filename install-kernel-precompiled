@@ -20,7 +20,7 @@ fi
 # FIXME: we should definitely do a VPATH build ...
 #
 
-(cd linux && make headers_install INSTALL_HDR_PATH=$PREFIX/usr/include/linux) || {
+(cd linux && make headers_install_all INSTALL_HDR_PATH=$PREFIX/usr/include/linux) || {
     echo "$ME: Cannot install kernel headers"
     exit 1
 }
