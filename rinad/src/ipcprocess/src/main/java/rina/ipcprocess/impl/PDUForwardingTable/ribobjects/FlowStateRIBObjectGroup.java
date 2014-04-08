@@ -1,9 +1,6 @@
 package rina.ipcprocess.impl.PDUForwardingTable.ribobjects;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
@@ -15,7 +12,6 @@ import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.PDUForwardingTable.api.PDUFTable;
 
 public class FlowStateRIBObjectGroup extends BaseRIBObject{
-	private static final Log log = LogFactory.getLog(FlowStateRIBObjectGroup.class);
 	
 	private PDUFTable pdufTable = null;
 	

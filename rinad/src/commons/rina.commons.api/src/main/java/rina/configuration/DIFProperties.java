@@ -3,6 +3,7 @@ package rina.configuration;
 import java.util.List;
 
 import eu.irati.librina.DataTransferConstants;
+import eu.irati.librina.PDUFTableGeneratorConfiguration;
 import eu.irati.librina.Parameter;
 import eu.irati.librina.QoSCube;
 
@@ -28,6 +29,11 @@ public class DIFProperties {
 	 */
 	private DataTransferConstants dataTransferConstants = null;
 
+	/**
+	 * The PDU forwarding table configurations
+	 */
+	private PDUFTableGeneratorConfiguration pdufTableConfiguration = null;
+	
 	/**
 	 * The QoS cubes available in the DIF
 	 */
@@ -159,5 +165,12 @@ public class DIFProperties {
 
 	public void setConfigParameters(List<Parameter> configParameters) {
 		this.configParameters = configParameters;
+	}
+	public PDUFTableGeneratorConfiguration getPdufTableConfiguration() {
+		return pdufTableConfiguration;
+	}
+	public void setPdufTableConfiguration(
+			PDUFTableGeneratorConfiguration pdufTableConfiguration) {
+		this.pdufTableConfiguration = pdufTableConfiguration;
 	}
 }

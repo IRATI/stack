@@ -867,6 +867,71 @@ public:
 };
 
 /**
+ * Contains the configurations of the algorithm used to set and propagate
+ * the PDU Forwarding Table
+ */
+class IAlgorithmConfiguration {
+	protected:
+        /** The algorithm used */
+        unsigned short type;
+	public:
+        virtual ~IAlgorithmConfiguration(){};
+        unsigned short getType();
+        void setType(unsigned short type);
+        virtual const std::string toString() = 0;
+};
+
+/**
+ * Link state algorithm configurations
+ */
+class LSAlgorithmConfiguration : public IAlgorithmConfiguration {
+	private:
+		static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
+		static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
+		static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
+		static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
+		static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+		int waitUntilReadCDAP;
+		int waitUntilError;
+		int waitUntilPDUFTComputation;
+		int waitUntilFSODBPropagation;
+		int waitUntilAgeIncrement;
+		int pulsesUntilFSOExpiration;
+	public:
+		LSAlgorithmConfiguration();
+        const std::string toString();
+        int getPulsesUntilFsoExpiration() const;
+        void setPulsesUntilFsoExpiration(int pulsesUntilFsoExpiration);
+        int getWaitUntilAgeIncrement() const;
+        void setWaitUntilAgeIncrement(int waitUntilAgeIncrement);
+        int getWaitUntilError() const;
+        void setWaitUntilError(int waitUntilError);
+        int getWaitUntilFsodbPropagation() const;
+        void setWaitUntilFsodbPropagation(int waitUntilFsodbPropagation);
+        int getWaitUntilPduftComputation() const;
+        void setWaitUntilPduftComputation(int waitUntilPduftComputation);
+        int getWaitUntilReadCdap() const;
+        void setWaitUntilReadCdap(int waitUntilReadCdap);
+};
+
+/**
+ * Contains the algorithm used to set and propagate the PDU Forwarding Table
+ * and its configurations
+ */
+class PDUFTableGeneratorConfiguration {
+
+        /** The algorithm used */
+		IAlgorithmConfiguration* algorithm;
+public:
+		PDUFTableGeneratorConfiguration();
+        ~PDUFTableGeneratorConfiguration();
+        IAlgorithmConfiguration* getAlgorithm() const;
+        void setAlgorithm(IAlgorithmConfiguration* algorithm);
+        bool isInitialized();
+};
+
+/**
  * Contains the data about a DIF Configuration
  * (QoS cubes, policies, parameters, etc)
  */

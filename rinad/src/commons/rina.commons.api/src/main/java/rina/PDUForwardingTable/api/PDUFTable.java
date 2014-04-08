@@ -2,14 +2,13 @@ package rina.PDUForwardingTable.api;
 
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
-import eu.irati.librina.ApplicationProcessNamingInformation;
 
 public interface PDUFTable {
 	public void setIPCProcess(IPCProcess ipcProcess);
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex);
 	
-	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId);
+	public void enrollmentToNeighbor(long address, boolean newMember, int portId);
 
 	public void flowAllocated(long address, int portId, long neighborAddress, int neighborPortId);
 
