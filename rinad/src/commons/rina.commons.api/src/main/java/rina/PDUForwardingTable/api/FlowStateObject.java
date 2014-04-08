@@ -5,6 +5,10 @@ import org.apache.commons.logging.LogFactory;
 
 import rina.ribdaemon.api.RIBObjectNames;
 
+/**
+ * @author bernat
+ *
+ */
 public class FlowStateObject{
 	
 	private static final Log log = LogFactory.getLog(FlowStateObject.class);
@@ -37,6 +41,14 @@ public class FlowStateObject{
 	/* Age of this FSO (in seconds) */
 	protected int age;
 	
+	/* The object has been marked for propagation */
+	protected boolean isModified;
+	
+	/* Avoid port in the next propagation */
+	protected int avoidPort;
+	
+	/* The object is being erased */
+	protected boolean isBeingErased;
 		
 	/*		Accessors		*/
 	public long getAddress() {
@@ -85,12 +97,26 @@ public class FlowStateObject{
 	{
 		return this.ID;
 	}
-
-
-
+	public boolean isModified() {
+		return isModified;
+	}
+	public void setModified(boolean isModified) {
+		this.isModified = isModified;
+	}
+	public boolean isBeingErased() {
+		return isBeingErased;
+	}
+	public void setBeingErased(boolean isBeingErased) {
+		this.isBeingErased = isBeingErased;
+	}
+	public int getAvoidPort() {
+		return avoidPort;
+	}
+	public void setAvoidPort(int avoidPort) {
+		this.avoidPort = avoidPort;
+	}
+	
 	/*		Constructor	*/
-	public FlowStateObject()
-	{}
 	public FlowStateObject(long address, int portid, long neighborAddress, int neighborPortid, boolean state, int sequenceNumber, int age)
 	{
 		this.address = address;
@@ -101,6 +127,8 @@ public class FlowStateObject{
 		this.sequenceNumber = sequenceNumber;
 		this.age = age;
 		this.ID = this.ID + address + /*portid +*/ neighborAddress /*+ neighborPortid*/;
+		this.isModified = true;
+		this.isBeingErased = false;
 		log.debug("Created object with id: " + this.ID);
 	}
 	
