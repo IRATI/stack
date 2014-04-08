@@ -22,8 +22,6 @@ import rina.encoding.api.Encoder;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.FlowStateInternalObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.internalobjects.ObjectStateMapper;
 import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
 import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;
@@ -35,7 +33,6 @@ import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.events.NeighborAddedEvent;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
-import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowInformation;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.PDUForwardingTableEntry;
@@ -127,6 +124,11 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	 */
 	protected List<NMinusOneFlowAllocatedEvent> flowAllocatedList = null;
 	
+	/**
+	 * PDUFT CDAP message handler
+	 */
+	protected PDUFTCDAPMessageHandler pduftCDAPmessageHandler = null;
+	
 	protected boolean test = false;
 	public void setTest(boolean test)
 	{
@@ -147,33 +149,32 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		db = new FlowStateDatabase();
 		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		this.maximumAge = maximumAge;
-		
-		/*	Time to compute PDUFT	*/
-		/* TODO: Descomentar */
-		pduFTComputationTimer = new Timer();
-		pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
-		
-		/*	Time to increment age	*/
-		ageIncrementationTimer = new Timer();
-		ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
-
-		/* Timer to propagate modified FSO */
-		fsodbPropagationTimer = new Timer();
-		fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
-
-		/* Timer to send CDAP*/
 		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
+		pduftCDAPmessageHandler = new PDUFTCDAPMessageHandler(this);
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
 		this.ipcProcess = ipcProcess;
-		//ipcManager = rina.getExtendedIPCManager();
 		ribDaemon = ipcProcess.getRIBDaemon();
 		encoder = ipcProcess.getEncoder();
 		cdapSessionManager = ipcProcess.getCDAPSessionManager();
-		//registrationManager = ipcProcess.getRegistrationManager();
 		populateRIB();
 		subscribeToEvents();
+		
+		/*	Time to compute PDUFT	*/
+		if(!test)
+		{
+			pduFTComputationTimer = new Timer();
+			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), WAIT_UNTIL_PDUFT_COMPUTATION, WAIT_UNTIL_PDUFT_COMPUTATION);
+			
+			/*	Time to increment age	*/
+			ageIncrementationTimer = new Timer();
+			ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), WAIT_UNTIL_AGE_INCREMENT, WAIT_UNTIL_AGE_INCREMENT);
+	
+			/* Timer to propagate modified FSO */
+			fsodbPropagationTimer = new Timer();
+			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), WAIT_UNTIL_FSODB_PROPAGATION, WAIT_UNTIL_FSODB_PROPAGATION);
+		}
 	}
 	
 	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
@@ -264,21 +265,21 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				}
 			}
 			// TODO: Remove newmember thing
-			enrollmentToNeighbor(neighbor.getName(), neighbor.getAddress(), true , neighbor.getUnderlyingPortId());
+			enrollmentToNeighbor(neighbor.getAddress(), true , neighbor.getUnderlyingPortId());
 		}
 	}
 	
-	public void enrollmentToNeighbor(ApplicationProcessNamingInformation name, long address, boolean newMember, int portId)
+	public void enrollmentToNeighbor(long address, boolean newMember, int portId)
 	{
 		ObjectValue objectValue = new ObjectValue();
-		
 		if (!db.isEmpty())
 		{
 			try 
-			{	
+			{							
 				objectValue.setByteval(db.encode(encoder));
 				CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(portId, null,
-						null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
+						null, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, objectValue, 
+						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
 				ribDaemon.sendMessage(cdapMessage, portId , null);
 				db.setAvoidPort(portId);
 			} catch (Exception e) {
@@ -289,7 +290,8 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				log.debug("Launch timer to check write back");
 				EnrollmentTimer timer = new EnrollmentTimer(portId);
 				sendCDAPTimers.add(timer);
-				timer.getTimer().schedule(new SendReadCDAP(portId, cdapSessionManager, ribDaemon, WAIT_UNTIL_ERROR), WAIT_UNTIL_READ_CDAP);
+				timer.getTimer().schedule(new SendReadCDAP(portId, cdapSessionManager, ribDaemon, WAIT_UNTIL_ERROR, 
+						pduftCDAPmessageHandler), WAIT_UNTIL_READ_CDAP);
 			}
 		}
 	}
@@ -308,23 +310,20 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean propagateFSDB()
 	{
-		//log.debug("propagateFSDB function launched");
-
 		ObjectValue objectValue = new ObjectValue();
-		ObjectStateMapper mapper = new  ObjectStateMapper();
-		//TODO: Change for FlowStateObject no internal!
 		
 		FlowInformation[] nminusFlowInfo = ipcProcess.getResourceAllocator().getNMinus1FlowManager().getAllNMinus1FlowsInformation();
 		
-		ArrayList<FlowStateInternalObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
-
-		if (groupsToSend.size() > 0)
+		ArrayList<FlowStateObjectGroup> groupsToSend = db.prepareForPropagation(nminusFlowInfo);
+		
+		if (!groupsToSend.isEmpty())
 		{
 			for(int i = 0; i < nminusFlowInfo.length; i++)
 			{
+				log.debug("Flow info num:" + i + " corresponding to neighbor: " + nminusFlowInfo[i].getRemoteAppName() + " and port: " + nminusFlowInfo[i].getPortId());
 				try 
 				{
-					FlowStateObjectGroup fsg= mapper.FSOGMap(groupsToSend.get(i));
+					FlowStateObjectGroup fsg= groupsToSend.get(i);
 					if (fsg.getFlowStateObjectArray().size() > 0)
 					{
 						log.debug("Group sent: " + fsg.getFlowStateObjectArray());
@@ -390,10 +389,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		}
 	}
 	
-	@Override
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort) 
 	{
-		log.info("writeMessageRecieved function launched");
+		log.info("Message recieved with a flow state object group");
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			try {
@@ -418,37 +416,29 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort)
 	{
 		log.info("readMessageRecieved function launched");
-		ObjectStateMapper mapper = new ObjectStateMapper();
 		ObjectValue objectValue = new ObjectValue();
-		FlowStateObjectGroup fsg= mapper.FSOGMap(db.getFlowStateInternalObjectGroup());
+		FlowStateObjectGroup fsg= db.getFlowStateObjectGroup();
 		
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
-			int position = sendCDAPTimers.indexOf(new EnrollmentTimer(srcPort));
-			if (position != -1)
-			{
-				try 
-				{
-					
-					objectValue.setByteval(encoder.encode(fsg));
-					CDAPMessage cdapMessage = cdapSessionManager.getReadObjectResponseMessage(srcPort, null, 
-							FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME,
-							objectValue, 0, null, 0);
-					ribDaemon.sendMessage(cdapMessage, srcPort , null);
-					
-					// TODO: Implementar anulació segon timer
-					/*if (position != -1)
-					{
-						SendReadCDAP timer = (SendReadCDAP)sendCDAPTimers.get(position).getTimer();
-						timer.getTimer().
-						sendCDAPTimers.remove(position);
-					}	*/		
-				}
-				catch (Exception e) 
-				{
-					e.printStackTrace();
-					return false;
-				}
+			CDAPMessage cdapMessage;
+			try {
+				objectValue.setByteval(encoder.encode(fsg));
+				cdapMessage = cdapSessionManager.getReadObjectResponseMessage(srcPort, null, 
+						FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 0, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME,
+						objectValue, 0, null, 0);
+				ribDaemon.sendMessage(cdapMessage, srcPort , null);
+			} catch (CDAPException e) {
+				log.error("Error creating the CDAP message");
+				e.printStackTrace();
+			}
+			catch (RIBDaemonException e) {
+				log.error("Error sending the CDAP message");
+				e.printStackTrace();
+			}
+			catch (Exception e) {
+				log.error("Error codifying the flow state object group");
+				e.printStackTrace();
 			}
 		}
 		return true;
