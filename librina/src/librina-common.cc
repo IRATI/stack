@@ -1238,6 +1238,113 @@ const std::string DataTransferConstants::toString(){
         return ss.str();
 }
 
+/* CLASS IAlgorithmConfiguration */
+unsigned short IAlgorithmConfiguration::getType()
+{
+	return type;
+}
+void IAlgorithmConfiguration::setType(unsigned short type)
+{
+	this->type = type;
+}
+
+/* CLASS LSAlgorithmConfiguration */
+LSAlgorithmConfiguration::LSAlgorithmConfiguration()
+{
+	waitUntilReadCDAP = WAIT_UNTIL_READ_CDAP_DEFAULT;
+	waitUntilError = WAIT_UNTIL_ERROR_DEFAULT;
+	waitUntilPDUFTComputation = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
+	waitUntilFSODBPropagation = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
+	waitUntilAgeIncrement = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
+	pulsesUntilFSOExpiration = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
+}
+
+const std::string LSAlgorithmConfiguration::toString()
+{
+    std::stringstream ss;
+
+    ss<<"Timer until send a Read CDAP message (ms): " << waitUntilReadCDAP <<std::endl;
+    ss<<"Timer until send CDAP error (ms): "<<waitUntilError<<std::endl;
+    ss<<"Timer between PDU forwarding table Computation (ms): "<<waitUntilPDUFTComputation<<std::endl;
+    ss<<"Timer between FlowStateDataBase propagation (ms): "<<waitUntilFSODBPropagation<<std::endl;
+    ss<<"Timer between age incrementation pulses (ms): "<<waitUntilAgeIncrement<<std::endl;
+    ss<<"Number of pulses until FSO expiration: "<<pulsesUntilFSOExpiration<<std::endl;
+
+    return ss.str();
+}
+
+
+int LSAlgorithmConfiguration::getPulsesUntilFsoExpiration() const {
+	return pulsesUntilFSOExpiration;
+}
+void LSAlgorithmConfiguration::setPulsesUntilFsoExpiration(int pulsesUntilFsoExpiration) {
+	pulsesUntilFSOExpiration = pulsesUntilFsoExpiration;
+}
+
+int LSAlgorithmConfiguration::getWaitUntilAgeIncrement() const {
+	return waitUntilAgeIncrement;
+}
+
+void LSAlgorithmConfiguration::setWaitUntilAgeIncrement(int waitUntilAgeIncrement) {
+	this->waitUntilAgeIncrement = waitUntilAgeIncrement;
+}
+
+int LSAlgorithmConfiguration::getWaitUntilError() const {
+	return waitUntilError;
+}
+
+void LSAlgorithmConfiguration::setWaitUntilError(int waitUntilError) {
+	this->waitUntilError = waitUntilError;
+}
+
+int LSAlgorithmConfiguration::getWaitUntilFsodbPropagation() const {
+	return waitUntilFSODBPropagation;
+}
+
+void LSAlgorithmConfiguration::setWaitUntilFsodbPropagation(int waitUntilFsodbPropagation) {
+	waitUntilFSODBPropagation = waitUntilFsodbPropagation;
+}
+
+int LSAlgorithmConfiguration::getWaitUntilPduftComputation() const {
+	return waitUntilPDUFTComputation;
+}
+
+void LSAlgorithmConfiguration::setWaitUntilPduftComputation(int waitUntilPduftComputation) {
+	waitUntilPDUFTComputation = waitUntilPduftComputation;
+}
+
+int LSAlgorithmConfiguration::getWaitUntilReadCdap() const {
+	return waitUntilReadCDAP;
+}
+
+void LSAlgorithmConfiguration::setWaitUntilReadCdap(int waitUntilReadCdap) {
+	waitUntilReadCDAP = waitUntilReadCdap;
+}
+
+/* CLASS PDUFTableConfiguration */
+
+PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration()
+{
+	this->algorithm = NULL;
+}
+
+PDUFTableGeneratorConfiguration::~PDUFTableGeneratorConfiguration()
+{
+	delete this->algorithm;
+}
+
+IAlgorithmConfiguration* PDUFTableGeneratorConfiguration::getAlgorithm() const{
+	return this->algorithm;
+}
+
+void PDUFTableGeneratorConfiguration::setAlgorithm(IAlgorithmConfiguration* algorithm){
+	this->algorithm = algorithm;
+}
+
+bool PDUFTableGeneratorConfiguration::isInitialized(){
+	return this->algorithm != NULL;
+}
+
 /* CLASS DIF INFORMATION */
 const ApplicationProcessNamingInformation& DIFInformation::getDifName()
 		const {

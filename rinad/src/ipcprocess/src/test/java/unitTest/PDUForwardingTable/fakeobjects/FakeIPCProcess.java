@@ -2,6 +2,9 @@ package unitTest.PDUForwardingTable.fakeobjects;
 
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.Neighbor;
@@ -16,7 +19,7 @@ import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 
 public class FakeIPCProcess implements IPCProcess{
-	
+	private static final Log log = LogFactory.getLog(FakeIPCProcess.class);
 	CDAPSessionManager cdapSM = null;
 	RIBDaemon ribd = null;
 	Encoder encoder = null;
@@ -62,6 +65,7 @@ public class FakeIPCProcess implements IPCProcess{
 
 	@Override
 	public ResourceAllocator getResourceAllocator() {
+		log.debug("hola");
 		return new FakeResourceAllocator();
 	}
 

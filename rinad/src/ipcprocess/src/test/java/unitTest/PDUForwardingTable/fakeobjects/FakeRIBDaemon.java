@@ -32,7 +32,7 @@ public class FakeRIBDaemon implements RIBDaemon{
 	
 	private static final Log log = LogFactory.getLog(FakeRIBDaemon.class);
 	
-	public ConcurrentHashMap rib = new ConcurrentHashMap<String, RIBObject>();
+	public ConcurrentHashMap<String, RIBObject> rib = new ConcurrentHashMap<String, RIBObject>();
 	public FlowStateObject recoveredObject = null;
 	public FlowStateObjectGroup recoveredObjectGroup = null;
 	public boolean waitingResponse = false;
