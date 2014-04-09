@@ -320,13 +320,13 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		{
 			for(int i = 0; i < nminusFlowInfo.length; i++)
 			{
-				log.debug("Flow info num:" + i + " corresponding to neighbor: " + nminusFlowInfo[i].getRemoteAppName() + " and port: " + nminusFlowInfo[i].getPortId());
+				log.debug("Flow info num:" + i + " corresponding to neighbor: " + nminusFlowInfo[i].getRemoteAppName() 
+						+ " and port: " + nminusFlowInfo[i].getPortId());
 				try 
 				{
 					FlowStateObjectGroup fsg= groupsToSend.get(i);
 					if (fsg.getFlowStateObjectArray().size() > 0)
 					{
-						log.debug("Group sent: " + fsg.getFlowStateObjectArray());
 						objectValue.setByteval(encoder.encode(fsg));
 						CDAPMessage cdapMessage = cdapSessionManager.getWriteObjectRequestMessage(
 								nminusFlowInfo[i].getPortId(), null, null,
@@ -334,7 +334,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 								FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME, 0, false);
 						ribDaemon.sendMessage(cdapMessage, nminusFlowInfo[i].getPortId() , null);
 					}
-					return true;
 				}
 				catch (CDAPException e1)
 				{
@@ -351,13 +350,13 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 					log.error("Error encoding the message");
 				}
 			}
+			return true;
 		}
 		return false;
 	}
 	
 	public void updateAge()
 	{
-		//log.debug("updateAge function launched");
 		try {
 			db.incrementAge(maximumAge, fsRIBGroup);
 		} catch (RIBDaemonException e) {
@@ -368,11 +367,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public void forwardingTableUpdate ()
 	{
-		//log.debug("forwardingTableUpdate function launched");
 		if (db.isModified())
 		{
 			db.setModified(false);
-			log.debug("FSDB is modified, computing new paths");
 			List<FlowStateObject> fsoList = db.getFlowStateObjectGroup().getFlowStateObjectArray();
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
 			try {
@@ -391,7 +388,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean writeMessageRecieved(CDAPMessage objectsToModify, int srcPort) 
 	{
-		log.info("Message recieved with a flow state object group");
 		if (objectsToModify.getObjClass().equals(FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS))
 		{
 			try {
@@ -415,7 +411,6 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 	public boolean readMessageRecieved(CDAPMessage objectsToModify, int srcPort)
 	{
-		log.info("readMessageRecieved function launched");
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateObjectGroup fsg= db.getFlowStateObjectGroup();
 		
