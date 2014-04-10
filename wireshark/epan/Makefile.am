@@ -223,6 +223,7 @@ plugin_src = \
 	../plugins/docsis/packet-uccreq.c \
 	../plugins/docsis/packet-uccrsp.c \
 	../plugins/docsis/packet-ucd.c \
+	../plugins/efcp/packet-efcp.c \
 	../plugins/giop/packet-cosnaming.c \
 	../plugins/giop/packet-coseventcomm.c \
 	../plugins/gryphon/packet-gryphon.c \
