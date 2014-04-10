@@ -19,12 +19,14 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-/* FIXME: PIGSTY HACK TO USER OUR SYSCALLS, PLEASE FIX ASAP !!! */
+/* FIXME: PIGSTY HACK TO USE OUR SYSCALLS, PLEASE FIX ASAP !!! */
+#if defined(__x86_64__)
+#undef _ASM_X86_UNISTD_64_H
+#include "/usr/include/linux/include/asm-x86/unistd_64.h"
+#else
 #undef _ASM_X86_UNISTD_32_H
 #include "/usr/include/linux/include/asm-x86/unistd_32.h"
-
-//#undef _ASM_X86_UNISTD_64_H
-//#include "/usr/include/linux/include/asm-x86/unistd_64.h"
+#endif
 
 #define SYS_createIPCProcess   __NR_ipc_create
 #define SYS_destroyIPCProcess  __NR_ipc_destroy
