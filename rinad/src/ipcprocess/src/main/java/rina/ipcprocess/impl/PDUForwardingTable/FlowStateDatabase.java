@@ -137,7 +137,6 @@ public class FlowStateDatabase {
 	
 	public ArrayList<FlowStateObjectGroup> prepareForPropagation(FlowInformation[] flows)
 	{
-		//log.debug("prepareForPropagation()");
 		ArrayList<FlowStateObjectGroup> groupsToSend = new ArrayList<FlowStateObjectGroup>();
 		if(!getModifiedFSO().isEmpty())
 		{
@@ -149,14 +148,15 @@ public class FlowStateDatabase {
 			for(int i = 0; i < getModifiedFSO().size(); i++)
 			{
 				FlowStateObject object = getModifiedFSO().get(i);
-				log.debug("Check modified object: " + object.getID() + " to be sent with age: " + object.getAge() + " and Status: " + object.isState());
+				log.debug("Check modified object: " + object.getID() + " to be sent with age: " + object.getAge() +
+						" and Status: " + object.isState());
 	
 				for(int j = 0; j < flows.length; j++)
 				{
 					int portId = flows[j].getPortId();
 					if (object.getAvoidPort() != portId)
 					{
-						log.debug("Sent to port: " + portId);
+						log.debug("To be sent to port: " + portId);
 						groupsToSend.get(j).getFlowStateObjectArray().add(object);
 					}
 				}
@@ -207,24 +207,24 @@ public class FlowStateDatabase {
 				{
 					log.debug("Found the object in the DB. Obj: " + newObj.getID());
 					continueLoop = false;
-					if (newObj.getAddress() == address)
-					{
-						oldObj.setSequenceNumber(oldObj.getSequenceNumber() + 1);
-						oldObj.setModified(true);
-						this.isModified = true;
-						oldObj.setAvoidPort(NO_AVOID_PORT);
-						log.debug("Object is self generated, updating sequence number of " + oldObj.getID() + " to seqnum: " 
-								+ oldObj.getSequenceNumber());
-					}
 					if (newObj.getSequenceNumber() >= oldObj.getSequenceNumber())
 					{
-						log.debug("Update the object: " + oldObj.getID() + " with seq num: " + oldObj.getSequenceNumber());
-						oldObj.setAge(newObj.getAge());
-						oldObj.setState(newObj.isState());
-						oldObj.setSequenceNumber(newObj.getSequenceNumber());
+						if (newObj.getAddress() == address)
+						{
+							oldObj.setSequenceNumber(oldObj.getSequenceNumber() + 1);
+							oldObj.setAvoidPort(NO_AVOID_PORT);
+							log.debug("Object is self generated, updating sequence number of " + oldObj.getID() + " to seqnum: " 
+									+ oldObj.getSequenceNumber());
+						}
+						else
+						{
+							log.debug("Update the object: " + oldObj.getID() + " with seq num: " + oldObj.getSequenceNumber());
+							oldObj.setAge(newObj.getAge());
+							oldObj.setState(newObj.isState());
+							oldObj.setSequenceNumber(newObj.getSequenceNumber());
+							oldObj.setAvoidPort(avoidPort);
+						}
 						oldObj.setModified(true);
-						oldObj.setAvoidPort(avoidPort);
-						
 						this.isModified = true;
 					}
 				}

@@ -12,7 +12,6 @@ import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.IPCProcessDIFRegistrationEvent;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
 import rina.resourceallocator.api.NMinus1FlowManager;
 
 public class FakeNMinus1FlowManager implements NMinus1FlowManager{
