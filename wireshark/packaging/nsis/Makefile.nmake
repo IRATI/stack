@@ -46,6 +46,7 @@ HELP=$(STAGING_DIR)/help/capture_filters.txt \
 
 PLUGINS= \
 	../../plugins/asn1/asn1.dll \
+        ../../plugins/cdap/cdap.dll \
 	../../plugins/docsis/docsis.dll \
         ../../plugins/efcp/efcp.dll
 	../../plugins/ethercat/ethercat.dll \

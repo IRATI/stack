@@ -197,6 +197,7 @@ if ENABLE_STATIC
 -include ../plugins/Custom.make
 plugin_src = \
 	../plugins/asn1/packet-asn1.c \
+	../plugins/cdap/packet-cdap.c \
 	../plugins/docsis/packet-bintrngreq.c \
 	../plugins/docsis/packet-bpkmattr.c \
 	../plugins/docsis/packet-bpkmreq.c \

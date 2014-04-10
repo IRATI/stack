@@ -843,6 +843,7 @@ Section "Dissector Plugins" SecPlugins
 ;-------------------------------------------
 SetOutPath '$INSTDIR\plugins\${VERSION}'
 File "${STAGING_DIR}\plugins\${VERSION}\asn1.dll"
+File "${STAGING_DIR}\plugins\${VERSION}\cdap.dll"
 File "${STAGING_DIR}\plugins\${VERSION}\docsis.dll"
 File "${STAGING_DIR}\plugins\${VERSION}\efcp.dll"
 File "${STAGING_DIR}\plugins\${VERSION}\ethercat.dll"
