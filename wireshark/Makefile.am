@@ -292,6 +292,7 @@ if HAVE_PLUGINS
 plugin_ldadd = $(_CUSTOM_plugin_ldadd_) \
 	-dlopen plugins/asn1/asn1.la \
 	-dlopen plugins/docsis/docsis.la \
+	-dlopen plugins/efcp/efcp.la \
 	-dlopen plugins/ethercat/ethercat.la \
 	-dlopen plugins/gryphon/gryphon.la \
 	-dlopen plugins/irda/irda.la \

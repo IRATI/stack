@@ -1,5 +1,7 @@
-# Makefile.am
-# Automake file for Wireshark plugins
+# Makefile.common for EFCP plugin
+#     Contains the stuff from Makefile.am and Makefile.nmake that is
+#     a) common to both files and
+#     b) portable between both files
 #
 # $Id$
 #
@@ -21,41 +23,21 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
--include Custom.make
+# the name of the plugin
+PLUGIN_NAME = efcp
 
-SUBDIRS = $(_CUSTOM_SUBDIRS_) \
-	asn1 \
-	docsis \
-	efcp \
-	ethercat \
-	gryphon \
-	irda \
-	m2m \
-	mate \
-	opcua \
-	profinet \
-	stats_tree \
-	unistim \
-	wimax \
-	wimaxasncp \
-	wimaxmacphy
+# Non-generated sources to be scanned for registration routines
+NONGENERATED_REGISTER_C_FILES = \
+        packet-efcp.c
 
-plugindir = @plugindir@
+# Non-generated sources
+NONGENERATED_C_FILES = \
+        $(NONGENERATED_REGISTER_C_FILES) 
 
-EXTRA_DIST = \
-	$(_CUSTOM_EXTRA_DIST_) \
-	plugins.vcproj \
-	Makefile.common.inc \
-	Makefile.nmake \
-	Custom.make.example \
-	Custom.m4.example \
-	Custom.nmake.example
+# Headers.
+CLEAN_HEADER_FILES =
 
-MAINTAINERCLEANFILES = \
-	Makefile.in
+HEADER_FILES = \
+        $(CLEAN_HEADER_FILES)
 
-checkapi:
-	for i in $(SUBDIRS); do \
-		(cd "$$i"; $(MAKE) checkapi); \
-	done
-
+include ../Makefile.common.inc

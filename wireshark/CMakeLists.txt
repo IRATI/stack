@@ -456,6 +456,7 @@ if(ENABLE_PLUGINS)
 	set(PLUGIN_SRC_DIRS
 		plugins/asn1
 		plugins/docsis
+                plugins/efcp
 		plugins/ethercat
 		plugins/gryphon
 		plugins/irda

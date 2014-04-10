@@ -2687,6 +2687,7 @@ AC_OUTPUT(
   plugins/Makefile
   plugins/asn1/Makefile
   plugins/docsis/Makefile
+  plugins/efcp/Makefile
   plugins/ethercat/Makefile
   plugins/gryphon/Makefile
   plugins/irda/Makefile
