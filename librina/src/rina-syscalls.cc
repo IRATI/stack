@@ -22,10 +22,10 @@
 /* FIXME: PIGSTY HACK TO USE OUR SYSCALLS, PLEASE FIX ASAP !!! */
 #if defined(__x86_64__)
 #undef _ASM_X86_UNISTD_64_H
-#include "/usr/include/linux/include/asm-x86/unistd_64.h"
+#include "/usr/include/linux/include/asm/unistd_64.h"
 #else
 #undef _ASM_X86_UNISTD_32_H
-#include "/usr/include/linux/include/asm-x86/unistd_32.h"
+#include "/usr/include/linux/include/asm/unistd_32.h"
 #endif
 
 #define SYS_createIPCProcess   __NR_ipc_create
@@ -84,7 +84,7 @@ namespace rina {
         int syscallWriteSDU(int portId, void * sdu, int size)
         {
                 int result;
-                
+
                 DUMP_SYSCALL("SYS_writeSDU", SYS_writeSDU);
 
                 result = syscall(SYS_writeSDU, portId, sdu, size);
@@ -109,15 +109,17 @@ namespace rina {
                 return result;
         }
 
-        int syscallWriteManagementSDU(unsigned short ipcProcessId, void * sdu,
-                                int portId, int size)
+        int syscallWriteManagementSDU(unsigned short ipcProcessId,
+                                      void *         sdu,
+                                      int            portId,
+                                      int            size)
         {
                 int result;
 
                 DUMP_SYSCALL("SYS_writeManagementSDU", SYS_writeManagementSDU);
 
                 result = syscall(SYS_writeManagementSDU, ipcProcessId, portId,
-                                sdu, size);
+                                 sdu, size);
                 if (result < 0) {
                         LOG_ERR("Syscall write SDU failed: %d", result);
                 }
@@ -125,17 +127,23 @@ namespace rina {
                 return result;
         }
 
-        int syscallReadManagementSDU(int ipcProcessId, void * sdu, int * portId,
-                                int maxBytes)
+        int syscallReadManagementSDU(int    ipcProcessId,
+                                     void * sdu,
+                                     int *  portId,
+                                     int    maxBytes)
         {
                 int result;
-                
+
                 DUMP_SYSCALL("SYS_readManagementSDU", SYS_readManagementSDU);
 
-                result = syscall(SYS_readManagementSDU, ipcProcessId, sdu, portId, maxBytes);
+                result = syscall(SYS_readManagementSDU,
+                                 ipcProcessId,
+                                 sdu,
+                                 portId,
+                                 maxBytes);
                 if (result < 0) {
                         LOG_ERR("Syscall read SDU failed: %d", result);
-                } 
+                }
 
                 return result;
         }
@@ -148,7 +156,8 @@ namespace rina {
 
                 result = syscall(SYS_destroyIPCProcess, ipcProcessId);
                 if (result < 0) {
-                        LOG_ERR("Syscall destroy IPC Process failed: %d", result);
+                        LOG_ERR("Syscall destroy IPC Process failed: %d",
+                                result);
                 }
 
                 return result;
@@ -171,23 +180,24 @@ namespace rina {
                                  difType.c_str());
 
                 if (result < 0) {
-                        LOG_ERR("Syscall create IPC Process failed: %d", result);
+                        LOG_ERR("Syscall create IPC Process failed: %d",
+                                result);
                 }
 
                 return result;
         }
 
         int syscallAllocatePortId(unsigned short ipcProcessId,
-                        const ApplicationProcessNamingInformation & applicationName)
+                                  const ApplicationProcessNamingInformation & applicationName)
         {
                 int result;
 
                 DUMP_SYSCALL("SYS_allocatePortId", SYS_allocatePortId);
 
                 result = syscall(SYS_allocatePortId,
-                                ipcProcessId,
-                                applicationName.getProcessName().c_str(),
-                                applicationName.getProcessInstance().c_str());
+                                 ipcProcessId,
+                                 applicationName.getProcessName().c_str(),
+                                 applicationName.getProcessInstance().c_str());
 
                 if (result < 0) {
                         LOG_ERR("Syscall allocate port id failed: %d", result);
@@ -205,10 +215,10 @@ namespace rina {
                 result = syscall(SYS_deallocatePortId, portId);
 
                 if (result < 0) {
-                        LOG_ERR("Syscall deallocate port id failed: %d", result);
+                        LOG_ERR("Syscall deallocate port id failed: %d",
+                                result);
                 }
 
                 return result;
-
         }
 }
