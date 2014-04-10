@@ -40,13 +40,57 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
         if (tree) { /* we are being asked for details */
                 proto_item *ti = NULL;
                 proto_tree *cdap_tree = NULL;
+                guint buff_length;
+                guint offset;
+                guint8 protofield;
+                gboolean stop;
+                size_t str_len;
 
                 ti = proto_tree_add_item(tree, proto_cdap, tvb, 0, -1, ENC_NA);
                 cdap_tree = proto_item_add_subtree(ti, ett_cdap);
 
                 /* Add them to the tree here */
-                proto_tree_add_item(cdap_tree, hf_cdap_abs_syntax, tvb, 0, 4, ENC_LITTLE_ENDIAN); 
-                     
+                offset = 0;
+                buff_length = tvb_length(tvb);
+                stop = FALSE;
+                protofield = 0;
+                while (!stop && offset < buff_length) {
+                        /*
+                         * Each key in the streamed message is a varint with 
+                         * the value (field_number << 3) | wire_type – in 
+                         * other words, the last three bits of the number 
+                         * store the wire type. 
+                         */
+                        TRY {
+                                protofield = tvb_get_guint8(tvb, offset);
+                                offset++;
+                        }
+                        CATCH_ALL {
+                                stop = TRUE;
+                                break;
+                        }
+                        ENDTRY;
+                        protofield = (protofield >> 3);
+
+                        /* Processing based on field */
+                        switch ( protofield ) {
+                        case 22:
+                                /* TODO: Add try catch here */
+                                str_len = tvb_get_guint8(tvb, offset);
+                                offset++;
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_dstapname, 
+                                                    tvb, 0, str_len, 
+                                                    ENC_LITTLE_ENDIAN);
+                                offset+=str_len;
+                                break;
+                        default:
+                                stop = TRUE;
+                                break;
+                        }
+
+                         
+                }
         }
 }
 
@@ -207,6 +251,8 @@ proto_register_cdap(void)
 
     proto_register_field_array(proto_cdap, hf, array_length(hf));
     proto_register_subtree_array(ett, array_length(ett));
+
+    register_dissector("cdap", dissect_cdap, proto_cdap);
 }
 
 void
@@ -215,6 +261,4 @@ proto_reg_handoff_cdap(void)
     static dissector_handle_t cdap_handle;
 
     cdap_handle = create_dissector_handle(dissect_cdap, proto_cdap);
-
-    /* TODO: Hook into management PDU here */
 }

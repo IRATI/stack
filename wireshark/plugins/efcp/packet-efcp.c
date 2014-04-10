@@ -27,6 +27,8 @@ static int hf_rina_ctrl_seq     = -1;
 
 static gint ett_rina = -1;
 
+static dissector_handle_t cdap_handle;
+
 static const value_string pdutypenames[] = {
         { 0x8001, "Data transfer" },
         { 0xC000, "Management" },
@@ -38,6 +40,7 @@ dissect_rina(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
         gint offset = 0;
         guint pdu_type = 0;
+        tvbuff_t *next_tvb = NULL; 
 
         pdu_type = tvb_get_letoh24(tvb, 0);
 
@@ -98,6 +101,13 @@ dissect_rina(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                 offset += 4;
                 proto_tree_add_item(rina_tree, hf_rina_ctrl_seq, 
                                     tvb, offset, 4, ENC_LITTLE_ENDIAN);
+        }
+        if (pdu_type ==  0xC000) {
+                next_tvb = tvb_new_subset(tvb, 56, -1, 0);
+                call_dissector(cdap_handle, 
+                               next_tvb, 
+                               pinfo, 
+                               tree);
         }
 }
 
@@ -212,6 +222,8 @@ proto_reg_handoff_rina(void)
         static dissector_handle_t rina_handle;
 
         rina_handle = create_dissector_handle(dissect_rina, proto_rina);
+
+        cdap_handle = find_dissector("cdap");
 
         dissector_add_uint("ethertype", ETH_P_RINA, rina_handle);
 }
