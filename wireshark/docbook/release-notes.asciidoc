@@ -1,0 +1,196 @@
+= Wireshark wireshark-version:[] Release Notes
+
+== What is Wireshark?
+
+Wireshark is the world's most popular network protocol analyzer. It is
+used for troubleshooting, analysis, development and education.
+
+== What's New
+
+=== Bug Fixes
+
+The following vulnerabilities have been fixed.
+
+//* ws-buglink:5000[]
+//* ws-buglink:6000[Wireshark bug]
+//* ws-salink:2013-11[]
+//* cve-idlink:2013-2486[]
+
+* ws-salink:2014-01[]
++
+The NFS dissector could crash. Discovered by Moshe Kaplan.
+// Fixed in trunk: r54875 / gf4ab2b2
+// Fixed in trunk-1.10: g312f7e1
+// Fixed in trunk-1.8: g2fb9848
+(ws-buglink:9672[])
++
+Versions affected: 1.10.0 to 1.10.5, 1.8.0 to 1.8.12
++
+cve-idlink:2014-2281[]
+
+* ws-salink:2014-02[]
++
+The M3UA dissector could crash. Discovered by Laurent Butti.
+// Fixed in master: r51608 / ga8f4327
+// Fixed in master-1.10: gd3bd396
+(ws-buglink:9699[])
++
+Versions affected: 1.10.0 to 1.10.5
++
+cve-idlink:2014-2282[]
+
+* ws-salink:2014-03[]
++
+The RLC dissector could crash.
+// Fixed in trunk: n/a
+// Fixed in trunk-1.10: gd8075e7
+// Fixed in trunk-1.8: g217293b
+(ws-buglink:9730[])
++
+Versions affected: 1.10.0 to 1.10.5, 1.8.0 to 1.8.12
++
+cve-idlink:2014-2283[]
+
+* ws-salink:2014-04[]
++
+The MPEG file parser could overflow a buffer. Discovered by Wesley
+Neelen.
+// Fixed in trunk: n/a
+// Fixed in trunk-1.10: g34144b8
+// Fixed in trunk-1.8: gf567435
+(ws-buglink:9843[])
++
+Versions affected: 1.10.0 to 1.10.5, 1.8.0 to 1.8.12
++
+cve-idlink:2014-2299[]
+
+The following bugs have been fixed:
+
+//* Wireshark will practice the jazz flute for hours on end when you're trying to sleep. (ws-buglink:0000[])
+
+* Customized OUI is not recognized correctly during dissection. (ws-buglink:9122[])
+* Properly decode CAPWAP Data Keep-Alives. (ws-buglink:9165[])
+* Build failure with GTK 3.10 - GTK developers have gone insane. (ws-buglink:9340[])
+* SIGSEGV/SIGABRT during free of TvbRange using a chained dissector in lua. (ws-buglink:9483[])
+* MPLS dissector no longer registers itself in "ppp.protocol" table. (ws-buglink:9492[])
+* Tshark doesn't display the longer data fields (mbtcp). (ws-buglink:9572[])
+* DMX-CHAN disector does not clear strbuf between rows. (ws-buglink:9598[])
+* Dissector bug, protocol SDP: proto.c:4214: failed assertion "length >= 0". (ws-buglink:9633[])
+* False error: capture file appears to be damaged or corrupt. (ws-buglink:9634[])
+* SMPP field source_telematics_id field length different from spec. (ws-buglink:9649[])
+* Lua: bitop library is missing in Lua 5.2. (ws-buglink:9720[])
+* GTPv1-C / MM Context / Authentication quintuplet / RAND is not correct. (ws-buglink:9722[])
+* Lua: ProtoField.new() is buggy. (ws-buglink:9725[])
+* Lua: ProtoField.bool() VALUESTRING argument is not optional but was supposed to be. (ws-buglink:9728[])
+* Problem with CAPWAP Wireshark Dissector. (ws-buglink:9752[])
+* nas-eps dissector: CS Service notification dissection stops after Paging identity IE. (ws-buglink:9789[])
+
+=== New and Updated Features
+
+IPv4 checksum verfification is now disabled by default.
+
+=== New Protocol Support
+
+There are no new protocols in this release.
+
+=== Updated Protocol Support
+
+--sort-and-group--
+
+AppleTalk
+CAPWAP
+GTPv1
+DMX-CHAN
+DSI
+DVB-CI
+ESS
+IEEE 802a
+M3UA
+Modbus/TCP
+NAS-EPS
+NFS
+OpenSafety
+SDP
+SMPP
+
+--sort-and-group--
+
+=== New and Updated Capture File Support
+
+--sort-and-group--
+
+libpcap
+MPEG
+pcap-ng
+
+--sort-and-group--
+
+== Getting Wireshark
+
+Wireshark source code and installation packages are available from
+http://www.wireshark.org/download.html.
+
+=== Vendor-supplied Packages
+
+Most Linux and Unix vendors supply their own Wireshark packages. You can
+usually install or upgrade Wireshark using the package management system
+specific to that platform. A list of third-party packages can be found
+on the http://www.wireshark.org/download.html#thirdparty[download page]
+on the Wireshark web site.
+
+== File Locations
+
+Wireshark and TShark look in several different locations for preference
+files, plugins, SNMP MIBS, and RADIUS dictionaries. These locations vary
+from platform to platform. You can use About→Folders to find the default
+locations on your system.
+
+== Known Problems
+
+Dumpcap might not quit if Wireshark or TShark crashes.
+(ws-buglink:1419[])
+
+The BER dissector might infinitely loop.
+(ws-buglink:1516[])
+
+Capture filters aren't applied when capturing from named pipes.
+(ws-buglink:1814[])
+
+Filtering tshark captures with read filters (-R) no longer works.
+(ws-buglink:2234[])
+
+The 64-bit Windows installer does not support Kerberos decryption.
+(https://wiki.wireshark.org/Development/Win64[Win64 development page])
+
+Resolving (ws-buglink:9044[]) reopens (ws-buglink:3528[]) so that Wireshark
+no longer automatically decodes gzip data when following a TCP stream.
+
+Application crash when changing real-time option.
+(ws-buglink:4035[])
+
+Hex pane display issue after startup.
+(ws-buglink:4056[])
+
+Packet list rows are oversized.
+(ws-buglink:4357[])
+
+Summary pane selected frame highlighting not maintained.
+(ws-buglink:4445[])
+
+Wireshark and TShark will display incorrect delta times in some cases.
+(ws-buglink:4985[])
+
+== Getting Help
+
+Community support is available on http://ask.wireshark.org/[Wireshark's
+Q&A site] and on the wireshark-users mailing list. Subscription
+information and archives for all of Wireshark's mailing lists can be
+found on http://www.wireshark.org/lists/[the web site].
+
+Official Wireshark training and certification are available from
+http://www.wiresharktraining.com/[Wireshark University].
+
+== Frequently Asked Questions
+
+A complete FAQ is available on the
+http://www.wireshark.org/faq.html[Wireshark web site].
