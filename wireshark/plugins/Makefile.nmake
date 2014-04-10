@@ -8,6 +8,7 @@ include ..\config.nmake
 
 PLUGIN_LIST = \
 	asn1        \
+        cdap        \
 	docsis      \  
         efcp        \
 	ethercat    \

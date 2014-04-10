@@ -342,7 +342,7 @@ if(ENABLE_ZLIB)
 endif()
 
 # Lua 5.1 dissectors
-if(ENABLE_LUA)
+if(ENABLE_UA)
 	set(PACKAGELIST ${PACKAGELIST} LUA)
 endif()
 
@@ -455,6 +455,7 @@ if(ENABLE_PLUGINS)
 	set(PLUGIN_DIR="${DATAFILE_DIR}/plugins/${CPACK_PACKAGE_VERSION}")
 	set(PLUGIN_SRC_DIRS
 		plugins/asn1
+                plugins/cdap
 		plugins/docsis
                 plugins/efcp
 		plugins/ethercat

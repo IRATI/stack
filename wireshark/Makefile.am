@@ -291,6 +291,7 @@ if HAVE_PLUGINS
 -include plugins/Custom.make
 plugin_ldadd = $(_CUSTOM_plugin_ldadd_) \
 	-dlopen plugins/asn1/asn1.la \
+	-dlopen plugins/cdap/cdap.la \
 	-dlopen plugins/docsis/docsis.la \
 	-dlopen plugins/efcp/efcp.la \
 	-dlopen plugins/ethercat/ethercat.la \
