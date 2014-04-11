@@ -1,6 +1,15 @@
+/* c-basic-offset: 8; tab-width: 8; indent-tabs-mode: nil
+ * vi: set shiftwidth=8 tabstop=8 expandtab:
+ * :indentSize=8:tabSize=8:noTabs=true:
+ */
 #include "config.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <epan/packet.h>
+#include <epan/wmem/wmem.h>
 
 static int proto_cdap = -1;
 
@@ -30,13 +39,54 @@ static int hf_cdap_version      = -1;
 
 static gint ett_cdap = -1;
 
+static size_t 
+cdap_get_length_varint(size_t len, const guint8 *data)
+{
+        size_t i;
+        
+        for (i = 0; i < len; i++) {
+                if ((data[i] & 0x80) == 0)
+                        break;
+        }
+
+        return i+1;
+}
+
+/* Caller needs to free the return value */
+static guint8 *
+cdap_parse_int32(size_t len, const guint8 *data)
+{
+        guint8 *rv;
+        guint i;
+
+        rv = (guint8 *) wmem_alloc0(wmem_packet_scope(), 32);
+        for (i = 0; i < len; i++) {
+                rv[i] = (data[i] & 0x7f);
+        }
+
+        return rv;
+}
+
+/* Caller needs to free the return value */
+static guint8 *
+cdap_parse_int64(size_t len, const guint8 *data)
+{
+        guint8 *rv;
+        guint i;
+
+        rv = (guint8 *) wmem_alloc0(wmem_packet_scope(), 64);
+        for (i = 0; i < len; i++) {
+                rv[i] = (data[i] & 0x7f);
+        }
+
+        return rv;
+}
+
+
 static void
 dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
 {
         col_set_str(pinfo->cinfo, COL_PROTOCOL, "CDAP");
-        /* Clear out stuff in the info column */
-        col_clear(pinfo->cinfo,COL_INFO);
-
         if (tree) { /* we are being asked for details */
                 proto_item *ti = NULL;
                 proto_tree *cdap_tree = NULL;
@@ -44,7 +94,13 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                 guint offset;
                 guint8 protofield;
                 gboolean stop;
-                size_t str_len;
+                /* Contains either the string length, or the varint length */
+                volatile size_t len;
+                guint8 *buf;
+                guint8 *buf2;
+                tvbuff_t *new_tvb;
+                guint i;
+                guint8 *str;
 
                 ti = proto_tree_add_item(tree, proto_cdap, tvb, 0, -1, ENC_NA);
                 cdap_tree = proto_item_add_subtree(ti, ett_cdap);
@@ -54,6 +110,11 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                 buff_length = tvb_length(tvb);
                 stop = FALSE;
                 protofield = 0;
+                len = 0;
+                i = 0;
+                new_tvb = NULL;
+                str = NULL;
+                buf = (guint8 *) wmem_alloc0(wmem_packet_scope(), 8);
                 while (!stop && offset < buff_length) {
                         /*
                          * Each key in the streamed message is a varint with 
@@ -64,28 +125,215 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                         TRY {
                                 protofield = tvb_get_guint8(tvb, offset);
                                 offset++;
+                                protofield = protofield >> 3;
+                                /* String */
+                                if ((protofield > 18 && protofield < 28) ||
+                                    (protofield > 4 && protofield < 7)) {  
+                                        len = tvb_get_guint8(tvb, offset);
+                                        offset++;
+                                        str = (guint8 *) wmem_alloc0(wmem_packet_scope(), len);
+                                        
+                                        for (i = 0; i < len; i++) {
+                                                str[i] = tvb_get_guint8(tvb, offset+i);
+                                        }
+                                }
+                                /* Int 32 */        
+                                else if (protofield < 5 ||
+                                           protofield == 9 ||
+                                           protofield == 10 ||
+                                           protofield == 17) {
+                                        /* Get data from tvbuff */
+                                        /* TODO: Use tvb_memcpy */
+                                        for (i = 0; i < 4; i++) { 
+                                                /* TODO: Check if we don't go beyond the packet length */
+                                                buf[i] = tvb_get_guint8(tvb,
+ offset+i);
+                                        }
+                                        len = cdap_get_length_varint(4, buf);
+                                        buf2 = cdap_parse_int32(len, buf);
+                                        new_tvb = tvb_new_real_data(buf2, 4, 4);
+                                        offset+= len;
+                                } 
+                                /* Int 64 */
+                                else if (protofield == 7 ||
+                                           protofield == 28) {
+                                        /* Get data from tvbuff */
+                                        /* TODO: Use tvb_memcpy */
+                                        for (i = 0; i < 8; i++) { 
+                                                /* TODO: Check if we don't go beyond the packet length */
+                                                buf[i] = tvb_get_guint8(tvb,
+ offset+i);
+                                        }
+                                        len = cdap_get_length_varint(8, buf);
+                                        buf2 = cdap_parse_int64(len, buf);
+                                        new_tvb = tvb_new_real_data(buf2, 8, 8);
+                                        offset+= len;
+                                } 
+                                /* Message in message or bytes */
+                                else if (protofield == 8 ||
+                                         protofield == 11 ||
+                                         protofield == 18) {
+                                        len = tvb_get_guint8(tvb, offset);
+                                        offset++;
+                                }
                         }
                         CATCH_ALL {
                                 stop = TRUE;
                                 break;
                         }
                         ENDTRY;
-                        protofield = (protofield >> 3);
-
+                       
                         /* Processing based on field */
-                        switch ( protofield ) {
-                        case 22:
-                                /* TODO: Add try catch here */
-                                str_len = tvb_get_guint8(tvb, offset);
-                                offset++;
+                        switch (protofield) {
+                        case 1:
                                 proto_tree_add_item(cdap_tree, 
-                                                    hf_cdap_dstapname, 
-                                                    tvb, 0, str_len, 
+                                                    hf_cdap_abs_syntax, 
+                                                    new_tvb, 0, 4, 
                                                     ENC_LITTLE_ENDIAN);
-                                offset+=str_len;
+                                break;
+                        case 2:
+                                /* Enum are also gint32 */
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_opcode, 
+                                                    new_tvb, 0, 4, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 3:
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_invokeid, 
+                                                    new_tvb, 0, 4, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 4:
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_flags, 
+                                                    new_tvb, 0, 4, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 5:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_objclass, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;                       
+                                break;
+                        case 6:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_objname, 
+                                                      tvb, offset, len, 
+                                                      str);
+;                                offset+= len;
+                                break;
+                        case 7:
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_objinst, 
+                                                    new_tvb, 0, 8, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 8:
+                                /* For now just increase the offset */
+                                printf("Msg in msg, increasing by %d\n", len);
+                                offset+=len;
+                                break;
+                        case 9:  
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_result, 
+                                                    new_tvb, 0, 4, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 10:
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_scope, 
+                                                    new_tvb, 0, 4, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 11:
+                                /* For now just increase the offset */
+                                offset+= len;
+                                break; 
+                        case 17:
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_authmech, 
+                                                    new_tvb, 0, 4, 
+                                                    ENC_LITTLE_ENDIAN);
+                                break;
+                        case 18:
+                                /* For now just increase the offset */
+                                offset+= len;
+                                break;
+                        case 19:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_dstaeinst, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 20:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_dstaename, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 21:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_dstapinst, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 22:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_dstapname, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 23:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_srcaeinst, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 24:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_srcaename, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 25:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_srcapinst, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 26: 
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_srcapname, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 27:
+                                proto_tree_add_string(cdap_tree, 
+                                                      hf_cdap_resultreason, 
+                                                      tvb, offset, len, 
+                                                      str);
+                                offset+= len;
+                                break;
+                        case 28:
+                                proto_tree_add_item(cdap_tree, 
+                                                    hf_cdap_version, 
+                                                    new_tvb, 0, 8, 
+                                                    ENC_LITTLE_ENDIAN);
                                 break;
                         default:
                                 stop = TRUE;
+                                printf("CDAP got an unknown field, stopping\n");
+                                printf("Field: %d\n", protofield);
                                 break;
                         }
 
@@ -124,13 +372,13 @@ proto_register_cdap(void)
             },
             { &hf_cdap_objclass,
               { "Object class", "cdap.objclass",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_objname,
               { "Object name", "cdap.objname",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
@@ -140,27 +388,28 @@ proto_register_cdap(void)
                 NULL, 0x0,
                 NULL, HFILL }
             },
+            /* TODO: Can be any value, check best type */
             { &hf_cdap_objvalue,
               { "Object value", "cdap.objvalue",
-                FT_UINT32, BASE_DEC,
+                FT_BYTES, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_result,
               { "Result of operation", "cdap.result",
-                FT_UINT32, BASE_DEC,
+                FT_INT32, BASE_DEC,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_scope,
               { "Scope of read/write operation", "cdap.scope",
-                FT_UINT32, BASE_DEC,
+                FT_INT32, BASE_DEC,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_filter,
               { "Filter script", "cdap.filter",
-                FT_UINT32, BASE_DEC,
+                FT_BYTES, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
@@ -170,69 +419,70 @@ proto_register_cdap(void)
                 NULL, 0x0,
                 NULL, HFILL }
             },
+            /* Can be a lot of values */
             { &hf_cdap_authvalue,
               { "Authentication information", "cdap.authvalue",
-                FT_UINT32, BASE_DEC,
+                FT_BYTES, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_dstaeinst,
               { "Destination application entity instance name", "cdap.dstaeinst",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_dstaename,
               { "Destination application entity name", "cdap.dstaename",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_dstapinst,
               { "Destination application instance name", "cdap.dstapinst",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_dstapname,
               { "Destination Application Name", "cdap.dstapname",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_srcaeinst,
               { "Source application entity instance name", "cdap.srcaeinst",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_srcaename,
               { "Source application entity name", "cdap.srcaename",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_srcapinst,
               { "Source application instance name", "cdap.srcapinst",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_srcapname,
               { "Source Application Name", "cdap.srcapname",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_resultreason,
               { "Explanation of result", "cdap.resultreason",
-                FT_UINT32, BASE_DEC,
+                FT_STRING, BASE_NONE,
                 NULL, 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_version,
               { "RIB/class version", "cdap.version",
-                FT_UINT32, BASE_DEC,
+                FT_INT64, BASE_DEC,
                 NULL, 0x0,
                 NULL, HFILL }
             }
@@ -257,8 +507,17 @@ proto_register_cdap(void)
 
 void
 proto_reg_handoff_cdap(void)
-{
-    static dissector_handle_t cdap_handle;
+{}
 
-    cdap_handle = create_dissector_handle(dissect_cdap, proto_cdap);
-}
+/*
+ * Editor modelines  -  http://www.wireshark.org/tools/modelines.html
+ *
+ * Local variables:
+ * c-basic-offset: 8
+ * tab-width: 8
+ * indent-tabs-mode: nil
+ * End:
+ *
+ * vi: set shiftwidth=8 tabstop=8 expandtab:
+ * :indentSize=8:tabSize=8:noTabs=true:
+ */

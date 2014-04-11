@@ -47,7 +47,7 @@ dissect_rina(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
         col_set_str(pinfo->cinfo, COL_PROTOCOL, "EFCP");
         /* Clear out stuff in the info column */
         col_clear(pinfo->cinfo,COL_INFO);
-        col_add_fstr(pinfo->cinfo, COL_INFO, "%s PDU",
+        col_add_fstr(pinfo->cinfo, COL_INFO, "%s PDU ",
                      val_to_str(pdu_type, pdutypenames, "Unknown (0x%02x)"));
 
         if (tree) { /* we are being asked for details */
