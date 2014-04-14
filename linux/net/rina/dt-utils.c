@@ -173,10 +173,67 @@ static struct rtxqueue * rtxqueue_create(void)
         return tmp;
 }
 
+static int rtxq_entry_destroy(struct rtxq_entry * entry)
+{
+        if (!entry)
+                return -1;
+
+        pdu_destroy(entry->pdu);
+        rkfree(entry);
+
+        return 0;
+}
+
+static int entries_ack(struct rtxqueue * q,
+                       seq_num_t         seq_num)
+{
+        struct rtxq_entry * cur, * n;
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)))
+                    <= seq_num) {
+                        list_del(&cur->next);
+                        rtxq_entry_destroy(cur);
+                }
+        }
+
+        return 0;
+}
+
+static int entries_nack(struct rtxqueue * q,
+                        seq_num_t         seq_num)
+{
+        struct rtxq_entry * cur, * n;
+        /* struct pdu * tmp; */
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)))
+                    >= seq_num) {
+                        /*
+                         * FIXME: We need a way to use the RMT
+                         * tmp = pdu_dup_ni(pdu);
+                         * rmt_send(pdu);
+                         */
+                }
+        }
+
+        return 0;
+}
+
 static int rtxqueue_destroy(struct rtxqueue * q)
 {
+        struct rtxq_entry * cur;
+        struct rtxq_entry * n;
         if (!q)
                 return -1;
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                rtxq_entry_destroy(cur);
+        }
 
         return 0;
 
@@ -207,17 +264,6 @@ struct rtxq {
         struct dt *       parent;
         struct rtxqueue * queue;
 };
-
-static int rtxq_entry_destroy(struct rtxq_entry * entry)
-{
-        if (!entry)
-                return -1;
-
-        pdu_destroy(entry->pdu);
-        rkfree(entry);
-
-        return 0;
-}
 
 static void Rtimer_handler(void * data)
 {
@@ -289,24 +335,6 @@ int rtxq_push(struct rtxq * q,
         return 0;
 }
 
-static int entries_ack(struct rtxqueue * q,
-                       seq_num_t         seq_num)
-{
-        struct rtxq_entry * cur, * n;
-
-        ASSERT(q);
-
-        list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)))
-                    <= seq_num) {
-                        list_del(&cur->next);
-                        rtxq_entry_destroy(cur);
-                }
-        }
-
-        return 0;
-}
-
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
              timeout_t     tr)
@@ -321,28 +349,6 @@ int rtxq_ack(struct rtxq * q,
                 return -1;
         }
         spin_unlock(&q->lock);
-
-        return 0;
-}
-
-static int entries_nack(struct rtxqueue * q,
-                        seq_num_t         seq_num)
-{
-        struct rtxq_entry * cur, * n;
-        /* struct pdu * tmp; */
-
-        ASSERT(q);
-
-        list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)))
-                    >= seq_num) {
-                        /*
-                         * FIXME: We need a way to use the RMT
-                         * tmp = pdu_dup_ni(pdu);
-                         * rmt_send(pdu);
-                         */
-                }
-        }
 
         return 0;
 }

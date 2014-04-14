@@ -346,7 +346,6 @@ int dtp_write(struct dtp * instance,
         struct dtp_sv *       sv;
         struct dt *           dt;
         struct dtcp *         dtcp;
-        struct cwq *          cwq;
         struct rtxq *         rtxq;
         int                   ret = 0;
         struct pdu *          cpdu;
