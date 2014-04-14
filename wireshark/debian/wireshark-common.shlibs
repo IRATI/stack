@@ -1,0 +1,3 @@
+libwireshark 3 wireshark-common (>= 1.10.0)
+libwiretap 3 wireshark-common (>= 1.10.0)
+libwsutil 3 wireshark-common (>= 1.10.0)
