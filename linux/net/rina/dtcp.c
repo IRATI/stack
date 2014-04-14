@@ -419,6 +419,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         struct pci * pci;
         pdu_type_t   type;
         seq_num_t    seq_num;
+        seq_num_t    seq;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
@@ -484,11 +485,15 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_ACK:
+                seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+
                 return dtcp->policies->sender_ack(dtcp,
-                                                  pci_control_ack_seq_num(pdu_pci_get_ro(pdu)));
+                                                  seq);
         case PDU_TYPE_NACK:
+                seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+
                 return rcv_nack_ctl(dtcp,
-                                    pci_control_ack_seq_num(pdu_pci_get_ro(pdu)));
+                                    seq);
         case PDU_TYPE_FC:
                 return rcv_flow_ctl(dtcp, pci, pdu);
         case PDU_TYPE_ACK_AND_FC:
