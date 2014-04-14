@@ -48,6 +48,10 @@ cdap_get_length_varint(size_t len, const guint8 *data)
                 if ((data[i] & 0x80) == 0)
                         break;
         }
+        
+        if (i > 0) {
+                printf("Got an int that is larger than a byte\n");
+        }
 
         return i+1;
 }
@@ -127,27 +131,27 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 offset++;
                                 protofield = protofield >> 3;
                                 /* String */
-                                if ((protofield > 18 && protofield < 28) ||
-                                    (protofield > 4 && protofield < 7)) {  
+                                if ((protofield >= 19 && protofield <= 27) ||
+                                    (protofield >= 5 && protofield <= 6)) {  
                                         len = tvb_get_guint8(tvb, offset);
                                         offset++;
-                                        str = (guint8 *) wmem_alloc0(wmem_packet_scope(), len);
-                                        
+                                        str = (guint8 *) wmem_alloc0(wmem_packet_scope(), len+1);
+                                        str[len]= '\0';
+
                                         for (i = 0; i < len; i++) {
                                                 str[i] = tvb_get_guint8(tvb, offset+i);
                                         }
                                 }
                                 /* Int 32 */        
-                                else if (protofield < 5 ||
-                                           protofield == 9 ||
-                                           protofield == 10 ||
-                                           protofield == 17) {
+                                else if (protofield <= 4 ||
+                                         protofield == 9 ||
+                                         protofield == 10 ||
+                                         protofield == 17) {
                                         /* Get data from tvbuff */
                                         /* TODO: Use tvb_memcpy */
                                         for (i = 0; i < 4; i++) { 
                                                 /* TODO: Check if we don't go beyond the packet length */
-                                                buf[i] = tvb_get_guint8(tvb,
- offset+i);
+                                                buf[i] = tvb_get_guint8(tvb, offset+i);
                                         }
                                         len = cdap_get_length_varint(4, buf);
                                         buf2 = cdap_parse_int32(len, buf);
@@ -156,13 +160,12 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 } 
                                 /* Int 64 */
                                 else if (protofield == 7 ||
-                                           protofield == 28) {
+                                         protofield == 28) {
                                         /* Get data from tvbuff */
                                         /* TODO: Use tvb_memcpy */
                                         for (i = 0; i < 8; i++) { 
                                                 /* TODO: Check if we don't go beyond the packet length */
-                                                buf[i] = tvb_get_guint8(tvb,
- offset+i);
+                                                buf[i] = tvb_get_guint8(tvb, offset+i);
                                         }
                                         len = cdap_get_length_varint(8, buf);
                                         buf2 = cdap_parse_int64(len, buf);
@@ -173,8 +176,10 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 else if (protofield == 8 ||
                                          protofield == 11 ||
                                          protofield == 18) {
+                                        printf("Proto: %d\n", protofield);
                                         len = tvb_get_guint8(tvb, offset);
                                         offset++;
+                                        printf("Length: %d\n", len);
                                 }
                         }
                         CATCH_ALL {
@@ -182,6 +187,8 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 break;
                         }
                         ENDTRY;
+
+                        printf("Protofield: %d\n", protofield);
                        
                         /* Processing based on field */
                         switch (protofield) {
@@ -222,7 +229,7 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                                       hf_cdap_objname, 
                                                       tvb, offset, len, 
                                                       str);
-;                                offset+= len;
+                                offset+= len;
                                 break;
                         case 7:
                                 proto_tree_add_item(cdap_tree, 
@@ -232,7 +239,6 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 break;
                         case 8:
                                 /* For now just increase the offset */
-                                printf("Msg in msg, increasing by %d\n", len);
                                 offset+=len;
                                 break;
                         case 9:  
@@ -333,7 +339,7 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                         default:
                                 stop = TRUE;
                                 printf("CDAP got an unknown field, stopping\n");
-                                printf("Field: %d\n", protofield);
+                                printf("Field: %d\n\n", protofield);
                                 break;
                         }
 
