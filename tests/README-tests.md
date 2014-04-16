@@ -31,9 +31,9 @@ the 32/64 bits x86 based machines available on the testbeds.
 A tag is stitched to 'be' when:
   * New functionalities are added
 
-A tag is stitched to 'wip' when: 
+'be' is merged into 'wip' when:
   * 'be' succeeds in the following tests without crashing on the project's
-    testbeds:
+     testbeds:
          - An application can be run on top of the shim-dummy and shim-eth-vlan
          - Enrolment succeeds
          - An application can be run on top of a normal DIF (unreliable flow)
@@ -41,9 +41,11 @@ A tag is stitched to 'wip' when:
          - Forwarding is working
          - DIFs can be stacked
          - No major performance decreases are noticed
-   * 'be' is merged into 'wip'
-  
-A tag is stitched to irati when:
+
+A tag is stitched to 'wip' when: 
+  * 'be' is merged into 'wip'
+
+'wip' is merged into 'irati' when: 
   * 'wip' succeeds in the following tests without crashing on the project's
     testbeds.
          - An application can be run on top of the shim-dummy and shim-eth-vlan
@@ -53,4 +55,6 @@ A tag is stitched to irati when:
          - Forwarding is working
          - DIFs can be stacked
          - No major performance decreases are noticed
+  
+A tag is stitched to irati when:
   * 'wip' is merged into 'irati'
