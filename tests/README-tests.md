@@ -1,9 +1,6 @@
 Branches
 ========
 
-This document describes the tests that have to succeed before integrating code
-from one branch in the other.
-
 The IRATI stack repository contains 3 main branches: irati, wip and be:
 
   * be (bleeding edge):
@@ -21,15 +18,15 @@ The IRATI stack repository contains 3 main branches: irati, wip and be:
     compiling and must complete successfully on the target platforms.
     Installation cannot require tweaks.
 
-Testing and tagging procedures
-==============================
+This document describes the tests that have to succeed before integrating code
+from one branch in the other.
+
+Testing procedures
+==================
 
 On the following, we refer with the term 'testbeds' assuming that they are the
 IRATI's vWall and EXPERIMENTA testbeds. Target platforms are Debian wheezy and
 the 32/64 bits x86 based machines available on the testbeds.
-
-A tag is stitched to 'be' when:
-  * New functionalities are added
 
 'be' is merged into 'wip' when:
   * 'be' succeeds in the following tests without crashing on the project's
@@ -42,9 +39,6 @@ A tag is stitched to 'be' when:
          - DIFs can be stacked
          - No major performance decreases are noticed
 
-A tag is stitched to 'wip' when: 
-  * 'be' is merged into 'wip'
-
 'wip' is merged into 'irati' when: 
   * 'wip' succeeds in the following tests without crashing on the project's
     testbeds.
@@ -55,6 +49,15 @@ A tag is stitched to 'wip' when:
          - Forwarding is working
          - DIFs can be stacked
          - No major performance decreases are noticed
-  
+
+Tagging procedures
+==================
+
+A tag is stitched to 'be' when:
+  * New functionalities are added
+
+A tag is stitched to 'wip' when: 
+  * 'be' is merged into 'wip'
+
 A tag is stitched to irati when:
   * 'wip' is merged into 'irati'
