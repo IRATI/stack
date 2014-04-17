@@ -33,9 +33,9 @@ the 32/64 bits x86 based machines available on the testbeds.
      testbeds:
 
      General tests: 
-       - The stack can be loaded
-       - The stack can be unloaded
-       - The stack can be loaded and unloaded multiple times
+       - The kernel reaches 'init' and the modules can be loaded
+       - The modules can be unloaded
+       - The modules can be loaded and unloaded multiple times
        - The IPC Manager Daemon initializes
        - Kill the IPC Manager Daemon
        - No major performance decreases are noticed
