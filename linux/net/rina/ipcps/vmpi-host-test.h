@@ -1,4 +1,4 @@
-/* A Virtual MPI interface
+/* Test interface for VMPI on the hypervisor
  *
  * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
@@ -17,17 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __VMPI_H__
-#define __VMPI_H__
+#ifndef __VMPI_HOST_TEST_H__
+#define __VMPI_HOST_TEST_H__
 
+/* Enable hypervisor-side test interface. */
+//#define VMPI_HOST_TEST
 
-typedef struct vmpi_info vmpi_info_t;
+#ifdef VMPI_HOST_TEST
+ssize_t vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
+                            unsigned long iovcnt, loff_t pos);
+ssize_t vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
+                           unsigned long iovcnt, loff_t pos);
+#endif  /* VMPI_HOST_TEST */
 
-ssize_t vmpi_write(vmpi_info_t *mpi, unsigned int channel,
-                   const struct iovec *iv, unsigned long iovlen);
-ssize_t vmpi_read(vmpi_info_t *mpi, unsigned int channel,
-                  const struct iovec *iv, unsigned long iovcnt);
+#endif  /* __VMPI_HOST_TEST_H__ */
 
-#define VMPI_MAX_CHANNELS   64
-
-#endif  /* __VMPI_H__ */
