@@ -263,6 +263,12 @@ static void recv_callback(vmpi_impl_info_t *vi)
         schedule_work(&mpi->recv_worker);
 }
 
+#define SHIM_HV
+#ifdef SHIM_HV
+int shim_hv_init(vmpi_info_t *mpi);
+void shim_hv_fini(void);
+#endif  /* SHIM_HV */
+
 struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *ret)
 {
     struct vmpi_info *mpi;
@@ -306,6 +312,13 @@ struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *ret)
 
     vmpi_impl_callbacks_register(mpi->vi, xmit_callback, recv_callback);
 
+#ifdef SHIM_HV
+    *ret = shim_hv_init(mpi);
+    if (*ret) {
+        goto alloc_read_buf;
+    }
+#endif  /* SHIM_HV */
+
     printk("vmpi_init completed\n");
 
     *ret = 0;
@@ -335,6 +348,11 @@ void vmpi_fini(void)
         BUG_ON(1);
         return;
     }
+
+#ifdef SHIM_HV
+    shim_hv_fini();
+#endif  /* SHIM_HV */
+
     /*
      * Deregister the callbacks, so that vmpi-impl will stop
      * scheduling the receive worker.
