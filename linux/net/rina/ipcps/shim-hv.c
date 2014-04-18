@@ -43,14 +43,134 @@ extern struct kipcm *default_kipcm;
 struct ipcp_instance_data {
         struct list_head        list;
         ipc_process_id_t        id;
-        struct name             *name;
+        struct name             name;
+        int                     assigned;
+        struct name             dif_name;
         struct kfa              *kfa;
+        struct list_head        registered_applications;
 };
 
 /* Private data associated to shim IPC process factory. */
 static struct ipcp_factory_data {
         struct list_head instances;
 } shim_hv_factory_data;
+
+struct name_list_element {
+        struct list_head list;
+        struct name application_name;
+};
+
+static int
+shim_hv_application_register(struct ipcp_instance_data *priv,
+                             const struct name *application_name)
+{
+        struct name_list_element *cur;
+        char *tmpstr = name_tostring(application_name);
+        int ret = -1;
+
+        /* Is this application already registered? */
+        list_for_each_entry(cur, &priv->registered_applications, list) {
+                if (name_is_equal(application_name, &cur->application_name)) {
+                        LOG_ERR("%s: Application %s already registered",
+                                __func__, tmpstr);
+                        goto out;
+                }
+        }
+
+        /* Add the application to the list of registered applications. */
+        cur = rkzalloc(sizeof(*cur), GFP_KERNEL);
+        if (!cur) {
+                LOG_ERR("%s: Allocating list element\n", __func__);
+                goto out;
+        }
+
+        if (name_cpy(application_name, &cur->application_name)) {
+                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                goto name_alloc;
+        }
+
+        list_add(&priv->registered_applications, &cur->list);
+
+        ret = 0;
+        LOG_INFO("%s: Application %s registered", __func__, tmpstr);
+
+name_alloc:
+        if (ret) {
+                rkfree(cur);
+        }
+out:
+        if (tmpstr)
+                rkfree(tmpstr);
+
+        return ret;
+}
+
+static int
+shim_hv_application_unregister(struct ipcp_instance_data *priv,
+                               const struct name *application_name)
+{
+        struct name_list_element *cur;
+        struct name_list_element *found = NULL;
+        char *tmpstr = name_tostring(application_name);
+
+        /* Is this application registered? */
+        list_for_each_entry(cur, &priv->registered_applications, list) {
+                if (name_is_equal(application_name, &cur->application_name)) {
+                        found = cur;
+                        break;
+                }
+        }
+
+        if (!found) {
+                LOG_ERR("%s: Application %s not registered", __func__, tmpstr);
+                goto out;
+        }
+
+        /* Remove the application from the list of registered applications. */
+        name_fini(&found->application_name);
+        list_del(&found->list);
+        rkfree(found);
+
+        LOG_INFO("%s: Application %s unregistered", __func__, tmpstr);
+
+out:
+        if (tmpstr)
+                rkfree(tmpstr);
+
+        return (found != NULL);
+}
+
+static int
+shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
+                      const struct dif_info *dif_information)
+{
+        ASSERT(priv);
+        ASSERT(dif_information);
+
+        if (priv->assigned) {
+                ASSERT(priv->dif_name.process_name);
+                LOG_ERR("%s: IPC process already assigned to the DIF %s",
+                        __func__,  priv->dif_name.process_name);
+                return -1;
+        }
+
+        priv->assigned = 1;
+        if (name_cpy(dif_information->dif_name, &priv->dif_name)) {
+                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                return -1;
+        }
+
+        return 0;
+}
+
+static const struct name *
+shim_hv_ipcp_name(struct ipcp_instance_data *priv)
+{
+        ASSERT(priv);
+        ASSERT(name_is_ok(&priv->name));
+
+        return &priv->name;
+}
 
 /* Interface exported by a shim IPC process. */
 static struct ipcp_instance_ops shim_hv_ipcp_ops = {
@@ -60,10 +180,10 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_binding_ipcp         = NULL,
         .flow_destroy              = NULL,
 
-        .application_register      = NULL,
-        .application_unregister    = NULL,
+        .application_register      = shim_hv_application_register,
+        .application_unregister    = shim_hv_application_unregister,
 
-        .assign_to_dif             = NULL,
+        .assign_to_dif             = shim_hv_assign_to_dif,
         .update_dif_config         = NULL,
 
         .connection_create         = NULL,
@@ -83,7 +203,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .pft_dump                  = NULL,
         .pft_flush                 = NULL,
 
-        .ipcp_name                 = NULL,
+        .ipcp_name                 = shim_hv_ipcp_name,
 };
 
 /* Initialize the IPC process factory. */
@@ -157,11 +277,14 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
                 goto alloc_data;
 
         priv->id = id;
-        priv->name = name_dup(name);
-        if (!priv->name) {
-                LOG_ERR("name_dup() failed\n");
+        priv->assigned = 0;
+
+        if (name_cpy(name, &priv->name)) {
+                LOG_ERR("%s: name_cpy() failed\n", __func__);
                 goto alloc_name;
         }
+
+        INIT_LIST_HEAD(&priv->registered_applications);
 
         priv->kfa = kipcm_kfa(default_kipcm);
         ASSERT(priv->kfa);
@@ -204,7 +327,8 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data *factory_data,
                 LOG_ERR("%s: entry not found", __func__);
         }
 
-        name_destroy(ipcp->data->name);
+        name_fini(&ipcp->data->name);
+        name_fini(&ipcp->data->dif_name);
         rkfree(ipcp->data);
         rkfree(ipcp);
 
