@@ -46,6 +46,8 @@ struct vmpi_info {
     struct work_struct recv_worker;
     struct mutex recv_worker_lock;
 
+    vmpi_read_cb_t read_cb;
+
     /* Number of input buffers. */
     //unsigned int num;
 };
@@ -55,6 +57,13 @@ static struct vmpi_info *vmpi_info_instance = NULL;
 struct vmpi_info *vmpi_get_instance(void)
 {
     return vmpi_info_instance;
+}
+
+int vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb)
+{
+    mpi->read_cb = cb;
+
+    return 0;
 }
 
 static void vmpi_impl_clean_tx(struct vmpi_info *mpi)
@@ -230,14 +239,21 @@ again:
             printk("WARNING: bogus channel index %u\n", channel);
             channel = 0;
         }
-        queue = &mpi->read[channel];
-        mutex_lock(&queue->lock);
-        if (unlikely(vmpi_queue_len(queue) >= VMPI_RING_SIZE)) {
-            vmpi_buffer_destroy(buf);
+
+        if (!mpi->read_cb) {
+                queue = &mpi->read[channel];
+                mutex_lock(&queue->lock);
+                if (unlikely(vmpi_queue_len(queue) >= VMPI_RING_SIZE)) {
+                        vmpi_buffer_destroy(buf);
+                } else {
+                        vmpi_queue_push(queue, buf);
+                }
+                mutex_unlock(&queue->lock);
         } else {
-            vmpi_queue_push(queue, buf);
+                mpi->read_cb(channel, vmpi_buffer_data(buf),
+                             buf->len - sizeof(struct vmpi_hdr));
+                vmpi_buffer_destroy(buf);
         }
-        mutex_unlock(&queue->lock);
         budget--;
     }
 
@@ -311,6 +327,7 @@ struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *ret)
     mutex_init(&mpi->recv_worker_lock);
 
     vmpi_impl_callbacks_register(mpi->vi, xmit_callback, recv_callback);
+    mpi->read_cb = NULL;
 
 #ifdef SHIM_HV
     *ret = shim_hv_init(mpi);

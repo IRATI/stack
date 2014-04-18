@@ -73,7 +73,15 @@ struct vmpi_impl_info {
         struct vmpi_info *mpi;
         struct vmpi_ring *write;
         struct vmpi_queue *read;
+        vmpi_read_cb_t read_cb;
 };
+
+int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb)
+{
+    vi->read_cb = cb;
+
+    return 0;
+}
 
 static void vhost_mpi_vq_reset(struct vmpi_impl_info *vi)
 {
@@ -182,17 +190,23 @@ static void handle_tx(struct vmpi_impl_info *vi)
                         channel = 0;
                     }
 
-                    read = &vi->read[channel];
-                    mutex_lock(&read->lock);
-                    if (unlikely(vmpi_queue_len(read) >= VMPI_RING_SIZE)) {
-                        vmpi_buffer_destroy(buf);
-                    } else {
-                        vmpi_queue_push(read, buf);
-                    }
-                    mutex_unlock(&read->lock);
+                    if (!vi->read_cb) {
+                        read = &vi->read[channel];
+                        mutex_lock(&read->lock);
+                        if (unlikely(vmpi_queue_len(read) >= VMPI_RING_SIZE)) {
+                            vmpi_buffer_destroy(buf);
+                        } else {
+                            vmpi_queue_push(read, buf);
+                        }
+                        mutex_unlock(&read->lock);
 
-                    wake_up_interruptible_poll(&read->wqh, POLLIN |
-                            POLLRDNORM | POLLRDBAND);
+                        wake_up_interruptible_poll(&read->wqh, POLLIN |
+                                POLLRDNORM | POLLRDBAND);
+                    } else {
+                        vi->read_cb(channel, vmpi_buffer_data(buf),
+                                    buf->len - sizeof(struct vmpi_hdr));
+                        vmpi_buffer_destroy(buf);
+                    }
                 }
 
 		vhost_add_used_and_signal(&vi->dev, vq, head, 0);
@@ -419,6 +433,7 @@ static int vhost_mpi_open(struct inode *inode, struct file *f)
         }
         vi->write = vmpi_get_write_ring(vi->mpi);
         vi->read = vmpi_get_read_queue(vi->mpi);
+        vi->read_cb = NULL;
 
         printk("vhost_mpi_open completed\n");
 

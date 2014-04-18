@@ -34,6 +34,11 @@ struct vmpi_info {
     struct vmpi_queue read[VMPI_MAX_CHANNELS];
 };
 
+int vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb)
+{
+    return vmpi_impl_register_read_callback(mpi->vi, cb);
+}
+
 struct vmpi_ring *vmpi_get_write_ring(struct vmpi_info *mpi)
 {
     return &mpi->write;
