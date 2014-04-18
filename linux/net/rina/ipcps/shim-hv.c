@@ -52,7 +52,14 @@ enum channel_state {
 };
 
 struct shim_hv_channel {
-        enum channel_state state;
+        enum channel_state      state;
+        port_id_t               port_id;
+};
+
+enum shim_hv_command {
+        CMD_ALLOCATE_REQ = 0,
+        CMD_ALLOCATE_RESP,
+        CMD_DEALLOCATE,
 };
 
 /* Global data structure shared by all the shim IPC processes.
@@ -98,6 +105,27 @@ find_instance(struct ipcp_factory_data *factory_data, ipc_process_id_t id)
 
 }
 
+static void ser_uint8(uint8_t **to, uint8_t x)
+{
+        *(*to) = x;
+        *to += 1;
+}
+
+static void ser_uint32(uint8_t **to, uint32_t x)
+{
+        uint32_t *buf = (uint32_t*)(*to);
+
+        *buf = x;
+        *to += sizeof(uint32_t);
+}
+
+static void ser_string(uint8_t **to, string_t *str, uint32_t len)
+{
+        ser_uint32(to, len);
+        memcpy(*to, str, len);
+        *to += len;
+}
+
 static int
 shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
                               const struct name *src_application,
@@ -105,12 +133,87 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
                               const struct flow_spec *fspec,
                               port_id_t port_id)
 {
+        uint32_t ch;
+        string_t *src_name;
+        string_t *dst_name;
+        size_t msg_len;
+        ssize_t n;
+        uint8_t *msg_buf;
+        uint8_t *msg_ptr;
+        uint32_t slen, dlen;
+        int err = -ENOMEM;
+        struct iovec iov;
+
         /* TODO move this checs to the caller. */
         ASSERT(priv);
         ASSERT(src_application);
         ASSERT(dst_application);
 
-        return 0;
+        /* Select an unused channel. */
+        for (ch = 1; ch < VMPI_MAX_CHANNELS; ch++)
+                if (vmpi.channels[ch].state == CHANNEL_STATE_NULL)
+                        break;
+
+        if (ch == VMPI_MAX_CHANNELS) {
+                LOG_INFO("%s: no free channel available, try later", __func__);
+                return -EBUSY;
+        }
+
+        src_name = name_tostring(src_application);
+        if (!src_name) {
+                LOG_ERR("%s: allocating source naming info", __func__);
+                goto src_name_alloc;
+        }
+
+        dst_name = name_tostring(dst_application);
+        if (!dst_name) {
+                LOG_ERR("%s: allocating destination naming info", __func__);
+                goto dst_name_alloc;
+        }
+
+        /* Compute the length of the ALLOCATE-REQ message and allocate
+         * a buffer for the message itself.
+         */
+        slen = strlen(src_name);
+        dlen = strlen(dst_name);
+        msg_len = 1 + sizeof(ch) + sizeof(slen) + slen + sizeof(dlen) + dlen;
+        if (msg_len >= 2000) { /* XXX This is just a temporary limitation */
+                LOG_ERR("%s: message too long %d", __func__, (int)msg_len);
+                goto msg_alloc;
+        }
+        msg_buf = rkmalloc(msg_len, GFP_KERNEL);
+        if (msg_buf == NULL) {
+                LOG_ERR("%s: message buffer allocation failed", __func__);
+                goto msg_alloc;
+        }
+
+        /* Build the message by serialization. */
+        msg_ptr = msg_buf;
+        ser_uint8(&msg_ptr, CMD_ALLOCATE_REQ);
+        ser_uint32(&msg_ptr, ch);
+        ser_string(&msg_ptr, src_name, slen);
+        ser_string(&msg_ptr, dst_name, dlen);
+
+        /* Send the message on the control channel. */
+        iov.iov_base = msg_buf;
+        iov.iov_len = msg_len;
+        n = vmpi_write(vmpi.mpi, 0, &iov, 1);
+        LOG_INFO("%s: vmpi_write(%d) --> %d", __func__, (int)msg_len, (int)n);
+
+        err = 0;
+        vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
+        vmpi.channels[ch].port_id = port_id;
+
+        rkfree(msg_buf);
+msg_alloc:
+        rkfree(dst_name);
+dst_name_alloc:
+        rkfree(src_name);
+src_name_alloc:
+        if (err)
+                vmpi.channels[ch].state = CHANNEL_STATE_NULL;
+
+        return err;
 }
 
 /* Register an application to this IPC process. */
