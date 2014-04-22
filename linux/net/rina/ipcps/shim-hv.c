@@ -357,7 +357,7 @@ static void shim_hv_handle_control_msg(const uint8_t *msg, int len)
         }
 }
 
-static void shim_hv_recv_callback(unsigned int channel, const char *buffer,
+static void shim_hv_recv_callback(void *opaque, unsigned int channel, const char *buffer,
                                   int len)
 {
         if (unlikely(channel == 0)) {
@@ -658,7 +658,7 @@ shim_hv_init(vmpi_info_t *mpi)
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 vmpi.channels[i].state = CHANNEL_STATE_NULL;
         }
-        err = vmpi_register_read_callback(vmpi.mpi, shim_hv_recv_callback);
+        err = vmpi_register_read_callback(vmpi.mpi, shim_hv_recv_callback, &vmpi);
         if (err) {
                 LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
                 return err;

@@ -74,11 +74,14 @@ struct vmpi_impl_info {
         struct vmpi_ring *write;
         struct vmpi_queue *read;
         vmpi_read_cb_t read_cb;
+        void *read_cb_data;
 };
 
-int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb)
+int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb,
+                                     void *opaque)
 {
     vi->read_cb = cb;
+    vi->read_cb_data = opaque;
 
     return 0;
 }
@@ -203,7 +206,8 @@ static void handle_tx(struct vmpi_impl_info *vi)
                         wake_up_interruptible_poll(&read->wqh, POLLIN |
                                 POLLRDNORM | POLLRDBAND);
                     } else {
-                        vi->read_cb(channel, vmpi_buffer_data(buf),
+                        vi->read_cb(vi->read_cb_data, channel,
+                                    vmpi_buffer_data(buf),
                                     buf->len - sizeof(struct vmpi_hdr));
                         vmpi_buffer_destroy(buf);
                     }

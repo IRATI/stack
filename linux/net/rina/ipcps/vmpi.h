@@ -28,9 +28,10 @@ ssize_t vmpi_write(vmpi_info_t *mpi, unsigned int channel,
 ssize_t vmpi_read(vmpi_info_t *mpi, unsigned int channel,
                   const struct iovec *iv, unsigned long iovcnt);
 
-typedef void (*vmpi_read_cb_t)(unsigned int channel, const char *buffer,
-                               int len);
-int vmpi_register_read_callback(vmpi_info_t *mpi, vmpi_read_cb_t rcb);
+typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
+                               const char *buffer, int len);
+int vmpi_register_read_callback(vmpi_info_t *mpi, vmpi_read_cb_t rcb,
+                                void *opaque);
 
 #define VMPI_MAX_CHANNELS   64
 

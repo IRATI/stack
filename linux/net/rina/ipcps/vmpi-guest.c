@@ -47,6 +47,7 @@ struct vmpi_info {
     struct mutex recv_worker_lock;
 
     vmpi_read_cb_t read_cb;
+    void *read_cb_data;
 
     /* Number of input buffers. */
     //unsigned int num;
@@ -59,9 +60,11 @@ struct vmpi_info *vmpi_get_instance(void)
     return vmpi_info_instance;
 }
 
-int vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb)
+int vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
+                                void *opaque)
 {
     mpi->read_cb = cb;
+    mpi->read_cb_data = opaque;
 
     return 0;
 }
@@ -250,7 +253,7 @@ again:
                 }
                 mutex_unlock(&queue->lock);
         } else {
-                mpi->read_cb(channel, vmpi_buffer_data(buf),
+                mpi->read_cb(mpi->read_cb_data, channel, vmpi_buffer_data(buf),
                              buf->len - sizeof(struct vmpi_hdr));
                 vmpi_buffer_destroy(buf);
         }
