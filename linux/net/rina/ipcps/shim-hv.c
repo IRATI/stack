@@ -256,7 +256,8 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
 
         if (ch == VMPI_MAX_CHANNELS) {
                 LOG_INFO("%s: no free channel available, try later", __func__);
-                return -EBUSY;
+                err = -EBUSY;
+                goto src_name_alloc;
         }
 
         src_name = name_tostring(src_application);
@@ -312,8 +313,13 @@ msg_alloc:
 dst_name_alloc:
         rkfree(src_name);
 src_name_alloc:
-        if (err)
-                priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
+        if (err) {
+                /* The flow was allocated outside this module. Are we
+                 * in charge of deallocate it this method fails?
+                 */
+                if (kfa_flow_deallocate(priv->kfa, port_id))
+                        LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
+        }
 
         return err;
 }
@@ -355,8 +361,12 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         } else {
                 /* Negative response */
                 kfa_flow_deallocate(priv->kfa, port_id);
+                /* XXX The following call should be useless because of the last
+                 * call.
+                 */
                 kfa_port_id_release(priv->kfa, port_id);
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
+                priv->vmpi.channels[ch].port_id = port_id_bad();
                 LOG_INFO("%s: channel %d --> NULL", __func__, ch);
         }
 resp:
@@ -476,20 +486,22 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                                          const uint8_t *msg, int len)
 {
         uint32_t ch;
-        uint8_t resp;
+        uint8_t response;
+        port_id_t port_id;
+        int ret = -1;
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
                 goto out;
         }
 
-        if (des_uint8(&msg, &resp, &len)) {
+        if (des_uint8(&msg, &response, &len)) {
                 LOG_ERR("%s: truncated msg: while reading response", __func__);
                 goto out;
         }
 
         LOG_INFO("%s: received ALLOCATE_RESP(ch = %d, resp = %u)",
-                        __func__, ch, resp);
+                        __func__, ch, response);
 
         if (ch >= VMPI_MAX_CHANNELS) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
@@ -501,7 +513,40 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                                 priv->vmpi.channels[ch].state);
                 goto out;
         }
+        port_id = priv->vmpi.channels[ch].port_id;
 
+        ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
+        if (ret) {
+                LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
+                goto flow_commit;
+        }
+
+        ret = kipcm_notify_flow_alloc_req_result(default_kipcm, priv->id,
+                                        port_id, (response == RESP_OK) ? 0 : 1);
+        if (ret) {
+                LOG_ERR("%s: kipcm_notify_flow_alloc_req_result() failed",
+                        __func__);
+                goto flow_commit;
+        }
+
+        if (response == RESP_OK) {
+                /* Everything is ok: Let's do the transition to the ALLOCATED
+                 * state.
+                 */
+                ret = 0;
+                priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
+                LOG_INFO("%s: channel %d --> ALLOCATED", __func__, ch);
+        } else {
+                priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
+                priv->vmpi.channels[ch].port_id = port_id_bad();
+                LOG_INFO("%s: channel %d --> NULL", __func__, ch);
+        }
+
+flow_commit:
+        if (ret) {
+                if (kfa_flow_deallocate(priv->kfa, port_id))
+                        LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
+        }
 out:
         return;
 }
