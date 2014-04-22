@@ -68,6 +68,11 @@ enum shim_hv_command {
         CMD_DEALLOCATE,
 };
 
+enum shim_hv_response {
+        RESP_OK = 0,
+        RESP_KO = 1
+};
+
 /* Per-IPC-process data structure that contains all
  * the VMPI-related information (among the other).
  */
@@ -195,6 +200,29 @@ static int des_string(const uint8_t **from, const string_t **str, int *len)
         return 0;
 }
 
+/* Build and send an ALLOCATE_RESP message on the control channel. */
+static int
+shim_hv_send_allocate_resp(struct ipcp_instance_data *priv,
+                           unsigned int ch, int response)
+{
+        uint8_t msg[sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint8_t)];
+        uint8_t *msg_ptr;
+        struct iovec iov;
+        int ret;
+
+        /* Build the message by serialization. */
+        msg_ptr = msg;
+        ser_uint8(&msg_ptr, CMD_ALLOCATE_RESP);
+        ser_uint32(&msg_ptr, ch);
+        ser_uint8(&msg_ptr, response);
+
+        iov.iov_base = msg;
+        iov.iov_len = sizeof(msg);
+        ret = vmpi_write(priv->vmpi.mpi, 0, &iov, 1);
+
+        return !(ret == sizeof(msg));
+}
+
 /* Invoked from the RINA stack when an application issues a
  * FlowAllocateRequest to this shim IPC process.
  */
@@ -299,6 +327,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
         int ret;
+        int response = RESP_KO;
 
         if (!ch) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
@@ -308,19 +337,20 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
                 LOG_ERR("%s: channel %d in invalid state %d", __func__, ch,
                                 priv->vmpi.channels[ch].state);
-                return -1;
+                goto resp;
         }
 
         if (result == 0) {
                 /* Positive response */
                 ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
                 if (ret) {
-                       LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
-                        return -1;
+                        LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
+                        goto resp;
                 }
 
                 /* Let's do the transition to the ALLOCATED state. */
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
+                response = RESP_OK;
                 LOG_INFO("%s: channel %d --> ALLOCATED", __func__, ch);
         } else {
                 /* Negative response */
@@ -329,8 +359,10 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 LOG_INFO("%s: channel %d --> NULL", __func__, ch);
         }
+resp:
+        shim_hv_send_allocate_resp(priv, ch, response);
 
-        return 0;
+        return (response == RESP_OK) ? 0 : -1;
 }
 
 /* Handler invoked when receiving an ALLOCATE_REQ message from the control
@@ -345,7 +377,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         const string_t *dst_name;
         port_id_t port_id;
         uint32_t ch;
-        int ret = 0;
+        int err = -1;
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
@@ -375,13 +407,13 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_NULL) {
                 LOG_ERR("%s: channel %d in invalid state %d", __func__, ch,
                                 priv->vmpi.channels[ch].state);
-                goto out;
+                goto reject;
         }
 
         src_application = string_toname(src_name);
         if (src_application == NULL) {
                 LOG_ERR("%s: invalid src name %s", __func__, src_name);
-                goto out;
+                goto reject;
         }
 
         dst_application = string_toname(dst_name);
@@ -396,16 +428,16 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 goto port_alloc;
         }
 
-        ret = kfa_flow_create(priv->kfa, priv->id, port_id);
-        if (ret) {
+        err = kfa_flow_create(priv->kfa, priv->id, port_id);
+        if (err) {
                 LOG_ERR("%s: kfa_flow_create() failed", __func__);
                 goto flow_alloc;
         }
 
-        ret = kipcm_flow_arrived(default_kipcm, priv->id, port_id,
+        err = kipcm_flow_arrived(default_kipcm, priv->id, port_id,
                                  &priv->dif_name, src_application,
                                  dst_application, &priv->fspec);
-        if (ret) {
+        if (err) {
                 LOG_ERR("%s: kipcm_flow_arrived() failed", __func__);
                 goto flow_arrived;
         }
@@ -413,15 +445,16 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         /* Everything is ok: Let's do the transition to the PENDING
          * state.
          */
+        err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
         LOG_INFO("%s: channel %d --> PENDING", __func__, ch);
 
 flow_arrived:
-        if (ret)
+        if (err)
                 kfa_flow_deallocate(priv->kfa, port_id);
 flow_alloc:
-        if (ret)
+        if (err)
                 kfa_port_id_release(priv->kfa, port_id);
 port_alloc:
         if (dst_application)
@@ -429,10 +462,16 @@ port_alloc:
 dst_app:
         if (src_application)
                 rkfree(src_application);
+reject:
+        if (err)
+                shim_hv_send_allocate_resp(priv, ch, RESP_KO);
 out:
         return;
 }
 
+/* Handler invoked when receiving an ALLOCATE_RESP message from the control
+ * channel.
+ */
 static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                                          const uint8_t *msg, int len)
 {
@@ -441,16 +480,30 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
-                return;
+                goto out;
         }
 
         if (des_uint8(&msg, &resp, &len)) {
                 LOG_ERR("%s: truncated msg: while reading response", __func__);
-                return;
+                goto out;
         }
 
         LOG_INFO("%s: received ALLOCATE_RESP(ch = %d, resp = %u)",
                         __func__, ch, resp);
+
+        if (ch >= VMPI_MAX_CHANNELS) {
+                LOG_ERR("%s: bogus channel %u", __func__, ch);
+                goto out;
+        }
+
+        if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
+                LOG_ERR("%s: channel %d in invalid state %d", __func__, ch,
+                                priv->vmpi.channels[ch].state);
+                goto out;
+        }
+
+out:
+        return;
 }
 
 static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
