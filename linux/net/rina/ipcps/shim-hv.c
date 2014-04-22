@@ -99,8 +99,8 @@ struct name_list_element {
         struct name application_name;
 };
 
-static unsigned int port_id_to_channel(struct ipcp_instance_data *priv,
-                                       port_id_t port_id)
+static unsigned int
+port_id_to_channel(struct ipcp_instance_data *priv, port_id_t port_id)
 {
         int i;
 
@@ -375,6 +375,29 @@ resp:
         return (response == RESP_OK) ? 0 : -1;
 }
 
+static int
+shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
+{
+        int ret = 0;
+        unsigned int ch = port_id_to_channel(priv, port_id);
+
+        if (!ch) {
+                LOG_ERR("%s: unknown port-id %d", __func__, port_id);
+                return -1;
+        }
+
+        priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
+        priv->vmpi.channels[ch].port_id = port_id_bad();
+        LOG_INFO("%s: channel %d --> NULL", __func__, ch);
+
+        ret = kfa_flow_deallocate(priv->kfa, port_id);
+        if (ret) {
+                LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
+        }
+
+        return ret;
+}
+
 /* Handler invoked when receiving an ALLOCATE_REQ message from the control
  * channel.
  */
@@ -590,6 +613,7 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
         }
 }
 
+/* Invoked from the VMPI worker thread when a new message comes from a channel. */
 static void shim_hv_recv_callback(void *opaque, unsigned int channel, const char *buffer,
                                   int len)
 {
@@ -601,7 +625,7 @@ static void shim_hv_recv_callback(void *opaque, unsigned int channel, const char
                 return;
         }
 
-        /* Regular traffic channel. */
+        /* User data channel. */
 }
 
 /* Register an application to this IPC process. */
@@ -723,7 +747,7 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
 static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_request     = shim_hv_flow_allocate_request,
         .flow_allocate_response    = shim_hv_flow_allocate_response,
-        .flow_deallocate           = NULL,
+        .flow_deallocate           = shim_hv_flow_deallocate,
         .flow_binding_ipcp         = NULL,
         .flow_destroy              = NULL,
 
