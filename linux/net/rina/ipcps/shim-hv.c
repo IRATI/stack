@@ -121,11 +121,59 @@ static void ser_uint32(uint8_t **to, uint32_t x)
 
 static void ser_string(uint8_t **to, string_t *str, uint32_t len)
 {
-        ser_uint32(to, len);
         memcpy(*to, str, len);
         *to += len;
+        *(*to) = '\0';
+        *to += 1;
 }
 
+static int des_uint8(const uint8_t **from, uint8_t *x, int *len)
+{
+        if (*len == 0)
+                return -1;
+
+        *x = *(*from);
+        *from += sizeof(uint8_t);
+        *len -= sizeof(uint8_t);
+
+        return 0;
+}
+
+static int des_uint32(const uint8_t **from, uint32_t *x, int *len)
+{
+        if (*len < sizeof(uint32_t))
+                return -1;
+
+        *x = *((uint32_t *)(*from));
+        *from += sizeof(uint32_t);
+        *len -= sizeof(uint32_t);
+
+        return 0;
+}
+
+static int des_string(const uint8_t **from, const string_t **str, int *len)
+{
+        int l = *len;
+        const uint8_t *f = *from;
+
+        while (l && *f != '\0') {
+                f++;
+                l--;
+        }
+
+        if (*f != '\0')
+                return -1;
+
+        *str = *from;
+        *from = f;
+        *len = l;
+
+        return 0;
+}
+
+/* Invoked from the RINA stack when an application issues a
+ * FlowAllocateRequest to this shim IPC process.
+ */
 static int
 shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
                               const struct name *src_application,
@@ -176,7 +224,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
          */
         slen = strlen(src_name);
         dlen = strlen(dst_name);
-        msg_len = 1 + sizeof(ch) + sizeof(slen) + slen + sizeof(dlen) + dlen;
+        msg_len = 1 + sizeof(ch) + slen + 1 + dlen + 1;
         if (msg_len >= 2000) { /* XXX This is just a temporary limitation */
                 LOG_ERR("%s: message too long %d", __func__, (int)msg_len);
                 goto msg_alloc;
@@ -214,6 +262,111 @@ src_name_alloc:
                 vmpi.channels[ch].state = CHANNEL_STATE_NULL;
 
         return err;
+}
+
+static int
+shim_hv_flow_allocate_response(struct ipcp_instance_data *data,
+                               port_id_t port_id, int result)
+{
+        LOG_INFO("%s: called", __func__);
+
+        return -1;
+}
+
+static void shim_hv_handle_allocate_req(const uint8_t *msg, int len)
+{
+        uint32_t ch;
+        const string_t *src_name;
+        const string_t *dst_name;
+
+        if (des_uint32(&msg, &ch, &len)) {
+                LOG_ERR("%s: truncated msg: while reading channel", __func__);
+                return;
+        }
+
+        if (des_string(&msg, &src_name, &len)) {
+                LOG_ERR("%s: truncated msg: while reading source application "
+                        "name", __func__);
+                return;
+        }
+
+        if (des_string(&msg, &dst_name, &len)) {
+                LOG_ERR("%s: truncated msg: while reading destination "
+                        "application name", __func__);
+                return;
+        }
+
+        LOG_INFO("%s: received ALLOCATE_REQ(ch = %d, src = %s, dst = %s)",
+                        __func__, ch, src_name, dst_name);
+
+}
+
+static void shim_hv_handle_allocate_resp(const uint8_t *msg, int len)
+{
+        uint32_t ch;
+        uint8_t resp;
+
+        if (des_uint32(&msg, &ch, &len)) {
+                LOG_ERR("%s: truncated msg: while reading channel", __func__);
+                return;
+        }
+
+        if (des_uint8(&msg, &resp, &len)) {
+                LOG_ERR("%s: truncated msg: while reading response", __func__);
+                return;
+        }
+
+        LOG_INFO("%s: received ALLOCATE_RESP(ch = %d, resp = %u)",
+                        __func__, ch, resp);
+}
+
+static void shim_hv_handle_deallocate(const uint8_t *msg, int len)
+{
+        uint32_t ch;
+
+        if (des_uint32(&msg, &ch, &len)) {
+                LOG_ERR("%s: truncated msg: while reading channel", __func__);
+                return;
+        }
+
+        LOG_INFO("%s: received DEALLOCATE(ch = %d)", __func__, ch);
+}
+
+static void shim_hv_handle_control_msg(const uint8_t *msg, int len)
+{
+        uint8_t cmd;
+
+        if (des_uint8(&msg, &cmd, &len)) {
+                LOG_ERR("%s: truncated msg: while reading command", __func__);
+                return;
+        }
+
+        switch (cmd) {
+                case CMD_ALLOCATE_REQ:
+                        shim_hv_handle_allocate_req(msg, len);
+                        break;
+                case CMD_ALLOCATE_RESP:
+                        shim_hv_handle_allocate_resp(msg, len);
+                        break;
+                case CMD_DEALLOCATE:
+                        shim_hv_handle_deallocate(msg, len);
+                        break;
+                default:
+                        LOG_ERR("%s: unknown cmd %u\n", __func__, cmd);
+                        break;
+        }
+}
+
+static void shim_hv_recv_callback(unsigned int channel, const char *buffer,
+                                  int len)
+{
+        if (unlikely(channel == 0)) {
+                /* Control channel. */
+                shim_hv_handle_control_msg(buffer, len);
+                return;
+        }
+
+        /* Regular traffic channel. */
 }
 
 /* Register an application to this IPC process. */
@@ -334,7 +487,7 @@ shim_hv_ipcp_name(struct ipcp_instance_data *priv)
 /* Interface exported by a shim IPC process. */
 static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_request     = shim_hv_flow_allocate_request,
-        .flow_allocate_response    = NULL,
+        .flow_allocate_response    = shim_hv_flow_allocate_response,
         .flow_deallocate           = NULL,
         .flow_binding_ipcp         = NULL,
         .flow_destroy              = NULL,
@@ -495,6 +648,7 @@ int
 shim_hv_init(vmpi_info_t *mpi)
 {
         int i;
+        int err;
 
         ASSERT(mpi);
 
@@ -503,6 +657,11 @@ shim_hv_init(vmpi_info_t *mpi)
         vmpi.mpi = mpi;
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 vmpi.channels[i].state = CHANNEL_STATE_NULL;
+        }
+        err = vmpi_register_read_callback(vmpi.mpi, shim_hv_recv_callback);
+        if (err) {
+                LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
+                return err;
         }
 
         shim_hv_ipcp_factory = kipcm_ipcp_factory_register(
