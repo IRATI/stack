@@ -200,6 +200,21 @@ static int des_string(const uint8_t **from, const string_t **str, int *len)
         return 0;
 }
 
+static int
+shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
+                      uint8_t *msg, int len)
+{
+        struct iovec iov;
+        int ret;
+
+        iov.iov_base = msg;
+        iov.iov_len = len;
+        ret = vmpi_write(priv->vmpi.mpi, 0, &iov, 1);
+        LOG_INFO("%s: vmpi_write(0, %d) --> %d", __func__, (int)len, (int)ret);
+
+        return !(ret == len);
+}
+
 /* Build and send an ALLOCATE_RESP message on the control channel. */
 static int
 shim_hv_send_allocate_resp(struct ipcp_instance_data *priv,
@@ -207,8 +222,6 @@ shim_hv_send_allocate_resp(struct ipcp_instance_data *priv,
 {
         uint8_t msg[sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint8_t)];
         uint8_t *msg_ptr;
-        struct iovec iov;
-        int ret;
 
         /* Build the message by serialization. */
         msg_ptr = msg;
@@ -216,11 +229,21 @@ shim_hv_send_allocate_resp(struct ipcp_instance_data *priv,
         ser_uint32(&msg_ptr, ch);
         ser_uint8(&msg_ptr, response);
 
-        iov.iov_base = msg;
-        iov.iov_len = sizeof(msg);
-        ret = vmpi_write(priv->vmpi.mpi, 0, &iov, 1);
+        return shim_hv_send_ctrl_msg(priv, msg, sizeof(msg));
+}
 
-        return !(ret == sizeof(msg));
+static int
+shim_hv_send_deallocate(struct ipcp_instance_data *priv, unsigned int ch)
+{
+        uint8_t msg[sizeof(uint8_t) + sizeof(uint32_t)];
+        uint8_t *msg_ptr;
+
+        /* Build the message by serialization. */
+        msg_ptr = msg;
+        ser_uint8(&msg_ptr, CMD_DEALLOCATE);
+        ser_uint32(&msg_ptr, ch);
+
+        return shim_hv_send_ctrl_msg(priv, msg, sizeof(msg));
 }
 
 /* Invoked from the RINA stack when an application issues a
@@ -237,12 +260,10 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         string_t *src_name;
         string_t *dst_name;
         size_t msg_len;
-        ssize_t n;
         uint8_t *msg_buf;
         uint8_t *msg_ptr;
         uint32_t slen, dlen;
         int err = -ENOMEM;
-        struct iovec iov;
 
         /* TODO move this checs to the caller. */
         ASSERT(priv);
@@ -296,10 +317,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         ser_string(&msg_ptr, dst_name, dlen);
 
         /* Send the message on the control channel. */
-        iov.iov_base = msg_buf;
-        iov.iov_len = msg_len;
-        n = vmpi_write(priv->vmpi.mpi, 0, &iov, 1);
-        LOG_INFO("%s: vmpi_write(%d) --> %d", __func__, (int)msg_len, (int)n);
+        shim_hv_send_ctrl_msg(priv, msg_buf, msg_len);
 
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
@@ -376,13 +394,20 @@ resp:
 }
 
 static int
-shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
+shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
+                               unsigned int ch)
 {
         int ret = 0;
-        unsigned int ch = port_id_to_channel(priv, port_id);
+        port_id_t port_id;
 
-        if (!ch) {
-                LOG_ERR("%s: unknown port-id %d", __func__, port_id);
+        if (!ch || ch >= VMPI_MAX_CHANNELS) {
+                LOG_ERR("%s: invalid channel %d", __func__, ch);
+                return -1;
+        }
+        port_id = priv->vmpi.channels[ch].port_id;
+
+        if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL) {
+                LOG_ERR("%s: channel state is already NULL", __func__);
                 return -1;
         }
 
@@ -394,6 +419,22 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
         if (ret) {
                 LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
+
+        return ret;
+}
+
+/* Invoked from the RINA stack when an application issues a
+ * FlowDeallocate to this shim IPC process.
+ */
+static int
+shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
+{
+        int ret = 0;
+        unsigned int ch = port_id_to_channel(priv, port_id);
+
+        ret = shim_hv_flow_deallocate_common(priv, ch);
+
+        shim_hv_send_deallocate(priv, ch);
 
         return ret;
 }
@@ -574,6 +615,9 @@ out:
         return;
 }
 
+/* Handler invoked when receiving an DEALLOCATE message from the control
+ * channel.
+ */
 static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
                                       const uint8_t *msg, int len)
 {
@@ -585,6 +629,8 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
         }
 
         LOG_INFO("%s: received DEALLOCATE(ch = %d)", __func__, ch);
+
+        shim_hv_flow_deallocate_common(priv, ch);
 }
 
 static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
@@ -592,11 +638,13 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
 {
         uint8_t cmd;
 
+        /* Deserialize the control command code. */
         if (des_uint8(&msg, &cmd, &len)) {
                 LOG_ERR("%s: truncated msg: while reading command", __func__);
                 return;
         }
 
+        /* Call the handler associated to command. */
         switch (cmd) {
                 case CMD_ALLOCATE_REQ:
                         shim_hv_handle_allocate_req(priv, msg, len);
