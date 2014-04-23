@@ -359,7 +359,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         }
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
-                LOG_ERR("%s: channel %d in invalid state %d", __func__, ch,
+                LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
                                 priv->vmpi.channels[ch].state);
                 goto resp;
         }
@@ -401,7 +401,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
         port_id_t port_id;
 
         if (!ch || ch >= VMPI_MAX_CHANNELS) {
-                LOG_ERR("%s: invalid channel %d", __func__, ch);
+                LOG_ERR("%s: invalid channel %u", __func__, ch);
                 return -1;
         }
         port_id = priv->vmpi.channels[ch].port_id;
@@ -479,7 +479,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         }
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_NULL) {
-                LOG_ERR("%s: channel %d in invalid state %d", __func__, ch,
+                LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
                                 priv->vmpi.channels[ch].state);
                 goto reject;
         }
@@ -573,7 +573,7 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         }
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
-                LOG_ERR("%s: channel %d in invalid state %d", __func__, ch,
+                LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
                                 priv->vmpi.channels[ch].state);
                 goto out;
         }
@@ -661,19 +661,58 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
         }
 }
 
-/* Invoked from the VMPI worker thread when a new message comes from a channel. */
-static void shim_hv_recv_callback(void *opaque, unsigned int channel, const char *buffer,
-                                  int len)
+/* Invoked from the VMPI worker thread when a new message comes from
+ * a channel.
+ */
+static void shim_hv_recv_callback(void *opaque, unsigned int ch,
+                                  const char *data, int len)
 {
         struct ipcp_instance_data *priv = opaque;
+        port_id_t port_id;
+        struct sdu *sdu;
+        struct buffer *buf;
+        int ret = 0;
 
-        if (unlikely(channel == 0)) {
+        if (unlikely(ch == 0)) {
                 /* Control channel. */
-                shim_hv_handle_control_msg(priv, buffer, len);
+                shim_hv_handle_control_msg(priv, data, len);
                 return;
         }
 
         /* User data channel. */
+        if (unlikely(ch >= VMPI_MAX_CHANNELS)) {
+                LOG_ERR("%s: invalid channel %u", __func__, ch);
+                return;
+        }
+
+        if (unlikely(priv->vmpi.channels[ch].state !=
+                                CHANNEL_STATE_ALLOCATED)) {
+                LOG_ERR("%s: channel %u in invalid state %d", __func__,
+                                        ch, priv->vmpi.channels[ch].state);
+                return;
+        }
+
+        port_id = priv->vmpi.channels[ch].port_id;
+
+        buf = buffer_create_from(data, len);
+        if (unlikely(buf == NULL)) {
+                LOG_ERR("%s: buffer_create_from_ni() failed", __func__);
+                return;
+        }
+
+        sdu = sdu_create_buffer_with(buf);
+        if (unlikely(sdu == NULL)) {
+                LOG_ERR("%s: sdu_create_buffer_with_ni() failed", __func__);
+                buffer_destroy(buf);
+                return;
+        }
+
+        ret = kfa_sdu_post(priv->kfa, port_id, sdu);
+        if (unlikely(ret)) {
+                LOG_ERR("%s: kfa_sdu_post() failed", __func__);
+                return;
+        }
+        LOG_INFO("%s: SDU received", __func__);
 }
 
 /* Register an application to this IPC process. */
@@ -799,7 +838,7 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
 
         if (unlikely(priv->vmpi.channels[ch].state !=
                                 CHANNEL_STATE_ALLOCATED)) {
-                LOG_ERR("%s: channel %d in invalid state %d", __func__,
+                LOG_ERR("%s: channel %u in invalid state %d", __func__,
                                         ch, priv->vmpi.channels[ch].state);
                 goto out;
         }
