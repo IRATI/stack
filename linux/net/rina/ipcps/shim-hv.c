@@ -782,6 +782,47 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         return 0;
 }
 
+static int
+shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
+                  struct sdu *sdu)
+{
+        unsigned int ch = port_id_to_channel(priv, port_id);
+        struct buffer *buf = sdu_buffer_rw(sdu);
+        struct iovec iov;
+        int ret = -1;
+        int n;
+
+        if (unlikely(!ch)) {
+                LOG_ERR("%s: unknown port-id %d", __func__, port_id);
+                goto out;
+        }
+
+        if (unlikely(priv->vmpi.channels[ch].state !=
+                                CHANNEL_STATE_ALLOCATED)) {
+                LOG_ERR("%s: channel %d in invalid state %d", __func__,
+                                        ch, priv->vmpi.channels[ch].state);
+                goto out;
+        }
+
+        if (unlikely(buf == NULL)) {
+                LOG_ERR("%s: NULL buffer", __func__);
+                goto out;
+        }
+
+        iov.iov_base = buffer_data_rw(buf);
+        iov.iov_len = buffer_length(buf);
+        n = vmpi_write(priv->vmpi.mpi, ch, &iov, 1);
+        if (likely(n == iov.iov_len))
+                ret = 0;
+        LOG_INFO("%s: vmpi_write(%u, %d) --> %d", __func__, ch,
+                        (int)iov.iov_len, (int)n);
+
+out:
+        sdu_destroy(sdu);
+
+        return ret;
+}
+
 static const struct name *
 shim_hv_ipcp_name(struct ipcp_instance_data *priv)
 {
@@ -811,7 +852,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .connection_create_arrived = NULL,
 
         .sdu_enqueue               = NULL,
-        .sdu_write                 = NULL,
+        .sdu_write                 = shim_hv_sdu_write,
 
         .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
