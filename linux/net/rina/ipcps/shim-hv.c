@@ -818,6 +818,9 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                 return -1;
         }
 
+        LOG_INFO("%s: ipcp %d assigned to DIF %s", __func__,
+                        priv->id, priv->dif_name.process_name);
+
         return 0;
 }
 
@@ -1006,6 +1009,8 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         /* Add this IPC process to the factory global list. */
         list_add(&priv->list, &factory_data->instances);
 
+        LOG_INFO("%s: ipcp created (id = %d)", __func__, id);
+
         return ipcp;
 
 read_callback:
@@ -1045,8 +1050,10 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data *factory_data,
 
         name_fini(&ipcp->data->name);
         name_fini(&ipcp->data->dif_name);
+        LOG_INFO("%s: ipcp destroyed (id = %d)", __func__, ipcp->data->id);
         rkfree(ipcp->data);
         rkfree(ipcp);
+
 
         return 0;
 }
