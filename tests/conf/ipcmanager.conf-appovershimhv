@@ -16,7 +16,7 @@
     "difName" : "test-shim-dif-hv"
   }],
   "ipcProcessesToCreate" : [ {
-    "type" : "shim-hv",
+    "type" : "shim-hv-virtio",
     "applicationProcessName" : "test-hv",
     "applicationProcessInstance" : "1",
     "difName" : "test-shim-dif-hv"
