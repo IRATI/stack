@@ -58,8 +58,8 @@ enum channel_state {
 };
 
 struct shim_hv_channel {
-        enum channel_state              state;
-        port_id_t                       port_id;
+        enum channel_state      state;
+        port_id_t               port_id;
 };
 
 enum shim_hv_command {
@@ -821,6 +821,9 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         return 0;
 }
 
+/* Invoked from the RINA stack when an application sends an
+ * SDU to a flow managed by this shim IPC process.
+ */
 static int
 shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
                   struct sdu *sdu)
