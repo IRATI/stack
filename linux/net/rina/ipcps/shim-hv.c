@@ -664,8 +664,8 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
 /* Invoked from the VMPI worker thread when a new message comes from
  * a channel.
  */
-static void shim_hv_recv_callback(void *opaque, unsigned int ch,
-                                  const char *data, int len)
+static void
+shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
 {
         struct ipcp_instance_data *priv = opaque;
         port_id_t port_id;
@@ -687,8 +687,8 @@ static void shim_hv_recv_callback(void *opaque, unsigned int ch,
 
         if (unlikely(priv->vmpi.channels[ch].state !=
                                 CHANNEL_STATE_ALLOCATED)) {
-                LOG_ERR("%s: channel %u in invalid state %d", __func__,
-                                        ch, priv->vmpi.channels[ch].state);
+                LOG_INFO("%s: dropping packet from channel %u: no "
+                                "associated flow", __func__, ch);
                 return;
         }
 
