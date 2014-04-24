@@ -32,6 +32,7 @@
 
 #include "../../../drivers/vhost/vhost.h"
 
+#include "vmpi-iovec.h"
 #include "vmpi-structs.h"
 #include "vmpi.h"
 #include "vmpi-host-impl.h"
@@ -88,50 +89,6 @@ int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb,
 
 static void vhost_mpi_vq_reset(struct vmpi_impl_info *vi)
 {
-}
-
-static size_t iovec_to_buf(struct iovec *iov, unsigned int iovcnt,
-                           void *to, size_t len)
-{
-    size_t copylen;
-    size_t tot  = 0;
-
-    while (iovcnt && len) {
-        copylen = iov->iov_len;
-        if (len < copylen) {
-            copylen = len;
-        }
-        memcpy(to, iov->iov_base, copylen);
-        tot += copylen;
-        len -= copylen;
-        to += copylen;
-        iovcnt--;
-        iov++;
-    }
-
-    return tot;
-}
-
-static size_t iovec_from_buf(struct iovec *iov, unsigned int iovcnt,
-                             void *from, size_t len)
-{
-    size_t copylen;
-    size_t tot  = 0;
-
-    while (iovcnt && len) {
-        copylen = iov->iov_len;
-        if (len < copylen) {
-            copylen = len;
-        }
-        memcpy(iov->iov_base, from, copylen);
-        tot += copylen;
-        len -= copylen;
-        from += copylen;
-        iovcnt--;
-        iov++;
-    }
-
-    return tot;
 }
 
 /* Expects to be always run from workqueue - which acts as

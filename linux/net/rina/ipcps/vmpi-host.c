@@ -23,6 +23,7 @@
 #include <linux/socket.h>
 
 #include "vmpi.h"
+#include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-host-test.h"
 
@@ -116,8 +117,9 @@ void vmpi_fini(struct vmpi_info *mpi)
     kfree(mpi);
 }
 
-ssize_t vmpi_write(struct vmpi_info *mpi, unsigned int channel,
-                   const struct iovec *iv, unsigned long iovcnt)
+ssize_t vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
+                          const struct iovec *iv, unsigned long iovcnt,
+                          int user)
 {
     //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_RX];
     struct vmpi_ring *ring = &mpi->write;
@@ -159,8 +161,12 @@ ssize_t vmpi_write(struct vmpi_info *mpi, unsigned int channel,
         }
         ret = copylen;
         vmpi_buffer_hdr(buf)->channel = channel;
-        if (memcpy_fromiovecend(vmpi_buffer_data(buf), iv, 0, copylen))
-            ret = -EFAULT;
+        if (user) {
+            if (memcpy_fromiovecend(vmpi_buffer_data(buf), iv, 0, copylen))
+                ret = -EFAULT;
+        } else {
+            iovec_to_buf(iv, iovcnt, vmpi_buffer_data(buf), copylen);
+        }
         buf->len = sizeof(struct vmpi_hdr) + copylen;
         VMPI_RING_INC(ring->nu);
         mutex_unlock(&ring->lock);

@@ -23,6 +23,7 @@
 #include <linux/sched.h>
 #include <linux/socket.h>
 
+#include "vmpi-iovec.h"
 #include "vmpi-guest-impl.h"
 #include "vmpi-structs.h"
 #include "vmpi.h"
@@ -83,11 +84,12 @@ static void vmpi_impl_clean_tx(struct vmpi_info *mpi)
     }
 }
 
-ssize_t vmpi_write(struct vmpi_info *mpi, unsigned int channel,
-                   const struct iovec *iv, unsigned long iovlen)
+ssize_t vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
+                          const struct iovec *iv, unsigned long iovcnt,
+                          int user)
 {
     vmpi_impl_info_t *vi = mpi->vi;
-    size_t len = iov_length(iv, iovlen);
+    size_t len = iov_length(iv, iovcnt);
     DECLARE_WAITQUEUE(wait, current);
     size_t buf_data_size = mpi->write.buf_size - sizeof(struct vmpi_hdr);
     ssize_t ret = 0;
@@ -95,7 +97,7 @@ ssize_t vmpi_write(struct vmpi_info *mpi, unsigned int channel,
     if (!vi)
         return -EBADFD;
 
-    IFV(printk("vmpi_info_aio_write user-buf (%lu,%d)\n", iovlen, (int)len));
+    IFV(printk("vmpi_info_aio_write user-buf (%lu,%d)\n", iovcnt, (int)len));
 
     add_wait_queue(&mpi->write.wqh, &wait);
     while (len) {
@@ -128,9 +130,13 @@ ssize_t vmpi_write(struct vmpi_info *mpi, unsigned int channel,
             copylen = buf_data_size;
         }
         vmpi_buffer_hdr(buf)->channel = channel;
-        if (memcpy_fromiovecend(vmpi_buffer_data(buf), iv, 0, copylen)) {
-            ret = -EFAULT;
-            break;
+        if (user) {
+            if (memcpy_fromiovecend(vmpi_buffer_data(buf), iv, 0, copylen)) {
+                ret = -EFAULT;
+                break;
+            }
+        } else {
+            iovec_to_buf(iv, iovcnt, vmpi_buffer_data(buf), copylen);
         }
         buf->len = sizeof(struct vmpi_hdr) + copylen;
         VMPI_RING_INC(mpi->write.nu);
