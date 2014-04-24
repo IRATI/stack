@@ -629,8 +629,9 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
         }
 
         LOG_INFO("%s: received DEALLOCATE(ch = %d)", __func__, ch);
-
+#ifdef DONT_IGNORE_DEALLOCATE
         shim_hv_flow_deallocate_common(priv, ch);
+#endif
 }
 
 static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
