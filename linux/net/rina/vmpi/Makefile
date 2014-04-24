@@ -1,8 +1,8 @@
-obj-m += vhost-mpi.o
-vhost-mpi-y := vmpi-host-impl-virtio.o vmpi-host.o vmpi-ring.o vmpi-host-test.o
+#obj-m += vhost-mpi.o
+#vhost-mpi-y := vmpi-host-impl-virtio.o vmpi-host.o vmpi-ring.o vmpi-host-test.o
 
-obj-m += virtio-mpi.o
-virtio-mpi-y := vmpi-guest-impl-virtio.o vmpi-guest-test.o vmpi-guest.o vmpi-ring.o
+#obj-m += virtio-mpi.o
+#virtio-mpi-y := vmpi-guest-impl-virtio.o vmpi-guest-test.o vmpi-guest.o vmpi-ring.o
 
 KER=`uname -r`
 
