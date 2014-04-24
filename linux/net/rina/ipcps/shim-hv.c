@@ -998,7 +998,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         ASSERT(priv->vmpi.mpi);
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 priv->vmpi.channels[i].state = CHANNEL_STATE_NULL;
-                priv->vmpi.channels[i].state = port_id_bad();
+                priv->vmpi.channels[i].port_id = port_id_bad();
         }
         err = vmpi_register_read_callback(priv->vmpi.mpi, shim_hv_recv_callback, priv);
         if (err) {
