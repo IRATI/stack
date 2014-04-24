@@ -14,7 +14,10 @@
   "applicationToDIFMappings" : [ {
     "encodedAppName" : "rina.utils.apps.echo.server-1--",
     "difName" : "test-shim-dif-hv"
-  }],
+  }, {
+    "encodedAppName" : "rina.utils.apps.echo.client-1--",
+    "difName" : "test-shim-dif-hv"
+  } ],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-hv-virtio",
     "applicationProcessName" : "test-hv",
