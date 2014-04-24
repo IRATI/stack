@@ -745,7 +745,7 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
                 goto name_alloc;
         }
 
-        list_add(&priv->registered_applications, &cur->list);
+        list_add(&cur->list, &priv->registered_applications);
 
         ret = 0;
         LOG_INFO("%s: Application %s registered", __func__, tmpstr);
