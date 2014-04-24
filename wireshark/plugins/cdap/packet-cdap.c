@@ -11,6 +11,27 @@
 #include <epan/packet.h>
 #include <epan/wmem/wmem.h>
 
+static const value_string opcodes[] = {
+        { 0, "M_CONNECT" },
+        { 1, "M_CONNECT_R" }, 
+        { 2, "M_RELEASE" }, 
+        { 3, "M_RELEASE_R" }, 
+        { 4, "M_CREATE" }, 
+        { 5, "M_CREATE_R" }, 
+        { 6, "M_DELETE" }, 
+        { 7, "M_DELETE_R" }, 
+        { 8, "M_READ" }, 
+        { 9, "M_READ_R" }, 
+        { 10, "M_CANCELREAD" }, 
+        { 11, "M_CANCELREAD_R" }, 
+        { 12, "M_WRITE" }, 
+        { 13, "M_WRITE_R" }, 
+        { 14, "M_START" }, 
+        { 15, "M_START_R" }, 
+        { 16, "M_STOP" }, 
+        { 17, "M_STOP_R" } 
+};
+
 static int proto_cdap = -1;
 
 static int hf_cdap_abs_syntax   = -1;
@@ -361,7 +382,7 @@ proto_register_cdap(void)
             { &hf_cdap_opcode,
               { "Opcode", "cdap.opcode",
                 FT_UINT32, BASE_DEC,
-                NULL, 0x0,
+                VALS(opcodes), 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_invokeid,
