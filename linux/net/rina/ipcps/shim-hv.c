@@ -209,8 +209,8 @@ shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
 
         iov.iov_base = msg;
         iov.iov_len = len;
-        ret = vmpi_write(priv->vmpi.mpi, 0, &iov, 1);
-        LOG_INFO("%s: vmpi_write(0, %d) --> %d", __func__, (int)len, (int)ret);
+        ret = vmpi_write_kernel(priv->vmpi.mpi, 0, &iov, 1);
+        LOG_INFO("%s: vmpi_write_kernel(0, %d) --> %d", __func__, (int)len, (int)ret);
 
         return !(ret == len);
 }
@@ -856,10 +856,10 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
 
         iov.iov_base = buffer_data_rw(buf);
         iov.iov_len = buffer_length(buf);
-        n = vmpi_write(priv->vmpi.mpi, ch, &iov, 1);
+        n = vmpi_write_kernel(priv->vmpi.mpi, ch, &iov, 1);
         if (likely(n == iov.iov_len))
                 ret = 0;
-        LOG_INFO("%s: vmpi_write(%u, %d) --> %d", __func__, ch,
+        LOG_INFO("%s: vmpi_write_kernel(%u, %d) --> %d", __func__, ch,
                         (int)iov.iov_len, (int)n);
 
 out:
