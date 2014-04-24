@@ -50,6 +50,12 @@ struct vmpi_queue *vmpi_get_read_queue(struct vmpi_info *mpi)
     return mpi->read;
 }
 
+#define SHIM_HV
+#ifdef SHIM_HV
+int shim_hv_init(vmpi_info_t *mpi);
+void shim_hv_fini(void);
+#endif  /* SHIM_HV */
+
 struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
 {
     struct vmpi_info *mpi;
@@ -75,6 +81,13 @@ struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
         }
     }
 
+#ifdef SHIM_HV
+    *err = shim_hv_init(mpi);
+    if (*err) {
+        goto init_read;
+    }
+#endif  /* SHIM_HV */
+
     return mpi;
 
 init_read:
@@ -92,6 +105,9 @@ void vmpi_fini(struct vmpi_info *mpi)
 {
     unsigned int i;
 
+#ifdef SHIM_HV
+    shim_hv_fini();
+#endif  /* SHIM_HV */
     mpi->vi = NULL;
     vmpi_ring_fini(&mpi->write);
     for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
