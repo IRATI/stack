@@ -341,7 +341,7 @@ void ExtendedIPCManager::appUnregistered(
         }
 
         std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-        for (iterator = applicationRegistration->getDIFNames().begin();
+        for (iterator = applicationRegistration->getDIFNames() .begin();
                         iterator != applicationRegistration->getDIFNames().end();
                         ++iterator) {
                 if (*iterator == DIFName) {
@@ -1130,6 +1130,118 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 #endif
 }
 
-Singleton<KernelIPCProcess> kernelIPCProcess;
+/*	CLASS RIBObjectNames	*/
+const std::string RIBObjectNames::ADDRESS = "address";
+const std::string RIBObjectNames::APNAME = "applicationprocessname";
+const std::string RIBObjectNames::CONSTANTS = "constants";
+const std::string RIBObjectNames::DATA_TRANSFER = "datatransfer";
+const std::string RIBObjectNames::DAF = "daf";
+const std::string RIBObjectNames::DIF = "dif";
+const std::string RIBObjectNames::DIF_REGISTRATIONS = "difregistrations";
+const std::string RIBObjectNames::DIRECTORY_FORWARDING_TABLE_ENTRIES = "directoryforwardingtableentries";
+const std::string RIBObjectNames::ENROLLMENT = "enrollment";
+const std::string RIBObjectNames::FLOWS = "flows";
+const std::string RIBObjectNames::FLOW_ALLOCATOR = "flowallocator";
+const std::string RIBObjectNames::IPC = "ipc";
+const std::string RIBObjectNames::MANAGEMENT = "management";
+const std::string RIBObjectNames::NEIGHBORS = "neighbors";
+const std::string RIBObjectNames::NAMING = "naming";
+const std::string RIBObjectNames::NMINUSONEFLOWMANAGER = "nminusoneflowmanager";
+const std::string RIBObjectNames::NMINUSEONEFLOWS = "nminusoneflows";
+const std::string RIBObjectNames::OPERATIONAL_STATUS = "operationalStatus";
+const std::string RIBObjectNames::PDU_FORWARDING_TABLE = "pduforwardingtable";
+const std::string RIBObjectNames::QOS_CUBES = "qoscubes";
+const std::string RIBObjectNames::RESOURCE_ALLOCATION = "resourceallocation";
+const std::string RIBObjectNames::ROOT = "root";
+const std::string RIBObjectNames::SEPARATOR = "/";
+const std::string RIBObjectNames::SYNONYMS = "synonyms";
+const std::string RIBObjectNames::WHATEVERCAST_NAMES = "whatevercastnames";
+const std::string RIBObjectNames::ROUTING = "routing";
+const std::string RIBObjectNames::FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
+const std::string RIBObjectNames::OPERATIONAL_STATUS_RIB_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DAF +
+			RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT + RIBObjectNames::SEPARATOR + RIBObjectNames::OPERATIONAL_STATUS;
 
+const std::string RIBObjectNames::OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "operationstatus";
+
+const std::string RIBObjectNames::PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS = "pdu forwarding table";
+const std::string RIBObjectNames::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DIF +
+			RIBObjectNames::SEPARATOR + RIBObjectNames::RESOURCE_ALLOCATION + RIBObjectNames::SEPARATOR + RIBObjectNames::PDU_FORWARDING_TABLE;
+
+/*	CLASS EnrollmentInformationRequest	*/
+const std::string EnrollmentInformationRequest::ENROLLMENT_INFO_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DAF +
+			RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT + RIBObjectNames::SEPARATOR + RIBObjectNames::ENROLLMENT;
+
+EnrollmentInformationRequest::EnrollmentInformationRequest(){
+	this->address = 0L;
+	this->supportingDifs = NULL;
+}
+
+unsigned int EnrollmentInformationRequest::getAddress() const {
+	return address;
+}
+
+void EnrollmentInformationRequest::setAddress(unsigned int address) {
+	this->address = address;
+}
+
+std::list<ApplicationProcessNamingInformation>* EnrollmentInformationRequest::getSupportingDifs() const {
+	return supportingDifs;
+}
+
+void EnrollmentInformationRequest::setSupportingDifs(std::list<ApplicationProcessNamingInformation> &supportingDifs) {
+	this->supportingDifs = &supportingDifs;
+}
+
+/*	CLASS EnrollmentRequest	*/
+EnrollmentRequest::EnrollmentRequest(Neighbor &neighbor, EnrollToDIFRequestEvent &event){
+	this->neighbor = &neighbor;
+	this->event = &event;
+	this->neighbor = NULL;
+	this->event = NULL;
+}
+
+Neighbor* EnrollmentRequest::getNeighbor() const{
+	return neighbor;
+}
+
+void EnrollmentRequest::setNeighbor(Neighbor &neighbor) {
+	this->neighbor = &neighbor;
+}
+
+EnrollToDIFRequestEvent* EnrollmentRequest::getEvent() const{
+	return event;
+}
+
+void EnrollmentRequest::setEvent(EnrollToDIFRequestEvent &event) {
+	this->event = &event;
+}
+
+/*	CLASS Event	*/
+const std::string CONNECTIVITY_TO_NEIGHBOR_LOST = "Connectivity to Neighbor Lost";
+const std::string EFCP_CONNECTION_CREATED = "EFCP Connection Created";
+const std::string EFCP_CONNECTION_DELETED = "EFCP Connection Deleted";
+const std::string MANAGEMENT_FLOW_ALLOCATED = "Management Flow Allocated";
+const std::string MANAGEMENT_FLOW_DEALLOCATED = "Management Flow Deallocated";
+const std::string N_MINUS_1_FLOW_ALLOCATED = "N minus 1 Flow Allocated";
+const std::string N_MINUS_1_FLOW_ALLOCATION_FAILED = "N minus 1 Flow Allocation Failed";
+const std::string N_MINUS_1_FLOW_DEALLOCATED = "N minus 1 Flow Deallocated";
+const std::string NEIGHBOR_DECLARED_DEAD = "Neighbor declared dead";
+const std::string NEIGHBOR_ADDED = "Neighbor added";
+
+/*	CLASS BaseEvent	*/
+BaseEvent::BaseEvent()
+{
+}
+
+BaseEvent::BaseEvent(std::string id)
+{
+	this->id = id;
+}
+
+std::string BaseEvent::getId() const
+{
+	return id;
+}
+
+Singleton<KernelIPCProcess> kernelIPCProcess;
 }
