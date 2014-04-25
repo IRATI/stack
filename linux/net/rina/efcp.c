@@ -52,9 +52,6 @@ struct efcp_container {
         struct dt_cons            dt_cons;
         struct rmt *              rmt;
         struct kfa *              kfa;
-
-        struct workqueue_struct * egress_wq;
-        struct workqueue_struct * ingress_wq;
 };
 
 static struct efcp * efcp_create(void)
@@ -130,22 +127,6 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
                 return NULL;
         }
 
-        /* FIXME: name should be unique, not shared with all the EFCPC's */
-        container->egress_wq = rwq_create("efcpc-egress-wq");
-        if (!container->egress_wq) {
-                LOG_ERR("Cannot create efcpc egress workqueue");
-                efcp_container_destroy(container);
-                return NULL;
-        }
-
-        /* FIXME: name should be unique, not shared with all the EFCPC's */
-        container->ingress_wq = rwq_create("efcpc-ingress-wq");
-        if (!container->egress_wq) {
-                LOG_ERR("Cannot create efcpc ingress workqueue");
-                efcp_container_destroy(container);
-                return NULL;
-        }
-
         container->kfa = kfa;
 
         return container;
@@ -162,9 +143,6 @@ int efcp_container_destroy(struct efcp_container * container)
         if (container->instances)  efcp_imap_destroy(container->instances,
                                                      efcp_destroy);
         if (container->cidm)       cidm_destroy(container->cidm);
-
-        if (container->egress_wq)  rwq_destroy(container->egress_wq);
-        if (container->ingress_wq) rwq_destroy(container->ingress_wq);
 
         rkfree(container);
 
@@ -204,6 +182,8 @@ int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
 }
 EXPORT_SYMBOL(efcp_container_set_dt_cons);
 
+/* Removed with the wq queue in efcp_container */
+/*
 struct write_data {
         struct efcp * efcp;
         struct sdu *  sdu;
@@ -277,12 +257,12 @@ static int efcp_write_worker(void * o)
         write_data_destroy(tmp);
         return 0;
 }
+*/
 
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
 {
-        struct write_data *    tmp;
-        struct rwq_work_item * item;
+        struct dtp *        dtp;
 
         if (!sdu) {
                 LOG_ERR("Bogus SDU passed");
@@ -294,21 +274,18 @@ static int efcp_write(struct efcp * efcp,
                 return -1;
         }
 
-        tmp = write_data_create(efcp, sdu);
-        ASSERT(is_write_data_ok(tmp));
+        ASSERT(efcp);
+        ASSERT(efcp->dt);
 
-        /* Is this _ni() really necessary ??? */
-        item = rwq_work_create_ni(efcp_write_worker, tmp);
-        if (!item) {
-                write_data_destroy(tmp);
+        dtp = dt_dtp(efcp->dt);
+        if (!dtp) {
+                LOG_ERR("No DTP instance available");
+                sdu_destroy(sdu);
                 return -1;
         }
 
-        ASSERT(efcp->container->egress_wq);
-
-        if (rwq_work_post(efcp->container->egress_wq, item)) {
-                write_data_destroy(tmp);
-                sdu_destroy(sdu);
+        if (dtp_write(dtp, sdu)) {
+                LOG_ERR("Could not write SDU to DTP");
                 return -1;
         }
 
@@ -354,6 +331,8 @@ int efcp_container_mgmt_write(struct efcp_container * container,
 { return dtp_mgmt_write(container->rmt, src_address, port_id, sdu); }
 EXPORT_SYMBOL(efcp_container_mgmt_write);
 
+/*Removed with the wqs in efcp_container */
+/*
 struct receive_data {
         struct efcp * efcp;
         struct pdu *  pdu;
@@ -429,13 +408,8 @@ static int efcp_receive_worker(void * o)
                         return -1;
                 }
 
-                /* FIXME: The PDU has been consumed ... */
         }
 
-        /*
-         * FIXME: Based on the previous FIXME, shouldn't the rest of this
-         *        functionbe in the else case ?
-         */
         dtp = dt_dtp(tmp->efcp->dt);
         if (!dtp) {
                 LOG_ERR("No DTP instance available");
@@ -453,10 +427,12 @@ static int efcp_receive_worker(void * o)
         receive_data_destroy(tmp);
         return 0;
 }
+*/
 
 static int efcp_receive(struct efcp * efcp,
                         struct pdu *  pdu)
 {
+/*        
         struct receive_data *  data;
         struct rwq_work_item * item;
 
@@ -473,7 +449,6 @@ static int efcp_receive(struct efcp * efcp,
         data = receive_data_create(efcp, pdu);
         ASSERT(is_receive_data_ok(data));
 
-        /* Is this _ni() call really necessary ??? */
         item = rwq_work_create_ni(efcp_receive_worker, data);
         if (!item) {
                 pdu_destroy(pdu);
@@ -486,6 +461,39 @@ static int efcp_receive(struct efcp * efcp,
         if (rwq_work_post(efcp->container->ingress_wq, item)) {
                 pdu_destroy(pdu);
                 receive_data_destroy(data);
+                return -1;
+        }
+*/
+        struct dtp *          dtp;
+        struct dtcp *         dtcp;
+        pdu_type_t            pdu_type;
+
+        ASSERT(efcp);
+        ASSERT(efcp->dt);
+
+        pdu_type = pci_type(pdu_pci_get_ro(pdu));
+        if (pdu_type_is_control(pdu_type)) {
+                dtcp = dt_dtcp(efcp->dt);
+                if (!dtcp) {
+                        LOG_ERR("No DTCP instance available");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+
+                if (dtcp_common_rcv_control(dtcp, pdu)) 
+                        return -1;
+
+        }
+
+        dtp = dt_dtp(efcp->dt);
+        if (!dtp) {
+                LOG_ERR("No DTP instance available");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (dtp_receive(dtp, pdu)) {
+                LOG_ERR("DTP cannot receive this PDU");
                 return -1;
         }
 
