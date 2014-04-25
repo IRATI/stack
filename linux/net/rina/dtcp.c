@@ -674,6 +674,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         if (!dtcp)
                 return -1;
 
+        LOG_DBG("Update invoked");
         /* FIXME: here it goes rcvr_flow_control_policy */
         if (dtcp->conn->policies_params.flow_ctrl) {
                 if (dtcp->conn->policies_params.window_based_fctrl)
@@ -716,10 +717,10 @@ static struct dtcp_sv default_sv = {
         .last_rcv_data_ack      = 0,
         .time_unit              = 0,
         .sndr_credit            = 0,
-        .snd_rt_wind_edge       = 0,
+        .snd_rt_wind_edge       = 10,
         .sndr_rate              = 0,
         .pdus_sent_in_time_unit = 0,
-        .rcvr_credit            = 0,
+        .rcvr_credit            = 20,
         .rcvr_rt_wind_edge      = 0,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,

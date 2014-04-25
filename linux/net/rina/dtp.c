@@ -88,8 +88,8 @@ static struct dtp_sv default_sv = {
         .max_cwq_len                   = 0,
         .drf_flag                      = false,
         .a                             = 0,
-        .window_based                  = false,
-        .rexmsn_ctrl                   = false,
+        .window_based                  = true,
+        .rexmsn_ctrl                   = true,
 };
 
 static uint_t max_cwq_len_get(struct dtp_sv * sv)
@@ -441,6 +441,7 @@ int dtp_write(struct dtp * instance,
 
         if (dtcp) {
                 if (sv->window_based) {
+                        LOG_DBG("WindowBased");
                         if (!dt_sv_window_closed(dt) &&
                             pci_sequence_number_get(pci) <
                             dtcp_snd_rt_win(dtcp)) {

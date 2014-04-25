@@ -296,10 +296,10 @@ int rtxq_destroy(struct rtxq * q)
         if (!q)
                 return -1;
 
-        if (rtimer_destroy(q->r_timer))
-                LOG_ERR("Problems destroying timer for RTXQ %pK", q);
+        if (q->r_timer && rtimer_destroy(q->r_timer))
+                LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
 
-        if (rtxqueue_destroy(q->queue))
+        if (q->queue  && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
         rkfree(q);

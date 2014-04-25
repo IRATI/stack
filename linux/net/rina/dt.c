@@ -51,14 +51,14 @@ struct dt {
 };
 
 static struct dt_sv default_sv = {
-        .max_flow_pdu_size    = 0,
-        .max_flow_sdu_size    = 0,
-        .MPL                  = 0,
-        .R                    = 0,
+        .max_flow_pdu_size    = 1000000000000,
+        .max_flow_sdu_size    = 1000000000000,
+        .MPL                  = 1000,
+        .R                    = 100,
         .A                    = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
-        .tr                   = 0,
+        .tr                   = 10,
 };
 
 struct dt * dt_create(void)
