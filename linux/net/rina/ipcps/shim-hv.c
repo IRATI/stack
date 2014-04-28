@@ -22,6 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/list.h>
+#include <linux/mutex.h>
 
 #define SHIM_HV_NAME    "shim-hv-virtio"
 #define RINA_PREFIX SHIM_HV_NAME
@@ -91,6 +92,7 @@ struct ipcp_instance_data {
         struct flow_spec        fspec;
         struct kfa              *kfa;
         struct list_head        registered_applications;
+        struct mutex            reg_lock;
         struct shim_hv_vmpi     vmpi;
 };
 
@@ -725,6 +727,8 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
         char *tmpstr = name_tostring(application_name);
         int ret = -1;
 
+        mutex_lock(&priv->reg_lock);
+
         /* Is this application already registered? */
         list_for_each_entry(cur, &priv->registered_applications, list) {
                 if (name_is_equal(application_name, &cur->application_name)) {
@@ -756,6 +760,7 @@ name_alloc:
                 rkfree(cur);
         }
 out:
+        mutex_unlock(&priv->reg_lock);
         if (tmpstr)
                 rkfree(tmpstr);
 
@@ -770,6 +775,8 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         struct name_list_element *cur;
         struct name_list_element *found = NULL;
         char *tmpstr = name_tostring(application_name);
+
+        mutex_lock(&priv->reg_lock);
 
         /* Is this application registered? */
         list_for_each_entry(cur, &priv->registered_applications, list) {
@@ -792,6 +799,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         LOG_INFO("%s: Application %s unregistered", __func__, tmpstr);
 
 out:
+        mutex_unlock(&priv->reg_lock);
         if (tmpstr)
                 rkfree(tmpstr);
 
@@ -989,6 +997,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         }
 
         INIT_LIST_HEAD(&priv->registered_applications);
+        mutex_init(&priv->reg_lock);
 
         priv->kfa = kipcm_kfa(default_kipcm);
         ASSERT(priv->kfa);
