@@ -79,12 +79,7 @@ size_t pci_length_min(void)
 EXPORT_SYMBOL(pci_length_min);
 
 ssize_t pci_length(const struct pci * pci)
-{
-        if (!pci)
-                return -1;
-
-        return sizeof(*pci);
-}
+{ return pci ? sizeof(*pci) : -1; }
 EXPORT_SYMBOL(pci_length);
 
 static struct pci * pci_create_gfp(gfp_t flags)
