@@ -27,15 +27,15 @@
 #include "dt-utils.h"
 
 struct dt_sv {
-        uint_t    max_flow_pdu_size;
-        uint_t    max_flow_sdu_size;
-        timeout_t MPL;
-        timeout_t R;
-        timeout_t A;
-        seq_num_t rcv_left_window_edge;
-        bool      window_closed;
-        seq_num_t last_seq_num_sent;
-        timeout_t tr;
+        uint_t       max_flow_pdu_size;
+        uint_t       max_flow_sdu_size;
+        timeout_t    MPL;
+        timeout_t    R;
+        timeout_t    A;
+        seq_num_t    rcv_left_window_edge;
+        bool         window_closed;
+        seq_num_t    last_seq_num_sent;
+        unsigned int tr;
 };
 
 struct dt {
@@ -51,13 +51,14 @@ struct dt {
 };
 
 static struct dt_sv default_sv = {
-        .max_flow_pdu_size    = 0,
-        .max_flow_sdu_size    = 0,
-        .MPL                  = 0,
-        .R                    = 0,
+        .max_flow_pdu_size    = 1000000000000,
+        .max_flow_sdu_size    = 1000000000000,
+        .MPL                  = 1000,
+        .R                    = 100,
         .A                    = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
+        .tr                   = 10,
 };
 
 struct dt * dt_create(void)
@@ -443,9 +444,9 @@ seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
         return tmp;
 }
 
-timeout_t dt_sv_tr(struct dt * dt)
+unsigned int dt_sv_tr(struct dt * dt)
 {
-        timeout_t tmp;
+        unsigned int tmp;
 
         ASSERT(dt);
         ASSERT(dt->sv);

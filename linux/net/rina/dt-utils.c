@@ -25,6 +25,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "dt-utils.h"
+#include "dt.h"
 
 struct cwq {
         struct rqueue * q;
@@ -139,13 +140,13 @@ struct rtxq_entry {
         struct list_head next;
 };
 
-static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
+static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 {
         struct rtxq_entry * tmp;
 
         ASSERT(pdu_is_ok(pdu));
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), flag);
         if (!tmp)
                 return NULL;
 
@@ -157,6 +158,9 @@ static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
 
         return tmp;
 }
+
+static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
+{return rtxq_entry_create_gfp(pdu, GFP_ATOMIC);}
 
 struct rtxqueue {
         struct list_head head;
@@ -228,12 +232,15 @@ static int rtxqueue_destroy(struct rtxqueue * q)
 {
         struct rtxq_entry * cur;
         struct rtxq_entry * n;
+
         if (!q)
                 return -1;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 rtxq_entry_destroy(cur);
         }
+
+        rkfree(q);
 
         return 0;
 
@@ -249,12 +256,17 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
         if (!pdu_is_ok(pdu))
                 return -1;
 
-        tmp = rtxq_entry_create(pdu);
+        tmp = rtxq_entry_create_ni(pdu);
         if (!tmp)
                 return -1;
 
         list_add(&tmp->next, &q->head);
 
+        return 0;
+}
+
+static int rtxqueue_rtx(struct rtxqueue * q, unsigned int tr)
+{
         return 0;
 }
 
@@ -274,6 +286,9 @@ static void Rtimer_handler(void * data)
                 LOG_ERR("No RTXQ to work with");
                 return;
         }
+
+        rtxqueue_rtx(q->queue, dt_sv_tr(q->parent));
+        rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 }
 
 int rtxq_destroy(struct rtxq * q)
@@ -281,10 +296,10 @@ int rtxq_destroy(struct rtxq * q)
         if (!q)
                 return -1;
 
-        if (rtimer_destroy(q->r_timer))
-                LOG_ERR("Problems destroying timer for RTXQ %pK", q);
+        if (q->r_timer && rtimer_destroy(q->r_timer))
+                LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
 
-        if (rtxqueue_destroy(q->queue))
+        if (q->queue  && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
         rkfree(q);
@@ -337,13 +352,13 @@ int rtxq_push(struct rtxq * q,
 
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
-             timeout_t     tr)
+             unsigned int  tr)
 {
         if (!q)
                 return -1;
 
-        entries_ack(q->queue, seq_num);
         spin_lock(&q->lock);
+        entries_ack(q->queue, seq_num);
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
@@ -355,13 +370,13 @@ int rtxq_ack(struct rtxq * q,
 
 int rtxq_nack(struct rtxq * q,
               seq_num_t     seq_num,
-              timeout_t     tr)
+              unsigned int  tr)
 {
         if (!q)
                 return -1;
 
-        entries_nack(q->queue, seq_num);
         spin_lock(&q->lock);
+        entries_nack(q->queue, seq_num);
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;

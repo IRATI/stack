@@ -88,8 +88,8 @@ static struct dtp_sv default_sv = {
         .max_cwq_len                   = 0,
         .drf_flag                      = false,
         .a                             = 0,
-        .window_based                  = false,
-        .rexmsn_ctrl                   = false,
+        .window_based                  = true,
+        .rexmsn_ctrl                   = true,
 };
 
 static uint_t max_cwq_len_get(struct dtp_sv * sv)
@@ -440,28 +440,6 @@ int dtp_write(struct dtp * instance,
          */
 
         if (dtcp) {
-                if (sv->window_based) {
-                        if (!dt_sv_window_closed(dt) &&
-                            pci_sequence_number_get(pci) <
-                            dtcp_snd_rt_win(dtcp)) {
-                                /*
-                                 * Might close window
-                                 */
-                                if (policies->transmission_control(instance,
-                                                                   pdu)) {
-                                        LOG_ERR("Problems with transmission "
-                                                "control");
-                                        ret = -1;
-                                }
-                        } else {
-                                dt_sv_window_closed_set(dt, true);
-                                if (policies->closed_window(instance, pdu)) {
-                                        LOG_ERR("Problems with the "
-                                                "closed window policy");
-                                        ret = -1;
-                                }
-                        }
-                }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
                         rtxq = dt_rtxq(dt);
@@ -474,6 +452,9 @@ int dtp_write(struct dtp * instance,
                         cpdu = pdu_dup(pdu);
                         if (!cpdu) {
                                 LOG_ERR("Failed to copy PDU");
+                                LOG_ERR("PDU ok? %d", pdu_pci_present(pdu));
+                                LOG_ERR("PDU type: %d",
+                                        pci_type(pdu_pci_get_ro(pdu)));
                                 pdu_destroy(pdu);
                                 return -1;
                         }
@@ -484,7 +465,31 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-                return ret;
+
+                if (sv->window_based) {
+                        LOG_DBG("WindowBased");
+                        if (!dt_sv_window_closed(dt) &&
+                            pci_sequence_number_get(pci) <
+                            dtcp_snd_rt_win(dtcp)) {
+                                /*
+                                 * Might close window
+                                 */
+                                if (policies->transmission_control(instance,
+                                                                   pdu)) {
+                                        LOG_ERR("Problems with transmission "
+                                                "control");
+                                        return -1;
+                                }
+                        } else {
+                                dt_sv_window_closed_set(dt, true);
+                                if (policies->closed_window(instance, pdu)) {
+                                        LOG_ERR("Problems with the "
+                                                "closed window policy");
+                                        return -1;
+                                }
+                        }
+                }
+                return 0;
         }
 
         /* Post SDU to RMT */
