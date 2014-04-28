@@ -79,12 +79,7 @@ size_t pci_length_min(void)
 EXPORT_SYMBOL(pci_length_min);
 
 ssize_t pci_length(const struct pci * pci)
-{
-        if (!pci)
-                return -1;
-
-        return sizeof(*pci);
-}
+{ return pci ? sizeof(*pci) : -1; }
 EXPORT_SYMBOL(pci_length);
 
 static struct pci * pci_create_gfp(gfp_t flags)
@@ -275,7 +270,7 @@ struct pci * pci_dup_gfp(gfp_t              flags,
 {
         struct pci * tmp;
 
-        if (pci_is_ok(pci))
+        if (!pci_is_ok(pci))
                 return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), flags);

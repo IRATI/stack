@@ -659,8 +659,8 @@ static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
         }
 
         entry->ports_size = nla_len(nested_attr);
-        entry->ports = rkzalloc(entry->ports_size, GFP_KERNEL);
-        LOG_DBG("Allocated %d bytes in %pk", entry->ports_size, entry->ports);
+        entry->ports      = rkzalloc(entry->ports_size, GFP_KERNEL);
+        LOG_DBG("Allocated %zd bytes in %pk", entry->ports_size, entry->ports);
 
         if (!entry->ports) {
                 LOG_ERR("Could not allocate memory for ports");

@@ -282,7 +282,8 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
                 LOG_ERR("Cannot create DTP state-vector");
-                rkfree(tmp);
+
+                dtp_destroy(tmp);
                 return NULL;
         }
         *tmp->sv            = default_sv;
@@ -290,7 +291,7 @@ struct dtp * dtp_create(struct dt *         dt,
 
         spin_lock_init(&tmp->sv->lock);
 
-        tmp->sv->connection   = connection;
+        tmp->sv->connection = connection;
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
@@ -434,35 +435,12 @@ int dtp_write(struct dtp * instance,
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
         /*
-         * FIXME : The two ways of carrying out flow control
+         * FIXME: The two ways of carrying out flow control
          * could exist at once, thus reconciliation should be
          * the first and default case if both are present.
          */
 
         if (dtcp) {
-                if (sv->window_based) {
-                        LOG_DBG("WindowBased");
-                        if (!dt_sv_window_closed(dt) &&
-                            pci_sequence_number_get(pci) <
-                            dtcp_snd_rt_win(dtcp)) {
-                                /*
-                                 * Might close window
-                                 */
-                                if (policies->transmission_control(instance,
-                                                                   pdu)) {
-                                        LOG_ERR("Problems with transmission "
-                                                "control");
-                                        ret = -1;
-                                }
-                        } else {
-                                dt_sv_window_closed_set(dt, true);
-                                if (policies->closed_window(instance, pdu)) {
-                                        LOG_ERR("Problems with the "
-                                                "closed window policy");
-                                        ret = -1;
-                                }
-                        }
-                }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
                         rtxq = dt_rtxq(dt);
@@ -475,6 +453,9 @@ int dtp_write(struct dtp * instance,
                         cpdu = pdu_dup(pdu);
                         if (!cpdu) {
                                 LOG_ERR("Failed to copy PDU");
+                                LOG_ERR("PDU ok? %d", pdu_pci_present(pdu));
+                                LOG_ERR("PDU type: %d",
+                                        pci_type(pdu_pci_get_ro(pdu)));
                                 pdu_destroy(pdu);
                                 return -1;
                         }
@@ -485,7 +466,31 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-                return ret;
+
+                if (sv->window_based) {
+                        LOG_DBG("WindowBased");
+                        if (!dt_sv_window_closed(dt) &&
+                            pci_sequence_number_get(pci) <
+                            dtcp_snd_rt_win(dtcp)) {
+                                /*
+                                 * Might close window
+                                 */
+                                if (policies->transmission_control(instance,
+                                                                   pdu)) {
+                                        LOG_ERR("Problems with transmission "
+                                                "control");
+                                        return -1;
+                                }
+                        } else {
+                                dt_sv_window_closed_set(dt, true);
+                                if (policies->closed_window(instance, pdu)) {
+                                        LOG_ERR("Problems with the "
+                                                "closed window policy");
+                                        return -1;
+                                }
+                        }
+                }
+                return 0;
         }
 
         /* Post SDU to RMT */
