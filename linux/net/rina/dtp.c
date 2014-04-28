@@ -282,7 +282,8 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
                 LOG_ERR("Cannot create DTP state-vector");
-                rkfree(tmp);
+
+                dtp_destroy(tmp);
                 return NULL;
         }
         *tmp->sv            = default_sv;
@@ -290,7 +291,7 @@ struct dtp * dtp_create(struct dt *         dt,
 
         spin_lock_init(&tmp->sv->lock);
 
-        tmp->sv->connection   = connection;
+        tmp->sv->connection = connection;
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
@@ -434,7 +435,7 @@ int dtp_write(struct dtp * instance,
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
         /*
-         * FIXME : The two ways of carrying out flow control
+         * FIXME: The two ways of carrying out flow control
          * could exist at once, thus reconciliation should be
          * the first and default case if both are present.
          */
