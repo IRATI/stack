@@ -51,7 +51,6 @@ struct cwq * cwq_create(void)
         return tmp;
 }
 
-
 int cwq_destroy(struct cwq * queue)
 {
         if (!queue)
@@ -92,7 +91,6 @@ int cwq_push(struct cwq * queue,
 
         return 0;
 }
-
 
 struct pdu * cwq_pop(struct cwq * queue)
 {
@@ -160,7 +158,7 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 }
 
 static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
-{return rtxq_entry_create_gfp(pdu, GFP_ATOMIC);}
+{ return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
 
 struct rtxqueue {
         struct list_head head;
@@ -173,6 +171,8 @@ static struct rtxqueue * rtxqueue_create(void)
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
+
+        INIT_LIST_HEAD(&tmp);
 
         return tmp;
 }
@@ -196,8 +196,8 @@ static int entries_ack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)))
-                    <= seq_num) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
+                    seq_num) {
                         list_del(&cur->next);
                         rtxq_entry_destroy(cur);
                 }
@@ -215,8 +215,8 @@ static int entries_nack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)))
-                    >= seq_num) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
+                    seq_num) {
                         /*
                          * FIXME: We need a way to use the RMT
                          * tmp = pdu_dup_ni(pdu);
@@ -267,6 +267,8 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
 
 static int rtxqueue_rtx(struct rtxqueue * q, unsigned int tr)
 {
+        LOG_MISSING;
+
         return 0;
 }
 

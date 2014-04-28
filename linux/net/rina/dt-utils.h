@@ -45,17 +45,17 @@ struct rtxq *   rtxq_create(struct dt * dt);
 int             rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
-int             rtxq_push(struct rtxq *  q,
-                          struct pdu *   pdu);
+int             rtxq_push(struct rtxq * q,
+                          struct pdu *  pdu);
 int             rtxq_ack(struct rtxq * q,
                          seq_num_t     seq_num,
                          timeout_t     tr);
 int             rtxq_nack(struct rtxq * q,
                           seq_num_t     seq_num,
                           timeout_t     tr);
-int             rtxq_drop(struct rtxq *  q,
-                          seq_num_t      from,
-                          seq_num_t      to);
+int             rtxq_drop(struct rtxq * q,
+                          seq_num_t     from,
+                          seq_num_t     to);
 int             rtxq_set_pop(struct rtxq *      q,
                              seq_num_t          from,
                              seq_num_t          to,
