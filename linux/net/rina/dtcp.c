@@ -130,8 +130,8 @@ struct dtcp_sv {
         /*
          * Control of duplicated control PDUs
          * */
-        uint_t       dup_acks;
-        uint_t       dup_flow_ctl;
+        uint_t       acks;
+        uint_t       flow_ctl;
 };
 
 struct dtcp_policies {
@@ -213,23 +213,23 @@ static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
         return tmp;
 }
 
-static void dup_flow_ctrl_inc(struct dtcp * dtcp)
+static void flow_ctrl_inc(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
         spin_lock(&dtcp->sv->lock);
-        dtcp->sv->dup_flow_ctl++;
+        dtcp->sv->flow_ctl++;
         spin_unlock(&dtcp->sv->lock);
 }
 
-static void dup_acks_inc(struct dtcp * dtcp)
+static void acks_inc(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
         spin_lock(&dtcp->sv->lock);
-        dtcp->sv->dup_acks++;
+        dtcp->sv->acks++;
         spin_unlock(&dtcp->sv->lock);
 }
 
@@ -538,14 +538,14 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         if (seq_num < dtcp->sv->last_rcv_ctl_seq) {
                 switch (type) {
                 case PDU_TYPE_FC:
-                        dup_flow_ctrl_inc(dtcp);
+                        flow_ctrl_inc(dtcp);
                         break;
                 case PDU_TYPE_ACK:
-                        dup_acks_inc(dtcp);
+                        acks_inc(dtcp);
                         break;
                 case PDU_TYPE_ACK_AND_FC:
-                        dup_acks_inc(dtcp);
-                        dup_flow_ctrl_inc(dtcp);
+                        acks_inc(dtcp);
+                        flow_ctrl_inc(dtcp);
                         break;
                 default:
                         break;
@@ -723,8 +723,8 @@ static struct dtcp_sv default_sv = {
         .rcvr_rt_wind_edge      = 0,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
-        .dup_acks               = 0,
-        .dup_flow_ctl           = 0,
+        .acks                   = 0,
+        .flow_ctl               = 0,
 };
 
 static struct dtcp_policies default_policies = {
