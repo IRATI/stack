@@ -275,7 +275,7 @@ struct pci * pci_dup_gfp(gfp_t              flags,
 {
         struct pci * tmp;
 
-        if (pci_is_ok(pci))
+        if (!pci_is_ok(pci))
                 return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), flags);
