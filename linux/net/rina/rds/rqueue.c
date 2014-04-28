@@ -161,7 +161,7 @@ static int rqueue_head_push_gfp(gfp_t           flags,
         list_add(&entry->next, &q->head);
         q->length++;
 
-        LOG_DBG("Entry %pK head-pushed into queue %pK (length = %d)",
+        LOG_DBG("Entry %pK head-pushed into queue %pK (length = %zd)",
                 entry, q, q->length);
 
         return 0;
@@ -199,7 +199,7 @@ void * rqueue_head_pop(struct rqueue * q)
         list_del(&entry->next);
         q->length--;
 
-        LOG_DBG("Entry %pK head-popped from queue %pK (length = %d)",
+        LOG_DBG("Entry %pK head-popped from queue %pK (length = %zd)",
                 entry, q, q->length);
 
         entry_destroy(entry);
@@ -224,7 +224,7 @@ static int rqueue_tail_push_gfp(gfp_t flags, struct rqueue * q, void * data)
         list_add_tail(&entry->next, &q->head);
         q->length++;
 
-        LOG_DBG("Entry %pK tail-pushed into queue %pK (length = %d)",
+        LOG_DBG("Entry %pK tail-pushed into queue %pK (length = %zd)",
                 entry, q, q->length);
 
         return 0;
@@ -261,7 +261,7 @@ void * rqueue_tail_pop(struct rqueue * q)
         entry = ((struct rqueue_entry *) h);
         ASSERT(entry);
 
-        LOG_DBG("Entry %pK tail-popped from queue %pK (length = %d)",
+        LOG_DBG("Entry %pK tail-popped from queue %pK (length = %zd)",
                 entry, q, q->length);
 
         data = entry->data;
