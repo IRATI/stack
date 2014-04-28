@@ -174,6 +174,9 @@ struct dtcp {
 
 static int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
+        ASSERT(dtcp);
+        ASSERT(pdu);
+
         if (rmt_send(dtcp->rmt,
                      dtcp->conn->destination_address,
                      dtcp->conn->qos_id,
@@ -184,7 +187,7 @@ static int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 }
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
-                                 seq_num_t last_rcv_ctrl_seq)
+                                 seq_num_t     last_rcv_ctrl_seq)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
@@ -210,19 +213,17 @@ static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
         return tmp;
 }
 
-static int dup_flow_ctrl_inc(struct dtcp * dtcp)
+static void dup_flow_ctrl_inc(struct dtcp * dtcp)
 {
-        if (!dtcp || !dtcp->sv)
-                return -1;
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
 
         spin_lock(&dtcp->sv->lock);
         dtcp->sv->dup_flow_ctl++;
         spin_unlock(&dtcp->sv->lock);
-
-        return 0;
 }
 
-static int dup_acks_inc(struct dtcp * dtcp)
+static void dup_acks_inc(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
@@ -230,8 +231,6 @@ static int dup_acks_inc(struct dtcp * dtcp)
         spin_lock(&dtcp->sv->lock);
         dtcp->sv->dup_acks++;
         spin_unlock(&dtcp->sv->lock);
-
-        return 0;
 }
 
 static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
