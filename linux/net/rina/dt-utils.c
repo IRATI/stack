@@ -21,6 +21,8 @@
 
 #define RINA_PREFIX "dt-utils"
 
+#include <linux/list.h>
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -172,7 +174,7 @@ static struct rtxqueue * rtxqueue_create(void)
         if (!tmp)
                 return NULL;
 
-        INIT_LIST_HEAD(&tmp);
+        INIT_LIST_HEAD(&tmp->head);
 
         return tmp;
 }
