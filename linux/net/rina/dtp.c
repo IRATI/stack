@@ -676,7 +676,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
-                max_seq_nr_rcv_set(sv, seq_num + 1);
+                max_seq_nr_rcv_set(sv, seq_num);
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
