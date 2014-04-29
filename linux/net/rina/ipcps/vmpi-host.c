@@ -26,6 +26,7 @@
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-host-test.h"
+#include "shim-hv.h"
 
 
 struct vmpi_info {
@@ -33,6 +34,8 @@ struct vmpi_info {
 
     struct vmpi_ring write;
     struct vmpi_queue read[VMPI_MAX_CHANNELS];
+
+    struct vmpi_ops ops;
 };
 
 int vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
@@ -51,11 +54,19 @@ struct vmpi_queue *vmpi_get_read_queue(struct vmpi_info *mpi)
     return mpi->read;
 }
 
-#define SHIM_HV
-#ifdef SHIM_HV
-int shim_hv_init(vmpi_info_t *mpi);
-void shim_hv_fini(void);
-#endif  /* SHIM_HV */
+static ssize_t
+vmpi_host_ops_write(struct vmpi_ops *ops, unsigned int channel,
+                    const struct iovec *iv, unsigned long iovcnt)
+{
+        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
+}
+
+static int
+vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
+                                      void *opaque)
+{
+        return vmpi_register_read_callback(ops->priv, cb, opaque);
+}
 
 struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
 {
@@ -82,12 +93,13 @@ struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
         }
     }
 
-#ifdef SHIM_HV
-    *err = shim_hv_init(mpi);
+    mpi->ops.priv = mpi;
+    mpi->ops.write = vmpi_host_ops_write;
+    mpi->ops.register_read_callback = vmpi_host_ops_register_read_callback;
+    *err = shim_hv_init(&mpi->ops);
     if (*err) {
         goto init_read;
     }
-#endif  /* SHIM_HV */
 
     return mpi;
 
@@ -106,9 +118,7 @@ void vmpi_fini(struct vmpi_info *mpi)
 {
     unsigned int i;
 
-#ifdef SHIM_HV
     shim_hv_fini();
-#endif  /* SHIM_HV */
     mpi->vi = NULL;
     vmpi_ring_fini(&mpi->write);
     for (i = 0; i < VMPI_MAX_CHANNELS; i++) {

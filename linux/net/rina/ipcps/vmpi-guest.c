@@ -27,6 +27,7 @@
 #include "vmpi-guest-impl.h"
 #include "vmpi-structs.h"
 #include "vmpi.h"
+#include "shim-hv.h"
 
 
 #ifdef VERBOSE
@@ -50,6 +51,7 @@ struct vmpi_info {
     vmpi_read_cb_t read_cb;
     void *read_cb_data;
 
+    struct vmpi_ops ops;
     /* Number of input buffers. */
     //unsigned int num;
 };
@@ -288,11 +290,19 @@ static void recv_callback(vmpi_impl_info_t *vi)
         schedule_work(&mpi->recv_worker);
 }
 
-#define SHIM_HV
-#ifdef SHIM_HV
-int shim_hv_init(vmpi_info_t *mpi);
-void shim_hv_fini(void);
-#endif  /* SHIM_HV */
+static ssize_t
+vmpi_guest_ops_write(struct vmpi_ops *ops, unsigned int channel,
+                     const struct iovec *iv, unsigned long iovcnt)
+{
+        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
+}
+
+static int
+vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
+                                      void *opaque)
+{
+        return vmpi_register_read_callback(ops->priv, cb, opaque);
+}
 
 struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *ret)
 {
@@ -338,12 +348,13 @@ struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *ret)
     vmpi_impl_callbacks_register(mpi->vi, xmit_callback, recv_callback);
     mpi->read_cb = NULL;
 
-#ifdef SHIM_HV
-    *ret = shim_hv_init(mpi);
+    mpi->ops.priv = mpi;
+    mpi->ops.write = vmpi_guest_ops_write;
+    mpi->ops.register_read_callback = vmpi_guest_ops_register_read_callback;
+    *ret = shim_hv_init(&mpi->ops);
     if (*ret) {
         goto alloc_read_buf;
     }
-#endif  /* SHIM_HV */
 
     printk("vmpi_init completed\n");
 
@@ -375,9 +386,7 @@ void vmpi_fini(void)
         return;
     }
 
-#ifdef SHIM_HV
     shim_hv_fini();
-#endif  /* SHIM_HV */
 
     /*
      * Deregister the callbacks, so that vmpi-impl will stop

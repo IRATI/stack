@@ -35,7 +35,7 @@
 #include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
-#include "vmpi.h"
+#include "vmpi-ops.h"
 
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -50,7 +50,7 @@ static struct ipcp_factory_data {
  * process. Therefore it is enough to hold the associated VMPI handler
  * in a global variable.
  */
-static vmpi_info_t *gmpi = NULL;
+static struct vmpi_ops *gops = NULL;
 
 enum channel_state {
         CHANNEL_STATE_NULL = 0,
@@ -78,7 +78,7 @@ enum shim_hv_response {
  * the VMPI-related information (among the other).
  */
 struct shim_hv_vmpi {
-        vmpi_info_t                     *mpi;
+        struct vmpi_ops                 *ops;
         struct shim_hv_channel          channels[VMPI_MAX_CHANNELS];
 };
 
@@ -211,7 +211,7 @@ shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
 
         iov.iov_base = msg;
         iov.iov_len = len;
-        ret = vmpi_write_kernel(priv->vmpi.mpi, 0, &iov, 1);
+        ret = priv->vmpi.ops->write(priv->vmpi.ops, 0, &iov, 1);
         LOG_INFO("%s: vmpi_write_kernel(0, %d) --> %d", __func__, (int)len, (int)ret);
 
         return !(ret == len);
@@ -865,7 +865,7 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
 
         iov.iov_base = buffer_data_rw(buf);
         iov.iov_len = buffer_length(buf);
-        n = vmpi_write_kernel(priv->vmpi.mpi, ch, &iov, 1);
+        n = priv->vmpi.ops->write(priv->vmpi.ops, ch, &iov, 1);
         if (likely(n == iov.iov_len))
                 ret = 0;
         LOG_INFO("%s: vmpi_write_kernel(%u, %d) --> %d", __func__, ch,
@@ -1004,13 +1004,13 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
 
         /* Initialize the VMPI-related data structure. */
         bzero(&priv->vmpi, sizeof(priv->vmpi));
-        priv->vmpi.mpi = gmpi;
-        ASSERT(priv->vmpi.mpi);
+        priv->vmpi.ops = gops;
+        ASSERT(priv->vmpi.ops);
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 priv->vmpi.channels[i].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[i].port_id = port_id_bad();
         }
-        err = vmpi_register_read_callback(priv->vmpi.mpi, shim_hv_recv_callback, priv);
+        err = priv->vmpi.ops->register_read_callback(priv->vmpi.ops, shim_hv_recv_callback, priv);
         if (err) {
                 LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
                 goto read_callback;
@@ -1083,10 +1083,10 @@ static struct ipcp_factory *shim_hv_ipcp_factory = NULL;
  * are not static.
  */
 int
-shim_hv_init(vmpi_info_t *mpi)
+shim_hv_init(struct vmpi_ops *ops)
 {
-        ASSERT(mpi);
-        gmpi = mpi;
+        ASSERT(ops);
+        gops = ops;
 
         shim_hv_ipcp_factory = kipcm_ipcp_factory_register(
                         default_kipcm, SHIM_HV_NAME,
