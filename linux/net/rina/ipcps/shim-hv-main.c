@@ -1102,6 +1102,7 @@ shim_hv_init(struct vmpi_ops *ops)
 
         return 0;
 }
+EXPORT_SYMBOL_GPL(shim_hv_init);
 
 void
 shim_hv_fini(void)
@@ -1112,4 +1113,8 @@ shim_hv_fini(void)
 
         LOG_INFO("%s", __func__);
 }
+EXPORT_SYMBOL_GPL(shim_hv_fini);
 
+MODULE_DESCRIPTION("IRATI Shim DIF for Hypervisors");
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Vincenzo Maffione");
