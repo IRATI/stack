@@ -1,7 +1,6 @@
-/*
- *  VMPI - LL (XEN)
+/* Test operations for the host side VMPI.
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +14,19 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <linux/kernel.h>
+#ifndef __VMPI_GUEST_TEST_H__
+#define __VMPI_GUEST_TEST_H__
 
-#define RINA_PREFIX "vmpi-ll-xen"
+/* Enable guest-side test interface. */
+//#define VMPI_GUEST_TEST
 
-#include "logs.h"
-#include "vmpi.h"
+#ifdef VMPI_GUEST_TEST
+int vmpi_test_init(void);
+void vmpi_test_fini(void);
+#endif  /* VMPI_GUEST_TEST */
+
+#endif  /* __VMPI_GUEST_TEST_H__ */
+
