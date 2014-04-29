@@ -145,7 +145,11 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 return -1;
         }
-        efcp_container_write(data->efcpc, flow->active, sdu);
+        if (efcp_container_write(data->efcpc, flow->active, sdu)) {
+                LOG_ERR("Could not send sdu to EFCP Container");
+                return -1;
+        }
+
         return 0;
 }
 

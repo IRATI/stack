@@ -37,7 +37,7 @@
 #include "rmt.h"
 
 #ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 1
+#define DTCP_TEST_ENABLE 0
 #endif
 
 struct efcp {
@@ -274,7 +274,6 @@ static int efcp_write(struct efcp * efcp,
                 return -1;
         }
 
-        ASSERT(efcp);
         ASSERT(efcp->dt);
 
         dtp = dt_dtp(efcp->dt);
@@ -468,7 +467,16 @@ static int efcp_receive(struct efcp * efcp,
         struct dtcp *         dtcp;
         pdu_type_t            pdu_type;
 
-        ASSERT(efcp);
+        if (!pdu) {
+                LOG_ERR("No pdu passed");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("No efcp instance passed");
+                pdu_destroy(pdu);
+                return -1;
+        }
+        
         ASSERT(efcp->dt);
 
         pdu_type = pci_type(pdu_pci_get_ro(pdu));
