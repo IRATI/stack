@@ -1238,18 +1238,10 @@ const std::string DataTransferConstants::toString(){
         return ss.str();
 }
 
-/* CLASS IAlgorithmConfiguration */
-unsigned short IAlgorithmConfiguration::getType()
-{
-	return type;
-}
-void IAlgorithmConfiguration::setType(unsigned short type)
-{
-	this->type = type;
-}
 
-/* CLASS LSAlgorithmConfiguration */
-LSAlgorithmConfiguration::LSAlgorithmConfiguration()
+
+/* CLASS PDUFTableConfiguration */
+PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration()
 {
 	waitUntilReadCDAP = WAIT_UNTIL_READ_CDAP_DEFAULT;
 	waitUntilError = WAIT_UNTIL_ERROR_DEFAULT;
@@ -1259,7 +1251,7 @@ LSAlgorithmConfiguration::LSAlgorithmConfiguration()
 	pulsesUntilFSOExpiration = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
 }
 
-const std::string LSAlgorithmConfiguration::toString()
+const std::string PDUFTableGeneratorConfiguration::toString()
 {
     std::stringstream ss;
 
@@ -1274,75 +1266,59 @@ const std::string LSAlgorithmConfiguration::toString()
 }
 
 
-int LSAlgorithmConfiguration::getPulsesUntilFsoExpiration() const {
+int PDUFTableGeneratorConfiguration::getPulsesUntilFsoExpiration() const {
 	return pulsesUntilFSOExpiration;
 }
-void LSAlgorithmConfiguration::setPulsesUntilFsoExpiration(int pulsesUntilFsoExpiration) {
+void PDUFTableGeneratorConfiguration::setPulsesUntilFsoExpiration(int pulsesUntilFsoExpiration) {
 	pulsesUntilFSOExpiration = pulsesUntilFsoExpiration;
 }
 
-int LSAlgorithmConfiguration::getWaitUntilAgeIncrement() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilAgeIncrement() const {
 	return waitUntilAgeIncrement;
 }
 
-void LSAlgorithmConfiguration::setWaitUntilAgeIncrement(int waitUntilAgeIncrement) {
+void PDUFTableGeneratorConfiguration::setWaitUntilAgeIncrement(int waitUntilAgeIncrement) {
 	this->waitUntilAgeIncrement = waitUntilAgeIncrement;
 }
 
-int LSAlgorithmConfiguration::getWaitUntilError() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilError() const {
 	return waitUntilError;
 }
 
-void LSAlgorithmConfiguration::setWaitUntilError(int waitUntilError) {
+void PDUFTableGeneratorConfiguration::setWaitUntilError(int waitUntilError) {
 	this->waitUntilError = waitUntilError;
 }
 
-int LSAlgorithmConfiguration::getWaitUntilFsodbPropagation() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilFsodbPropagation() const {
 	return waitUntilFSODBPropagation;
 }
 
-void LSAlgorithmConfiguration::setWaitUntilFsodbPropagation(int waitUntilFsodbPropagation) {
+void PDUFTableGeneratorConfiguration::setWaitUntilFsodbPropagation(int waitUntilFsodbPropagation) {
 	waitUntilFSODBPropagation = waitUntilFsodbPropagation;
 }
 
-int LSAlgorithmConfiguration::getWaitUntilPduftComputation() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilPduftComputation() const {
 	return waitUntilPDUFTComputation;
 }
 
-void LSAlgorithmConfiguration::setWaitUntilPduftComputation(int waitUntilPduftComputation) {
+void PDUFTableGeneratorConfiguration::setWaitUntilPduftComputation(int waitUntilPduftComputation) {
 	waitUntilPDUFTComputation = waitUntilPduftComputation;
 }
 
-int LSAlgorithmConfiguration::getWaitUntilReadCdap() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilReadCdap() const {
 	return waitUntilReadCDAP;
 }
 
-void LSAlgorithmConfiguration::setWaitUntilReadCdap(int waitUntilReadCdap) {
+void PDUFTableGeneratorConfiguration::setWaitUntilReadCdap(int waitUntilReadCdap) {
 	waitUntilReadCDAP = waitUntilReadCdap;
 }
 
-/* CLASS PDUFTableConfiguration */
-
-PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration()
-{
-	this->algorithm = NULL;
+int PDUFTableGeneratorConfiguration::getMaximumAge() const {
+	return maximumAge;
 }
 
-PDUFTableGeneratorConfiguration::~PDUFTableGeneratorConfiguration()
-{
-	delete this->algorithm;
-}
-
-IAlgorithmConfiguration* PDUFTableGeneratorConfiguration::getAlgorithm() const{
-	return this->algorithm;
-}
-
-void PDUFTableGeneratorConfiguration::setAlgorithm(IAlgorithmConfiguration* algorithm){
-	this->algorithm = algorithm;
-}
-
-bool PDUFTableGeneratorConfiguration::isInitialized(){
-	return this->algorithm != NULL;
+void PDUFTableGeneratorConfiguration::setMaximumAge(const int maximumAge) {
+	this->maximumAge = maximumAge;
 }
 
 /* CLASS DIF INFORMATION */
@@ -1434,6 +1410,11 @@ DIFConfiguration::getDataTransferConstants() const {
 void DIFConfiguration::setDataTransferConstants(
                 const DataTransferConstants& dataTransferConstants) {
         this->dataTransferConstants = dataTransferConstants;
+}
+
+void DIFConfiguration::setPdufTableGeneratorConfiguration(const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration)
+{
+	this->pdufTableGeneratorConfiguration = pdufTableGeneratorConfiguration;
 }
 
 /* CLASS NEIGHBOR */

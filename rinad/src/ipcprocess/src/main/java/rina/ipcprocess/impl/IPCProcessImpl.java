@@ -186,7 +186,7 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
-		pduForwardingTable = new PDUFTImpl(/*TODO: Set maximum age by config*/10000);
+		pduForwardingTable = new PDUFTImpl();
 		ribDaemon.setIPCProcess(this);
 		enrollmentTask.setIPCProcess(this);
 		resourceAllocator.setIPCProcess(this);

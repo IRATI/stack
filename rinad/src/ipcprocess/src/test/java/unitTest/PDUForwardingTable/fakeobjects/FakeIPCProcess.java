@@ -102,7 +102,7 @@ public class FakeIPCProcess implements IPCProcess{
 	@Override
 	public ApplicationProcessNamingInformation getName() {
 		// TODO Auto-generated method stub
-		return null;
+		return new ApplicationProcessNamingInformation("normal.DIF");
 	}
 
 	@Override

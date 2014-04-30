@@ -38,7 +38,7 @@ public class PDUFTImplTest {
 	@Before
 	public void set()
 	{
-		impl = new PDUFTImpl(2147483647);
+		impl = new PDUFTImpl();
 		impl.setTest(true);
 	}
 

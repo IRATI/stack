@@ -52,7 +52,7 @@ public class FlowStateDatabaseTest {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
 		
-		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
+		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(),ipc));
 		
 		Assert.assertTrue(db.isModified());
 	}
@@ -64,10 +64,10 @@ public class FlowStateDatabaseTest {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
 		
-		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
+		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(),ipc));
 		db.setModified(false);
 		try {
-			db.incrementAge(3, new FlowStateRIBObjectGroup(new PDUFTImpl(5000),ipc));
+			db.incrementAge(3, new FlowStateRIBObjectGroup(new PDUFTImpl(),ipc));
 		} catch (RIBDaemonException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
