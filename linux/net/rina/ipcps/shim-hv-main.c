@@ -93,6 +93,7 @@ struct ipcp_instance_data {
         struct kfa              *kfa;
         struct list_head        registered_applications;
         struct mutex            reg_lock;
+        struct mutex            vc_lock;
         struct shim_hv_vmpi     vmpi;
 };
 
@@ -272,6 +273,8 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         ASSERT(src_application);
         ASSERT(dst_application);
 
+        mutex_lock(&priv->vc_lock);
+
         /* Select an unused channel. */
         for (ch = 1; ch < VMPI_MAX_CHANNELS; ch++)
                 if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL)
@@ -333,6 +336,7 @@ msg_alloc:
 dst_name_alloc:
         rkfree(src_name);
 src_name_alloc:
+        mutex_unlock(&priv->vc_lock);
         if (err) {
                 /* The flow was allocated outside this module. Are we
                  * in charge of deallocate it this method fails?
@@ -351,12 +355,17 @@ static int
 shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                                port_id_t port_id, int result)
 {
-        unsigned int ch = port_id_to_channel(priv, port_id);
+        unsigned int ch;
         int ret;
         int response = RESP_KO;
 
+        mutex_lock(&priv->vc_lock);
+
+        ch = port_id_to_channel(priv, port_id);
+
         if (!ch) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
+                mutex_unlock(&priv->vc_lock);
                 return -1;
         }
 
@@ -390,6 +399,8 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 LOG_INFO("%s: channel %d --> NULL", __func__, ch);
         }
 resp:
+        mutex_unlock(&priv->vc_lock);
+
         shim_hv_send_allocate_resp(priv, ch, response);
 
         return (response == RESP_OK) ? 0 : -1;
@@ -406,11 +417,15 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: invalid channel %u", __func__, ch);
                 return -1;
         }
+
+        mutex_lock(&priv->vc_lock);
+
         port_id = priv->vmpi.channels[ch].port_id;
 
         if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL) {
                 LOG_ERR("%s: channel state is already NULL", __func__);
-                return -1;
+                ret = -1;
+                goto out;
         }
 
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
@@ -421,6 +436,8 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
         if (ret) {
                 LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
+out:
+        mutex_unlock(&priv->vc_lock);
 
         return ret;
 }
@@ -479,6 +496,8 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
                 goto out;
         }
+
+        mutex_lock(&priv->vc_lock);
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_NULL) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
@@ -539,6 +558,7 @@ dst_app:
         if (src_application)
                 rkfree(src_application);
 reject:
+        mutex_unlock(&priv->vc_lock);
         if (err)
                 shim_hv_send_allocate_resp(priv, ch, RESP_KO);
 out:
@@ -555,6 +575,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         uint8_t response;
         port_id_t port_id;
         int ret = -1;
+
+        mutex_lock(&priv->vc_lock);
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
@@ -614,6 +636,8 @@ flow_commit:
                         LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
 out:
+        mutex_unlock(&priv->vc_lock);
+
         return;
 }
 
@@ -998,6 +1022,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
 
         INIT_LIST_HEAD(&priv->registered_applications);
         mutex_init(&priv->reg_lock);
+        mutex_init(&priv->vc_lock);
 
         priv->kfa = kipcm_kfa(default_kipcm);
         ASSERT(priv->kfa);
