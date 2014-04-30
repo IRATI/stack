@@ -163,9 +163,11 @@ static void handle_tx(struct vmpi_impl_info *vi)
                         wake_up_interruptible_poll(&read->wqh, POLLIN |
                                 POLLRDNORM | POLLRDBAND);
                     } else {
+	                mutex_unlock(&vq->mutex);
                         vi->read_cb(vi->read_cb_data, channel,
                                     vmpi_buffer_data(buf),
                                     buf->len - sizeof(struct vmpi_hdr));
+	                mutex_lock(&vq->mutex);
                         vmpi_buffer_destroy(buf);
                     }
                 }
