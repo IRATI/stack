@@ -403,6 +403,11 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 	LOG_DBG("tcp_udp_init");
         ASSERT(data);
 
+        bzero(&tcp_udp_data, sizeof(tcp_udp_data));
+        INIT_LIST_HEAD(&(data->instances));
+
+        LOG_INFO("%s initialized", SHIM_NAME);
+
         return 0;
 }
 
@@ -410,6 +415,8 @@ static int tcp_udp_fini(struct ipcp_factory_data * data)
 {
 	LOG_DBG("tcp_udp_fini");
         ASSERT(data);
+
+        ASSERT(list_empty(&(data->instances)));
 
         return 0;
 }
@@ -436,7 +443,10 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                                               ipc_process_id_t           id)
 {
 	struct ipcp_instance *inst;
+
+	LOG_DBG("tcp_udp_fini");
         ASSERT(data);
+
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst)
