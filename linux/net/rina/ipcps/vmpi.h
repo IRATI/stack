@@ -1,7 +1,6 @@
-/*
- *  VMPI
+/* A Virtual MPI interface
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,46 +14,46 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef VMPI_H
-#define VMPI_H
+#ifndef __VMPI_H__
+#define __VMPI_H__
 
-typedef uint32_t vq_id_t;
-typedef uint32_t vc_id_t;
 
-struct vq_caps;
+typedef struct vmpi_info vmpi_info_t;
 
-bool    vq_caps_get(vq_id_t vq, struct vq_caps * caps);
+/* Do not call this function directly, use the wrappers instead. */
+ssize_t vmpi_write_common(vmpi_info_t *mpi, unsigned int channel,
+                          const struct iovec *iv, unsigned long iovlen,
+                          int user);
 
-int     vq_write(vq_id_t vq, void * data, size_t length);
-void    vq_notify_pending(vq_id_t vq,
-                          void  (*cb)(vq_id_t vq));
-int     vq_read(vq_id_t vq, void ** data, size_t * length);
+/* Use vmpi_write() when writing an userspace buffer. */
+static inline ssize_t
+vmpi_write(vmpi_info_t *mpi, unsigned int channel,
+           const struct iovec *iv, unsigned long iovlen)
+{
+        return vmpi_write_common(mpi, channel, iv, iovlen, 1);
+}
 
-/* Generic VQ functionalities */
-vq_id_t vq_allocate(void);
-void    vq_release(vq_id_t id);
-bool    vq_is_ok(vq_id_t vq);
+/* Use vmpi_write_kernel() when writing a kernelspace buffer. */
+static inline ssize_t
+vmpi_write_kernel(vmpi_info_t *mpi, unsigned int channel,
+                  const struct iovec *iv, unsigned long iovlen)
+{
+        return vmpi_write_common(mpi, channel, iv, iovlen, 0);
+}
 
-/* Generic VC functionalities */
-vc_id_t vc_allocate(vq_id_t vq);
-void    vc_release(vq_id_t vq, vc_id_t vc);
-bool    vc_is_ok(vq_id_t vq, vc_id_t vc);
+/* Use vmpi_read() when reading into an userspace buffer. */
+ssize_t vmpi_read(vmpi_info_t *mpi, unsigned int channel,
+                  const struct iovec *iv, unsigned long iovcnt);
 
-struct vc_caps;
-bool    vc_caps_get(vq_id_t vq, vc_id_t vc, struct vc_caps * caps);
+typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
+                               const char *buffer, int len);
 
-/* DCC (VQ and VC) related functionalities */
-void    dcc_ingress(vq_id_t * vq, vc_id_t * vc);
-vq_id_t dcc_egress(vq_id_t * vq, vc_id_t * vc);
+int vmpi_register_read_callback(vmpi_info_t *mpi, vmpi_read_cb_t rcb,
+                                void *opaque);
 
-/* Message transfer */
-int     vc_write(vq_id_t vq, vc_id_t vc, void * data, size_t length);
-void    vc_notify_pending(vq_id_t vq,
-                          vc_id_t vc,
-                          void  (*cb)(vq_id_t vq, vc_id_t vc));
-int     vc_read(vq_id_t vq, vc_id_t vc, void ** data, size_t * length);
+#include "vmpi-limits.h"
 
-#endif
+#endif  /* __VMPI_H__ */

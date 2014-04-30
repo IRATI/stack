@@ -5,5 +5,5 @@ set -x
 # prepare the host
 
 sudo modprobe vhost
-sudo insmod vhost-mpi.ko
+sudo modprobe vmpi-host-virtio
 sudo chmod a+rwx /dev/vhost-mpi

@@ -75,23 +75,25 @@ config RINA_SHIM_TCP_UDP
 	help
 	  No help for the time being
 
-config RINA_SHIM_HV_VMPI
-	tristate "Shim IPC for Hypervisors VMPI support"
-	default m
+config RINA_SHIM_HV_VIRTIO
+	boolean "Shim IPC for Hypervisors (using  Virtio)"
+	default n
         depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
 
-config RINA_SHIM_HV_VIRTIO
-	tristate "Shim IPC for Hypervisors (using Virtio)"
+config RINA_SHIM_HV_VIRTIO_GUEST
+	tristate "Guest support"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_SHIM_HV_VMPI && VIRTIO
+        depends on RINA_PERSONALITY_DEFAULT && RINA_SHIM_HV_VIRTIO
+        select VIRTIO
 	help
 	  No help for the time being
 
-config RINA_SHIM_HV_XEN
-	tristate "Shim IPC for Hypervisors (using XEN)"
+config RINA_SHIM_HV_VIRTIO_HOST
+	tristate "Host support"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_SHIM_HV_VMPI
+        depends on RINA_PERSONALITY_DEFAULT && RINA_SHIM_HV_VIRTIO
+        select VHOST
 	help
 	  No help for the time being

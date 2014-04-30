@@ -1,7 +1,6 @@
-/*
- *  VMPI - LL (VirtIO)
+/* Interface to SHIM-HV for VMPI.
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +14,15 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <linux/kernel.h>
+#ifndef __SHIM_HV_H__
+#define __SHIM_HV_H__
 
-#define RINA_PREFIX "vmpi-ll-virtio"
+#include "vmpi-ops.h"
 
-#include "logs.h"
-#include "vmpi.h"
+int shim_hv_init(struct vmpi_ops *ops);
+void shim_hv_fini(void);
+
+#endif  /* __SHIM_HV_H__ */

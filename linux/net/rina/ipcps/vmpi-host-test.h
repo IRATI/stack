@@ -17,39 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <linux/uio.h>
-#include <linux/aio.h>
-#include <linux/compat.h>
-#include <linux/fs.h>
+#ifndef __VMPI_HOST_TEST_H__
+#define __VMPI_HOST_TEST_H__
 
-#include "vmpi.h"
-#include "vmpi-host-test.h"
-
+/* Enable hypervisor-side test interface. */
+//#define VMPI_HOST_TEST
 
 #ifdef VMPI_HOST_TEST
-struct vmpi_info *vmpi_info_from_file_private_data(void *);
-
 ssize_t vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
-                            unsigned long iovcnt, loff_t pos)
-{
-    struct file *file = iocb->ki_filp;
-    vmpi_info_t *mpi = vmpi_info_from_file_private_data(file->private_data);
-
-    return vmpi_write(mpi, iv, iovcnt);
-}
-
+                            unsigned long iovcnt, loff_t pos);
 ssize_t vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
-                           unsigned long iovcnt, loff_t pos)
-{
-    struct file *file = iocb->ki_filp;
-    vmpi_info_t *mpi = vmpi_info_from_file_private_data(file->private_data);
-    ssize_t ret;
-
-    ret = vmpi_read(mpi, iv, iovcnt);
-
-    if (ret > 0)
-        iocb->ki_pos = ret;
-
-    return ret;
-}
+                           unsigned long iovcnt, loff_t pos);
 #endif  /* VMPI_HOST_TEST */
+
+#endif  /* __VMPI_HOST_TEST_H__ */
+

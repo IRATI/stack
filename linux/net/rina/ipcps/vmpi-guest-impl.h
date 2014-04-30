@@ -1,4 +1,4 @@
-/* A vmpi-impl interface for the hypervisor side
+/* A vmpi-impl interface for the hypervisor
  *
  * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
@@ -16,36 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __VMPI_HOST_IMPL_H__
-#define __VMPI_HOST_IMPL_H__
 
-#include <linux/compat.h>
-#include <linux/eventfd.h>
-#include <linux/vhost.h>
-#include <linux/miscdevice.h>
-#include <linux/module.h>
-#include <linux/moduleparam.h>
-#include <linux/mutex.h>
-#include <linux/workqueue.h>
-#include <linux/file.h>
-#include <linux/slab.h>
-#include <linux/aio.h>
+#ifndef __VMPI_GUEST_IMPL_H__
+#define __VMPI_GUEST_IMPL_H__
 
-#include "vhost.h"
-
-#include "vmpi-ring.h"
+#include "vmpi-structs.h"
 
 
 typedef struct vmpi_impl_info vmpi_impl_info_t;
 typedef struct vmpi_info vmpi_info_t;
 
+typedef void (*vmpi_impl_callback_t)(vmpi_impl_info_t *);
+
+struct vmpi_impl_info *vmpi_impl_get_instance(void);
 int vmpi_impl_write_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
-int vmpi_impl_give_rx_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
+void vmpi_impl_txkick(vmpi_impl_info_t *vi);
+void vmpi_impl_rxkick(vmpi_impl_info_t *vi);
+struct vmpi_buffer * vmpi_impl_get_written_buffer(vmpi_impl_info_t *vi);
+struct vmpi_buffer * vmpi_impl_read_buffer(vmpi_impl_info_t *vi);
+bool vmpi_impl_send_cb(vmpi_impl_info_t *vi, int enable);
+bool vmpi_impl_receive_cb(vmpi_impl_info_t *vi, int enable);
+void vmpi_impl_callbacks_register(vmpi_impl_info_t *vi,
+                                  vmpi_impl_callback_t xmit,
+                                  vmpi_impl_callback_t recv);
+void vmpi_impl_callbacks_unregister(vmpi_impl_info_t *vi);
 
-struct vmpi_ring *vmpi_get_write_ring(vmpi_info_t *mpi);
-struct vmpi_ring *vmpi_get_read_ring(vmpi_info_t *mpi);
-struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *err);
-void vmpi_fini(vmpi_info_t *mpi);
 vmpi_info_t *vmpi_info_from_vmpi_impl_info(vmpi_impl_info_t *vi);
+vmpi_info_t *vmpi_init(vmpi_impl_info_t *vi, int *err);
+void vmpi_fini(void);
 
-#endif  /* __VMPI_HOST_IMPL_H__ */
+
+#endif  /* __VMPI_GUEST_IMPL_H__ */

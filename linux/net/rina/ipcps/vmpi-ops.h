@@ -1,4 +1,4 @@
-/* Test interface for VMPI on the hypervisor
+/* A Virtual MPI interface
  *
  * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
@@ -17,18 +17,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __VMPI_HOST_TEST_H__
-#define __VMPI_HOST_TEST_H__
+#ifndef __VMPI_OPS_H__
+#define __VMPI_OPS_H__
 
-/* Enable hypervisor-side test interface. */
-#define VMPI_HOST_TEST
+typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
+                               const char *buffer, int len);
 
-#ifdef VMPI_HOST_TEST
-ssize_t vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
-                            unsigned long iovcnt, loff_t pos);
-ssize_t vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
-                           unsigned long iovcnt, loff_t pos);
-#endif  /* VMPI_HOST_TEST */
+struct vmpi_ops {
+        /* Write a kernelspace buffer. */
+        ssize_t (*write)(struct vmpi_ops *ops, unsigned int channel,
+                      const struct iovec *iv, unsigned long iovlen);
+        int (*register_read_callback)(struct vmpi_ops *ops, vmpi_read_cb_t rcb,
+                                   void *opaque);
 
-#endif  /* __VMPI_HOST_TEST_H__ */
+        /* Private: do not use. */
+        void *priv;
+};
 
+#include "vmpi-limits.h"
+
+#endif  /* __VMPI_OPS_H__ */

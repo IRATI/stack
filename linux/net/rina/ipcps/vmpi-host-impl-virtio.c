@@ -30,9 +30,11 @@
 #include <linux/aio.h>
 #include <linux/sched.h>
 
-#include "vhost.h"
+#include "../../../drivers/vhost/vhost.h"
 
-#include "vmpi-ring.h"
+#include "vmpi-iovec.h"
+#include "vmpi-structs.h"
+#include "vmpi.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-host-test.h"
 
@@ -71,55 +73,22 @@ struct vmpi_impl_info {
 
         struct vmpi_info *mpi;
         struct vmpi_ring *write;
-        struct vmpi_ring *read;
+        struct vmpi_queue *read;
+        vmpi_read_cb_t read_cb;
+        void *read_cb_data;
 };
 
-static void vhost_mpi_vq_reset(struct vmpi_impl_info *n)
+int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb,
+                                     void *opaque)
 {
+    vi->read_cb = cb;
+    vi->read_cb_data = opaque;
+
+    return 0;
 }
 
-static size_t iovec_to_buf(struct iovec *iov, unsigned int iovcnt,
-                           void *to, size_t len)
+static void vhost_mpi_vq_reset(struct vmpi_impl_info *vi)
 {
-    size_t copylen;
-    size_t tot  = 0;
-
-    while (iovcnt && len) {
-        copylen = iov->iov_len;
-        if (len < copylen) {
-            copylen = len;
-        }
-        memcpy(to, iov->iov_base, copylen);
-        tot += copylen;
-        len -= copylen;
-        to += copylen;
-        iovcnt--;
-        iov++;
-    }
-
-    return tot;
-}
-
-static size_t iovec_from_buf(struct iovec *iov, unsigned int iovcnt,
-                             void *from, size_t len)
-{
-    size_t copylen;
-    size_t tot  = 0;
-
-    while (iovcnt && len) {
-        copylen = iov->iov_len;
-        if (len < copylen) {
-            copylen = len;
-        }
-        memcpy(iov->iov_base, from, copylen);
-        tot += copylen;
-        len -= copylen;
-        from += copylen;
-        iovcnt--;
-        iov++;
-    }
-
-    return tot;
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -128,12 +97,13 @@ static void handle_tx(struct vmpi_impl_info *vi)
 {
 	struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_NET_VQ_TX];
 	struct vhost_virtqueue *vq = &nvq->vq;
-        struct vmpi_ring *ring = vi->read;
+        struct vmpi_queue *read;
 	unsigned out, in;
 	int head;
 	size_t len, total_len = 0;
         void *opaque;
         struct vmpi_buffer *buf = NULL;
+        unsigned int channel;
 
 	mutex_lock(&vq->mutex);
 	opaque = vq->private_data;
@@ -164,16 +134,43 @@ static void handle_tx(struct vmpi_impl_info *vi)
 			break;
 		}
 
-                buf = &ring->bufs[ring->np];
                 len = iov_length(vq->iov, out);
-                IFV(printk("transmit (%u, %d)\n", out, (int)len));
-                len = iovec_to_buf(vq->iov, out, buf->p, buf->size);
-                buf->len = len;
-                IFV(printk("popped %d bytes from the TX ring\n", (int)len));
-                VMPI_RING_INC(ring->np);
+                buf = vmpi_buffer_create(VMPI_BUF_SIZE);
+                if (unlikely(buf == NULL)) {
+                    printk("vmpi_buffer_create(%u) failed\n", VMPI_BUF_SIZE);
+                } else {
+                    IFV(printk("transmit (%u, %d)\n", out, (int)len));
+                    len = iovec_to_buf(vq->iov, out, buf->p, VMPI_BUF_SIZE);
+                    buf->len = len;
+                    IFV(printk("popped %d bytes from the TX ring\n", (int)len));
 
-                wake_up_interruptible_poll(&ring->wqh, POLLIN |
-                                            POLLRDNORM | POLLRDBAND);
+                    channel = vmpi_buffer_hdr(buf)->channel;
+                    if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
+                        printk("bogus channel request: %u\n", channel);
+                        channel = 0;
+                    }
+
+                    if (!vi->read_cb) {
+                        read = &vi->read[channel];
+                        mutex_lock(&read->lock);
+                        if (unlikely(vmpi_queue_len(read) >= VMPI_RING_SIZE)) {
+                            vmpi_buffer_destroy(buf);
+                        } else {
+                            vmpi_queue_push(read, buf);
+                        }
+                        mutex_unlock(&read->lock);
+
+                        wake_up_interruptible_poll(&read->wqh, POLLIN |
+                                POLLRDNORM | POLLRDBAND);
+                    } else {
+	                mutex_unlock(&vq->mutex);
+                        vi->read_cb(vi->read_cb_data, channel,
+                                    vmpi_buffer_data(buf),
+                                    buf->len - sizeof(struct vmpi_hdr));
+	                mutex_lock(&vq->mutex);
+                        vmpi_buffer_destroy(buf);
+                    }
+                }
 
 		vhost_add_used_and_signal(&vi->dev, vq, head, 0);
 		total_len += len;
@@ -364,131 +361,125 @@ static void handle_rx_mpi(struct vhost_work *work)
 
 static int vhost_mpi_open(struct inode *inode, struct file *f)
 {
-	struct vmpi_impl_info *n = kmalloc(sizeof *n, GFP_KERNEL);
+	struct vmpi_impl_info *vi = kmalloc(sizeof *vi, GFP_KERNEL);
 	struct vhost_dev *dev;
 	struct vhost_virtqueue **vqs;
 	int r;
 
-	if (!n)
+	if (!vi)
 		return -ENOMEM;
 	vqs = kmalloc(VHOST_NET_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
 	if (!vqs) {
-		kfree(n);
+		kfree(vi);
 		return -ENOMEM;
 	}
 
-	dev = &n->dev;
-	vqs[VHOST_NET_VQ_TX] = &n->vqs[VHOST_NET_VQ_TX].vq;
-	vqs[VHOST_NET_VQ_RX] = &n->vqs[VHOST_NET_VQ_RX].vq;
-	n->vqs[VHOST_NET_VQ_TX].vq.handle_kick = handle_tx_kick;
-	n->vqs[VHOST_NET_VQ_RX].vq.handle_kick = handle_rx_kick;
-        n->mpi = vmpi_init(n, &r);
-        if (n->mpi == NULL) {
+	dev = &vi->dev;
+	vqs[VHOST_NET_VQ_TX] = &vi->vqs[VHOST_NET_VQ_TX].vq;
+	vqs[VHOST_NET_VQ_RX] = &vi->vqs[VHOST_NET_VQ_RX].vq;
+	vi->vqs[VHOST_NET_VQ_TX].vq.handle_kick = handle_tx_kick;
+	vi->vqs[VHOST_NET_VQ_RX].vq.handle_kick = handle_rx_kick;
+
+	vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
+
+	vhost_poll_init(vi->poll + VHOST_NET_VQ_TX, handle_tx_mpi, POLLOUT, dev);
+	vhost_poll_init(vi->poll + VHOST_NET_VQ_RX, handle_rx_mpi, POLLIN, dev);
+
+	f->private_data = vi;
+        vi->file = f;
+
+        init_waitqueue_head(&vi->wqh_poll);
+
+        vi->mpi = vmpi_init(vi, &r);
+        if (vi->mpi == NULL) {
             goto buf_alloc_fail;
         }
-        n->write = vmpi_get_write_ring(n->mpi);
-        n->read = vmpi_get_read_ring(n->mpi);
-
-	r = vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
-	if (r < 0) {
-                vmpi_fini(n->mpi);
-		kfree(n);
-		kfree(vqs);
-		return r;
-	}
-
-	vhost_poll_init(n->poll + VHOST_NET_VQ_TX, handle_tx_mpi, POLLOUT, dev);
-	vhost_poll_init(n->poll + VHOST_NET_VQ_RX, handle_rx_mpi, POLLIN, dev);
-
-	f->private_data = n;
-        n->file = f;
-
-        init_waitqueue_head(&n->wqh_poll);
-        /* Mark the read vmpi ring (corresponding to the virtio TX ring)
-           as completely available. */
-        n->read->nu = RING_SIZE - 1;
+        vi->write = vmpi_get_write_ring(vi->mpi);
+        vi->read = vmpi_get_read_queue(vi->mpi);
+        vi->read_cb = NULL;
 
         printk("vhost_mpi_open completed\n");
 
 	return 0;
 
 buf_alloc_fail:
+    vhost_dev_cleanup(&vi->dev, false);
     kfree(vqs);
-    kfree(n);
+    kfree(vi);
 
-    return -ENOMEM;
+    return r;
 }
 
-static void vhost_mpi_disable_vq(struct vmpi_impl_info *n,
+static void vhost_mpi_disable_vq(struct vmpi_impl_info *vi,
 				 struct vhost_virtqueue *vq)
 {
 	struct vmpi_impl_queue *nvq =
 		container_of(vq, struct vmpi_impl_queue, vq);
-	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
+	struct vhost_poll *poll = vi->poll + (nvq - vi->vqs);
 	if (!vq->private_data)
 		return;
 	vhost_poll_stop(poll);
 }
 
-static int vhost_mpi_enable_vq(struct vmpi_impl_info *n,
+static int vhost_mpi_enable_vq(struct vmpi_impl_info *vi,
 				struct vhost_virtqueue *vq)
 {
 	struct vmpi_impl_queue *nvq =
 		container_of(vq, struct vmpi_impl_queue, vq);
-	struct vhost_poll *poll = n->poll + (nvq - n->vqs);
+	struct vhost_poll *poll = vi->poll + (nvq - vi->vqs);
 
-	return vhost_poll_start(poll, n->file);
+	return vhost_poll_start(poll, vi->file);
 }
 
-static void vhost_mpi_stop_vq(struct vmpi_impl_info *n,
+static void vhost_mpi_stop_vq(struct vmpi_impl_info *vi,
 					struct vhost_virtqueue *vq)
 {
 	mutex_lock(&vq->mutex);
-	vhost_mpi_disable_vq(n, vq);
+	vhost_mpi_disable_vq(vi, vq);
 	vq->private_data = NULL;
 	mutex_unlock(&vq->mutex);
 }
 
-static void vhost_mpi_stop(struct vmpi_impl_info *n)
+static void vhost_mpi_stop(struct vmpi_impl_info *vi)
 {
-	vhost_mpi_stop_vq(n, &n->vqs[VHOST_NET_VQ_TX].vq);
-	vhost_mpi_stop_vq(n, &n->vqs[VHOST_NET_VQ_RX].vq);
+	vhost_mpi_stop_vq(vi, &vi->vqs[VHOST_NET_VQ_TX].vq);
+	vhost_mpi_stop_vq(vi, &vi->vqs[VHOST_NET_VQ_RX].vq);
 }
 
-static void vhost_mpi_flush_vq(struct vmpi_impl_info *n, int index)
+static void vhost_mpi_flush_vq(struct vmpi_impl_info *vi, int index)
 {
-	vhost_poll_flush(n->poll + index);
-	vhost_poll_flush(&n->vqs[index].vq.poll);
+	vhost_poll_flush(vi->poll + index);
+	vhost_poll_flush(&vi->vqs[index].vq.poll);
 }
 
-static void vhost_mpi_flush(struct vmpi_impl_info *n)
+static void vhost_mpi_flush(struct vmpi_impl_info *vi)
 {
-	vhost_mpi_flush_vq(n, VHOST_NET_VQ_TX);
-	vhost_mpi_flush_vq(n, VHOST_NET_VQ_RX);
+	vhost_mpi_flush_vq(vi, VHOST_NET_VQ_TX);
+	vhost_mpi_flush_vq(vi, VHOST_NET_VQ_RX);
 }
 
 static int vhost_mpi_release(struct inode *inode, struct file *f)
 {
-	struct vmpi_impl_info *n = f->private_data;
+	struct vmpi_impl_info *vi = f->private_data;
 
-	vhost_mpi_stop(n);
-	vhost_mpi_flush(n);
-	vhost_dev_stop(&n->dev);
-	vhost_dev_cleanup(&n->dev, false);
-	vhost_mpi_vq_reset(n);
+	vhost_mpi_stop(vi);
+	vhost_mpi_flush(vi);
+	vhost_dev_stop(&vi->dev);
+	vhost_dev_cleanup(&vi->dev, false);
+	vhost_mpi_vq_reset(vi);
 	/* We do an extra flush before freeing memory,
 	 * since jobs can re-queue themselves. */
-	vhost_mpi_flush(n);
-        vmpi_fini(n->mpi);
-	kfree(n->dev.vqs);
-	kfree(n);
+	vhost_mpi_flush(vi);
+        vmpi_fini(vi->mpi);
+	kfree(vi->dev.vqs);
+	kfree(vi);
 
         printk("vhost_mpi_release completed\n");
 
 	return 0;
 }
 
-static long vhost_mpi_startstop(struct vmpi_impl_info *n, unsigned index, unsigned enable)
+static long vhost_mpi_startstop(struct vmpi_impl_info *vi, unsigned index, unsigned enable)
 {
 	struct vhost_virtqueue *vq;
 	struct vmpi_impl_queue *nvq;
@@ -497,8 +488,8 @@ static long vhost_mpi_startstop(struct vmpi_impl_info *n, unsigned index, unsign
 
         printk("vhost_mpi_startstop idx = %d enable = %d\n", index, enable);
 
-	mutex_lock(&n->dev.mutex);
-	r = vhost_dev_check_owner(&n->dev);
+	mutex_lock(&vi->dev.mutex);
+	r = vhost_dev_check_owner(&vi->dev);
 	if (r)
 		goto err;
 
@@ -506,8 +497,8 @@ static long vhost_mpi_startstop(struct vmpi_impl_info *n, unsigned index, unsign
 		r = -ENOBUFS;
 		goto err;
 	}
-	vq = &n->vqs[index].vq;
-	nvq = &n->vqs[index];
+	vq = &vi->vqs[index].vq;
+	nvq = &vi->vqs[index];
 	mutex_lock(&vq->mutex);
 
 	/* Verify that ring has been setup correctly. */
@@ -517,7 +508,7 @@ static long vhost_mpi_startstop(struct vmpi_impl_info *n, unsigned index, unsign
 	}
 
         if (enable) {
-	    file = n->file;
+	    file = vi->file;
         } else {
             file = NULL;
         }
@@ -525,12 +516,12 @@ static long vhost_mpi_startstop(struct vmpi_impl_info *n, unsigned index, unsign
 	/* start polling new socket */
 	oldfile = vq->private_data;
 	if (file != oldfile) {
-		vhost_mpi_disable_vq(n, vq);
+		vhost_mpi_disable_vq(vi, vq);
 		vq->private_data = file;
 		r = vhost_init_used(vq);
 		if (r)
 			goto err_used;
-		r = vhost_mpi_enable_vq(n, vq);
+		r = vhost_mpi_enable_vq(vi, vq);
 		if (r)
 			goto err_used;
 	}
@@ -538,29 +529,29 @@ static long vhost_mpi_startstop(struct vmpi_impl_info *n, unsigned index, unsign
 	mutex_unlock(&vq->mutex);
 
 	if (oldfile) {
-		vhost_mpi_flush_vq(n, index);
+		vhost_mpi_flush_vq(vi, index);
 	}
 
-	mutex_unlock(&n->dev.mutex);
+	mutex_unlock(&vi->dev.mutex);
 	return 0;
 
 err_used:
 	vq->private_data = oldfile;
-	vhost_mpi_enable_vq(n, vq);
+	vhost_mpi_enable_vq(vi, vq);
 err_vq:
 	mutex_unlock(&vq->mutex);
 err:
-	mutex_unlock(&n->dev.mutex);
+	mutex_unlock(&vi->dev.mutex);
 	return r;
 }
 
-static long vhost_mpi_reset_owner(struct vmpi_impl_info *n)
+static long vhost_mpi_reset_owner(struct vmpi_impl_info *vi)
 {
 	long err;
 	struct vhost_memory *memory;
 
-	mutex_lock(&n->dev.mutex);
-	err = vhost_dev_check_owner(&n->dev);
+	mutex_lock(&vi->dev.mutex);
+	err = vhost_dev_check_owner(&vi->dev);
 	if (err)
 		goto done;
 	memory = vhost_dev_reset_owner_prepare();
@@ -568,43 +559,43 @@ static long vhost_mpi_reset_owner(struct vmpi_impl_info *n)
 		err = -ENOMEM;
 		goto done;
 	}
-	vhost_mpi_stop(n);
-	vhost_mpi_flush(n);
-	vhost_dev_reset_owner(&n->dev, memory);
-	vhost_mpi_vq_reset(n);
+	vhost_mpi_stop(vi);
+	vhost_mpi_flush(vi);
+	vhost_dev_reset_owner(&vi->dev, memory);
+	vhost_mpi_vq_reset(vi);
 done:
-	mutex_unlock(&n->dev.mutex);
+	mutex_unlock(&vi->dev.mutex);
 	return err;
 }
 
-static int vhost_mpi_set_features(struct vmpi_impl_info *n, u64 features)
+static int vhost_mpi_set_features(struct vmpi_impl_info *vi, u64 features)
 {
-	mutex_lock(&n->dev.mutex);
+	mutex_lock(&vi->dev.mutex);
 	if ((features & (1 << VHOST_F_LOG_ALL)) &&
-	    !vhost_log_access_ok(&n->dev)) {
-		mutex_unlock(&n->dev.mutex);
+	    !vhost_log_access_ok(&vi->dev)) {
+		mutex_unlock(&vi->dev.mutex);
 		return -EFAULT;
 	}
-	n->dev.acked_features = features;
+	vi->dev.acked_features = features;
 	smp_wmb();
-	vhost_mpi_flush(n);
-	mutex_unlock(&n->dev.mutex);
+	vhost_mpi_flush(vi);
+	mutex_unlock(&vi->dev.mutex);
 	return 0;
 }
 
-static long vhost_mpi_set_owner(struct vmpi_impl_info *n)
+static long vhost_mpi_set_owner(struct vmpi_impl_info *vi)
 {
 	int r;
 
-	mutex_lock(&n->dev.mutex);
-	if (vhost_dev_has_owner(&n->dev)) {
+	mutex_lock(&vi->dev.mutex);
+	if (vhost_dev_has_owner(&vi->dev)) {
 		r = -EBUSY;
 		goto out;
 	}
-	r = vhost_dev_set_owner(&n->dev);
-	vhost_mpi_flush(n);
+	r = vhost_dev_set_owner(&vi->dev);
+	vhost_mpi_flush(vi);
 out:
-	mutex_unlock(&n->dev.mutex);
+	mutex_unlock(&vi->dev.mutex);
 	return r;
 }
 
@@ -619,7 +610,7 @@ struct vhost_mpi_command {
 static long vhost_mpi_ioctl(struct file *f, unsigned int ioctl,
 			    unsigned long arg)
 {
-	struct vmpi_impl_info *n = f->private_data;
+	struct vmpi_impl_info *vi = f->private_data;
 	void __user *argp = (void __user *)arg;
 	u64 __user *featurep = argp;
 	struct vhost_mpi_command mpi_cmd;
@@ -630,7 +621,7 @@ static long vhost_mpi_ioctl(struct file *f, unsigned int ioctl,
 	case VHOST_MPI_STARTSTOP:
 		if (copy_from_user(&mpi_cmd, argp, sizeof mpi_cmd))
 			return -EFAULT;
-		return vhost_mpi_startstop(n, mpi_cmd.index, mpi_cmd.enable);
+		return vhost_mpi_startstop(vi, mpi_cmd.index, mpi_cmd.enable);
 	case VHOST_GET_FEATURES:
 		features = VHOST_MPI_FEATURES;
 		if (copy_to_user(featurep, &features, sizeof features))
@@ -641,19 +632,19 @@ static long vhost_mpi_ioctl(struct file *f, unsigned int ioctl,
 			return -EFAULT;
 		if (features & ~VHOST_MPI_FEATURES)
 			return -EOPNOTSUPP;
-		return vhost_mpi_set_features(n, features);
+		return vhost_mpi_set_features(vi, features);
 	case VHOST_RESET_OWNER:
-		return vhost_mpi_reset_owner(n);
+		return vhost_mpi_reset_owner(vi);
 	case VHOST_SET_OWNER:
-		return vhost_mpi_set_owner(n);
+		return vhost_mpi_set_owner(vi);
 	default:
-		mutex_lock(&n->dev.mutex);
-		r = vhost_dev_ioctl(&n->dev, ioctl, argp);
+		mutex_lock(&vi->dev.mutex);
+		r = vhost_dev_ioctl(&vi->dev, ioctl, argp);
 		if (r == -ENOIOCTLCMD)
-			r = vhost_vring_ioctl(&n->dev, ioctl, argp);
+			r = vhost_vring_ioctl(&vi->dev, ioctl, argp);
 		else
-			vhost_mpi_flush(n);
-		mutex_unlock(&n->dev.mutex);
+			vhost_mpi_flush(vi);
+		mutex_unlock(&vi->dev.mutex);
 		return r;
 	}
 }
@@ -668,25 +659,29 @@ static long vhost_mpi_compat_ioctl(struct file *f, unsigned int ioctl,
 
 static unsigned int vhost_mpi_poll(struct file *file, poll_table *wait)
 {
-    struct vmpi_impl_info *n = file->private_data;
-    struct vmpi_ring *write = n->write;
-    struct vmpi_ring *read = n->read;
+    struct vmpi_impl_info *vi = file->private_data;
+    struct vmpi_ring *write = vi->write;
     unsigned int mask = 0;
 
-    if (!n)
+    if (!vi)
         return POLLERR;
 
-    poll_wait(file, &n->wqh_poll, wait);
+    poll_wait(file, &vi->wqh_poll, wait);
 
+    /*
+     * Are there host resources for the guest to receive
+     * (e.g. pending rx packets)?
+     */
     mutex_lock(&write->lock);
     if (vmpi_ring_pending(write))
         mask |= POLLIN | POLLRDNORM;
     mutex_unlock(&write->lock);
 
-    mutex_lock(&read->lock);
-    if (vmpi_ring_pending(read))
-        mask |= POLLOUT | POLLWRNORM;
-    mutex_unlock(&read->lock);
+    /*
+     * Are there host resources for the guest to send
+     * (e.g. buffers in the read pool)?
+     */
+    mask |= POLLOUT | POLLWRNORM;
 
     return mask;
 }
@@ -699,14 +694,6 @@ int vmpi_impl_write_buf(struct vmpi_impl_info *vi,
 
     return 0;
 
-}
-
-int vmpi_impl_give_rx_buf(struct vmpi_impl_info *vi, struct vmpi_buffer *buf)
-{
-    wake_up_interruptible_poll(&vi->wqh_poll, POLLOUT |
-                               POLLWRNORM | POLLWRBAND);
-
-    return 0;
 }
 
 #ifdef VMPI_HOST_TEST
@@ -758,5 +745,5 @@ MODULE_VERSION("0.0.1");
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Vincenzo Maffione");
 MODULE_DESCRIPTION("Host kernel server for virtio mpi");
-MODULE_ALIAS_MISCDEV(VHOST_NET_MINOR);
+MODULE_ALIAS_MISCDEV(VHOST_MPI_MINOR);
 MODULE_ALIAS("devname:vhost-mpi");

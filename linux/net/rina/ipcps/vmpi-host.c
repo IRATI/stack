@@ -22,30 +22,56 @@
 #include <linux/sched.h>
 #include <linux/socket.h>
 
+#include "vmpi.h"
+#include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-host-test.h"
+#include "shim-hv.h"
 
 
 struct vmpi_info {
     struct vmpi_impl_info *vi;
 
     struct vmpi_ring write;
-    struct vmpi_ring read;
+    struct vmpi_queue read[VMPI_MAX_CHANNELS];
+
+    struct vmpi_ops ops;
 };
+
+int vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
+                                void *opaque)
+{
+    return vmpi_impl_register_read_callback(mpi->vi, cb, opaque);
+}
 
 struct vmpi_ring *vmpi_get_write_ring(struct vmpi_info *mpi)
 {
     return &mpi->write;
 }
 
-struct vmpi_ring *vmpi_get_read_ring(struct vmpi_info *mpi)
+struct vmpi_queue *vmpi_get_read_queue(struct vmpi_info *mpi)
 {
-    return &mpi->read;
+    return mpi->read;
+}
+
+static ssize_t
+vmpi_host_ops_write(struct vmpi_ops *ops, unsigned int channel,
+                    const struct iovec *iv, unsigned long iovcnt)
+{
+        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
+}
+
+static int
+vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
+                                      void *opaque)
+{
+        return vmpi_register_read_callback(ops->priv, cb, opaque);
 }
 
 struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
 {
     struct vmpi_info *mpi;
+    int i;
 
     mpi = kmalloc(sizeof(struct vmpi_info), GFP_KERNEL);
     if (mpi == NULL) {
@@ -55,12 +81,22 @@ struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
 
     mpi->vi = vi;
 
-    *err = vmpi_ring_init(&mpi->write);
+    *err = vmpi_ring_init(&mpi->write, VMPI_BUF_SIZE);
     if (*err) {
         goto init_write;
     }
 
-    *err = vmpi_ring_init(&mpi->read);
+    for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
+        *err = vmpi_queue_init(&mpi->read[i], 0, VMPI_BUF_SIZE);
+        if (*err) {
+            goto init_read;
+        }
+    }
+
+    mpi->ops.priv = mpi;
+    mpi->ops.write = vmpi_host_ops_write;
+    mpi->ops.register_read_callback = vmpi_host_ops_register_read_callback;
+    *err = shim_hv_init(&mpi->ops);
     if (*err) {
         goto init_read;
     }
@@ -68,6 +104,9 @@ struct vmpi_info *vmpi_init(struct vmpi_impl_info *vi, int *err)
     return mpi;
 
 init_read:
+    for (--i; i >= 0; i--) {
+        vmpi_queue_fini(&mpi->read[i]);
+    }
     vmpi_ring_fini(&mpi->write);
 init_write:
     kfree(mpi);
@@ -77,19 +116,26 @@ init_write:
 
 void vmpi_fini(struct vmpi_info *mpi)
 {
+    unsigned int i;
+
+    shim_hv_fini();
     mpi->vi = NULL;
     vmpi_ring_fini(&mpi->write);
-    vmpi_ring_fini(&mpi->read);
+    for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
+        vmpi_queue_fini(&mpi->read[i]);
+    }
     kfree(mpi);
 }
 
-ssize_t vmpi_write(struct vmpi_info *mpi, const struct iovec *iv,
-                   unsigned long iovcnt)
+ssize_t vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
+                          const struct iovec *iv, unsigned long iovcnt,
+                          int user)
 {
     //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_RX];
     struct vmpi_ring *ring = &mpi->write;
     size_t len = iov_length(iv, iovcnt);
     DECLARE_WAITQUEUE(wait, current);
+    size_t buf_data_size = ring->buf_size - sizeof(struct vmpi_hdr);
     ssize_t ret = 0;
 
     if (!mpi)
@@ -120,13 +166,18 @@ ssize_t vmpi_write(struct vmpi_info *mpi, const struct iovec *iv,
 
         buf = &ring->bufs[ring->nu];
         copylen = len;
-        if (copylen > buf->size) {
-            copylen = buf->size;
+        if (copylen > buf_data_size) {
+            copylen = buf_data_size;
         }
         ret = copylen;
-        if (memcpy_fromiovecend(buf->p, iv, 0, copylen))
-            ret = -EFAULT;
-        buf->len = copylen;
+        vmpi_buffer_hdr(buf)->channel = channel;
+        if (user) {
+            if (memcpy_fromiovecend(vmpi_buffer_data(buf), iv, 0, copylen))
+                ret = -EFAULT;
+        } else {
+            iovec_to_buf(iv, iovcnt, vmpi_buffer_data(buf), copylen);
+        }
+        buf->len = sizeof(struct vmpi_hdr) + copylen;
         VMPI_RING_INC(ring->nu);
         mutex_unlock(&ring->lock);
 
@@ -141,33 +192,35 @@ ssize_t vmpi_write(struct vmpi_info *mpi, const struct iovec *iv,
     return ret;
 }
 
-ssize_t vmpi_read(struct vmpi_info *mpi, const struct iovec *iv,
-                         unsigned long iovcnt)
+ssize_t vmpi_read(struct vmpi_info *mpi, unsigned int channel,
+                  const struct iovec *iv, unsigned long iovcnt)
 {
     //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_TX];
-    struct vmpi_ring *ring = &mpi->read;
+    struct vmpi_queue *queue;
     ssize_t len = iov_length(iv, iovcnt);
     DECLARE_WAITQUEUE(wait, current);
     ssize_t ret = 0;
 
-    if (!mpi) {
+    if (unlikely(!mpi)) {
         return -EBADFD;
     }
 
-    if (len < 0) {
+    if (unlikely(channel >= VMPI_MAX_CHANNELS || len < 0)) {
         return -EINVAL;
     }
 
-    add_wait_queue(&ring->wqh, &wait);
+    queue = &mpi->read[channel];
+
+    add_wait_queue(&queue->wqh, &wait);
     while (len) {
         struct vmpi_buffer *buf;
         size_t copylen;
 
         current->state = TASK_INTERRUPTIBLE;
 
-        mutex_lock(&ring->lock);
-        if (vmpi_ring_ready(ring) == 0) {
-            mutex_unlock(&ring->lock);
+        mutex_lock(&queue->lock);
+        if (vmpi_queue_len(queue) == 0) {
+            mutex_unlock(&queue->lock);
             if (signal_pending(current)) {
                 ret = -ERESTARTSYS;
                 break;
@@ -178,26 +231,25 @@ ssize_t vmpi_read(struct vmpi_info *mpi, const struct iovec *iv,
             continue;
         }
 
-        buf = &ring->bufs[ring->nr];
-        copylen = buf->len;
+        buf = vmpi_queue_pop(queue);
+        mutex_unlock(&queue->lock);
+
+        copylen = buf->len - sizeof(struct vmpi_hdr);
         if (len < copylen) {
             copylen = len;
         }
         ret = copylen;
-        if (memcpy_toiovecend(iv, buf->p, 0, copylen))
+        if (memcpy_toiovecend(iv, vmpi_buffer_data(buf), 0, copylen))
             ret = -EFAULT;
         buf->len = 0;
-        VMPI_RING_INC(ring->nr);
-        VMPI_RING_INC(ring->nu);
-        mutex_unlock(&ring->lock);
 
-        vmpi_impl_give_rx_buf(mpi->vi, buf);
+        vmpi_buffer_destroy(buf);
 
         break;
     }
 
     current->state = TASK_RUNNING;
-    remove_wait_queue(&ring->wqh, &wait);
+    remove_wait_queue(&queue->wqh, &wait);
 
     return ret;
 }

@@ -21,9 +21,15 @@
 #include <linux/aio.h>
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
+#include <linux/moduleparam.h>
 
 #include "vmpi.h"
 
+
+static unsigned int write_channel = 0;
+module_param(write_channel, uint, 0644);
+static unsigned int read_channel = 0;
+module_param(read_channel, uint, 0644);
 
 static ssize_t vmpi_test_aio_write(struct kiocb *iocb, const struct iovec *iv,
                                     unsigned long iovlen, loff_t pos)
@@ -33,7 +39,7 @@ static ssize_t vmpi_test_aio_write(struct kiocb *iocb, const struct iovec *iv,
 
     /* XXX file->f_flags & O_NONBLOCK */
 
-    return vmpi_write(mpi, iv, iovlen);
+    return vmpi_write(mpi, write_channel, iv, iovlen);
 }
 
 static ssize_t vmpi_test_aio_read(struct kiocb *iocb, const struct iovec *iv,
@@ -43,7 +49,7 @@ static ssize_t vmpi_test_aio_read(struct kiocb *iocb, const struct iovec *iv,
     vmpi_info_t *mpi = file->private_data;
     ssize_t ret;
 
-    ret = vmpi_read(mpi, iv, iovcnt);
+    ret = vmpi_read(mpi, read_channel, iv, iovcnt);
 
     if (ret > 0)
         iocb->ki_pos = ret;
