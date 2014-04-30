@@ -261,8 +261,10 @@ again:
                 }
                 mutex_unlock(&queue->lock);
         } else {
+                mutex_unlock(&mpi->recv_worker_lock);
                 mpi->read_cb(mpi->read_cb_data, channel, vmpi_buffer_data(buf),
                              buf->len - sizeof(struct vmpi_hdr));
+                mutex_lock(&mpi->recv_worker_lock);
                 vmpi_buffer_destroy(buf);
         }
         budget--;
