@@ -34,6 +34,7 @@
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t lock;
+
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
 
@@ -54,7 +55,7 @@ struct dtp_policies {
         int (* transmission_control)(struct dtp * instance,
                                      struct pdu * pdu);
         int (* closed_window)(struct dtp * instance,
-                                      struct pdu * pdu);
+                              struct pdu * pdu);
         int (* flow_control_overrun)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
@@ -130,6 +131,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                         pdu_destroy(pdu);
                         return -1;
                 }
+
                 return 0;
         }
 
@@ -349,7 +351,6 @@ int dtp_write(struct dtp * instance,
         struct dt *           dt;
         struct dtcp *         dtcp;
         struct rtxq *         rtxq;
-        int                   ret = 0;
         struct pdu *          cpdu;
         struct dtp_policies * policies;
 
@@ -361,6 +362,7 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
@@ -369,6 +371,7 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 #endif
+
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
 
@@ -491,22 +494,15 @@ int dtp_write(struct dtp * instance,
                                 }
                         }
                 }
+
                 return 0;
         }
 
         /* Post SDU to RMT */
-        ret = rmt_send(instance->rmt,
-                       pci_destination(pci),
-                       pci_qos_id(pci),
-                       pdu);
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
-        if (rtimer_start(instance->timers.sender_inactivity,
-                         2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start timer");
-                return -1;
-        }
-#endif
-        return ret;
+        return rmt_send(instance->rmt,
+                        pci_destination(pci),
+                        pci_qos_id(pci),
+                        pdu);
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
@@ -723,6 +719,7 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
+
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
@@ -731,5 +728,6 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 #endif
+
         return 0;
 }
