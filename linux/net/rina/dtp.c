@@ -82,6 +82,7 @@ struct dtp {
 
 static struct dtp_sv default_sv = {
         .connection                    = NULL,
+        .nxt_seq                       = 0,
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
@@ -189,7 +190,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        tmp = sv->nxt_seq++;
+        tmp = ++sv->nxt_seq;
         spin_unlock(&sv->lock);
 
         return tmp;
@@ -698,6 +699,8 @@ int dtp_receive(struct dtp * instance,
                 /* Something went wrong! */
                 pdu_destroy(pdu);
                 LOG_ERR("Something is horribly wrong on receiving");
+                LOG_ERR("Seq num: %d", seq_num);
+                LOG_ERR("Max seq num received: %d", max_seq_nr_rcv(sv));
                 return -1;
         }
 #endif
