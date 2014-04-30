@@ -34,6 +34,7 @@
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t lock;
+
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
 
@@ -54,7 +55,7 @@ struct dtp_policies {
         int (* transmission_control)(struct dtp * instance,
                                      struct pdu * pdu);
         int (* closed_window)(struct dtp * instance,
-                                      struct pdu * pdu);
+                              struct pdu * pdu);
         int (* flow_control_overrun)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
@@ -82,6 +83,7 @@ struct dtp {
 
 static struct dtp_sv default_sv = {
         .connection                    = NULL,
+        .nxt_seq                       = 0,
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
@@ -129,6 +131,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                         pdu_destroy(pdu);
                         return -1;
                 }
+
                 return 0;
         }
 
@@ -189,7 +192,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        tmp = sv->nxt_seq++;
+        tmp = ++sv->nxt_seq;
         spin_unlock(&sv->lock);
 
         return tmp;
@@ -348,7 +351,6 @@ int dtp_write(struct dtp * instance,
         struct dt *           dt;
         struct dtcp *         dtcp;
         struct rtxq *         rtxq;
-        int                   ret = 0;
         struct pdu *          cpdu;
         struct dtp_policies * policies;
 
@@ -360,6 +362,7 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
@@ -368,6 +371,7 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 #endif
+
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
 
@@ -490,22 +494,15 @@ int dtp_write(struct dtp * instance,
                                 }
                         }
                 }
+
                 return 0;
         }
 
         /* Post SDU to RMT */
-        ret = rmt_send(instance->rmt,
-                       pci_destination(pci),
-                       pci_qos_id(pci),
-                       pdu);
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
-        if (rtimer_start(instance->timers.sender_inactivity,
-                         2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start timer");
-                return -1;
-        }
-#endif
-        return ret;
+        return rmt_send(instance->rmt,
+                        pci_destination(pci),
+                        pci_qos_id(pci),
+                        pdu);
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
@@ -676,7 +673,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
-                max_seq_nr_rcv_set(sv, seq_num + 1);
+                max_seq_nr_rcv_set(sv, seq_num);
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
@@ -698,6 +695,8 @@ int dtp_receive(struct dtp * instance,
                 /* Something went wrong! */
                 pdu_destroy(pdu);
                 LOG_ERR("Something is horribly wrong on receiving");
+                LOG_ERR("Seq num: %d", seq_num);
+                LOG_ERR("Max seq num received: %d", max_seq_nr_rcv(sv));
                 return -1;
         }
 #endif
@@ -720,6 +719,7 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
+
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
@@ -728,5 +728,6 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 #endif
+
         return 0;
 }
