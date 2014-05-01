@@ -325,18 +325,33 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
-                                  const struct dif_info *    dif_information)
+static int tcp_udp_assign_to_dif(struct ipcp_instance_data *data,
+                                  const struct dif_info *dif_information)
 {
 	LOG_DBG("tcp_udp assign to dif");
         ASSERT(data);
         ASSERT(dif_information);
 
+        if (data->dif_name) {
+                ASSERT(data->dif_name->process_name);
+
+                LOG_ERR("This IPC Process is already assigned to the DIF %s. "
+                        "An IPC Process can only be assigned to a DIF once",
+                        data->dif_name->process_name);
+                return -1;
+        }
+
+        data->dif_name = name_dup(dif_information->dif_name);
+        if (!data->dif_name) {
+                LOG_ERR("Error duplicating name, bailing out");
+                return -1;
+        }
+
         return 0;
 }
 
-static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
-                                      const struct dif_config *  new_config)
+static int tcp_udp_update_dif_config(struct ipcp_instance_data *data,
+                                      const struct dif_config *new_config)
 {
 	LOG_DBG("tcp_udp update dif config");
         ASSERT(data);
@@ -345,9 +360,9 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
-                              port_id_t                  id,
-                              struct sdu *               sdu)
+static int tcp_udp_sdu_write(struct ipcp_instance_data *data,
+                              port_id_t id,
+                              struct sdu *sdu)
 {
 	LOG_DBG("tcp_udp sdu write");
         ASSERT(data);
@@ -356,7 +371,7 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data * data)
+static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data *data)
 {
 	LOG_DBG("tcp_udp name");
         ASSERT(data);
@@ -402,7 +417,7 @@ static struct ipcp_factory_data {
         struct list_head instances;
 } tcp_udp_data;
 
-static int tcp_udp_init(struct ipcp_factory_data * data)
+static int tcp_udp_init(struct ipcp_factory_data *data)
 {
 	LOG_DBG("tcp_udp_init");
         ASSERT(data);
@@ -415,7 +430,7 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
         return 0;
 }
 
-static int tcp_udp_fini(struct ipcp_factory_data * data)
+static int tcp_udp_fini(struct ipcp_factory_data *data)
 {
 	LOG_DBG("tcp_udp_fini");
         ASSERT(data);
@@ -426,8 +441,8 @@ static int tcp_udp_fini(struct ipcp_factory_data * data)
 }
 
 static struct ipcp_instance_data *
-find_instance(struct ipcp_factory_data * data,
-              ipc_process_id_t           id)
+find_instance(struct ipcp_factory_data *data,
+              ipc_process_id_t id)
 {
 
         struct ipcp_instance_data * pos;
@@ -442,11 +457,13 @@ find_instance(struct ipcp_factory_data * data,
 
 }
 
-static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
-                                              const struct name *        name,
-                                              ipc_process_id_t           id)
+static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data *data,
+                                              const struct name *name,
+                                              ipc_process_id_t id)
 {
         struct ipcp_instance * inst;
+
+        LOG_DBG("tcp_udp_create");
 
         ASSERT(data);
 
@@ -458,9 +475,10 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
-        if (!inst)
+        if (!inst) {
                 LOG_ERR("could not allocate mem for ipcp instance");
                 return NULL;
+	}
 
         /* fill it properly */
         inst->ops  = &tcp_udp_instance_ops;
@@ -558,10 +576,12 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         return inst;
 }
 
-static int tcp_udp_destroy(struct ipcp_factory_data * data,
-                            struct ipcp_instance *     instance)
+static int tcp_udp_destroy(struct ipcp_factory_data *data,
+                            struct ipcp_instance *instance)
 {
-        struct ipcp_instance_data * pos, * next;
+        struct ipcp_instance_data *pos, *next;
+
+        LOG_DBG("tcp_udp_destroy");
 
         ASSERT(data);
         ASSERT(instance);
@@ -584,6 +604,8 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
 
                         if (pos->name)
                                 name_destroy(pos->name);
+                        if (pos->dif_name)
+                                name_destroy(pos->dif_name);
 
                         rkfree(pos);
                         rkfree(instance);
@@ -606,7 +628,7 @@ static struct ipcp_factory_ops tcp_udp_ops = {
         .destroy   = tcp_udp_destroy,
 };
 
-static struct ipcp_factory * shim = NULL;
+static struct ipcp_factory *shim = NULL;
 
 static int __init mod_init(void)
 {
