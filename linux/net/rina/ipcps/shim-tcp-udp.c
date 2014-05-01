@@ -23,12 +23,11 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
-#include <linux/if_ether.h>
 #include <linux/string.h>
 #include <linux/list.h>
-#include <linux/netdevice.h>
-#include <linux/if_packet.h>
 #include <linux/workqueue.h>
+
+#include <net/sock.h>
 
 #define PROTO_LEN   32
 #define SHIM_NAME   "shim-tcp-udp"
@@ -44,10 +43,10 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 
-static struct workqueue_struct * rcv_wq;
-static struct work_struct        rcv_work;
-static struct list_head rcv_wq_data;
-static DEFINE_SPINLOCK(rcv_wq_lock);
+//static struct workqueue_struct * rcv_wq;
+//static struct work_struct        rcv_work;
+//static struct list_head rcv_wq_data;
+//static DEFINE_SPINLOCK(rcv_wq_lock);
 
 
 extern struct kipcm * default_kipcm;
@@ -60,7 +59,7 @@ struct ipcp_instance_data {
         struct name *name;
         struct name *dif_name;
 
-	struct flow_spec **qoscubes;
+	struct flow_spec **qos;
 
         /* Stores the state of flows indexed by port_id */
         spinlock_t flow_lock;
@@ -74,8 +73,9 @@ struct ipcp_instance_data {
 };
 
 /* FIXME Remove this */
-static struct ipcp_instance_data *inst_data;
+//static struct ipcp_instance_data *inst_data;
 
+/*
 enum port_id_state {
         PORT_STATE_NULL = 1,
         PORT_STATE_PENDING,
@@ -151,7 +151,7 @@ find_tcp_flow_by_socket(struct ipcp_instance_data *data,
         return NULL;
 }
 
-static int compare_sockaddr(const struct sockaddr_in *f,
+static int compare_addr(const struct sockaddr_in *f,
 		const struct sockaddr_in *s)
 {
 	if (f->sin_family == s->sin_family &&
@@ -173,7 +173,8 @@ find_udp_flow(struct ipcp_instance_data *data,
                 return NULL;
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (flow->sock == sock && compare_sockaddr(addr, &flow->addr)) {
+                if (flow->sock == sock &&
+				compare_addr(addr, &flow->addr)) {
                         return flow;
                 }
         }
@@ -240,8 +241,9 @@ static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
         if (kfa_flow_deallocate(data->kfa, flow->port_id))
                 LOG_ERR("Failed to destroy KFA flow");
         if (flow_destroy(data, flow))
-                LOG_ERR("Failed to destroy shim-tcp-udp-vlan flow");
+                LOG_ERR("Failed to destroy shim-tcp-udp flow");
 }
+*/
 
 static int tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                           const struct name *        source,
@@ -277,6 +279,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
         return 0;
 }
 
+/*
 int recv_msg(struct socket *sock, struct sockaddr_in *other,
 		unsigned char *buf, int len) 
 {
@@ -300,6 +303,7 @@ static void tcp_udp_recv_worker(struct work_struct *work)
 static void tcp_udp_recv(struct sock *sk, int bytes)
 {
 }
+*/
 
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                          const struct name *        name)
@@ -442,15 +446,114 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                                               const struct name *        name,
                                               ipc_process_id_t           id)
 {
-	struct ipcp_instance *inst;
+        struct ipcp_instance * inst;
 
-	LOG_DBG("tcp_udp_fini");
         ASSERT(data);
+
+        /* Check if there already is an instance with that id */
+        if (find_instance(data,id)) {
+                LOG_ERR("There's a shim instance with id %d already", id);
+                return NULL;
+        }
 
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst)
+                LOG_ERR("could not allocate mem for ipcp instance");
                 return NULL;
+
+        /* fill it properly */
+        inst->ops  = &tcp_udp_instance_ops;
+        inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
+        if (!inst->data) {
+                LOG_ERR("could not allocate mem for inst data");
+                rkfree(inst);
+                return NULL;
+        }
+
+        inst->data->id = id;
+
+        inst->data->name = name_dup(name);
+        if (!inst->data->name) {
+                LOG_ERR("Failed creation of qos cubes");
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+        }
+
+        inst->data->qos = rkzalloc(2*sizeof(struct flow_spec*), GFP_KERNEL);
+        if (!inst->data->qos) {
+                LOG_ERR("Failed creation of qos cube 1");
+		name_destroy(inst->data->name);
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+        }
+
+	inst->data->qos[0] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
+	if (!inst->data->qos[0]) {
+                LOG_ERR("Failed creation of qos cube 2");
+		rkfree(inst->data->qos);
+		name_destroy(inst->data->name);
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+	}
+
+	inst->data->qos[1] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
+	if (!inst->data->qos[1]) {
+                LOG_ERR("Failed creation of ipc name");
+		rkfree(inst->data->qos[0]);
+		rkfree(inst->data->qos);
+		name_destroy(inst->data->name);
+                rkfree(inst->data);
+                rkfree(inst);
+                return NULL;
+	}
+
+        inst->data->qos[0]->average_bandwidth           = 0;
+        inst->data->qos[0]->average_sdu_bandwidth       = 0;
+        inst->data->qos[0]->delay                       = 0;
+        inst->data->qos[0]->jitter                      = 0;
+        inst->data->qos[0]->max_allowable_gap           = -1;
+        inst->data->qos[0]->max_sdu_size                = 512;
+        inst->data->qos[0]->ordered_delivery            = 0;
+        inst->data->qos[0]->partial_delivery            = 1;
+        inst->data->qos[0]->peak_bandwidth_duration     = 0;
+        inst->data->qos[0]->peak_sdu_bandwidth_duration = 0;
+        inst->data->qos[0]->undetected_bit_error_rate   = 0;
+
+        inst->data->qos[1]->average_bandwidth           = 0;
+        inst->data->qos[1]->average_sdu_bandwidth       = 0;
+        inst->data->qos[1]->delay                       = 0;
+        inst->data->qos[1]->jitter                      = 0;
+        inst->data->qos[1]->max_allowable_gap           = 0;
+        inst->data->qos[1]->max_sdu_size                = 512;
+        inst->data->qos[1]->ordered_delivery            = 1;
+        inst->data->qos[1]->partial_delivery            = 0;
+        inst->data->qos[1]->peak_bandwidth_duration     = 0;
+        inst->data->qos[1]->peak_sdu_bandwidth_duration = 0;
+        inst->data->qos[1]->undetected_bit_error_rate   = 0;
+
+        /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
+        inst->data->kfa = kipcm_kfa(default_kipcm);
+
+        ASSERT(inst->data->kfa);
+
+        LOG_DBG("KFA instance %pK bound to the shim tcp-udp", inst->data->kfa);
+
+        spin_lock_init(&inst->data->flow_lock);
+        spin_lock_init(&inst->data->app_lock);
+
+        INIT_LIST_HEAD(&(inst->data->flows));
+        INIT_LIST_HEAD(&(inst->data->apps));
+
+        /*
+         * Bind the shim-instance to the shims set, to keep all our data
+         * structures linked (somewhat) together
+         */
+        INIT_LIST_HEAD(&(inst->data->list));
+        list_add(&(inst->data->list), &(data->instances));
 
         return inst;
 }
@@ -458,9 +561,40 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 static int tcp_udp_destroy(struct ipcp_factory_data * data,
                             struct ipcp_instance *     instance)
 {
-	LOG_DBG("tcp_udp_destory");
+        struct ipcp_instance_data * pos, * next;
+
         ASSERT(data);
         ASSERT(instance);
+
+        LOG_DBG("Looking for the tcp-udp-ipcp-instance to destroy");
+
+        list_for_each_entry_safe(pos, next, &data->instances, list) {
+                if (pos->id == instance->data->id) {
+
+                        /* Unbind from the instances set */
+                        list_del(&pos->list);
+
+                        /* Destroy it */
+			if (pos->qos[0])
+				rkfree(pos->qos[0]);
+			if (pos->qos[1])
+				rkfree(pos->qos[1]);
+			if (pos->qos)
+				rkfree(pos->qos);
+
+                        if (pos->name)
+                                name_destroy(pos->name);
+
+                        rkfree(pos);
+                        rkfree(instance);
+
+                        LOG_DBG("tcp-udp shim instance destroyed, returning");
+
+                        return 0;
+                }
+        }
+
+        LOG_DBG("Didn't find instance, returning error");
 
         return -1;
 }
