@@ -4,5 +4,5 @@ set -x
 
 # unprepare the host
 
-sudo rmmod vmpi-host-virtio
+sudo rmmod vmpi-virtio-host
 sudo rmmod shim-hv
