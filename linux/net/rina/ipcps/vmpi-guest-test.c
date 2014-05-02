@@ -31,101 +31,107 @@ module_param(write_channel, uint, 0644);
 static unsigned int read_channel = 0;
 module_param(read_channel, uint, 0644);
 
-static ssize_t vmpi_test_aio_write(struct kiocb *iocb, const struct iovec *iv,
-                                    unsigned long iovlen, loff_t pos)
+static ssize_t
+vmpi_test_aio_write(struct kiocb *iocb, const struct iovec *iv,
+                    unsigned long iovlen, loff_t pos)
 {
-    struct file *file = iocb->ki_filp;
-    vmpi_info_t *mpi = file->private_data;
+        struct file *file = iocb->ki_filp;
+        vmpi_info_t *mpi = file->private_data;
 
-    /* XXX file->f_flags & O_NONBLOCK */
+        /* XXX file->f_flags & O_NONBLOCK */
 
-    return vmpi_write(mpi, write_channel, iv, iovlen);
+        return vmpi_write(mpi, write_channel, iv, iovlen);
 }
 
-static ssize_t vmpi_test_aio_read(struct kiocb *iocb, const struct iovec *iv,
-                                        unsigned long iovcnt, loff_t pos)
+static ssize_t
+vmpi_test_aio_read(struct kiocb *iocb, const struct iovec *iv,
+                   unsigned long iovcnt, loff_t pos)
 {
-    struct file *file = iocb->ki_filp;
-    vmpi_info_t *mpi = file->private_data;
-    ssize_t ret;
+        struct file *file = iocb->ki_filp;
+        vmpi_info_t *mpi = file->private_data;
+        ssize_t ret;
 
-    ret = vmpi_read(mpi, read_channel, iv, iovcnt);
+        ret = vmpi_read(mpi, read_channel, iv, iovcnt);
 
-    if (ret > 0)
-        iocb->ki_pos = ret;
+        if (ret > 0)
+                iocb->ki_pos = ret;
 
-    return ret;
+        return ret;
 }
 
 /* Defined in vmpi.c, must NOT be part of vmpi.h. */
 vmpi_info_t *vmpi_get_instance(void);
 
-static int vmpi_test_open(struct inode *inode, struct file *f)
+static int
+vmpi_test_open(struct inode *inode, struct file *f)
 {
-    if (vmpi_get_instance() == NULL) {
-        /* Not yet ready.. this should not happen! */
-        printk("vmpi_test_open: not ready\n");
-        BUG_ON(1);
-        return -ENXIO;
-    }
+        if (vmpi_get_instance() == NULL) {
+                /* Not yet ready.. this should not happen! */
+                printk("vmpi_test_open: not ready\n");
+                BUG_ON(1);
+                return -ENXIO;
+        }
 
-    f->private_data = vmpi_get_instance();
+        f->private_data = vmpi_get_instance();
 
-    printk("vmpi_test_open completed\n");
+        printk("vmpi_test_open completed\n");
 
-    return 0;
+        return 0;
 }
 
-static int vmpi_test_release(struct inode *inode, struct file *f)
+static int
+vmpi_test_release(struct inode *inode, struct file *f)
 {
-    f->private_data = NULL;
+        f->private_data = NULL;
 
-    printk("vmpi_test_close completed\n");
+        printk("vmpi_test_close completed\n");
 
-    return 0;
+        return 0;
 }
 
 static const struct file_operations vmpi_test_fops = {
-	.owner          = THIS_MODULE,
-	.release        = vmpi_test_release,
-	.open           = vmpi_test_open,
+        .owner          = THIS_MODULE,
+        .release        = vmpi_test_release,
+        .open           = vmpi_test_open,
         .write          = do_sync_write,
         .aio_write      = vmpi_test_aio_write,
         .read           = do_sync_read,
         .aio_read       = vmpi_test_aio_read,
-	.llseek		= noop_llseek,
+        .llseek		= noop_llseek,
 };
 
 #define VIRTIO_MPI_MINOR     246
 
 static struct miscdevice vmpi_test_misc = {
-	.minor = VIRTIO_MPI_MINOR,
-	.name = "vmpi-test",
-	.fops = &vmpi_test_fops,
+        .minor = VIRTIO_MPI_MINOR,
+        .name = "vmpi-test",
+        .fops = &vmpi_test_fops,
 };
 
-int vmpi_test_init(void)
+int
+vmpi_test_init(void)
 {
-    int ret;
+        int ret;
 
-    ret = misc_register(&vmpi_test_misc);
-    if (ret) {
-        printk("Failed to register virtio-mpi-test misc device\n");
-        goto misc_reg;
-    }
+        ret = misc_register(&vmpi_test_misc);
+        if (ret) {
+                printk("Failed to register virtio-mpi-test misc device\n");
+                goto misc_reg;
+        }
 
-    printk("vmpi_test_init completed\n");
+        printk("vmpi_test_init completed\n");
 
-    return 0;
+        return 0;
 
 misc_reg:
 
-    return ret;
+        return ret;
 }
 
-void vmpi_test_fini(void)
+void
+vmpi_test_fini(void)
 {
-    misc_deregister(&vmpi_test_misc);
+        misc_deregister(&vmpi_test_misc);
 
-    printk("vmpi_test_fini completed\n");
+        printk("vmpi_test_fini completed\n");
 }

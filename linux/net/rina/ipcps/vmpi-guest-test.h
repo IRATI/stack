@@ -29,4 +29,3 @@ void vmpi_test_fini(void);
 #endif  /* VMPI_GUEST_TEST */
 
 #endif  /* __VMPI_GUEST_TEST_H__ */
-

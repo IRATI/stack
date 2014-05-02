@@ -35,27 +35,29 @@ module_param(read_channel, uint, 0644);
 
 struct vmpi_info *vmpi_info_from_file_private_data(void *);
 
-ssize_t vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
-                            unsigned long iovcnt, loff_t pos)
+ssize_t
+vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
+                    unsigned long iovcnt, loff_t pos)
 {
-    struct file *file = iocb->ki_filp;
-    vmpi_info_t *mpi = vmpi_info_from_file_private_data(file->private_data);
+        struct file *file = iocb->ki_filp;
+        vmpi_info_t *mpi = vmpi_info_from_file_private_data(file->private_data);
 
-    return vmpi_write(mpi, write_channel, iv, iovcnt);
+        return vmpi_write(mpi, write_channel, iv, iovcnt);
 }
 
-ssize_t vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
-                           unsigned long iovcnt, loff_t pos)
+ssize_t
+vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
+                   unsigned long iovcnt, loff_t pos)
 {
-    struct file *file = iocb->ki_filp;
-    vmpi_info_t *mpi = vmpi_info_from_file_private_data(file->private_data);
-    ssize_t ret;
+        struct file *file = iocb->ki_filp;
+        vmpi_info_t *mpi = vmpi_info_from_file_private_data(file->private_data);
+        ssize_t ret;
 
-    ret = vmpi_read(mpi, read_channel, iv, iovcnt);
+        ret = vmpi_read(mpi, read_channel, iv, iovcnt);
 
-    if (ret > 0)
-        iocb->ki_pos = ret;
+        if (ret > 0)
+                iocb->ki_pos = ret;
 
-    return ret;
+        return ret;
 }
 #endif  /* VMPI_HOST_TEST */
