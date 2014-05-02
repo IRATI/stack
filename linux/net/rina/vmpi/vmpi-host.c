@@ -26,6 +26,7 @@
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-host-test.h"
+#include "vmpi-ops.h"
 #include "shim-hv.h"
 
 

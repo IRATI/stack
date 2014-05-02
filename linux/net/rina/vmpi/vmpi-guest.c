@@ -27,6 +27,7 @@
 #include "vmpi-guest-impl.h"
 #include "vmpi-structs.h"
 #include "vmpi.h"
+#include "vmpi-ops.h"
 #include "shim-hv.h"
 
 

@@ -20,7 +20,7 @@
 #ifndef __SHIM_HV_H__
 #define __SHIM_HV_H__
 
-#include "vmpi-ops.h"
+struct vmpi_ops;
 
 int shim_hv_init(struct vmpi_ops *ops);
 void shim_hv_fini(void);
