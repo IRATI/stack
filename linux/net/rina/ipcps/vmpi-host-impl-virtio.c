@@ -47,7 +47,8 @@
 
 /* Max number of bytes transferred before requeueing the job.
  * Using this limit prevents one virtqueue from starving others. */
-#define VHOST_NET_WEIGHT 0x80000
+#define VHOST_NET_WEIGHT_X  0x80000
+#define VHOST_NET_WEIGHT    150
 
 enum {
 	VHOST_MPI_FEATURES = VHOST_FEATURES,
