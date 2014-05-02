@@ -34,6 +34,7 @@
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t lock;
+
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
 
@@ -52,9 +53,9 @@ struct dtp_sv {
 /* FIXME: Has to be rearranged */
 struct dtp_policies {
         int (* transmission_control)(struct dtp * instance,
-                                     struct sdu * sdu);
-        int (* closed_window_overrun)(struct dtp * instance,
-                                      struct sdu * sdu);
+                                     struct pdu * pdu);
+        int (* closed_window)(struct dtp * instance,
+                              struct pdu * pdu);
         int (* flow_control_overrun)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
         int (* receiver_inactivity_timer)(struct dtp * instance);
@@ -82,19 +83,77 @@ struct dtp {
 
 static struct dtp_sv default_sv = {
         .connection                    = NULL,
+        .nxt_seq                       = 0,
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
         .max_cwq_len                   = 0,
         .drf_flag                      = false,
         .a                             = 0,
-        .window_based                  = false,
-        .rexmsn_ctrl                   = false,
+        .window_based                  = true,
+        .rexmsn_ctrl                   = true,
 };
 
+static uint_t max_cwq_len_get(struct dtp_sv * sv)
+{
+        uint_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->max_cwq_len;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
+static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
+{
+        struct cwq * cwq;
+        struct dt *  dt;
+
+        ASSERT(dtp);
+        ASSERT(pdu_is_ok(pdu));
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        cwq = dt_cwq(dt);
+        if (!cwq) {
+                LOG_ERR("Failed to get cwq");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (cwq_size(cwq) < max_cwq_len_get(dtp->sv)-1) {
+                if (cwq_push(cwq, pdu)) {
+                        LOG_ERR("Failed to push to cwq");
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+
+                return 0;
+        }
+
+        return -1;
+}
+
+static int default_transmission(struct dtp * dtp, struct pdu * pdu)
+{
+
+        ASSERT(dtp);
+        ASSERT(pdu_is_ok(pdu));
+
+        /* Post SDU to RMT */
+        return rmt_send(dtp->rmt,
+                        pci_destination(pdu_pci_get_ro(pdu)),
+                        pci_qos_id(pdu_pci_get_ro(pdu)),
+                        pdu);
+}
+
 static struct dtp_policies default_policies = {
-        .transmission_control      = NULL,
-        .closed_window_overrun     = NULL,
+        .transmission_control      = default_transmission,
+        .closed_window             = default_closed_window,
         .flow_control_overrun      = NULL,
         .initial_sequence_number   = NULL,
         .receiver_inactivity_timer = NULL,
@@ -133,7 +192,7 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        tmp = sv->nxt_seq++;
+        tmp = ++sv->nxt_seq;
         spin_unlock(&sv->lock);
 
         return tmp;
@@ -164,19 +223,6 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         spin_unlock(&sv->lock);
 }
 #endif
-
-static uint_t max_cwq_len_get(struct dtp_sv * sv)
-{
-        uint_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_cwq_len;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
 
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
@@ -239,7 +285,8 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->sv = rkmalloc(sizeof(*tmp->sv), GFP_KERNEL);
         if (!tmp->sv) {
                 LOG_ERR("Cannot create DTP state-vector");
-                rkfree(tmp);
+
+                dtp_destroy(tmp);
                 return NULL;
         }
         *tmp->sv            = default_sv;
@@ -247,7 +294,7 @@ struct dtp * dtp_create(struct dt *         dt,
 
         spin_lock_init(&tmp->sv->lock);
 
-        tmp->sv->connection   = connection;
+        tmp->sv->connection = connection;
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
@@ -303,9 +350,7 @@ int dtp_write(struct dtp * instance,
         struct dtp_sv *       sv;
         struct dt *           dt;
         struct dtcp *         dtcp;
-        struct cwq *          cwq;
         struct rtxq *         rtxq;
-        int                   ret;
         struct pdu *          cpdu;
         struct dtp_policies * policies;
 
@@ -317,6 +362,7 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
@@ -325,6 +371,7 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 #endif
+
         sv = instance->sv;
         ASSERT(sv); /* State Vector must not be NULL */
 
@@ -391,73 +438,71 @@ int dtp_write(struct dtp * instance,
         /* Step 2: Protection */
         /* Step 2: Delimiting (fragmentation/reassembly) */
 
-        if (dtcp && sv->window_based) {
-                if (!dt_sv_window_closed(dt) &&
-                    pci_sequence_number_get(pci) <
-                    dtcp_snd_rt_win(dtcp)) {
-                        /*
-                         * Might close window
-                         */
-                        policies->transmission_control(instance, sdu);
-                } else {
-                        cwq = dt_cwq(dt);
-                        if (!cwq) {
-                                LOG_ERR("Failed to get cwq");
+        /*
+         * FIXME: The two ways of carrying out flow control
+         * could exist at once, thus reconciliation should be
+         * the first and default case if both are present.
+         */
+
+        if (dtcp) {
+                if (sv->rexmsn_ctrl) {
+                        /* FIXME: Add timer for PDU */
+                        rtxq = dt_rtxq(dt);
+                        if (!rtxq) {
+                                LOG_ERR("Failed to get rtxq");
                                 pdu_destroy(pdu);
                                 return -1;
                         }
 
-                        if (cwq_size(cwq) < max_cwq_len_get(sv)-1) {
-                                if (cwq_push(cwq, pdu)) {
-                                        LOG_ERR("Failed to push to cwq");
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
-                                return 0;
-                        } else {
-                                policies->closed_window_overrun(instance, sdu);
-                                return 0;
+                        cpdu = pdu_dup(pdu);
+                        if (!cpdu) {
+                                LOG_ERR("Failed to copy PDU");
+                                LOG_ERR("PDU ok? %d", pdu_pci_present(pdu));
+                                LOG_ERR("PDU type: %d",
+                                        pci_type(pdu_pci_get_ro(pdu)));
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
+
+                        if (rtxq_push(rtxq, cpdu)) {
+                                LOG_ERR("Couldn't push to rtxq");
+                                pdu_destroy(pdu);
+                                return -1;
                         }
                 }
-        }
 
-        if (dtcp && sv->rexmsn_ctrl) {
-                /* FIXME: Add timer for PDU */
-                rtxq = dt_rtxq(dt);
-                if (!rtxq) {
-                        LOG_ERR("Failed to get rtxq");
-                        pdu_destroy(pdu);
-                        return -1;
+                if (sv->window_based) {
+                        LOG_DBG("WindowBased");
+                        if (!dt_sv_window_closed(dt) &&
+                            pci_sequence_number_get(pci) <
+                            dtcp_snd_rt_win(dtcp)) {
+                                /*
+                                 * Might close window
+                                 */
+                                if (policies->transmission_control(instance,
+                                                                   pdu)) {
+                                        LOG_ERR("Problems with transmission "
+                                                "control");
+                                        return -1;
+                                }
+                        } else {
+                                dt_sv_window_closed_set(dt, true);
+                                if (policies->closed_window(instance, pdu)) {
+                                        LOG_ERR("Problems with the "
+                                                "closed window policy");
+                                        return -1;
+                                }
+                        }
                 }
 
-                cpdu = pdu_dup(pdu);
-                if (!cpdu) {
-                        LOG_ERR("Failed to copy PDU");
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-
-                if (rtxq_push(rtxq, cpdu)) {
-                        LOG_ERR("Couldn't push to rtxq");
-                        pdu_destroy(pdu);
-                        pdu_destroy(cpdu);
-                        return -1;
-                }
+                return 0;
         }
 
         /* Post SDU to RMT */
-        ret = rmt_send(instance->rmt,
-                       pci_destination(pci),
-                       pci_qos_id(pci),
-                       pdu);
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
-        if (rtimer_start(instance->timers.sender_inactivity,
-                         2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start timer");
-                return -1;
-        }
-#endif
-        return ret;
+        return rmt_send(instance->rmt,
+                        pci_destination(pci),
+                        pci_qos_id(pci),
+                        pdu);
 }
 
 int dtp_mgmt_write(struct rmt * rmt,
@@ -628,7 +673,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
-                max_seq_nr_rcv_set(sv, seq_num + 1);
+                max_seq_nr_rcv_set(sv, seq_num);
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
@@ -650,6 +695,8 @@ int dtp_receive(struct dtp * instance,
                 /* Something went wrong! */
                 pdu_destroy(pdu);
                 LOG_ERR("Something is horribly wrong on receiving");
+                LOG_ERR("Seq num: %d", seq_num);
+                LOG_ERR("Max seq num received: %d", max_seq_nr_rcv(sv));
                 return -1;
         }
 #endif
@@ -672,6 +719,7 @@ int dtp_receive(struct dtp * instance,
 
         pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
+
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Start ReceiverInactivityTimer */
         if (rtimer_start(instance->timers.receiver_inactivity,
@@ -680,5 +728,6 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 #endif
+
         return 0;
 }

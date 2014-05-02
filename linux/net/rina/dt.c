@@ -27,35 +27,38 @@
 #include "dt-utils.h"
 
 struct dt_sv {
-        uint_t    max_flow_pdu_size;
-        uint_t    max_flow_sdu_size;
-        timeout_t MPL;
-        timeout_t R;
-        timeout_t A;
-        seq_num_t rcv_left_window_edge;
-        bool      window_closed;
-        seq_num_t last_seq_num_sent;
+        uint_t       max_flow_pdu_size;
+        uint_t       max_flow_sdu_size;
+        timeout_t    MPL;
+        timeout_t    R;
+        timeout_t    A;
+        seq_num_t    rcv_left_window_edge;
+        bool         window_closed;
+        seq_num_t    last_seq_num_sent;
+        unsigned int tr;
 };
 
 struct dt {
-        struct dt_sv *  sv;
-        struct dtp *    dtp;
-        struct dtcp *   dtcp;
+        struct dt_sv *      sv;
+        struct dtp *        dtp;
+        struct dtcp *       dtcp;
+        struct connection * connection;
 
-        struct cwq *    cwq;
-        struct rtxq *   rtxq;
+        struct cwq *        cwq;
+        struct rtxq *       rtxq;
 
-        spinlock_t      lock;
+        spinlock_t          lock;
 };
 
 static struct dt_sv default_sv = {
-        .max_flow_pdu_size    = 0,
-        .max_flow_sdu_size    = 0,
-        .MPL                  = 0,
-        .R                    = 0,
+        .max_flow_pdu_size    = UINT_MAX,
+        .max_flow_sdu_size    = UINT_MAX,
+        .MPL                  = 1000,
+        .R                    = 100,
         .A                    = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
+        .tr                   = 10,
 };
 
 struct dt * dt_create(void)
@@ -193,7 +196,7 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
                 return -1;
         }
 
-        dt->rtxq = rtxq_create();
+        dt->rtxq = rtxq_create(dt);
         if (!dt->rtxq) {
                 LOG_ERR("Failed to create rexmsn queue");
                 if (cwq_destroy(dt->cwq))
@@ -436,6 +439,34 @@ seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
 
         spin_lock(&dt->lock);
         tmp = dt->sv->last_seq_num_sent;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+unsigned int dt_sv_tr(struct dt * dt)
+{
+        unsigned int tmp;
+
+        ASSERT(dt);
+        ASSERT(dt->sv);
+
+        spin_lock(&dt->lock);
+        tmp = dt->sv->tr;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct connection * dt_connection(struct dt * dt)
+{
+        struct connection * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->connection;
         spin_unlock(&dt->lock);
 
         return tmp;

@@ -21,10 +21,13 @@
 
 #define RINA_PREFIX "dt-utils"
 
+#include <linux/list.h>
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
 #include "dt-utils.h"
+#include "dt.h"
 
 struct cwq {
         struct rqueue * q;
@@ -49,7 +52,6 @@ struct cwq * cwq_create(void)
 
         return tmp;
 }
-
 
 int cwq_destroy(struct cwq * queue)
 {
@@ -92,7 +94,6 @@ int cwq_push(struct cwq * queue,
         return 0;
 }
 
-
 struct pdu * cwq_pop(struct cwq * queue)
 {
         struct pdu * tmp;
@@ -132,19 +133,166 @@ size_t cwq_size(struct cwq * queue)
         return 0;
 }
 
-struct rtxq {
-        int filler_to_be_removed;
+struct rtxq_entry {
+        unsigned long    time_stamp;
+        struct pdu *     pdu;
+        int              retries;
+        struct list_head next;
 };
 
-struct rtxq * rtxq_create(void)
+static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 {
-        struct rtxq * tmp;
+        struct rtxq_entry * tmp;
+
+        ASSERT(pdu_is_ok(pdu));
+
+        tmp = rkzalloc(sizeof(*tmp), flag);
+        if (!tmp)
+                return NULL;
+
+        tmp->pdu        = pdu;
+        tmp->time_stamp = jiffies;
+        tmp->retries    = 1;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        return tmp;
+}
+
+static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
+{ return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
+
+struct rtxqueue {
+        struct list_head head;
+};
+
+static struct rtxqueue * rtxqueue_create(void)
+{
+        struct rtxqueue * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
+        INIT_LIST_HEAD(&tmp->head);
+
         return tmp;
+}
+
+static int rtxq_entry_destroy(struct rtxq_entry * entry)
+{
+        if (!entry)
+                return -1;
+
+        pdu_destroy(entry->pdu);
+        rkfree(entry);
+
+        return 0;
+}
+
+static int entries_ack(struct rtxqueue * q,
+                       seq_num_t         seq_num)
+{
+        struct rtxq_entry * cur, * n;
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
+                    seq_num) {
+                        list_del(&cur->next);
+                        rtxq_entry_destroy(cur);
+                }
+        }
+
+        return 0;
+}
+
+static int entries_nack(struct rtxqueue * q,
+                        seq_num_t         seq_num)
+{
+        struct rtxq_entry * cur, * n;
+        /* struct pdu * tmp; */
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
+                    seq_num) {
+                        /*
+                         * FIXME: We need a way to use the RMT
+                         * tmp = pdu_dup_ni(pdu);
+                         * rmt_send(pdu);
+                         */
+                }
+        }
+
+        return 0;
+}
+
+static int rtxqueue_destroy(struct rtxqueue * q)
+{
+        struct rtxq_entry * cur;
+        struct rtxq_entry * n;
+
+        if (!q)
+                return -1;
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                rtxq_entry_destroy(cur);
+        }
+
+        rkfree(q);
+
+        return 0;
+
+}
+
+static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
+{
+        struct rtxq_entry * tmp;
+
+        if (!q)
+                return -1;
+
+        if (!pdu_is_ok(pdu))
+                return -1;
+
+        tmp = rtxq_entry_create_ni(pdu);
+        if (!tmp)
+                return -1;
+
+        list_add(&tmp->next, &q->head);
+
+        return 0;
+}
+
+static int rtxqueue_rtx(struct rtxqueue * q, unsigned int tr)
+{
+        LOG_MISSING;
+
+        return 0;
+}
+
+struct rtxq {
+        spinlock_t        lock;
+        struct rtimer *   r_timer;
+        struct dt *       parent;
+        struct rtxqueue * queue;
+};
+
+static void Rtimer_handler(void * data)
+{
+        struct rtxq * q;
+
+        q = (struct rtxq *) data;
+        if (!q) {
+                LOG_ERR("No RTXQ to work with");
+                return;
+        }
+
+        rtxqueue_rtx(q->queue, dt_sv_tr(q->parent));
+        rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 }
 
 int rtxq_destroy(struct rtxq * q)
@@ -152,20 +300,94 @@ int rtxq_destroy(struct rtxq * q)
         if (!q)
                 return -1;
 
+        if (q->r_timer && rtimer_destroy(q->r_timer))
+                LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
+
+        if (q->queue  && rtxqueue_destroy(q->queue))
+                LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
+
         rkfree(q);
 
         return 0;
 }
 
-int rtxq_push(struct rtxq *  q,
-              struct pdu *   pdu)
+struct rtxq * rtxq_create(struct dt * dt)
 {
-        if (!q || !pdu)
+        struct rtxq * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->r_timer = rtimer_create(Rtimer_handler, tmp);
+        if (!tmp->r_timer) {
+                LOG_ERR("Failed to create retransmission queue");
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->queue = rtxqueue_create();
+        if (!tmp->queue) {
+                LOG_ERR("Failed to create retransmission queue");
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->parent = dt;
+
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+int rtxq_push(struct rtxq * q,
+              struct pdu *  pdu)
+{
+
+        if (!q || !pdu_is_ok(pdu))
                 return -1;
 
-        LOG_MISSING;
+        spin_lock(&q->lock);
+        rtxqueue_push(q->queue, pdu);
+        spin_unlock(&q->lock);
 
-        return -1;
+        return 0;
+}
+
+int rtxq_ack(struct rtxq * q,
+             seq_num_t     seq_num,
+             unsigned int  tr)
+{
+        if (!q)
+                return -1;
+
+        spin_lock(&q->lock);
+        entries_ack(q->queue, seq_num);
+        if (rtimer_restart(q->r_timer, tr)) {
+                spin_unlock(&q->lock);
+                return -1;
+        }
+        spin_unlock(&q->lock);
+
+        return 0;
+}
+
+int rtxq_nack(struct rtxq * q,
+              seq_num_t     seq_num,
+              unsigned int  tr)
+{
+        if (!q)
+                return -1;
+
+        spin_lock(&q->lock);
+        entries_nack(q->queue, seq_num);
+        if (rtimer_restart(q->r_timer, tr)) {
+                spin_unlock(&q->lock);
+                return -1;
+        }
+        spin_unlock(&q->lock);
+
+        return 0;
 }
 
 int rtxq_set_pop(struct rtxq *      q,

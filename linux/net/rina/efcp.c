@@ -36,6 +36,10 @@
 #include "dtcp.h"
 #include "rmt.h"
 
+#ifndef DTCP_TEST_ENABLE
+#define DTCP_TEST_ENABLE 1
+#endif
+
 struct efcp {
         struct connection *     connection;
         struct dt *             dt;
@@ -539,6 +543,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id_t      cep_id;
         struct dtp *  dtp;
         struct dtcp * dtcp;
+#if DTCP_TEST_ENABLE
+        struct connection * conn_params;
+#endif
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -562,6 +569,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         ASSERT(tmp->dt);
+
+        /* FIXME: Initialization of dt required */
 
         cep_id                    = cidm_allocate(container->cidm);
 
@@ -594,6 +603,33 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         dtcp = NULL;
+
+#if DTCP_TEST_ENABLE
+        conn_params = rkzalloc(sizeof(*conn_params), GFP_KERNEL);
+        if(!conn_params) {
+                dtp_destroy(dtp);
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+        conn_params->policies_params.dtcp_present = true;
+        conn_params->policies_params.flow_ctrl = true;
+        conn_params->policies_params.rate_based_fctrl = false;
+        conn_params->policies_params.rtx_ctrl = true;
+        conn_params->policies_params.window_based_fctrl = true;
+        dtcp = dtcp_create(tmp->dt, conn_params, container->rmt);
+        if (!dtcp) {
+                dtp_destroy(dtp);
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+
+        if (dt_dtcp_bind(tmp->dt, dtcp)) {
+                dtp_destroy(dtp);
+                dtcp_destroy(dtcp);
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+#else
         if (connection->policies_params.dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
@@ -609,7 +645,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         return cep_id_bad();
                 }
         }
-
+#endif
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
                           tmp)) {

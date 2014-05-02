@@ -2028,8 +2028,6 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                  *        system
                  */
                 LOG_DBG("This flow should go for an app");
-
-                LOG_MISSING;
         }
 
         KIPCM_UNLOCK(kipcm);
