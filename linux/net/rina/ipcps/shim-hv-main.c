@@ -811,7 +811,11 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         }
 
         if (!found) {
-                LOG_ERR("%s: Application %s not registered", __func__, tmpstr);
+                LOG_WARN("%s: Application %s not registered", __func__, tmpstr);
+                /* For now don't return error in this case, since these spurious
+                 * unregistrations seem to happen in the stack. Need some more
+                 * investigation.
+                 */
                 goto out;
         }
 
@@ -827,7 +831,7 @@ out:
         if (tmpstr)
                 rkfree(tmpstr);
 
-        return (found != NULL);
+        return 0;
 }
 
 /* Callback invoked when a shim IPC process is assigned to a DIF. */
