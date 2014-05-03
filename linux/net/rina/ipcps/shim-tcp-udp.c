@@ -82,15 +82,27 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
+<<<<<<< Updated upstream
+=======
+*/
+>>>>>>> Stashed changes
 struct app_data {
 	struct list_head list;
 
 	struct socket *lsock;
+<<<<<<< Updated upstream
+=======
+	struct socket *udpsock;
+>>>>>>> Stashed changes
 
         struct name *app_name;
 	int port;
 };
 
+<<<<<<< Updated upstream
+=======
+/*
+>>>>>>> Stashed changes
 struct shim_tcp_udp_flow {
         struct list_head list;
 
@@ -199,6 +211,10 @@ static struct app_data * find_app_by_socket(struct ipcp_instance_data *data,
         return NULL;
 }
 
+<<<<<<< Updated upstream
+=======
+*/
+>>>>>>> Stashed changes
 static struct app_data * find_app_by_name(struct ipcp_instance_data *data,
 		const struct name *name)
 {
@@ -215,6 +231,10 @@ static struct app_data * find_app_by_name(struct ipcp_instance_data *data,
 
         return NULL;
 }
+<<<<<<< Updated upstream
+=======
+/*
+>>>>>>> Stashed changes
 
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_tcp_udp_flow *  flow)
@@ -299,6 +319,7 @@ static int tcp_udp_recv_process_msg(struct socket *sock)
 static void tcp_udp_recv_worker(struct work_struct *work)
 {
 }
+<<<<<<< Updated upstream
 
 static void tcp_udp_recv(struct sock *sk, int bytes)
 {
@@ -308,21 +329,127 @@ static void tcp_udp_recv(struct sock *sk, int bytes)
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                          const struct name *        name)
 {
+=======
+*/
+static void tcp_udp_recv(struct sock *sk, int bytes)
+{
+}
+
+static int tcp_udp_application_register(struct ipcp_instance_data *data,
+                                         const struct name *name)
+{
+	struct app_data *app;
+	struct sockaddr_in sin;
+	int err;
+
+>>>>>>> Stashed changes
 	LOG_DBG("tcp_udp app register");
         ASSERT(data);
         ASSERT(name);
 
+<<<<<<< Updated upstream
         return 0;
 }
 
 static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
                                            const struct name *        name)
 {
+=======
+	app = find_app_by_name(data, name);
+	if (app) {
+		LOG_ERR("application already registered with shim dif");
+		return -1;
+	}
+
+	app = rkzalloc(sizeof(struct app_data), GFP_KERNEL);
+	if (!app) {
+		LOG_ERR("could not allocate mem for application data");
+		return -1;
+	}
+
+        app->app_name = name_dup(name);
+        if (!app->app_name) {
+                char * tmp = name_tostring(name);
+                LOG_ERR("Application %s registration has failed", tmp);
+                if (tmp) rkfree(tmp);
+		rkfree(app);
+                return -1;
+        }
+
+	app->port = 2325;
+
+	err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP, &app->udpsock);
+	if (err < 0) {
+		LOG_ERR("could not create udp socket for registration");
+		name_destroy(app->app_name);
+		rkfree(app);
+		return -1;
+	}
+
+	sin.sin_addr.s_addr = htonl(INADDR_ANY);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(app->port);
+
+	err = kernel_bind(app->udpsock, (struct sockaddr*)&sin, sizeof(sin));
+	if (err < 0) {
+		LOG_ERR("could not bind socket for registration");
+		name_destroy(app->app_name);
+		sock_release(app->udpsock);
+		rkfree(app);
+		return -1;
+	}
+
+	write_lock_bh(&app->udpsock->sk->sk_callback_lock);
+	app->udpsock->sk->sk_user_data = app->udpsock->sk->sk_data_ready;
+	app->udpsock->sk->sk_data_ready = tcp_udp_recv;
+	write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
+
+	INIT_LIST_HEAD(&(app->list));
+	
+	spin_lock(&data->app_lock);
+	list_add(&(app->list), &(data->apps));
+	spin_unlock(&data->app_lock);
+
+        return 0;
+}
+
+static int tcp_udp_application_unregister(struct ipcp_instance_data *data,
+                                           const struct name *name)
+{
+	struct app_data *app;
+
+>>>>>>> Stashed changes
 	LOG_DBG("tcp_udp app unregister");
         ASSERT(data);
         ASSERT(name);
 
+<<<<<<< Updated upstream
         return 0;
+=======
+	app = find_app_by_name(data, name);
+	if (!app) {
+		LOG_ERR("app is not registered, so can't unregister");
+		return -1;
+	}
+
+	lock_sock(app->udpsock->sk);
+	write_lock_bh(&app->udpsock->sk->sk_callback_lock);
+	app->udpsock->sk->sk_data_ready = app->udpsock->sk->sk_user_data;
+	app->udpsock->sk->sk_user_data = NULL;
+	write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
+	release_sock(app->udpsock->sk);
+
+	sock_release(app->udpsock);
+        name_destroy(app->app_name);
+
+	spin_lock(&data->app_lock);
+	list_del(&app->list);
+	spin_unlock(&data->app_lock);
+
+	rkfree(app);
+
+	return 0;
+>>>>>>> Stashed changes
 }
 
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data *data,
@@ -347,6 +474,11 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data *data,
                 return -1;
         }
 
+<<<<<<< Updated upstream
+=======
+	/* FIXME: bind dif to device */
+
+>>>>>>> Stashed changes
         return 0;
 }
 
@@ -431,6 +563,7 @@ static int tcp_udp_init(struct ipcp_factory_data *data)
 }
 
 static int tcp_udp_fini(struct ipcp_factory_data *data)
+<<<<<<< Updated upstream
 {
 	LOG_DBG("tcp_udp_fini");
         ASSERT(data);
@@ -444,6 +577,21 @@ static struct ipcp_instance_data *
 find_instance(struct ipcp_factory_data *data,
               ipc_process_id_t id)
 {
+=======
+{
+	LOG_DBG("tcp_udp_fini");
+        ASSERT(data);
+
+        ASSERT(list_empty(&(data->instances)));
+
+        return 0;
+}
+
+static struct ipcp_instance_data *
+find_instance(struct ipcp_factory_data *data,
+              ipc_process_id_t id)
+{
+>>>>>>> Stashed changes
 
         struct ipcp_instance_data * pos;
 
