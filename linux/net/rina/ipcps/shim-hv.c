@@ -59,8 +59,13 @@ enum channel_state {
 };
 
 struct shim_hv_channel {
+        /* Internal state associated to the channel. */
         enum channel_state      state;
+        /* In ALLOCATED state, this is the port-id supported by the channel. */
         port_id_t               port_id;
+        /* In PENDING or ALLOCATED state, this is the application that
+           currently holds the channel. */
+        struct name             application_name;
 };
 
 enum shim_hv_command {
@@ -327,6 +332,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
+        name_cpy(src_application, &priv->vmpi.channels[ch].application_name);
 
         LOG_INFO("%s: channel %d --> PENDING", __func__, ch);
 
@@ -396,6 +402,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 kfa_port_id_release(priv->kfa, port_id);
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
+                name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_INFO("%s: channel %d --> NULL", __func__, ch);
         }
 resp:
@@ -408,7 +415,7 @@ resp:
 
 static int
 shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
-                               unsigned int ch)
+                               unsigned int ch, unsigned locked)
 {
         int ret = 0;
         port_id_t port_id;
@@ -418,7 +425,8 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
                 return -1;
         }
 
-        mutex_lock(&priv->vc_lock);
+        if (locked)
+                mutex_lock(&priv->vc_lock);
 
         port_id = priv->vmpi.channels[ch].port_id;
 
@@ -430,6 +438,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
 
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
         priv->vmpi.channels[ch].port_id = port_id_bad();
+        name_fini(&priv->vmpi.channels[ch].application_name);
         LOG_INFO("%s: channel %d --> NULL", __func__, ch);
 
         ret = kfa_flow_deallocate(priv->kfa, port_id);
@@ -437,7 +446,8 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
 out:
-        mutex_unlock(&priv->vc_lock);
+        if (locked)
+                mutex_unlock(&priv->vc_lock);
 
         return ret;
 }
@@ -451,7 +461,7 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
         int ret = 0;
         unsigned int ch = port_id_to_channel(priv, port_id);
 
-        ret = shim_hv_flow_deallocate_common(priv, ch);
+        ret = shim_hv_flow_deallocate_common(priv, ch, 1);
 
         shim_hv_send_deallocate(priv, ch);
 
@@ -543,6 +553,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
+        name_cpy(dst_application, &priv->vmpi.channels[ch].application_name);
         LOG_INFO("%s: channel %d --> PENDING", __func__, ch);
 
 flow_arrived:
@@ -627,6 +638,7 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         } else {
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
+                name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_INFO("%s: channel %d --> NULL", __func__, ch);
         }
 
@@ -656,7 +668,7 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
 
         LOG_INFO("%s: received DEALLOCATE(ch = %d)", __func__, ch);
 #ifdef DONT_IGNORE_DEALLOCATE
-        shim_hv_flow_deallocate_common(priv, ch);
+        shim_hv_flow_deallocate_common(priv, ch, 1);
 #endif
 }
 
@@ -799,6 +811,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         struct name_list_element *cur;
         struct name_list_element *found = NULL;
         char *tmpstr = name_tostring(application_name);
+        unsigned int ch;
 
         mutex_lock(&priv->reg_lock);
 
@@ -830,6 +843,15 @@ out:
         mutex_unlock(&priv->reg_lock);
         if (tmpstr)
                 rkfree(tmpstr);
+
+        mutex_lock(&priv->vc_lock);
+        for (ch = 0; ch < VMPI_MAX_CHANNELS; ch++) {
+                if (name_is_equal(application_name,
+                                &priv->vmpi.channels[ch].application_name)) {
+                        shim_hv_flow_deallocate_common(priv, ch, 0);
+                }
+        }
+        mutex_unlock(&priv->vc_lock);
 
         return 0;
 }
@@ -1038,6 +1060,8 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 priv->vmpi.channels[i].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[i].port_id = port_id_bad();
+                name_init_with(&priv->vmpi.channels[i].application_name,
+                                NULL, NULL, NULL, NULL);
         }
         err = priv->vmpi.ops->register_read_callback(priv->vmpi.ops, shim_hv_recv_callback, priv);
         if (err) {
