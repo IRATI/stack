@@ -114,7 +114,6 @@ struct rcv_data {
 	struct sock *sk;
 };
 
-/*
 static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data *data,
 		port_id_t id)
 {
@@ -134,6 +133,7 @@ static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data *data,
 	return NULL;
 }
 
+/*
 static struct shim_tcp_udp_flow * find_tcp_flow_by_socket(
 		struct ipcp_instance_data *data, const struct socket *sock)
 {
@@ -240,8 +240,8 @@ static int flow_destroy(struct ipcp_instance_data *data,
 	return 0;
 }
 
-static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
-		struct shim_tcp_udp_flow *  flow)
+static void deallocate_and_destroy_flow(struct ipcp_instance_data *data,
+		struct shim_tcp_udp_flow *flow)
 {
 	if (kfa_flow_deallocate(data->kfa, flow->port_id))
 		LOG_ERR("Failed to destroy KFA flow");
@@ -249,38 +249,195 @@ static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
 		LOG_ERR("Failed to destroy shim-tcp-udp flow");
 }
 
-static int tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
-		const struct name *        source,
-		const struct name *        dest,
-		const struct flow_spec *   fspec,
-		port_id_t                  id)
+static int tcp_udp_flow_allocate_request(struct ipcp_instance_data *data,
+		const struct name *source,
+		const struct name *dest,
+		const struct flow_spec *fspec,
+		port_id_t id)
 {
+	struct shim_tcp_udp_flow *flow;
+	struct app_data *app;
+	int ip;
+
 	LOG_DBG("tcp_udp allocate request");
 	ASSERT(data);
 	ASSERT(source);
 	ASSERT(dest);
 
+	app = find_app_by_name(data, source);
+	if (!app) {
+		LOG_ERR("app not registered, so can't send allocate request");
+		return -1;
+	}
+
+	flow = find_flow(data, id);
+	if (!flow) {
+		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+		if (!flow)
+			return -1;
+
+		flow->port_id       = id;
+		flow->port_id_state = PORT_STATE_PENDING;
+		flow->app_name = app->app_name;
+
+		INIT_LIST_HEAD(&flow->list);
+		spin_lock(&data->flow_lock);
+		list_add(&flow->list, &data->flows);
+		spin_unlock(&data->flow_lock);
+
+		flow->sdu_queue = rfifo_create();
+		if (!flow->sdu_queue) {
+			LOG_ERR("Couldn't create the sdu queue "
+					"for a new flow");
+			deallocate_and_destroy_flow(data, flow);
+			return -1;
+		}
+
+		ip = (10 << 24) | (1 << 16) | (1 << 8) | (3);
+		flow->addr.sin_addr.s_addr = htonl(ip);
+		flow->addr.sin_family = AF_INET;
+		flow->addr.sin_port = htons(2325);
+
+		flow->sock = app->udpsock;
+
+		flow->port_id_state = PORT_STATE_ALLOCATED;
+		if (kipcm_flow_commit(default_kipcm, data->id, flow->port_id)) {
+			LOG_ERR("Cannot add flow");
+			return -1;
+		}
+
+		while (!rfifo_is_empty(flow->sdu_queue)) {
+			struct sdu * tmp = NULL;
+
+			tmp = rfifo_pop(flow->sdu_queue);
+			ASSERT(tmp);
+
+			LOG_DBG("Got a new element from the fifo");
+
+			if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
+				LOG_ERR("Couldn't post SDU to KFA ...");
+				return -1;
+			}
+		}
+
+		rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+		flow->sdu_queue = NULL;
+		
+		if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
+					flow->port_id, 0)) {
+			LOG_ERR("couldn't tell flow is allocated to KIPCM");
+			return -1;
+		}
+	} else if (flow->port_id_state == PORT_STATE_PENDING) {
+		LOG_ERR("Port-id state is already pending ...");
+	} else {
+		LOG_ERR("Allocate called in a wrong state, how dare you!");
+		return -1;
+	}
+
 	return 0;
 }
 
-static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
-		port_id_t                  port_id,
-		int                        result)
+static int tcp_udp_flow_allocate_response(struct ipcp_instance_data *data,
+		port_id_t port_id,
+		int result)
 {
+        struct shim_tcp_udp_flow * flow;
+
 	LOG_DBG("tcp_udp allocate response");
-	ASSERT(data);
-	ASSERT(is_port_id_ok(port_id));
+        ASSERT(data);
+        ASSERT(is_port_id_ok(port_id));
 
-	return 0;
+        flow = find_flow(data, port_id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, you shouldn't call this");
+                return -1;
+        }
+
+        spin_lock(&data->flow_lock);
+        if (flow->port_id_state != PORT_STATE_PENDING) {
+                LOG_ERR("Flow is already allocated");
+                spin_unlock(&data->flow_lock);
+                return -1;
+        }
+        spin_unlock(&data->flow_lock);
+
+        /* On positive response, flow should transition to allocated state */
+        if (!result) {
+                if (kipcm_flow_commit(default_kipcm, data->id,
+                                      flow->port_id)) {
+                        LOG_ERR("KIPCM flow add failed");
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
+                spin_lock(&data->flow_lock);
+                flow->port_id_state = PORT_STATE_ALLOCATED;
+                spin_unlock(&data->flow_lock);
+
+                ASSERT(flow->sdu_queue);
+
+                while (!rfifo_is_empty(flow->sdu_queue)) {
+                        struct sdu * tmp = NULL;
+
+                        tmp = rfifo_pop(flow->sdu_queue);
+                        ASSERT(tmp);
+
+                        LOG_DBG("Got a new element from the fifo");
+
+                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
+                                LOG_ERR("Couldn't post SDU to KFA ...");
+                                return -1;
+                        }
+                }
+
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
+
+        } else {
+                spin_lock(&data->flow_lock);
+                flow->port_id_state = PORT_STATE_NULL;
+                spin_unlock(&data->flow_lock);
+
+                /*
+                 *  If we would destroy the flow, the application
+                 *  we refused would constantly try to allocate
+                 *  a flow again. This should only be allowed if
+                 *  the IPC manager deallocates the NULL state flow first.
+                 */
+                ASSERT(flow->sdu_queue);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                flow->sdu_queue = NULL;
+        }
+
+        return 0;
 }
 
-static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
-		port_id_t                  id)
+static int tcp_udp_flow_deallocate(struct ipcp_instance_data *data,
+		port_id_t id)
 {
-	LOG_DBG("tcp_udp deallocate");
-	ASSERT(data);
+        struct shim_tcp_udp_flow *flow;
 
-	return 0;
+	LOG_DBG("tcp_udp deallocate");
+        ASSERT(data);
+
+        flow = find_flow(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
+
+        if (kfa_flow_deallocate(data->kfa, flow->port_id)) {
+                LOG_ERR("Failed to deallocate flow in KFA");
+                return -1;
+        }
+
+        if (flow_destroy(data, flow)) {
+                LOG_ERR("Failed to destroy shim-tcp-udp flow");
+                return -1;
+        }
+
+        return 0;
 }
 
 int recv_msg(struct socket *sock, struct sockaddr_in *other,
@@ -356,10 +513,13 @@ static int udp_process_msg(struct socket *sock)
 	struct shim_tcp_udp_flow *flow;
 	struct sockaddr_in addr;
 	struct app_data *app;
+	struct buffer *sdubuf;
         struct name *sname;
 	struct sdu *du;
 	char buf[512];
 	int size;
+
+	LOG_DBG("udp_process_msg");
 
 	memset(&addr, 0, sizeof(struct sockaddr_in));
 	size = recv_msg(sock, &addr, buf, 512);
@@ -368,8 +528,16 @@ static int udp_process_msg(struct socket *sock)
 		return -1;
 	}
 
-	du = NULL;
-	if (create_sdu(du, buf, size)) {
+	sdubuf = buffer_create_from(buf, size);
+	if (!sdubuf) {
+		LOG_ERR("could not create buffer");
+		return -1;
+	}
+
+	du = sdu_create_buffer_with_ni(sdubuf);
+	if (!du) {
+		LOG_ERR("Couldn't create sdu");
+		buffer_destroy(sdubuf);
 		return -1;
 	}
 
@@ -378,6 +546,8 @@ static int udp_process_msg(struct socket *sock)
 	spin_lock(&data->flow_lock);
 	flow = find_udp_flow(data, &addr, sock);
 	if (!flow) {
+		LOG_DBG("udp_process_msg: no flow found, creating it");
+
 		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 		if (!flow) {
 			LOG_ERR("could not allocate flow");
@@ -471,6 +641,7 @@ static int udp_process_msg(struct socket *sock)
 			return -1;
 		}
 		name_destroy(sname);
+		LOG_DBG("udp_process_msg: flow created");
 
 	} else {
 		LOG_DBG("Flow exists, queueing or delivering or dropping");
@@ -699,11 +870,47 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data *data,
 		port_id_t id,
 		struct sdu *sdu)
 {
-	LOG_DBG("tcp_udp sdu write");
-	ASSERT(data);
-	ASSERT(sdu);
+	struct shim_tcp_udp_flow *flow;
+	int size;
 
-	return 0;
+        ASSERT(data);
+        ASSERT(sdu);
+
+        LOG_DBG("Entered the sdu-write");
+
+	flow = find_flow(data, id);
+	if (!flow) {
+		LOG_ERR("could not find flow with specified port-id");
+		sdu_destroy(sdu);
+		return -1;
+	}
+
+        spin_lock(&data->flow_lock);
+        if (flow->port_id_state != PORT_STATE_ALLOCATED) {
+                LOG_ERR("Flow is not in the right state to call this");
+                sdu_destroy(sdu);
+                spin_unlock(&data->flow_lock);
+                return -1;
+        }
+        spin_unlock(&data->flow_lock);
+
+	size = send_msg(flow->sock, &flow->addr,
+			(char*)buffer_data_rw(sdu->buffer),
+			buffer_length(sdu->buffer));
+	if (size < 0) {
+		LOG_DBG("error during sdu write");
+		sdu_destroy(sdu);
+		return -1;
+	} else if (size < buffer_length(sdu->buffer)) {
+		LOG_DBG("could not completly send sdu");
+		sdu_destroy(sdu);
+		return -1;
+	}
+
+	LOG_DBG("Packet sent");
+        sdu_destroy(sdu);
+
+        return 0;
 }
 
 static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data *data)
