@@ -192,6 +192,7 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator.setIPCProcess(this);
 		registrationManager.setIPCProcess(this);
 		flowAllocator.setIPCProcess(this);
+		log.debug("dif: " + this.getDIFInformation());
 		pduForwardingTable.setIPCProcess(this);
 		
 		populateRIB();
@@ -538,7 +539,7 @@ public class IPCProcessImpl implements IPCProcess {
 			}
 			
 			/*TODO: Set algorithm by config*/
-			pduForwardingTable.setAlgorithm(new DijkstraAlgorithm(), new Vertex(getAddress()));
+			pduForwardingTable.setDIFConfiguration(new DijkstraAlgorithm(), new Vertex(getAddress()));
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());

@@ -65,7 +65,6 @@ public class FakeIPCProcess implements IPCProcess{
 
 	@Override
 	public ResourceAllocator getResourceAllocator() {
-		log.debug("hola");
 		return new FakeResourceAllocator();
 	}
 
@@ -101,8 +100,7 @@ public class FakeIPCProcess implements IPCProcess{
 
 	@Override
 	public ApplicationProcessNamingInformation getName() {
-		// TODO Auto-generated method stub
-		return new ApplicationProcessNamingInformation("normal.DIF");
+		return new ApplicationProcessNamingInformation("normal.DIF", "1");
 	}
 
 	@Override

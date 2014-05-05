@@ -871,36 +871,33 @@ public:
  */
 class PDUFTableGeneratorConfiguration {
 	private:
+		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
 		static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
 		static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
 		static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
 		static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
 		static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+		int objectMaximumAge;
 		int waitUntilReadCDAP;
 		int waitUntilError;
 		int waitUntilPDUFTComputation;
 		int waitUntilFSODBPropagation;
 		int waitUntilAgeIncrement;
-		int pulsesUntilFSOExpiration;
-		int maximumAge;
 	public:
 		PDUFTableGeneratorConfiguration();
         const std::string toString();
-        int getPulsesUntilFsoExpiration() const;
-        void setPulsesUntilFsoExpiration(const int pulsesUntilFsoExpiration);
         int getWaitUntilAgeIncrement() const;
         void setWaitUntilAgeIncrement(const int waitUntilAgeIncrement);
         int getWaitUntilError() const;
         void setWaitUntilError(const int waitUntilError);
-        int getWaitUntilFsodbPropagation() const;
-        void setWaitUntilFsodbPropagation(const int waitUntilFsodbPropagation);
-        int getWaitUntilPduftComputation() const;
-        void setWaitUntilPduftComputation(const int waitUntilPduftComputation);
-        int getWaitUntilReadCdap() const;
-        void setWaitUntilReadCdap(const int waitUntilReadCdap);
-        int getMaximumAge() const;
-        void setMaximumAge(const int maximumAge);
+        int getWaitUntilFSODBPropagation() const;
+        void setWaitUntilFSODBPropagation(const int waitUntilFsodbPropagation);
+        int getWaitUntilPDUFTComputation() const;
+        void setWaitUntilPDUFTComputation(const int waitUntilPduftComputation);
+        int getWaitUntilReadCDAP() const;
+        void setWaitUntilReadCDAP(const int waitUntilReadCdap);
+        int getObjectMaximumAge() const;
+        void setObjectMaximumAge(const int objectMaximumAge);
 };
 
 /**

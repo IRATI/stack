@@ -1248,7 +1248,7 @@ PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration()
 	waitUntilPDUFTComputation = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
 	waitUntilFSODBPropagation = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
 	waitUntilAgeIncrement = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
-	pulsesUntilFSOExpiration = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
+	objectMaximumAge = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
 }
 
 const std::string PDUFTableGeneratorConfiguration::toString()
@@ -1260,18 +1260,11 @@ const std::string PDUFTableGeneratorConfiguration::toString()
     ss<<"Timer between PDU forwarding table Computation (ms): "<<waitUntilPDUFTComputation<<std::endl;
     ss<<"Timer between FlowStateDataBase propagation (ms): "<<waitUntilFSODBPropagation<<std::endl;
     ss<<"Timer between age incrementation pulses (ms): "<<waitUntilAgeIncrement<<std::endl;
-    ss<<"Number of pulses until FSO expiration: "<<pulsesUntilFSOExpiration<<std::endl;
+    ss<<"Number of pulses until FSO expiration: "<<objectMaximumAge<<std::endl;
 
     return ss.str();
 }
 
-
-int PDUFTableGeneratorConfiguration::getPulsesUntilFsoExpiration() const {
-	return pulsesUntilFSOExpiration;
-}
-void PDUFTableGeneratorConfiguration::setPulsesUntilFsoExpiration(int pulsesUntilFsoExpiration) {
-	pulsesUntilFSOExpiration = pulsesUntilFsoExpiration;
-}
 
 int PDUFTableGeneratorConfiguration::getWaitUntilAgeIncrement() const {
 	return waitUntilAgeIncrement;
@@ -1289,36 +1282,36 @@ void PDUFTableGeneratorConfiguration::setWaitUntilError(int waitUntilError) {
 	this->waitUntilError = waitUntilError;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilFsodbPropagation() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilFSODBPropagation() const {
 	return waitUntilFSODBPropagation;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilFsodbPropagation(int waitUntilFsodbPropagation) {
+void PDUFTableGeneratorConfiguration::setWaitUntilFSODBPropagation(int waitUntilFsodbPropagation) {
 	waitUntilFSODBPropagation = waitUntilFsodbPropagation;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilPduftComputation() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilPDUFTComputation() const {
 	return waitUntilPDUFTComputation;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilPduftComputation(int waitUntilPduftComputation) {
+void PDUFTableGeneratorConfiguration::setWaitUntilPDUFTComputation(int waitUntilPduftComputation) {
 	waitUntilPDUFTComputation = waitUntilPduftComputation;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilReadCdap() const {
+int PDUFTableGeneratorConfiguration::getWaitUntilReadCDAP() const {
 	return waitUntilReadCDAP;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilReadCdap(int waitUntilReadCdap) {
+void PDUFTableGeneratorConfiguration::setWaitUntilReadCDAP(int waitUntilReadCdap) {
 	waitUntilReadCDAP = waitUntilReadCdap;
 }
 
-int PDUFTableGeneratorConfiguration::getMaximumAge() const {
-	return maximumAge;
+int PDUFTableGeneratorConfiguration::getObjectMaximumAge() const {
+	return objectMaximumAge;
 }
 
-void PDUFTableGeneratorConfiguration::setMaximumAge(const int maximumAge) {
-	this->maximumAge = maximumAge;
+void PDUFTableGeneratorConfiguration::setObjectMaximumAge(const int objectMaximumAge) {
+	this->objectMaximumAge = objectMaximumAge;
 }
 
 /* CLASS DIF INFORMATION */

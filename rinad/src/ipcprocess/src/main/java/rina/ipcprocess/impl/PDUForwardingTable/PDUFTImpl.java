@@ -155,23 +155,34 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	}
 	
 	public void setIPCProcess(IPCProcess ipcProcess){
-		RINAConfiguration rinaConf = RINAConfiguration.getInstance();
-		String difName = rinaConf.getDIFNameAssociatedToApName(this.ipcProcess.getName());
-		pduftGeneratorConfiguration = rinaConf.getDIFConfiguration(difName).getPdufTableGeneratorConfiguration();
-		this.maximumAge = pduftGeneratorConfiguration.getMaximumAge();
 		this.ipcProcess = ipcProcess;
 		ribDaemon = ipcProcess.getRIBDaemon();
 		encoder = ipcProcess.getEncoder();
 		cdapSessionManager = ipcProcess.getCDAPSessionManager();
 		populateRIB();
 		subscribeToEvents();
-		
-		/*	Time to compute PDUFT	*/
+	}
+	
+	public void setDIFConfiguration(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
+	{
+		log.info("Algorithm " + routingAlgorithm.getClass() + " setted");
+		this.routingAlgorithm = routingAlgorithm;
+		this.sourceVertex = sourceVertex;
 		if(!test)
 		{
+			RINAConfiguration rinaConf = RINAConfiguration.getInstance();
+			log.debug("Comensa el debugging");
+			log.debug("difName: " + this.ipcProcess.getDIFInformation().getDifName().getProcessName());
+
+			pduftGeneratorConfiguration = rinaConf.getDIFConfiguration(this.ipcProcess.getDIFInformation().getDifName().getProcessName()).
+					getPdufTableGeneratorConfiguration();
+			log.debug("Configuration: " + pduftGeneratorConfiguration);
+			this.maximumAge = pduftGeneratorConfiguration.getObjectMaximumAge();
+
+			/*	Time to compute PDUFT	*/	
 			pduFTComputationTimer = new Timer();
-			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), pduftGeneratorConfiguration.getWaitUntilPduftComputation(), 
-					pduftGeneratorConfiguration.getWaitUntilPduftComputation());
+			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), pduftGeneratorConfiguration.getWaitUntilPDUFTComputation(), 
+					pduftGeneratorConfiguration.getWaitUntilPDUFTComputation());
 			
 			/*	Time to increment age	*/
 			ageIncrementationTimer = new Timer();
@@ -180,16 +191,9 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 	
 			/* Timer to propagate modified FSO */
 			fsodbPropagationTimer = new Timer();
-			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), pduftGeneratorConfiguration.getWaitUntilFsodbPropagation(), 
-					pduftGeneratorConfiguration.getWaitUntilFsodbPropagation());
+			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), pduftGeneratorConfiguration.getWaitUntilFSODBPropagation(), 
+					pduftGeneratorConfiguration.getWaitUntilFSODBPropagation());
 		}
-	}
-	
-	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
-	{
-		log.info("Algorithm " + routingAlgorithm.getClass() + " setted");
-		this.routingAlgorithm = routingAlgorithm;
-		this.sourceVertex = sourceVertex;
 	}
 	
 	public void setMaximumAge(int maximumAge)
@@ -299,7 +303,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 				EnrollmentTimer timer = new EnrollmentTimer(portId);
 				sendCDAPTimers.add(timer);
 				timer.getTimer().schedule(new SendReadCDAP(portId, cdapSessionManager, ribDaemon, pduftGeneratorConfiguration.getWaitUntilError(), 
-						pduftCDAPmessageHandler), pduftGeneratorConfiguration.getWaitUntilReadCdap());
+						pduftCDAPmessageHandler), pduftGeneratorConfiguration.getWaitUntilReadCDAP());
 			}
 		}
 	}
