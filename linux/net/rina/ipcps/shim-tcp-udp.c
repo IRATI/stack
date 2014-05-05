@@ -487,26 +487,6 @@ int send_msg(struct socket *sock, struct sockaddr_in *other, char *buf, int len)
 	return size;
 }
 
-static int create_sdu(struct sdu *du, char *buf, int size)
-{
-	struct buffer *sdubuf;
-
-	sdubuf = buffer_create_from(buf, size);
-	if (!sdubuf) {
-		LOG_ERR("could not create buffer");
-		return -1;
-	}
-
-	du = sdu_create_buffer_with_ni(sdubuf);
-	if (!du) {
-		LOG_ERR("Couldn't create sdu");
-		buffer_destroy(sdubuf);
-		return -1;
-	}
-
-	return 0;
-}
-
 static int udp_process_msg(struct socket *sock)
 {
 	struct ipcp_instance_data *data;
@@ -775,9 +755,9 @@ static int tcp_udp_application_register(struct ipcp_instance_data *data,
 
 	err = kernel_bind(app->udpsock, (struct sockaddr*)&sin, sizeof(sin));
 	if (err < 0) {
-		LOG_ERR("could not bind socket for registration");
-		name_destroy(app->app_name);
+		LOG_ERR("could not bind udp socket for registration");
 		sock_release(app->udpsock);
+		name_destroy(app->app_name);
 		rkfree(app);
 		return -1;
 	}
@@ -786,6 +766,44 @@ static int tcp_udp_application_register(struct ipcp_instance_data *data,
 	app->udpsock->sk->sk_user_data = app->udpsock->sk->sk_data_ready;
 	app->udpsock->sk->sk_data_ready = tcp_udp_rcv;
 	write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
+
+	LOG_DBG("udp socket ready");
+
+	err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &app->lsock);
+	if (err < 0) {
+		LOG_ERR("could not create tcp socket for registration");
+		sock_release(app->udpsock);
+		name_destroy(app->app_name);
+		rkfree(app);
+		return -1;
+	}
+
+	err = kernel_bind(app->lsock, (struct sockaddr*)&sin, sizeof(sin));
+	if (err < 0) {
+		LOG_ERR("could not bind tcp socket for registration");
+		sock_release(app->lsock);
+		sock_release(app->udpsock);
+		name_destroy(app->app_name);
+		rkfree(app);
+		return -1;
+	}
+
+	err = kernel_listen(app->lsock, 5);
+	if (err < 0) {
+		LOG_ERR("could not listen on tcp socket for registration");
+		sock_release(app->lsock);
+		sock_release(app->udpsock);
+		name_destroy(app->app_name);
+		rkfree(app);
+		return -1;
+	}
+
+	write_lock_bh(&app->lsock->sk->sk_callback_lock);
+	app->lsock->sk->sk_user_data = app->lsock->sk->sk_data_ready;
+	app->lsock->sk->sk_data_ready = tcp_udp_rcv;
+	write_unlock_bh(&app->lsock->sk->sk_callback_lock);
+
+	LOG_DBG("tcp socket ready");
 
 	INIT_LIST_HEAD(&(app->list));
 
@@ -819,6 +837,21 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data *data,
 	release_sock(app->udpsock->sk);
 
 	sock_release(app->udpsock);
+
+	LOG_DBG("udp socket destroyed");
+
+	lock_sock(app->lsock->sk);
+	write_lock_bh(&app->lsock->sk->sk_callback_lock);
+	app->lsock->sk->sk_data_ready = app->lsock->sk->sk_user_data;
+	app->lsock->sk->sk_user_data = NULL;
+	write_unlock_bh(&app->lsock->sk->sk_callback_lock);
+	release_sock(app->lsock->sk);
+
+	kernel_sock_shutdown(app->lsock, SHUT_RDWR);
+	sock_release(app->lsock);
+
+	LOG_DBG("tcp socket destroyed");
+
 	name_destroy(app->app_name);
 
 	spin_lock(&data->app_lock);
