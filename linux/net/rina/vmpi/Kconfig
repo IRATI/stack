@@ -1,0 +1,27 @@
+#
+# VMPI
+#
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
+
+menuconfig VMPI
+	bool "VMPI support"
+        default n
+
+config VMPI_VIRTIO_GUEST
+	tristate "VMPI for Virtio - guest support"
+	default m
+        depends on VMPI
+        select VIRTIO
+        select RINA_SHIM_HV
+	help
+	  No help for the time being
+
+config VMPI_VIRTIO_HOST
+	tristate "VMPI for Virtio - host support"
+	default m
+        depends on VMPI
+        select VHOST
+        select RINA_SHIM_HV
+	help
+	  No help for the time being
