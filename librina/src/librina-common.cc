@@ -1405,9 +1405,14 @@ void DIFConfiguration::setDataTransferConstants(
         this->dataTransferConstants = dataTransferConstants;
 }
 
-void DIFConfiguration::setPdufTableGeneratorConfiguration(const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration)
+void DIFConfiguration::setPDUFTableGeneratorConfiguration(const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration)
 {
 	this->pdufTableGeneratorConfiguration = pdufTableGeneratorConfiguration;
+}
+
+const PDUFTableGeneratorConfiguration& DIFConfiguration::getPDUFTableGeneratorConfiguration() const
+{
+	return pdufTableGeneratorConfiguration;
 }
 
 /* CLASS NEIGHBOR */

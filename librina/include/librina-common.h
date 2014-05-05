@@ -939,7 +939,8 @@ public:
 					const DataTransferConstants& dataTransferConstants);
 	unsigned int getAddress() const;
 	void setAddress(unsigned int address);
-	void setPdufTableGeneratorConfiguration (const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+	void setPDUFTableGeneratorConfiguration (const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+	const PDUFTableGeneratorConfiguration& getPDUFTableGeneratorConfiguration() const;
 };
 
 /**
