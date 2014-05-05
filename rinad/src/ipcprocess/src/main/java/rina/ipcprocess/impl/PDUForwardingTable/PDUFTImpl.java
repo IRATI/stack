@@ -171,12 +171,8 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		if(!test)
 		{
 			RINAConfiguration rinaConf = RINAConfiguration.getInstance();
-			log.debug("Comensa el debugging");
-			log.debug("difName: " + this.ipcProcess.getDIFInformation().getDifName().getProcessName());
-
 			pduftGeneratorConfiguration = rinaConf.getDIFConfiguration(this.ipcProcess.getDIFInformation().getDifName().getProcessName()).
 					getPdufTableGeneratorConfiguration();
-			log.debug("Configuration: " + pduftGeneratorConfiguration);
 			this.maximumAge = pduftGeneratorConfiguration.getObjectMaximumAge();
 
 			/*	Time to compute PDUFT	*/	
