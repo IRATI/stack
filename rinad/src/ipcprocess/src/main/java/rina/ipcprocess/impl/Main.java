@@ -24,14 +24,12 @@ public class Main {
 				log.error("Don't have enough arguments, exiting");
 				System.exit(-1);
 			}
-			
 			ApplicationProcessNamingInformation namingInfo = 
 					new ApplicationProcessNamingInformation();
 			namingInfo.setProcessName(args[0]);
 			namingInfo.setProcessInstance(args[1]);
 			int ipcProcessId = Integer.parseInt(args[2]);
 			long ipcManagerPort = Long.parseLong(args[3]);
-			
 			IPCProcessImpl ipcProcess = new IPCProcessImpl();
 			ipcProcess.initialize(namingInfo, ipcProcessId, ipcManagerPort);
 			ipcProcess.executeEventLoop();
