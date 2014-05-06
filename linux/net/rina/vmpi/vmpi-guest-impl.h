@@ -37,8 +37,8 @@ struct vmpi_buffer * vmpi_impl_read_buffer(vmpi_impl_info_t *vi);
 bool vmpi_impl_send_cb(vmpi_impl_info_t *vi, int enable);
 bool vmpi_impl_receive_cb(vmpi_impl_info_t *vi, int enable);
 void vmpi_impl_callbacks_register(vmpi_impl_info_t *vi,
-                                  vmpi_impl_callback_t xmit,
-                                  vmpi_impl_callback_t recv);
+                vmpi_impl_callback_t xmit,
+                vmpi_impl_callback_t recv);
 void vmpi_impl_callbacks_unregister(vmpi_impl_info_t *vi);
 
 vmpi_info_t *vmpi_info_from_vmpi_impl_info(vmpi_impl_info_t *vi);

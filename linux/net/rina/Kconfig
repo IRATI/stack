@@ -80,6 +80,8 @@ menuconfig IPC_PROCESSES
 	bool "IPC Processes"
         default y
 
+source "net/rina/vmpi/Kconfig"
+
 if IPC_PROCESSES
 source "net/rina/ipcps/Kconfig"
 endif

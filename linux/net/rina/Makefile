@@ -31,5 +31,6 @@ rina_personality_default-y +=			\
 	 utils-workarounds.o
 endif
 
+obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/
 obj-$(CONFIG_RINA) += rinarp/

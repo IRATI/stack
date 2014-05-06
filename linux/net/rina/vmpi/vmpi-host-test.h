@@ -1,4 +1,4 @@
-/* Test operations for the host side VMPI.
+/* Test interface for VMPI on the hypervisor
  *
  * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
@@ -17,16 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __VMPI_GUEST_TEST_H__
-#define __VMPI_GUEST_TEST_H__
+#ifndef __VMPI_HOST_TEST_H__
+#define __VMPI_HOST_TEST_H__
 
-/* Enable guest-side test interface. */
-//#define VMPI_GUEST_TEST
+/* Enable hypervisor-side test interface. */
+//#define VMPI_HOST_TEST
 
-#ifdef VMPI_GUEST_TEST
-int vmpi_test_init(void);
-void vmpi_test_fini(void);
-#endif  /* VMPI_GUEST_TEST */
+#ifdef VMPI_HOST_TEST
+ssize_t vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
+                unsigned long iovcnt, loff_t pos);
+ssize_t vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
+                unsigned long iovcnt, loff_t pos);
+#endif  /* VMPI_HOST_TEST */
 
-#endif  /* __VMPI_GUEST_TEST_H__ */
+#endif  /* __VMPI_HOST_TEST_H__ */
 

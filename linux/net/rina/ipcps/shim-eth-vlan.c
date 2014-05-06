@@ -1,9 +1,9 @@
 /*
- *  Shim IPC Process over Ethernet (using VLANs)
+ * Shim IPC Process over Ethernet (using VLANs)
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
- *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *   Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *   Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *   Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

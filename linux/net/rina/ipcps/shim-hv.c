@@ -1,7 +1,7 @@
 /*
  * Shim IPC process for hypervisors
  *
- *      Author: Vincenzo Maffione <v.maffione@nextworks.it>
+ *   Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +24,8 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 
-#define SHIM_HV_NAME    "shim-hv-virtio"
-#define RINA_PREFIX SHIM_HV_NAME
+#define SHIM_NAME "shim-hv-virtio"
+#define RINA_PREFIX  SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -37,6 +37,15 @@
 #include "ipcp-factories.h"
 #include "vmpi-ops.h"
 
+/* FIXME: Pigsty workaround, to be removed immediately */
+#if defined(CONFIG_VMPI_VIRTIO_GUEST) && !defined(CONFIG_VMPI_VIRTIO_GUEST_MODULE)
+#error VMPI guest must be a module
+#endif
+
+/* FIXME: Pigsty workaround, to be removed immediately */
+#if defined(CONFIG_VMPI_VIRTIO_HOST) && !defined(CONFIG_VMPI_VIRTIO_HOST_MODULE)
+#error VMPI host must be a module
+#endif
 
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm *default_kipcm;
@@ -59,8 +68,13 @@ enum channel_state {
 };
 
 struct shim_hv_channel {
+        /* Internal state associated to the channel. */
         enum channel_state      state;
+        /* In ALLOCATED state, this is the port-id supported by the channel. */
         port_id_t               port_id;
+        /* In PENDING or ALLOCATED state, this is the application that
+           currently holds the channel. */
+        struct name             application_name;
 };
 
 enum shim_hv_command {
@@ -93,6 +107,7 @@ struct ipcp_instance_data {
         struct kfa              *kfa;
         struct list_head        registered_applications;
         struct mutex            reg_lock;
+        struct mutex            vc_lock;
         struct shim_hv_vmpi     vmpi;
 };
 
@@ -212,7 +227,8 @@ shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
         iov.iov_base = msg;
         iov.iov_len = len;
         ret = priv->vmpi.ops->write(priv->vmpi.ops, 0, &iov, 1);
-        LOG_INFO("%s: vmpi_write_kernel(0, %d) --> %d", __func__, (int)len, (int)ret);
+        LOG_DBG("%s: vmpi_write_kernel(0, %d) --> %d",
+                __func__, (int) len, (int) ret);
 
         return !(ret == len);
 }
@@ -272,6 +288,8 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         ASSERT(src_application);
         ASSERT(dst_application);
 
+        mutex_lock(&priv->vc_lock);
+
         /* Select an unused channel. */
         for (ch = 1; ch < VMPI_MAX_CHANNELS; ch++)
                 if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL)
@@ -324,15 +342,17 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
+        name_cpy(src_application, &priv->vmpi.channels[ch].application_name);
 
-        LOG_INFO("%s: channel %d --> PENDING", __func__, ch);
+        LOG_DBG("%s: channel %d --> PENDING", __func__, ch);
 
         rkfree(msg_buf);
-msg_alloc:
+ msg_alloc:
         rkfree(dst_name);
-dst_name_alloc:
+ dst_name_alloc:
         rkfree(src_name);
-src_name_alloc:
+ src_name_alloc:
+        mutex_unlock(&priv->vc_lock);
         if (err) {
                 /* The flow was allocated outside this module. Are we
                  * in charge of deallocate it this method fails?
@@ -351,18 +371,23 @@ static int
 shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                                port_id_t port_id, int result)
 {
-        unsigned int ch = port_id_to_channel(priv, port_id);
+        unsigned int ch;
         int ret;
         int response = RESP_KO;
 
+        mutex_lock(&priv->vc_lock);
+
+        ch = port_id_to_channel(priv, port_id);
+
         if (!ch) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
+                mutex_unlock(&priv->vc_lock);
                 return -1;
         }
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
-                                priv->vmpi.channels[ch].state);
+                        priv->vmpi.channels[ch].state);
                 goto resp;
         }
 
@@ -377,7 +402,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 /* Let's do the transition to the ALLOCATED state. */
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
                 response = RESP_OK;
-                LOG_INFO("%s: channel %d --> ALLOCATED", __func__, ch);
+                LOG_DBG("%s: channel %d --> ALLOCATED", __func__, ch);
         } else {
                 /* Negative response */
                 kfa_flow_deallocate(priv->kfa, port_id);
@@ -387,9 +412,12 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 kfa_port_id_release(priv->kfa, port_id);
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
-                LOG_INFO("%s: channel %d --> NULL", __func__, ch);
+                name_fini(&priv->vmpi.channels[ch].application_name);
+                LOG_DBG("%s: channel %d --> NULL", __func__, ch);
         }
-resp:
+ resp:
+        mutex_unlock(&priv->vc_lock);
+
         shim_hv_send_allocate_resp(priv, ch, response);
 
         return (response == RESP_OK) ? 0 : -1;
@@ -397,7 +425,7 @@ resp:
 
 static int
 shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
-                               unsigned int ch)
+                               unsigned int ch, unsigned locked)
 {
         int ret = 0;
         port_id_t port_id;
@@ -406,21 +434,30 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: invalid channel %u", __func__, ch);
                 return -1;
         }
+
+        if (locked)
+                mutex_lock(&priv->vc_lock);
+
         port_id = priv->vmpi.channels[ch].port_id;
 
         if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL) {
                 LOG_ERR("%s: channel state is already NULL", __func__);
-                return -1;
+                ret = -1;
+                goto out;
         }
 
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
         priv->vmpi.channels[ch].port_id = port_id_bad();
-        LOG_INFO("%s: channel %d --> NULL", __func__, ch);
+        name_fini(&priv->vmpi.channels[ch].application_name);
+        LOG_DBG("%s: channel %d --> NULL", __func__, ch);
 
         ret = kfa_flow_deallocate(priv->kfa, port_id);
         if (ret) {
                 LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
+ out:
+        if (locked)
+                mutex_unlock(&priv->vc_lock);
 
         return ret;
 }
@@ -434,7 +471,7 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
         int ret = 0;
         unsigned int ch = port_id_to_channel(priv, port_id);
 
-        ret = shim_hv_flow_deallocate_common(priv, ch);
+        ret = shim_hv_flow_deallocate_common(priv, ch, 1);
 
         shim_hv_send_deallocate(priv, ch);
 
@@ -472,17 +509,19 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 goto out;
         }
 
-        LOG_INFO("%s: received ALLOCATE_REQ(ch = %u, src = %s, dst = %s)",
-                        __func__, ch, src_name, dst_name);
+        LOG_DBG("%s: received ALLOCATE_REQ(ch = %u, src = %s, dst = %s)",
+                __func__, ch, src_name, dst_name);
 
         if (ch >= VMPI_MAX_CHANNELS) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
                 goto out;
         }
 
+        mutex_lock(&priv->vc_lock);
+
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_NULL) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
-                                priv->vmpi.channels[ch].state);
+                        priv->vmpi.channels[ch].state);
                 goto reject;
         }
 
@@ -524,24 +563,26 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
-        LOG_INFO("%s: channel %d --> PENDING", __func__, ch);
+        name_cpy(dst_application, &priv->vmpi.channels[ch].application_name);
+        LOG_DBG("%s: channel %d --> PENDING", __func__, ch);
 
-flow_arrived:
+ flow_arrived:
         if (err)
                 kfa_flow_deallocate(priv->kfa, port_id);
-flow_alloc:
+ flow_alloc:
         if (err)
                 kfa_port_id_release(priv->kfa, port_id);
-port_alloc:
+ port_alloc:
         if (dst_application)
                 rkfree(dst_application);
-dst_app:
+ dst_app:
         if (src_application)
                 rkfree(src_application);
-reject:
+ reject:
+        mutex_unlock(&priv->vc_lock);
         if (err)
                 shim_hv_send_allocate_resp(priv, ch, RESP_KO);
-out:
+ out:
         return;
 }
 
@@ -556,6 +597,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         port_id_t port_id;
         int ret = -1;
 
+        mutex_lock(&priv->vc_lock);
+
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
                 goto out;
@@ -566,8 +609,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 goto out;
         }
 
-        LOG_INFO("%s: received ALLOCATE_RESP(ch = %d, resp = %u)",
-                        __func__, ch, response);
+        LOG_DBG("%s: received ALLOCATE_RESP(ch = %d, resp = %u)",
+                __func__, ch, response);
 
         if (ch >= VMPI_MAX_CHANNELS) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
@@ -576,7 +619,7 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
-                                priv->vmpi.channels[ch].state);
+                        priv->vmpi.channels[ch].state);
                 goto out;
         }
         port_id = priv->vmpi.channels[ch].port_id;
@@ -588,7 +631,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         }
 
         ret = kipcm_notify_flow_alloc_req_result(default_kipcm, priv->id,
-                                        port_id, (response == RESP_OK) ? 0 : 1);
+                                                 port_id,
+                                                 (response == RESP_OK) ? 0:1);
         if (ret) {
                 LOG_ERR("%s: kipcm_notify_flow_alloc_req_result() failed",
                         __func__);
@@ -601,19 +645,22 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                  */
                 ret = 0;
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
-                LOG_INFO("%s: channel %d --> ALLOCATED", __func__, ch);
+                LOG_DBG("%s: channel %d --> ALLOCATED", __func__, ch);
         } else {
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
-                LOG_INFO("%s: channel %d --> NULL", __func__, ch);
+                name_fini(&priv->vmpi.channels[ch].application_name);
+                LOG_DBG("%s: channel %d --> NULL", __func__, ch);
         }
 
-flow_commit:
+ flow_commit:
         if (ret) {
                 if (kfa_flow_deallocate(priv->kfa, port_id))
                         LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
-out:
+ out:
+        mutex_unlock(&priv->vc_lock);
+
         return;
 }
 
@@ -630,9 +677,9 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
                 return;
         }
 
-        LOG_INFO("%s: received DEALLOCATE(ch = %d)", __func__, ch);
+        LOG_DBG("%s: received DEALLOCATE(ch = %d)", __func__, ch);
 #ifdef DONT_IGNORE_DEALLOCATE
-        shim_hv_flow_deallocate_common(priv, ch);
+        shim_hv_flow_deallocate_common(priv, ch, 1);
 #endif
 }
 
@@ -649,18 +696,18 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
 
         /* Call the handler associated to command. */
         switch (cmd) {
-                case CMD_ALLOCATE_REQ:
-                        shim_hv_handle_allocate_req(priv, msg, len);
-                        break;
-                case CMD_ALLOCATE_RESP:
-                        shim_hv_handle_allocate_resp(priv, msg, len);
-                        break;
-                case CMD_DEALLOCATE:
-                        shim_hv_handle_deallocate(priv, msg, len);
-                        break;
-                default:
-                        LOG_ERR("%s: unknown cmd %u\n", __func__, cmd);
-                        break;
+        case CMD_ALLOCATE_REQ:
+                shim_hv_handle_allocate_req(priv, msg, len);
+                break;
+        case CMD_ALLOCATE_RESP:
+                shim_hv_handle_allocate_resp(priv, msg, len);
+                break;
+        case CMD_DEALLOCATE:
+                shim_hv_handle_deallocate(priv, msg, len);
+                break;
+        default:
+                LOG_ERR("%s: unknown cmd %u\n", __func__, cmd);
+                break;
         }
 }
 
@@ -689,9 +736,9 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
         }
 
         if (unlikely(priv->vmpi.channels[ch].state !=
-                                CHANNEL_STATE_ALLOCATED)) {
+                     CHANNEL_STATE_ALLOCATED)) {
                 LOG_INFO("%s: dropping packet from channel %u: no "
-                                "associated flow", __func__, ch);
+                         "associated flow", __func__, ch);
                 return;
         }
 
@@ -715,7 +762,7 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
                 LOG_ERR("%s: kfa_sdu_post() failed", __func__);
                 return;
         }
-        LOG_INFO("%s: SDU received", __func__);
+        LOG_DBG("%s: SDU received", __func__);
 }
 
 /* Register an application to this IPC process. */
@@ -753,13 +800,13 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
         list_add(&cur->list, &priv->registered_applications);
 
         ret = 0;
-        LOG_INFO("%s: Application %s registered", __func__, tmpstr);
+        LOG_DBG("%s: Application %s registered", __func__, tmpstr);
 
-name_alloc:
+ name_alloc:
         if (ret) {
                 rkfree(cur);
         }
-out:
+ out:
         mutex_unlock(&priv->reg_lock);
         if (tmpstr)
                 rkfree(tmpstr);
@@ -775,6 +822,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         struct name_list_element *cur;
         struct name_list_element *found = NULL;
         char *tmpstr = name_tostring(application_name);
+        unsigned int ch;
 
         mutex_lock(&priv->reg_lock);
 
@@ -787,7 +835,14 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         }
 
         if (!found) {
-                LOG_ERR("%s: Application %s not registered", __func__, tmpstr);
+                LOG_WARN("%s: Application %s not registered",
+                         __func__, tmpstr);
+                /*
+                 * FIXME:
+                 *   For now don't return error in this case, since these
+                 *   spurious unregistrations seem to happen in the stack. Need
+                 *   some more investigation.
+                 */
                 goto out;
         }
 
@@ -796,14 +851,23 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         list_del(&found->list);
         rkfree(found);
 
-        LOG_INFO("%s: Application %s unregistered", __func__, tmpstr);
+        LOG_DBG("%s: Application %s unregistered", __func__, tmpstr);
 
-out:
+ out:
         mutex_unlock(&priv->reg_lock);
         if (tmpstr)
                 rkfree(tmpstr);
 
-        return (found != NULL);
+        mutex_lock(&priv->vc_lock);
+        for (ch = 0; ch < VMPI_MAX_CHANNELS; ch++) {
+                if (name_is_equal(application_name,
+                                  &priv->vmpi.channels[ch].application_name)) {
+                        shim_hv_flow_deallocate_common(priv, ch, 0);
+                }
+        }
+        mutex_unlock(&priv->vc_lock);
+
+        return 0;
 }
 
 /* Callback invoked when a shim IPC process is assigned to a DIF. */
@@ -827,8 +891,8 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                 return -1;
         }
 
-        LOG_INFO("%s: ipcp %d assigned to DIF %s", __func__,
-                        priv->id, priv->dif_name.process_name);
+        LOG_DBG("%s: ipcp %d assigned to DIF %s", __func__,
+                priv->id, priv->dif_name.process_name);
 
         return 0;
 }
@@ -852,9 +916,9 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
         }
 
         if (unlikely(priv->vmpi.channels[ch].state !=
-                                CHANNEL_STATE_ALLOCATED)) {
+                     CHANNEL_STATE_ALLOCATED)) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__,
-                                        ch, priv->vmpi.channels[ch].state);
+                        ch, priv->vmpi.channels[ch].state);
                 goto out;
         }
 
@@ -868,10 +932,10 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
         n = priv->vmpi.ops->write(priv->vmpi.ops, ch, &iov, 1);
         if (likely(n == iov.iov_len))
                 ret = 0;
-        LOG_INFO("%s: vmpi_write_kernel(%u, %d) --> %d", __func__, ch,
-                        (int)iov.iov_len, (int)n);
+        LOG_DBG("%s: vmpi_write_kernel(%u, %d) --> %d",
+                __func__, ch, (int) iov.iov_len, (int) n);
 
-out:
+ out:
         sdu_destroy(sdu);
 
         return ret;
@@ -921,38 +985,37 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
 };
 
 /* Initialize the IPC process factory. */
-static int
-shim_hv_factory_init(struct ipcp_factory_data *factory_data)
+static int shim_hv_factory_init(struct ipcp_factory_data * factory_data)
 {
         ASSERT(factory_data);
 
         INIT_LIST_HEAD(&factory_data->instances);
 
-        LOG_INFO("%s initialized", SHIM_HV_NAME);
+        LOG_DBG("Initialized");
 
         return 0;
 }
 
 /* Uninitialize the IPC process factory. */
-static int
-shim_hv_factory_fini(struct ipcp_factory_data *data)
+static int shim_hv_factory_fini(struct ipcp_factory_data * data)
 {
         ASSERT(data);
 
         ASSERT(list_empty(&data->instances));
 
-        LOG_INFO("%s uninitialized", SHIM_HV_NAME);
+        LOG_DBG("Uninitialized");
 
         return 0;
 }
 
 /* Create a new shim IPC process. */
 static struct ipcp_instance *
-shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
-                            const struct name *name, ipc_process_id_t id)
+shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
+                            const struct name *        name,
+                            ipc_process_id_t           id)
 {
-        struct ipcp_instance *ipcp;
-        struct ipcp_instance_data *priv;
+        struct ipcp_instance *      ipcp;
+        struct ipcp_instance_data * priv;
         int i;
         int err;
 
@@ -962,14 +1025,15 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
                 goto alloc_ipcp;
         }
 
-        /* For now we only accept a single IPC process for DIF.
+        /*
+         * For now we only accept a single IPC process for DIF.
          * This restriction will be removed when we are able to
          * manage multiple VMPI devices per Virtual Machine, e.g.
          * when we have a naming scheme for that.
          */
         if (!list_empty(&factory_data->instances)) {
                 LOG_ERR("%s: multiple IPC processes are not allowed",
-                                __func__);
+                        __func__);
                 goto alloc_ipcp;
         }
 
@@ -981,14 +1045,15 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         ipcp->ops = &shim_hv_ipcp_ops;
 
         /* Allocate private data for the new shim IPC process. */
-        ipcp->data = priv = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
+        ipcp->data = priv = rkzalloc(sizeof(struct ipcp_instance_data),
+                                     GFP_KERNEL);
         if (!priv)
                 goto alloc_data;
 
         priv->id = id;
         priv->assigned = 0;
         bzero(&priv->fspec, sizeof(priv->fspec));
-        priv->fspec.max_sdu_size = 2000;   /* XXX Temporary limitation. */
+        priv->fspec.max_sdu_size      = 2000;   /* XXX Temporary limitation. */
         priv->fspec.max_allowable_gap = -1;
 
         if (name_cpy(name, &priv->name)) {
@@ -998,6 +1063,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
 
         INIT_LIST_HEAD(&priv->registered_applications);
         mutex_init(&priv->reg_lock);
+        mutex_init(&priv->vc_lock);
 
         priv->kfa = kipcm_kfa(default_kipcm);
         ASSERT(priv->kfa);
@@ -1009,8 +1075,12 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 priv->vmpi.channels[i].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[i].port_id = port_id_bad();
+                name_init_with(&priv->vmpi.channels[i].application_name,
+                               NULL, NULL, NULL, NULL);
         }
-        err = priv->vmpi.ops->register_read_callback(priv->vmpi.ops, shim_hv_recv_callback, priv);
+        err = priv->vmpi.ops->register_read_callback(priv->vmpi.ops,
+                                                     shim_hv_recv_callback,
+                                                     priv);
         if (err) {
                 LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
                 goto read_callback;
@@ -1019,17 +1089,17 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data *factory_data,
         /* Add this IPC process to the factory global list. */
         list_add(&priv->list, &factory_data->instances);
 
-        LOG_INFO("%s: ipcp created (id = %d)", __func__, id);
+        LOG_DBG("%s: ipcp created (id = %d)", __func__, id);
 
         return ipcp;
 
-read_callback:
+ read_callback:
         name_fini(&priv->name);
-alloc_name:
+ alloc_name:
         rkfree(priv);
-alloc_data:
+ alloc_data:
         rkfree(ipcp);
-alloc_ipcp:
+ alloc_ipcp:
         LOG_ERR("%s: failed\n", __func__);
 
         return NULL;
@@ -1037,8 +1107,8 @@ alloc_ipcp:
 
 /* Destroy a shim IPC process. */
 static int
-shim_hv_factory_ipcp_destroy(struct ipcp_factory_data *factory_data,
-                             struct ipcp_instance *ipcp)
+shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
+                             struct ipcp_instance *     ipcp)
 {
         struct ipcp_instance_data *cur, *next, *found;
 
@@ -1060,19 +1130,18 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data *factory_data,
 
         name_fini(&ipcp->data->name);
         name_fini(&ipcp->data->dif_name);
-        LOG_INFO("%s: ipcp destroyed (id = %d)", __func__, ipcp->data->id);
+        LOG_DBG("%s: ipcp destroyed (id = %d)", __func__, ipcp->data->id);
         rkfree(ipcp->data);
         rkfree(ipcp);
-
 
         return 0;
 }
 
 static struct ipcp_factory_ops shim_hv_factory_ops = {
-        .init      = shim_hv_factory_init,
-        .fini      = shim_hv_factory_fini,
-        .create    = shim_hv_factory_ipcp_create,
-        .destroy   = shim_hv_factory_ipcp_destroy,
+        .init    = shim_hv_factory_init,
+        .fini    = shim_hv_factory_fini,
+        .create  = shim_hv_factory_ipcp_create,
+        .destroy = shim_hv_factory_ipcp_destroy,
 };
 
 /* A factory for shim IPC processes for hypervisors. */
@@ -1082,16 +1151,15 @@ static struct ipcp_factory *shim_hv_ipcp_factory = NULL;
  * functions are called by the vmpi code. This is why these functions
  * are not static.
  */
-int
-shim_hv_init(struct vmpi_ops *ops)
+int shim_hv_init(struct vmpi_ops *ops)
 {
         ASSERT(ops);
         gops = ops;
 
-        shim_hv_ipcp_factory = kipcm_ipcp_factory_register(
-                        default_kipcm, SHIM_HV_NAME,
-                        &shim_hv_factory_data,
-                        &shim_hv_factory_ops);
+        shim_hv_ipcp_factory =
+                kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,
+                                            &shim_hv_factory_data,
+                                            &shim_hv_factory_ops);
 
         if (shim_hv_ipcp_factory == NULL) {
                 LOG_ERR("%s: factory registration failed\n", __func__);
@@ -1104,8 +1172,7 @@ shim_hv_init(struct vmpi_ops *ops)
 }
 EXPORT_SYMBOL_GPL(shim_hv_init);
 
-void
-shim_hv_fini(void)
+void shim_hv_fini(void)
 {
         ASSERT(shim_hv_ipcp_factory);
 
@@ -1115,6 +1182,6 @@ shim_hv_fini(void)
 }
 EXPORT_SYMBOL_GPL(shim_hv_fini);
 
-MODULE_DESCRIPTION("IRATI Shim DIF for Hypervisors");
+MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Vincenzo Maffione");
+MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
