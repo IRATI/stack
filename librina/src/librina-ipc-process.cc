@@ -1130,6 +1130,53 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 #endif
 }
 
+/*	CLASS ADataUnitPDU	*/
+const std::string ADataUnitPDU::ADataUnitPDUObjectName = "/daf/adataunitpdu";
+
+ADataUnitPDU::ADataUnitPDU()
+{
+	this->sourceAddress = 0;
+	this->destinationAddress = 0;
+	&this->payload = 0;
+}
+
+ADataUnitPDU::ADataUnitPDU(long sourceAddress, long destinationAddress, char payload[])
+{
+	this->sourceAddress = sourceAddress;
+	this->destinationAddress = destinationAddress;
+	this->payload = payload;
+}
+
+long ADataUnitPDU::getSourceAddress() const
+{
+	return sourceAddress;
+}
+
+void ADataUnitPDU::setSourceAddress(const long sourceAddress)
+{
+	this->sourceAddress = sourceAddress;
+}
+
+long ADataUnitPDU::getDestinationAddress() const
+{
+	return destinationAddress;
+}
+
+void ADataUnitPDU::setDestinationAddress(const long destinationAddress)
+{
+	this->destinationAddress = destinationAddress;
+}
+
+char* ADataUnitPDU::getPayload() const
+{
+	return payload;
+}
+
+void ADataUnitPDU::setPayload(const char* payload)
+{
+	this->payload = payload;
+}
+
 /*	CLASS RIBObjectNames	*/
 const std::string RIBObjectNames::ADDRESS = "address";
 const std::string RIBObjectNames::APNAME = "applicationprocessname";

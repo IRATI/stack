@@ -955,6 +955,35 @@ public:
 };
 
 /**
+ * Basic PDU
+ */
+class ADataUnitPDU {
+	/*	Constants	*/
+	public:
+		static const std::string ADataUnitPDUObjectName;
+	/*	Members	*/
+	protected:
+		/** The address of the Application Process that generated this PDU */
+		long sourceAddress;
+		/** The address of the Applicatio Process that is the target this PDU*/
+		 long destinationAddress;
+		/** The encoded payload of the PDU */
+		char payload[];
+	/*	Constructors and Destructors	*/
+	public:
+		ADataUnitPDU();
+		ADataUnitPDU(long sourceAddress, long destinationAddress, char payload[]);
+	/*	Accessors	*/
+	public:
+		long getSourceAddress() const;
+		void setSourceAddress(const long sourceAddress);
+		long getDestinationAddress() const;
+		void setDestinationAddress(const long destinationAddress);
+		char* getPayload() const;
+		void setPayload(const char* payload);
+};
+
+/**
  * Contains the object names of the objects in the RIB
  */
 class RIBObjectNames
