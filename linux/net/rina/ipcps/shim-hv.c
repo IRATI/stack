@@ -37,6 +37,16 @@
 #include "ipcp-factories.h"
 #include "vmpi-ops.h"
 
+/* FIXME: Pigsty workaround, to be removed immediately */
+#if defined(CONFIG_VMPI_VIRTIO_GUEST) && !defined(CONFIG_VMPI_VIRTIO_GUEST_MODULE)
+#error VMPI guest must be a module
+#endif
+
+/* FIXME: Pigsty workaround, to be removed immediately */
+#if defined(CONFIG_VMPI_VIRTIO_HOST) && !defined(CONFIG_VMPI_VIRTIO_HOST_MODULE)
+#error VMPI host must be a module
+#endif
+
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm *default_kipcm;
 
