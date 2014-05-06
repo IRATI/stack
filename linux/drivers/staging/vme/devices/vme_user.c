@@ -109,7 +109,7 @@ struct driver_stats {
 	unsigned long ioctls;
 	unsigned long irqs;
 	unsigned long berrs;
-	unsigned long dmaErrors;
+	unsigned long dmaerrors;
 	unsigned long timeouts;
 	unsigned long external;
 };
@@ -147,6 +147,7 @@ static const struct file_operations vme_user_fops = {
 	.write = vme_user_write,
 	.llseek = vme_user_llseek,
 	.unlocked_ioctl = vme_user_unlocked_ioctl,
+	.compat_ioctl = vme_user_unlocked_ioctl,
 };
 
 
@@ -160,7 +161,7 @@ static void reset_counters(void)
 	statistics.ioctls = 0;
 	statistics.irqs = 0;
 	statistics.berrs = 0;
-	statistics.dmaErrors = 0;
+	statistics.dmaerrors = 0;
 	statistics.timeouts = 0;
 }
 
@@ -663,9 +664,16 @@ err_nocard:
 
 static int vme_user_match(struct vme_dev *vdev)
 {
-	if (vdev->num >= VME_USER_BUS_MAX)
-		return 0;
-	return 1;
+	int i;
+
+	int cur_bus = vme_bus_num(vdev);
+	int cur_slot = vme_slot_num(vdev);
+
+	for (i = 0; i < bus_num; i++)
+		if ((cur_bus == bus[i]) && (cur_slot == vdev->num))
+			return 1;
+
+	return 0;
 }
 
 /*
@@ -734,6 +742,7 @@ static int vme_user_probe(struct vme_dev *vdev)
 		if (image[i].resource == NULL) {
 			dev_warn(&vdev->dev,
 				 "Unable to allocate slave resource\n");
+			err = -ENOMEM;
 			goto err_slave;
 		}
 		image[i].size_buf = PCI_BUF_SIZE;
@@ -760,6 +769,7 @@ static int vme_user_probe(struct vme_dev *vdev)
 		if (image[i].resource == NULL) {
 			dev_warn(&vdev->dev,
 				 "Unable to allocate master resource\n");
+			err = -ENOMEM;
 			goto err_master;
 		}
 		image[i].size_buf = PCI_BUF_SIZE;

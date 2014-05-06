@@ -10,7 +10,6 @@
 #include <linux/cpufreq.h>
 #include <linux/errno.h>
 #include <linux/export.h>
-#include <linux/init.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
@@ -121,7 +120,8 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	clk->rate = rate;
 
 	regval = LOONGSON_CHIPCFG0;
-	regval = (regval & ~0x7) | (loongson2_clockmod_table[i].index - 1);
+	regval = (regval & ~0x7) |
+		(loongson2_clockmod_table[i].driver_data - 1);
 	LOONGSON_CHIPCFG0 = regval;
 
 	return ret;

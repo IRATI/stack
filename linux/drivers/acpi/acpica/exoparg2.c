@@ -215,7 +215,7 @@ acpi_status acpi_ex_opcode_2A_2T_1R(struct acpi_walk_state *walk_state)
 		goto cleanup;
 	}
 
-      cleanup:
+cleanup:
 	/*
 	 * Since the remainder is not returned indirectly, remove a reference to
 	 * it. Only the quotient is returned indirectly.
@@ -304,7 +304,6 @@ acpi_status acpi_ex_opcode_2A_1T_1R(struct acpi_walk_state *walk_state)
 		break;
 
 	case AML_TO_STRING_OP:	/* to_string (Buffer, Length, Result) (ACPI 2.0) */
-
 		/*
 		 * Input object is guaranteed to be a buffer at this point (it may have
 		 * been converted.)  Copy the raw buffer data to a new object of
@@ -446,7 +445,7 @@ acpi_status acpi_ex_opcode_2A_1T_1R(struct acpi_walk_state *walk_state)
 		break;
 	}
 
-      store_result_to_target:
+store_result_to_target:
 
 	if (ACPI_SUCCESS(status)) {
 		/*
@@ -463,7 +462,7 @@ acpi_status acpi_ex_opcode_2A_1T_1R(struct acpi_walk_state *walk_state)
 		}
 	}
 
-      cleanup:
+cleanup:
 
 	/* Delete return object on error */
 
@@ -554,7 +553,7 @@ acpi_status acpi_ex_opcode_2A_0T_1R(struct acpi_walk_state *walk_state)
 		goto cleanup;
 	}
 
-      store_logical_result:
+store_logical_result:
 	/*
 	 * Set return value to according to logical_result. logical TRUE (all ones)
 	 * Default is FALSE (zero)
@@ -563,7 +562,7 @@ acpi_status acpi_ex_opcode_2A_0T_1R(struct acpi_walk_state *walk_state)
 		return_desc->integer.value = ACPI_UINT64_MAX;
 	}
 
-      cleanup:
+cleanup:
 
 	/* Delete return object on error */
 

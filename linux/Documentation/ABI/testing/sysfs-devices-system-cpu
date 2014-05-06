@@ -144,6 +144,21 @@ Description:	Discover and change clock speed of CPUs
 		to learn how to control the knobs.
 
 
+What:		/sys/devices/system/cpu/cpu#/cpufreq/freqdomain_cpus
+Date:		June 2013
+Contact:	cpufreq@vger.kernel.org
+Description:	Discover CPUs in the same CPU frequency coordination domain
+
+		freqdomain_cpus is the list of CPUs (online+offline) that share
+		the same clock/freq domain (possibly at the hardware level).
+		That information may be hidden from the cpufreq core and the
+		value of related_cpus may be different from freqdomain_cpus. This
+		attribute is useful for user space DVFS controllers to get better
+		power/performance results for platforms using acpi-cpufreq.
+
+		This file is only present if the acpi-cpufreq driver is in use.
+
+
 What:		/sys/devices/system/cpu/cpu*/cache/index3/cache_disable_{0,1}
 Date:		August 2008
 KernelVersion:	2.6.27
@@ -185,3 +200,27 @@ Description:	address and size of the percpu note.
 		note of cpu#.
 
 		crash_notes_size: size of the note of cpu#.
+
+
+What:		/sys/devices/system/cpu/intel_pstate/max_perf_pct
+		/sys/devices/system/cpu/intel_pstate/min_perf_pct
+		/sys/devices/system/cpu/intel_pstate/no_turbo
+Date:		February 2013
+Contact:	linux-pm@vger.kernel.org
+Description:	Parameters for the Intel P-state driver
+
+		Logic for selecting the current P-state in Intel
+		Sandybridge+ processors. The three knobs control
+		limits for the P-state that will be requested by the
+		driver.
+
+		max_perf_pct: limits the maximum P state that will be requested by
+		the driver stated as a percentage of the available performance.
+
+		min_perf_pct: limits the minimum P state that will be requested by
+		the driver stated as a percentage of the available performance.
+
+		no_turbo: limits the driver to selecting P states below the turbo
+		frequency range.
+
+		More details can be found in Documentation/cpu-freq/intel-pstate.txt

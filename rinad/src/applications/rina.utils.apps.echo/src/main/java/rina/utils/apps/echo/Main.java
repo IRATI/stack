@@ -29,6 +29,10 @@ Timeout to consider the test completed
 
 -timeout T
 
+Rate at which to send (in Mbps)
+
+-rate R
+
 All of the above can have implementation-dependant defaults. For example, the default for -appname might be "RINAband" 
 and the default for -instance might be the DIF address of the IPC Process.
  * @author eduardgrasa
@@ -51,6 +55,7 @@ public class Main {
 	public static final String CAPINSTANCE = "cinstance";
 	public static final String CAPNAME = "capname";
 	public static final String TIMEOUT = "timeout";
+        public static final String RATE = "rate";
 	
 	public static final int DEFAULT_SDU_SIZE_IN_BYTES = 1500;
 	public static final int DEFAULT_SDU_COUNT = 5000;
@@ -59,10 +64,12 @@ public class Main {
 	public static final String DEFAULT_CLIENT_AP_NAME = "rina.utils.apps.echo.client";
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	public static final int DEFAULT_TIMEOUT_IN_MS = 2000;
+        public static final int DEFAULT_RATE_IN_MBPS = 1000;
 	
 	public static final String USAGE = "java -jar rina.utils.apps.echo [-role] (client|server)" +
 			"[-sapname] serverApName [-sinstance] serverApInstance [-capname] clientApName " + 
-			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-count] num_sdus [-timeout] timeout_in_millisecnods";
+			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-count] num_sdus " +
+                        "[-timeout] timeout_in_milliseconds [-rate] rate_in_mbps";
 	public static final String DEFAULTS = "The defaults are: role=server;  sapname=rina.utils.apps.echo.server; " + 
 			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; count=5000; timeout=2000";
 	
@@ -77,6 +84,7 @@ public class Main {
 		String serverApInstance = DEFAULT_AP_INSTANCE;
 		String clientApInstance = DEFAULT_AP_INSTANCE;
 		int timeout = DEFAULT_TIMEOUT_IN_MS;
+                int rate = DEFAULT_RATE_IN_MBPS;
 		
 		int i=0;
 		while(i<args.length){
@@ -123,6 +131,15 @@ public class Main {
 				}catch(Exception ex){
 					showErrorAndExit(TIMEOUT);
 				}
+                        }else if (args[i].equals(ARGUMENT_SEPARATOR + RATE)){
+				try{
+					rate = Integer.parseInt(args[i+1]);
+					if (rate <= 0){
+						showErrorAndExit(RATE);
+					}
+				}catch(Exception ex){
+					showErrorAndExit(TIMEOUT);
+				}
 			}else{
 				System.out.println("Wrong argument.\nUsage: "
 						+USAGE+"\n"+DEFAULTS);
@@ -138,7 +155,7 @@ public class Main {
 				new ApplicationProcessNamingInformation(clientApName, clientApInstance);
 		
 		Echo echo = new Echo(server, serverAPNamingInfo, clientApNamingInfo, sduCount, 
-				sduSizeInBytes, timeout);
+                                     sduSizeInBytes, timeout, rate);
 		echo.execute();
 	}
 	

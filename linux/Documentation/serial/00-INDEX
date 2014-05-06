@@ -4,10 +4,12 @@ README.cycladesZ
 	- info on Cyclades-Z firmware loading.
 digiepca.txt
 	- info on Digi Intl. {PC,PCI,EISA}Xx and Xem series cards.
-hayes-esp.txt
-	- info on using the Hayes ESP serial driver.
+driver
+	- intro to the low level serial driver.
 moxa-smartio
 	- file with info on installing/using Moxa multiport serial driver.
+n_gsm.txt
+	- GSM 0710 tty multiplexer howto.
 riscom8.txt
 	- notes on using the RISCom/8 multi-port serial driver.
 rocket.txt
@@ -16,8 +18,6 @@ serial-rs485.txt
 	- info about RS485 structures and support in the kernel.
 specialix.txt
 	- info on hardware/driver for specialix IO8+ multiport serial card.
-stallion.txt
-	- info on using the Stallion multiport serial driver.
 sx.txt
 	- info on the Specialix SX/SI multiport serial driver.
 tty.txt

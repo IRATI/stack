@@ -457,8 +457,6 @@ static int cp_tm1217_probe(struct i2c_client *client,
 	for (i = 0; i < TOUCH_SUPPORTED; i++) {
 		input_dev = input_allocate_device();
 		if (input_dev == NULL) {
-			dev_err(ts->dev,
-				"cp_tm1217:Input Device Struct alloc failed\n");
 			retval = -ENOMEM;
 			goto fail;
 		}
@@ -547,10 +545,8 @@ fail_gpio:
 fail:
 	/* Clean up before returning failure */
 	for (i = 0; i < TOUCH_SUPPORTED; i++) {
-		if (ts->cp_input_info[i].input) {
+		if (ts->cp_input_info[i].input)
 			input_unregister_device(ts->cp_input_info[i].input);
-			input_free_device(ts->cp_input_info[i].input);
-		}
 	}
 	kfree(ts);
 	return retval;

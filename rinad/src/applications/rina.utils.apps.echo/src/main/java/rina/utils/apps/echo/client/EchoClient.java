@@ -41,7 +41,6 @@ public class EchoClient implements  ApplicationRegistrationListener,
 FlowAllocationListener, FlowDeallocationListener {
 	
 	public static final int MAX_SDU_SIZE = 10000;
-	public static final int MAX_NUM_OF_SDUS = 10000;
 	public static final String TEST_OBJECT_CLASS = "Echo test";
 	public static final String TEST_OBJECT_NAME = "/rina/utils/apps/echo/test";
 	
@@ -81,7 +80,7 @@ FlowAllocationListener, FlowDeallocationListener {
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo, 
 			ApplicationProcessNamingInformation clientApNamingInfo, 
-			int timeout){
+                          int timeout, int rate){
 		try {
 			rina.initialize(LogHelper.getLibrinaLogLevel(), 
 					LogHelper.getLibrinaLogFile());
@@ -91,9 +90,6 @@ FlowAllocationListener, FlowDeallocationListener {
 		}
 		
 		testInformation = new TestInformation();
-		if (numberOfSdus > MAX_NUM_OF_SDUS) {
-			numberOfSdus = MAX_NUM_OF_SDUS;
-		}
 		testInformation.setNumberOfSDUs(numberOfSdus);
 		
 		if (sduSize > MAX_SDU_SIZE) {
@@ -104,8 +100,9 @@ FlowAllocationListener, FlowDeallocationListener {
 		this.echoApNamingInfo = echoApNamingInfo;
 		this.clientApNamingInfo = clientApNamingInfo;
 		this.timeout = timeout;
-		testInformation.setTimeout(timeout);
-		
+                testInformation.setTimeout(timeout);
+                testInformation.setRate(rate);
+
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
 		
@@ -252,6 +249,26 @@ FlowAllocationListener, FlowDeallocationListener {
 				//3 Send SDUs to server
 				buffer = new byte[testInformation.getSduSize()];
 				int sentSDUs = 0;
+
+
+                                //Calculate rate
+                                /* B/ms = packet size in bytes / time unit in millis
+                                   send it every x ms
+                                   
+                                   Mbps --> MB/s = /8 
+                                   MB/s --> B/s = *1024*1024
+                                   B/s --> B/ms = /1000
+                                   
+                                   time to send packet at max rate = packet size / B/ms
+
+                                   Get current time, check if we are allowed to send it
+                                   We can send after startTime + numOfPacketsSend*timeToSend
+
+                                 */
+
+                                double byteMillisRate = testInformation.getRate() * 1024 / 8 * 1024 / 1000;
+                                double timeToSend = testInformation.getSduSize() / byteMillisRate;
+
 				for(int i=0; i<testInformation.getNumberOfSDUs(); i++){
 					try{
 						flow.writeSDU(buffer, buffer.length);
@@ -260,6 +277,9 @@ FlowAllocationListener, FlowDeallocationListener {
 							testInformation.setFirstSDUSentTime(
 									Calendar.getInstance().getTimeInMillis());
 						}
+                                                while (Calendar.getInstance().getTimeInMillis() < 
+                                                       testInformation.getFirstSDUSentTime() + i * timeToSend) {
+                                                }
 					}catch(Exception ex){
 						log.error("Error writing SDU "+i+" to port-id "+flow.getPortId());
 					}

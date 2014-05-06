@@ -1,0 +1,9 @@
+#!@SHELL@
+
+#
+# rina-bug-report
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+exit 1

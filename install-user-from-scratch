@@ -20,12 +20,6 @@ fi
 # FIXME: we should definitely do a VPATH build ...
 #
 
-#echo "$ME: Starting kernel phase"
-#(cd linux && INSTALL_PATH=$PREFIX/boot INSTALL_MOD_PATH=$PREFIX make bzImage modules modules_install install) || {
-#    echo "$ME: Cannot complete kernel phase"
-#    exit 1
-#}
-
 echo "$ME: Starting librina phase"
 (cd librina && ./bootstrap && ./configure --enable-java-bindings --prefix=$PREFIX && make CPPFLAGS="-I $PREFIX/usr/include" clean install installcheck) || {
     echo "$ME: Cannot complete librina phase"
