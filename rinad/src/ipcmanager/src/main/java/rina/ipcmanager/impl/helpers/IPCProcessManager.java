@@ -33,6 +33,7 @@ import eu.irati.librina.IpcmRegisterApplicationResponseEvent;
 import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborsModifiedNotificationEvent;
+import eu.irati.librina.PDUFTableGeneratorConfiguration;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 
@@ -218,6 +219,19 @@ public class IPCProcessManager {
 						result = result + "            Ordered delivery: " + qosCube.isOrderedDelivery() + "\n";
 						result = result + "            Partial delivery: " + qosCube.isOrderedDelivery() + "\n";
 						result = result + "            --------------------: \n";
+					}
+					
+					if (difConfiguration.getDataTransferConstants() != null && 
+							difConfiguration.getPDUFTableGeneratorConfiguration() != null) 
+					{
+						result = result + "        PDUFTableGeneratofConfiguration: \n";
+						PDUFTableGeneratorConfiguration pduftTableGeneratorConfiguration = difConfiguration.getPDUFTableGeneratorConfiguration();
+						result = result + "            objectMaximumAge: " + pduftTableGeneratorConfiguration.getObjectMaximumAge() + "\n";
+						result = result + "            waitUntilReadCDAP: " + pduftTableGeneratorConfiguration.getWaitUntilReadCDAP() + "\n";
+						result = result + "            waitUntilError: " + pduftTableGeneratorConfiguration.getWaitUntilError() + "\n";
+						result = result + "            waitUntilPDUFTComputation: " + pduftTableGeneratorConfiguration.getWaitUntilPDUFTComputation() + "\n";
+						result = result + "            waitUntilFSODBPropagation: " + pduftTableGeneratorConfiguration.getWaitUntilFSODBPropagation() + "\n";
+						result = result + "            waitUntilAgeIncrement: " + pduftTableGeneratorConfiguration.getWaitUntilAgeIncrement() + "\n";
 					}
 					
 					Iterator<Neighbor> neighborIterator = ipcProcess.getNeighbors().iterator();

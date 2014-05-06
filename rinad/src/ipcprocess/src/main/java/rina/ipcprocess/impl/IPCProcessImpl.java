@@ -186,12 +186,13 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
-		pduForwardingTable = new PDUFTImpl(/*TODO: Set maximum age by config*/10000);
+		pduForwardingTable = new PDUFTImpl();
 		ribDaemon.setIPCProcess(this);
 		enrollmentTask.setIPCProcess(this);
 		resourceAllocator.setIPCProcess(this);
 		registrationManager.setIPCProcess(this);
 		flowAllocator.setIPCProcess(this);
+		log.debug("dif: " + this.getDIFInformation());
 		pduForwardingTable.setIPCProcess(this);
 		
 		populateRIB();
@@ -538,7 +539,7 @@ public class IPCProcessImpl implements IPCProcess {
 			}
 			
 			/*TODO: Set algorithm by config*/
-			pduForwardingTable.setAlgorithm(new DijkstraAlgorithm(), new Vertex(getAddress()));
+			pduForwardingTable.setDIFConfiguration(new DijkstraAlgorithm(), new Vertex(getAddress()));
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());
