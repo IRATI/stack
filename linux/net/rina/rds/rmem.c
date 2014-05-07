@@ -185,36 +185,67 @@ static atomic_t mem_stats[] = {
         ATOMIC_INIT(0) /* 2 ^ 20 */,
 };
 
-#define BLOCKS_COUNT (ARRAY_SIZE(mem_stats) / sizeof(atomic_t))
+#define BLOCKS_COUNT ARRAY_SIZE(mem_stats)
 
-#if 0
-static void stats_dump(void)
+static DEFINE_SPINLOCK(mem_stats_lock);
+static unsigned long mem_stats_j = 0;
+#define MEM_STATS_INTERVAL msecs_to_jiffies(CONFIG_RINA_MEMORY_STATS_INTERVAL)
+#define MEM_STATS_BANNER   "MEMSTAT "
+
+static void mem_stats_dump(void)
 {
-        size_t s;
+        size_t        s;
+        unsigned long flags;
+        unsigned long now = jiffies;
 
-        LOG_DBG("Memory stats:");
+        spin_lock_irqsave(&mem_stats_lock, flags);
+        if (mem_stats_j && time_before(now,
+                                       mem_stats_j + MEM_STATS_INTERVAL)) {
+                spin_unlock_irqrestore(&mem_stats_lock, flags);
+                return;
+        }
+        mem_stats_j = now;
+        spin_unlock_irqrestore(&mem_stats_lock, flags);
+
+        LOG_INFO(MEM_STATS_BANNER "BEG %u", jiffies_to_msecs(now));
         for (s = 0; s < BLOCKS_COUNT; s++)
-                LOG_DBG("  %02d %08d %zd",
-                        s, 2 ^ s, atomic_read(&mem_stat[s]));
+                LOG_INFO(MEM_STATS_BANNER "%d %u",
+                         (int) s, atomic_read(&mem_stats[s]));
+        LOG_INFO(MEM_STATS_BANNER "END");
 }
-#endif
 
 static size_t size2bin(size_t size)
 {
         size_t bin = 0;
 
-        if (bin > BLOCKS_COUNT)
-                bin = BLOCKS_COUNT;
+        if (!size)
+                return 0;
+
+        size--;
+        while (size) {
+                size >>= 1;
+                bin++;
+        }
+
+        if (bin >= BLOCKS_COUNT)
+                bin = BLOCKS_COUNT - 1;
 
         return bin;
 }
 
-static void stats_inc(size_t size)
+static void mem_stats_inc(size_t size)
 { atomic_inc(&mem_stats[size2bin(size)]); }
 
-static void stats_dec(size_t size)
+static void mem_stats_dec(size_t size)
 { atomic_dec(&mem_stats[size2bin(size)]); }
 #endif
+
+void rms_dump()
+{
+#ifdef CONFIG_RINA_MEMORY_STATS
+        mem_stats_dump();
+#endif
+}
 
 static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
                             size_t    size,
@@ -277,7 +308,8 @@ static void * generic_alloc(void * (* alloc_func)(size_t size, gfp_t flags),
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_STATS
-        stats_inc(size);
+        mem_stats_inc(size);
+        mem_stats_dump();
 #endif
 
         return ptr;
@@ -344,7 +376,8 @@ static bool generic_free(void * ptr)
 #endif
 
 #ifdef CONFIG_RINA_MEMORY_STATS
-        stats_dec(ksize(ptr));
+        mem_stats_dec(ksize(ptr));
+        mem_stats_dump();
 #endif
 
         kfree(ptr);

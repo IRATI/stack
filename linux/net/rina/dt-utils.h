@@ -36,6 +36,7 @@ int             cwq_push(struct cwq * q,
                          struct pdu * pdu);
 struct pdu *    cwq_pop(struct cwq * q);
 bool            cwq_is_empty(struct cwq * q);
+size_t          cwq_size(struct cwq * q);
 
 struct rtxq;
 

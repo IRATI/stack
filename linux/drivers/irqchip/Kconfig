@@ -10,6 +10,11 @@ config ARM_GIC
 config GIC_NON_BANKED
 	bool
 
+config ARM_NVIC
+	bool
+	select IRQ_DOMAIN
+	select GENERIC_IRQ_CHIP
+
 config ARM_VIC
 	bool
 	select IRQ_DOMAIN
@@ -25,6 +30,20 @@ config ARM_VIC_NR
 	  The maximum number of VICs available in the system, for
 	  power management.
 
+config DW_APB_ICTL
+	bool
+	select IRQ_DOMAIN
+
+config IMGPDC_IRQ
+	bool
+	select GENERIC_IRQ_CHIP
+	select IRQ_DOMAIN
+
+config ORION_IRQCHIP
+	bool
+	select IRQ_DOMAIN
+	select MULTI_IRQ_HANDLER
+
 config RENESAS_INTC_IRQPIN
 	bool
 	select IRQ_DOMAIN
@@ -32,6 +51,11 @@ config RENESAS_INTC_IRQPIN
 config RENESAS_IRQC
 	bool
 	select IRQ_DOMAIN
+
+config TB10X_IRQC
+	bool
+	select IRQ_DOMAIN
+	select GENERIC_IRQ_CHIP
 
 config VERSATILE_FPGA_IRQ
 	bool
@@ -41,3 +65,7 @@ config VERSATILE_FPGA_IRQ_NR
        int
        default 4
        depends on VERSATILE_FPGA_IRQ
+
+config XTENSA_MX
+	bool
+	select IRQ_DOMAIN

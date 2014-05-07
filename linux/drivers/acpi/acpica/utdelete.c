@@ -303,6 +303,7 @@ static void acpi_ut_delete_internal_obj(union acpi_operand_object *object)
 		break;
 
 	default:
+
 		break;
 	}
 
@@ -508,7 +509,6 @@ acpi_ut_update_object_reference(union acpi_operand_object *object, u16 action)
 		case ACPI_TYPE_PROCESSOR:
 		case ACPI_TYPE_POWER:
 		case ACPI_TYPE_THERMAL:
-
 			/*
 			 * Update the notify objects for these types (if present)
 			 * Two lists, system and device notify handlers.
@@ -623,6 +623,7 @@ acpi_ut_update_object_reference(union acpi_operand_object *object, u16 action)
 
 		case ACPI_TYPE_REGION:
 		default:
+
 			break;	/* No subobjects for all other types */
 		}
 
@@ -648,7 +649,7 @@ acpi_ut_update_object_reference(union acpi_operand_object *object, u16 action)
 
 	return (AE_OK);
 
-      error_exit:
+error_exit:
 
 	ACPI_EXCEPTION((AE_INFO, status,
 			"Could not update object reference count"));

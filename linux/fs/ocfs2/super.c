@@ -68,7 +68,6 @@
 #include "super.h"
 #include "sysfile.h"
 #include "uptodate.h"
-#include "ver.h"
 #include "xattr.h"
 #include "quota.h"
 #include "refcounttree.h"
@@ -90,6 +89,7 @@ static struct dentry *ocfs2_debugfs_root = NULL;
 
 MODULE_AUTHOR("Oracle");
 MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("OCFS2 cluster file system");
 
 struct mount_options
 {
@@ -286,10 +286,9 @@ static int ocfs2_osb_dump(struct ocfs2_super *osb, char *buf, int len)
 	spin_unlock(&osb->osb_lock);
 
 	out += snprintf(buf + out, len - out,
-			"%10s => Pid: %d  Interval: %lu  Needs: %d\n", "Commit",
+			"%10s => Pid: %d  Interval: %lu\n", "Commit",
 			(osb->commit_task ? task_pid_nr(osb->commit_task) : -1),
-			osb->osb_commit_interval,
-			atomic_read(&osb->needs_checkpoint));
+			osb->osb_commit_interval);
 
 	out += snprintf(buf + out, len - out,
 			"%10s => State: %d  TxnId: %lu  NumTxns: %d\n",
@@ -1023,7 +1022,7 @@ static int ocfs2_fill_super(struct super_block *sb, void *data, int silent)
 	struct inode *inode = NULL;
 	struct ocfs2_super *osb = NULL;
 	struct buffer_head *bh = NULL;
-	char nodestr[8];
+	char nodestr[12];
 	struct ocfs2_blockcheck_stats stats;
 
 	trace_ocfs2_fill_super(sb, data, silent);
@@ -1619,8 +1618,6 @@ static int __init ocfs2_init(void)
 {
 	int status, i;
 
-	ocfs2_print_version();
-
 	for (i = 0; i < OCFS2_IOEND_WQ_HASH_SZ; i++)
 		init_waitqueue_head(&ocfs2__ioend_wq[i]);
 
@@ -1849,8 +1846,8 @@ static int ocfs2_get_sector(struct super_block *sb,
 
 	*bh = sb_getblk(sb, block);
 	if (!*bh) {
-		mlog_errno(-EIO);
-		return -EIO;
+		mlog_errno(-ENOMEM);
+		return -ENOMEM;
 	}
 	lock_buffer(*bh);
 	if (!buffer_dirty(*bh))
@@ -1925,7 +1922,7 @@ static void ocfs2_dismount_volume(struct super_block *sb, int mnt_err)
 {
 	int tmp, hangup_needed = 0;
 	struct ocfs2_super *osb = NULL;
-	char nodestr[8];
+	char nodestr[12];
 
 	trace_ocfs2_dismount_volume(sb);
 
@@ -1948,10 +1945,14 @@ static void ocfs2_dismount_volume(struct super_block *sb, int mnt_err)
 
 	ocfs2_shutdown_local_alloc(osb);
 
-	ocfs2_truncate_log_shutdown(osb);
-
 	/* This will disable recovery and flush any recovery work. */
 	ocfs2_recovery_exit(osb);
+
+	/*
+	 * During dismount, when it recovers another node it will call
+	 * ocfs2_recover_orphans and queue delayed work osb_truncate_log_wq.
+	 */
+	ocfs2_truncate_log_shutdown(osb);
 
 	ocfs2_journal_shutdown(osb);
 
@@ -2154,7 +2155,6 @@ static int ocfs2_initialize_super(struct super_block *sb,
 	}
 
 	init_waitqueue_head(&osb->checkpoint_event);
-	atomic_set(&osb->needs_checkpoint, 0);
 
 	osb->s_atime_quantum = OCFS2_DEFAULT_ATIME_QUANTUM;
 
@@ -2227,10 +2227,9 @@ static int ocfs2_initialize_super(struct super_block *sb,
 	if (ocfs2_clusterinfo_valid(osb)) {
 		osb->osb_stackflags =
 			OCFS2_RAW_SB(di)->s_cluster_info.ci_stackflags;
-		memcpy(osb->osb_cluster_stack,
+		strlcpy(osb->osb_cluster_stack,
 		       OCFS2_RAW_SB(di)->s_cluster_info.ci_stack,
-		       OCFS2_STACK_LABEL_LEN);
-		osb->osb_cluster_stack[OCFS2_STACK_LABEL_LEN] = '\0';
+		       OCFS2_STACK_LABEL_LEN + 1);
 		if (strlen(osb->osb_cluster_stack) != OCFS2_STACK_LABEL_LEN) {
 			mlog(ML_ERROR,
 			     "couldn't mount because of an invalid "
@@ -2239,6 +2238,9 @@ static int ocfs2_initialize_super(struct super_block *sb,
 			status = -EINVAL;
 			goto bail;
 		}
+		strlcpy(osb->osb_cluster_name,
+			OCFS2_RAW_SB(di)->s_cluster_info.ci_cluster,
+			OCFS2_CLUSTER_NAME_LEN + 1);
 	} else {
 		/* The empty string is identical with classic tools that
 		 * don't know about s_cluster_info. */

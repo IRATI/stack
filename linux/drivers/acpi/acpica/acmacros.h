@@ -374,10 +374,11 @@
  * the plist contains a set of parens to allow variable-length lists.
  * These macros are used for both the debug and non-debug versions of the code.
  */
-#define ACPI_ERROR_NAMESPACE(s, e)      acpi_ut_namespace_error (AE_INFO, s, e);
-#define ACPI_ERROR_METHOD(s, n, p, e)   acpi_ut_method_error (AE_INFO, s, n, p, e);
-#define ACPI_WARN_PREDEFINED(plist)     acpi_ut_predefined_warning plist
-#define ACPI_INFO_PREDEFINED(plist)     acpi_ut_predefined_info plist
+#define ACPI_ERROR_NAMESPACE(s, e)          acpi_ut_namespace_error (AE_INFO, s, e);
+#define ACPI_ERROR_METHOD(s, n, p, e)       acpi_ut_method_error (AE_INFO, s, n, p, e);
+#define ACPI_WARN_PREDEFINED(plist)         acpi_ut_predefined_warning plist
+#define ACPI_INFO_PREDEFINED(plist)         acpi_ut_predefined_info plist
+#define ACPI_BIOS_ERROR_PREDEFINED(plist)   acpi_ut_predefined_bios_error plist
 
 #else
 
@@ -387,6 +388,7 @@
 #define ACPI_ERROR_METHOD(s, n, p, e)
 #define ACPI_WARN_PREDEFINED(plist)
 #define ACPI_INFO_PREDEFINED(plist)
+#define ACPI_BIOS_ERROR_PREDEFINED(plist)
 
 #endif				/* ACPI_NO_ERROR_MESSAGES */
 
@@ -406,37 +408,6 @@
 #else
 #define ACPI_DEBUGGER_EXEC(a)
 #endif
-
-/*
- * Memory allocation tracking (DEBUG ONLY)
- */
-#define ACPI_MEM_PARAMETERS         _COMPONENT, _acpi_module_name, __LINE__
-
-#ifndef ACPI_DBG_TRACK_ALLOCATIONS
-
-/* Memory allocation */
-
-#ifndef ACPI_ALLOCATE
-#define ACPI_ALLOCATE(a)            acpi_ut_allocate((acpi_size) (a), ACPI_MEM_PARAMETERS)
-#endif
-#ifndef ACPI_ALLOCATE_ZEROED
-#define ACPI_ALLOCATE_ZEROED(a)     acpi_ut_allocate_zeroed((acpi_size) (a), ACPI_MEM_PARAMETERS)
-#endif
-#ifndef ACPI_FREE
-#define ACPI_FREE(a)                acpi_os_free(a)
-#endif
-#define ACPI_MEM_TRACKING(a)
-
-#else
-
-/* Memory allocation */
-
-#define ACPI_ALLOCATE(a)            acpi_ut_allocate_and_track((acpi_size) (a), ACPI_MEM_PARAMETERS)
-#define ACPI_ALLOCATE_ZEROED(a)     acpi_ut_allocate_zeroed_and_track((acpi_size) (a), ACPI_MEM_PARAMETERS)
-#define ACPI_FREE(a)                acpi_ut_free_and_track(a, ACPI_MEM_PARAMETERS)
-#define ACPI_MEM_TRACKING(a)        a
-
-#endif				/* ACPI_DBG_TRACK_ALLOCATIONS */
 
 /*
  * Macros used for ACPICA utilities only

@@ -1016,7 +1016,7 @@ static int gfs2_journaled_truncate(struct inode *inode, u64 oldsize, u64 newsize
 		chunk = oldsize - newsize;
 		if (chunk > max_chunk)
 			chunk = max_chunk;
-		truncate_pagecache(inode, oldsize, oldsize - chunk);
+		truncate_pagecache(inode, oldsize - chunk);
 		oldsize -= chunk;
 		gfs2_trans_end(sdp);
 		error = gfs2_trans_begin(sdp, RES_DINODE, GFS2_JTRUNC_REVOKES);
@@ -1067,7 +1067,7 @@ static int trunc_start(struct inode *inode, u64 oldsize, u64 newsize)
 	if (journaled)
 		error = gfs2_journaled_truncate(inode, oldsize, newsize);
 	else
-		truncate_pagecache(inode, oldsize, newsize);
+		truncate_pagecache(inode, newsize);
 
 	if (error) {
 		brelse(dibh);
@@ -1216,6 +1216,7 @@ static int do_grow(struct inode *inode, u64 size)
 {
 	struct gfs2_inode *ip = GFS2_I(inode);
 	struct gfs2_sbd *sdp = GFS2_SB(inode);
+	struct gfs2_alloc_parms ap = { .target = 1, };
 	struct buffer_head *dibh;
 	int error;
 	int unstuff = 0;
@@ -1226,13 +1227,15 @@ static int do_grow(struct inode *inode, u64 size)
 		if (error)
 			return error;
 
-		error = gfs2_inplace_reserve(ip, 1, 0);
+		error = gfs2_inplace_reserve(ip, &ap);
 		if (error)
 			goto do_grow_qunlock;
 		unstuff = 1;
 	}
 
-	error = gfs2_trans_begin(sdp, RES_DINODE + RES_STATFS + RES_RG_BIT, 0);
+	error = gfs2_trans_begin(sdp, RES_DINODE + RES_STATFS + RES_RG_BIT +
+				 (sdp->sd_args.ar_quota == GFS2_QUOTA_OFF ?
+				  0 : RES_QUOTA), 0);
 	if (error)
 		goto do_grow_release;
 
@@ -1277,6 +1280,7 @@ do_grow_qunlock:
 
 int gfs2_setattr_size(struct inode *inode, u64 newsize)
 {
+	struct gfs2_inode *ip = GFS2_I(inode);
 	int ret;
 	u64 oldsize;
 
@@ -1292,7 +1296,7 @@ int gfs2_setattr_size(struct inode *inode, u64 newsize)
 
 	inode_dio_wait(inode);
 
-	ret = gfs2_rs_alloc(GFS2_I(inode));
+	ret = gfs2_rs_alloc(ip);
 	if (ret)
 		goto out;
 
@@ -1302,6 +1306,7 @@ int gfs2_setattr_size(struct inode *inode, u64 newsize)
 		goto out;
 	}
 
+	gfs2_rs_deltree(ip->i_res);
 	ret = do_shrink(inode, oldsize, newsize);
 out:
 	put_write_access(inode);

@@ -32,6 +32,8 @@ public class TestInformation {
 	private long lastSDUReceivedTime = 0;
 	
 	private int timeout = 0;
+
+        private int rate = 0;
 	
 	public TestInformation(){
 	}
@@ -99,6 +101,14 @@ public class TestInformation {
 	public void setTimeout(int timeout) {
 		this.timeout = timeout;
 	}
+
+        public int getRate() {
+                return rate;
+        }
+
+        public void setRate(int rate) {
+                this.rate = rate;
+        }
 
 	public String toString(){
 		String result = "";

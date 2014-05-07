@@ -1,16 +1,25 @@
 config SND_SOC_SAMSUNG
 	tristate "ASoC support for Samsung"
 	depends on PLAT_SAMSUNG
-	select S3C64XX_DMA if ARCH_S3C64XX
 	select S3C2410_DMA if ARCH_S3C24XX
+	select S3C64XX_PL080 if ARCH_S3C64XX
+	select SND_S3C_DMA if !ARCH_S3C24XX
+	select SND_S3C_DMA_LEGACY if ARCH_S3C24XX
+	select SND_SOC_GENERIC_DMAENGINE_PCM if !ARCH_S3C24XX
 	help
 	  Say Y or M if you want to add support for codecs attached to
 	  the Samsung SoCs' Audio interfaces. You will also need to
 	  select the audio interfaces to support below.
 
+config SND_S3C_DMA
+	tristate
+
+config SND_S3C_DMA_LEGACY
+	tristate
+
 config SND_S3C24XX_I2S
 	tristate
-	select S3C2410_DMA
+	select S3C24XX_DMA
 
 config SND_S3C_I2SV2_SOC
 	tristate
@@ -39,7 +48,7 @@ config SND_SOC_SAMSUNG_NEO1973_WM8753
 	depends on SND_SOC_SAMSUNG && MACH_NEO1973_GTA02
 	select SND_S3C24XX_I2S
 	select SND_SOC_WM8753
-	select SND_SOC_DFBMCS320
+	select SND_SOC_BT_SCO
 	help
 	  Say Y here to enable audio support for the Openmoko Neo1973
 	  Smartphones.
@@ -50,7 +59,7 @@ config SND_SOC_SAMSUNG_JIVE_WM8750
 	select SND_SOC_WM8750
 	select SND_S3C2412_SOC_I2S
 	help
-	  Sat Y if you want to add support for SoC audio on the Jive.
+	  Say Y if you want to add support for SoC audio on the Jive.
 
 config SND_SOC_SAMSUNG_SMDK_WM8580
 	tristate "SoC I2S Audio support for WM8580 on SMDK"
@@ -63,7 +72,7 @@ config SND_SOC_SAMSUNG_SMDK_WM8580
 config SND_SOC_SAMSUNG_SMDK_WM8994
 	tristate "SoC I2S Audio support for WM8994 on SMDK"
 	depends on SND_SOC_SAMSUNG
-	depends on I2C=y && GENERIC_HARDIRQS
+	depends on I2C=y
 	select MFD_WM8994
 	select SND_SOC_WM8994
 	select SND_SAMSUNG_I2S
@@ -136,11 +145,11 @@ config SND_SOC_SAMSUNG_RX1950_UDA1380
 
 config SND_SOC_SAMSUNG_SMDK_WM9713
 	tristate "SoC AC97 Audio support for SMDK with WM9713"
-	depends on SND_SOC_SAMSUNG && (MACH_SMDK6410 || MACH_SMDKC100 || MACH_SMDKV210 || MACH_SMDKC110 || MACH_SMDKV310 || MACH_SMDKC210)
+	depends on SND_SOC_SAMSUNG && (MACH_SMDK6410 || MACH_SMDKC100 || MACH_SMDKV210 || MACH_SMDKC110)
 	select SND_SOC_WM9713
 	select SND_SAMSUNG_AC97
 	help
-	  Sat Y if you want to add support for SoC audio on the SMDK.
+	  Say Y if you want to add support for SoC audio on the SMDK.
 
 config SND_SOC_SMARTQ
 	tristate "SoC I2S Audio support for SmartQ board"
@@ -151,7 +160,7 @@ config SND_SOC_SMARTQ
 config SND_SOC_GONI_AQUILA_WM8994
 	tristate "SoC I2S Audio support for AQUILA/GONI - WM8994"
 	depends on SND_SOC_SAMSUNG && (MACH_GONI || MACH_AQUILA)
-	depends on I2C=y && GENERIC_HARDIRQS
+	depends on I2C=y
 	select SND_SAMSUNG_I2S
 	select MFD_WM8994
 	select SND_SOC_WM8994
@@ -177,7 +186,7 @@ config SND_SOC_SMDK_WM8580_PCM
 config SND_SOC_SMDK_WM8994_PCM
 	tristate "SoC PCM Audio support for WM8994 on SMDK"
 	depends on SND_SOC_SAMSUNG
-	depends on I2C=y && GENERIC_HARDIRQS
+	depends on I2C=y
 	select MFD_WM8994
 	select SND_SOC_WM8994
 	select SND_SAMSUNG_PCM
@@ -201,7 +210,7 @@ config SND_SOC_TOBERMORY
 
 config SND_SOC_BELLS
 	tristate "Audio support for Wolfson Bells"
-	depends on SND_SOC_SAMSUNG && MACH_WLF_CRAGG_6410
+	depends on SND_SOC_SAMSUNG && MACH_WLF_CRAGG_6410 && MFD_ARIZONA
 	select SND_SAMSUNG_I2S
 	select SND_SOC_WM5102
 	select SND_SOC_WM5110

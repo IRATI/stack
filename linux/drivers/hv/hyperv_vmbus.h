@@ -514,6 +514,13 @@ struct hv_context {
 
 extern struct hv_context hv_context;
 
+struct hv_ring_buffer_debug_info {
+	u32 current_interrupt_mask;
+	u32 current_read_index;
+	u32 current_write_index;
+	u32 bytes_avail_toread;
+	u32 bytes_avail_towrite;
+};
 
 /* Hv Interface */
 
@@ -526,6 +533,10 @@ extern int hv_post_message(union hv_connection_id connection_id,
 			 void *payload, size_t payload_size);
 
 extern u16 hv_signal_event(void *con_id);
+
+extern int hv_synic_alloc(void);
+
+extern void hv_synic_free(void);
 
 extern void hv_synic_init(void *irqarg);
 
@@ -608,7 +619,7 @@ struct vmbus_connection {
 	 * 2 pages - 1st page for parent->child notification and 2nd
 	 * is child->parent notification
 	 */
-	void *monitor_pages;
+	struct hv_monitor_page *monitor_pages[2];
 	struct list_head chn_msg_list;
 	spinlock_t channelmsg_lock;
 

@@ -7,7 +7,6 @@
  * $Id:
  *====================================================
  */
-#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/usb.h>
@@ -36,7 +35,7 @@ static struct usb_device_id id_table[] = {
 
 MODULE_DEVICE_TABLE(usb, id_table);
 
-static bool gPollingfailed = FALSE;
+static bool gPollingfailed = false;
 static int ft1000_poll_thread(void *arg)
 {
 	int ret;
@@ -45,13 +44,13 @@ static int ft1000_poll_thread(void *arg)
 		msleep(10);
 		if (!gPollingfailed) {
 			ret = ft1000_poll(arg);
-			if (ret != STATUS_SUCCESS) {
+			if (ret != 0) {
 				DEBUG("ft1000_poll_thread: polling failed\n");
-				gPollingfailed = TRUE;
+				gPollingfailed = true;
 			}
 		}
 	}
-	return STATUS_SUCCESS;
+	return 0;
 }
 
 static int ft1000_probe(struct usb_interface *interface,
@@ -79,8 +78,12 @@ static int ft1000_probe(struct usb_interface *interface,
 	ft1000dev->dev = dev;
 	ft1000dev->status = 0;
 	ft1000dev->net = NULL;
-	ft1000dev->tx_urb = usb_alloc_urb(0, GFP_ATOMIC);
-	ft1000dev->rx_urb = usb_alloc_urb(0, GFP_ATOMIC);
+	ft1000dev->tx_urb = usb_alloc_urb(0, GFP_KERNEL);
+	ft1000dev->rx_urb = usb_alloc_urb(0, GFP_KERNEL);
+	if (!ft1000dev->tx_urb || !ft1000dev->rx_urb) {
+		ret = -ENOMEM;
+		goto err_fw;
+	}
 
 	DEBUG("ft1000_probe is called\n");
 	numaltsetting = interface->num_altsetting;
@@ -167,7 +170,7 @@ static int ft1000_probe(struct usb_interface *interface,
 		goto err_load;
 	}
 
-	gPollingfailed = FALSE;
+	gPollingfailed = false;
 	ft1000dev->pPollThread =
 	    kthread_run(ft1000_poll_thread, ft1000dev, "ft1000_poll");
 
@@ -209,6 +212,8 @@ err_thread:
 err_load:
 	kfree(pFileStart);
 err_fw:
+	usb_free_urb(ft1000dev->rx_urb);
+	usb_free_urb(ft1000dev->tx_urb);
 	kfree(ft1000dev);
 	return ret;
 }
