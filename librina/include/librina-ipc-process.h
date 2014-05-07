@@ -968,7 +968,7 @@ class ADataUnitPDU {
 		/** The address of the Applicatio Process that is the target this PDU*/
 		 long destinationAddress;
 		/** The encoded payload of the PDU */
-		char payload[];
+		char *payload;
 	/*	Constructors and Destructors	*/
 	public:
 		ADataUnitPDU();
@@ -976,12 +976,14 @@ class ADataUnitPDU {
 	/*	Accessors	*/
 	public:
 		long getSourceAddress() const;
-		void setSourceAddress(const long sourceAddress);
+		void setSourceAddress(long sourceAddress);
 		long getDestinationAddress() const;
-		void setDestinationAddress(const long destinationAddress);
+		void setDestinationAddress(long destinationAddress);
 		char* getPayload() const;
-		void setPayload(const char* payload);
+		void setPayload(char payload[]);
 };
+
+
 
 /**
  * Contains the object names of the objects in the RIB

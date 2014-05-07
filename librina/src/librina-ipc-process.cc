@@ -1137,7 +1137,7 @@ ADataUnitPDU::ADataUnitPDU()
 {
 	this->sourceAddress = 0;
 	this->destinationAddress = 0;
-	&this->payload = 0;
+	this->payload = 0;
 }
 
 ADataUnitPDU::ADataUnitPDU(long sourceAddress, long destinationAddress, char payload[])
@@ -1172,7 +1172,7 @@ char* ADataUnitPDU::getPayload() const
 	return payload;
 }
 
-void ADataUnitPDU::setPayload(const char* payload)
+void ADataUnitPDU::setPayload(char payload[])
 {
 	this->payload = payload;
 }
