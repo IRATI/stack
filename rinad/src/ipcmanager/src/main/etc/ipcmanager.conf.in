@@ -88,6 +88,14 @@
   	  }, {
     	 "addressPrefix" : 16,
     	 "organization" : "IRATI"
-      } ]
+      } ],
+     "pdufTableGeneratorConfiguration" : {
+         "objectMaximumAge" : 10000,
+         "waitUntilReadCDAP" : 5001,
+         "waitUntilError" : 5001,
+         "waitUntilPDUFTComputation" : 103,
+         "waitUntilFSODBPropagation" : 101,
+         "waitUntilAgeIncrement" : 997
+     }
   } ]
 }

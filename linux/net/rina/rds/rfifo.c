@@ -35,6 +35,9 @@ struct rfifo {
         struct rqueue * q;
 };
 
+/* FIXME: This extern has to disappear from here */
+struct rqueue * rqueue_create_gfp(gfp_t flags);
+
 static struct rfifo * rfifo_create_gfp(gfp_t flags)
 {
         struct rfifo * f;
@@ -43,7 +46,7 @@ static struct rfifo * rfifo_create_gfp(gfp_t flags)
         if (!f)
                 return NULL;
 
-        f->q = rqueue_create();
+        f->q = rqueue_create_gfp(flags);
         if (!f->q) {
                 rkfree(f);
                 return NULL;

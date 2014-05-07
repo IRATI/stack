@@ -2,6 +2,7 @@ package unitTest.PDUForwardingTable;
 
 
 import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.Assert;
 
@@ -14,6 +15,8 @@ import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
+import rina.configuration.ApplicationToDIFMapping;
+import rina.configuration.RINAConfiguration;
 import rina.encoding.impl.EncoderImpl;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
@@ -35,27 +38,41 @@ public class PDUFTImplTest {
 		System.loadLibrary("rina_java");
 	}
 	
+	private FakeRIBDaemon rib;
+	
 	@Before
 	public void set()
 	{
-		impl = new PDUFTImpl(2147483647);
+		impl = new PDUFTImpl();
 		impl.setTest(true);
+		rib = new FakeRIBDaemon();
+		EncoderImpl encoder = new EncoderImpl();
+        encoder.addEncoder(FlowStateObject.class.getName(), new FlowStateEncoder());
+        encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
+		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, encoder);
+		impl.setIPCProcess(ipc);
+		impl.setDIFConfiguration(new DijkstraAlgorithm(), new Vertex(1));
+		/*	Rinaconfiguration	*/
+		/*
+		RINAConfiguration rinaConf = new RINAConfiguration();
+		List<ApplicationToDIFMapping> list = new ArrayList<ApplicationToDIFMapping>();
+		ApplicationToDIFMapping apToDIF = new ApplicationToDIFMapping();
+		apToDIF.setDifName("normal.DIF");
+		apToDIF.setEncodedAppName("1");
+		list.add(apToDIF);
+		rinaConf.setApplicationToDIFMappings(list);
+		*/
 	}
 
 	@Test
 	public void PDUFTImpl_Constructor_True()
 	{
-		log.info("PDUFTImpl_Constructor_True()");
 		Assert.assertEquals(impl.getClass(), PDUFTImpl.class);
 	}
 	
 	@Test
 	public void flowdeAllocated_DeAllocateFlow_True()
 	{
-		log.info("flowdeAllocated_DeAllocateFlow_True()");
-		impl.setIPCProcess(new FakeIPCProcess(new FakeCDAPSessionManager(), new FakeRIBDaemon(), new FlowStateEncoder()));
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
 		impl.flowAllocated(1, 1, 2, 1);
 		
 		Assert.assertTrue(impl.flowDeallocated(1));
@@ -64,10 +81,6 @@ public class PDUFTImplTest {
 	@Test
 	public void flowdeAllocated_DeAllocateFlow_False()
 	{
-		log.info("flowdeAllocated_DeAllocateFlow_False()");
-		impl.setIPCProcess(new FakeIPCProcess(new FakeCDAPSessionManager(), new FakeRIBDaemon(), new FlowStateEncoder()));
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
 		impl.flowAllocated(1, 1, 2, 1);
 		
 		Assert.assertFalse(impl.flowDeallocated(2));
@@ -76,15 +89,6 @@ public class PDUFTImplTest {
 	@Test
 	public void enrollmentToNeighbor_NoFlowAllocateds_Null()
 	{
-		log.info("enrollmentToNeighbor_NoFlowAllocateds_Null()");
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		EncoderImpl encoder = new EncoderImpl();
-        encoder.addEncoder(FlowStateObject.class.getName(), new FlowStateEncoder());
-        encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, encoder);
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
 		impl.enrollmentToNeighbor(3, true, 2);
 		
 		Assert.assertNull(rib.recoveredObjectGroup);
@@ -93,12 +97,6 @@ public class PDUFTImplTest {
 	@Test
 	public void enrollmentToNeighbor_SendMessageRecoverObject_True()
 	{
-		log.info("enrollmentToNeighbor_SendMessageRecoverObject_True()");
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
 		impl.flowAllocated(1, 1, 2, 1);
 	
 		impl.enrollmentToNeighbor(3, true, 2);
@@ -107,44 +105,24 @@ public class PDUFTImplTest {
 		Assert.assertEquals(rib.recoveredObjectGroup.getFlowStateObjectArray().get(0).getPortid(), 1);
 		Assert.assertEquals(rib.recoveredObjectGroup.getFlowStateObjectArray().get(0).getNeighborAddress(), 2);
 		Assert.assertEquals(rib.recoveredObjectGroup.getFlowStateObjectArray().get(0).getNeighborPortid(), 1);
-		
-		
 	}
-	
 	
 	@Test
 	public void propagateFSDB_EmptyDB_True()
-	{
-		log.info("propagateFSDB_EmptyDB_True()");
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
+	{	
 		Assert.assertFalse(impl.propagateFSDB());;
 	}
 	
 	@Test
 	public void propagateFSDB_NewFlow_True()
-	{
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
+	{	
 		impl.flowAllocated(1, 1, 2, 1);
-		
 		Assert.assertTrue(impl.propagateFSDB());
 	}
 	
 	@Test
 	public void propagateFSDB_SendObject_NotNull()
-	{
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
+	{	
 		impl.flowAllocated(1, 1, 2, 1);
 		impl.propagateFSDB();
 		
@@ -154,11 +132,6 @@ public class PDUFTImplTest {
 	@Test
 	public void propagateFSDB_SendObjectSameObject_True()
 	{
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
 		impl.flowAllocated(1, 1, 2, 1);
 		impl.propagateFSDB();
 		
@@ -170,12 +143,7 @@ public class PDUFTImplTest {
 	
 	@Test
 	public void propagateFSDB_PropagateTwoTimes_NULL()
-	{
-		FakeRIBDaemon rib = new FakeRIBDaemon();
-		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
-		
+	{	
 		impl.flowAllocated(1, 1, 2, 1);
 		impl.propagateFSDB();
 		rib.recoveredObjectGroup = null;
@@ -190,13 +158,9 @@ public class PDUFTImplTest {
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateGroupEncoder fse = new FlowStateGroupEncoder();
 		FakeCDAPSessionManager cdapSessionManager = new FakeCDAPSessionManager();
-		FakeRIBDaemon rib = new FakeRIBDaemon();
 		FlowStateObject obj1 = new FlowStateObject(2,1,3,1, true, 1, 0);
 		ArrayList<FlowStateObject> fsoL = new ArrayList<FlowStateObject>();
 		fsoL.add(obj1);
-		IPCProcess ipc = new FakeIPCProcess(cdapSessionManager, rib, fse);
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
 		FlowStateObjectGroup fsg = new FlowStateObjectGroup(fsoL);
 
 		try
@@ -218,11 +182,7 @@ public class PDUFTImplTest {
 		ObjectValue objectValue = new ObjectValue();
 		FlowStateEncoder fse = new FlowStateEncoder();
 		FakeCDAPSessionManager cdapSessionManager = new FakeCDAPSessionManager();
-		FakeRIBDaemon rib = new FakeRIBDaemon();
 		FlowStateObject obj1 = new FlowStateObject(1,1,2,1, true, 1, 0);
-		IPCProcess ipc = new FakeIPCProcess(cdapSessionManager, rib, fse);
-		impl.setIPCProcess(ipc);
-		impl.setAlgorithm(new DijkstraAlgorithm(), new Vertex(1));
 		CDAPMessage cdapMessage = null;
 
 		try
@@ -238,4 +198,5 @@ public class PDUFTImplTest {
 		}
 		Assert.assertFalse(impl.writeMessageRecieved(cdapMessage, 1));
 	}
+
 }

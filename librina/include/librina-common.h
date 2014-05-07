@@ -867,68 +867,37 @@ public:
 };
 
 /**
- * Contains the configurations of the algorithm used to set and propagate
- * the PDU Forwarding Table
- */
-class IAlgorithmConfiguration {
-	protected:
-        /** The algorithm used */
-        unsigned short type;
-	public:
-        virtual ~IAlgorithmConfiguration(){};
-        unsigned short getType();
-        void setType(unsigned short type);
-        virtual const std::string toString() = 0;
-};
-
-/**
  * Link state algorithm configurations
  */
-class LSAlgorithmConfiguration : public IAlgorithmConfiguration {
+class PDUFTableGeneratorConfiguration {
 	private:
+		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
 		static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
 		static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
 		static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
 		static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
 		static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+		int objectMaximumAge;
 		int waitUntilReadCDAP;
 		int waitUntilError;
 		int waitUntilPDUFTComputation;
 		int waitUntilFSODBPropagation;
 		int waitUntilAgeIncrement;
-		int pulsesUntilFSOExpiration;
 	public:
-		LSAlgorithmConfiguration();
-        const std::string toString();
-        int getPulsesUntilFsoExpiration() const;
-        void setPulsesUntilFsoExpiration(int pulsesUntilFsoExpiration);
-        int getWaitUntilAgeIncrement() const;
-        void setWaitUntilAgeIncrement(int waitUntilAgeIncrement);
-        int getWaitUntilError() const;
-        void setWaitUntilError(int waitUntilError);
-        int getWaitUntilFsodbPropagation() const;
-        void setWaitUntilFsodbPropagation(int waitUntilFsodbPropagation);
-        int getWaitUntilPduftComputation() const;
-        void setWaitUntilPduftComputation(int waitUntilPduftComputation);
-        int getWaitUntilReadCdap() const;
-        void setWaitUntilReadCdap(int waitUntilReadCdap);
-};
-
-/**
- * Contains the algorithm used to set and propagate the PDU Forwarding Table
- * and its configurations
- */
-class PDUFTableGeneratorConfiguration {
-
-        /** The algorithm used */
-		IAlgorithmConfiguration* algorithm;
-public:
 		PDUFTableGeneratorConfiguration();
-        ~PDUFTableGeneratorConfiguration();
-        IAlgorithmConfiguration* getAlgorithm() const;
-        void setAlgorithm(IAlgorithmConfiguration* algorithm);
-        bool isInitialized();
+        const std::string toString();
+        int getWaitUntilAgeIncrement() const;
+        void setWaitUntilAgeIncrement(const int waitUntilAgeIncrement);
+        int getWaitUntilError() const;
+        void setWaitUntilError(const int waitUntilError);
+        int getWaitUntilFSODBPropagation() const;
+        void setWaitUntilFSODBPropagation(const int waitUntilFsodbPropagation);
+        int getWaitUntilPDUFTComputation() const;
+        void setWaitUntilPDUFTComputation(const int waitUntilPduftComputation);
+        int getWaitUntilReadCDAP() const;
+        void setWaitUntilReadCDAP(const int waitUntilReadCdap);
+        int getObjectMaximumAge() const;
+        void setObjectMaximumAge(const int objectMaximumAge);
 };
 
 /**
@@ -937,11 +906,11 @@ public:
  */
 class DIFConfiguration {
 
-        /** The DIF Data Transfer constants */
-        DataTransferConstants dataTransferConstants;
+	/** The DIF Data Transfer constants */
+	DataTransferConstants dataTransferConstants;
 
-        /** The address of the IPC Process in the DIF */
-        unsigned int address;
+	/** The address of the IPC Process in the DIF */
+	unsigned int address;
 
 	/** The QoS cubes supported by the DIF */
 	std::list<QoSCube> qosCubes;
@@ -951,6 +920,9 @@ class DIFConfiguration {
 
 	/** Configuration parameters */
 	std::list<Parameter> parameters;
+
+	/** PDUFT Configuration parameters of the DIF	*/
+	PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
 public:
 	const std::list<Policy>& getPolicies();
@@ -962,11 +934,13 @@ public:
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
-        const DataTransferConstants& getDataTransferConstants() const;
-        void setDataTransferConstants(
-                        const DataTransferConstants& dataTransferConstants);
-        unsigned int getAddress() const;
-        void setAddress(unsigned int address);
+	const DataTransferConstants& getDataTransferConstants() const;
+	void setDataTransferConstants(
+					const DataTransferConstants& dataTransferConstants);
+	unsigned int getAddress() const;
+	void setAddress(unsigned int address);
+	void setPDUFTableGeneratorConfiguration (const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+	const PDUFTableGeneratorConfiguration& getPDUFTableGeneratorConfiguration() const;
 };
 
 /**
