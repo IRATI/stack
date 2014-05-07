@@ -1104,6 +1104,7 @@ void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
         }
 #endif
 }
+Singleton<KernelIPCProcess> kernelIPCProcess;
 
 ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
                 int maxBytes)
@@ -1175,6 +1176,106 @@ char* ADataUnitPDU::getPayload() const
 void ADataUnitPDU::setPayload(char payload[])
 {
 	this->payload = payload;
+}
+
+/*	CLASS WhatevercastName	*/
+const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DAF +
+RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT + RIBObjectNames::SEPARATOR + RIBObjectNames::NAMING +
+RIBObjectNames::SEPARATOR + RIBObjectNames::WHATEVERCAST_NAMES;
+const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS = "whatname set";
+const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS = "whatname";
+const std::string DIF_NAME_WHATEVERCAST_RULE = "any";
+
+std::string WhatevercastName::getName() const
+{
+	return name;
+}
+
+void WhatevercastName::setName(std::string name)
+{
+	this->name = name;
+}
+
+std::string WhatevercastName::getRule() const
+{
+	return rule;
+}
+
+void WhatevercastName::setRule(std::string rule)
+{
+	this->rule = rule;
+}
+
+std::list<char*> WhatevercastName::getSetMembers() const
+{
+	return setMembers;
+}
+
+void WhatevercastName::setSetMembers(std::list<char*> setMembers)
+{
+	this->setMembers = setMembers;
+}
+
+bool WhatevercastName::operator==(const WhatevercastName &other)
+{
+	if (name == other.getName()){
+		return true;
+	}
+	return false;
+}
+
+std::string WhatevercastName::toString()
+{
+	std::string result = "Name: " + name + "\n";
+	result = result + "Rule: " + rule;
+	return result;
+}
+
+/*	CLASS ApplicationProcessException */
+const int UNEXISTING_SYNOYM = 1;
+const int WRONG_APPLICATION_PROCES_NAME = 2;
+const int NULL_OR_MALFORMED_SYNONYM = 3;
+const int ALREADY_EXISTING_SYNOYM = 4;
+const int NULL_OR_MALFORMED_WHATEVERCAST_NAME = 5;
+const int ALREADY_EXISTING_WHATEVERCAST_NAME = 6;
+const int UNEXISTING_WHATEVERCAST_NAME = 7;
+
+ApplicationProcessException::ApplicationProcessException()
+{
+	this->errorCode = 0;
+}
+
+ApplicationProcessException::ApplicationProcessException(int errorCode)
+{
+	this->errorCode = errorCode;
+}
+
+ApplicationProcessException::ApplicationProcessException(int errorCode, std::string message)
+{
+	this->errorCode = errorCode;
+	this->message = new char[message.size() + 1];
+	std::copy(message.begin(), message.end(), this->message);
+	this->message[message.size()] = '\0';
+}
+
+ApplicationProcessException::~ApplicationProcessException() throw()
+{
+	delete[] message;
+}
+
+int ApplicationProcessException::getErrorCode() const
+{
+	return errorCode;
+}
+
+void ApplicationProcessException::setErrorCode(int errorCode)
+{
+	this->errorCode = errorCode;
+}
+
+const char* ApplicationProcessException::what() const throw()
+{
+	return message;
 }
 
 /*	CLASS RIBObjectNames	*/
@@ -1289,6 +1390,4 @@ std::string BaseEvent::getId() const
 {
 	return id;
 }
-
-Singleton<KernelIPCProcess> kernelIPCProcess;
 }
