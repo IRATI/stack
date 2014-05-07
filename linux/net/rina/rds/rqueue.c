@@ -39,7 +39,7 @@ struct rqueue {
         size_t           length;
 };
 
-static struct rqueue * rqueue_create_gfp(gfp_t flags)
+struct rqueue * rqueue_create_gfp(gfp_t flags)
 {
         struct rqueue * q;
 
