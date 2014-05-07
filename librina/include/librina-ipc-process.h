@@ -21,6 +21,7 @@
 
 #include "librina-common.h"
 #include "librina-application.h"
+#include "librina-ipc-manager.h"
 
 namespace rina {
 
@@ -952,6 +953,263 @@ public:
         ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes)
                 throw (ReadSDUException);
 };
+
+/**
+ * Basic PDU
+ */
+class ADataUnitPDU {
+	/*	Constants	*/
+	public:
+		static const std::string ADataUnitPDUObjectName;
+	/*	Members	*/
+	protected:
+		/** The address of the Application Process that generated this PDU */
+		long sourceAddress;
+		/** The address of the Applicatio Process that is the target this PDU*/
+		 long destinationAddress;
+		/** The encoded payload of the PDU */
+		char *payload;
+	/*	Constructors and Destructors	*/
+	public:
+		ADataUnitPDU();
+		ADataUnitPDU(long sourceAddress, long destinationAddress, char payload[]);
+	/*	Accessors	*/
+	public:
+		long getSourceAddress() const;
+		void setSourceAddress(long sourceAddress);
+		long getDestinationAddress() const;
+		void setDestinationAddress(long destinationAddress);
+		char* getPayload() const;
+		void setPayload(char payload[]);
+};
+
+
+
+/**
+ * Contains the object names of the objects in the RIB
+ */
+class RIBObjectNames
+{
+	/*	Constants	*/
+	public:
+		/* Partial names */
+		static const std::string ADDRESS;
+		static const std::string APNAME;
+		static const std::string CONSTANTS;
+		static const std::string DATA_TRANSFER;
+		static const std::string DAF;
+		static const std::string DIF;
+		static const std::string DIF_REGISTRATIONS;
+		static const std::string DIRECTORY_FORWARDING_TABLE_ENTRIES;
+		static const std::string ENROLLMENT;
+		static const std::string FLOWS;
+		static const std::string FLOW_ALLOCATOR;
+		static const std::string IPC;
+		static const std::string MANAGEMENT;
+		static const std::string NEIGHBORS;
+		static const std::string NAMING;
+		static const std::string NMINUSONEFLOWMANAGER;
+		static const std::string NMINUSEONEFLOWS;
+		static const std::string OPERATIONAL_STATUS;
+		static const std::string PDU_FORWARDING_TABLE;
+		static const std::string QOS_CUBES;
+		static const std::string RESOURCE_ALLOCATION;
+		static const std::string ROOT;
+		static const std::string SEPARATOR;
+		static const std::string SYNONYMS;
+		static const std::string WHATEVERCAST_NAMES;
+		static const std::string ROUTING;
+		static const std::string FLOWSTATEOBJECTGROUP;
+		/* Full names */
+		static const std::string OPERATIONAL_STATUS_RIB_OBJECT_NAME;
+		static const std::string OPERATIONAL_STATUS_RIB_OBJECT_CLASS;
+		static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS;
+		static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_NAME;
+
+	/*	Constructors and Destructor	*/
+	public:
+		virtual ~RIBObjectNames() = 0;
+};
+
+/**
+ * The object that contains all the information
+ * that is required to initiate an enrollment
+ * request (send as the objectvalue of a CDAP M_START
+ * message, as specified by the Enrollment spec)
+ */
+
+class EnrollmentInformationRequest
+{
+	/*	Constants	*/
+	public:
+		static const std::string ENROLLMENT_INFO_OBJECT_NAME;
+	/*	Variables	*/
+	protected:
+		/**
+		 * The address of the IPC Process that requests
+		 * to join a DIF
+		 */
+		unsigned int address;
+		std::list<ApplicationProcessNamingInformation>* supportingDifs;
+	/*	Accessors	*/
+	public:
+		unsigned int getAddress() const;
+		void setAddress(unsigned int address);
+		std::list<ApplicationProcessNamingInformation>* getSupportingDifs() const;
+		void setSupportingDifs(
+		std::list<ApplicationProcessNamingInformation> &supportingDifs);
+	/*	Constructors and Destructors	*/
+	public:
+		EnrollmentInformationRequest();
+		virtual ~EnrollmentInformationRequest();
+};
+
+/**
+ * Contains the objects needed to request the Enrollment
+ */
+class EnrollmentRequest
+{
+	/*	Variables	*/
+	protected:
+		Neighbor* neighbor;
+		EnrollToDIFRequestEvent* event;
+
+	/*	Accessors	*/
+	public:
+		Neighbor* getNeighbor() const;
+		void setNeighbor(Neighbor &neighbor);
+		EnrollToDIFRequestEvent* getEvent() const;
+		void setEvent(EnrollToDIFRequestEvent &event);
+
+	/*	Constructor and Destructor	*/
+	public:
+		EnrollmentRequest(Neighbor &neighbor, EnrollToDIFRequestEvent &event);
+		virtual ~EnrollmentRequest(){};
+};
+
+/**
+ * IPC process component interface
+ */
+class IPCProcessComponent {
+	/*	Variables	*/
+	protected:
+		IPCProcess ipcProcess;
+	/*	Accessors	*/
+	public:
+		virtual void setIPCProcess(IPCProcess ipcProcess) = 0;
+		virtual ~IPCProcessComponent(){};
+};
+
+/**
+ * Interface
+ * An event
+ */
+class Event
+{
+	/*	Constants	*/
+	public:
+		static const std::string CONNECTIVITY_TO_NEIGHBOR_LOST;
+		static const std::string EFCP_CONNECTION_CREATED;
+		static const std::string EFCP_CONNECTION_DELETED;
+		static const std::string MANAGEMENT_FLOW_ALLOCATED;
+		static const std::string MANAGEMENT_FLOW_DEALLOCATED;
+		static const std::string N_MINUS_1_FLOW_ALLOCATED;
+		static const std::string N_MINUS_1_FLOW_ALLOCATION_FAILED;
+		static const std::string N_MINUS_1_FLOW_DEALLOCATED;
+		static const std::string NEIGHBOR_DECLARED_DEAD;
+		static const std::string NEIGHBOR_ADDED;
+	/*	Accessors	*/
+	public:
+		/**
+		 * The id of the event
+		 * @return
+		 */
+		virtual std::string getId() const = 0;
+	/*	Constructors and Destructor	*/
+	public:
+		virtual ~Event(){};
+};
+
+/**
+ * Base class common to all events
+ *
+ */
+class BaseEvent: public Event{
+	/*	Variable	*/
+	protected:
+		/**
+		 * The identity of the event
+		 */
+		std::string id;
+	/*	Accessors	*/
+	public:
+		std::string getId() const;
+	/*	Constructors and Destructors	*/
+	public:
+		BaseEvent();
+		BaseEvent(std::string id);
+};
+
+/**
+ * Interface
+ * It is subscribed to events of certain type
+ */
+class EventListener {
+	/*	Methods	*/
+	public:
+		/**
+		 * Called when a acertain event has happened
+		 * @param event
+		 */
+		virtual void eventHappened(Event &event) = 0;
+	/*	Constructors and Destructor	*/
+	public:
+		virtual ~EventListener(){};
+};
+
+/**
+ * Interface
+ * Manages subscriptions to events
+ */
+class EventManager
+{
+	/*	Methods	*/
+	public:
+		/**
+		 * Subscribe to a single event
+		 * @param eventId The id of the event
+		 * @param eventListener The event listener
+		 */
+		virtual void subscribeToEvent(std::string eventId, EventListener &eventListener) = 0;
+		/**
+		 * Subscribes to a list of events
+		 * @param eventIds the list of event ids
+		 * @param eventListener The event listener
+		 */
+		virtual void subscribeToEvents(std::list<std::string> eventIds, EventListener &eventListener) = 0;
+		/**
+		 * Unubscribe from a single event
+		 * @param eventId The id of the event
+		 * @param eventListener The event listener
+		 */
+		virtual void unsubscribeFromEvent(std::string eventId, EventListener &eventListener) = 0;
+		/**
+		 * Unsubscribe from a list of events
+		 * @param eventIds the list of event ids
+		 * @param eventListener The event listener
+		 */
+		virtual void unsubscribeFromEvents(std::list<std::string> eventIds, EventListener &eventListener) = 0;
+		/**
+		 * Invoked when a certain event has happened
+		 * @param event
+		 */
+		virtual void deliverEvent(Event &event) = 0;
+
+		/*	Constructors and Destructors	*/
+	public:
+		virtual ~EventManager(){};
+};
+
 
 /**
  * Make Kernel IPC Process singleton
