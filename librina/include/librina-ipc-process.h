@@ -1017,6 +1017,15 @@ class ApplicationProcessException: public std::exception{
 		virtual const char* what() const throw();
 };
 
+/**
+ * Defines a whatevercast name (or a name of a set of names).
+ * In traditional architectures, sets that returned all members were called multicast; while
+ * sets that returned one member were called anycast.  It is not clear what sets that returned
+ * something in between were called.  With the more general definition here, these
+ * distinctions are unnecessary.
+ *
+ */
+
 class WhatevercastName {
 	/*	Constants	*/
 	public:
@@ -1045,6 +1054,29 @@ class WhatevercastName {
 		bool operator==(const WhatevercastName &other);
 		std::string toString();
 };
+
+
+/**
+ * Initializes the IPC Process
+ * @param localPort port of the NL socket
+ * @param logLevel librina log level
+ * @param pathToLogFile the path to the librina log file
+ */
+//void initializeIPCProcess(unsigned int localPort, const std::string& logLevel, const std::string& pathToLogFile);
+
+/**
+ * Encodes and Decodes an object to/from bytes)
+ * @author eduardgrasa
+ *
+ */
+template <class T>
+class IEncoder {
+	public:
+		virtual char* encode(T object) throw (std::exception) = 0;
+		virtual T decode(char serializedObject[]) throw (std::exception) = 0;
+		virtual ~IEncoder(){};
+};
+
 
 /**
  * Contains the object names of the objects in the RIB

@@ -1278,6 +1278,13 @@ const char* ApplicationProcessException::what() const throw()
 	return message;
 }
 
+void initializeIPCProcess(unsigned int localPort, const std::string& logLevel, const std::string& pathToLogFile)
+{
+	initialize(localPort, logLevel, pathToLogFile);
+}
+
+
+
 /*	CLASS RIBObjectNames	*/
 const std::string RIBObjectNames::ADDRESS = "address";
 const std::string RIBObjectNames::APNAME = "applicationprocessname";
