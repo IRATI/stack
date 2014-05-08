@@ -468,11 +468,22 @@ static int
 shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
 {
         int ret = 0;
-        unsigned int ch = port_id_to_channel(priv, port_id);
+        unsigned int ch;
 
-        ret = shim_hv_flow_deallocate_common(priv, ch, 1);
+        mutex_lock(&priv->vc_lock);
 
-        shim_hv_send_deallocate(priv, ch);
+        ch = port_id_to_channel(priv, port_id);
+        /* If channel is equal to 0, it means that the channel
+         * for this port-id has already been deallocated, so
+         * we don't have to call shim_hv_flow_deallocate_common().
+         */
+        if (ch)
+                ret = shim_hv_flow_deallocate_common(priv, ch, 0);
+
+        mutex_unlock(&priv->vc_lock);
+
+        if (ch && ch < VMPI_MAX_CHANNELS)
+                shim_hv_send_deallocate(priv, ch);
 
         return ret;
 }
