@@ -194,7 +194,7 @@ static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
 
         spin_lock(&dtcp->sv->lock);
         dtcp->sv->last_rcv_ctl_seq = last_rcv_ctrl_seq;
-        spin_lock(&dtcp->sv->lock);
+        spin_unlock(&dtcp->sv->lock);
 
         return 0;
 }
@@ -208,7 +208,7 @@ static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 
         spin_lock(&dtcp->sv->lock);
         tmp = dtcp->sv->last_rcv_ctl_seq;
-        spin_lock(&dtcp->sv->lock);
+        spin_unlock(&dtcp->sv->lock);
 
         return tmp;
 }
@@ -556,7 +556,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
 
+        LOG_ERR("SEQ NUM: %d", seq_num);
+
         last_ctrl = last_rcv_ctrl_seq(dtcp);
+        LOG_ERR("LAST SEQ: %d", last_ctrl);
         if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
