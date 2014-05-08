@@ -441,8 +441,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
         port_id = priv->vmpi.channels[ch].port_id;
 
         if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL) {
-                LOG_ERR("%s: channel state is already NULL", __func__);
-                ret = -1;
+                LOG_INFO("%s: channel state is already NULL", __func__);
                 goto out;
         }
 
@@ -678,9 +677,8 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
         }
 
         LOG_DBG("%s: received DEALLOCATE(ch = %d)", __func__, ch);
-#ifdef DONT_IGNORE_DEALLOCATE
+
         shim_hv_flow_deallocate_common(priv, ch, 1);
-#endif
 }
 
 static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
