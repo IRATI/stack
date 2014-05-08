@@ -40,15 +40,17 @@
 
 typedef uint8_t pdu_flags_t;
 
-#define PDU_TYPE_EFCP       0x8000 /* EFCP PDUs */
-#define PDU_TYPE_DT         0x8001 /* Data Transfer PDU */
-#define PDU_TYPE_CC         0x8002 /* Common Control PDU */
-#define PDU_TYPE_SACK       0x8004 /* Selective ACK */
-#define PDU_TYPE_NACK       0x8006 /* Forced Retransmission PDU (NACK) */
-#define PDU_TYPE_FC         0x8009 /* Flow Control only */
-#define PDU_TYPE_ACK        0x800C /* ACK only */
-#define PDU_TYPE_ACK_AND_FC 0x800D /* ACK and Flow Control */
-#define PDU_TYPE_MGMT       0xC000 /* Management */
+#define PDU_TYPE_EFCP        0x8000 /* EFCP PDUs */
+#define PDU_TYPE_DT          0x8001 /* Data Transfer PDU */
+#define PDU_TYPE_CC          0x8002 /* Common Control PDU */
+#define PDU_TYPE_ACK         0x8804 /* ACK only */
+#define PDU_TYPE_NACK        0x8805 /* Forced Retransmission PDU (NACK) */
+#define PDU_TYPE_SACK        0x8806 /* Selective ACK */
+#define PDU_TYPE_SNACK       0x8807 /* Selective NACK */
+#define PDU_TYPE_FC          0x8808 /* Flow Control only */
+#define PDU_TYPE_ACK_AND_FC  0x880C /* ACK and Flow Control */
+#define PDU_TYPE_NACK_AND_FC 0x880D /* NACK and Flow Control */
+#define PDU_TYPE_MGMT        0xC000 /* Management */
 
 typedef uint16_t pdu_type_t;
 
