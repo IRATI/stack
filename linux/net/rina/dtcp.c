@@ -408,6 +408,7 @@ static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
         return pdu;
 }
 
+/* This is 880C */
 static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
                                       seq_num_t     last_ctrl_seq_rcvd,
                                       seq_num_t     ack_nack_seq,
@@ -523,7 +524,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         pdu_type_t   type;
         seq_num_t    seq_num;
         seq_num_t    seq;
+        seq_num_t    last_ctrl;
 
+        LOG_ERR("DTCP common receive control");
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
                 pdu_destroy(pdu);
@@ -553,7 +556,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
 
-        if (seq_num < dtcp->sv->last_rcv_ctl_seq) {
+        last_ctrl = last_rcv_ctrl_seq(dtcp);
+        if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
                         flow_ctrl_inc(dtcp);
@@ -572,14 +576,14 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 pdu_destroy(pdu);
                 return 0;
 
-        } else if (seq_num > dtcp->sv->last_rcv_ctl_seq) {
+        } else if (seq_num > (last_ctrl + 1)) {
                 if (dtcp->policies->lost_control_pdu(dtcp)) {
                         /* What else could we do here? */
                         pdu_destroy(pdu);
                         return 0;
                 }
         }
-        last_rcv_ctrl_seq_set(dtcp, seq_num);
+        last_rcv_ctrl_seq_set(dtcp, last_ctrl + 1);
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
@@ -609,11 +613,15 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 static int default_lost_control_pdu(struct dtcp * dtcp)
 {
         struct pdu * pdu_ctrl;
+        seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
-        pdu_ctrl = pdu_ctrl_ack_create(dtcp,
-                                       last_rcv_ctrl_seq(dtcp),
-                                       snd_lft_win(dtcp),
-                                       snd_rt_wind_edge(dtcp));
+        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+        snd_lft       = snd_lft_win(dtcp);
+        snd_rt        = snd_rt_wind_edge(dtcp);
+        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                            last_rcv_ctrl,
+                                            snd_lft,
+                                            snd_rt);
         if (!pdu_ctrl) {
                 LOG_ERR("Failed Lost Control PDU policy");
                 return -1;
@@ -628,11 +636,15 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
 static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
+        seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
-        pdu_ctrl = pdu_ctrl_ack_create(dtcp,
-                                       last_rcv_ctrl_seq(dtcp),
-                                       snd_lft_win(dtcp),
-                                       snd_rt_wind_edge(dtcp));
+        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+        snd_lft       = snd_lft_win(dtcp);
+        snd_rt        = snd_rt_wind_edge(dtcp);
+        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                            last_rcv_ctrl,
+                                            snd_lft,
+                                            snd_rt);
         if (!pdu_ctrl)
                 return -1;
 
@@ -780,6 +792,14 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 LOG_ERR("No DT passed, bailing out");
                 return NULL;
         }
+        if (!conn) {
+                LOG_ERR("No connection, bailing out");
+                return NULL;
+        }
+        if (!rmt) {
+                LOG_ERR("No RMT, bailing out");
+                return NULL;
+        }
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) {
@@ -810,6 +830,7 @@ struct dtcp * dtcp_create(struct dt *         dt,
         /* FIXME: fixups to the policies should be placed here */
 
         tmp->conn      = conn;
+        tmp->rmt       = rmt;
 
         LOG_DBG("Instance %pK created successfully", tmp);
 

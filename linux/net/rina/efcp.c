@@ -108,9 +108,29 @@ static int efcp_destroy(struct efcp * instance)
         return 0;
 }
 
+#define MAX_NAME_SIZE 128
+
+static const char * create_name(const char *                  prefix,
+                                const struct efcp_container * instance)
+{
+        static char name[MAX_NAME_SIZE];
+
+        ASSERT(prefix);
+        ASSERT(instance);
+
+        if (snprintf(name, sizeof(name),
+                     RINA_PREFIX "-%s-%pK", prefix, instance) >=
+            sizeof(name))
+                return NULL;
+
+        return name;
+}
+
 struct efcp_container * efcp_container_create(struct kfa * kfa)
 {
         struct efcp_container * container;
+        const char * name_egress;
+        const char * name_ingress;
 
         if (!kfa) {
                 LOG_ERR("Bogus KFA instances passed, bailing out");
@@ -130,16 +150,26 @@ struct efcp_container * efcp_container_create(struct kfa * kfa)
                 return NULL;
         }
 
-        /* FIXME: name should be unique, not shared with all the EFCPC's */
-        container->egress_wq = rwq_create("efcpc-egress-wq");
+        name_egress = create_name("c-egress-wq", container);
+        if (!name_egress) {
+                LOG_ERR("Cannot create efcpc egress wq name");
+                efcp_container_destroy(container);
+                return NULL;
+        }
+        container->egress_wq = rwq_create(name_egress);
         if (!container->egress_wq) {
                 LOG_ERR("Cannot create efcpc egress workqueue");
                 efcp_container_destroy(container);
                 return NULL;
         }
 
-        /* FIXME: name should be unique, not shared with all the EFCPC's */
-        container->ingress_wq = rwq_create("efcpc-ingress-wq");
+        name_ingress = create_name("c-ingress-wq", container);
+        if (!name_ingress) {
+                LOG_ERR("Cannot create efcpc ingress wq name");
+                efcp_container_destroy(container);
+                return NULL;
+        }
+        container->ingress_wq = rwq_create(name_ingress);
         if (!container->egress_wq) {
                 LOG_ERR("Cannot create efcpc ingress workqueue");
                 efcp_container_destroy(container);
@@ -415,7 +445,9 @@ static int efcp_receive_worker(void * o)
         ASSERT(tmp->efcp->dt);
 
         pdu_type = pci_type(pdu_pci_get_ro(tmp->pdu));
+        LOG_ERR("PDU_TYPE: %d", pdu_type);
         if (pdu_type_is_control(pdu_type)) {
+                LOG_ERR("PDU type is control");
                 dtcp = dt_dtcp(tmp->efcp->dt);
                 if (!dtcp) {
                         LOG_ERR("No DTCP instance available");
@@ -429,12 +461,14 @@ static int efcp_receive_worker(void * o)
                         return -1;
                 }
 
+                receive_data_destroy(tmp);
+                return 0;
                 /* FIXME: The PDU has been consumed ... */
         }
 
         /*
          * FIXME: Based on the previous FIXME, shouldn't the rest of this
-         *        functionbe in the else case ?
+         *        function be in the else case ?
          */
         dtp = dt_dtp(tmp->efcp->dt);
         if (!dtp) {
@@ -470,6 +504,7 @@ static int efcp_receive(struct efcp * efcp,
                 return -1;
         }
 
+        LOG_ERR("CREATING EFCP RECEIVE DATA");
         data = receive_data_create(efcp, pdu);
         ASSERT(is_receive_data_ok(data));
 
@@ -543,9 +578,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id_t      cep_id;
         struct dtp *  dtp;
         struct dtcp * dtcp;
-#if DTCP_TEST_ENABLE
-        struct connection * conn_params;
-#endif
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -605,31 +637,13 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         dtcp = NULL;
 
 #if DTCP_TEST_ENABLE
-        conn_params = rkzalloc(sizeof(*conn_params), GFP_KERNEL);
-        if(!conn_params) {
-                dtp_destroy(dtp);
-                efcp_destroy(tmp);
-                return cep_id_bad();
-        }
-        conn_params->policies_params.dtcp_present = true;
-        conn_params->policies_params.flow_ctrl = true;
-        conn_params->policies_params.rate_based_fctrl = false;
-        conn_params->policies_params.rtx_ctrl = true;
-        conn_params->policies_params.window_based_fctrl = true;
-        dtcp = dtcp_create(tmp->dt, conn_params, container->rmt);
-        if (!dtcp) {
-                dtp_destroy(dtp);
-                efcp_destroy(tmp);
-                return cep_id_bad();
-        }
+        connection->policies_params.dtcp_present = true;
+        connection->policies_params.flow_ctrl = true;
+        connection->policies_params.rate_based_fctrl = false;
+        connection->policies_params.rtx_ctrl = true;
+        connection->policies_params.window_based_fctrl = true;
+#endif
 
-        if (dt_dtcp_bind(tmp->dt, dtcp)) {
-                dtp_destroy(dtp);
-                dtcp_destroy(dtcp);
-                efcp_destroy(tmp);
-                return cep_id_bad();
-        }
-#else
         if (connection->policies_params.dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
@@ -645,7 +659,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         return cep_id_bad();
                 }
         }
-#endif
+
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,
                           tmp)) {

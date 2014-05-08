@@ -45,6 +45,27 @@ struct cwq * cwq_create(void)
         tmp->q = rqueue_create();
         if (!tmp->q) {
                 LOG_ERR("Failed to create closed window queue");
+                rkfree(tmp);
+                return NULL;
+        }
+
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+struct cwq * cwq_create_ni(void)
+{
+        struct cwq * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+
+        tmp->q = rqueue_create_ni();
+        if (!tmp->q) {
+                LOG_ERR("Failed to create closed window queue");
+                rkfree(tmp);
                 return NULL;
         }
 
@@ -171,6 +192,19 @@ static struct rtxqueue * rtxqueue_create(void)
         struct rtxqueue * tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
+
+static struct rtxqueue * rtxqueue_create_ni(void)
+{
+        struct rtxqueue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
@@ -327,6 +361,35 @@ struct rtxq * rtxq_create(struct dt * dt)
         }
 
         tmp->queue = rtxqueue_create();
+        if (!tmp->queue) {
+                LOG_ERR("Failed to create retransmission queue");
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->parent = dt;
+
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+struct rtxq * rtxq_create_ni(struct dt * dt)
+{
+        struct rtxq * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return NULL;
+
+        tmp->r_timer = rtimer_create_ni(Rtimer_handler, tmp);
+        if (!tmp->r_timer) {
+                LOG_ERR("Failed to create retransmission queue");
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->queue = rtxqueue_create_ni();
         if (!tmp->queue) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);

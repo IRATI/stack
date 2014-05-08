@@ -189,14 +189,14 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
                 return -1;
         }
 
-        dt->cwq = cwq_create();
+        dt->cwq = cwq_create_ni();
         if (!dt->cwq) {
                 LOG_ERR("Failed to create closed window queue");
                 spin_unlock(&dt->lock);
                 return -1;
         }
 
-        dt->rtxq = rtxq_create(dt);
+        dt->rtxq = rtxq_create_ni(dt);
         if (!dt->rtxq) {
                 LOG_ERR("Failed to create rexmsn queue");
                 if (cwq_destroy(dt->cwq))
