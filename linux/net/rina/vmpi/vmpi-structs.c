@@ -97,7 +97,7 @@ vmpi_ring_init(struct vmpi_ring *ring, unsigned int buf_size)
 
         return 0;
 
-err:
+ err:
         for (i--; i >= 0; i--) {
                 vmpi_buffer_fini(&ring->bufs[i]);
         }
