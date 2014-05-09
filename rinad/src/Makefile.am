@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+SUBDIRS = common ipcp ipcm
+
 #edit = $(SED)						\
 #        -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
 #        -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'	\

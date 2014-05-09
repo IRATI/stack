@@ -29,6 +29,12 @@ AC_PATH_PROG([SORT], [sort], [/bin/false])
 AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
 AC_PATH_PROG([GIT],  [git],  [/bin/false])
 
+AC_PROG_CXXCPP
+AC_PROG_CXX
+AC_PROG_CXX_C_O
+AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+AC_PROG_RANLIB
+
 AX_PROG_JAVA
 
 PKG_PROG_PKG_CONFIG([0.26])
@@ -48,6 +54,9 @@ AC_CONFIG_FILES([
     Makefile
     src-old/Makefile
     src/Makefile
+    src/common/Makefile
+    src/ipcp/Makefile
+    src/ipcm/Makefile
 ])
 
 AC_OUTPUT
