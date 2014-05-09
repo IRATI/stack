@@ -92,7 +92,7 @@ vmpi_impl_clean_tx(struct vmpi_info *mpi)
 
 ssize_t
 vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
-                  const struct iovec *iv, unsigned long iovcnt, int user)
+                  const struct iovec *iv, unsigned long iovcnt, bool user)
 {
         vmpi_impl_info_t *vi = mpi->vi;
         size_t len = iov_length(iv, iovcnt);

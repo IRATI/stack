@@ -425,7 +425,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
 
 static int
 shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
-                               unsigned int ch, unsigned locked)
+                               unsigned int ch, bool locked)
 {
         int ret = 0;
         port_id_t port_id;
