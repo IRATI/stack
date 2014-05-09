@@ -10,7 +10,7 @@ MAINTAINERCLEANFILES      =
 BUILT_SOURCES             =
 DISTCHECK_CONFIGURE_FLAGS =
 
-SUBDIRS = src
+SUBDIRS = src-old src
 
 EXTRA_DIST =					\
 	bootstrap				\
