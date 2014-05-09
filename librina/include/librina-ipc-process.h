@@ -984,6 +984,99 @@ class ADataUnitPDU {
 };
 
 
+/**
+ * General exceptions thrown by Application Processes
+ *
+ */
+class ApplicationProcessException: public std::exception{
+	/*	Constants	*/
+	public:
+		/*	Error Codes	*/
+		static const int UNEXISTING_SYNOYM ;
+		static const int WRONG_APPLICATION_PROCES_NAME;
+		static const int NULL_OR_MALFORMED_SYNONYM;
+		static const int ALREADY_EXISTING_SYNOYM;
+		static const int NULL_OR_MALFORMED_WHATEVERCAST_NAME;
+		static const int ALREADY_EXISTING_WHATEVERCAST_NAME;
+		static const int UNEXISTING_WHATEVERCAST_NAME;
+	/*	Members	*/
+	protected:
+		int errorCode;
+		char* message;
+	/*	Constructors and Destructors	*/
+	public:
+		ApplicationProcessException();
+		ApplicationProcessException(int errorCode);
+		ApplicationProcessException(int errorCode, std::string message);
+		~ApplicationProcessException() throw();
+	/*	Accessors	*/
+	public:
+		int getErrorCode() const;
+		void setErrorCode(int errorCode);
+	/*	Functionalities	*/
+		virtual const char* what() const throw();
+};
+
+/**
+ * Defines a whatevercast name (or a name of a set of names).
+ * In traditional architectures, sets that returned all members were called multicast; while
+ * sets that returned one member were called anycast.  It is not clear what sets that returned
+ * something in between were called.  With the more general definition here, these
+ * distinctions are unnecessary.
+ *
+ */
+
+class WhatevercastName {
+	/*	Constants	*/
+	public:
+		static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME;
+		static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
+		static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
+		static const std::string DIF_NAME_WHATEVERCAST_RULE;
+	/*	Members	*/
+	protected:
+		/** The name **/
+		std::string name;
+		/** The members of the set **/
+		std::list<char*> setMembers;
+		/** The rule to select one or more members from the set **/
+		std::string rule;
+	/*	Accessors	*/
+	public:
+		std::string getName() const;
+		void setName(std::string name);
+		std::string getRule() const;
+		void setRule(std::string rule);
+		std::list<char*> getSetMembers() const;
+		void setSetMembers(std::list<char*> setMembers);
+	/*	Functionalities	*/
+	public:
+		bool operator==(const WhatevercastName &other);
+		std::string toString();
+};
+
+
+/**
+ * Initializes the IPC Process
+ * @param localPort port of the NL socket
+ * @param logLevel librina log level
+ * @param pathToLogFile the path to the librina log file
+ */
+//void initializeIPCProcess(unsigned int localPort, const std::string& logLevel, const std::string& pathToLogFile);
+
+/**
+ * Encodes and Decodes an object to/from bytes)
+ * @author eduardgrasa
+ *
+ */
+template <class T>
+class IEncoder {
+	public:
+		virtual char* encode(T object) throw (std::exception) = 0;
+		virtual T decode(char serializedObject[]) throw (std::exception) = 0;
+		virtual ~IEncoder(){};
+};
+
 
 /**
  * Contains the object names of the objects in the RIB
