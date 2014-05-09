@@ -26,9 +26,9 @@ typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
 struct vmpi_ops {
         /* Write a kernelspace buffer. */
         ssize_t (*write)(struct vmpi_ops *ops, unsigned int channel,
-                      const struct iovec *iv, unsigned long iovlen);
+                         const struct iovec *iv, unsigned long iovlen);
         int (*register_read_callback)(struct vmpi_ops *ops, vmpi_read_cb_t rcb,
-                                   void *opaque);
+                                      void *opaque);
 
         /* Private: do not use. */
         void *priv;

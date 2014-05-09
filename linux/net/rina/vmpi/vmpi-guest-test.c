@@ -97,7 +97,7 @@ static const struct file_operations vmpi_test_fops = {
         .aio_write      = vmpi_test_aio_write,
         .read           = do_sync_read,
         .aio_read       = vmpi_test_aio_read,
-        .llseek		= noop_llseek,
+        .llseek         = noop_llseek,
 };
 
 #define VIRTIO_MPI_MINOR     246
@@ -123,7 +123,7 @@ vmpi_test_init(void)
 
         return 0;
 
-misc_reg:
+ misc_reg:
 
         return ret;
 }

@@ -136,11 +136,11 @@ vmpi_impl_read_buffer(struct vmpi_impl_info *vi)
                 newbuf = vmpi_buffer_create(VMPI_BUF_SIZE);
                 if (unlikely(newbuf == NULL)) {
                         printk("Error: vmpi_buffer_create(%u) failed\n",
-                                VMPI_BUF_SIZE);
+                               VMPI_BUF_SIZE);
                 } else {
                         sg_set_buf(q->sg, newbuf->p, VMPI_BUF_SIZE);
                         err = virtqueue_add_inbuf(q->vq, q->sg, 1, newbuf,
-                                                        GFP_ATOMIC);
+                                                  GFP_ATOMIC);
                         if (unlikely(err)) {
                                 printk("Error: virtqueue_add_inbuf() failed\n");
                         }
@@ -176,8 +176,8 @@ vmpi_impl_receive_cb(struct vmpi_impl_info *vi, int enable)
 
 void
 vmpi_impl_callbacks_register(struct vmpi_impl_info *vi,
-                vmpi_impl_callback_t xmit,
-                vmpi_impl_callback_t recv)
+                             vmpi_impl_callback_t xmit,
+                             vmpi_impl_callback_t recv)
 {
         vi->sq->cb = xmit;
         vi->rq->cb = recv;
@@ -225,7 +225,7 @@ virtio_mpi_find_vqs(struct vmpi_impl_info *vi)
         names[1] = vi->sq->name;
 
         ret = vi->vdev->config->find_vqs(vi->vdev, total_vqs, vqs, callbacks,
-                        names);
+                                         names);
         if (ret)
                 goto err_find;
 
@@ -238,13 +238,13 @@ virtio_mpi_find_vqs(struct vmpi_impl_info *vi)
 
         return 0;
 
-err_find:
+ err_find:
         kfree(names);
-err_names:
+ err_names:
         kfree(callbacks);
-err_callback:
+ err_callback:
         kfree(vqs);
-err_vq:
+ err_vq:
         return ret;
 }
 
@@ -273,9 +273,9 @@ virtio_mpi_alloc_queues(struct vmpi_impl_info *vi)
 
         return 0;
 
-err_rq:
+ err_rq:
         kfree(vi->sq);
-err_sq:
+ err_sq:
         return -ENOMEM;
 }
 
@@ -326,9 +326,9 @@ init_vqs(struct vmpi_impl_info *vi)
 
         return 0;
 
-err_free:
+ err_free:
         virtio_mpi_free_queues(vi);
-err:
+ err:
         return ret;
 }
 
@@ -442,16 +442,16 @@ virtio_mpi_probe(struct virtio_device *vdev)
         return 0;
 
 #ifdef VMPI_GUEST_TEST
-vmpi_test_init:
+ vmpi_test_init:
 #endif  /* VMPI_GUEST_TEST */
-setup_rxbufs:
+ setup_rxbufs:
         vmpi_impl_free_unused_bufs(vi);
         vmpi_fini();
-vmpi_init:
+ vmpi_init:
         virtio_mpi_del_vqs(vi);
-init_vqs:
+ init_vqs:
         kfree(vi);
-alloc:
+ alloc:
         return err;
 }
 
@@ -486,15 +486,15 @@ static unsigned int features[] = {
 static struct virtio_driver virtio_mpi_driver = {
         .feature_table = features,
         .feature_table_size = ARRAY_SIZE(features),
-        .driver.name =	KBUILD_MODNAME,
-        .driver.owner =	THIS_MODULE,
-        .id_table =	id_table,
-        .probe =	virtio_mpi_probe,
-        .remove =	virtio_mpi_remove,
+        .driver.name =  KBUILD_MODNAME,
+        .driver.owner = THIS_MODULE,
+        .id_table =     id_table,
+        .probe =        virtio_mpi_probe,
+        .remove =       virtio_mpi_remove,
         .config_changed = virtio_mpi_config_changed,
 #ifdef CONFIG_PM_SLEEP
-        .freeze =	virtio_mpi_freeze,
-        .restore =	virtio_mpi_restore,
+        .freeze =       virtio_mpi_freeze,
+        .restore =      virtio_mpi_restore,
 #endif
 };
 

@@ -118,9 +118,9 @@ handle_tx(struct vmpi_impl_info *vi)
 
         for (;;) {
                 head = vhost_get_vq_desc(&vi->dev, vq, vq->iov,
-                                ARRAY_SIZE(vq->iov),
-                                &out, &in,
-                                NULL, NULL);
+                                         ARRAY_SIZE(vq->iov),
+                                         &out, &in,
+                                         NULL, NULL);
                 /* On error, stop handling until the next kick. */
                 if (unlikely(head < 0))
                         break;
@@ -134,7 +134,7 @@ handle_tx(struct vmpi_impl_info *vi)
                 }
                 if (in) {
                         vq_err(vq, "Unexpected descriptor format for TX: "
-                                        "out %d, int %d\n", out, in);
+                               "out %d, int %d\n", out, in);
                         break;
                 }
 
@@ -142,14 +142,14 @@ handle_tx(struct vmpi_impl_info *vi)
                 buf = vmpi_buffer_create(VMPI_BUF_SIZE);
                 if (unlikely(buf == NULL)) {
                         printk("vmpi_buffer_create(%u) failed\n",
-                                VMPI_BUF_SIZE);
+                               VMPI_BUF_SIZE);
                 } else {
                         IFV(printk("transmit (%u, %d)\n", out, (int)len));
                         len = iovec_to_buf(vq->iov, out, buf->p,
-                                                VMPI_BUF_SIZE);
+                                           VMPI_BUF_SIZE);
                         buf->len = len;
                         IFV(printk("popped %d bytes from the TX ring\n",
-                                        (int)len));
+                                   (int)len));
 
                         channel = vmpi_buffer_hdr(buf)->channel;
                         if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
@@ -161,7 +161,7 @@ handle_tx(struct vmpi_impl_info *vi)
                                 read = &vi->read[channel];
                                 mutex_lock(&read->lock);
                                 if (unlikely(vmpi_queue_len(read) >=
-                                                        VMPI_RING_SIZE)) {
+                                             VMPI_RING_SIZE)) {
                                         vmpi_buffer_destroy(buf);
                                 } else {
                                         vmpi_queue_push(read, buf);
@@ -189,7 +189,7 @@ handle_tx(struct vmpi_impl_info *vi)
                         break;
                 }
         }
-out:
+ out:
         mutex_unlock(&vq->mutex);
 }
 
@@ -206,23 +206,23 @@ peek_head_len(struct vmpi_ring *ring)
 }
 
 /* This is a multi-buffer version of vhost_get_desc, that works if
- *	vq has read descriptors only.
+ *      vq has read descriptors only.
  * XXX probably useless for us (for now)
- * @vq		- the relevant virtqueue
- * @datalen	- data length we'll be reading
- * @iovcount	- returned count of io vectors we fill
- * @log		- vhost log
- * @log_num	- log offset
+ * @vq          - the relevant virtqueue
+ * @datalen     - data length we'll be reading
+ * @iovcount    - returned count of io vectors we fill
+ * @log         - vhost log
+ * @log_num     - log offset
  * @quota       - headcount quota, 1 for big buffer
- *	returns number of buffer heads allocated, negative on error
+ *      returns number of buffer heads allocated, negative on error
  */
 static int get_rx_bufs(struct vhost_virtqueue *vq,
-                struct vring_used_elem *heads,
-                int datalen,
-                unsigned *iovcount,
-                struct vhost_log *log,
-                unsigned *log_num,
-                unsigned int quota)
+                       struct vring_used_elem *heads,
+                       int datalen,
+                       unsigned *iovcount,
+                       struct vhost_log *log,
+                       unsigned *log_num,
+                       unsigned int quota)
 {
         unsigned int out, in;
         int seg = 0;
@@ -236,15 +236,15 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
                         goto err;
                 }
                 d = vhost_get_vq_desc(vq->dev, vq, vq->iov + seg,
-                                ARRAY_SIZE(vq->iov) - seg, &out,
-                                &in, log, log_num);
+                                      ARRAY_SIZE(vq->iov) - seg, &out,
+                                      &in, log, log_num);
                 if (d == vq->num) {
                         r = 0;
                         goto err;
                 }
                 if (unlikely(out || in <= 0)) {
                         vq_err(vq, "unexpected descriptor format for RX: "
-                                        "out %d, in %d\n", out, in);
+                               "out %d, in %d\n", out, in);
                         r = -EINVAL;
                         goto err;
                 }
@@ -263,7 +263,7 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
         if (unlikely(log))
                 *log_num = nlogs;
         return headcount;
-err:
+ err:
         vhost_discard_vq_desc(vq, headcount);
         return r;
 }
@@ -296,7 +296,7 @@ handle_rx(struct vmpi_impl_info *vi)
         while ((len = peek_head_len(ring))) {
                 IFV(printk("peek %d bytes\n", (int)len));
                 headcount = get_rx_bufs(vq, vq->heads, len,
-                                &in, vq_log, &log, 1);
+                                        &in, vq_log, &log, 1);
                 /* On error, stop handling until the next kick. */
                 if (unlikely(headcount < 0))
                         break;
@@ -322,11 +322,11 @@ handle_rx(struct vmpi_impl_info *vi)
                 VMPI_RING_INC(ring->nr);
 
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
-                                POLLWRNORM | POLLWRBAND);
+                                           POLLWRNORM | POLLWRBAND);
                 IFV(printk("pushed %d bytes in the RX ring\n", (int)len));
 
                 vhost_add_used_and_signal_n(&vi->dev, vq, vq->heads,
-                                headcount);
+                                            headcount);
                 if (unlikely(vq_log))
                         vhost_log_write(vq, vq_log, log, len);
                 total_len += len;
@@ -335,7 +335,7 @@ handle_rx(struct vmpi_impl_info *vi)
                         break;
                 }
         }
-out:
+ out:
         mutex_unlock(&vq->mutex);
 }
 
@@ -343,7 +343,7 @@ static void
 handle_tx_kick(struct vhost_work *work)
 {
         struct vhost_virtqueue *vq = container_of(work, struct vhost_virtqueue,
-                        poll.work);
+                                                  poll.work);
         struct vmpi_impl_info *vi = container_of(vq->dev,
                                                  struct vmpi_impl_info, dev);
 
@@ -354,7 +354,7 @@ static void
 handle_rx_kick(struct vhost_work *work)
 {
         struct vhost_virtqueue *vq = container_of(work, struct vhost_virtqueue,
-                        poll.work);
+                                                  poll.work);
         struct vmpi_impl_info *vi = container_of(vq->dev,
                                                  struct vmpi_impl_info, dev);
 
@@ -365,7 +365,7 @@ static void
 handle_tx_mpi(struct vhost_work *work)
 {
         struct vmpi_impl_info *vi = container_of(work, struct vmpi_impl_info,
-                        poll[VHOST_NET_VQ_TX].work);
+                                                 poll[VHOST_NET_VQ_TX].work);
         handle_tx(vi);
 }
 
@@ -373,7 +373,7 @@ static void
 handle_rx_mpi(struct vhost_work *work)
 {
         struct vmpi_impl_info *vi = container_of(work, struct vmpi_impl_info,
-                        poll[VHOST_NET_VQ_RX].work);
+                                                 poll[VHOST_NET_VQ_RX].work);
         handle_rx(vi);
 }
 
@@ -402,9 +402,9 @@ vhost_mpi_open(struct inode *inode, struct file *f)
         vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
 
         vhost_poll_init(vi->poll + VHOST_NET_VQ_TX,
-                                handle_tx_mpi, POLLOUT, dev);
+                        handle_tx_mpi, POLLOUT, dev);
         vhost_poll_init(vi->poll + VHOST_NET_VQ_RX,
-                                handle_rx_mpi, POLLIN, dev);
+                        handle_rx_mpi, POLLIN, dev);
 
         f->private_data = vi;
         vi->file = f;
@@ -423,7 +423,7 @@ vhost_mpi_open(struct inode *inode, struct file *f)
 
         return 0;
 
-buf_alloc_fail:
+ buf_alloc_fail:
         vhost_dev_cleanup(&vi->dev, false);
         kfree(vqs);
         kfree(vi);
@@ -561,12 +561,12 @@ vhost_mpi_startstop(struct vmpi_impl_info *vi, unsigned index, unsigned enable)
         mutex_unlock(&vi->dev.mutex);
         return 0;
 
-err_used:
+ err_used:
         vq->private_data = oldfile;
         vhost_mpi_enable_vq(vi, vq);
-err_vq:
+ err_vq:
         mutex_unlock(&vq->mutex);
-err:
+ err:
         mutex_unlock(&vi->dev.mutex);
         return r;
 }
@@ -590,7 +590,7 @@ vhost_mpi_reset_owner(struct vmpi_impl_info *vi)
         vhost_mpi_flush(vi);
         vhost_dev_reset_owner(&vi->dev, memory);
         vhost_mpi_vq_reset(vi);
-done:
+ done:
         mutex_unlock(&vi->dev.mutex);
         return err;
 }
@@ -600,7 +600,7 @@ vhost_mpi_set_features(struct vmpi_impl_info *vi, u64 features)
 {
         mutex_lock(&vi->dev.mutex);
         if ((features & (1 << VHOST_F_LOG_ALL)) &&
-                        !vhost_log_access_ok(&vi->dev)) {
+            !vhost_log_access_ok(&vi->dev)) {
                 mutex_unlock(&vi->dev.mutex);
                 return -EFAULT;
         }
@@ -623,7 +623,7 @@ vhost_mpi_set_owner(struct vmpi_impl_info *vi)
         }
         r = vhost_dev_set_owner(&vi->dev);
         vhost_mpi_flush(vi);
-out:
+ out:
         mutex_unlock(&vi->dev.mutex);
         return r;
 }
@@ -648,36 +648,36 @@ vhost_mpi_ioctl(struct file *f, unsigned int ioctl,
         int r;
 
         switch (ioctl) {
-                case VHOST_MPI_STARTSTOP:
-                        if (copy_from_user(&mpi_cmd, argp, sizeof mpi_cmd))
-                                return -EFAULT;
-                        return vhost_mpi_startstop(vi, mpi_cmd.index,
-                                                   mpi_cmd.enable);
-                case VHOST_GET_FEATURES:
-                        features = VHOST_MPI_FEATURES;
-                        if (copy_to_user(featurep, &features, sizeof features))
-                                return -EFAULT;
-                        return 0;
-                case VHOST_SET_FEATURES:
-                        if (copy_from_user(&features, featurep,
-                                           sizeof features))
-                                return -EFAULT;
-                        if (features & ~VHOST_MPI_FEATURES)
-                                return -EOPNOTSUPP;
-                        return vhost_mpi_set_features(vi, features);
-                case VHOST_RESET_OWNER:
-                        return vhost_mpi_reset_owner(vi);
-                case VHOST_SET_OWNER:
-                        return vhost_mpi_set_owner(vi);
-                default:
-                        mutex_lock(&vi->dev.mutex);
-                        r = vhost_dev_ioctl(&vi->dev, ioctl, argp);
-                        if (r == -ENOIOCTLCMD)
-                                r = vhost_vring_ioctl(&vi->dev, ioctl, argp);
-                        else
-                                vhost_mpi_flush(vi);
-                        mutex_unlock(&vi->dev.mutex);
-                        return r;
+        case VHOST_MPI_STARTSTOP:
+                if (copy_from_user(&mpi_cmd, argp, sizeof mpi_cmd))
+                        return -EFAULT;
+                return vhost_mpi_startstop(vi, mpi_cmd.index,
+                                           mpi_cmd.enable);
+        case VHOST_GET_FEATURES:
+                features = VHOST_MPI_FEATURES;
+                if (copy_to_user(featurep, &features, sizeof features))
+                        return -EFAULT;
+                return 0;
+        case VHOST_SET_FEATURES:
+                if (copy_from_user(&features, featurep,
+                                   sizeof features))
+                        return -EFAULT;
+                if (features & ~VHOST_MPI_FEATURES)
+                        return -EOPNOTSUPP;
+                return vhost_mpi_set_features(vi, features);
+        case VHOST_RESET_OWNER:
+                return vhost_mpi_reset_owner(vi);
+        case VHOST_SET_OWNER:
+                return vhost_mpi_set_owner(vi);
+        default:
+                mutex_lock(&vi->dev.mutex);
+                r = vhost_dev_ioctl(&vi->dev, ioctl, argp);
+                if (r == -ENOIOCTLCMD)
+                        r = vhost_vring_ioctl(&vi->dev, ioctl, argp);
+                else
+                        vhost_mpi_flush(vi);
+                mutex_unlock(&vi->dev.mutex);
+                return r;
         }
 }
 
@@ -724,7 +724,7 @@ int
 vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buffer *buf)
 {
         wake_up_interruptible_poll(&vi->wqh_poll, POLLIN |
-                        POLLRDNORM | POLLRDBAND);
+                                   POLLRDNORM | POLLRDBAND);
 
         return 0;
 
@@ -753,7 +753,7 @@ static const struct file_operations vhost_mpi_fops = {
         .read           = do_sync_read,
         .aio_read       = vhost_mpi_aio_read,
 #endif  /* VMPI_HOST_TEST */
-        .llseek		= noop_llseek,
+        .llseek         = noop_llseek,
 };
 
 #define VHOST_MPI_MINOR     245

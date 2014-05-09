@@ -67,7 +67,7 @@ vmpi_host_ops_write(struct vmpi_ops *ops, unsigned int channel,
 
 static int
 vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
-                                    void *opaque)
+                                     void *opaque)
 {
         return vmpi_register_read_callback(ops->priv, cb, opaque);
 }
@@ -108,15 +108,15 @@ vmpi_init(struct vmpi_impl_info *vi, int *err)
 
         return mpi;
 
-init_read:
+ init_read:
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
         vmpi_ring_fini(&mpi->write);
-init_write:
+ init_write:
         kfree(mpi);
 
-        return NULL;    
+        return NULL;
 }
 
 void
@@ -179,11 +179,11 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 vmpi_buffer_hdr(buf)->channel = channel;
                 if (user) {
                         if (memcpy_fromiovecend(vmpi_buffer_data(buf),
-                                                        iv, 0, copylen))
+                                                iv, 0, copylen))
                                 ret = -EFAULT;
                 } else {
                         iovec_to_buf(iv, iovcnt, vmpi_buffer_data(buf),
-                                        copylen);
+                                     copylen);
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(ring->nu);
@@ -267,7 +267,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
 /* To use only in vmpi-host-test. */
 struct vmpi_info *
 vmpi_info_from_file_private_data(void *opaque)
-{   
+{
         vmpi_impl_info_t *vi = opaque;
 
         return vmpi_info_from_vmpi_impl_info(vi);
