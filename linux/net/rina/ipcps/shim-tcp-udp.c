@@ -133,7 +133,6 @@ static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data *data,
 	return NULL;
 }
 
-/*
 static struct shim_tcp_udp_flow * find_tcp_flow_by_socket(
 		struct ipcp_instance_data *data, const struct socket *sock)
 {
@@ -150,7 +149,6 @@ static struct shim_tcp_udp_flow * find_tcp_flow_by_socket(
 
 	return NULL;
 }
-*/
 
 static int compare_addr(const struct sockaddr_in *f,
 		const struct sockaddr_in *s)
@@ -190,9 +188,17 @@ static struct app_data * find_app_by_socket(struct ipcp_instance_data *data,
 	if (!data)
 		return NULL;
 
-	list_for_each_entry(app, &data->apps, list) {
-		if (app->udpsock == sock) {
-			return app;
+	if (sock->type == SOCK_DGRAM) {
+		list_for_each_entry(app, &data->apps, list) {
+			if (app->udpsock == sock) {
+				return app;
+			}
+		}
+	} else {
+		list_for_each_entry(app, &data->apps, list) {
+			if (app->lsock == sock) {
+				return app;
+			}
 		}
 	}
 
@@ -249,6 +255,35 @@ static void deallocate_and_destroy_flow(struct ipcp_instance_data *data,
 		LOG_ERR("Failed to destroy shim-tcp-udp flow");
 }
 
+static void tcp_deallocate_and_destroy_flow(struct ipcp_instance_data *data,
+		struct shim_tcp_udp_flow *flow)
+{
+	sock_release(flow->sock);
+	deallocate_and_destroy_flow(data, flow);
+}
+
+static void tcp_udp_rcv(struct sock *sk, int bytes)
+{
+	struct rcv_data *recvd;
+
+	LOG_DBG("callback on %p", sk->sk_socket);
+
+	recvd = rkmalloc(sizeof(struct rcv_data), GFP_ATOMIC);
+	if (!recvd) {
+		LOG_ERR("could not allocata rcv_data");
+		return;
+	}
+
+	recvd->sk = sk;
+	INIT_LIST_HEAD(&recvd->list);
+
+	spin_lock(&rcv_wq_lock);
+	list_add_tail(&recvd->list, &rcv_wq_data);
+	spin_unlock(&rcv_wq_lock);
+
+	queue_work(rcv_wq, &rcv_work);
+}
+
 static int tcp_udp_flow_allocate_request(struct ipcp_instance_data *data,
 		const struct name *source,
 		const struct name *dest,
@@ -257,7 +292,7 @@ static int tcp_udp_flow_allocate_request(struct ipcp_instance_data *data,
 {
 	struct shim_tcp_udp_flow *flow;
 	struct app_data *app;
-	int ip;
+	int ip, err, cube;
 
 	LOG_DBG("tcp_udp allocate request");
 	ASSERT(data);
@@ -273,8 +308,10 @@ static int tcp_udp_flow_allocate_request(struct ipcp_instance_data *data,
 	flow = find_flow(data, id);
 	if (!flow) {
 		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-		if (!flow)
+		if (!flow) {
+			LOG_ERR("could not allocate mem for flow");
 			return -1;
+		}
 
 		flow->port_id       = id;
 		flow->port_id_state = PORT_STATE_PENDING;
@@ -284,48 +321,61 @@ static int tcp_udp_flow_allocate_request(struct ipcp_instance_data *data,
 		spin_lock(&data->flow_lock);
 		list_add(&flow->list, &data->flows);
 		spin_unlock(&data->flow_lock);
+		LOG_DBG("allocate request flow added");
 
-		flow->sdu_queue = rfifo_create();
-		if (!flow->sdu_queue) {
-			LOG_ERR("Couldn't create the sdu queue "
-					"for a new flow");
-			deallocate_and_destroy_flow(data, flow);
-			return -1;
-		}
-
+		//this should be done with DNS or DHT
 		ip = (10 << 24) | (1 << 16) | (1 << 8) | (3);
 		flow->addr.sin_addr.s_addr = htonl(ip);
 		flow->addr.sin_family = AF_INET;
 		flow->addr.sin_port = htons(2325);
 
-		flow->sock = app->udpsock;
+		if (!fspec->ordered_delivery) {
+			LOG_DBG("unreliable flow requested");
+			flow->sock = app->udpsock;
+			flow->fspec_id = 0;
+		} else {
+			LOG_DBG("reliable flow requested");
+			flow->fspec_id = 1;
+			err = sock_create_kern(PF_INET, SOCK_STREAM,
+					IPPROTO_TCP, &flow->sock);
+			if (err < 0) {
+				LOG_ERR("could not create tcp socket");
+				return -1;
+			}
+
+			err = kernel_connect(flow->sock,
+					(struct sockaddr*)&flow->addr,
+					sizeof(struct sockaddr), 0);
+			if (err < 0) {
+				LOG_ERR("could not connect tcp socket");
+				return -1;
+			}
+
+			write_lock_bh(&flow->sock->sk->sk_callback_lock);
+			flow->sock->sk->sk_user_data = flow->sock->sk->sk_data_ready;
+			flow->sock->sk->sk_data_ready = tcp_udp_rcv;
+			write_unlock_bh(&flow->sock->sk->sk_callback_lock);
+		}
 
 		flow->port_id_state = PORT_STATE_ALLOCATED;
 		if (kipcm_flow_commit(default_kipcm, data->id, flow->port_id)) {
 			LOG_ERR("Cannot add flow");
+			if (!cube) {
+				kernel_sock_shutdown(flow->sock, SHUT_RDWR);
+				sock_release(flow->sock);
+			}
 			return -1;
 		}
 
-		while (!rfifo_is_empty(flow->sdu_queue)) {
-			struct sdu * tmp = NULL;
-
-			tmp = rfifo_pop(flow->sdu_queue);
-			ASSERT(tmp);
-
-			LOG_DBG("Got a new element from the fifo");
-
-			if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
-				LOG_ERR("Couldn't post SDU to KFA ...");
-				return -1;
-			}
-		}
-
-		rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
 		flow->sdu_queue = NULL;
 		
 		if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
 					flow->port_id, 0)) {
 			LOG_ERR("couldn't tell flow is allocated to KIPCM");
+			if (!cube) {
+				kernel_sock_shutdown(flow->sock, SHUT_RDWR);
+				sock_release(flow->sock);
+			}
 			return -1;
 		}
 	} else if (flow->port_id_state == PORT_STATE_PENDING) {
@@ -399,6 +449,12 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data *data,
                 flow->port_id_state = PORT_STATE_NULL;
                 spin_unlock(&data->flow_lock);
 
+		if (flow->fspec_id == 1 &&
+				flow->port_id_state == PORT_STATE_ALLOCATED) {
+			kernel_sock_shutdown(flow->sock, SHUT_RDWR);
+			sock_release(flow->sock);
+		}
+
                 /*
                  *  If we would destroy the flow, the application
                  *  we refused would constantly try to allocate
@@ -427,6 +483,12 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data *data,
                 return -1;
         }
 
+	if (flow->fspec_id == 1 && flow->port_id == PORT_STATE_ALLOCATED) {
+		LOG_DBG("closing socket");
+		kernel_sock_shutdown(flow->sock, SHUT_RDWR);
+		sock_release(flow->sock);
+	}
+
         if (kfa_flow_deallocate(data->kfa, flow->port_id)) {
                 LOG_ERR("Failed to deallocate flow in KFA");
                 return -1;
@@ -441,48 +503,116 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data *data,
 }
 
 int recv_msg(struct socket *sock, struct sockaddr_in *other,
-		unsigned char *buf, int len) 
+		unsigned char *buf, int len, int encapsulate) 
 {
 	struct msghdr msg;
 	struct kvec iov;
 	int size = 0;
-
-	iov.iov_base = buf;
-	iov.iov_len = len;
+	char sbuf[2];
+	int length;
+	__be16 nlen;
 
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_flags = MSG_DONTWAIT;
-	msg.msg_name = other;
-	msg.msg_namelen = sizeof(struct sockaddr_in);
 
-	size = kernel_recvmsg(sock, &msg, &iov, 1, len, msg.msg_flags);
+	if (encapsulate) {
+		iov.iov_base = sbuf;
+		iov.iov_len = 2;
 
-	if (size > 0)
-		LOG_DBG("message received");
+		msg.msg_name = NULL;
+		msg.msg_namelen = 0;
+
+		size = kernel_recvmsg(sock, &msg, &iov, 1, 2, msg.msg_flags);
+		if (size == 0) {
+			return 0;
+		}
+		if (size != 2) {
+			LOG_ERR("could not read size: %d", size);
+			return -1;
+		}
+
+		memcpy(&nlen, &sbuf[0], 2);
+		length = (int)ntohs(nlen);
+
+		LOG_DBG("incoming message is %d bytes long", length);
+
+		iov.iov_base = buf;
+		iov.iov_len = len;
+
+		size = kernel_recvmsg(sock, &msg, &iov, 1,
+				length, msg.msg_flags);
+		if (size == 0) {
+			return 0;
+		}
+		if (size != length) {
+			LOG_ERR("received size != specified size in message");
+			LOG_ERR("message received: %d bytes and should be: %d",
+					size, length);
+			return -1;
+		} else {
+			LOG_DBG("message received: %d bytes", size);
+		}
+	} else {
+		iov.iov_base = buf;
+		iov.iov_len = len;
+
+		msg.msg_name = other;
+		msg.msg_namelen = sizeof(struct sockaddr_in);
+
+		size = kernel_recvmsg(sock, &msg, &iov, 1,
+				len, msg.msg_flags);
+		if (size == 0) {
+			return 0;
+		} else if (size > 0) {
+			LOG_ERR("message received: %d", size);
+		}
+	}
 
 	return size;
 }
 
-int send_msg(struct socket *sock, struct sockaddr_in *other, char *buf, int len) 
+int send_msg(struct socket *sock, struct sockaddr_in *other,
+		char *buf, int len, int encapsulate) 
 {
 	struct msghdr msg;
 	struct kvec iov;
+	char nbuf[len+2];
 	int size;
+	__be16 length;
 
-	iov.iov_base = buf;
-	iov.iov_len = len;
+	LOG_DBG("sending messages with %d bytes", len);
 
 	msg.msg_control = NULL;
 	msg.msg_controllen = 0;
 	msg.msg_flags = 0;
-	msg.msg_name = other;
-	msg.msg_namelen = sizeof(struct sockaddr_in);
 
-	size = kernel_sendmsg(sock, &msg, &iov, 1, len);
+	if (encapsulate) {
+		length = htons((short)len);
+
+		/* FIXME: avoid this extra memcpy */
+		memcpy(&nbuf[0], &length, sizeof(__be16));
+		memcpy(&nbuf[2], buf, len);
+
+		iov.iov_base = nbuf;
+		iov.iov_len = len+2;
+
+		msg.msg_name = NULL;
+		msg.msg_namelen = 0;
+
+		size = kernel_sendmsg(sock, &msg, &iov, 1, len+2);
+	} else {
+		iov.iov_base = buf;
+		iov.iov_len = len;
+
+		msg.msg_name = other;
+		msg.msg_namelen = sizeof(struct sockaddr_in);
+
+		size = kernel_sendmsg(sock, &msg, &iov, 1, len);
+	}
 
 	if (size > 0)
-		LOG_DBG("message send");
+		LOG_DBG("message send: %d bytes", size);
 
 	return size;
 }
@@ -502,7 +632,7 @@ static int udp_process_msg(struct socket *sock)
 	LOG_DBG("udp_process_msg");
 
 	memset(&addr, 0, sizeof(struct sockaddr_in));
-	size = recv_msg(sock, &addr, buf, 512);
+	size = recv_msg(sock, &addr, buf, 512, 0);
 	if (size < 0) {
 		LOG_ERR("error during udp recv");
 		return -1;
@@ -540,9 +670,11 @@ static int udp_process_msg(struct socket *sock)
 
 		INIT_LIST_HEAD(&flow->list);
 		list_add(&flow->list, &data->flows);
+		LOG_DBG("added udp flow");
 
 		flow->port_id = kfa_port_id_reserve(data->kfa, data->id);
 		flow->sock = sock;
+		flow->fspec_id = 0;
 
 		memset(&flow->addr, 0, sizeof(struct sockaddr_in));
 		flow->addr.sin_port = addr.sin_port;
@@ -560,7 +692,7 @@ static int udp_process_msg(struct socket *sock)
 			return -1;
 		}
 
-		if (kfa_flow_create(data->kfa, data->id, flow->port_id)){
+		if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
 			LOG_ERR("Could not create flow in KFA");
 			flow->port_id_state = PORT_STATE_NULL;
 			kfa_port_id_release(data->kfa, flow->port_id);
@@ -571,8 +703,6 @@ static int udp_process_msg(struct socket *sock)
 						"flow");
 			return -1;
 		}
-
-		LOG_DBG("Added flow to the list");
 
 		flow->sdu_queue = rfifo_create();
 		if (!flow->sdu_queue) {
@@ -600,6 +730,8 @@ static int udp_process_msg(struct socket *sock)
 
 		app = find_app_by_socket(data, sock);
 		ASSERT(app);
+
+		flow->app_name = app->app_name;
 
 		sname = name_create_ni();
 		if (!name_init_from_ni(sname,
@@ -653,12 +785,198 @@ static int udp_process_msg(struct socket *sock)
 	return 0;
 }
 
+static int tcp_process_msg(struct ipcp_instance_data *data, struct socket *sock)
+{
+	struct shim_tcp_udp_flow *flow;
+	struct buffer *sdubuf;
+	struct sdu *du;
+	char buf[512];
+	int size;
+
+	flow = find_tcp_flow_by_socket(data, sock);
+	ASSERT(flow);
+
+	size = recv_msg(sock, &flow->addr, buf, 512, 1);
+	if (size < 0) {
+		LOG_ERR("error during tcp recv");
+		return -1;
+	}
+
+	if (size == 0 && flow->port_id_state == PORT_STATE_ALLOCATED) {
+		LOG_DBG("closing flow");
+		kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+		sock_release(flow->sock);
+		return 0;
+	}
+
+	sdubuf = buffer_create_from(buf, size);
+	if (!sdubuf) {
+		LOG_ERR("could not create buffer");
+		return -1;
+	}
+
+	du = sdu_create_buffer_with_ni(sdubuf);
+	if (!du) {
+		LOG_ERR("Couldn't create sdu");
+		buffer_destroy(sdubuf);
+		return -1;
+	}
+
+	spin_lock(&data->flow_lock);
+	if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+		spin_unlock(&data->flow_lock);
+
+		if (kfa_sdu_post(data->kfa, flow->port_id, du))
+			return -1;
+
+	} else if (flow->port_id_state == PORT_STATE_PENDING) {
+		LOG_DBG("Queueing frame");
+
+		if (rfifo_push(flow->sdu_queue, du)) {
+			LOG_ERR("Failed to write %zd bytes"
+					"into the fifo",
+					sizeof(struct sdu *));
+			spin_unlock(&data->flow_lock);
+			sdu_destroy(du);
+			return -1;
+		}
+
+		spin_unlock(&data->flow_lock);
+	} else if (flow->port_id_state == PORT_STATE_NULL) {
+		spin_unlock(&data->flow_lock);
+		sdu_destroy(du);
+	}
+
+	return size;
+}
+
+static int tcp_process(struct socket *sock)
+{
+	struct ipcp_instance_data *data;
+	struct shim_tcp_udp_flow *flow;
+	struct app_data *app;
+	struct socket *acsock;
+	struct name *sname;
+	int err;
+
+	LOG_DBG("tcp process on %p", sock);
+
+	data = get_instance_data();
+
+	app = find_app_by_socket(data, sock);
+
+	if (!app) {
+		//connection exists
+		while(tcp_process_msg(data, sock) > 0) {
+		}
+		
+		return 0;
+	} else {
+		//accept connection
+		err = kernel_accept(app->lsock, &acsock, O_NONBLOCK);
+		if (err < 0) {
+			LOG_ERR("could not accept socket");
+			return -1;
+		}
+		LOG_DBG("accepted socket");
+
+		write_lock_bh(&acsock->sk->sk_callback_lock);
+		acsock->sk->sk_user_data = acsock->sk->sk_data_ready;
+		acsock->sk->sk_data_ready = tcp_udp_rcv;
+		write_unlock_bh(&acsock->sk->sk_callback_lock);
+
+		spin_lock(&data->flow_lock);
+
+		flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+		if (!flow) {
+			LOG_ERR("could not allocate flow");
+			spin_unlock(&data->flow_lock);
+			sock_release(acsock);
+			return -1;
+		}
+
+		flow->port_id_state = PORT_STATE_PENDING;
+		flow->fspec_id = 1;
+
+		flow->port_id = kfa_port_id_reserve(data->kfa, data->id);
+		flow->sock = acsock;
+
+		INIT_LIST_HEAD(&flow->list);
+		list_add(&flow->list, &data->flows);
+		LOG_DBG("tcp flow added");
+
+		memset(&flow->addr, 0, sizeof(struct sockaddr_in));
+
+		if (!is_port_id_ok(flow->port_id)) {
+			LOG_ERR("Port id is not ok");
+			flow->port_id_state = PORT_STATE_NULL;
+			spin_unlock(&data->flow_lock);
+			sock_release(acsock);
+			if (flow_destroy(data, flow))
+				LOG_ERR("Problems destroying shim-tcp-udp "
+						"flow");
+			return -1;
+		}
+
+		if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
+			LOG_ERR("Could not create flow in KFA");
+			flow->port_id_state = PORT_STATE_NULL;
+			kfa_port_id_release(data->kfa, flow->port_id);
+			spin_unlock(&data->flow_lock);
+			sock_release(acsock);
+			if (flow_destroy(data, flow))
+				LOG_ERR("Problems destroying shim-tcp-udp "
+						"flow");
+			return -1;
+		}
+
+		LOG_DBG("Added flow to the list");
+
+		flow->sdu_queue = rfifo_create();
+		if (!flow->sdu_queue) {
+			LOG_ERR("Couldn't create the sdu queue "
+					"for a new flow");
+			spin_unlock(&data->flow_lock);
+			tcp_deallocate_and_destroy_flow(data, flow);
+			return -1;
+		}
+
+		LOG_DBG("Created the queue");
+
+		spin_unlock(&data->flow_lock);
+
+		sname = name_create_ni();
+		if (!name_init_from_ni(sname, "Unknown app", "", "", "")) {
+			name_destroy(sname);
+			tcp_deallocate_and_destroy_flow(data, flow);
+			return -1;
+		}
+
+		if (kipcm_flow_arrived(default_kipcm,
+					data->id,
+					flow->port_id,
+					data->dif_name,
+					sname,
+					app->app_name,
+					data->qos[1])) {
+			LOG_ERR("Couldn't tell the KIPCM about the flow");
+			tcp_deallocate_and_destroy_flow(data, flow);
+			name_destroy(sname);
+			return -1;
+		}
+		name_destroy(sname);
+		LOG_DBG("tcp_process: flow created");
+
+		return 0;
+	}
+}
+
 static int tcp_udp_rcv_process_msg(struct sock *sk)
 {
 	if (sk->sk_socket->type == SOCK_DGRAM) {
 		return udp_process_msg(sk->sk_socket);
 	} else {
-		return -1; //TCP not yet implemented
+		return tcp_process(sk->sk_socket);
 	}
 }
 
@@ -671,6 +989,7 @@ static void tcp_udp_rcv_worker(struct work_struct *work)
 	list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
 		spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
+		LOG_DBG("worker on %p", recvd->sk->sk_socket);
 		if (tcp_udp_rcv_process_msg(recvd->sk))
 			LOG_ERR("failed to process packet");
 
@@ -685,26 +1004,6 @@ static void tcp_udp_rcv_worker(struct work_struct *work)
 	spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
 	LOG_DBG("Worker finished for now");
-}
-
-static void tcp_udp_rcv(struct sock *sk, int bytes)
-{
-	struct rcv_data *recvd;
-
-	recvd = rkmalloc(sizeof(struct rcv_data), GFP_ATOMIC);
-	if (!recvd) {
-		LOG_ERR("could not allocata rcv_data");
-		return;
-	}
-
-	recvd->sk = sk;
-	INIT_LIST_HEAD(&recvd->list);
-
-	spin_lock(&rcv_wq_lock);
-	list_add_tail(&recvd->list, &rcv_wq_data);
-	spin_unlock(&rcv_wq_lock);
-
-	queue_work(rcv_wq, &rcv_work);
 }
 
 static int tcp_udp_application_register(struct ipcp_instance_data *data,
@@ -929,7 +1228,8 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data *data,
 
 	size = send_msg(flow->sock, &flow->addr,
 			(char*)buffer_data_rw(sdu->buffer),
-			buffer_length(sdu->buffer));
+			buffer_length(sdu->buffer),
+			flow->fspec_id);
 	if (size < 0) {
 		LOG_DBG("error during sdu write");
 		sdu_destroy(sdu);
