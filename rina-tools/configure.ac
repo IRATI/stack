@@ -21,8 +21,7 @@ AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign -Wall])
-#AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign std-options -Wall])
+AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign std-options -Wall])
 
 AC_PROG_SED
 AC_PROG_GREP
@@ -46,6 +45,33 @@ AX_CHECK_COMPILE_FLAG([ -Wformat ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
+
+ax_cv_have_python=yes
+ax_cv_have_matplotlib=yes
+AM_PATH_PYTHON([2.0],[
+    AX_PYTHON_MODULE([re],,[
+        AC_MSG_WARN([Python module re seems missing (???), some features will be disabled])
+        ax_cv_have_python=no 
+    ])
+    AX_PYTHON_MODULE([sys],,[
+        AC_MSG_WARN([Python module sys seems missing (???), some features will be disabled])
+        ax_cv_have_python=no 
+    ])
+    AX_PYTHON_MODULE([argparse],,[
+        AC_MSG_WARN([Python module arparse seems missing (???), some features will be disabled])
+        ax_cv_have_python=no 
+    ])
+    AX_PYTHON_MODULE([matplotlib],,[
+        AC_MSG_WARN([Python module matplotlib seems missing, some features will be disabled])
+        ax_cv_have_matplotlib=no 
+    ])
+],[
+    AC_MSG_WARN([Python (>= 2.0) seems missing, some features will be disabled]) 
+        ax_cv_have_python=no 
+        ax_cv_have_matplotlib=no 
+])
+AM_CONDITIONAL([HAVE_PYTHON], [ test "$ax_cv_have_python" != "no" ])
+AM_CONDITIONAL([HAVE_PYTHON_MATPLOT_LIB], [ test "$ax_cv_have_matplotlib" != "no" ])
 
 PKG_PROG_PKG_CONFIG([0.26])
 

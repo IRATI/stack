@@ -320,15 +320,17 @@
 311	64	process_vm_writev	sys_process_vm_writev
 312	common	kcmp			sys_kcmp
 313	common	finit_module		sys_finit_module
+314	common	sched_setattr		sys_sched_setattr
+315	common	sched_getattr		sys_sched_getattr
 
-314	common	ipc_create		sys_ipc_create
-315	common	ipc_destroy		sys_ipc_destroy
-316	common	sdu_read		sys_sdu_read
-317	common	sdu_write		sys_sdu_write
-318	common	allocate_port	        sys_allocate_port
-319	common	deallocate_port	        sys_deallocate_port
-320     common  management_sdu_read     sys_management_sdu_read
-321     common  management_sdu_write    sys_management_sdu_write
+316	common	ipc_create		sys_ipc_create
+317	common	ipc_destroy		sys_ipc_destroy
+318	common	sdu_read		sys_sdu_read
+319	common	sdu_write		sys_sdu_write
+320	common	allocate_port	        sys_allocate_port
+321	common	deallocate_port	        sys_deallocate_port
+322     common  management_sdu_read     sys_management_sdu_read
+323     common  management_sdu_write    sys_management_sdu_write
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact

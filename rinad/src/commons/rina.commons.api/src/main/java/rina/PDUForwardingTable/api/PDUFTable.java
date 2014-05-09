@@ -6,7 +6,7 @@ import rina.ipcprocess.api.IPCProcess;
 public interface PDUFTable {
 	public void setIPCProcess(IPCProcess ipcProcess);
 	
-	public void setAlgorithm(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex);
+	public void setDIFConfiguration(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex);
 	
 	public void enrollmentToNeighbor(long address, boolean newMember, int portId);
 

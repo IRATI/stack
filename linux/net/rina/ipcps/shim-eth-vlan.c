@@ -898,8 +898,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 /* Store SDU in queue */
                 if (rfifo_push(flow->sdu_queue, du)) {
-                        LOG_ERR("Could not write %zd bytes into the fifo",
-                                sizeof(struct sdu *));
+                        LOG_ERR("Could not push a SDU into the flow queue");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);

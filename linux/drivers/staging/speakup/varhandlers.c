@@ -46,7 +46,7 @@ static struct st_var_header var_headers[] = {
 	{ "direct", DIRECT, VAR_NUM, NULL, NULL },
 };
 
-static struct st_var_header *var_ptrs[MAXVARS] = { 0, 0, 0 };
+static struct st_var_header *var_ptrs[MAXVARS] = { NULL, NULL, NULL };
 
 static struct punc_var_t punc_vars[] = {
 	{ PUNC_SOME, 1 },
@@ -137,18 +137,15 @@ struct st_var_header *spk_get_var_header(enum var_id_t var_id)
 struct st_var_header *spk_var_header_by_name(const char *name)
 {
 	int i;
-	struct st_var_header *where = NULL;
 
-	if (name != NULL) {
-		i = 0;
-		while ((i < MAXVARS) && (where == NULL)) {
-			if (strcmp(name, var_ptrs[i]->name) == 0)
-				where = var_ptrs[i];
-			else
-				i++;
-		}
+	if (!name)
+		return NULL;
+
+	for (i = 0; i < MAXVARS; i++) {
+		if (strcmp(name, var_ptrs[i]->name) == 0)
+			return var_ptrs[i];
 	}
-	return where;
+	return NULL;
 }
 
 struct var_t *spk_get_var(enum var_id_t var_id)
@@ -280,10 +277,10 @@ int spk_set_mask_bits(const char *input, const int which, const int how)
 			spk_chartab[*cp] &= ~mask;
 	}
 	cp = (u_char *)input;
-	if (cp == 0)
+	if (!cp)
 		cp = spk_punc_info[which].value;
 	else {
-		for ( ; *cp; cp++) {
+		for (; *cp; cp++) {
 			if (*cp < SPACE)
 				break;
 			if (mask < PUNC) {
@@ -297,11 +294,11 @@ int spk_set_mask_bits(const char *input, const int which, const int how)
 		cp = (u_char *)input;
 	}
 	if (how&2) {
-		for ( ; *cp; cp++)
+		for (; *cp; cp++)
 			if (*cp > SPACE)
 				spk_chartab[*cp] |= mask;
 	} else {
-		for ( ; *cp; cp++)
+		for (; *cp; cp++)
 			if (*cp > SPACE)
 				spk_chartab[*cp] &= ~mask;
 	}

@@ -273,16 +273,14 @@ static struct snd_pcm_chmap_elem *convert_chmap(int channels, unsigned int bits,
 		SNDRV_CHMAP_TSL,	/* top side left */
 		SNDRV_CHMAP_TSR,	/* top side right */
 		SNDRV_CHMAP_BC,		/* bottom center */
-		SNDRV_CHMAP_BLC,	/* bottom left center */
-		SNDRV_CHMAP_BRC,	/* bottom right center */
+		SNDRV_CHMAP_RLC,	/* back left of center */
+		SNDRV_CHMAP_RRC,	/* back right of center */
 		0 /* terminator */
 	};
 	struct snd_pcm_chmap_elem *chmap;
 	const unsigned int *maps;
 	int c;
 
-	if (!bits)
-		return NULL;
 	if (channels > ARRAY_SIZE(chmap->map))
 		return NULL;
 
@@ -293,9 +291,19 @@ static struct snd_pcm_chmap_elem *convert_chmap(int channels, unsigned int bits,
 	maps = protocol == UAC_VERSION_2 ? uac2_maps : uac1_maps;
 	chmap->channels = channels;
 	c = 0;
-	for (; bits && *maps; maps++, bits >>= 1) {
-		if (bits & 1)
-			chmap->map[c++] = *maps;
+
+	if (bits) {
+		for (; bits && *maps; maps++, bits >>= 1)
+			if (bits & 1)
+				chmap->map[c++] = *maps;
+	} else {
+		/* If we're missing wChannelConfig, then guess something
+		    to make sure the channel map is not skipped entirely */
+		if (channels == 1)
+			chmap->map[c++] = SNDRV_CHMAP_MONO;
+		else
+			for (; c < channels && *maps; maps++)
+				chmap->map[c++] = *maps;
 	}
 
 	for (; c < channels; c++)
@@ -493,10 +501,10 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 		altsd = get_iface_desc(alts);
 		protocol = altsd->bInterfaceProtocol;
 		/* skip invalid one */
-		if ((altsd->bInterfaceClass != USB_CLASS_AUDIO &&
+		if (((altsd->bInterfaceClass != USB_CLASS_AUDIO ||
+		      (altsd->bInterfaceSubClass != USB_SUBCLASS_AUDIOSTREAMING &&
+		       altsd->bInterfaceSubClass != USB_SUBCLASS_VENDOR_SPEC)) &&
 		     altsd->bInterfaceClass != USB_CLASS_VENDOR_SPEC) ||
-		    (altsd->bInterfaceSubClass != USB_SUBCLASS_AUDIOSTREAMING &&
-		     altsd->bInterfaceSubClass != USB_SUBCLASS_VENDOR_SPEC) ||
 		    altsd->bNumEndpoints < 1 ||
 		    le16_to_cpu(get_endpoint(alts, 0)->wMaxPacketSize) == 0)
 			continue;
@@ -511,6 +519,15 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 
 		if (snd_usb_apply_interface_quirk(chip, iface_no, altno))
 			continue;
+
+		/*
+		 * Roland audio streaming interfaces are marked with protocols
+		 * 0/1/2, but are UAC 1 compatible.
+		 */
+		if (USB_ID_VENDOR(chip->usb_id) == 0x0582 &&
+		    altsd->bInterfaceClass == USB_CLASS_VENDOR_SPEC &&
+		    protocol <= 2)
+			protocol = UAC_VERSION_1;
 
 		chconfig = 0;
 		/* get audio formats */
@@ -570,6 +587,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 
 			num_channels = as->bNrChannels;
 			format = le32_to_cpu(as->bmFormats);
+			chconfig = le32_to_cpu(as->bmChannelConfig);
 
 			/* lookup the terminal associated to this interface
 			 * to extract the clock */
@@ -577,7 +595,8 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 									    as->bTerminalLink);
 			if (input_term) {
 				clock = input_term->bCSourceID;
-				chconfig = le32_to_cpu(input_term->bmChannelConfig);
+				if (!chconfig && (num_channels == input_term->bNrChannels))
+					chconfig = le32_to_cpu(input_term->bmChannelConfig);
 				break;
 			}
 
@@ -635,6 +654,7 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 		fp->endpoint = get_endpoint(alts, 0)->bEndpointAddress;
 		fp->ep_attr = get_endpoint(alts, 0)->bmAttributes;
 		fp->datainterval = snd_usb_parse_datainterval(chip, alts);
+		fp->protocol = protocol;
 		fp->maxpacksize = le16_to_cpu(get_endpoint(alts, 0)->wMaxPacketSize);
 		fp->channels = num_channels;
 		if (snd_usb_get_speed(dev) == USB_SPEED_HIGH)
@@ -642,7 +662,6 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 					* (fp->maxpacksize & 0x7ff);
 		fp->attributes = parse_uac_endpoint_attributes(chip, alts, protocol, iface_no);
 		fp->clock = clock;
-		fp->chmap = convert_chmap(num_channels, chconfig, protocol);
 
 		/* some quirks for attributes here */
 
@@ -676,13 +695,17 @@ int snd_usb_parse_audio_interface(struct snd_usb_audio *chip, int iface_no)
 		}
 
 		/* ok, let's parse further... */
-		if (snd_usb_parse_audio_format(chip, fp, format, fmt, stream, alts) < 0) {
+		if (snd_usb_parse_audio_format(chip, fp, format, fmt, stream) < 0) {
 			kfree(fp->rate_table);
-			kfree(fp->chmap);
 			kfree(fp);
 			fp = NULL;
 			continue;
 		}
+
+		/* Create chmap */
+		if (fp->channels != num_channels)
+			chconfig = 0;
+		fp->chmap = convert_chmap(fp->channels, chconfig, protocol);
 
 		snd_printdd(KERN_INFO "%d:%u:%d: add audio endpoint %#x\n", dev->devnum, iface_no, altno, fp->endpoint);
 		err = snd_usb_add_audio_stream(chip, stream, fp);

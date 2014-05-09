@@ -8,7 +8,9 @@ include ..\config.nmake
 
 PLUGIN_LIST = \
 	asn1        \
-	docsis      \
+        cdap        \
+	docsis      \  
+        efcp        \
 	ethercat    \
 	gryphon     \
 	irda        \

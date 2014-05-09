@@ -61,6 +61,7 @@
 #include <linux/davinci_emac.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_device.h>
 #include <linux/of_irq.h>
 #include <linux/of_net.h>
 
@@ -876,8 +877,7 @@ static void emac_dev_mcast_set(struct net_device *ndev)
 		    netdev_mc_count(ndev) > EMAC_DEF_MAX_MULTICAST_ADDRESSES) {
 			mbp_enable = (mbp_enable | EMAC_MBP_RXMCAST);
 			emac_add_mcast(priv, EMAC_ALL_MULTI_SET, NULL);
-		}
-		if (!netdev_mc_empty(ndev)) {
+		} else if (!netdev_mc_empty(ndev)) {
 			struct netdev_hw_addr *ha;
 
 			mbp_enable = (mbp_enable | EMAC_MBP_RXMCAST);
@@ -1533,8 +1533,8 @@ static int emac_dev_open(struct net_device *ndev)
 	u32 cnt;
 	struct resource *res;
 	int q, m, ret;
+	int res_num = 0, irq_num = 0;
 	int i = 0;
-	int k = 0;
 	struct emac_priv *priv = netdev_priv(ndev);
 
 	pm_runtime_get(&priv->pdev->dev);
@@ -1564,15 +1564,24 @@ static int emac_dev_open(struct net_device *ndev)
 	}
 
 	/* Request IRQ */
+	while ((res = platform_get_resource(priv->pdev, IORESOURCE_IRQ,
+					    res_num))) {
+		for (irq_num = res->start; irq_num <= res->end; irq_num++) {
+			dev_err(emac_dev, "Request IRQ %d\n", irq_num);
+			if (request_irq(irq_num, emac_irq, 0, ndev->name,
+					ndev)) {
+				dev_err(emac_dev,
+					"DaVinci EMAC: request_irq() failed\n");
+				ret = -EBUSY;
 
-	while ((res = platform_get_resource(priv->pdev, IORESOURCE_IRQ, k))) {
-		for (i = res->start; i <= res->end; i++) {
-			if (request_irq(i, emac_irq, IRQF_DISABLED,
-					ndev->name, ndev))
 				goto rollback;
+			}
 		}
-		k++;
+		res_num++;
 	}
+	/* prepare counters for rollback in case of an error */
+	res_num--;
+	irq_num--;
 
 	/* Start/Enable EMAC hardware */
 	emac_hw_enable(priv);
@@ -1639,19 +1648,23 @@ static int emac_dev_open(struct net_device *ndev)
 
 	return 0;
 
-rollback:
-
-	dev_err(emac_dev, "DaVinci EMAC: request_irq() failed");
-
-	for (q = k; k >= 0; k--) {
-		for (m = i; m >= res->start; m--)
-			free_irq(m, ndev);
-		res = platform_get_resource(priv->pdev, IORESOURCE_IRQ, k-1);
-		m = res->end;
-	}
-
-	ret = -EBUSY;
 err:
+	emac_int_disable(priv);
+	napi_disable(&priv->napi);
+
+rollback:
+	for (q = res_num; q >= 0; q--) {
+		res = platform_get_resource(priv->pdev, IORESOURCE_IRQ, q);
+		/* at the first iteration, irq_num is already set to the
+		 * right value
+		 */
+		if (q != res_num)
+			irq_num = res->end;
+
+		for (m = irq_num; m >= res->start; m--)
+			free_irq(m, ndev);
+	}
+	cpdma_ctlr_stop(priv->dma);
 	pm_runtime_put(&priv->pdev->dev);
 	return ret;
 }
@@ -1771,29 +1784,26 @@ static const struct net_device_ops emac_netdev_ops = {
 #endif
 };
 
-#ifdef CONFIG_OF
-static struct emac_platform_data
-	*davinci_emac_of_get_pdata(struct platform_device *pdev,
-	struct emac_priv *priv)
+static const struct of_device_id davinci_emac_of_match[];
+
+static struct emac_platform_data *
+davinci_emac_of_get_pdata(struct platform_device *pdev, struct emac_priv *priv)
 {
 	struct device_node *np;
+	const struct of_device_id *match;
+	const struct emac_platform_data *auxdata;
 	struct emac_platform_data *pdata = NULL;
 	const u8 *mac_addr;
-	u32 data;
-	int ret;
 
-	pdata = pdev->dev.platform_data;
-	if (!pdata) {
-		pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
-		if (!pdata)
-			goto nodata;
-	}
+	if (!IS_ENABLED(CONFIG_OF) || !pdev->dev.of_node)
+		return dev_get_platdata(&pdev->dev);
+
+	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return NULL;
 
 	np = pdev->dev.of_node;
-	if (!np)
-		goto nodata;
-	else
-		pdata->version = EMAC_VERSION_2;
+	pdata->version = EMAC_VERSION_2;
 
 	if (!is_valid_ether_addr(pdata->mac_addr)) {
 		mac_addr = of_get_mac_address(np);
@@ -1801,47 +1811,44 @@ static struct emac_platform_data
 			memcpy(pdata->mac_addr, mac_addr, ETH_ALEN);
 	}
 
-	ret = of_property_read_u32(np, "ti,davinci-ctrl-reg-offset", &data);
-	if (!ret)
-		pdata->ctrl_reg_offset = data;
+	of_property_read_u32(np, "ti,davinci-ctrl-reg-offset",
+			     &pdata->ctrl_reg_offset);
 
-	ret = of_property_read_u32(np, "ti,davinci-ctrl-mod-reg-offset",
-		&data);
-	if (!ret)
-		pdata->ctrl_mod_reg_offset = data;
+	of_property_read_u32(np, "ti,davinci-ctrl-mod-reg-offset",
+			     &pdata->ctrl_mod_reg_offset);
 
-	ret = of_property_read_u32(np, "ti,davinci-ctrl-ram-offset", &data);
-	if (!ret)
-		pdata->ctrl_ram_offset = data;
+	of_property_read_u32(np, "ti,davinci-ctrl-ram-offset",
+			     &pdata->ctrl_ram_offset);
 
-	ret = of_property_read_u32(np, "ti,davinci-ctrl-ram-size", &data);
-	if (!ret)
-		pdata->ctrl_ram_size = data;
+	of_property_read_u32(np, "ti,davinci-ctrl-ram-size",
+			     &pdata->ctrl_ram_size);
 
-	ret = of_property_read_u32(np, "ti,davinci-rmii-en", &data);
-	if (!ret)
-		pdata->rmii_en = data;
+	of_property_read_u8(np, "ti,davinci-rmii-en", &pdata->rmii_en);
 
-	ret = of_property_read_u32(np, "ti,davinci-no-bd-ram", &data);
-	if (!ret)
-		pdata->no_bd_ram = data;
+	pdata->no_bd_ram = of_property_read_bool(np, "ti,davinci-no-bd-ram");
 
 	priv->phy_node = of_parse_phandle(np, "phy-handle", 0);
 	if (!priv->phy_node)
-		pdata->phy_id = "";
+		pdata->phy_id = NULL;
+
+	auxdata = pdev->dev.platform_data;
+	if (auxdata) {
+		pdata->interrupt_enable = auxdata->interrupt_enable;
+		pdata->interrupt_disable = auxdata->interrupt_disable;
+	}
+
+	match = of_match_device(davinci_emac_of_match, &pdev->dev);
+	if (match && match->data) {
+		auxdata = match->data;
+		pdata->version = auxdata->version;
+		pdata->hw_ram_addr = auxdata->hw_ram_addr;
+	}
 
 	pdev->dev.platform_data = pdata;
-nodata:
+
 	return  pdata;
 }
-#else
-static struct emac_platform_data
-	*davinci_emac_of_get_pdata(struct platform_device *pdev,
-	struct emac_priv *priv)
-{
-	return  pdev->dev.platform_data;
-}
-#endif
+
 /**
  * davinci_emac_probe - EMAC device probe
  * @pdev: The DaVinci EMAC device that we are removing
@@ -1856,7 +1863,7 @@ static int davinci_emac_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct net_device *ndev;
 	struct emac_priv *priv;
-	unsigned long size, hw_ram_addr;
+	unsigned long hw_ram_addr;
 	struct emac_platform_data *pdata;
 	struct device *emac_dev;
 	struct cpdma_params dma_params;
@@ -1894,7 +1901,7 @@ static int davinci_emac_probe(struct platform_device *pdev)
 	}
 
 	/* MAC addr and PHY mask , RMII enable info from platform_data */
-	memcpy(priv->mac_addr, pdata->mac_addr, 6);
+	memcpy(priv->mac_addr, pdata->mac_addr, ETH_ALEN);
 	priv->phy_id = pdata->phy_id;
 	priv->rmii_en = pdata->rmii_en;
 	priv->version = pdata->version;
@@ -1907,25 +1914,10 @@ static int davinci_emac_probe(struct platform_device *pdev)
 	emac_dev = &ndev->dev;
 	/* Get EMAC platform data */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(&pdev->dev,"error getting res\n");
-		rc = -ENOENT;
-		goto no_pdata;
-	}
-
 	priv->emac_base_phys = res->start + pdata->ctrl_reg_offset;
-	size = resource_size(res);
-	if (!devm_request_mem_region(&pdev->dev, res->start,
-				     size, ndev->name)) {
-		dev_err(&pdev->dev, "failed request_mem_region() for regs\n");
-		rc = -ENXIO;
-		goto no_pdata;
-	}
-
-	priv->remap_addr = devm_ioremap(&pdev->dev, res->start, size);
-	if (!priv->remap_addr) {
-		dev_err(&pdev->dev, "unable to map IO\n");
-		rc = -ENOMEM;
+	priv->remap_addr = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(priv->remap_addr)) {
+		rc = PTR_ERR(priv->remap_addr);
 		goto no_pdata;
 	}
 	priv->emac_base = priv->remap_addr + pdata->ctrl_reg_offset;
@@ -2037,8 +2029,6 @@ static int davinci_emac_remove(struct platform_device *pdev)
 
 	dev_notice(&ndev->dev, "DaVinci EMAC: davinci_emac_remove()\n");
 
-	platform_set_drvdata(pdev, NULL);
-
 	if (priv->txchan)
 		cpdma_chan_destroy(priv->txchan);
 	if (priv->rxchan)
@@ -2078,11 +2068,19 @@ static const struct dev_pm_ops davinci_emac_pm_ops = {
 	.resume		= davinci_emac_resume,
 };
 
+#if IS_ENABLED(CONFIG_OF)
+static const struct emac_platform_data am3517_emac_data = {
+	.version		= EMAC_VERSION_2,
+	.hw_ram_addr		= 0x01e20000,
+};
+
 static const struct of_device_id davinci_emac_of_match[] = {
 	{.compatible = "ti,davinci-dm6467-emac", },
+	{.compatible = "ti,am3517-emac", .data = &am3517_emac_data, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, davinci_emac_of_match);
+#endif
 
 /* davinci_emac_driver: EMAC platform driver structure */
 static struct platform_driver davinci_emac_driver = {

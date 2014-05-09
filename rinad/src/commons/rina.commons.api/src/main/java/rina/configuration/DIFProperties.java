@@ -28,11 +28,6 @@ public class DIFProperties {
 	 * The DIF Data Transfer constants
 	 */
 	private DataTransferConstants dataTransferConstants = null;
-
-	/**
-	 * The PDU forwarding table configurations
-	 */
-	private PDUFTableGeneratorConfiguration pdufTableConfiguration = null;
 	
 	/**
 	 * The QoS cubes available in the DIF
@@ -63,6 +58,11 @@ public class DIFProperties {
 	 * that can potentially be members of the DIFs I know
 	 */
 	private List<KnownIPCProcessAddress> knownIPCProcessAddresses = null;
+	
+	/**
+	 * The PDU forwarding table configurations
+	 */
+	private PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration = null;
 	
 	/**
 	 * The address prefixes, assigned to different organizations
@@ -166,11 +166,11 @@ public class DIFProperties {
 	public void setConfigParameters(List<Parameter> configParameters) {
 		this.configParameters = configParameters;
 	}
-	public PDUFTableGeneratorConfiguration getPdufTableConfiguration() {
-		return pdufTableConfiguration;
+	public PDUFTableGeneratorConfiguration getPdufTableGeneratorConfiguration() {
+		return pdufTableGeneratorConfiguration;
 	}
-	public void setPdufTableConfiguration(
-			PDUFTableGeneratorConfiguration pdufTableConfiguration) {
-		this.pdufTableConfiguration = pdufTableConfiguration;
+	public void setPdufTableGeneratorConfiguration(
+			PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration) {
+		this.pdufTableGeneratorConfiguration = pdufTableGeneratorConfiguration;
 	}
 }
