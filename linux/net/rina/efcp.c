@@ -623,6 +623,14 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         connection->source_cep_id = cep_id;
         tmp->connection           = connection;
 
+#if DTCP_TEST_ENABLE
+        connection->policies_params.dtcp_present = true;
+        connection->policies_params.flow_ctrl = true;
+        connection->policies_params.rate_based_fctrl = false;
+        connection->policies_params.rtx_ctrl = false;
+        connection->policies_params.window_based_fctrl = true;
+#endif
+
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
@@ -642,14 +650,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         dtcp = NULL;
-
-#if DTCP_TEST_ENABLE
-        connection->policies_params.dtcp_present = true;
-        connection->policies_params.flow_ctrl = true;
-        connection->policies_params.rate_based_fctrl = false;
-        connection->policies_params.rtx_ctrl = false;
-        connection->policies_params.window_based_fctrl = true;
-#endif
 
         if (connection->policies_params.dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);

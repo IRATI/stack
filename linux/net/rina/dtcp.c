@@ -410,13 +410,15 @@ static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
 
 /* This is 880C */
 static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
-                                      seq_num_t     last_ctrl_seq_rcvd,
+                                      seq_num_t     ctrl_seq,
                                       seq_num_t     ack_nack_seq,
                                       seq_num_t     new_rt_wind_edge,
                                       seq_num_t     left_wind_edge)
 {
         struct pdu * pdu;
         struct pci * pci;
+        seq_num_t    my_lf_win_edge;
+        seq_num_t    my_rt_win_edge;
 
         pdu = pdu_ctrl_create(dtcp);
         if (!pdu)
@@ -435,7 +437,7 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
                 return NULL;
         }
 
-        if (pci_control_last_seq_num_rcvd_set(pci, last_ctrl_seq_rcvd)) {
+        if (pci_control_last_seq_num_rcvd_set(pci, ctrl_seq)) {
                 pdu_destroy(pdu);
                 return NULL;
         }
@@ -450,13 +452,14 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
                 return NULL;
         }
 
-        if (pci_control_left_wind_edge_set(pci,
-                                           dt_sv_rcv_lft_win(dtcp->parent))) {
+        my_lf_win_edge = dt_sv_rcv_lft_win(dtcp->parent);
+        if (pci_control_left_wind_edge_set(pci,my_lf_win_edge)) {
                 pdu_destroy(pdu);
                 return NULL;
         }
 
-        if (pci_control_rt_wind_edge_set(pci, rcvr_rt_wind_edge(dtcp))) {
+        my_rt_win_edge = rcvr_rt_wind_edge(dtcp);
+        if (pci_control_rt_wind_edge_set(pci, my_rt_win_edge)) {
                 pdu_destroy(pdu);
                 return NULL;
         }
@@ -675,14 +678,21 @@ static seq_num_t update_rt_wind_edge(struct dtcp * dtcp)
 static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
+        seq_num_t    seq_ctl;
+        seq_num_t    rt_wind_edge;
+        seq_num_t    lf_wind_edge;
 
         /* FIXME: Missing update of right window edge */
 
+        LOG_ERR("We are in the default RCVR flow control");
+        seq_ctl = next_snd_ctl_seq(dtcp);
+        rt_wind_edge = update_rt_wind_edge(dtcp);
+        lf_wind_edge = dt_sv_rcv_lft_win(dtcp->parent);
         pdu_ctrl = pdu_ctrl_ack_flow(dtcp,
-                                     dtcp->sv->last_rcv_ctl_seq,
+                                     seq_ctl,
                                      seq,
-                                     update_rt_wind_edge(dtcp),
-                                     dtcp->sv->snd_lft_win);
+                                     rt_wind_edge,
+                                     lf_wind_edge);
         if (!pdu_ctrl) {
                 LOG_ERR("ERROR creating PDU for default rcvr flow control");
                 return -1;
