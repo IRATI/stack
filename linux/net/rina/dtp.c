@@ -48,6 +48,7 @@ struct dtp_sv {
 
         bool                window_based;
         bool                rexmsn_ctrl;
+        bool                rate_based;
 };
 
 /* FIXME: Has to be rearranged */
@@ -90,8 +91,9 @@ static struct dtp_sv default_sv = {
         .max_cwq_len                   = 0,
         .drf_flag                      = false,
         .a                             = 0,
-        .window_based                  = true,
-        .rexmsn_ctrl                   = true,
+        .window_based                  = false,
+        .rexmsn_ctrl                   = false,
+        .rate_based                    = false,
 };
 
 static uint_t max_cwq_len_get(struct dtp_sv * sv)
@@ -257,6 +259,21 @@ static void tf_receiver_inactivity(void * data)
 static void tf_a(void * data)
 { }
 
+static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
+{
+        ASSERT(sv);
+        ASSERT(conn);
+
+        if (conn->policies_params.rtx_ctrl)
+                sv->rexmsn_ctrl = true;
+
+        if (conn->policies_params.window_based_fctrl)
+                sv->window_based = true;
+
+        if (conn->policies_params.rate_based_fctrl)
+                sv->rate_based = true;
+}
+
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct kfa *        kfa,
@@ -298,6 +315,7 @@ struct dtp * dtp_create(struct dt *         dt,
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
+        sv_policies_apply(tmp->sv, connection);
 
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
@@ -367,8 +385,8 @@ int dtp_write(struct dtp * instance,
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
-                sdu_destroy(sdu);
-                return -1;
+                /* sdu_destroy(sdu);
+                return -1; */
         }
 #endif
 
@@ -444,6 +462,7 @@ int dtp_write(struct dtp * instance,
          * the first and default case if both are present.
          */
 
+        LOG_DBG("DTCP instance: %pK", dtcp);
         if (dtcp) {
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
