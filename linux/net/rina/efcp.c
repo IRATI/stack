@@ -35,6 +35,7 @@
 #include "dtp.h"
 #include "dtcp.h"
 #include "rmt.h"
+#include "dt-utils.h"
 
 #ifndef DTCP_TEST_ENABLE
 #define DTCP_TEST_ENABLE 1
@@ -80,10 +81,14 @@ static int efcp_destroy(struct efcp * instance)
         if (instance->dt) {
                 struct dtp *  dtp  = dt_dtp_unbind(instance->dt);
                 struct dtcp * dtcp = dt_dtcp_unbind(instance->dt);
+                struct cwq *  cwq  = dt_cwq_unbind(instance->dt);
+                struct rtxq * rtxq = dt_rtxq_unbind(instance->dt);
 
                 /* FIXME: We should watch for memleaks here ... */
                 if (dtp)  dtp_destroy(dtp);
                 if (dtcp) dtcp_destroy(dtcp);
+                if (cwq)  cwq_destroy(cwq);
+                if (rtxq) rtxq_destroy(rtxq);
 
                 dt_destroy(instance->dt);
         } else
@@ -578,6 +583,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         cep_id_t      cep_id;
         struct dtp *  dtp;
         struct dtcp * dtcp;
+        struct cwq *  cwq;
+        struct rtxq * rtxq;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -640,21 +647,47 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         connection->policies_params.dtcp_present = true;
         connection->policies_params.flow_ctrl = true;
         connection->policies_params.rate_based_fctrl = false;
-        connection->policies_params.rtx_ctrl = true;
+        connection->policies_params.rtx_ctrl = false;
         connection->policies_params.window_based_fctrl = true;
 #endif
 
         if (connection->policies_params.dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
-                        dtp_destroy(dtp);
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
 
                 if (dt_dtcp_bind(tmp->dt, dtcp)) {
-                        dtp_destroy(dtp);
                         dtcp_destroy(dtcp);
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+        }
+
+        if (connection->policies_params.window_based_fctrl) {
+                cwq = cwq_create();
+                if (!cwq) {
+                        LOG_ERR("Failed to create closed window queue");
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+                if (dt_cwq_bind(tmp->dt, cwq)) {
+                        cwq_destroy(cwq);
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+        }
+
+        if (connection->policies_params.rtx_ctrl) {
+                rtxq = rtxq_create(tmp->dt);
+                if (!rtxq) {
+                        LOG_ERR("Failed to create rexmsn queue");
+                        efcp_destroy(tmp);
+                        return cep_id_bad();
+                }
+                if (dt_rtxq_bind(tmp->dt, rtxq)) {
+                        rtxq_destroy(rtxq);
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
