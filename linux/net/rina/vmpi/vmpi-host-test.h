@@ -25,9 +25,9 @@
 
 #ifdef VMPI_HOST_TEST
 ssize_t vhost_mpi_aio_write(struct kiocb *iocb, const struct iovec *iv,
-                unsigned long iovcnt, loff_t pos);
+                            unsigned long iovcnt, loff_t pos);
 ssize_t vhost_mpi_aio_read(struct kiocb *iocb, const struct iovec *iv,
-                unsigned long iovcnt, loff_t pos);
+                           unsigned long iovcnt, loff_t pos);
 #endif  /* VMPI_HOST_TEST */
 
 #endif  /* __VMPI_HOST_TEST_H__ */

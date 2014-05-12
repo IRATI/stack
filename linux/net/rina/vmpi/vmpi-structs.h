@@ -41,11 +41,11 @@ void vmpi_buffer_destroy(struct vmpi_buffer *buf);
 #define vmpi_buffer_hdr(b) ((struct vmpi_hdr *)b->p)
 #define vmpi_buffer_data(b) (b->p + sizeof(struct vmpi_hdr))
 
-#define vmpi_buffer_swap(b1, b2)    do {                                \
-        struct vmpi_buffer tmp = *b1;           \
-        *b1 = *b2;                              \
-        *b2 = tmp;                              \
-} while (0)
+#define vmpi_buffer_swap(b1, b2)    do {        \
+                struct vmpi_buffer tmp = *b1;   \
+                *b1 = *b2;                      \
+                *b2 = tmp;                      \
+        } while (0)
 
 
 /* ######################## VMPI-RING ############################## */
@@ -99,10 +99,10 @@ vmpi_ring_pending(struct vmpi_ring *ring)
         return space;
 }
 
-#define VMPI_RING_INC(x)   do { \
-        if (++(x) == VMPI_RING_SIZE) \
-        x = 0; \
-} while (0)
+#define VMPI_RING_INC(x)   do {                 \
+                if (++(x) == VMPI_RING_SIZE)    \
+                        x = 0;                  \
+        } while (0)
 
 int vmpi_ring_init(struct vmpi_ring *ring, unsigned int buf_size);
 
@@ -126,7 +126,7 @@ static inline unsigned int vmpi_queue_len(struct vmpi_queue *queue)
 }
 
 int vmpi_queue_init(struct vmpi_queue *queue, unsigned int initial_length,
-                unsigned int buf_size);
+                    unsigned int buf_size);
 void vmpi_queue_fini(struct vmpi_queue *queue);
 void vmpi_queue_purge(struct vmpi_queue *queue);
 void vmpi_queue_push(struct vmpi_queue *queue, struct vmpi_buffer *buf);

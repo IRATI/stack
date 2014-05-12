@@ -24,8 +24,8 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 
-#define SHIM_NAME "shim-hv-virtio"
-#define RINA_PREFIX  SHIM_NAME
+#define SHIM_NAME   "shim-hv-virtio"
+#define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
 #include "common.h"
@@ -69,12 +69,12 @@ enum channel_state {
 
 struct shim_hv_channel {
         /* Internal state associated to the channel. */
-        enum channel_state      state;
+        enum channel_state state;
         /* In ALLOCATED state, this is the port-id supported by the channel. */
-        port_id_t               port_id;
+        port_id_t          port_id;
         /* In PENDING or ALLOCATED state, this is the application that
            currently holds the channel. */
-        struct name             application_name;
+        struct name        application_name;
 };
 
 enum shim_hv_command {
@@ -92,28 +92,28 @@ enum shim_hv_response {
  * the VMPI-related information (among the other).
  */
 struct shim_hv_vmpi {
-        struct vmpi_ops                 *ops;
-        struct shim_hv_channel          channels[VMPI_MAX_CHANNELS];
+        struct vmpi_ops        *ops;
+        struct shim_hv_channel channels[VMPI_MAX_CHANNELS];
 };
 
 /* Private data associated to a shim IPC process. */
 struct ipcp_instance_data {
-        struct list_head        list;
-        ipc_process_id_t        id;
-        struct name             name;
-        int                     assigned;
-        struct name             dif_name;
-        struct flow_spec        fspec;
-        struct kfa              *kfa;
-        struct list_head        registered_applications;
-        struct mutex            reg_lock;
-        struct mutex            vc_lock;
-        struct shim_hv_vmpi     vmpi;
+        struct list_head    list;
+        ipc_process_id_t    id;
+        struct name         name;
+        int                 assigned;
+        struct name         dif_name;
+        struct flow_spec    fspec;
+        struct kfa          *kfa;
+        struct list_head    registered_applications;
+        struct mutex        reg_lock;
+        struct mutex        vc_lock;
+        struct shim_hv_vmpi vmpi;
 };
 
 struct name_list_element {
         struct list_head list;
-        struct name application_name;
+        struct name      application_name;
 };
 
 static unsigned int
@@ -441,8 +441,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
         port_id = priv->vmpi.channels[ch].port_id;
 
         if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL) {
-                LOG_ERR("%s: channel state is already NULL", __func__);
-                ret = -1;
+                LOG_INFO("%s: channel state is already NULL", __func__);
                 goto out;
         }
 
@@ -469,11 +468,22 @@ static int
 shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
 {
         int ret = 0;
-        unsigned int ch = port_id_to_channel(priv, port_id);
+        unsigned int ch;
 
-        ret = shim_hv_flow_deallocate_common(priv, ch, 1);
+        mutex_lock(&priv->vc_lock);
 
-        shim_hv_send_deallocate(priv, ch);
+        ch = port_id_to_channel(priv, port_id);
+        /* If channel is equal to 0, it means that the channel
+         * for this port-id has already been deallocated, so
+         * we don't have to call shim_hv_flow_deallocate_common().
+         */
+        if (ch)
+                ret = shim_hv_flow_deallocate_common(priv, ch, 0);
+
+        mutex_unlock(&priv->vc_lock);
+
+        if (ch && ch < VMPI_MAX_CHANNELS)
+                shim_hv_send_deallocate(priv, ch);
 
         return ret;
 }
@@ -678,9 +688,8 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
         }
 
         LOG_DBG("%s: received DEALLOCATE(ch = %d)", __func__, ch);
-#ifdef DONT_IGNORE_DEALLOCATE
+
         shim_hv_flow_deallocate_common(priv, ch, 1);
-#endif
 }
 
 static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,

@@ -46,7 +46,10 @@
 #define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
-#define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+
+/* Helpers */
+#define LOG_DBGF(FMT,  ARGS...) LOG_DBG("(%s: " FMT, __FUNCTION__, ##ARGS)
 
 #ifdef RINA_DEBUG_HEARTBEATS
 #define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
