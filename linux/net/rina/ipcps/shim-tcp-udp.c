@@ -299,7 +299,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct app_data *          app;
-        int                        ip, err, cube;
+        int                        ip, err;
 
         LOG_DBG("tcp_udp allocate request");
 
@@ -356,6 +356,8 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                              sizeof(struct sockaddr), 0);
                         if (err < 0) {
                                 LOG_ERR("could not connect tcp socket");
+				sock_release(flow->sock);
+				deallocate_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -372,10 +374,11 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 if (kipcm_flow_commit(default_kipcm, data->id,
                                       flow->port_id)) {
                         LOG_ERR("Cannot add flow");
-                        if (!cube) {
+                        if (fspec->ordered_delivery) {
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
+			deallocate_and_destroy_flow(data, flow);
 
                         return -1;
                 }
@@ -385,10 +388,11 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
                                                        flow->port_id, 0)) {
                         LOG_ERR("couldn't tell flow is allocated to KIPCM");
-                        if (!cube) {
+                        if (fspec->ordered_delivery) {
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
+			deallocate_and_destroy_flow(data, flow);
                         return -1;
                 }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
