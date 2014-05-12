@@ -402,7 +402,7 @@ int dtp_write(struct dtp * instance,
         policies = instance->policies;
         ASSERT(policies);
 
-        pci = pci_create();
+        pci = pci_create_ni();
         if (!pci) {
                 sdu_destroy(sdu);
                 return -1;
@@ -430,7 +430,7 @@ int dtp_write(struct dtp * instance,
 
         /* FIXME: Check if we need to set DRF */
 
-        pdu = pdu_create();
+        pdu = pdu_create_ni();
         if (!pdu) {
                 pci_destroy(pci);
                 sdu_destroy(sdu);
