@@ -808,11 +808,11 @@ enum ConnectionPoliciesParametersAttributes {
 
 #define CCP_ATTR_MAX (__CCP_ATTR_MAX -1)
 
-int putConnectionPoliciesParametersObject(nl_msg * netlinkMessage,
-                const ConnectionPoliciesParameters& object); 
+int putConnectionPoliciesObject(nl_msg * netlinkMessage,
+                const ConnectionPolicies& object);
 
-ConnectionPoliciesParameters *
-parseConnectionPoliciesParametersObject(nlattr *nested);
+ConnectionPolicies *
+parseConnectionPoliciesObject(nlattr *nested);
 
 /* IpcpConnectionCreateRequestMessage CLASS*/
 enum IpcpConnectionCreateRequestMessageAttributes {

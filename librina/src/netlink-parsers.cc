@@ -1545,28 +1545,19 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	return result;
 }
 
-int putConnectionPoliciesParametersObject(nl_msg* netlinkMessage,
-		const ConnectionPoliciesParameters& object) {
-	if (object.isDTCPpresent())
-	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_DTCP_PRESENT);
-	if (object.isFlowControl())
-	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_FLOW_CONTROL);
-	if (object.isRTXcontrol())
-	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_RTX_CONTROL);
-	if (object.isWindowBasedFlowControl())
-	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_WINDOW_BASED_FLOW_CONTROL);
-	if (object.isRateBasedFlowControl())
-	        NLA_PUT_FLAG(netlinkMessage, CPP_ATTR_RATE_BASED_FLOW_CONTROL);
+int putConnectionPoliciesObject(nl_msg* netlinkMessage,
+		const ConnectionPolicies& object) {
+	//TODO
 
 	return 0;
 
-	nla_put_failure: LOG_ERR(
+	/*nla_put_failure: LOG_ERR(
 			"Error building ConnectionPoliciesParameters Netlink object");
-	return -1;
+	return -1;*/
 }
 
-ConnectionPoliciesParameters *
-parseConnectionPoliciesParametersObject(nlattr *nested) {
+ConnectionPolicies *
+parseConnectionPoliciesObject(nlattr *nested) {
 	struct nla_policy attr_policy[CCP_ATTR_MAX + 1];
 	attr_policy[CPP_ATTR_DTCP_PRESENT].type = NLA_FLAG;
 	attr_policy[CPP_ATTR_DTCP_PRESENT].minlen = 0;
@@ -1593,27 +1584,9 @@ parseConnectionPoliciesParametersObject(nlattr *nested) {
 		return NULL;
 	}
 
-	ConnectionPoliciesParameters * result =
-			new ConnectionPoliciesParameters();
-	if (attrs[CPP_ATTR_DTCP_PRESENT]) {
-		result->setDTCPpresent(nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]));
-	}
-
-	if (attrs[CPP_ATTR_FLOW_CONTROL]) {
-		result->setFlowControl(nla_get_flag(attrs[CPP_ATTR_FLOW_CONTROL]));
-	}
-
-	if (attrs[CPP_ATTR_RTX_CONTROL]) {
-		result->setRTXcontrol(nla_get_flag(attrs[CPP_ATTR_RTX_CONTROL]));
-	}
-
-	if (attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL]) {
-		result->setWindowBasedFlowControl(nla_get_flag(attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL]));
-	}
-
-	if (attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]) {
-		result->setRateBasedFlowControl(nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]));
-	}
+	ConnectionPolicies * result =
+			new ConnectionPolicies();
+	//TODO
 
 	return result;
 }
@@ -2745,8 +2718,8 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDRESS,
                                 object.getDestAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID, object.getQosId());
-        if (putConnectionPoliciesParametersObject(netlinkMessage,
-                        object.getConnPoliciesParams()) < 0) {
+        if (putConnectionPoliciesObject(netlinkMessage,
+                        object.getConnPolicies()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -5227,7 +5200,7 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         IpcpConnectionCreateRequestMessage * result =
                         new IpcpConnectionCreateRequestMessage();
 
-        ConnectionPoliciesParameters * connPoliciesParams;
+        ConnectionPolicies * connPolicies;
 
         if (attrs[ICCRM_ATTR_PORT_ID]){
                 result->setPortId(nla_get_u32(attrs[ICCRM_ATTR_PORT_ID]));
@@ -5248,14 +5221,14 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         }
 
 	if (attrs[ICCRM_ATTR_POLICIES_PARAMETERS]) {
-		connPoliciesParams = parseConnectionPoliciesParametersObject(
+	        connPolicies = parseConnectionPoliciesObject(
 				attrs[ICCRM_ATTR_POLICIES_PARAMETERS]);
-		if (connPoliciesParams == 0) {
+		if (connPolicies == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->setConnPoliciesParams(*connPoliciesParams);
-			delete connPoliciesParams;
+			result->setConnPolicies(*connPolicies);
+			delete connPolicies;
 		}
 	}
 
@@ -5416,7 +5389,7 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         IpcpConnectionCreateArrivedMessage * result =
                         new IpcpConnectionCreateArrivedMessage();
 
-	ConnectionPoliciesParameters * connPoliciesParams;
+	ConnectionPolicies * connPolicies;
 
         if (attrs[ICCAM_ATTR_PORT_ID]){
                 result->setPortId(nla_get_u32(attrs[ICCAM_ATTR_PORT_ID]));
@@ -5445,14 +5418,14 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         }
 
 	if (attrs[ICCAM_ATTR_POLICIES_PARAMETERS]) {
-		connPoliciesParams = parseConnectionPoliciesParametersObject(
+	        connPolicies = parseConnectionPoliciesObject(
 				attrs[ICCAM_ATTR_POLICIES_PARAMETERS]);
-		if (connPoliciesParams == 0) {
+		if (connPolicies == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->setConnPoliciesParams(*connPoliciesParams);
-			delete connPoliciesParams;
+			result->setConnPolicies(*connPolicies);
+			delete connPolicies;
 		}
 	}
 

@@ -1483,14 +1483,14 @@ void IpcpConnectionCreateRequestMessage::setSourceAddress(
         this->sourceAddress = sourceAddress;
 }
 
-const ConnectionPoliciesParameters& 
-IpcpConnectionCreateRequestMessage::getConnPoliciesParams() const {
-        return connPoliciesParams;
+const ConnectionPolicies&
+IpcpConnectionCreateRequestMessage::getConnPolicies() const {
+        return connPolicies;
 }
 
-void IpcpConnectionCreateRequestMessage::setConnPoliciesParams(
-                const ConnectionPoliciesParameters& connPParams) {
-        this->connPoliciesParams = connPParams;
+void IpcpConnectionCreateRequestMessage::setConnPolicies(
+                const ConnectionPolicies& connPParams) {
+        this->connPolicies = connPParams;
 }
 
 IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
@@ -1659,14 +1659,14 @@ void IpcpConnectionCreateArrivedMessage::setDestCepId(int destCepId) {
         this->destCepId = destCepId;
 }
 
-const ConnectionPoliciesParameters& IpcpConnectionCreateArrivedMessage::
-getConnPoliciesParams() const {
-        return connPoliciesParameters;
+const ConnectionPolicies& IpcpConnectionCreateArrivedMessage::
+getConnPolicies() const {
+        return connPolicies;
 }
 
-void IpcpConnectionCreateArrivedMessage::setConnPoliciesParams(
-                const ConnectionPoliciesParameters& connPParams) {
-        this->connPoliciesParameters = connPParams;
+void IpcpConnectionCreateArrivedMessage::setConnPolicies(
+                const ConnectionPolicies& connPParams) {
+        this->connPolicies = connPParams;
 }
 
 IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {
