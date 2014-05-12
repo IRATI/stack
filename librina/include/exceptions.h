@@ -35,6 +35,127 @@ private:
         std::string description_;
 };
 
+/**
+ * General exceptions thrown by Application Processes
+ *
+ */
+class ApplicationProcessException: public std::exception{
+	/*	Constants	*/
+	public:
+		/*	Error Codes	*/
+		static const int UNEXISTING_SYNOYM ;
+		static const int WRONG_APPLICATION_PROCES_NAME;
+		static const int NULL_OR_MALFORMED_SYNONYM;
+		static const int ALREADY_EXISTING_SYNOYM;
+		static const int NULL_OR_MALFORMED_WHATEVERCAST_NAME;
+		static const int ALREADY_EXISTING_WHATEVERCAST_NAME;
+		static const int UNEXISTING_WHATEVERCAST_NAME;
+	/*	Members	*/
+	protected:
+		int errorCode;
+		char* message;
+	/*	Constructors and Destructors	*/
+	public:
+		ApplicationProcessException();
+		ApplicationProcessException(int errorCode);
+		ApplicationProcessException(int errorCode, std::string message);
+		~ApplicationProcessException() throw();
+	/*	Accessors	*/
+	public:
+		int getErrorCode() const;
+		void setErrorCode(int errorCode);
+	/*	Methods	*/
+		virtual const char* what() const throw();
+};
+
+class CDAPMessage;
+
+class CDAPException: public Exception{
+	/*	Members	*/
+	protected:
+		/**
+		 * Name of the operation that failed
+		 */
+		std::string operation;
+		/**
+		 * Operation result code
+		 */
+		int result;
+		/**
+		 * Result reason
+		 */
+		std::string resultReason;
+		/**
+		 * The CDAPMessage that caused the exception
+		 */
+		CDAPMessage* cdapMessage;
+	/*	Constructors and Destructors	*/
+	public:
+		CDAPException(Exception ex);
+		CDAPException(std::string operation, int result, std::string resultReason);
+		CDAPException(int result, std::string resultReason);
+		CDAPException(std::string resultReason);
+		CDAPException(std::string resultReason, const CDAPMessage &cdapMessage);
+        virtual ~CDAPException() throw() {};
+    /*	Accessors	*/
+	public:
+		std::string getOperation() const;
+		void setOperation(std::string operation);
+		int getResult() const;
+		void setResult(int result);
+		std::string getResultReason() const;
+		void setResultReason(std::string resultReason);
+		const CDAPMessage& getCDAPMessage() const;
+		void setCDAPMessage(const CDAPMessage &cdapMessage);
+	/*	Functionalities	*/
+	public:
+        virtual const char * what() const throw();
+};
+
+/**
+ * Exceptions thrown by the RIB Daemon
+ * TODO finish this class
+ *
+ */
+class RIBDaemonException: public Exception{
+	/*	Constants	*/
+	public:
+		/** Error codes **/
+		static const int UNKNOWN_OBJECT_CLASS;
+		static const int MALFORMED_MESSAGE_SUBSCRIPTION_REQUEST;
+		static const int MALFORMED_MESSAGE_UNSUBSCRIPTION_REQUEST;
+		static const int SUBSCRIBER_WAS_NOT_SUBSCRIBED;
+		static const int OBJECTCLASS_AND_OBJECT_NAME_OR_OBJECT_INSTANCE_NOT_SPECIFIED;
+		static const int OBJECTNAME_NOT_PRESENT_IN_THE_RIB;
+		static const int RESPONSE_REQUIRED_BUT_MESSAGE_HANDLER_IS_NULL;
+		static const int PROBLEMS_SENDING_CDAP_MESSAGE;
+		static const int OPERATION_NOT_ALLOWED_AT_THIS_OBJECT;
+		static const int UNRECOGNIZED_OBJECT_NAME;
+		static const int OBJECTCLASS_DOES_NOT_MATCH_OBJECTNAME;
+		static const int OBJECT_ALREADY_HAS_THIS_CHILD;
+		static const int CHILD_NOT_FOUND;
+		static const int OBJECT_ALREADY_EXISTS;
+		static const int RIB_OBJECT_AND_OBJECT_NAME_NULL;
+		static const int PROBLEMS_DECODING_OBJECT;
+		static const int OBJECT_VALUE_IS_NULL;
+	/*	Members	*/
+	protected:
+		int errorCode;
+	/* Constructors and Destructors	 */
+	public:
+		RIBDaemonException(int errorCode);
+		RIBDaemonException(int errorCode, std::string message);
+		RIBDaemonException(int errorCode, Exception &ex);
+        virtual ~RIBDaemonException() throw() {};
+	/*	Accessors	*/
+	public:
+		int getErrorCode();
+		void setErrorCode(int errorCode);
+	/*	Methods	*/
+	public:
+        virtual const char * what() const throw();
+};
+
 #endif
 
 #endif

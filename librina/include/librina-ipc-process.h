@@ -22,6 +22,7 @@
 #include "librina-common.h"
 #include "librina-application.h"
 #include "librina-ipc-manager.h"
+#include "librina-cdap.h"
 
 namespace rina {
 
@@ -73,6 +74,7 @@ class EnrollToDIFRequestEvent: public IPCEvent {
         ApplicationProcessNamingInformation neighborName;
 
 public:
+        EnrollToDIFRequestEvent();
         EnrollToDIFRequestEvent(
                 const ApplicationProcessNamingInformation& difName,
                 const ApplicationProcessNamingInformation& supportingDIFName,
@@ -80,8 +82,7 @@ public:
                 unsigned int sequenceNumber);
         const ApplicationProcessNamingInformation& getDifName() const;
         const ApplicationProcessNamingInformation& getNeighborName() const;
-        const ApplicationProcessNamingInformation&
-                getSupportingDifName() const;
+        const ApplicationProcessNamingInformation& getSupportingDifName() const;
 };
 
 /**
@@ -955,6 +956,11 @@ public:
 };
 
 /**
+ * Make Kernel IPC Process singleton
+ */
+extern Singleton<KernelIPCProcess> kernelIPCProcess;
+
+/**
  * Basic PDU
  */
 class ADataUnitPDU {
@@ -981,40 +987,6 @@ class ADataUnitPDU {
 		void setDestinationAddress(long destinationAddress);
 		char* getPayload() const;
 		void setPayload(char payload[]);
-};
-
-
-/**
- * General exceptions thrown by Application Processes
- *
- */
-class ApplicationProcessException: public std::exception{
-	/*	Constants	*/
-	public:
-		/*	Error Codes	*/
-		static const int UNEXISTING_SYNOYM ;
-		static const int WRONG_APPLICATION_PROCES_NAME;
-		static const int NULL_OR_MALFORMED_SYNONYM;
-		static const int ALREADY_EXISTING_SYNOYM;
-		static const int NULL_OR_MALFORMED_WHATEVERCAST_NAME;
-		static const int ALREADY_EXISTING_WHATEVERCAST_NAME;
-		static const int UNEXISTING_WHATEVERCAST_NAME;
-	/*	Members	*/
-	protected:
-		int errorCode;
-		char* message;
-	/*	Constructors and Destructors	*/
-	public:
-		ApplicationProcessException();
-		ApplicationProcessException(int errorCode);
-		ApplicationProcessException(int errorCode, std::string message);
-		~ApplicationProcessException() throw();
-	/*	Accessors	*/
-	public:
-		int getErrorCode() const;
-		void setErrorCode(int errorCode);
-	/*	Functionalities	*/
-		virtual const char* what() const throw();
 };
 
 /**
@@ -1047,9 +1019,9 @@ class WhatevercastName {
 		void setName(std::string name);
 		std::string getRule() const;
 		void setRule(std::string rule);
-		std::list<char*> getSetMembers() const;
-		void setSetMembers(std::list<char*> setMembers);
-	/*	Functionalities	*/
+		const std::list<char*>& getSetMembers() const;
+		void setSetMembers(const std::list<char*> &setMembers);
+	/*	Methods	*/
 	public:
 		bool operator==(const WhatevercastName &other);
 		std::string toString();
@@ -1065,15 +1037,14 @@ class WhatevercastName {
 //void initializeIPCProcess(unsigned int localPort, const std::string& logLevel, const std::string& pathToLogFile);
 
 /**
- * Encodes and Decodes an object to/from bytes)
- * @author eduardgrasa
+ * Interface that Encodes and Decodes an object to/from bytes)
  *
  */
 template <class T>
 class IEncoder {
 	public:
-		virtual char* encode(T object) throw (std::exception) = 0;
-		virtual T decode(char serializedObject[]) throw (std::exception) = 0;
+		virtual char* encode(const T &object) throw (Exception) = 0;
+		virtual T decode(const char serializedObject[]) throw (Exception) = 0;
 		virtual ~IEncoder(){};
 };
 
@@ -1121,7 +1092,7 @@ class RIBObjectNames
 
 	/*	Constructors and Destructor	*/
 	public:
-		virtual ~RIBObjectNames() = 0;
+		virtual ~RIBObjectNames() {};
 };
 
 /**
@@ -1136,25 +1107,23 @@ class EnrollmentInformationRequest
 	/*	Constants	*/
 	public:
 		static const std::string ENROLLMENT_INFO_OBJECT_NAME;
-	/*	Variables	*/
+	/*	Members	*/
 	protected:
 		/**
 		 * The address of the IPC Process that requests
 		 * to join a DIF
 		 */
 		unsigned int address;
-		std::list<ApplicationProcessNamingInformation>* supportingDifs;
+		std::list<ApplicationProcessNamingInformation> supportingDifs;
+	/*	Constructors and Destructors	*/
+	public:
+		EnrollmentInformationRequest();
 	/*	Accessors	*/
 	public:
 		unsigned int getAddress() const;
 		void setAddress(unsigned int address);
-		std::list<ApplicationProcessNamingInformation>* getSupportingDifs() const;
-		void setSupportingDifs(
-		std::list<ApplicationProcessNamingInformation> &supportingDifs);
-	/*	Constructors and Destructors	*/
-	public:
-		EnrollmentInformationRequest();
-		virtual ~EnrollmentInformationRequest();
+		const std::list<ApplicationProcessNamingInformation>& getSupportingDifs() const;
+		void setSupportingDifs(const std::list<ApplicationProcessNamingInformation> &supportingDifs);
 };
 
 /**
@@ -1162,22 +1131,19 @@ class EnrollmentInformationRequest
  */
 class EnrollmentRequest
 {
-	/*	Variables	*/
+	/*	Members	*/
 	protected:
-		Neighbor* neighbor;
-		EnrollToDIFRequestEvent* event;
-
+		Neighbor neighbor;
+		EnrollToDIFRequestEvent event;
+		/*	Constructors and Destructors	*/
+	public:
+		EnrollmentRequest(const Neighbor &neighbor, const EnrollToDIFRequestEvent &event);
 	/*	Accessors	*/
 	public:
-		Neighbor* getNeighbor() const;
-		void setNeighbor(Neighbor &neighbor);
-		EnrollToDIFRequestEvent* getEvent() const;
-		void setEvent(EnrollToDIFRequestEvent &event);
-
-	/*	Constructor and Destructor	*/
-	public:
-		EnrollmentRequest(Neighbor &neighbor, EnrollToDIFRequestEvent &event);
-		virtual ~EnrollmentRequest(){};
+		const Neighbor& getNeighbor() const;
+		void setNeighbor(const Neighbor &neighbor);
+		const EnrollToDIFRequestEvent& getEvent() const;
+		void setEvent(const EnrollToDIFRequestEvent &event);
 };
 
 /**
@@ -1186,10 +1152,10 @@ class EnrollmentRequest
 class IPCProcessComponent {
 	/*	Variables	*/
 	protected:
-		IPCProcess ipcProcess;
+		IPCProcess *ipcProcess;
 	/*	Accessors	*/
 	public:
-		virtual void setIPCProcess(IPCProcess ipcProcess) = 0;
+		virtual void setIPCProcess(const IPCProcess &ipcProcess) = 0;
 		virtual ~IPCProcessComponent(){};
 };
 
@@ -1211,6 +1177,9 @@ class Event
 		static const std::string N_MINUS_1_FLOW_DEALLOCATED;
 		static const std::string NEIGHBOR_DECLARED_DEAD;
 		static const std::string NEIGHBOR_ADDED;
+	/*	Constructors and Destructor	*/
+	public:
+		virtual ~Event(){};
 	/*	Accessors	*/
 	public:
 		/**
@@ -1218,9 +1187,6 @@ class Event
 		 * @return
 		 */
 		virtual std::string getId() const = 0;
-	/*	Constructors and Destructor	*/
-	public:
-		virtual ~Event(){};
 };
 
 /**
@@ -1228,7 +1194,19 @@ class Event
  *
  */
 class BaseEvent: public Event{
-	/*	Variable	*/
+	/*	Constants	*/
+	public:
+		static const std::string CONNECTIVITY_TO_NEIGHBOR_LOST;
+		static const std::string EFCP_CONNECTION_CREATED;
+		static const std::string EFCP_CONNECTION_DELETED;
+		static const std::string MANAGEMENT_FLOW_ALLOCATED;
+		static const std::string MANAGEMENT_FLOW_DEALLOCATED;
+		static const std::string N_MINUS_1_FLOW_ALLOCATED;
+		static const std::string N_MINUS_1_FLOW_ALLOCATION_FAILED;
+		static const std::string N_MINUS_1_FLOW_DEALLOCATED;
+		static const std::string NEIGHBOR_DECLARED_DEAD;
+		static const std::string NEIGHBOR_ADDED;
+	/*	Members	*/
 	protected:
 		/**
 		 * The identity of the event
@@ -1266,6 +1244,9 @@ class EventListener {
  */
 class EventManager
 {
+	/*	Constructors and Destructors	*/
+	public:
+		virtual ~EventManager(){};
 	/*	Methods	*/
 	public:
 		/**
@@ -1273,41 +1254,261 @@ class EventManager
 		 * @param eventId The id of the event
 		 * @param eventListener The event listener
 		 */
-		virtual void subscribeToEvent(std::string eventId, EventListener &eventListener) = 0;
+		virtual void subscribeToEvent(std::string eventId, const EventListener &eventListener) = 0;
 		/**
 		 * Subscribes to a list of events
 		 * @param eventIds the list of event ids
 		 * @param eventListener The event listener
 		 */
-		virtual void subscribeToEvents(std::list<std::string> eventIds, EventListener &eventListener) = 0;
+		virtual void subscribeToEvents(const std::list<std::string> &eventIds, const EventListener &eventListener) = 0;
 		/**
 		 * Unubscribe from a single event
 		 * @param eventId The id of the event
 		 * @param eventListener The event listener
 		 */
-		virtual void unsubscribeFromEvent(std::string eventId, EventListener &eventListener) = 0;
+		virtual void unsubscribeFromEvent(std::string eventId, const EventListener &eventListener) = 0;
 		/**
 		 * Unsubscribe from a list of events
 		 * @param eventIds the list of event ids
 		 * @param eventListener The event listener
 		 */
-		virtual void unsubscribeFromEvents(std::list<std::string> eventIds, EventListener &eventListener) = 0;
+		virtual void unsubscribeFromEvents(const std::list<std::string> &eventIds, const EventListener &eventListener) = 0;
 		/**
 		 * Invoked when a certain event has happened
 		 * @param event
 		 */
-		virtual void deliverEvent(Event &event) = 0;
+		virtual void deliverEvent(const Event &event) = 0;
+};
+
+/**
+ * An entry of the directory forwarding table
+ */
+class DirectoryForwardingTableEntry {
+	/*	Members	*/
+	protected:
+		/**
+		 * The name of the application process
+		 */
+		ApplicationProcessNamingInformation apNamingInfo;
+		/**
+		 * The address of the IPC process it is currently attached to
+		 */
+		long address;
+		/**
+		 * A timestamp for this entry
+		 */
+		long timestamp;
 
 		/*	Constructors and Destructors	*/
 	public:
-		virtual ~EventManager(){};
+		DirectoryForwardingTableEntry();
+	/*	Accessors	*/
+	public:
+		ApplicationProcessNamingInformation getApNamingInfo() const;
+		void setApNamingInfo(const ApplicationProcessNamingInformation &apNamingInfo);
+		long getAddress() const;
+		void setAddress(long address);
+		long getTimestamp() const;
+		void setTimestamp(long timestamp);
+		/**
+		 * Returns a key identifying this entry
+		 * @return
+		 */
+		std::string getKey();
+	/*	Methods	*/
+	public:
+		bool operator==(const DirectoryForwardingTableEntry &object);
+		std::string toString();
 };
 
 
 /**
- * Make Kernel IPC Process singleton
+ * Encapsulates all the information required to manage a Flow
+ *
  */
-extern Singleton<KernelIPCProcess> kernelIPCProcess;
+class IPCPFlow {
+	/*	Constants	*/
+	public:
+		static const std::string FLOW_SET_RIB_OBJECT_NAME;
+		static const std::string FLOW_SET_RIB_OBJECT_CLASS ;
+		static const std::string FLOW_RIB_OBJECT_CLASS;
+	/*	Variables	*/
+	public:
+		enum IPCPFlowState {EMPTY, ALLOCATION_IN_PROGRESS, ALLOCATED, WAITING_2_MPL_BEFORE_TEARING_DOWN, DEALLOCATED};
+	protected:
+		/**
+		 * The application that requested the flow
+		 */
+		ApplicationProcessNamingInformation sourceNamingInfo;
+		/**
+		 * The destination application of the flow
+		 */
+		ApplicationProcessNamingInformation destinationNamingInfo;
+		/**
+		 * The port-id returned to the Application process that requested the flow. This port-id is used for
+		 * the life of the flow.
+		 */
+		int sourcePortId;
+		/**
+		 * The port-id returned to the destination Application process. This port-id is used for
+		 * the life of the flow.
+		 */
+		int destinationPortId;
+		/**
+		 * The address of the IPC process that is the source of this flow
+		 */
+		long sourceAddress;
+		/**
+		 * The address of the IPC process that is the destination of this flow
+		 */
+		long destinationAddress;
+		/**
+		 * All the possible connections of this flow
+		 */
+		std::list<Connection> connections;
+		/**
+		 * The index of the connection that is currently Active in this flow
+		 */
+		int currentConnectionIndex;
+		/**
+		 * The status of this flow
+		 */
+		IPCPFlowState state;
+		/**
+		 * The list of parameters from the AllocateRequest that generated this flow
+		 */
+		FlowSpecification flowSpec;
+		/**
+		 * The list of policies that are used to control this flow. NOTE: Does this provide
+		 * anything beyond the list used within the QoS-cube? Can we override or specialize those,
+		 * somehow?
+		 */
+		std::map<std::string, std::string> policies;
+		/**
+		 * The merged list of parameters from QoS.policy-Default-Parameters and QoS-Params.
+		 */
+		std::map<std::string, std::string> policyParameters;
+		/**
+		 * TODO this is just a placeHolder for this piece of data
+		 */
+		char* accessControl;
+		/**
+		 * Maximum number of retries to create the flow before giving up.
+		 */
+		int maxCreateFlowRetries;
+		/**
+		 * The current number of retries
+		 */
+		int createFlowRetries;
+		/**
+		 * While the search rules that generate the forwarding table should allow for a
+		 * natural termination condition, it seems wise to have the means to enforce termination.
+		 */
+		int hopCount;
+		/**
+		 * True if this IPC process is the source of the flow, false otherwise
+		 */
+		bool source;
+	/*	Constructors and Destructors	*/
+	public:
+		IPCPFlow();
+	/*	Accessors	*/
+	bool isSource() const;
+	void setSource(bool source);
+	const ApplicationProcessNamingInformation& getSourceNamingInfo() const;
+	void setSourceNamingInfo(const ApplicationProcessNamingInformation &sourceNamingInfo);
+	const ApplicationProcessNamingInformation& getDestinationNamingInfo() const;
+	void setDestinationNamingInfo(const ApplicationProcessNamingInformation &destinationNamingInfo);
+	int getSourcePortId() const;
+	void setSourcePortId(int sourcePortId);
+	int getDestinationPortId() const;
+	void setDestinationPortId(int destinationPortId);
+	long getSourceAddress() const;
+	void setSourceAddress(long sourceAddress);
+	long getDestinationAddress() const;
+	void setDestinationAddress(long destinationAddress);
+	const std::list<Connection>& getConnections() const;
+	void setConnections(const std::list<Connection> &connections);
+	int getCurrentConnectionIndex() const;
+	void setCurrentConnectionIndex(int currentConnectionIndex);
+	IPCPFlowState getState() const;
+	void setState(IPCPFlowState state);
+	const FlowSpecification& getFlowSpecification() const;
+	void setFlowSpecification(const FlowSpecification &flowSpec);
+	const std::map<std::string, std::string>& getPolicies() const;
+	void setPolicies(const std::map<std::string, std::string> &policies);
+	const std::map<std::string, std::string>& getPolicyParameters() const;
+	void setPolicyParameters(const std::map<std::string, std::string> &policyParameters);
+	char* getAccessControl() const;
+	void setAccessControl(char* accessControl);
+	int getMaxCreateFlowRetries() const;
+	void setMaxCreateFlowRetries(int maxCreateFlowRetries);
+	int getCreateFlowRetries() const;
+	void setCreateFlowRetries(int createFlowRetries);
+	int getHopCount() const;
+	void setHopCount(int hopCount);
+	/*	Methods	*/
+	public:
+		std::string toString();
+};
+
+/**
+ * Delimits and undelimits SDUs, to allow multiple SDUs to be concatenated in the same PDU
+ *
+ */
+class Delimiter {
+	/*	Constructors and Destructors	*/
+	public:
+		virtual ~Delimiter(){};
+	/*	Accessors	*/
+	public:
+		/**
+		 * Takes a single rawSdu and produces a single delimited byte array, consisting in
+		 * [length][sdu]
+		 * @param rawSdus
+		 * @return
+		 */
+		virtual char* getDelimitedSdu(char rawSdu[]) = 0;
+		/**
+		 * Takes a list of raw sdus and produces a single delimited byte array, consisting in
+		 * the concatenation of the sdus followed by their encoded length: [length][sdu][length][sdu] ...
+		 * @param rawSdus
+		 * @return
+		 */
+		virtual char* getDelimitedSdus(const std::list<char*>& rawSdus) = 0;
+		/**
+		 * Assumes that the first length bytes of the "byteArray" are an encoded varint (encoding an integer of 32 bytes max), and returns the value
+		 * of this varint. If the byteArray is still not a complete varint, doesn't start with a varint or it is encoding an
+		 * integer of more than 4 bytes the function will return -1.
+		 * @param byteArray
+		 * @return the value of the integer encoded as a varint, or -1 if there is not a valid encoded varint32, or -2 if
+		 * this may be a complete varint32 but still more bytes are needed
+		 */
+		virtual int readVarint32(char byteArray[], int length) = 0;
+		/**
+		 * Takes a delimited byte array ([length][sdu][length][sdu] ..) and extracts the sdus
+		 * @param delimitedSdus
+		 * @return
+		 */
+		virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
+};
+
+class ADataUnitHandler {
+	/*	Constructors and Destructors	*/
+	public:
+		virtual ~ADataUnitHandler(){};
+	/*	Functionalitites	*/
+	public:
+		/** Set the new A-Data PDU Forwarding Table */
+		//void setPDUForwardingTable(PDUForwardingTableEntryList entries);
+		/** Get the port-id of the N-1 flow to reach the destination address*/
+		long getNextHop(long destinationAddress) throw (IPCException);
+
+		/** Send a message encapsulated in an A-Data-Unit PDU */
+		void sendADataUnit(long destinationAddress, const CDAPMessage &cdapMessage,
+				const CDAPMessageHandler &cdapMessageHandler) throw (IPCException);
+
+};
 
 }
 
