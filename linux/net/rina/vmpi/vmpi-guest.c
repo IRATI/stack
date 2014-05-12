@@ -92,7 +92,7 @@ vmpi_impl_clean_tx(struct vmpi_info *mpi)
 
 ssize_t
 vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
-                 const struct iovec *iv, unsigned long iovcnt, int user)
+                  const struct iovec *iv, unsigned long iovcnt, int user)
 {
         vmpi_impl_info_t *vi = mpi->vi;
         size_t len = iov_length(iv, iovcnt);
@@ -104,7 +104,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 return -EBADFD;
 
         IFV(printk("vmpi_info_aio_write user-buf (%lu,%d)\n",
-                        iovcnt, (int)len));
+                   iovcnt, (int)len));
 
         add_wait_queue(&mpi->write.wqh, &wait);
         while (len) {
@@ -139,13 +139,13 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 vmpi_buffer_hdr(buf)->channel = channel;
                 if (user) {
                         if (memcpy_fromiovecend(vmpi_buffer_data(buf),
-                                                        iv, 0, copylen)) {
+                                                iv, 0, copylen)) {
                                 ret = -EFAULT;
                                 break;
                         }
                 } else {
                         iovec_to_buf(iv, iovcnt, vmpi_buffer_data(buf),
-                                                                copylen);
+                                     copylen);
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(mpi->write.nu);
@@ -184,7 +184,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
         }
 
         IFV(printk("vmpi_info_aio-read user-buf (%lu, %d)\n",
-                        iovcnt, (int)len));
+                   iovcnt, (int)len));
 
         add_wait_queue(&mpi->read_global_wqh, &wait);
         while (len) {
@@ -238,7 +238,7 @@ xmit_callback(vmpi_impl_info_t *vi)
         struct vmpi_info *mpi = vmpi_info_from_vmpi_impl_info(vi);
 
         wake_up_interruptible_poll(&mpi->write.wqh, POLLOUT |
-                        POLLWRNORM | POLLWRBAND);
+                                   POLLWRNORM | POLLWRBAND);
 }
 
 static void
@@ -253,7 +253,7 @@ recv_worker_function(struct work_struct *work)
         struct vmpi_queue *queue;
 
         mutex_lock(&mpi->recv_worker_lock);
-again:
+ again:
         while (budget && (buf = vmpi_impl_read_buffer(vi)) != NULL) {
                 IFV(printk("received %d bytes\n", (int)buf->len));
                 channel = vmpi_buffer_hdr(buf)->channel;
@@ -274,8 +274,8 @@ again:
                 } else {
                         mutex_unlock(&mpi->recv_worker_lock);
                         mpi->read_cb(mpi->read_cb_data, channel,
-                                        vmpi_buffer_data(buf),
-                                        buf->len - sizeof(struct vmpi_hdr));
+                                     vmpi_buffer_data(buf),
+                                     buf->len - sizeof(struct vmpi_hdr));
                         mutex_lock(&mpi->recv_worker_lock);
                         vmpi_buffer_destroy(buf);
                 }
@@ -292,7 +292,7 @@ again:
         mutex_unlock(&mpi->recv_worker_lock);
 
         wake_up_interruptible_poll(&mpi->read_global_wqh, POLLIN |
-                        POLLRDNORM | POLLRDBAND);
+                                   POLLRDNORM | POLLRDBAND);
 }
 
 static void
@@ -378,14 +378,14 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret)
 
         return mpi;
 
-alloc_read_buf:
+ alloc_read_buf:
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
         vmpi_ring_fini(&mpi->write);
-alloc_write_buf:
+ alloc_write_buf:
         kfree(mpi);
-alloc_test:
+ alloc_test:
         vmpi_info_instance = NULL;
 
         return NULL;
