@@ -1508,7 +1508,7 @@ class RIBObjectNames
 
 	/*	Constructors and Destructor	*/
 	public:
-		virtual ~RIBObjectNames() {};
+		virtual ~RIBObjectNames(){};
 };
 
 /**
