@@ -6,8 +6,8 @@
 
 lib_LTLIBRARIES = librinad.la
 
-libcommon_la_CFLAGS   =
-libcommon_la_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS)
-libcommon_LDADD       = $(LIBRINA_LIBS)
-libcommon_la_SOURCES  =				\
+librinad_la_CFLAGS   =
+librinad_la_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS)
+librinad_la_LIBADD   = $(LIBRINA_LIBS)
+librinad_la_SOURCES  =				\
 	empty.cc
