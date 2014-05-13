@@ -1545,48 +1545,1254 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	return result;
 }
 
+int putPolicyParameterObject(nl_msg * netlinkMessage,
+                const PolicyParameter& object) {
+        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_NAME, object.getName().c_str());
+        NLA_PUT_STRING(netlinkMessage, PPA_ATTR_VALUE, object.getName().c_str());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building PolicyParameter Netlink object");
+        return -1;
+}
+
+PolicyParameter * parsePolicyParameterObject(nlattr *nested) {
+        struct nla_policy attr_policy[PPA_ATTR_MAX + 1];
+        attr_policy[PPA_ATTR_NAME].type = NLA_STRING;
+        attr_policy[PPA_ATTR_NAME].minlen = 0;
+        attr_policy[PPA_ATTR_NAME].maxlen = 65535;
+        attr_policy[PPA_ATTR_VALUE].type = NLA_STRING;
+        attr_policy[PPA_ATTR_VALUE].minlen = 0;
+        attr_policy[PPA_ATTR_VALUE].maxlen = 65535;
+        struct nlattr *attrs[PPA_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, PPA_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing PolicyParameter from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        PolicyParameter * result = new PolicyParameter();
+
+        if (attrs[PPA_ATTR_NAME]) {
+                result->setName(nla_get_string(attrs[PPA_ATTR_NAME]));
+        }
+
+        if (attrs[PPA_ATTR_VALUE]) {
+                result->setValue(nla_get_string(attrs[PPA_ATTR_VALUE]));
+        }
+
+        return result;
+}
+
+int putListOfPolicyParameters(nl_msg* netlinkMessage,
+                const std::list<PolicyParameter>& parameters){
+        std::list<PolicyParameter>::const_iterator iterator;
+        struct nlattr *policyparam;
+        int i = 0;
+
+        for (iterator = parameters.begin();
+                        iterator != parameters.end();
+                        ++iterator) {
+                if (!(policyparam = nla_nest_start(netlinkMessage, i))){
+                        goto nla_put_failure;
+                }
+                if (putPolicyParameterObject(netlinkMessage, *iterator) < 0) {
+                        goto nla_put_failure;
+                }
+                nla_nest_end(netlinkMessage, policyparam);
+                i++;
+        }
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building List of Policy Parameters Netlink object");
+        return -1;
+}
+
+int parseListOfEFCPPolicyConfigPolicyParameters(nlattr *nested,
+                EFCPPolicyConfig * efcpPolicyConfig) {
+        nlattr * nla;
+        int rem;
+        PolicyParameter * parameter;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+                parameter = parsePolicyParameterObject(nla);
+                if (parameter == 0){
+                        return -1;
+                }
+                efcpPolicyConfig->addParameter(*parameter);
+                delete parameter;
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
+}
+
+int putEFCPPolicyConfigObject(nl_msg * netlinkMessage,
+                const EFCPPolicyConfig& object) {
+        struct nlattr * parameters;
+
+        NLA_PUT_STRING(netlinkMessage, EPC_ATTR_NAME, object.getName().c_str());
+        NLA_PUT_U32(netlinkMessage, EPC_ATTR_VERSION, object.getVersion());
+
+        if (object.getParameters().size() > 0) {
+                if (!(parameters = nla_nest_start(netlinkMessage,
+                                EPC_ATTR_PARAMETERS))) {
+                        goto nla_put_failure;
+                }
+
+                if (putListOfPolicyParameters(netlinkMessage,
+                                object.getParameters())< 0) {
+                        goto nla_put_failure;
+                }
+
+                nla_nest_end(netlinkMessage, parameters);
+        }
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building EFCPPolicyConfig Netlink object");
+        return -1;
+}
+
+EFCPPolicyConfig *
+parseEFCPPolicyConfigObject(nlattr *nested) {
+        struct nla_policy attr_policy[EPC_ATTR_MAX + 1];
+        attr_policy[EPC_ATTR_NAME].type = NLA_STRING;
+        attr_policy[EPC_ATTR_NAME].minlen = 0;
+        attr_policy[EPC_ATTR_NAME].maxlen = 65535;
+        attr_policy[EPC_ATTR_VERSION].type = NLA_U32;
+        attr_policy[EPC_ATTR_VERSION].minlen = 4;
+        attr_policy[EPC_ATTR_VERSION].maxlen = 4;
+        attr_policy[EPC_ATTR_PARAMETERS].type = NLA_NESTED;
+        attr_policy[EPC_ATTR_PARAMETERS].minlen = 0;
+        attr_policy[EPC_ATTR_PARAMETERS].maxlen = 0;
+        struct nlattr *attrs[EPC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, EPC_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing EFCPPolicyConfig from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        EFCPPolicyConfig * result = new EFCPPolicyConfig();
+
+        if (attrs[EPC_ATTR_NAME]) {
+                result->setName(nla_get_string(attrs[EPC_ATTR_NAME]));
+        }
+
+        if (attrs[EPC_ATTR_VERSION]) {
+                result->setVersion(nla_get_u32(attrs[EPC_ATTR_VERSION]));
+        }
+
+        int status = 0;
+        if (attrs[EPC_ATTR_PARAMETERS]) {
+                status = parseListOfEFCPPolicyConfigPolicyParameters(
+                                attrs[EPC_ATTR_PARAMETERS], result);
+                if (status != 0){
+                        delete result;
+                        return 0;
+                }
+        }
+
+        return result;
+}
+
+int putDTCPWindowBasedFlowControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPWindowBasedFlowControlConfig& object) {
+        struct nlattr *rcvrFlowControlPolicy, *rcvingFlowControlPolicy;
+
+        NLA_PUT_U32(netlinkMessage, DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH,
+                                object.getMaxclosedwindowqueuelength());
+
+        NLA_PUT_U32(netlinkMessage, DWFCC_ATTR_INITIAL_CREDIT,
+                        object.getInitialcredit());
+
+        if (!(rcvrFlowControlPolicy = nla_nest_start(netlinkMessage,
+                        DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRcvrflowcontrolpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rcvrFlowControlPolicy);
+
+        if (!(rcvingFlowControlPolicy = nla_nest_start(netlinkMessage,
+                        DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getReceivingflowcontrolpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rcvingFlowControlPolicy);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building DTCPWindowBasedFlowControlConfig Netlink object");
+        return -1;
+}
+
+DTCPWindowBasedFlowControlConfig *
+parseDTCPWindowBasedFlowControlConfigObject(nlattr *nested) {
+        struct nla_policy attr_policy[DWFCC_ATTR_MAX + 1];
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].type = NLA_U32;
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].minlen = 4;
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].maxlen = 4;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].type = NLA_U32;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].minlen = 4;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].maxlen = 4;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].type = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].minlen = 0;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].maxlen = 0;
+        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].minlen = 0;
+        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].maxlen = 0;
+        struct nlattr *attrs[DWFCC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, DWFCC_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing DTCPWindowBasedFlowControlConfig from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        DTCPWindowBasedFlowControlConfig * result = new DTCPWindowBasedFlowControlConfig();
+        EFCPPolicyConfig * rcvrFlowControlPolicy;
+        EFCPPolicyConfig * recvingFlowControlPolicy;
+
+        if (attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]) {
+                result->setMaxclosedwindowqueuelength(
+                                nla_get_u32(attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]));
+        }
+
+        if (attrs[DWFCC_ATTR_INITIAL_CREDIT]) {
+                result->setInitialcredit(
+                                nla_get_u32(attrs[DWFCC_ATTR_INITIAL_CREDIT]));
+        }
+
+        if (attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY]){
+                rcvrFlowControlPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY]);
+                if (rcvrFlowControlPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRcvrflowcontrolpolicy(*rcvrFlowControlPolicy);
+                        delete rcvrFlowControlPolicy;
+                }
+        }
+
+        if (attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY]){
+                recvingFlowControlPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY]);
+                if (recvingFlowControlPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setReceivingflowcontrolpolicy(*recvingFlowControlPolicy);
+                        delete recvingFlowControlPolicy;
+                }
+        }
+
+        return result;
+}
+
+int putDTCPRateBasedFlowControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPRateBasedFlowControlConfig& object) {
+        struct nlattr *noRateSlowdownPolicy, *noOverrunDefPeakPolicy,
+                *rateReductionPolicy;
+
+        NLA_PUT_U32(netlinkMessage, DRFCC_ATTR_SEND_RATE,
+                        object.getSendingrate());
+
+        NLA_PUT_U32(netlinkMessage, DRFCC_ATTR_TIME_PERIOD,
+                                object.getTimeperiod());
+
+        if (!(noRateSlowdownPolicy = nla_nest_start(netlinkMessage,
+                        DRFCC_ATTR_NO_RATE_SDOWN_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getNorateslowdownpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, noRateSlowdownPolicy);
+
+        if (!(noOverrunDefPeakPolicy = nla_nest_start(netlinkMessage,
+                        DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getNooverridedefaultpeakpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, noOverrunDefPeakPolicy);
+
+        if (!(rateReductionPolicy = nla_nest_start(netlinkMessage,
+                        DRFCC_ATTR_RATE_REDUC_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRatereductionpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rateReductionPolicy);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building DTCPRateBasedFlowControlConfig Netlink object");
+        return -1;
+}
+
+DTCPRateBasedFlowControlConfig *
+parseDTCPRateBasedFlowControlConfigObject(nlattr *nested) {
+        struct nla_policy attr_policy[DRFCC_ATTR_MAX + 1];
+        attr_policy[DRFCC_ATTR_SEND_RATE].type = NLA_U32;
+        attr_policy[DRFCC_ATTR_SEND_RATE].minlen = 4;
+        attr_policy[DRFCC_ATTR_SEND_RATE].maxlen = 4;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].type = NLA_U32;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].minlen = 4;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].maxlen = 4;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].type = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].minlen = 0;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].maxlen = 0;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].type = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].minlen = 0;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].maxlen = 0;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].type = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].minlen = 0;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].maxlen = 0;
+        struct nlattr *attrs[DRFCC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, DRFCC_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing DTCPRateBasedFlowControlConfig from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        DTCPRateBasedFlowControlConfig * result = new DTCPRateBasedFlowControlConfig();
+        EFCPPolicyConfig * noRateSlowdownPolicy;
+        EFCPPolicyConfig * noOverrideDefaultPeakPolicy;
+        EFCPPolicyConfig * rateReductionPolicy;
+
+        if (attrs[DRFCC_ATTR_SEND_RATE]) {
+                result->setSendingrate(
+                                nla_get_u32(attrs[DRFCC_ATTR_SEND_RATE]));
+        }
+
+        if (attrs[DRFCC_ATTR_TIME_PERIOD]) {
+                result->setTimeperiod(
+                                nla_get_u32(attrs[DRFCC_ATTR_TIME_PERIOD]));
+        }
+
+        if (attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY]){
+                noRateSlowdownPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY]);
+                if (noRateSlowdownPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setNorateslowdownpolicy(*noRateSlowdownPolicy);
+                        delete noRateSlowdownPolicy;
+                }
+        }
+
+        if (attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY]){
+                noOverrideDefaultPeakPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY]);
+                if (noOverrideDefaultPeakPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setNooverridedefaultpeakpolicy(*noOverrideDefaultPeakPolicy);
+                        delete noOverrideDefaultPeakPolicy;
+                }
+        }
+
+        if (attrs[DRFCC_ATTR_RATE_REDUC_POLICY]){
+                rateReductionPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRFCC_ATTR_RATE_REDUC_POLICY]);
+                if (rateReductionPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRatereductionpolicy(*rateReductionPolicy);
+                        delete rateReductionPolicy;
+                }
+        }
+
+        return result;
+}
+
+int putDTCPFlowControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPFlowControlConfig& object) {
+        struct nlattr *windowFlowControlConfig, *rateFlowControlConfig,
+                *closedWindowPolicy, *flowCtrlOverrunPolicy,
+                *reconcileFlowCtrlPolicy;
+
+        if (object.isWindowbased()) {
+                NLA_PUT_FLAG(netlinkMessage, DFCC_ATTR_WINDOW_BASED);
+
+                if (!(windowFlowControlConfig = nla_nest_start(netlinkMessage,
+                                DFCC_ATTR_WINDOW_BASED_CONFIG))) {
+                        goto nla_put_failure;
+                }
+
+                if (putDTCPWindowBasedFlowControlConfigObject(netlinkMessage,
+                                object.getWindowbasedconfig())< 0) {
+                        goto nla_put_failure;
+                }
+
+                nla_nest_end(netlinkMessage, windowFlowControlConfig);
+        }
+
+        if (object.isRatebased()) {
+                NLA_PUT_FLAG(netlinkMessage, DFCC_ATTR_RATE_BASED);
+
+                if (!(rateFlowControlConfig = nla_nest_start(netlinkMessage,
+                                DFCC_ATTR_RATE_BASED_CONFIG))) {
+                        goto nla_put_failure;
+                }
+
+                if (putDTCPRateBasedFlowControlConfigObject(netlinkMessage,
+                                object.getRatebasedconfig())< 0) {
+                        goto nla_put_failure;
+                }
+
+                nla_nest_end(netlinkMessage, rateFlowControlConfig);
+        }
+
+        NLA_PUT_U32(netlinkMessage, DFCC_ATTR_SBYTES_THRES,
+                                object.getSentbytesthreshold());
+
+        NLA_PUT_U32(netlinkMessage, DFCC_ATTR_SBYTES_PER_THRES,
+                        object.getSentbytespercentthreshold());
+
+        NLA_PUT_U32(netlinkMessage, DFCC_ATTR_SBUFFER_THRES,
+                        object.getSentbuffersthreshold());
+
+        NLA_PUT_U32(netlinkMessage, DFCC_ATTR_RBYTES_THRES,
+                        object.getRcvbytesthreshold());
+
+        NLA_PUT_U32(netlinkMessage, DFCC_ATTR_RBYTES_PER_THRES,
+                        object.getRcvbytespercentthreshold());
+
+        NLA_PUT_U32(netlinkMessage, DFCC_ATTR_RBUFFERS_THRES,
+                        object.getRcvbuffersthreshold());
+
+        if (!(closedWindowPolicy = nla_nest_start(netlinkMessage,
+                        DFCC_ATTR_CLOSED_WINDOW_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getClosedwindowpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, closedWindowPolicy);
+
+        if (!(flowCtrlOverrunPolicy = nla_nest_start(netlinkMessage,
+                        DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getFlowcontroloverrunpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, flowCtrlOverrunPolicy);
+
+        if (!(reconcileFlowCtrlPolicy = nla_nest_start(netlinkMessage,
+                        DFCC_ATTR_RECON_FLOW_CTRL_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getReconcileflowcontrolpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, reconcileFlowCtrlPolicy);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building DTCPFlowControlConfig Netlink object");
+        return -1;
+}
+
+DTCPFlowControlConfig *
+parseDTCPFlowControlConfigObject(nlattr *nested) {
+        struct nla_policy attr_policy[DFCC_ATTR_MAX + 1];
+        attr_policy[DFCC_ATTR_WINDOW_BASED].type = NLA_FLAG;
+        attr_policy[DFCC_ATTR_WINDOW_BASED].minlen = 0;
+        attr_policy[DFCC_ATTR_WINDOW_BASED].maxlen = 0;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].minlen = 0;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].maxlen = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED].type = NLA_FLAG;
+        attr_policy[DFCC_ATTR_RATE_BASED].minlen = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED].maxlen = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].minlen = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].maxlen = 0;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].type = NLA_U32;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].minlen = 4;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].maxlen = 4;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].type = NLA_U32;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].minlen = 4;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].maxlen = 4;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].type = NLA_U32;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].minlen = 4;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].maxlen = 4;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].type = NLA_U32;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].minlen = 4;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].maxlen = 4;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].type = NLA_U32;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].minlen = 4;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].maxlen = 4;
+        attr_policy[DFCC_ATTR_RBUFFERS_THRES].type = NLA_U32;
+        attr_policy[DFCC_ATTR_RBUFFERS_THRES].minlen = 4;
+        attr_policy[DFCC_ATTR_RBUFFERS_THRES].maxlen = 4;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].minlen = 0;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].maxlen = 0;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].minlen = 0;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].maxlen = 0;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].minlen = 0;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].maxlen = 0;
+        struct nlattr *attrs[DFCC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, DFCC_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing DTCPFlowControlConfig from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        DTCPFlowControlConfig * result = new DTCPFlowControlConfig();
+        DTCPWindowBasedFlowControlConfig * windowBasedConfig;
+        DTCPRateBasedFlowControlConfig * rateBasedConfig;
+        EFCPPolicyConfig * closedWindowPolicy;
+        EFCPPolicyConfig * flowControlOverrunPolicy;
+        EFCPPolicyConfig * reconcileFlowControlPolicy;
+
+        if (attrs[DFCC_ATTR_WINDOW_BASED]) {
+                result->setWindowbased(true);
+
+                if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG]){
+                        windowBasedConfig = parseDTCPWindowBasedFlowControlConfigObject(
+                                        attrs[DFCC_ATTR_WINDOW_BASED_CONFIG]);
+                        if (windowBasedConfig == 0) {
+                                delete result;
+                                LOG_ERR("Window-based flow control configuraiton should have been present but is not");
+                                return 0;
+                        } else {
+                                result->setWindowbasedconfig(*windowBasedConfig);
+                                delete windowBasedConfig;
+                        }
+                }
+        } else {
+                result->setWindowbased(false);
+        }
+
+        if (attrs[DFCC_ATTR_RATE_BASED]) {
+                result->setRatebased(true);
+
+                if (attrs[DFCC_ATTR_RATE_BASED_CONFIG]){
+                        rateBasedConfig = parseDTCPRateBasedFlowControlConfigObject(
+                                        attrs[DFCC_ATTR_RATE_BASED_CONFIG]);
+                        if (rateBasedConfig == 0) {
+                                delete result;
+                                LOG_ERR("Rate-based flow control configuraiton should have been present but is not");
+                                return 0;
+                        } else {
+                                result->setRatebasedconfig(*rateBasedConfig);
+                                delete rateBasedConfig;
+                        }
+                }
+        } else {
+                result->setRatebased(false);
+        }
+
+        if (attrs[DFCC_ATTR_SBYTES_THRES]) {
+                result->setSentbytesthreshold(
+                                nla_get_u32(attrs[DFCC_ATTR_SBYTES_THRES]));
+        }
+
+        if (attrs[DFCC_ATTR_SBYTES_PER_THRES]) {
+                result->setSentbytespercentthreshold(
+                                nla_get_u32(attrs[DFCC_ATTR_SBYTES_PER_THRES]));
+        }
+
+        if (attrs[DFCC_ATTR_SBUFFER_THRES]) {
+                result->setSentbuffersthreshold(
+                                nla_get_u32(attrs[DFCC_ATTR_SBUFFER_THRES]));
+        }
+
+        if (attrs[DFCC_ATTR_RBYTES_THRES]) {
+                result->setRcvbytesthreshold(
+                                nla_get_u32(attrs[DFCC_ATTR_RBYTES_THRES]));
+        }
+
+        if (attrs[DFCC_ATTR_RBYTES_PER_THRES]) {
+                result->setRcvbytespercentthreshold(
+                                nla_get_u32(attrs[DFCC_ATTR_RBYTES_PER_THRES]));
+        }
+
+        if (attrs[DFCC_ATTR_RBUFFERS_THRES]) {
+                result->setRcvbuffersthreshold(
+                                nla_get_u32(attrs[DFCC_ATTR_RBUFFERS_THRES]));
+        }
+
+        if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY]){
+                closedWindowPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY]);
+                if (closedWindowPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setClosedwindowpolicy(*closedWindowPolicy);
+                        delete closedWindowPolicy;
+                }
+        }
+
+        if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY]){
+                flowControlOverrunPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY]);
+                if (flowControlOverrunPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setFlowcontroloverrunpolicy(*flowControlOverrunPolicy);
+                        delete flowControlOverrunPolicy;
+                }
+        }
+
+        if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY]){
+                reconcileFlowControlPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY]);
+                if (reconcileFlowControlPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setReconcileflowcontrolpolicy(*reconcileFlowControlPolicy);
+                        delete reconcileFlowControlPolicy;
+                }
+        }
+
+        return result;
+}
+
+int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPRtxControlConfig& object) {
+        struct nlattr *rttEstPolicy, *rtxTimExpPolicy, *sackPolicy,
+                *rackListPolicy, *rackPolicy, *sendingAckPolicy,
+                *rControlAckPolicy;
+
+        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_DATA_RXMSN_MAX,
+                        object.getDatarxmsnmax());
+
+        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_INIT_A_TIMER,
+                                object.getInitialATimer());
+
+        if (!(rttEstPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_RTT_EST_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRttestimatorpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rttEstPolicy);
+
+        if (!(rtxTimExpPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_RTX_TIME_EXP_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRtxtimerexpirypolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rtxTimExpPolicy);
+
+        if (!(sackPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_SACK_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getSenderackpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, sackPolicy);
+
+        if (!(rackListPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_RACK_LIST_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRecvingacklistpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rackListPolicy);
+
+        if (!(rackPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_RACK_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRcvrackpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rackPolicy);
+
+        if (!(sendingAckPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_SDING_ACK_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getSendingackpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, sendingAckPolicy);
+
+        if (!(rControlAckPolicy = nla_nest_start(netlinkMessage,
+                        DRCC_ATTR_RCONTROL_ACK_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRcvrcontrolackpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rControlAckPolicy);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building DTCPRtxControlConfig Netlink object");
+        return -1;
+}
+
+DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
+        struct nla_policy attr_policy[DRCC_ATTR_MAX + 1];
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type = NLA_U32;
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].minlen = 4;
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].maxlen = 4;
+        attr_policy[DRCC_ATTR_INIT_A_TIMER].type = NLA_U32;
+        attr_policy[DRCC_ATTR_INIT_A_TIMER].minlen = 4;
+        attr_policy[DRCC_ATTR_INIT_A_TIMER].maxlen = 4;
+        attr_policy[DRCC_ATTR_RTT_EST_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RTT_EST_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_RTT_EST_POLICY].maxlen = 0;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].maxlen = 0;
+        attr_policy[DRCC_ATTR_SACK_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_SACK_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_SACK_POLICY].maxlen = 0;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].maxlen = 0;
+        attr_policy[DRCC_ATTR_RACK_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RACK_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_RACK_POLICY].maxlen = 0;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].maxlen = 0;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].minlen = 0;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].maxlen = 0;
+        struct nlattr *attrs[DRCC_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, DRCC_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing DTCPRtxControlConfig from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        DTCPRtxControlConfig * result = new DTCPRtxControlConfig();
+        EFCPPolicyConfig * rttEstimatorPolicy;
+        EFCPPolicyConfig * rtxTimerExpirationPolicy;
+        EFCPPolicyConfig * sackPolicy;
+        EFCPPolicyConfig * rackListPolicy;
+        EFCPPolicyConfig * rackPolicy;
+        EFCPPolicyConfig * sendingAckPolicy;
+        EFCPPolicyConfig * rControlAckPolicy;
+
+        if (attrs[DRCC_ATTR_DATA_RXMSN_MAX]) {
+                result->setDatarxmsnmax(
+                                nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+        }
+
+        if (attrs[DRCC_ATTR_INIT_A_TIMER]) {
+                result->setInitialATimer(
+                                nla_get_u32(attrs[DRCC_ATTR_INIT_A_TIMER]));
+        }
+
+        if (attrs[DRCC_ATTR_RTT_EST_POLICY]){
+                rttEstimatorPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_RTT_EST_POLICY]);
+                if (rttEstimatorPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRttestimatorpolicy(*rttEstimatorPolicy);
+                        delete rttEstimatorPolicy;
+                }
+        }
+
+        if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY]){
+                rtxTimerExpirationPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY]);
+                if (rtxTimerExpirationPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRtxtimerexpirypolicy(*rtxTimerExpirationPolicy);
+                        delete rtxTimerExpirationPolicy;
+                }
+        }
+
+        if (attrs[DRCC_ATTR_SACK_POLICY]){
+                sackPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_SACK_POLICY]);
+                if (sackPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setSenderackpolicy(*sackPolicy);
+                        delete sackPolicy;
+                }
+        }
+
+        if (attrs[DRCC_ATTR_RACK_LIST_POLICY]){
+                rackListPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_RACK_LIST_POLICY]);
+                if (rackListPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRecvingacklistpolicy(*rackListPolicy);
+                        delete rackListPolicy;
+                }
+        }
+
+        if (attrs[DRCC_ATTR_RACK_POLICY]){
+                rackPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_RACK_POLICY]);
+                if (rackPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRcvrackpolicy(*rackPolicy);
+                        delete rackPolicy;
+                }
+        }
+
+        if (attrs[DRCC_ATTR_SDING_ACK_POLICY]){
+                sendingAckPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_SDING_ACK_POLICY]);
+                if (sendingAckPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setSendingackpolicy(*sendingAckPolicy);
+                        delete sendingAckPolicy;
+                }
+        }
+
+        if (attrs[DRCC_ATTR_RCONTROL_ACK_POLICY]){
+                rControlAckPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DRCC_ATTR_RCONTROL_ACK_POLICY]);
+                if (rControlAckPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRcvrcontrolackpolicy(*rControlAckPolicy);
+                        delete rControlAckPolicy;
+                }
+        }
+
+        return result;
+}
+
+int putDTCPConfigObject(nl_msg* netlinkMessage,
+                const DTCPConfig& object) {
+        struct nlattr *flowControlConfig, *rtxControlConfig, *rtimerInacPolicy,
+        *stimerInacPolicy, *lostControlPduPolicy, *initSeqNumPolicy;
+
+        if (object.isFlowcontrol()) {
+                NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_FLOW_CONTROL);
+                if (!(flowControlConfig = nla_nest_start(netlinkMessage,
+                                DCA_ATTR_FLOW_CONTROL_CONFIG))) {
+                        goto nla_put_failure;
+                }
+
+                if (putDTCPFlowControlConfigObject(netlinkMessage,
+                                object.getFlowcontrolconfig())< 0) {
+                        goto nla_put_failure;
+                }
+
+                nla_nest_end(netlinkMessage, flowControlConfig);
+        }
+
+        if (object.isRtxcontrol()) {
+                NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_RETX_CONTROL);
+                if (!(rtxControlConfig = nla_nest_start(netlinkMessage,
+                                DCA_ATTR_RETX_CONTROL_CONFIG))) {
+                        goto nla_put_failure;
+                }
+
+                if (putDTCPRtxControlConfigObject(netlinkMessage,
+                                object.getRtxcontrolconfig())< 0) {
+                        goto nla_put_failure;
+                }
+
+                nla_nest_end(netlinkMessage, rtxControlConfig);
+        }
+
+        NLA_PUT_U32(netlinkMessage, DCA_ATTR_INIT_SINAC_TIME,
+                                object.getInitialsenderinactivitytime());
+
+        NLA_PUT_U32(netlinkMessage, DCA_ATTR_INIT_RINAC_TIME,
+                                object.getInitialrecvrinactivitytime());
+
+        if (!(stimerInacPolicy = nla_nest_start(netlinkMessage,
+                        DCA_ATTR_SNDR_TIMER_INAC_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getSendertimerinactiviypolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, stimerInacPolicy);
+
+        if (!(rtimerInacPolicy = nla_nest_start(netlinkMessage,
+                        DCA_ATTR_RCVR_TIMER_INAC_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getRcvrtimerinactivitypolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rtimerInacPolicy);
+
+        if (!(lostControlPduPolicy = nla_nest_start(netlinkMessage,
+                        DCA_ATTR_LOST_CONTROL_PDU_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getLostcontrolpdupolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, lostControlPduPolicy);
+
+        if (!(initSeqNumPolicy = nla_nest_start(netlinkMessage,
+                        DCA_ATTR_INIT_SEQ_NUM_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getInitialseqnumpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, initSeqNumPolicy);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building DTCPConfig Netlink object");
+        return -1;
+}
+
+DTCPConfig *
+parseDTCPConfigObject(nlattr *nested) {
+        struct nla_policy attr_policy[DCA_ATTR_MAX + 1];
+        attr_policy[DCA_ATTR_FLOW_CONTROL].type = NLA_FLAG;
+        attr_policy[DCA_ATTR_FLOW_CONTROL].minlen = 0;
+        attr_policy[DCA_ATTR_FLOW_CONTROL].maxlen = 0;
+        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].minlen = 0;
+        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].maxlen = 0;
+        attr_policy[DCA_ATTR_RETX_CONTROL].type = NLA_FLAG;
+        attr_policy[DCA_ATTR_RETX_CONTROL].minlen = 0;
+        attr_policy[DCA_ATTR_RETX_CONTROL].maxlen = 0;
+        attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].minlen = 0;
+        attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].maxlen = 0;
+        attr_policy[DCA_ATTR_INIT_SINAC_TIME].type = NLA_U32;
+        attr_policy[DCA_ATTR_INIT_SINAC_TIME].minlen = 4;
+        attr_policy[DCA_ATTR_INIT_SINAC_TIME].maxlen = 4;
+        attr_policy[DCA_ATTR_INIT_RINAC_TIME].type = NLA_U32;
+        attr_policy[DCA_ATTR_INIT_RINAC_TIME].minlen = 4;
+        attr_policy[DCA_ATTR_INIT_RINAC_TIME].maxlen = 4;
+        attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].minlen = 0;
+        attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].maxlen = 0;
+        attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].minlen = 0;
+        attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].maxlen = 0;
+        attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].minlen = 0;
+        attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].maxlen = 0;
+        attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].minlen = 0;
+        attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].maxlen = 0;
+        struct nlattr *attrs[DCA_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, DCA_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing DTCPConfig information from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        DTCPConfig * result = new DTCPConfig();
+        DTCPFlowControlConfig * flowCtrlConfig;
+        DTCPRtxControlConfig * rtxCtrlConfig;
+        EFCPPolicyConfig * sTimerInacPolicy;
+        EFCPPolicyConfig * rTimerInacPolicy;
+        EFCPPolicyConfig * lostControlPduPolicy;
+        EFCPPolicyConfig * initSeqNumPolicy;
+
+        if (attrs[DCA_ATTR_FLOW_CONTROL]) {
+                result->setFlowcontrol(true);
+
+                if (attrs[DCA_ATTR_FLOW_CONTROL_CONFIG]){
+                        flowCtrlConfig = parseDTCPFlowControlConfigObject(
+                                        attrs[DCA_ATTR_FLOW_CONTROL_CONFIG]);
+                        if (flowCtrlConfig == 0) {
+                                delete result;
+                                return 0;
+                        } else {
+                                result->setFlowcontrolconfig(*flowCtrlConfig);
+                                delete flowCtrlConfig;
+                        }
+                } else {
+                        delete result;
+                        LOG_ERR("DTCP Flow Control Config should have been present but it is not");
+                        return 0;
+                }
+        } else {
+                result->setFlowcontrol(false);
+        }
+
+        if (attrs[DCA_ATTR_RETX_CONTROL]) {
+                result->setRtxcontrol(true);
+
+                if (attrs[DCA_ATTR_RETX_CONTROL_CONFIG]){
+                        rtxCtrlConfig = parseDTCPRtxControlConfigObject(
+                                        attrs[DCA_ATTR_RETX_CONTROL_CONFIG]);
+                        if (rtxCtrlConfig == 0) {
+                                delete result;
+                                return 0;
+                        } else {
+                                result->setRtxcontrolconfig(*rtxCtrlConfig);
+                                delete rtxCtrlConfig;
+                        }
+                } else {
+                        delete result;
+                        LOG_ERR("DTCP Rtx Control Config should have been present but it is not");
+                        return 0;
+                }
+        } else {
+                result->setRtxcontrol(false);
+        }
+
+        if (attrs[DCA_ATTR_INIT_SINAC_TIME]) {
+                result->setInitialsenderinactivitytime(
+                                nla_get_u32(attrs[DCA_ATTR_INIT_SINAC_TIME]));
+        }
+
+        if (attrs[DCA_ATTR_INIT_RINAC_TIME]) {
+                result->setInitialrecvrinactivitytime(
+                                nla_get_u32(attrs[DCA_ATTR_INIT_RINAC_TIME]));
+        }
+
+        if (attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]){
+                sTimerInacPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]);
+                if (sTimerInacPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setSendertimerinactiviypolicy(*sTimerInacPolicy);
+                        delete sTimerInacPolicy;
+                }
+        }
+
+        if (attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]){
+                rTimerInacPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]);
+                if (rTimerInacPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setRcvrtimerinactivitypolicy(*rTimerInacPolicy);
+                        delete rTimerInacPolicy;
+                }
+        }
+
+        if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]){
+                lostControlPduPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]);
+                if (lostControlPduPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setLostcontrolpdupolicy(*lostControlPduPolicy);
+                        delete lostControlPduPolicy;
+                }
+        }
+
+        if (attrs[DCA_ATTR_INIT_SEQ_NUM_POLICY]){
+                initSeqNumPolicy = parseEFCPPolicyConfigObject(
+                                attrs[DCA_ATTR_INIT_SEQ_NUM_POLICY]);
+                if (initSeqNumPolicy == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setInitialseqnumpolicy(*initSeqNumPolicy);
+                        delete initSeqNumPolicy;
+                }
+        }
+
+        return result;
+}
+
 int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 		const ConnectionPolicies& object) {
-	//TODO
+
+        struct nlattr *dtcpConfig;
+
+        if (object.isDtcPpresent()){
+                NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_DTCP_PRESENT);
+                if (!(dtcpConfig = nla_nest_start(netlinkMessage,
+                                CPA_ATTR_DTCP_CONFIG))) {
+                        goto nla_put_failure;
+                }
+
+                if (putDTCPConfigObject(netlinkMessage,
+                                object.getDtcpConfiguration())< 0) {
+                        goto nla_put_failure;
+                }
+
+                nla_nest_end(netlinkMessage, dtcpConfig);
+        }
+
+        NLA_PUT_U32(netlinkMessage, CPA_ATTR_SEQ_NUM_ROLLOVER,
+                        object.getSeqnumrolloverthreshold());
 
 	return 0;
 
-	/*nla_put_failure: LOG_ERR(
-			"Error building ConnectionPoliciesParameters Netlink object");
-	return -1;*/
+	nla_put_failure: LOG_ERR(
+			"Error building ConnectionPolicies Netlink object");
+	return -1;
 }
 
 ConnectionPolicies *
 parseConnectionPoliciesObject(nlattr *nested) {
-	struct nla_policy attr_policy[CCP_ATTR_MAX + 1];
-	attr_policy[CPP_ATTR_DTCP_PRESENT].type = NLA_FLAG;
-	attr_policy[CPP_ATTR_DTCP_PRESENT].minlen = 0;
-	attr_policy[CPP_ATTR_DTCP_PRESENT].maxlen = 0;
-	attr_policy[CPP_ATTR_FLOW_CONTROL].type = NLA_FLAG;
-	attr_policy[CPP_ATTR_FLOW_CONTROL].minlen = 0;
-	attr_policy[CPP_ATTR_FLOW_CONTROL].maxlen = 0;
-	attr_policy[CPP_ATTR_RTX_CONTROL].type = NLA_FLAG;
-	attr_policy[CPP_ATTR_RTX_CONTROL].minlen = 0;
-	attr_policy[CPP_ATTR_RTX_CONTROL].maxlen = 0;
-	attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].type = NLA_FLAG;
-	attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].minlen = 0;
-	attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].maxlen = 0;
-	attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type = NLA_FLAG;
-	attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].minlen = 0;
-	attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].maxlen = 0;
-	struct nlattr *attrs[CCP_ATTR_MAX + 1];
+	struct nla_policy attr_policy[CPA_ATTR_MAX + 1];
+	attr_policy[CPA_ATTR_DTCP_PRESENT].type = NLA_FLAG;
+	attr_policy[CPA_ATTR_DTCP_PRESENT].minlen = 0;
+	attr_policy[CPA_ATTR_DTCP_PRESENT].maxlen = 0;
+	attr_policy[CPA_ATTR_DTCP_CONFIG].type = NLA_NESTED;
+	attr_policy[CPA_ATTR_DTCP_CONFIG].minlen = 0;
+	attr_policy[CPA_ATTR_DTCP_CONFIG].maxlen = 0;
+	attr_policy[CPA_ATTR_SEQ_NUM_ROLLOVER].type = NLA_U32;
+	attr_policy[CPA_ATTR_SEQ_NUM_ROLLOVER].minlen = 4;
+	attr_policy[CPA_ATTR_SEQ_NUM_ROLLOVER].maxlen = 4;
+	struct nlattr *attrs[CPA_ATTR_MAX + 1];
 
-	int err = nla_parse_nested(attrs, CCP_ATTR_MAX, nested, attr_policy);
+	int err = nla_parse_nested(attrs, CPA_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing ConnectionPoliciesParameters information from Netlink message: %d",
-				err);
-		return NULL;
+		LOG_ERR("Error parsing ConnectionPolicies information from Netlink message: %d",
+		                err);
+		return 0;
 	}
 
 	ConnectionPolicies * result =
 			new ConnectionPolicies();
-	//TODO
+	DTCPConfig * dtcpConfig;
+
+	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
+	        result->setDtcPpresent(true);
+
+	        if (attrs[CPA_ATTR_DTCP_CONFIG]){
+	                dtcpConfig = parseDTCPConfigObject(attrs[CPA_ATTR_DTCP_CONFIG]);
+	                if (dtcpConfig == 0) {
+	                        delete result;
+	                        return 0;
+	                } else {
+	                        result->setDtcpConfiguration(*dtcpConfig);
+	                        delete dtcpConfig;
+	                }
+	        } else {
+	                delete result;
+	                LOG_ERR("DTCP Config should have been present but it is not");
+	                return 0;
+	        }
+	} else {
+	        result->setDtcPpresent(false);
+	}
+
+	if (attrs[CPA_ATTR_SEQ_NUM_ROLLOVER]) {
+	        result->setSeqnumrolloverthreshold(
+	                        nla_get_u32(attrs[CPA_ATTR_SEQ_NUM_ROLLOVER]));
+	}
 
 	return result;
 }
@@ -2712,16 +3918,26 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateRequestMessage& object) {
+        struct nlattr *connectionPolicies;
+
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_PORT_ID, object.getPortId());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_SRC_ADDRESS,
                         object.getSourceAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDRESS,
                                 object.getDestAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID, object.getQosId());
+
+        if (!(connectionPolicies = nla_nest_start(
+                        netlinkMessage, ICCRM_ATTR_POLICIES))){
+                goto nla_put_failure;
+        }
+
         if (putConnectionPoliciesObject(netlinkMessage,
                         object.getConnPolicies()) < 0) {
                 goto nla_put_failure;
         }
+
+        nla_nest_end(netlinkMessage, connectionPolicies);
 
         return 0;
 
@@ -2772,6 +3988,8 @@ int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateArrivedMessage& object) {
+        struct nlattr *connectionPolicies;
+
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_PORT_ID, object.getPortId());
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_SRC_ADDRESS,
                         object.getSourceAddress());
@@ -2782,6 +4000,18 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
                         object.getDestCepId());
         NLA_PUT_U16(netlinkMessage, ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
                         object.getFlowUserIpcProcessId());
+
+        if (!(connectionPolicies = nla_nest_start(
+                        netlinkMessage, ICCAM_ATTR_POLICIES))){
+                goto nla_put_failure;
+        }
+
+        if (putConnectionPoliciesObject(netlinkMessage,
+                        object.getConnPolicies()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, connectionPolicies);
 
         return 0;
 
@@ -5184,9 +6414,9 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         attr_policy[ICCRM_ATTR_QOS_ID].type = NLA_U32;
         attr_policy[ICCRM_ATTR_QOS_ID].minlen = 4;
         attr_policy[ICCRM_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[ICCRM_ATTR_POLICIES_PARAMETERS].type = NLA_NESTED;
-        attr_policy[ICCRM_ATTR_POLICIES_PARAMETERS].minlen = 0;
-        attr_policy[ICCRM_ATTR_POLICIES_PARAMETERS].maxlen = 0;
+        attr_policy[ICCRM_ATTR_POLICIES].type = NLA_NESTED;
+        attr_policy[ICCRM_ATTR_POLICIES].minlen = 0;
+        attr_policy[ICCRM_ATTR_POLICIES].maxlen = 0;
         struct nlattr *attrs[ICCRM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -5220,9 +6450,9 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 result->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
         }
 
-	if (attrs[ICCRM_ATTR_POLICIES_PARAMETERS]) {
+	if (attrs[ICCRM_ATTR_POLICIES]) {
 	        connPolicies = parseConnectionPoliciesObject(
-				attrs[ICCRM_ATTR_POLICIES_PARAMETERS]);
+				attrs[ICCRM_ATTR_POLICIES]);
 		if (connPolicies == 0) {
 			delete result;
 			return 0;
@@ -5373,9 +6603,9 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
         attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].minlen = 2;
         attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].maxlen = 2;
-        attr_policy[ICCAM_ATTR_POLICIES_PARAMETERS].type = NLA_NESTED;
-        attr_policy[ICCAM_ATTR_POLICIES_PARAMETERS].minlen = 0;
-        attr_policy[ICCAM_ATTR_POLICIES_PARAMETERS].maxlen = 0;
+        attr_policy[ICCAM_ATTR_POLICIES].type = NLA_NESTED;
+        attr_policy[ICCAM_ATTR_POLICIES].minlen = 0;
+        attr_policy[ICCAM_ATTR_POLICIES].maxlen = 0;
         struct nlattr *attrs[ICCAM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -5417,9 +6647,9 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
                 result->setFlowUserIpcProcessId(nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
         }
 
-	if (attrs[ICCAM_ATTR_POLICIES_PARAMETERS]) {
+	if (attrs[ICCAM_ATTR_POLICIES]) {
 	        connPolicies = parseConnectionPoliciesObject(
-				attrs[ICCAM_ATTR_POLICIES_PARAMETERS]);
+				attrs[ICCAM_ATTR_POLICIES]);
 		if (connPolicies == 0) {
 			delete result;
 			return 0;

@@ -658,6 +658,7 @@ void PolicyParameter::setValue(const std::string& value){
 
 /* CLASS EFCP POLICY CONFIGURATION */
 EFCPPolicyConfig::EFCPPolicyConfig() {
+        name = "default";
         version = 0;
 }
 

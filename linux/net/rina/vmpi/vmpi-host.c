@@ -135,7 +135,7 @@ vmpi_fini(struct vmpi_info *mpi)
 
 ssize_t
 vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
-                  const struct iovec *iv, unsigned long iovcnt, int user)
+                  const struct iovec *iv, unsigned long iovcnt, bool user)
 {
         //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_RX];
         struct vmpi_ring *ring = &mpi->write;
