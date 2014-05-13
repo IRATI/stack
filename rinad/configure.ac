@@ -12,7 +12,7 @@ AC_INIT([RINA Daemons],
 
 AC_PREREQ([2.68])
 
-AC_CONFIG_SRCDIR([src-old/pom.xml.in])
+AC_CONFIG_SRCDIR([src/ipcm/main.cc])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -52,7 +52,6 @@ AS_IF([test -z "$MVN"],[
 
 AC_CONFIG_FILES([
     Makefile
-    src-old/Makefile
     src/Makefile
     src/common/Makefile
     src/ipcp/Makefile
