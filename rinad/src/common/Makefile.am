@@ -33,7 +33,6 @@ librinad.pc: Makefile librinad.pc.in
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
 	  $(edit) $${srcdir}$@.in >$@.tmp
-	chmod +x $@.tmp
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
