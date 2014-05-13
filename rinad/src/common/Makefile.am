@@ -4,9 +4,10 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-noinst_LIBRARIES = libcommon.a
+lib_LTLIBRARIES = librinad.la
 
-libcommon_a_CFLAGS   =
-libcommon_a_CPPFLAGS = $(CPPFLAGS_EXTRA)
-libcommon_a_SOURCES  =				\
+libcommon_la_CFLAGS   =
+libcommon_la_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS)
+libcommon_LDADD       = $(LIBRINA_LIBS)
+libcommon_la_SOURCES  =				\
 	empty.cc
