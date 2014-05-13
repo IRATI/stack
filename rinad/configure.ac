@@ -35,8 +35,6 @@ AC_PROG_CXX_C_O
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 AC_PROG_RANLIB
 
-AX_PROG_JAVA
-
 PKG_PROG_PKG_CONFIG([0.26])
 
 PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
@@ -44,11 +42,6 @@ PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
 ])
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
-
-AC_PATH_PROG([MVN],[mvn],[])
-AS_IF([test -z "$MVN"],[
-    AC_MSG_ERROR([Your system lacks maven support])
-])
 
 AC_CONFIG_FILES([
     Makefile
