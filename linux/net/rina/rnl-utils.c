@@ -1057,7 +1057,7 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
 }
 
 static int parse_conn_policies_params(struct nlattr *        cpp_attr,
-                                      struct conn_p_params * cpp_struct)
+                                      struct conn_policies * cpp_struct)
 {
         struct nla_policy attr_policy[CPP_ATTR_MAX + 1];
         struct nlattr * attrs[CPP_ATTR_MAX + 1];
@@ -1082,7 +1082,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->dtcp_present =
                         nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        if (attrs[CPP_ATTR_FLOW_CONTROL])
+        /* FIXME: To be removed */
+        /* if (attrs[CPP_ATTR_FLOW_CONTROL])
                 cpp_struct->flow_ctrl =
                         nla_get_flag(attrs[CPP_ATTR_FLOW_CONTROL]);
 
@@ -1097,7 +1098,7 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         if (attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL])
                 cpp_struct->rate_based_fctrl =
                         nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]);
-
+        */
         return 0;
 }
 

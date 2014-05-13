@@ -176,7 +176,7 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    address_t                   source,
                                    address_t                   dest,
                                    qos_id_t                    qos_id,
-                                   struct conn_p_params        cp_params)
+                                   struct conn_policies        cp_params)
 {
         cep_id_t               cep_id;
         struct connection *    conn;
@@ -315,7 +315,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          struct conn_p_params        cp_params)
+                          struct conn_policies        cp_params)
 {
         struct connection *    conn;
         cep_id_t               cep_id;

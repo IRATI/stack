@@ -25,6 +25,9 @@
 #include "du.h"
 #include "dt.h"
 
+struct dtcp_config;
+struct dtcp_fctrl_config;
+struct dtcp_rctrl_config;
 struct connection;
 struct rmt;
 

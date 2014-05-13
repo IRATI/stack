@@ -34,6 +34,7 @@
 #include "dt.h"
 #include "dtp.h"
 #include "dtcp.h"
+#include "dtcp-utils.h"
 #include "rmt.h"
 #include "dt-utils.h"
 
@@ -48,11 +49,11 @@ struct efcp {
 };
 
 struct efcp_container {
-        struct efcp_imap *        instances;
-        struct cidm *             cidm;
-        struct dt_cons            dt_cons;
-        struct rmt *              rmt;
-        struct kfa *              kfa;
+        struct efcp_imap * instances;
+        struct cidm *      cidm;
+        struct dt_cons     dt_cons;
+        struct rmt *       rmt;
+        struct kfa *       kfa;
 };
 
 static struct efcp * efcp_create(void)
@@ -438,7 +439,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (connection->policies_params.window_based_fctrl) {
+        if (dtcp_window_based_fctrl(connection->policies_params.dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
@@ -452,7 +453,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (connection->policies_params.rtx_ctrl) {
+        if (dtcp_rtx_ctrl(connection->policies_params.dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");

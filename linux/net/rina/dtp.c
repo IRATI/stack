@@ -22,6 +22,8 @@
  */
 
 #define RINA_PREFIX "dtp"
+/* FIXME remove this define */
+#define TEMP_MAX_CWQ_LEN 100
 
 #include "logs.h"
 #include "utils.h"
@@ -30,6 +32,12 @@
 #include "dt.h"
 #include "dt-utils.h"
 #include "dtcp.h"
+#include "dtcp-utils.h"
+#include "policies.h"
+
+struct dtp_config {
+        struct policy * initial_sequence_number;
+};
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
@@ -42,7 +50,6 @@ struct dtp_sv {
         uint_t              dropped_pdus;
         seq_num_t           max_seq_nr_rcv;
         seq_num_t           nxt_seq;
-        uint_t              max_cwq_len;
         bool                drf_flag;
         timeout_t           a;
 
@@ -57,10 +64,7 @@ struct dtp_policies {
                                      struct pdu * pdu);
         int (* closed_window)(struct dtp * instance,
                               struct pdu * pdu);
-        int (* flow_control_overrun)(struct dtp * instance);
         int (* initial_sequence_number)(struct dtp * instance);
-        int (* receiver_inactivity_timer)(struct dtp * instance);
-        int (* sender_inactivity_timer)(struct dtp * instance);
 };
 
 struct dtp {
@@ -88,26 +92,12 @@ static struct dtp_sv default_sv = {
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
-        .max_cwq_len                   = 0,
         .drf_flag                      = false,
         .a                             = 0,
         .window_based                  = false,
         .rexmsn_ctrl                   = false,
         .rate_based                    = false,
 };
-
-static uint_t max_cwq_len_get(struct dtp_sv * sv)
-{
-        uint_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_cwq_len;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
 
 static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 {
@@ -127,7 +117,8 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                 return -1;
         }
 
-        if (cwq_size(cwq) < max_cwq_len_get(dtp->sv)-1) {
+        /* FIXME: change this when merging with miquel */
+        if (cwq_size(cwq) < TEMP_MAX_CWQ_LEN-1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push to cwq");
                         pdu_destroy(pdu);
@@ -156,10 +147,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 static struct dtp_policies default_policies = {
         .transmission_control      = default_transmission,
         .closed_window             = default_closed_window,
-        .flow_control_overrun      = NULL,
         .initial_sequence_number   = NULL,
-        .receiver_inactivity_timer = NULL,
-        .sender_inactivity_timer   = NULL,
 };
 
 bool dtp_drf_flag(struct dtp * instance)
@@ -264,15 +252,21 @@ static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
         ASSERT(sv);
         ASSERT(conn);
 
-        if (conn->policies_params.rtx_ctrl)
+        if (dtcp_rtx_ctrl(conn->policies_params.dtcp_cfg))
                 sv->rexmsn_ctrl = true;
 
-        if (conn->policies_params.window_based_fctrl)
+        if (dtcp_window_based_fctrl(conn->policies_params.dtcp_cfg))
                 sv->window_based = true;
 
-        if (conn->policies_params.rate_based_fctrl)
+        if (dtcp_rate_based_fctrl(conn->policies_params.dtcp_cfg))
                 sv->rate_based = true;
 }
+
+struct policy * dtp_initial_sequence_number(struct dtp_config * cfg)
+{
+        return cfg->initial_sequence_number;
+}
+EXPORT_SYMBOL(dtp_initial_sequence_number);
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,

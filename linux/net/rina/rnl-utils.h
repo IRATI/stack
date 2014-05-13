@@ -539,7 +539,7 @@ struct rnl_ipcp_conn_create_req_msg_attrs {
         address_t            src_addr;
         address_t            dst_addr;
         qos_id_t             qos_id;
-        struct conn_p_params cp_params;
+        struct conn_policies cp_params;
 };
 
 struct rnl_ipcp_conn_create_resp_msg_attrs {
@@ -554,7 +554,7 @@ struct rnl_ipcp_conn_create_arrived_msg_attrs {
         cep_id_t             dst_cep;
         qos_id_t             qos_id;
         ipc_process_id_t     flow_user_ipc_process_id;
-        struct conn_p_params cp_params;
+        struct conn_policies cp_params;
 };
 
 struct rnl_ipcp_conn_create_result_msg_attrs {

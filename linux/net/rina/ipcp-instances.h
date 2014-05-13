@@ -145,7 +145,7 @@ struct ipcp_instance_ops {
                                        address_t                   source,
                                        address_t                   dest,
                                        qos_id_t                    qos_id,
-                                       struct conn_p_params        cp_params);
+                                       struct conn_policies        cp_params);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id,
@@ -162,7 +162,7 @@ struct ipcp_instance_ops {
                                       address_t                   dest,
                                       qos_id_t                    qos_id,
                                       cep_id_t                    dst_cep_id,
-                                      struct conn_p_params        cp_params);
+                                      struct conn_policies        cp_params);
 
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id);
