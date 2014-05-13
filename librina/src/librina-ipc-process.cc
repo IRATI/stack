@@ -636,67 +636,493 @@ void ExtendedIPCManager::deallocatePortId(int portId)
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
+/* CLASS POLICY PAREMETER */
+PolicyParameter::PolicyParameter(){
+}
 
-/* CLASS CONNECTION */
-ConnectionPoliciesParameters::ConnectionPoliciesParameters() {
+const std::string& PolicyParameter::getName() const {
+        return name;
+}
+
+void PolicyParameter::setName(const std::string& name) {
+        this->name = name;
+}
+
+const std::string& PolicyParameter::getValue() const {
+        return value;
+}
+
+void PolicyParameter::setValue(const std::string& value){
+        this->value = value;
+}
+
+/* CLASS EFCP POLICY CONFIGURATION */
+EFCPPolicyConfig::EFCPPolicyConfig() {
+        version = 0;
+}
+
+const std::string& EFCPPolicyConfig::getName() const {
+        return name;
+}
+
+void EFCPPolicyConfig::setName(const std::string& name) {
+        this->name = name;
+}
+
+const std::list<PolicyParameter>&
+EFCPPolicyConfig::getParameters() const {
+        return parameters;
+}
+
+void EFCPPolicyConfig::setParameters(
+                const std::list<PolicyParameter>& parameters) {
+        this->parameters = parameters;
+}
+
+void EFCPPolicyConfig::addParameter(const PolicyParameter& paremeter) {
+        parameters.push_back(paremeter);
+}
+
+short EFCPPolicyConfig::getVersion() const {
+        return version;
+}
+
+void EFCPPolicyConfig::setVersion(short version) {
+        this->version = version;
+}
+
+/* CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG */
+DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig() {
+        initialcredit = 0;
+        maxclosedwindowqueuelength = 0;
+}
+
+int DTCPWindowBasedFlowControlConfig::getInitialcredit() const {
+        return initialcredit;
+}
+
+void DTCPWindowBasedFlowControlConfig::setInitialcredit(int initialcredit) {
+        this->initialcredit = initialcredit;
+}
+
+int DTCPWindowBasedFlowControlConfig::getMaxclosedwindowqueuelength() const {
+        return maxclosedwindowqueuelength;
+}
+
+void DTCPWindowBasedFlowControlConfig::setMaxclosedwindowqueuelength(
+                int maxclosedwindowqueuelength) {
+        this->maxclosedwindowqueuelength = maxclosedwindowqueuelength;
+}
+
+const EFCPPolicyConfig&
+DTCPWindowBasedFlowControlConfig::getRcvrflowcontrolpolicy() const {
+        return rcvrflowcontrolpolicy;
+}
+
+void DTCPWindowBasedFlowControlConfig::setRcvrflowcontrolpolicy(
+                const EFCPPolicyConfig& rcvrflowcontrolpolicy) {
+        this->rcvrflowcontrolpolicy = rcvrflowcontrolpolicy;
+}
+
+const EFCPPolicyConfig&
+DTCPWindowBasedFlowControlConfig::getReceivingflowcontrolpolicy() const {
+        return receivingflowcontrolpolicy;
+}
+
+void DTCPWindowBasedFlowControlConfig::setReceivingflowcontrolpolicy(
+                const EFCPPolicyConfig& receivingflowcontrolpolicy) {
+        this->receivingflowcontrolpolicy = receivingflowcontrolpolicy;
+}
+
+/* CLASS DTCP RATE-BASED FLOW CONTROL CONFIG */
+DTCPRateBasedFlowControlConfig::DTCPRateBasedFlowControlConfig() {
+        sendingrate = 0;
+        timeperiod = 0;
+}
+
+const EFCPPolicyConfig&
+DTCPRateBasedFlowControlConfig::getNooverridedefaultpeakpolicy() const {
+        return nooverridedefaultpeakpolicy;
+}
+
+void DTCPRateBasedFlowControlConfig::setNooverridedefaultpeakpolicy(
+                const EFCPPolicyConfig& nooverridedefaultpeakpolicy) {
+        this->nooverridedefaultpeakpolicy = nooverridedefaultpeakpolicy;
+}
+
+const EFCPPolicyConfig&
+DTCPRateBasedFlowControlConfig::getNorateslowdownpolicy() const {
+        return norateslowdownpolicy;
+}
+
+void DTCPRateBasedFlowControlConfig::setNorateslowdownpolicy(
+                const EFCPPolicyConfig& norateslowdownpolicy) {
+        this->norateslowdownpolicy = norateslowdownpolicy;
+}
+
+const EFCPPolicyConfig&
+DTCPRateBasedFlowControlConfig::getRatereductionpolicy() const {
+        return ratereductionpolicy;
+}
+
+void DTCPRateBasedFlowControlConfig::setRatereductionpolicy(
+                const EFCPPolicyConfig& ratereductionpolicy) {
+        this->ratereductionpolicy = ratereductionpolicy;
+}
+
+int DTCPRateBasedFlowControlConfig::getSendingrate() const {
+        return sendingrate;
+}
+
+void DTCPRateBasedFlowControlConfig::setSendingrate(int sendingrate) {
+        this->sendingrate = sendingrate;
+}
+
+int DTCPRateBasedFlowControlConfig::getTimeperiod() const {
+        return timeperiod;
+}
+
+void DTCPRateBasedFlowControlConfig::setTimeperiod(int timeperiod) {
+        this->timeperiod = timeperiod;
+}
+
+/* CLASS DTCP FLOW CONTROL CONFIG */
+DTCPFlowControlConfig::DTCPFlowControlConfig() {
+        ratebased = false;
+        windowbased = false;
+        rcvbuffersthreshold = 0;
+        rcvbytespercentthreshold = 0;
+        rcvbytesthreshold = 0;
+        sentbuffersthreshold = 0;
+        sentbytespercentthreshold = 0;
+        sentbytesthreshold = 0;
+}
+
+const EFCPPolicyConfig& DTCPFlowControlConfig::getClosedwindowpolicy() const {
+        return closedwindowpolicy;
+}
+
+void DTCPFlowControlConfig::setClosedwindowpolicy(
+                const EFCPPolicyConfig& closedwindowpolicy) {
+        this->closedwindowpolicy = closedwindowpolicy;
+}
+
+const EFCPPolicyConfig&
+DTCPFlowControlConfig::getFlowcontroloverrunpolicy() const {
+        return flowcontroloverrunpolicy;
+}
+
+void DTCPFlowControlConfig::setFlowcontroloverrunpolicy(
+                const EFCPPolicyConfig& flowcontroloverrunpolicy) {
+        this->flowcontroloverrunpolicy = flowcontroloverrunpolicy;
+}
+
+bool DTCPFlowControlConfig::isRatebased() const {
+        return ratebased;
+}
+
+void DTCPFlowControlConfig::setRatebased(bool ratebased) {
+        this->ratebased = ratebased;
+}
+
+const DTCPRateBasedFlowControlConfig&
+DTCPFlowControlConfig::getRatebasedconfig() const {
+        return ratebasedconfig;
+}
+
+void DTCPFlowControlConfig::setRatebasedconfig(
+                const DTCPRateBasedFlowControlConfig& ratebasedconfig) {
+        this->ratebasedconfig = ratebasedconfig;
+}
+
+int DTCPFlowControlConfig::getRcvbuffersthreshold() const {
+        return rcvbuffersthreshold;
+}
+
+void DTCPFlowControlConfig::setRcvbuffersthreshold(int rcvbuffersthreshold) {
+        this->rcvbuffersthreshold = rcvbuffersthreshold;
+}
+
+int DTCPFlowControlConfig::getRcvbytespercentthreshold() const {
+        return rcvbytespercentthreshold;
+}
+
+void DTCPFlowControlConfig::setRcvbytespercentthreshold(
+                int rcvbytespercentthreshold) {
+        this->rcvbytespercentthreshold = rcvbytespercentthreshold;
+}
+
+int DTCPFlowControlConfig::getRcvbytesthreshold() const {
+        return rcvbytesthreshold;
+}
+
+void DTCPFlowControlConfig::setRcvbytesthreshold(int rcvbytesthreshold) {
+        this->rcvbytesthreshold = rcvbytesthreshold;
+}
+
+const EFCPPolicyConfig&
+DTCPFlowControlConfig::getReconcileflowcontrolpolicy() const {
+        return reconcileflowcontrolpolicy;
+}
+
+void DTCPFlowControlConfig::setReconcileflowcontrolpolicy(
+                const EFCPPolicyConfig& reconcileflowcontrolpolicy) {
+        this->reconcileflowcontrolpolicy = reconcileflowcontrolpolicy;
+}
+
+int DTCPFlowControlConfig::getSentbuffersthreshold() const {
+        return sentbuffersthreshold;
+}
+
+void DTCPFlowControlConfig::setSentbuffersthreshold(int sentbuffersthreshold) {
+        this->sentbuffersthreshold = sentbuffersthreshold;
+}
+
+int DTCPFlowControlConfig::getSentbytespercentthreshold() const {
+        return sentbytespercentthreshold;
+}
+
+void DTCPFlowControlConfig::setSentbytespercentthreshold(
+                int sentbytespercentthreshold) {
+        this->sentbytespercentthreshold = sentbytespercentthreshold;
+}
+
+int DTCPFlowControlConfig::getSentbytesthreshold() const {
+        return sentbytesthreshold;
+}
+
+void DTCPFlowControlConfig::setSentbytesthreshold(int sentbytesthreshold) {
+        this->sentbytesthreshold = sentbytesthreshold;
+}
+
+bool DTCPFlowControlConfig::isWindowbased() const {
+        return windowbased;
+}
+
+void DTCPFlowControlConfig::setWindowbased(bool windowbased) {
+        this->windowbased = windowbased;
+}
+
+const DTCPWindowBasedFlowControlConfig&
+DTCPFlowControlConfig::getWindowbasedconfig() const {
+        return windowbasedconfig;
+}
+
+void DTCPFlowControlConfig::setWindowbasedconfig(
+                const DTCPWindowBasedFlowControlConfig& windowbasedconfig) {
+        this->windowbasedconfig = windowbasedconfig;
+}
+
+/* CLASS DTCP RX CONTROL CONFIG */
+DTCPRtxControlConfig::DTCPRtxControlConfig() {
+        datarxmsnmax = 0;
+        initialATimer = 0;
+}
+
+int DTCPRtxControlConfig::getDatarxmsnmax() const {
+        return datarxmsnmax;
+}
+
+void DTCPRtxControlConfig::setDatarxmsnmax(int datarxmsnmax) {
+        this->datarxmsnmax = datarxmsnmax;
+}
+
+int DTCPRtxControlConfig::getInitialATimer() const {
+        return initialATimer;
+}
+
+void DTCPRtxControlConfig::setInitialATimer(int initialATimer) {
+        this->initialATimer = initialATimer;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getRcvrackpolicy() const {
+        return rcvrackpolicy;
+}
+
+void DTCPRtxControlConfig::setRcvrackpolicy(const EFCPPolicyConfig& rcvrackpolicy) {
+        this->rcvrackpolicy = rcvrackpolicy;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getRcvrcontrolackpolicy() const {
+        return rcvrcontrolackpolicy;
+}
+
+void DTCPRtxControlConfig::setRcvrcontrolackpolicy(
+                const EFCPPolicyConfig& rcvrcontrolackpolicy) {
+        this->rcvrcontrolackpolicy = rcvrcontrolackpolicy;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getRecvingacklistpolicy() const {
+        return recvingacklistpolicy;
+}
+
+void DTCPRtxControlConfig::setRecvingacklistpolicy(
+                const EFCPPolicyConfig& recvingacklistpolicy) {
+        this->recvingacklistpolicy = recvingacklistpolicy;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getRttestimatorpolicy() const {
+        return rttestimatorpolicy;
+}
+
+void DTCPRtxControlConfig::setRttestimatorpolicy(
+                const EFCPPolicyConfig& rttestimatorpolicy) {
+        this->rttestimatorpolicy = rttestimatorpolicy;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getRtxtimerexpirypolicy() const {
+        return rtxtimerexpirypolicy;
+}
+
+void DTCPRtxControlConfig::setRtxtimerexpirypolicy(
+                const EFCPPolicyConfig& rtxtimerexpirypolicy) {
+        this->rtxtimerexpirypolicy = rtxtimerexpirypolicy;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getSenderackpolicy() const {
+        return senderackpolicy;
+}
+
+void DTCPRtxControlConfig::setSenderackpolicy(
+                const EFCPPolicyConfig& senderackpolicy) {
+        this->senderackpolicy = senderackpolicy;
+}
+
+const EFCPPolicyConfig& DTCPRtxControlConfig::getSendingackpolicy() const {
+        return sendingackpolicy;
+}
+
+void DTCPRtxControlConfig::setSendingackpolicy(
+                const EFCPPolicyConfig& sendingackpolicy) {
+        this->sendingackpolicy = sendingackpolicy;
+}
+
+/* CLASS DTCP CONFIG */
+DTCPConfig::DTCPConfig() {
+        flowcontrol = false;
+        rtxcontrol = false;
+        initialrecvrinactivitytime = 0;
+        initialsenderinactivitytime = 0;
+}
+
+bool DTCPConfig::isFlowcontrol() const {
+        return flowcontrol;
+}
+
+void DTCPConfig::setFlowcontrol(bool flowcontrol) {
+        this->flowcontrol = flowcontrol;
+}
+
+const DTCPFlowControlConfig& DTCPConfig::getFlowcontrolconfig() const {
+        return flowcontrolconfig;
+}
+
+void DTCPConfig::setFlowcontrolconfig(
+                const DTCPFlowControlConfig& flowcontrolconfig) {
+        this->flowcontrolconfig = flowcontrolconfig;
+}
+
+int DTCPConfig::getInitialrecvrinactivitytime() const {
+        return initialrecvrinactivitytime;
+}
+
+void DTCPConfig::setInitialrecvrinactivitytime(
+                int initialrecvrinactivitytime) {
+        this->initialrecvrinactivitytime = initialrecvrinactivitytime;
+}
+
+int DTCPConfig::getInitialsenderinactivitytime() const {
+        return initialsenderinactivitytime;
+}
+
+void DTCPConfig::setInitialsenderinactivitytime(
+                int initialsenderinactivitytime) {
+        this->initialsenderinactivitytime = initialsenderinactivitytime;
+}
+
+const EFCPPolicyConfig& DTCPConfig::getInitialseqnumpolicy() const {
+        return initialseqnumpolicy;
+}
+
+void DTCPConfig::setInitialseqnumpolicy(
+                const EFCPPolicyConfig& initialseqnumpolicy) {
+        this->initialseqnumpolicy = initialseqnumpolicy;
+}
+
+const EFCPPolicyConfig& DTCPConfig::getLostcontrolpdupolicy() const {
+        return lostcontrolpdupolicy;
+}
+
+void DTCPConfig::setLostcontrolpdupolicy(
+                const EFCPPolicyConfig& lostcontrolpdupolicy) {
+        this->lostcontrolpdupolicy = lostcontrolpdupolicy;
+}
+
+const EFCPPolicyConfig& DTCPConfig::getRcvrtimerinactivitypolicy() const {
+        return rcvrtimerinactivitypolicy;
+}
+
+void DTCPConfig::setRcvrtimerinactivitypolicy(
+                const EFCPPolicyConfig& rcvrtimerinactivitypolicy) {
+        this->rcvrtimerinactivitypolicy = rcvrtimerinactivitypolicy;
+}
+
+bool DTCPConfig::isRtxcontrol() const {
+        return rtxcontrol;
+}
+
+void DTCPConfig::setRtxcontrol(bool rtxcontrol) {
+        this->rtxcontrol = rtxcontrol;
+}
+
+const DTCPRtxControlConfig& DTCPConfig::getRtxcontrolconfig() const {
+        return rtxcontrolconfig;
+}
+
+void DTCPConfig::setRtxcontrolconfig(
+                const DTCPRtxControlConfig& rtxcontrolconfig) {
+        this->rtxcontrolconfig = rtxcontrolconfig;
+}
+
+const EFCPPolicyConfig& DTCPConfig::getSendertimerinactiviypolicy() const {
+        return sendertimerinactiviypolicy;
+}
+
+void DTCPConfig::setSendertimerinactiviypolicy(
+                const EFCPPolicyConfig& sendertimerinactiviypolicy) {
+        this->sendertimerinactiviypolicy = sendertimerinactiviypolicy;
+}
+
+/* CLASS CONNECTION POLICIES */
+ConnectionPolicies::ConnectionPolicies(){
         DTCPpresent = false;
-        flowControl = false;
-        RTXcontrol = false;
-        windowBasedFlowControl = false;
-        rateBasedFlowControl = false;
+        seqnumrolloverthreshold = 0;
 }
 
-/*
-ConnectionPoliciesParameters::ConnectionPoliciesParameters(bool DTCPpresent,
-                bool flowControl,
-                bool RTXcontrol,
-                bool windowBasedFlowControl,
-                bool rateBasedFlowControl) {
-        this->DTCPpresent = DTCPpresent;
-        this->flowControl = flowControl;
-        this->RTXcontrol = RTXcontrol;
-        this->windowBasedFlowControl = windowBasedFlowControl;
-        this->rateBasedFlowControl = rateBasedFlowControl;
-}*/
-
-bool ConnectionPoliciesParameters::isDTCPpresent() const {
-	return DTCPpresent;
+const DTCPConfig& ConnectionPolicies::getDtcpConfiguration() const {
+        return dtcpConfiguration;
 }
 
-void ConnectionPoliciesParameters::setDTCPpresent(bool DTCPpresent) {
-	this->DTCPpresent = DTCPpresent;
+void ConnectionPolicies::setDtcpConfiguration(
+                const DTCPConfig& dtcpConfiguration) {
+        this->dtcpConfiguration = dtcpConfiguration;
 }
 
-bool ConnectionPoliciesParameters::isFlowControl() const {
-	return flowControl;
+bool ConnectionPolicies::isDtcPpresent() const {
+        return DTCPpresent;
 }
 
-void ConnectionPoliciesParameters::setFlowControl(bool flowControl) {
-	this->flowControl = flowControl;
+void ConnectionPolicies::setDtcPpresent(bool dtcPpresent) {
+        DTCPpresent = dtcPpresent;
 }
 
-bool ConnectionPoliciesParameters::isRTXcontrol() const {
-	return RTXcontrol;
+int ConnectionPolicies::getSeqnumrolloverthreshold() const {
+        return seqnumrolloverthreshold;
 }
 
-void ConnectionPoliciesParameters::setRTXcontrol(bool RTXcontrol) {
-	this->RTXcontrol = RTXcontrol;
-}
-
-bool ConnectionPoliciesParameters::isWindowBasedFlowControl() const {
-	return windowBasedFlowControl;
-}
-
-void ConnectionPoliciesParameters::setWindowBasedFlowControl(bool windowBasedFlowControl) {
-	this->windowBasedFlowControl = windowBasedFlowControl;
-}
-
-bool ConnectionPoliciesParameters::isRateBasedFlowControl() const {
-	return rateBasedFlowControl;
-}
-
-void ConnectionPoliciesParameters::setRateBasedFlowControl(bool rateBasedFlowControl) {
-	this->rateBasedFlowControl = rateBasedFlowControl;
+void ConnectionPolicies::setSeqnumrolloverthreshold(
+                int seqnumrolloverthreshold) {
+        this->seqnumrolloverthreshold = seqnumrolloverthreshold;
 }
 
 /* CLASS CONNECTION */
