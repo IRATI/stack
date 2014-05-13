@@ -6,5 +6,7 @@
 
 bin_PROGRAMS = ipcp
 
-ipcp_SOURCES =					\
+ipcp_CFLAGS   =
+ipcp_CPPFLAGS = $(CPPFLAGS_EXTRA)
+ipcp_SOURCES  =					\
 	main.cc
