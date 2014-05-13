@@ -20,11 +20,14 @@
 
 #include <cstdlib>
 
-#include "librina/librina-common.h"
+#include <librina/librina-common.h>
+
+#include "common/empty.h"
 
 int main(int argc, char * argv[])
 {
         rina::initialize("test", "/tmp/test");
+        (void) empty();
 
         return EXIT_SUCCESS;
 }
