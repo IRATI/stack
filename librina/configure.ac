@@ -38,6 +38,8 @@ AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
 
+LT_INIT
+
 CPPFLAGS_EXTRA=""
 AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall -Werror"
@@ -46,8 +48,6 @@ AX_CHECK_COMPILE_FLAG([ -Wformat ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
-
-LT_INIT
 
 #AX_HAVE_SYSCALL([ipc_create],,[
 #    AC_MSG_ERROR([Your system lacks of ipc_create syscall])])

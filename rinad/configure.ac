@@ -12,7 +12,7 @@ AC_INIT([RINA Daemons],
 
 AC_PREREQ([2.68])
 
-AC_CONFIG_SRCDIR([src-old/pom.xml.in])
+AC_CONFIG_SRCDIR([src/common/empty.cc])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -29,7 +29,22 @@ AC_PATH_PROG([SORT], [sort], [/bin/false])
 AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
 AC_PATH_PROG([GIT],  [git],  [/bin/false])
 
-AX_PROG_JAVA
+AC_PROG_CXXCPP
+AC_PROG_CXX
+AC_PROG_CXX_C_O
+
+LT_INIT
+
+CPPFLAGS_EXTRA=""
+AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall -Werror"
+])
+AX_CHECK_COMPILE_FLAG([ -Wformat ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
+])
+AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
+
+AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
 PKG_PROG_PKG_CONFIG([0.26])
 
@@ -39,15 +54,12 @@ PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
-AC_PATH_PROG([MVN],[mvn],[])
-AS_IF([test -z "$MVN"],[
-    AC_MSG_ERROR([Your system lacks maven support])
-])
-
 AC_CONFIG_FILES([
     Makefile
-    src-old/Makefile
     src/Makefile
+    src/common/Makefile
+    src/ipcp/Makefile
+    src/ipcm/Makefile
 ])
 
 AC_OUTPUT

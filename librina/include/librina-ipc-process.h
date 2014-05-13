@@ -1538,8 +1538,10 @@ class EnrollmentInformationRequest
 	public:
 		unsigned int getAddress() const;
 		void setAddress(unsigned int address);
+
 		const std::list<ApplicationProcessNamingInformation>& getSupportingDifs() const;
-		void setSupportingDifs(const std::list<ApplicationProcessNamingInformation> &supportingDifs);
+		void setSupportingDifs(
+		std::list<ApplicationProcessNamingInformation> &supportingDifs);
 };
 
 /**
