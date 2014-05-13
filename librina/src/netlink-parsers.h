@@ -962,7 +962,7 @@ enum IpcpConnectionCreateRequestMessageAttributes {
         ICCRM_ATTR_SRC_ADDRESS,
         ICCRM_ATTR_DEST_ADDRESS,
         ICCRM_ATTR_QOS_ID,
-        ICCRM_ATTR_POLICIES_PARAMETERS,
+        ICCRM_ATTR_POLICIES,
         __ICCRM_ATTR_MAX,
 };
 
@@ -1029,7 +1029,7 @@ enum IpcpConnectionCreateArrivedMessageAttributes {
         ICCAM_ATTR_DEST_CEP_ID,
         ICCAM_ATTR_QOS_ID,
         ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
-        ICCAM_ATTR_POLICIES_PARAMETERS,
+        ICCAM_ATTR_POLICIES,
         __ICCAM_ATTR_MAX,
 };
 

@@ -1662,7 +1662,7 @@ int putEFCPPolicyConfigObject(nl_msg * netlinkMessage,
         return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building DTCPConfig Netlink object");
+                        "Error building EFCPPolicyConfig Netlink object");
         return -1;
 }
 
@@ -2470,7 +2470,7 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
         if (object.isFlowcontrol()) {
                 NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_FLOW_CONTROL);
                 if (!(flowControlConfig = nla_nest_start(netlinkMessage,
-                                CPA_ATTR_DTCP_CONFIG))) {
+                                DCA_ATTR_FLOW_CONTROL_CONFIG))) {
                         goto nla_put_failure;
                 }
 
@@ -3918,16 +3918,26 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateRequestMessage& object) {
+        struct nlattr *connectionPolicies;
+
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_PORT_ID, object.getPortId());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_SRC_ADDRESS,
                         object.getSourceAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDRESS,
                                 object.getDestAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID, object.getQosId());
+
+        if (!(connectionPolicies = nla_nest_start(
+                        netlinkMessage, ICCRM_ATTR_POLICIES))){
+                goto nla_put_failure;
+        }
+
         if (putConnectionPoliciesObject(netlinkMessage,
                         object.getConnPolicies()) < 0) {
                 goto nla_put_failure;
         }
+
+        nla_nest_end(netlinkMessage, connectionPolicies);
 
         return 0;
 
@@ -3978,6 +3988,8 @@ int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateArrivedMessage& object) {
+        struct nlattr *connectionPolicies;
+
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_PORT_ID, object.getPortId());
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_SRC_ADDRESS,
                         object.getSourceAddress());
@@ -3988,6 +4000,18 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
                         object.getDestCepId());
         NLA_PUT_U16(netlinkMessage, ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
                         object.getFlowUserIpcProcessId());
+
+        if (!(connectionPolicies = nla_nest_start(
+                        netlinkMessage, ICCAM_ATTR_POLICIES))){
+                goto nla_put_failure;
+        }
+
+        if (putConnectionPoliciesObject(netlinkMessage,
+                        object.getConnPolicies()) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, connectionPolicies);
 
         return 0;
 
@@ -6390,9 +6414,9 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         attr_policy[ICCRM_ATTR_QOS_ID].type = NLA_U32;
         attr_policy[ICCRM_ATTR_QOS_ID].minlen = 4;
         attr_policy[ICCRM_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[ICCRM_ATTR_POLICIES_PARAMETERS].type = NLA_NESTED;
-        attr_policy[ICCRM_ATTR_POLICIES_PARAMETERS].minlen = 0;
-        attr_policy[ICCRM_ATTR_POLICIES_PARAMETERS].maxlen = 0;
+        attr_policy[ICCRM_ATTR_POLICIES].type = NLA_NESTED;
+        attr_policy[ICCRM_ATTR_POLICIES].minlen = 0;
+        attr_policy[ICCRM_ATTR_POLICIES].maxlen = 0;
         struct nlattr *attrs[ICCRM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -6426,9 +6450,9 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 result->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
         }
 
-	if (attrs[ICCRM_ATTR_POLICIES_PARAMETERS]) {
+	if (attrs[ICCRM_ATTR_POLICIES]) {
 	        connPolicies = parseConnectionPoliciesObject(
-				attrs[ICCRM_ATTR_POLICIES_PARAMETERS]);
+				attrs[ICCRM_ATTR_POLICIES]);
 		if (connPolicies == 0) {
 			delete result;
 			return 0;
@@ -6579,9 +6603,9 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
         attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].minlen = 2;
         attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].maxlen = 2;
-        attr_policy[ICCAM_ATTR_POLICIES_PARAMETERS].type = NLA_NESTED;
-        attr_policy[ICCAM_ATTR_POLICIES_PARAMETERS].minlen = 0;
-        attr_policy[ICCAM_ATTR_POLICIES_PARAMETERS].maxlen = 0;
+        attr_policy[ICCAM_ATTR_POLICIES].type = NLA_NESTED;
+        attr_policy[ICCAM_ATTR_POLICIES].minlen = 0;
+        attr_policy[ICCAM_ATTR_POLICIES].maxlen = 0;
         struct nlattr *attrs[ICCAM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -6623,9 +6647,9 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
                 result->setFlowUserIpcProcessId(nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
         }
 
-	if (attrs[ICCAM_ATTR_POLICIES_PARAMETERS]) {
+	if (attrs[ICCAM_ATTR_POLICIES]) {
 	        connPolicies = parseConnectionPoliciesObject(
-				attrs[ICCAM_ATTR_POLICIES_PARAMETERS]);
+				attrs[ICCAM_ATTR_POLICIES]);
 		if (connPolicies == 0) {
 			delete result;
 			return 0;
