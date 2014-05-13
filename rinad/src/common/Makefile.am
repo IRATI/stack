@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+EXTRA_DIST =
+
 lib_LTLIBRARIES = librinad.la
 
 librinad_la_CFLAGS   =
