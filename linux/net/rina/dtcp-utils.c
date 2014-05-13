@@ -20,7 +20,11 @@
 
 #define RINA_PREFIX "dtcp-utils"
 
+#include <linux/kernel.h>
+
 #include "logs.h"
+#include "utils.h"
+#include "dtcp-utils.h"
 #include "policies.h"
 
 struct window_fctrl_config {
@@ -79,10 +83,86 @@ struct dtcp_config {
         struct policy *             lost_control_pdu;
 };
 
-/* constructors */
+/* Constructors */
+static struct window_fctrl_config * window_fctrl_config_create_gfp(gfp_t flags)
+{
+        struct window_fctrl_config * tmp;
 
-/* Setters & getters */
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
 
+        return tmp;
+}
+
+struct window_fctrl_config * window_fctrl_config_create(void)
+{ return window_fctrl_config_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(window_fctrl_config_create);
+
+struct window_fctrl_config * window_fctrl_config_create_ni(void)
+{ return window_fctrl_config_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(window_fctrl_config_create_ni);
+
+static struct rate_fctrl_config * rate_fctrl_config_create_gfp(gfp_t flags)
+{
+        struct rate_fctrl_config * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+struct rate_fctrl_config * rate_fctrl_config_create(void)
+{ return rate_fctrl_config_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(rate_fctrl_config_create);
+
+struct rate_fctrl_config * rate_fctrl_config_create_ni(void)
+{ return rate_fctrl_config_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(rate_fctrl_config_create_ni);
+
+static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
+{
+        struct dtcp_fctrl_config * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+struct dtcp_fctrl_config * dtcp_fctrl_config_create(void)
+{ return dtcp_fctrl_config_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(dtcp_fctrl_config_create);
+
+struct dtcp_fctrl_config * dtcp_fctrl_config_create_ni(void)
+{ return dtcp_fctrl_config_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(dtcp_fctrl_config_create_ni);
+
+static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
+{
+        struct dtcp_config * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+struct dtcp_config * dtcp_config_create(void)
+{ return dtcp_config_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(dtcp_config_create);
+
+struct dtcp_config * dtcp_config_create_ni(void)
+{ return dtcp_config_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(dtcp_config_create_ni);
+
+/* Setters */
+
+/* Getters */
 /* window_fctrl_config */
 uint_t dtcp_max_closed_winq_length(struct dtcp_config * cfg)
 { return cfg->fctrl_cfg->wfctrl_cfg->max_closed_winq_length; }

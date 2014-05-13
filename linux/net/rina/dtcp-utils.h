@@ -21,12 +21,25 @@
 #ifndef RINA_DTCP_UTILS_H
 #define RINA_DTCP_UTILS_H
 
+#include "common.h"
+
 struct dtcp_config;
 struct dtcp_fctrl_config;
 struct dtcp_rctrl_config;
 struct window_fctrl_config;
 struct rate_fctrl_config;
 
+/* Constructors */
+struct window_fctrl_config * window_fctrl_config_create(void);
+struct window_fctrl_config * window_fctrl_config_create_ni(void);
+struct rate_fctrl_config * rate_fctrl_config_create(void);
+struct rate_fctrl_config * rate_fctrl_config_create_ni(void);
+struct dtcp_fctrl_config * dtcp_fctrl_config_create(void);
+struct dtcp_fctrl_config * dtcp_fctrl_config_create_ni(void);
+struct dtcp_rxctrl_config * dtcp_rxctrl_config_create(void);
+struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_ni(void);
+struct dtcp_config * dtcp_config_create(void);
+struct dtcp_config * dtcp_config_create_ni(void);
 
 /* window_fctrl_config */
 uint_t dtcp_max_closed_winq_length(struct dtcp_config * cfg);
