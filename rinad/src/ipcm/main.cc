@@ -20,5 +20,11 @@
 
 #include <cstdlib>
 
+#include "librina/librina-common.h"
+
 int main(int argc, char * argv[])
-{ return EXIT_SUCCESS; }
+{
+        rina::initialize("test", "/tmp/test");
+
+        return EXIT_SUCCESS;
+}

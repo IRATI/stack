@@ -7,7 +7,8 @@
 bin_PROGRAMS = ipcm
 
 ipcm_CFLAGS   =
-ipcm_CPPFLAGS = $(CPPFLAGS_EXTRA)
-ipcm_LDADD    = $(builddir)/../common/libcommon.a
+ipcm_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS)
+ipcm_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
 	main.cc
+
