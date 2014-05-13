@@ -6,7 +6,8 @@
 
 bin_PROGRAMS = ipcm
 
-ipcp_CFLAGS   =
-ipcp_CPPFLAGS = $(CPPFLAGS_EXTRA)
+ipcm_CFLAGS   =
+ipcm_CPPFLAGS = $(CPPFLAGS_EXTRA)
+ipcm_LDADD    = $(builddir)/../common/libcommon.a
 ipcm_SOURCES  =					\
 	main.cc
