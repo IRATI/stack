@@ -1540,8 +1540,7 @@ class EnrollmentInformationRequest
 		void setAddress(unsigned int address);
 
 		const std::list<ApplicationProcessNamingInformation>& getSupportingDifs() const;
-		void setSupportingDifs(
-		std::list<ApplicationProcessNamingInformation> &supportingDifs);
+		void setSupportingDifs(const std::list<ApplicationProcessNamingInformation> &supportingDifs);
 };
 
 /**
