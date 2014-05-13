@@ -1570,7 +1570,7 @@ class EnrollmentInformationRequest
 	/*	Constructors and Destructors	*/
 	public:
 		EnrollmentInformationRequest();
-		virtual ~EnrollmentInformationRequest();
+		virtual ~EnrollmentInformationRequest() {};
 };
 
 /**
@@ -1593,7 +1593,7 @@ class EnrollmentRequest
 	/*	Constructor and Destructor	*/
 	public:
 		EnrollmentRequest(Neighbor &neighbor, EnrollToDIFRequestEvent &event);
-		virtual ~EnrollmentRequest(){};
+		virtual ~EnrollmentRequest() { };
 };
 
 /**
@@ -1606,7 +1606,7 @@ class IPCProcessComponent {
 	/*	Accessors	*/
 	public:
 		virtual void setIPCProcess(IPCProcess ipcProcess) = 0;
-		virtual ~IPCProcessComponent(){};
+		virtual ~IPCProcessComponent() { };
 };
 
 /**
@@ -1636,7 +1636,7 @@ class Event
 		virtual std::string getId() const = 0;
 	/*	Constructors and Destructor	*/
 	public:
-		virtual ~Event(){};
+		virtual ~Event() { };
 };
 
 /**
