@@ -7,6 +7,6 @@
 noinst_LIBRARIES = libcommon.a
 
 libcommon_a_CFLAGS   =
-libcommon_a_CPPFLAGS = -Wall -Werror
+libcommon_a_CPPFLAGS = $(CPPFLAGS_EXTRA)
 libcommon_a_SOURCES  =				\
 	empty.cc
