@@ -797,16 +797,158 @@ int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
 IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
                 nlmsghdr *hdr);
 
-enum ConnectionPoliciesParametersAttributes {
-	CPP_ATTR_DTCP_PRESENT = 1,
-	CPP_ATTR_FLOW_CONTROL,
-	CPP_ATTR_RTX_CONTROL,
-	CPP_ATTR_WINDOW_BASED_FLOW_CONTROL,
-	CPP_ATTR_RATE_BASED_FLOW_CONTROL,
-	__CCP_ATTR_MAX,
+/* PolicyParameter class */
+enum PolicyParameterAttribures {
+        PPA_ATTR_NAME = 1,
+        PPA_ATTR_VALUE,
+        __PPA_ATTR_MAX,
 };
 
-#define CCP_ATTR_MAX (__CCP_ATTR_MAX -1)
+#define PPA_ATTR_MAX (__PPA_ATTR_MAX -1)
+
+int putPolicyParameterObject(nl_msg * netlinkMessage,
+                const PolicyParameter& object);
+
+int putListOfPolicyParameters(nl_msg* netlinkMessage,
+                const std::list<PolicyParameter>& parameters);
+
+PolicyParameter *
+parsePolicyParameterObject(nlattr *nested);
+
+int parseListOfEFCPPolicyConfigPolicyParameters(nlattr *nested,
+                EFCPPolicyConfig * efcpPolicyConfig);
+
+/* EFCPPolicyConfig class */
+enum EFCPPolicyConfigAttributes {
+        EPC_ATTR_NAME = 1,
+        EPC_ATTR_VERSION,
+        EPC_ATTR_PARAMETERS,
+        __EPC_ATTR_MAX,
+};
+
+#define EPC_ATTR_MAX (__EPC_ATTR_MAX -1)
+
+int putEFCPPolicyConfigObject(nl_msg * netlinkMessage,
+                const EFCPPolicyConfig& object);
+
+EFCPPolicyConfig *
+parseEFCPPolicyConfigObject(nlattr *nested);
+
+/* DTCPWindowBasedFlowControlConfig class */
+enum DTCPWindowBasedFlowControlConfigAttributes {
+        DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH = 1,
+        DWFCC_ATTR_INITIAL_CREDIT,
+        DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY,
+        DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
+        __DWFCC_ATTR_MAX,
+};
+
+#define DWFCC_ATTR_MAX (__DWFCC_ATTR_MAX -1)
+
+int putDTCPWindowBasedFlowControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPWindowBasedFlowControlConfig& object);
+
+DTCPWindowBasedFlowControlConfig *
+parseDTCPWindowBasedFlowControlConfigObject(nlattr *nested);
+
+/* DTCPRateBasedFlowControlConfig class */
+enum DTCPRateBasedFlowControlConfigAttributes {
+        DRFCC_ATTR_SEND_RATE = 1,
+        DRFCC_ATTR_TIME_PERIOD,
+        DRFCC_ATTR_NO_RATE_SDOWN_POLICY,
+        DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY,
+        DRFCC_ATTR_RATE_REDUC_POLICY,
+        __DRFCC_ATTR_MAX,
+};
+
+#define DRFCC_ATTR_MAX (__DRFCC_ATTR_MAX -1)
+
+int putDTCPRateBasedFlowControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPRateBasedFlowControlConfig& object);
+
+DTCPRateBasedFlowControlConfig *
+parseDTCPRateBasedFlowControlConfigObject(nlattr *nested);
+
+/* DTCPFlowControlConfig class */
+enum DTCPFlowControlConfigAttributes {
+        DFCC_ATTR_WINDOW_BASED = 1,
+        DFCC_ATTR_WINDOW_BASED_CONFIG,
+        DFCC_ATTR_RATE_BASED,
+        DFCC_ATTR_RATE_BASED_CONFIG,
+        DFCC_ATTR_SBYTES_THRES,
+        DFCC_ATTR_SBYTES_PER_THRES,
+        DFCC_ATTR_SBUFFER_THRES,
+        DFCC_ATTR_RBYTES_THRES,
+        DFCC_ATTR_RBYTES_PER_THRES,
+        DFCC_ATTR_RBUFFERS_THRES,
+        DFCC_ATTR_CLOSED_WINDOW_POLICY,
+        DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY,
+        DFCC_ATTR_RECON_FLOW_CTRL_POLICY,
+        __DFCC_ATTR_MAX,
+};
+
+#define DFCC_ATTR_MAX (__DFCC_ATTR_MAX -1)
+
+int putDTCPFlowControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPFlowControlConfig& object);
+
+DTCPFlowControlConfig *
+parseDTCPFlowControlConfigObject(nlattr *nested);
+
+/* DTCPRtxControlConfig class */
+enum DTCPRtxControlConfigAttributes {
+        DRCC_ATTR_DATA_RXMSN_MAX = 1,
+        DRCC_ATTR_INIT_A_TIMER,
+        DRCC_ATTR_RTT_EST_POLICY,
+        DRCC_ATTR_RTX_TIME_EXP_POLICY,
+        DRCC_ATTR_SACK_POLICY,
+        DRCC_ATTR_RACK_LIST_POLICY,
+        DRCC_ATTR_RACK_POLICY,
+        DRCC_ATTR_SDING_ACK_POLICY,
+        DRCC_ATTR_RCONTROL_ACK_POLICY,
+        __DRCC_ATTR_MAX,
+};
+
+#define DRCC_ATTR_MAX (__DRCC_ATTR_MAX -1)
+
+int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
+                const DTCPRtxControlConfig& object);
+
+DTCPRtxControlConfig *
+parseDTCPRtxControlConfigObject(nlattr *nested);
+
+/* DTCPConfig class */
+enum DTCPConfigAttributes {
+        DCA_ATTR_FLOW_CONTROL = 1,
+        DCA_ATTR_FLOW_CONTROL_CONFIG,
+        DCA_ATTR_RETX_CONTROL,
+        DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_INIT_SINAC_TIME,
+        DCA_ATTR_INIT_RINAC_TIME,
+        DCA_ATTR_RCVR_TIMER_INAC_POLICY,
+        DCA_ATTR_SNDR_TIMER_INAC_POLICY,
+        DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        DCA_ATTR_INIT_SEQ_NUM_POLICY,
+        __DCA_ATTR_MAX,
+};
+
+#define DCA_ATTR_MAX (__DCA_ATTR_MAX -1)
+
+int putDTCPConfigObject(nl_msg * netlinkMessage,
+                const DTCPConfig& object);
+
+DTCPConfig *
+parseDTCPConfigObject(nlattr *nested);
+
+/* ConnectionPolicies class */
+enum ConnectionPoliciesAttributes {
+	CPA_ATTR_DTCP_PRESENT = 1,
+	CPA_ATTR_DTCP_CONFIG,
+	CPA_ATTR_SEQ_NUM_ROLLOVER,
+	__CPA_ATTR_MAX,
+};
+
+#define CPA_ATTR_MAX (__CPA_ATTR_MAX -1)
 
 int putConnectionPoliciesObject(nl_msg * netlinkMessage,
                 const ConnectionPolicies& object);
