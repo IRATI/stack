@@ -59,6 +59,24 @@ librina_stubbed_la_CPPFLAGS =			\
 lib_LTLIBRARIES    = librina.la
 noinst_LTLIBRARIES = librina-stubbed.la
 
+noinst_PROGRAMS = test-linking
+
+test_linking_SOURCES  = test-linking.cc
+test_linking_CFLAGS   =
+test_linking_CPPFLAGS =				\
+	-DSTUB_API=0				\
+	-I$(top_srcdir)/include			\
+	-I$(top_srcdir)/include-system		\
+	$(LIBNL3_CFLAGS)			\
+	$(LIBNLGENL3_CFLAGS)			\
+	$(CPPFLAGS_EXTRA)
+test_linking_LDADD    =				\
+	$(LIBNL3_LIBS)				\
+	$(LIBNLGENL3_LIBS)			\
+	librina.la
+
+check-local: test-linking
+
 EXTRA_DIST +=					\
 	librina.pc.in
 
