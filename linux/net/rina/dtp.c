@@ -33,7 +33,6 @@
 #include "dt-utils.h"
 #include "dtcp.h"
 #include "dtcp-utils.h"
-#include "policies.h"
 
 struct dtp_config {
         struct policy * initial_sequence_number;
@@ -261,6 +260,37 @@ static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
         if (dtcp_rate_based_fctrl(conn->policies_params.dtcp_cfg))
                 sv->rate_based = true;
 }
+
+static struct dtp_config * dtp_config_create_gfp(gfp_t flags)
+{
+        struct dtp_config * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
+struct dtp_config * dtp_config_create(void)
+{ return dtp_config_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(dtp_config_create);
+
+struct dtp_config * dtp_config_create_ni(void)
+{ return dtp_config_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(dtp_config_create_ni);
+
+int dtp_initial_sequence_number_set(struct dtp_config * cfg,
+                                    struct policy * initial_sequence_number)
+{
+        if (!cfg) return -1;
+        if (!initial_sequence_number) return -1;
+
+        cfg->initial_sequence_number = initial_sequence_number;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtp_initial_sequence_number_set);
 
 struct policy * dtp_initial_sequence_number(struct dtp_config * cfg)
 {
