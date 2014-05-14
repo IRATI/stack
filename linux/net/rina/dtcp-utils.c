@@ -87,7 +87,15 @@ struct dtcp_config {
 /* Constructors */
 static int dtcp_window_fctrl_config_destroy(struct window_fctrl_config * cfg)
 {
-        LOG_MISSING;
+        if (!cfg)
+                return -1;
+        if (cfg->rcvr_flow_control)
+                policy_destroy(cfg->rcvr_flow_control);
+        if (cfg->receiving_flow_control)
+                policy_destroy(cfg->receiving_flow_control);
+
+        rkfree(cfg);
+
         return 0;
 }
 
@@ -115,7 +123,17 @@ static struct window_fctrl_config * window_fctrl_config_create_gfp(gfp_t flags)
 
 static int dtcp_rate_fctrl_config_destroy(struct rate_fctrl_config * cfg)
 {
-        LOG_MISSING;
+        if (!cfg)
+                return -1;
+        if (cfg->no_rate_slow_down)
+                policy_destroy(cfg->no_rate_slow_down);
+        if (cfg->no_override_default_peak)
+                policy_destroy(cfg->no_override_default_peak);
+        if (cfg->rate_reduction)
+                policy_destroy(cfg->rate_reduction);
+
+        rkfree(cfg);
+
         return 0;
 }
 
@@ -146,7 +164,24 @@ static struct rate_fctrl_config * rate_fctrl_config_create_gfp(gfp_t flags)
 
 static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
 {
-        LOG_MISSING;
+        if (!cfg)
+                return -1;
+        if(cfg->wfctrl_cfg) dtcp_window_fctrl_config_destroy(cfg->wfctrl_cfg);
+        if(cfg->rfctrl_cfg) dtcp_rate_fctrl_config_destroy(cfg->rfctrl_cfg);
+
+        if(cfg->closed_window)             
+                policy_destroy(cfg->closed_window);
+        if(cfg->flow_control_overrun)      
+                policy_destroy(cfg->flow_control_overrun);
+        if(cfg->reconcile_flow_conflict)   
+                policy_destroy(cfg->reconcile_flow_conflict);
+        if(cfg->receiver_inactivity_timer) 
+                policy_destroy(cfg->receiver_inactivity_timer);
+        if(cfg->sender_inactivity_timer)   
+                policy_destroy(cfg->sender_inactivity_timer);
+
+        rkfree(cfg);
+
         return 0;
 }
 
@@ -188,7 +223,25 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
 
 static int dtcp_rxctrl_config_destroy(struct dtcp_rxctrl_config * cfg)
 {
-        LOG_MISSING;
+        if (!cfg)
+                return -1;
+        if(cfg->rtt_estimator)               
+                policy_destroy(cfg->rtt_estimator);
+        if(cfg->retransmission_timer_expiry) 
+                policy_destroy(cfg->retransmission_timer_expiry);
+        if(cfg->sender_ack)                  
+                policy_destroy(cfg->sender_ack);
+        if(cfg->receiving_ack_list)          
+                policy_destroy(cfg->receiving_ack_list);
+        if(cfg->rcvr_ack)                    
+                policy_destroy(cfg->rcvr_ack);
+        if(cfg->sending_ack)                 
+                policy_destroy(cfg->sending_ack);
+        if(cfg->rcvr_control_ack)            
+                policy_destroy(cfg->rcvr_control_ack);
+
+        rkfree(cfg);
+
         return 0;
 }
 
@@ -227,7 +280,17 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
 
 int dtcp_config_destroy(struct dtcp_config * cfg)
 {
-        LOG_MISSING;
+        if (!cfg)
+                return -1;
+        if (cfg->fctrl_cfg)
+                dtcp_fctrl_config_destroy(cfg->fctrl_cfg);
+        if (cfg->rxctrl_cfg)
+                dtcp_rxctrl_config_destroy(cfg->rxctrl_cfg);
+        if (cfg->lost_control_pdu)
+                policy_destroy(cfg->lost_control_pdu);
+
+         rkfree(cfg);
+                
         return 0;
 }
 EXPORT_SYMBOL(dtcp_config_destroy);
