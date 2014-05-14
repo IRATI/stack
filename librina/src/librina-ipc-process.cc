@@ -1791,25 +1791,25 @@ void EnrollmentInformationRequest::setSupportingDifs(const std::list<Application
 }
 
 /*	CLASS EnrollmentRequest	*/
-EnrollmentRequest::EnrollmentRequest(const Neighbor &neighbor, const EnrollToDIFRequestEvent &event) {
-	this->neighbor = neighbor;
-	this->event = event;
+EnrollmentRequest::EnrollmentRequest(const Neighbor &arg0, const EnrollToDIFRequestEvent &arg1) {
+	neighbor = arg0;
+	event = arg1;
 }
 
 const Neighbor& EnrollmentRequest::getNeighbor() const{
 	return neighbor;
 }
 
-void EnrollmentRequest::setNeighbor(const Neighbor &neighbor) {
-	this->neighbor = neighbor;
+void EnrollmentRequest::setNeighbor(const Neighbor &arg0) {
+	neighbor = arg0;
 }
 
 const EnrollToDIFRequestEvent& EnrollmentRequest::getEvent() const{
 	return event;
 }
 
-void EnrollmentRequest::setEvent(const EnrollToDIFRequestEvent &event) {
-	this->event = event;
+void EnrollmentRequest::setEvent(const EnrollToDIFRequestEvent &arg0) {
+	event = arg0;
 }
 
 /*	CLASS BaseEvent	*/
@@ -2136,5 +2136,34 @@ std::string IPCPFlow::toString()
 	}
 	return ss.str();
 }
+
+/* CLASS EnrollmentRequest */
+
+EnrollmentRequest::EnrollmentRequest(const Neighbor &neighbor, const EnrollToDIFRequestEvent &event)
+{
+	this->neighbor = neighbor;
+	this->event = event;
+}
+
+const Neighbor& EnrollmentRequest::getNeighbor() const
+{
+	return neighbor;
+}
+
+void EnrollmentRequest::setNeighbor(const Neighbor &neighbor)
+{
+	this->neighbor = neighbor;
+}
+
+const EnrollToDIFRequestEvent& EnrollmentRequest::getEvent() const
+{
+	return event;
+}
+
+void EnrollmentRequest::setEvent(const EnrollToDIFRequestEvent &event)
+{
+	this->event = event;
+}
+
 
 }

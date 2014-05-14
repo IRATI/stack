@@ -548,6 +548,10 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
                        IPCManager::application_not_registered_error);
        }
 
+       if (!success) {
+    	   return;
+       }
+
        std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
        for (iterator = applicationRegistration->getDIFNames().begin();
                        iterator != applicationRegistration->getDIFNames().end();

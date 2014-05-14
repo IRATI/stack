@@ -419,6 +419,8 @@ void IPCProcess::disconnectFromNeighbor(
 		const ApplicationProcessNamingInformation& neighbor)
 throw (DisconnectFromNeighborException) {
 	LOG_DBG("IPCProcess::disconnect from neighbour called");
+	/* TODO: IMPLEMENT FUNCTIONALITY */
+	ApplicationProcessNamingInformation a = neighbor;
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
 
