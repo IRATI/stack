@@ -36,15 +36,30 @@ AC_PROG_CXX_C_O
 LT_INIT
 
 CPPFLAGS_EXTRA=""
-AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall -Werror"
+AX_CHECK_COMPILE_FLAG([ -Wall ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wformat ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
 ])
+AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wnon-virtual-dtor"
+])
+AX_CHECK_COMPILE_FLAG([ -Woverloaded-virtual ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Woverloaded-virtual"
+])
+AX_CHECK_COMPILE_FLAG([ -Wextra ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wextra"
+])
+AX_CHECK_COMPILE_FLAG([ -Werror ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Werror"
+])
+AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
+])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
-AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
+#AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
 PKG_PROG_PKG_CONFIG([0.26])
 
