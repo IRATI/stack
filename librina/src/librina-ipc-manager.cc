@@ -309,6 +309,7 @@ throw (NotifyRegistrationToDIFException) {
 
 #if STUB_API
 	//Do nothing
+        (void)ipcProcessName;
 #else
 	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
@@ -342,6 +343,7 @@ throw (NotifyUnregistrationFromDIFException) {
 
 #if STUB_API
 	//Do nothing
+        (void)ipcProcessName;
 #else
 	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
@@ -374,6 +376,9 @@ throw (EnrollException) {
 
 #if STUB_API
         //Do nothing
+        (void)difName;
+        (void)supportingDifName;
+        (void)neighborName;
 #else
         IpcmEnrollToDIFRequestMessage message;
         message.setDifName(difName);
@@ -437,6 +442,7 @@ throw (IpcmRegisterApplicationException) {
 
 #if STUB_API
 	//Do nothing
+        (void)regIpcProcessId;
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
@@ -635,6 +641,8 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 
 #if STUB_API
 	//Do nothing
+        (void)notifySource;
+        (void)flowAcceptorIpcProcessId;
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -738,6 +746,11 @@ unsigned int IPCProcess::queryRIB(const std::string& objectClass,
 		unsigned int scope, const std::string& filter)
 			throw (QueryRIBException){
 #if STUB_API
+        (void)objectClass;
+        (void)objectName;
+        (void)objectInstance;
+        (void)scope;
+        (void)filter;
 	return 0;
 #else
 	IpcmDIFQueryRIBRequestMessage message;
@@ -967,6 +980,9 @@ void ApplicationManager::applicationRegistered(
 
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)difName;
+        (void)result;
 #else
 	AppRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.
@@ -992,6 +1008,8 @@ void ApplicationManager::applicationUnregistered(
 
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)result;
 #else
 	AppUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
@@ -1012,6 +1030,7 @@ throw (NotifyFlowAllocatedException) {
 
 #if STUB_API
 	//Do nothing
+        (void)flowRequestEvent;
 #else
 	AppAllocateFlowRequestResultMessage responseMessage;
 	responseMessage.setPortId(flowRequestEvent.getPortId());
@@ -1034,6 +1053,11 @@ unsigned int ApplicationManager::flowRequestArrived(
 			const ApplicationProcessNamingInformation& difName,
 			int portId) throw (AppFlowArrivedException){
 #if STUB_API
+        (void)localAppName;
+        (void)remoteAppName;
+        (void)flowSpec;
+        (void)difName;
+        (void)portId;
 	return 0;
 #else
 	AppAllocateFlowRequestArrivedMessage message;
@@ -1061,6 +1085,8 @@ void ApplicationManager::flowDeallocated(
 
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)result;
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.getApplicationName());
@@ -1083,6 +1109,9 @@ void ApplicationManager::flowDeallocatedRemotely(
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
 #if STUB_API
 	//Do nothing
+        (void)portId;
+        (void)code;
+        (void)appName;
 #else
 	AppFlowDeallocatedNotificationMessage message;
 	message.setPortId(portId);
@@ -1103,6 +1132,9 @@ void ApplicationManager::getDIFPropertiesResponse(
 			throw (GetDIFPropertiesResponseException){
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)result;
+        (void)difProperties;
 #else
 	AppGetDIFPropertiesResponseMessage responseMessage;
 	responseMessage.setResult(result);

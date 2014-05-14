@@ -110,9 +110,9 @@ int Flow::readSDU(void * sdu, int maxBytes)
 	}
 
 #if STUB_API
-	unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-	sdu = buffer;
-	return 7;
+        memset(sdu, 'v', maxBytes);
+
+	return maxBytes;
 #else
 	int result = syscallReadSDU(portId, sdu, maxBytes);
 	if (result < 0){
@@ -130,7 +130,9 @@ void Flow::writeSDU(void * sdu, int size)
 	}
 
 #if STUB_API
-	//Do nothing
+	/* Do nothing. */
+        (void)sdu;
+        (void)size;
 #else
 	int result = syscallWriteSDU(portId, sdu, size);
 	if (result < 0){
@@ -272,6 +274,7 @@ unsigned int IPCManager::internalRequestFlowAllocation(
 #if STUB_API
         flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
         pendingFlows[0] = flow;
+        (void)sourceIPCProcessId;
         return 0;
 #else
         AppAllocateFlowRequestMessage message;
@@ -308,6 +311,8 @@ throw (FlowAllocationException) {
 #if STUB_API
         flow = new Flow(localAppName, remoteAppName, flowSpec, FLOW_ALLOCATED);
         pendingFlows[0] = flow;
+        (void)difName;
+        (void)sourceIPCProcessId;
         return 0;
 #else
         AppAllocateFlowRequestMessage message;
@@ -339,6 +344,8 @@ Flow * IPCManager::internalAllocateFlowResponse(
 throw (FlowAllocationException) {
 #if STUB_API
         //Do nothing
+        (void)notifySource;
+        (void)ipcProcessId;
 #else
         AppAllocateFlowResponseMessage responseMessage;
         responseMessage.setResult(result);
@@ -373,6 +380,8 @@ unsigned int IPCManager::getDIFProperties(
 throw (GetDIFPropertiesException) {
 
 #if STUB_API
+        (void)applicationName;
+        (void)DIFName;
 	return 0;
 #else
 	AppGetDIFPropertiesRequestMessage message;

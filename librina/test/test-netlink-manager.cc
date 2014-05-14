@@ -20,7 +20,7 @@
 
 using namespace rina;
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-MANAGER\n";
 
 	/* Test User-space to User-space communication */

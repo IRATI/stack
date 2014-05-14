@@ -232,7 +232,7 @@ void * doWorkConsume(void * arg)
 	return (void *) 0;
 }
 
-int main(int argc, char * argv[])
+int main()
 {
 	std::cout << "TESTING CONCURRENCY WRAPPER CLASSES\n";
 

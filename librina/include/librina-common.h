@@ -385,6 +385,8 @@ class IPCEvent {
 public:
 	virtual ~IPCEvent(){}
 
+        IPCEvent() { }
+
 	IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
 		this->eventType = eventType;
 		this->sequenceNumber = sequenceNumber;

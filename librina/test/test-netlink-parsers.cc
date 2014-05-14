@@ -3218,7 +3218,7 @@ int testRmtDumpPDUFTResponseMessage() {
         return returnValue;
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
 	int result;

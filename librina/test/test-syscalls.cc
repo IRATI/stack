@@ -45,7 +45,7 @@ char * intToCharArray(int i){
 	return stringToCharArray(strs.str());
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING RINA SYSCALLS\n";
 	int result = 0;
 	int portId1 = 0;

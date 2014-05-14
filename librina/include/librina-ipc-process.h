@@ -74,6 +74,7 @@ class EnrollToDIFRequestEvent: public IPCEvent {
         ApplicationProcessNamingInformation neighborName;
 
 public:
+        EnrollToDIFRequestEvent() {}
         EnrollToDIFRequestEvent(
                 const ApplicationProcessNamingInformation& difName,
                 const ApplicationProcessNamingInformation& supportingDIFName,

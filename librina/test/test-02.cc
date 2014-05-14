@@ -33,7 +33,7 @@ bool checkIPCProcesses(unsigned int expectedProcesses) {
 	return true;
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-IPCMANAGER\n";
 
 	/* TEST LIST IPC PROCESS TYPES */

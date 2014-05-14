@@ -225,11 +225,13 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	struct nlmsghdr *hdr;
 	struct genlmsghdr *nlhdr;
 	struct rinaHeader * myHeader;
-	struct sockaddr_nl nla = { 0 };
+	struct sockaddr_nl nla;
 	struct nl_msg *msg = NULL;
 	struct ucred *creds = NULL;
+	int numBytes;
 
-	int numBytes = nl_recv(socket, &nla, &buf, &creds);
+        memset(&nla, 0, sizeof(nla));
+        numBytes = nl_recv(socket, &nla, &buf, &creds);
 	if (numBytes <= 0) {
 		LOG_ERR("%s %d",
 				NetlinkException::error_receiving_netlink_message.c_str(),

@@ -67,7 +67,7 @@ bool checkRegisteredApplications(unsigned int expectedApps) {
         return true;
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-APPLICATION\n";
 	ApplicationProcessNamingInformation sourceName =
 			ApplicationProcessNamingInformation("/apps/test/source", "1");

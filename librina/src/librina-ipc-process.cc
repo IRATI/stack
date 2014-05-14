@@ -1796,7 +1796,7 @@ EnrollmentRequest::EnrollmentRequest(const Neighbor &arg0, const EnrollToDIFRequ
 	event = arg1;
 }
 
-const Neighbor& EnrollmentRequest::getNeighbor() const{
+const Neighbor& EnrollmentRequest::getNeighbor() const {
 	return neighbor;
 }
 
@@ -2135,34 +2135,6 @@ std::string IPCPFlow::toString()
 		}
 	}
 	return ss.str();
-}
-
-/* CLASS EnrollmentRequest */
-
-EnrollmentRequest::EnrollmentRequest(const Neighbor &neighbor, const EnrollToDIFRequestEvent &event)
-{
-	this->neighbor = neighbor;
-	this->event = event;
-}
-
-const Neighbor& EnrollmentRequest::getNeighbor() const
-{
-	return neighbor;
-}
-
-void EnrollmentRequest::setNeighbor(const Neighbor &neighbor)
-{
-	this->neighbor = neighbor;
-}
-
-const EnrollToDIFRequestEvent& EnrollmentRequest::getEvent() const
-{
-	return event;
-}
-
-void EnrollmentRequest::setEvent(const EnrollToDIFRequestEvent &event)
-{
-	this->event = event;
 }
 
 
