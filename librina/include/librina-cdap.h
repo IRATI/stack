@@ -121,11 +121,11 @@ class CDAPMessage {
 	protected:
 		static const int ABSTRACT_SYNTAX_VERSION;
 	public:
-		enum Opcode {M_CONNECT, M_CONNECT_R, M_RELEASE, M_RELEASE_R, M_CREATE, M_CREATE_R,
+		enum Opcode {NONE_OPCODE, M_CONNECT, M_CONNECT_R, M_RELEASE, M_RELEASE_R, M_CREATE, M_CREATE_R,
 			M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_CANCELREAD, M_CANCELREAD_R, M_WRITE,
 			M_WRITE_R, M_START, M_START_R, M_STOP, M_STOP_R};
 		enum AuthTypes {AUTH_NONE, AUTH_PASSWD, AUTH_SSHRSA, AUTH_SSHDSA};
-		enum Flags {F_SYNC, F_RD_INCOMPLETE};
+		enum Flags {NONE_FLAGS, F_SYNC, F_RD_INCOMPLETE};
 	/*	Members	*/
 	protected:
 		/**
@@ -266,40 +266,40 @@ class CDAPMessage {
 	public:
 		CDAPMessage();
 
-		static CDAPMessage& getOpenConnectionRequestMessage(AuthTypes authMech,
+		static CDAPMessage*getOpenConnectionRequestMessage(AuthTypes authMech,
 			const AuthValue &authValue, std::string destAEInst, std::string destAEName, std::string destApInst,
 			std::string destApName, std::string srcAEInst, std::string srcAEName, std::string srcApInst,
 			std::string srcApName, int invokeID) throw (CDAPException);
-		static CDAPMessage& getOpenConnectionResponseMessage(AuthTypes authMech,
+		static CDAPMessage*getOpenConnectionResponseMessage(AuthTypes authMech,
 			const AuthValue &authValue, std::string destAEInst, std::string destAEName, std::string destApInst,
 			std::string destApName, int result, std::string resultReason, std::string srcAEInst, std::string srcAEName,
 			std::string srcApInst, std::string srcApName, int invokeID) throw (CDAPException);
-		static CDAPMessage& getReleaseConnectionRequestMessage(Flags flags) throw (CDAPException);
-		static CDAPMessage& getReleaseConnectionResponseMessage(Flags flags, int result, std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getCreateObjectRequestMessage(char filter[], Flags flags,	std::string objClass, long objInst,
+		static CDAPMessage*getReleaseConnectionRequestMessage(Flags flags) throw (CDAPException);
+		static CDAPMessage*getReleaseConnectionResponseMessage(Flags flags, int result, std::string resultReason, int invokeID) throw (CDAPException);
+		static CDAPMessage*getCreateObjectRequestMessage(char filter[], Flags flags,	std::string objClass, long objInst,
 				std::string objName, const ObjectValue &objValue, int scope) throw (CDAPException);
-		static CDAPMessage& getCreateObjectResponseMessage(Flags flags, std::string objClass, long objInst, std::string objName, const ObjectValue &objValue, int result,
+		static CDAPMessage*getCreateObjectResponseMessage(Flags flags, std::string objClass, long objInst, std::string objName, const ObjectValue &objValue, int result,
 			std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getDeleteObjectRequestMessage(char filter[], Flags flags, std::string objClass, long objInst, std::string objName,
+		static CDAPMessage*getDeleteObjectRequestMessage(char filter[], Flags flags, std::string objClass, long objInst, std::string objName,
 			const ObjectValue &objectValue, int scope) throw (CDAPException);
-		static CDAPMessage& getDeleteObjectResponseMessage(Flags flags, std::string objClass, long objInst, std::string objName, int result,
+		static CDAPMessage*getDeleteObjectResponseMessage(Flags flags, std::string objClass, long objInst, std::string objName, int result,
 				std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getStartObjectRequestMessage(char filter[], Flags flags, std::string objClass, const ObjectValue &objValue, long objInst, std::string objName,
+		static CDAPMessage*getStartObjectRequestMessage(char filter[], Flags flags, std::string objClass, const ObjectValue &objValue, long objInst, std::string objName,
 			int scope) throw (CDAPException);
-		static CDAPMessage& getStartObjectResponseMessage(Flags flags, int result, std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getStartObjectResponseMessage(Flags flags, std::string objectClass, const ObjectValue &objectValue, long objInst,
+		static CDAPMessage*getStartObjectResponseMessage(Flags flags, int result, std::string resultReason, int invokeID) throw (CDAPException);
+		static CDAPMessage*getStartObjectResponseMessage(Flags flags, std::string objectClass, const ObjectValue &objectValue, long objInst,
 			std::string objName, int result, std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getStopObjectRequestMessage(char filter[], Flags flags,
+		static CDAPMessage*getStopObjectRequestMessage(char filter[], Flags flags,
 				std::string objClass, const ObjectValue &objValue, long objInst, std::string objName, int scope) throw (CDAPException);
-		static CDAPMessage& getStopObjectResponseMessage(Flags flags, int result, std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getReadObjectRequestMessage(char filter[], Flags flags, std::string objClass, long objInst, std::string objName, int scope) throw (CDAPException);
-		static CDAPMessage& getReadObjectResponseMessage(Flags flags, std::string objClass, long objInst, std::string objName, const ObjectValue &objValue,
+		static CDAPMessage*getStopObjectResponseMessage(Flags flags, int result, std::string resultReason, int invokeID) throw (CDAPException);
+		static CDAPMessage*getReadObjectRequestMessage(char filter[], Flags flags, std::string objClass, long objInst, std::string objName, int scope) throw (CDAPException);
+		static CDAPMessage*getReadObjectResponseMessage(Flags flags, std::string objClass, long objInst, std::string objName, const ObjectValue &objValue,
 			int result, std::string resultReason, int invokeID) throw (CDAPException);
-		static CDAPMessage& getWriteObjectRequestMessage(char filter[], Flags flags, std::string objClass, long objInst, const ObjectValue &objValue, std::string objName,
+		static CDAPMessage*getWriteObjectRequestMessage(char filter[], Flags flags, std::string objClass, long objInst, const ObjectValue &objValue, std::string objName,
 			int scope) throw (CDAPException);
-		static CDAPMessage& getWriteObjectResponseMessage(Flags flags, int result, int invokeID, std::string resultReason) throw (CDAPException);
-		static CDAPMessage& getCancelReadRequestMessage(Flags flags, int invokeID) throw (CDAPException);
-		static CDAPMessage& getCancelReadResponseMessage(Flags flags, int invokeID, int result, std::string resultReason) throw (CDAPException);
+		static CDAPMessage*getWriteObjectResponseMessage(Flags flags, int result, int invokeID, std::string resultReason) throw (CDAPException);
+		static CDAPMessage*getCancelReadRequestMessage(Flags flags, int invokeID) throw (CDAPException);
+		static CDAPMessage*getCancelReadResponseMessage(Flags flags, int invokeID, int result, std::string resultReason) throw (CDAPException);
 		/**
 		 * Returns a reply message from the request message, copying all the fields except for: Opcode (it will be the
 		 * request message counterpart), result (it will be 0) and resultReason (it will be null)
@@ -307,9 +307,9 @@ class CDAPMessage {
 		 * @return
 		 * @throws CDAPException
 		 */
-		CDAPMessage getReplyMessage();
 		/*	Accessors	*/
 	public:
+                CDAPMessage getReplyMessage();
 		int getAbsSyntax() const;
 		void setAbsSyntax(int absSyntax);
 		AuthTypes getAuthMech() const;
