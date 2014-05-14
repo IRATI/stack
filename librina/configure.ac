@@ -53,14 +53,14 @@ AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
 AX_CHECK_COMPILE_FLAG([ -Woverloaded-virtual ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Woverloaded-virtual"
 ])
-AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
-])
 AX_CHECK_COMPILE_FLAG([ -Wextra ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wextra"
 ])
 AX_CHECK_COMPILE_FLAG([ -Werror ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Werror"
+])
+AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
