@@ -280,6 +280,13 @@ struct dtp_config * dtp_config_create_ni(void)
 { return dtp_config_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(dtp_config_create_ni);
 
+int dtp_config_destroy(struct dtp_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
+EXPORT_SYMBOL(dtp_config_destroy);
+
 int dtp_initial_sequence_number_set(struct dtp_config * cfg,
                                     struct policy * initial_sequence_number)
 {

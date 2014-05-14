@@ -1,7 +1,7 @@
 /*
- * EFCP (Error and Flow Control Protocol)
+ * Policies Configuration
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,10 +30,12 @@ struct policy *  policy_create(void);
 struct policy *  policy_create_ni(void);
 struct p_param * policy_param_create(void);
 struct p_param * policy_param_create_ni(void);
-int    policy_param_add (struct policy *  policy,
-                         struct p_param * param);
-int    policy_param_rem (struct policy *  policy,
-                         struct p_param * param);
+int              policy_param_destroy(struct p_param * param);
+int              policy_destroy(struct policy * p);
+int              policy_param_add (struct policy *  policy,
+                                   struct p_param * param);
+int              policy_param_rem (struct policy *  policy,
+                                   struct p_param * param);
 
 
 #endif

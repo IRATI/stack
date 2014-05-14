@@ -34,11 +34,11 @@ struct dtcp_config;
 /* FIXME: More params to be added */
 struct conn_policies {
         /* FIXME: Anyone using this variable? To be removed */
-        bool                dtcp_present;
+        bool                  dtcp_present;
         struct  dtp_config  * dtp_cfg;
         struct  dtcp_config * dtcp_cfg;
         /* Sequence number rollover threshold */
-        int                 seq_num_ro_th;
+        int                   seq_num_ro_th;
 };
 
 /* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */

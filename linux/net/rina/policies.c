@@ -81,6 +81,41 @@ struct p_param * policy_param_create_ni()
 { return policy_param_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_param_create_ni);
 
+int policy_param_destroy(struct p_param * param)
+{
+        if (!param)
+                return -1;
+
+        if (param->name) rkfree(param->name);
+        if (param->value) rkfree(param->value);
+        list_del(&param->next);
+        rkfree(param);
+
+        return 0;
+}
+EXPORT_SYMBOL(policy_param_destroy);
+
+int policy_destroy(struct policy * p)
+{
+        struct p_param * pos, * nxt;
+
+        if (!p)
+                return -1;
+
+        if (p->name) rkfree(p->name);
+        if (p->version) rkfree(p->version);
+        
+        list_for_each_entry_safe(pos, nxt, &p->params, next) {
+                if (policy_param_destroy(pos))
+                        return -1;
+        }       
+
+        rkfree(p);
+
+        return 0;
+}
+EXPORT_SYMBOL(policy_destroy);
+
 int policy_param_add (struct policy *  policy,
                       struct p_param * param)
 { 

@@ -160,6 +160,14 @@ struct dtcp_config * dtcp_config_create_ni(void)
 { return dtcp_config_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(dtcp_config_create_ni);
 
+/* Destructors */
+int dtcp_config_destroy(struct dtcp_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_config_destroy);
+
 /* Setters */
 /* FIXME: check better the inputs */
 /* window_fctrl_config */

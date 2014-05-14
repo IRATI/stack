@@ -26,9 +26,9 @@
 #include "rmt.h"
 #include "kfa.h"
 #include "dt.h"
-#include "policies.h"
 
 struct dtp_config;
+struct policy;
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
@@ -39,6 +39,7 @@ int          dtp_destroy(struct dtp * instance);
 /* Config */
 struct dtp_config * dtp_config_create(void);
 struct dtp_config * dtp_config_create_ni(void);
+int                 dtp_config_destroy(struct dtp_config * cfg);
 int                 dtp_initial_sequence_number_set(struct dtp_config * cfg,
                                    struct policy * initial_sequence_number);
 struct policy *     dtp_initial_sequence_number(struct dtp_config * cfg);

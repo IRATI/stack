@@ -22,25 +22,28 @@
 #define RINA_DTCP_UTILS_H
 
 #include "common.h"
-#include "policies.h"
 
 struct dtcp_config;
 struct dtcp_fctrl_config;
 struct dtcp_rctrl_config;
 struct window_fctrl_config;
 struct rate_fctrl_config;
+struct policy;
 
 /* Constructors */
 struct window_fctrl_config * window_fctrl_config_create(void);
 struct window_fctrl_config * window_fctrl_config_create_ni(void);
-struct rate_fctrl_config * rate_fctrl_config_create(void);
-struct rate_fctrl_config * rate_fctrl_config_create_ni(void);
-struct dtcp_fctrl_config * dtcp_fctrl_config_create(void);
-struct dtcp_fctrl_config * dtcp_fctrl_config_create_ni(void);
-struct dtcp_rxctrl_config * dtcp_rxctrl_config_create(void);
-struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_ni(void);
-struct dtcp_config * dtcp_config_create(void);
-struct dtcp_config * dtcp_config_create_ni(void);
+struct rate_fctrl_config *   rate_fctrl_config_create(void);
+struct rate_fctrl_config *   rate_fctrl_config_create_ni(void);
+struct dtcp_fctrl_config *   dtcp_fctrl_config_create(void);
+struct dtcp_fctrl_config *   dtcp_fctrl_config_create_ni(void);
+struct dtcp_rxctrl_config *  dtcp_rxctrl_config_create(void);
+struct dtcp_rxctrl_config *  dtcp_rxctrl_config_create_ni(void);
+struct dtcp_config *         dtcp_config_create(void);
+struct dtcp_config *         dtcp_config_create_ni(void);
+
+/* Destructors */
+int dtcp_config_destroy(struct dtcp_config * cfg);
 
 /* Setters */
 /* window_fctrl_config */
@@ -121,23 +124,23 @@ int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
 
 /* Getters */
 /* window_fctrl_config */
-uint_t dtcp_max_closed_winq_length(struct dtcp_config * cfg);
-uint_t dtcp_initial_credit(struct dtcp_config * cfg);
+uint_t          dtcp_max_closed_winq_length(struct dtcp_config * cfg);
+uint_t          dtcp_initial_credit(struct dtcp_config * cfg);
 struct policy * dtcp_rcvr_flow_control(struct dtcp_config * cfg);
 struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg); 
 
 /* rate_fctrl_config */
-uint_t dtcp_sending_rate (struct dtcp_config * cfg); 
-uint_t dtcp_time_period(struct dtcp_config * cfg);
+uint_t          dtcp_sending_rate (struct dtcp_config * cfg); 
+uint_t          dtcp_time_period(struct dtcp_config * cfg);
 struct policy * dtcp_no_rate_slow_down(struct dtcp_config * cfg);
 struct policy * dtcp_no_override_default_peak(struct dtcp_config * cfg);
 struct policy * dtcp_rate_reduction(struct dtcp_config * cfg);
 
 /* dtcp_fctrl_config */
 bool dtcp_window_based_fctrl(struct dtcp_config * cfg);
-struct window_fctrl_config * dtcp_wfctrl_cfg(struct dtcp_config * cfg);
 bool dtcp_rate_based_fctrl(struct dtcp_config * cfg);
-struct rate_fctrl_config * dtcp_rfctrl_cfg(struct dtcp_config * cfg);
+struct window_fctrl_config * dtcp_wfctrl_cfg(struct dtcp_config * cfg);
+struct rate_fctrl_config *   dtcp_rfctrl_cfg(struct dtcp_config * cfg);
 uint_t dtcp_sent_bytes_th(struct dtcp_config * cfg);
 uint_t dtcp_sent_bytes_percent_th(struct dtcp_config * cfg);
 uint_t dtcp_sent_buffers_th(struct dtcp_config * cfg);
@@ -151,8 +154,8 @@ struct policy * dtcp_receiver_inactivity_timer(struct dtcp_config * cfg);
 struct policy * dtcp_sender_inactivity_timer(struct dtcp_config * cfg);
 
 /* dtcp_rxctrl_config */
-uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg);
-timeout_t dtcp_initial_a(struct dtcp_config * cfg);
+uint_t          dtcp_data_retransmit_max(struct dtcp_config * cfg);
+timeout_t       dtcp_initial_a(struct dtcp_config * cfg);
 struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg);
 struct policy * dtcp_retransmission_timer_expiry(struct dtcp_config * cfg);
 struct policy * dtcp_sender_ack(struct dtcp_config * cfg);
@@ -162,13 +165,13 @@ struct policy * dtcp_sending_ack(struct dtcp_config * cfg);
 struct policy * dtcp_rcvr_control_ack(struct dtcp_config * cfg);
 
 /* dtcp_config */
-bool dtcp_flow_ctrl(struct dtcp_config * cfg);
-bool dtcp_rtx_ctrl(struct dtcp_config * cfg);
-struct dtcp_fctrl_config * dtcp_fctrl_cfg(struct dtcp_config * cfg);
+bool                        dtcp_flow_ctrl(struct dtcp_config * cfg);
+bool                        dtcp_rtx_ctrl(struct dtcp_config * cfg);
+struct dtcp_fctrl_config *  dtcp_fctrl_cfg(struct dtcp_config * cfg);
 struct dtcp_rxctrl_config * dtcp_rxctrl_cfg(struct dtcp_config * cfg);
-timeout_t dtcp_receiver_inactivity(struct dtcp_config * cfg);
-timeout_t dtcp_sender_inactivity(struct dtcp_config * cfg);
-struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg);
+timeout_t                   dtcp_receiver_inactivity(struct dtcp_config * cfg);
+timeout_t                   dtcp_sender_inactivity(struct dtcp_config * cfg);
+struct policy *             dtcp_lost_control_pdu(struct dtcp_config * cfg);
 
 #endif
 
