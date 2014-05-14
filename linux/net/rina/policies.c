@@ -39,7 +39,7 @@ struct policy {
         struct list_head params;
 };
 
-static struct policy * policies_create_gfp(gfp_t flags) 
+struct policy * policy_create_gfp(gfp_t flags) 
 {
         struct policy * tmp;
 
@@ -51,13 +51,14 @@ static struct policy * policies_create_gfp(gfp_t flags)
 
         return tmp;
 }
+EXPORT_SYMBOL(policy_create_gfp);
 
 struct policy * policy_create()
-{ return policies_create_gfp(GFP_KERNEL); }
+{ return policy_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(policy_create);
 
 struct policy * policy_create_ni()
-{ return policies_create_gfp(GFP_ATOMIC); }
+{ return policy_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_create_ni);
 
 static struct p_param * policy_param_create_gfp(gfp_t flags) 

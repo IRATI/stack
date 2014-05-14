@@ -26,6 +26,7 @@
 #include "utils.h"
 #include "debug.h"
 #include "dtcp-utils.h"
+#include "policies.h"
 
 struct window_fctrl_config {
         uint_t          max_closed_winq_length; /* in cwq */
@@ -84,6 +85,12 @@ struct dtcp_config {
 };
 
 /* Constructors */
+static int dtcp_window_fctrl_config_destroy(struct window_fctrl_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
+
 static struct window_fctrl_config * window_fctrl_config_create_gfp(gfp_t flags)
 {
         struct window_fctrl_config * tmp;
@@ -92,16 +99,25 @@ static struct window_fctrl_config * window_fctrl_config_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        tmp->rcvr_flow_control      = policy_create_gfp(flags);
+        tmp->receiving_flow_control = policy_create_gfp(flags);
+
+        if (!tmp->rcvr_flow_control || tmp->receiving_flow_control)
+                goto clean;
+
         return tmp;
+
+        clean:
+
+        dtcp_window_fctrl_config_destroy(tmp);
+        return NULL;
 }
 
-struct window_fctrl_config * window_fctrl_config_create(void)
-{ return window_fctrl_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(window_fctrl_config_create);
-
-struct window_fctrl_config * window_fctrl_config_create_ni(void)
-{ return window_fctrl_config_create_gfp(GFP_ATOMIC); }
-EXPORT_SYMBOL(window_fctrl_config_create_ni);
+static int dtcp_rate_fctrl_config_destroy(struct rate_fctrl_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
 
 static struct rate_fctrl_config * rate_fctrl_config_create_gfp(gfp_t flags)
 {
@@ -111,16 +127,28 @@ static struct rate_fctrl_config * rate_fctrl_config_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        tmp->no_rate_slow_down        = policy_create_gfp(flags);
+        tmp->no_override_default_peak = policy_create_gfp(flags);
+        tmp->rate_reduction           = policy_create_gfp(flags);
+
+        if (!tmp->no_rate_slow_down        ||
+            !tmp->no_override_default_peak ||
+            !tmp->rate_reduction)
+                goto clean;
+
         return tmp;
+
+        clean:
+
+        dtcp_rate_fctrl_config_destroy(tmp);
+        return NULL;
 }
 
-struct rate_fctrl_config * rate_fctrl_config_create(void)
-{ return rate_fctrl_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(rate_fctrl_config_create);
-
-struct rate_fctrl_config * rate_fctrl_config_create_ni(void)
-{ return rate_fctrl_config_create_gfp(GFP_ATOMIC); }
-EXPORT_SYMBOL(rate_fctrl_config_create_ni);
+static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
 
 static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
 {
@@ -130,16 +158,79 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        tmp->wfctrl_cfg = window_fctrl_config_create_gfp(flags);
+        if (!tmp->wfctrl_cfg)
+                goto clean;
+
+        tmp->rfctrl_cfg = rate_fctrl_config_create_gfp(flags);
+        if (!tmp->rfctrl_cfg)
+                goto clean;
+
+        tmp->closed_window             = policy_create_gfp(flags);
+        tmp->flow_control_overrun      = policy_create_gfp(flags);
+        tmp->reconcile_flow_conflict   = policy_create_gfp(flags);
+        tmp->receiver_inactivity_timer = policy_create_gfp(flags);
+        tmp->sender_inactivity_timer   = policy_create_gfp(flags);
+        if (!tmp->closed_window              ||
+            !tmp->flow_control_overrun       ||
+            !tmp->reconcile_flow_conflict    ||
+            !tmp->receiver_inactivity_timer  ||
+            !tmp->sender_inactivity_timer)
+                goto clean;
+
         return tmp;
+
+        clean:
+
+        dtcp_fctrl_config_destroy(tmp);
+        return NULL;
 }
 
-struct dtcp_fctrl_config * dtcp_fctrl_config_create(void)
-{ return dtcp_fctrl_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(dtcp_fctrl_config_create);
+static int dtcp_rxctrl_config_destroy(struct dtcp_rxctrl_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
 
-struct dtcp_fctrl_config * dtcp_fctrl_config_create_ni(void)
-{ return dtcp_fctrl_config_create_gfp(GFP_ATOMIC); }
-EXPORT_SYMBOL(dtcp_fctrl_config_create_ni);
+static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
+{
+        struct dtcp_rxctrl_config * tmp;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->rtt_estimator               = policy_create_gfp(flags);
+        tmp->retransmission_timer_expiry = policy_create_gfp(flags);
+        tmp->sender_ack                  = policy_create_gfp(flags);
+        tmp->receiving_ack_list          = policy_create_gfp(flags);
+        tmp->rcvr_ack                    = policy_create_gfp(flags);
+        tmp->sending_ack                 = policy_create_gfp(flags);
+        tmp->rcvr_control_ack            = policy_create_gfp(flags);
+
+        if(!tmp->rtt_estimator               ||
+           !tmp->retransmission_timer_expiry ||
+           !tmp->sender_ack                  ||
+           !tmp->receiving_ack_list          ||
+           !tmp->rcvr_ack                    ||
+           !tmp->sending_ack                 ||
+           !tmp->rcvr_control_ack)
+                goto clean;
+
+        return tmp;
+
+        clean:
+
+        dtcp_rxctrl_config_destroy(tmp);
+        return NULL;
+}
+
+int dtcp_config_destroy(struct dtcp_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_config_destroy);
 
 static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
 {
@@ -149,7 +240,24 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        tmp->fctrl_cfg = dtcp_fctrl_config_create_gfp(flags);
+        if (!tmp->fctrl_cfg) 
+                goto clean;
+
+        tmp->rxctrl_cfg = dtcp_rxctrl_config_create_gfp(flags);
+        if (!tmp->rxctrl_cfg)
+                goto clean;
+
+        tmp->lost_control_pdu = policy_create_gfp(flags);
+        if (!tmp->lost_control_pdu)
+                goto clean;
+
         return tmp;
+
+        clean:
+
+        dtcp_config_destroy(tmp);
+        return NULL;
 }
 
 struct dtcp_config * dtcp_config_create(void)
@@ -159,14 +267,6 @@ EXPORT_SYMBOL(dtcp_config_create);
 struct dtcp_config * dtcp_config_create_ni(void)
 { return dtcp_config_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(dtcp_config_create_ni);
-
-/* Destructors */
-int dtcp_config_destroy(struct dtcp_config * cfg)
-{
-        LOG_MISSING;
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_config_destroy);
 
 /* Setters */
 /* FIXME: check better the inputs */

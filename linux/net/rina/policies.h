@@ -28,6 +28,7 @@ struct policy;
 
 struct policy *  policy_create(void);
 struct policy *  policy_create_ni(void);
+struct policy *  policy_create_gfp(gfp_t flags);
 struct p_param * policy_param_create(void);
 struct p_param * policy_param_create_ni(void);
 int              policy_param_destroy(struct p_param * param);
