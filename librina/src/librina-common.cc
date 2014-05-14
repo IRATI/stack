@@ -943,13 +943,14 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
 /* CLASS ALLOCATE FLOW RESPONSE EVENT */
 AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
-                bool notifysource,
+                bool notifySource,
                 int flowAcceptorIpcProcessId,
                 unsigned int sequenceNumber) :
-                BaseResponseEvent(result,
-                                 ALLOCATE_FLOW_RESPONSE_EVENT,
-                                 sequenceNumber) {
-        this->notifySource = notifySource;
+        BaseResponseEvent(result,
+                          ALLOCATE_FLOW_RESPONSE_EVENT,
+                          sequenceNumber)
+{
+        this->notifySource             = notifySource;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
 }
 
@@ -1007,7 +1008,8 @@ IPCEvent * getIPCEvent(){
 	return event;
 }
 
-IPCEvent * IPCEventProducer::eventPoll() {
+IPCEvent * IPCEventProducer::eventPoll()
+{
 #if STUB_API
 	return getIPCEvent();
 #else
@@ -1015,7 +1017,8 @@ IPCEvent * IPCEventProducer::eventPoll() {
 #endif
 }
 
-IPCEvent * IPCEventProducer::eventWait() {
+IPCEvent * IPCEventProducer::eventWait()
+{
 #if STUB_API
 	return getIPCEvent();
 #else
@@ -1023,9 +1026,13 @@ IPCEvent * IPCEventProducer::eventWait() {
 #endif
 }
 
-IPCEvent * IPCEventProducer::eventTimedWait(
-		int seconds, int nanoseconds){
+IPCEvent * IPCEventProducer::eventTimedWait(int seconds,
+                                            int nanoseconds)
+{
 #if STUB_API
+        (void) seconds;
+        (void) nanoseconds;
+
 	return getIPCEvent();
 #else
 	return rinaManager->getEventQueue()->timedtake(seconds, nanoseconds);
@@ -1037,24 +1044,25 @@ Singleton<IPCEventProducer> ipcEventProducer;
 /* CLASS IPC EXCEPTION */
 
 IPCException::IPCException(const std::string& description) :
-		Exception(description) {
-}
+        Exception(description)
+{ }
 
 const std::string IPCException::operation_not_implemented_error =
 		"This operation is not yet implemented";
 
 /* CLASS POLICY */
-bool Policy::operator==(const Policy &other) const {
-	return false;
+bool Policy::operator==(const Policy &other) const
+{
+        (void) other; // Suppress compiler warnings
+
+        return false;
 }
 
-bool Policy::operator!=(const Policy &other) const {
-	return !(*this == other);
-}
+bool Policy::operator!=(const Policy &other) const
+{ return !(*this == other); }
 
-Policy::Policy() {
-        this->id = 0;
-}
+Policy::Policy()
+{ this->id = 0; }
 
 Policy::Policy(unsigned int id, std::string name) {
         this->id = id;

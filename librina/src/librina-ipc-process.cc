@@ -25,7 +25,7 @@
 #include "core.h"
 #include "rina-syscalls.h"
 
-namespace rina{
+namespace rina {
 
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
@@ -36,10 +36,9 @@ AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 	this->difInformation = difInformation;
 }
 
-const DIFInformation&
-AssignToDIFRequestEvent::getDIFInformation() const{
-	return difInformation;
-}
+        const DIFInformation&
+        AssignToDIFRequestEvent::getDIFInformation() const
+{ return difInformation; }
 
 /* CLASS ENROLL TO DIF REQUEST EVENT */
 EnrollToDIFRequestEvent::EnrollToDIFRequestEvent(
@@ -49,9 +48,9 @@ EnrollToDIFRequestEvent::EnrollToDIFRequestEvent(
                 unsigned int sequenceNumber):
                 IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber)
 {
-        this->difName = difName;
+        this->difName           = difName;
         this->supportingDIFName = supportingDIFName;
-        this->neighborName = neighborName;
+        this->neighborName      = neighborName;
 }
 
 const ApplicationProcessNamingInformation&
@@ -91,7 +90,8 @@ IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
 		bool registered,
 		unsigned int sequenceNumber): IPCEvent(
 		                IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-		                sequenceNumber){
+		                sequenceNumber)
+{
         this->ipcProcessName = ipcProcessName;
         this->difName = difName;
         this->registered = registered;
@@ -116,7 +116,9 @@ QueryRIBRequestEvent::QueryRIBRequestEvent(const std::string& objectClass,
 		const std::string& objectName, long objectInstance,
 		int scope, const std::string& filter,
 		unsigned int sequenceNumber):
-				IPCEvent(IPC_PROCESS_QUERY_RIB, sequenceNumber){
+				IPCEvent(IPC_PROCESS_QUERY_RIB,
+                                         sequenceNumber)
+{
 	this->objectClass = objectClass;
 	this->objectName = objectName;
 	this->objectInstance = objectInstance;
@@ -245,25 +247,24 @@ ExtendedIPCManager::ExtendedIPCManager() {
         ipcProcessInitialized = false;
 }
 
-ExtendedIPCManager::~ExtendedIPCManager() throw(){
-}
+ExtendedIPCManager::~ExtendedIPCManager() throw()
+{ }
 
 const DIFInformation& ExtendedIPCManager::getCurrentDIFInformation() const{
 	return currentDIFInformation;
 }
 
 void ExtendedIPCManager::setCurrentDIFInformation(
-		const DIFInformation& currentDIFInformation){
+		const DIFInformation& currentDIFInformation)
+{
 	this->currentDIFInformation = currentDIFInformation;
 }
 
-unsigned short ExtendedIPCManager::getIpcProcessId() const{
-	return ipcProcessId;
-}
+unsigned short ExtendedIPCManager::getIpcProcessId() const
+{ return ipcProcessId; }
 
-void ExtendedIPCManager::setIpcProcessId(unsigned short ipcProcessId){
-	this->ipcProcessId = ipcProcessId;
-}
+void ExtendedIPCManager::setIpcProcessId(unsigned short ipcProcessId)
+{ this->ipcProcessId = ipcProcessId; }
 
 void ExtendedIPCManager::setIPCManagerPort(
                 unsigned int ipcManagerPort) {
@@ -272,7 +273,8 @@ void ExtendedIPCManager::setIPCManagerPort(
 
 void ExtendedIPCManager::notifyIPCProcessInitialized(
                 const ApplicationProcessNamingInformation& name)
-throw(IPCException){
+        throw(IPCException)
+{
         lock();
         if (ipcProcessInitialized) {
                 unlock();
@@ -280,7 +282,9 @@ throw(IPCException){
         }
 
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) name;
 #else
         IpcmIPCProcessInitializedMessage message;
         message.setName(name);
@@ -288,9 +292,9 @@ throw(IPCException){
         message.setDestPortId(ipcManagerPort);
         message.setNotificationMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch(NetlinkException &e) {
                 unlock();
                 throw IPCException(e.what());
         }
@@ -314,7 +318,7 @@ throw (ApplicationRegistrationException) {
         applicationRegistration = getApplicationRegistration(
                         appName);
 
-        if (!applicationRegistration){
+        if (!applicationRegistration) {
                 applicationRegistration = new ApplicationRegistration(
                                 appName);
                 putApplicationRegistration(appName,
@@ -334,7 +338,7 @@ void ExtendedIPCManager::appUnregistered(
         lock();
         ApplicationRegistration * applicationRegistration =
                         getApplicationRegistration(appName);
-        if (!applicationRegistration){
+        if (!applicationRegistration) {
                 unlock();
                 throw ApplicationUnregistrationException(
                                 IPCManager::application_not_registered_error);
@@ -359,8 +363,9 @@ void ExtendedIPCManager::appUnregistered(
 
 void ExtendedIPCManager::assignToDIFResponse(
 		const AssignToDIFRequestEvent& event, int result)
-	throw(AssignToDIFResponseException){
-	if (result == 0){
+	throw(AssignToDIFResponseException)
+{
+	if (result == 0) {
 		this->currentDIFInformation = event.getDIFInformation();
 	}
 #if STUB_API
@@ -372,9 +377,9 @@ void ExtendedIPCManager::assignToDIFResponse(
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw AssignToDIFResponseException(e.what());
 	}
 #endif
@@ -385,7 +390,12 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
                         const DIFInformation& difInformation)
         throw (EnrollException) {
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) event;
+        (void) result;
+        (void) newNeighbors;
+        (void) difInformation;
 #else
         IpcmEnrollToDIFResponseMessage responseMessage;
         responseMessage.setResult(result);
@@ -395,19 +405,23 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
         responseMessage.setDestPortId(ipcManagerPort);
         responseMessage.setSequenceNumber(event.getSequenceNumber());
         responseMessage.setResponseMessage(true);
-        try{
+        try {
                 rinaManager->sendMessage(&responseMessage);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
 #endif
 }
 
 void ExtendedIPCManager::notifyNeighborsModified(bool added,
-                        const std::list<Neighbor> & neighbors)
-        throw (EnrollException) {
+                        const std::list<Neighbor> &   neighbors)
+        throw (EnrollException)
+{
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) added;
+        (void) neighbors;
 #else
         IpcmNotifyNeighborsModifiedMessage message;
         message.setAdded(added);
@@ -417,9 +431,9 @@ void ExtendedIPCManager::notifyNeighborsModified(bool added,
         message.setSequenceNumber(0);
         message.setNotificationMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw EnrollException(e.what());
         }
 #endif
@@ -427,9 +441,13 @@ void ExtendedIPCManager::notifyNeighborsModified(bool added,
 
 void ExtendedIPCManager::registerApplicationResponse(
 		const ApplicationRegistrationRequestEvent& event, int result)
-	throw(RegisterApplicationResponseException){
+	throw(RegisterApplicationResponseException)
+{
 #if STUB_API
 	//Do nothing
+
+        (void) event;
+        (void) result;
 #else
 	IpcmRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -437,9 +455,9 @@ void ExtendedIPCManager::registerApplicationResponse(
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch(NetlinkException &e) {
 		throw RegisterApplicationResponseException(e.what());
 	}
 #endif
@@ -447,9 +465,12 @@ void ExtendedIPCManager::registerApplicationResponse(
 
 void ExtendedIPCManager::unregisterApplicationResponse(
 		const ApplicationUnregistrationRequestEvent& event, int result)
-	throw(UnregisterApplicationResponseException){
+	throw(UnregisterApplicationResponseException) {
 #if STUB_API
-	//Do nothing
+	// Do nothing
+
+        (void) event;
+        (void) result;
 #else
 	IpcmUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -457,9 +478,9 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw UnregisterApplicationResponseException(e.what());
 	}
 #endif
@@ -467,20 +488,25 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 
 void ExtendedIPCManager::allocateFlowRequestResult(
 		const FlowRequestEvent& event, int result)
-	throw(AllocateFlowResponseException){
+	throw(AllocateFlowResponseException) {
 #if STUB_API
-	//Do nothing
+	// Do nothing
+
+        (void) event;
+        (void) result;
 #else
 	IpcmAllocateFlowRequestResultMessage responseMessage;
+
 	responseMessage.setResult(result);
 	responseMessage.setPortId(event.getPortId());
 	responseMessage.setSequenceNumber(event.getSequenceNumber());
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
-	try{
+
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch(NetlinkException &e) {
 		throw AllocateFlowResponseException(e.what());
 	}
 #endif
@@ -491,8 +517,13 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpecification,
 			int portId)
-		throw (AllocateFlowRequestArrivedException){
+		throw (AllocateFlowRequestArrivedException) {
 #if STUP_API
+        (void) localAppName;
+        (void) remoteAppName;
+        (void) flowSpecification;
+        (void) portId;
+
 	return 0;
 #else
 	IpcmAllocateFlowRequestArrivedMessage message;
@@ -505,9 +536,9 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setDestPortId(ipcManagerPort);
 	message.setRequestMessage(true);
 
-	try{
+	try {
 	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 	        throw AllocateFlowRequestArrivedException(e.what());
 	}
 
@@ -536,17 +567,24 @@ throw (FlowAllocationException) {
 
 Flow * ExtendedIPCManager::allocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent, int result,
-                bool notifySource) throw (FlowAllocationException) {
-        return internalAllocateFlowResponse(
-                        flowRequestEvent, result, notifySource, ipcProcessId);
+                bool notifySource) throw (FlowAllocationException)
+{
+        return internalAllocateFlowResponse(flowRequestEvent,
+                                            result,
+                                            notifySource,
+                                            ipcProcessId);
 }
 
 void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
 		int result)
-	throw (DeallocateFlowResponseException){
+	throw (DeallocateFlowResponseException)
+{
 #if STUB_API
-	//Do nothing
+	// Do nothing
+
+        (void) flowDeallocateEvent;
+        (void) result;
 #else
 	IpcmDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -554,9 +592,9 @@ void ExtendedIPCManager::notifyflowDeallocated(
 	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw DeallocateFlowResponseException(e.what());
 	}
 #endif
@@ -564,9 +602,12 @@ void ExtendedIPCManager::notifyflowDeallocated(
 
 void ExtendedIPCManager::flowDeallocatedRemotely(
 		int portId, int code)
-		throw (DeallocateFlowResponseException){
+		throw (DeallocateFlowResponseException) {
 #if STUB_API
-	//Do nothing
+	// Do nothing
+
+        (void) portId;
+        (void) code;
 #else
 	IpcmFlowDeallocatedNotificationMessage message;
 	message.setPortId(portId);
@@ -574,9 +615,9 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setDestPortId(ipcManagerPort);
 	message.setNotificationMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw DeallocateFlowResponseException(e.what());
 	}
 #endif
@@ -585,9 +626,13 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
 		const std::list<RIBObject>& ribObjects)
-	throw(QueryRIBResponseException){
+	throw(QueryRIBResponseException) {
 #if STUB_API
 	//Do nothing
+
+        (void) event;
+        (void) result;
+        (void) ribObjects;
 #else
 	IpcmDIFQueryRIBResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -596,11 +641,11 @@ void ExtendedIPCManager::queryRIBResponse(
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 	        //FIXME, compute maximum message size dynamically
 		rinaManager->sendMessageOfMaxSize(&responseMessage,
 		                5*PAGE_SIZE);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw QueryRIBResponseException(e.what());
 	}
 #endif
@@ -609,11 +654,14 @@ void ExtendedIPCManager::queryRIBResponse(
 int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
         throw (PortAllocationException) {
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) appName;
+
         return 1;
 #else
         int result = syscallAllocatePortId(ipcProcessId, appName);
-        if (result < 0){
+        if (result < 0) {
                 throw PortAllocationException();
         }
 
@@ -624,11 +672,14 @@ int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation
 void ExtendedIPCManager::deallocatePortId(int portId)
         throw (PortAllocationException) {
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) portId;
+
         return;
 #else
         int result = syscallDeallocatePortId(portId);
-        if (result < 0){
+        if (result < 0) {
                 throw PortAllocationException();
         }
 #endif
@@ -637,34 +688,30 @@ void ExtendedIPCManager::deallocatePortId(int portId)
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS POLICY PAREMETER */
-PolicyParameter::PolicyParameter(){
-}
+PolicyParameter::PolicyParameter()
+{ }
 
-const std::string& PolicyParameter::getName() const {
-        return name;
-}
+const std::string& PolicyParameter::getName() const
+{ return name; }
 
-void PolicyParameter::setName(const std::string& name) {
-        this->name = name;
-}
+void PolicyParameter::setName(const std::string& name)
+{ this->name = name; }
 
-const std::string& PolicyParameter::getValue() const {
-        return value;
-}
+const std::string& PolicyParameter::getValue() const
+{ return value; }
 
-void PolicyParameter::setValue(const std::string& value){
-        this->value = value;
-}
+void PolicyParameter::setValue(const std::string& value)
+{ this->value = value; }
 
 /* CLASS EFCP POLICY CONFIGURATION */
-EFCPPolicyConfig::EFCPPolicyConfig() {
+EFCPPolicyConfig::EFCPPolicyConfig()
+{
         name = "default";
         version = 0;
 }
 
-const std::string& EFCPPolicyConfig::getName() const {
-        return name;
-}
+const std::string& EFCPPolicyConfig::getName() const
+{ return name; }
 
 void EFCPPolicyConfig::setName(const std::string& name) {
         this->name = name;
@@ -1095,7 +1142,7 @@ void DTCPConfig::setSendertimerinactiviypolicy(
 }
 
 /* CLASS CONNECTION POLICIES */
-ConnectionPolicies::ConnectionPolicies(){
+ConnectionPolicies::ConnectionPolicies() {
         DTCPpresent = false;
         seqnumrolloverthreshold = 0;
 }
@@ -1165,7 +1212,7 @@ unsigned int Connection::getSourceAddress() const {
         return sourceAddress;
 }
 
-void Connection::setSourceAddress(unsigned int sourceAddress){
+void Connection::setSourceAddress(unsigned int sourceAddress) {
         this->sourceAddress = sourceAddress;
 }
 
@@ -1241,7 +1288,7 @@ const std::list<unsigned int> PDUForwardingTableEntry::getPortIds() const {
 }
 
 void PDUForwardingTableEntry::
-setPortIds(const std::list<unsigned int>& portIds){
+setPortIds(const std::list<unsigned int>& portIds) {
         this->portIds = portIds;
 }
 
@@ -1307,7 +1354,8 @@ throw (AssignToDIFException) {
         unsigned int seqNum = 0;
 
 #if STUB_API
-        //Do nothing
+        // Do nothing
+        (void) difInformation;
 #else
         IpcmAssignToDIFRequestMessage message;
         message.setDIFInformation(difInformation);
@@ -1316,9 +1364,9 @@ throw (AssignToDIFException) {
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
 
@@ -1333,7 +1381,9 @@ throw (UpdateDIFConfigurationException) {
         unsigned int seqNum=0;
 
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) difConfiguration;
 #else
         IpcmUpdateDIFConfigurationRequestMessage message;
         message.setDIFConfiguration(difConfiguration);
@@ -1342,9 +1392,9 @@ throw (UpdateDIFConfigurationException) {
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw UpdateDIFConfigurationException(e.what());
         }
 
@@ -1359,7 +1409,8 @@ throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
 #if STUB_API
-        //Do nothing
+        // Do nothing
+        (void) connection;
 #else
         IpcpConnectionCreateRequestMessage message;
         message.setPortId(connection.getPortId());
@@ -1371,9 +1422,9 @@ throw (CreateConnectionException) {
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw CreateConnectionException(e.what());
         }
 
@@ -1388,7 +1439,9 @@ throw (UpdateConnectionException) {
         unsigned int seqNum=0;
 
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) connection;
 #else
         IpcpConnectionUpdateRequestMessage message;
         message.setPortId(connection.getPortId());
@@ -1400,9 +1453,9 @@ throw (UpdateConnectionException) {
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw UpdateConnectionException(e.what());
         }
 
@@ -1418,7 +1471,9 @@ throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) connection;
 #else
         IpcpConnectionCreateArrivedMessage message;
         message.setPortId(connection.getPortId());
@@ -1432,9 +1487,9 @@ throw (CreateConnectionException) {
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw CreateConnectionException(e.what());
         }
 
@@ -1446,11 +1501,13 @@ throw (CreateConnectionException) {
 
 unsigned int KernelIPCProcess::
 destroyConnection(const Connection& connection)
-        throw (DestroyConnectionException) {
-        unsigned int seqNum=0;
+        throw (DestroyConnectionException)
+{
+        unsigned int seqNum = 0;
 
 #if STUB_API
         //Do nothing
+        (void) connection;
 #else
         IpcpConnectionDestroyRequestMessage message;
         message.setPortId(connection.getPortId());
@@ -1460,9 +1517,9 @@ destroyConnection(const Connection& connection)
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw DestroyConnectionException(e.what());
         }
 
@@ -1474,9 +1531,13 @@ destroyConnection(const Connection& connection)
 
 void KernelIPCProcess::
 modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
-                        int mode) throw (PDUForwardingTableException) {
+                        int mode) throw (PDUForwardingTableException)
+{
 #if STUB_API
         //Do nothing
+
+        (void) entries;
+        (void) mode;
 #else
         RmtModifyPDUFTEntriesRequestMessage message;
         message.setEntries(entries);
@@ -1486,9 +1547,9 @@ modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entrie
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw PDUForwardingTableException(e.what());
         }
 #endif
@@ -1507,9 +1568,9 @@ unsigned int KernelIPCProcess::dumptPDUFT()
         message.setDestPortId(0);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw PDUForwardingTableException(e.what());
         }
 
@@ -1522,11 +1583,15 @@ unsigned int KernelIPCProcess::dumptPDUFT()
 void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
                 throw (WriteSDUException) {
 #if STUB_API
-        //Do nothing
+        // Do nothing
+
+        (void) sdu;
+        (void) size;
+        (void) portId;
 #else
         int result = syscallWriteManagementSDU(ipcProcessId, sdu, portId,
                         size);
-        if (result < 0){
+        if (result < 0) {
                 throw WriteSDUException();
         }
 #endif
@@ -1534,21 +1599,27 @@ void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
 Singleton<KernelIPCProcess> kernelIPCProcess;
 
 ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
-                int maxBytes)
-                throw (ReadSDUException) {
+                                                            int    maxBytes)
+        throw (ReadSDUException)
+{
         ReadManagementSDUResult readResult;
 
 #if STUB_API
         unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
+        
+        (void) sdu;
+        (void) maxBytes;
+
         sdu = buffer;
         readResult.setPortId(14);
         readResult.setBytesRead(7);
+
         return readResult;
 #else
         int portId = 0;
         int result = syscallReadManagementSDU(ipcProcessId, sdu, &portId,
                         maxBytes);
-        if (result < 0){
+        if (result < 0) {
                 throw ReadSDUException();
         }
 
@@ -1645,7 +1716,7 @@ void WhatevercastName::setSetMembers(const std::list<char*> &setMembers)
 
 bool WhatevercastName::operator==(const WhatevercastName &other)
 {
-	if (name == other.getName()){
+	if (name == other.getName()) {
 		return true;
 	}
 	return false;
@@ -1699,7 +1770,7 @@ const std::string RIBObjectNames::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = RIBObje
 const std::string EnrollmentInformationRequest::ENROLLMENT_INFO_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DAF +
 			RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT + RIBObjectNames::SEPARATOR + RIBObjectNames::ENROLLMENT;
 
-EnrollmentInformationRequest::EnrollmentInformationRequest(){
+EnrollmentInformationRequest::EnrollmentInformationRequest() {
 	this->address = 0;
 }
 
@@ -1720,7 +1791,7 @@ void EnrollmentInformationRequest::setSupportingDifs(const std::list<Application
 }
 
 /*	CLASS EnrollmentRequest	*/
-EnrollmentRequest::EnrollmentRequest(const Neighbor &neighbor, const EnrollToDIFRequestEvent &event){
+EnrollmentRequest::EnrollmentRequest(const Neighbor &neighbor, const EnrollToDIFRequestEvent &event) {
 	this->neighbor = neighbor;
 	this->event = event;
 }
@@ -1812,11 +1883,11 @@ std::string DirectoryForwardingTableEntry::getKey()
 
 bool DirectoryForwardingTableEntry::operator==(const DirectoryForwardingTableEntry &object)
 {
-	if (object.getApNamingInfo() != this->apNamingInfo){
+	if (object.getApNamingInfo() != this->apNamingInfo) {
 		return false;
 	}
 
-	if (object.getAddress() != this->address){
+	if (object.getAddress() != this->address) {
 		return false;
 	}
 	return true;
@@ -2037,16 +2108,16 @@ std::string IPCPFlow::toString()
     ss <<  "* Destination AP Naming Info: " << this->destinationNamingInfo.toString();
     ss <<  "* Destination addres: " + this->destinationAddress << std::endl;
     ss << "* Destination port id: "+ this->destinationPortId << std::endl;
-    if (connections.size() > 0){
+    if (connections.size() > 0) {
 		ss << "* Connection ids of the connection supporting this flow: +\n";
-		for(std::list<Connection>::const_iterator iterator = connections.begin(), end = connections.end(); iterator != end; ++iterator){
+		for(std::list<Connection>::const_iterator iterator = connections.begin(), end = connections.end(); iterator != end; ++iterator) {
 			ss << "Src CEP-id " << iterator->getSourceCepId()
 					<< "; Dest CEP-id " << iterator->getDestCepId()
 					<< "; Qos-id " << iterator->getQosId() << std::endl;
 		}
 	}
 	ss << "* Index of the current active connection for this flow: " << this->currentConnectionIndex << std::endl;
-	if (!this->policies.empty()){
+	if (!this->policies.empty()) {
 		ss << "* Policies: " << std::endl;
 		for (std::map<std::string, std::string>::const_iterator iterator = policies.begin(), end = policies.end();
 				iterator != end; ++iterator)
@@ -2055,7 +2126,7 @@ std::string IPCPFlow::toString()
 		}
 
 	}
-	if (!this->policyParameters.empty()){
+	if (!this->policyParameters.empty()) {
 		ss << "* Policy parameters: " << std::endl;
 		for (std::map<std::string, std::string>::const_iterator iterator = policyParameters.begin(), end = policyParameters.end();
 				iterator != end; ++iterator)
