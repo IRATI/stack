@@ -1059,12 +1059,6 @@ class DTCPConfig {
          */
         EFCPPolicyConfig lostcontrolpdupolicy;
 
-        /**
-         * This policy allows some discretion in selecting the initial sequence
-         * number, when DRF is going to be sent.
-         */
-        EFCPPolicyConfig initialseqnumpolicy;
-
 public:
         DTCPConfig();
         bool isFlowcontrol() const;
@@ -1076,8 +1070,6 @@ public:
         void setInitialrecvrinactivitytime(int initialrecvrinactivitytime);
         int getInitialsenderinactivitytime() const;
         void setInitialsenderinactivitytime(int initialsenderinactivitytime);
-        const EFCPPolicyConfig& getInitialseqnumpolicy() const;
-        void setInitialseqnumpolicy(const EFCPPolicyConfig& initialseqnumpolicy);
         const EFCPPolicyConfig& getLostcontrolpdupolicy() const;
         void setLostcontrolpdupolicy(
                         const EFCPPolicyConfig& lostcontrolpdupolicy);
@@ -1104,6 +1096,12 @@ class ConnectionPolicies {
 	DTCPConfig dtcpConfiguration;
 
 	/**
+	 * This policy allows some discretion in selecting the initial sequence
+	 * number, when DRF is going to be sent.
+	 */
+	EFCPPolicyConfig initialseqnumpolicy;
+
+	/**
 	 * When the sequence number is increasing beyond this value, the
 	 * sequence number space is close to rolling over, a new connection
 	 * should be instantiated and bound to the same port-ids, so that new
@@ -1113,12 +1111,14 @@ class ConnectionPolicies {
 
 public:
 	ConnectionPolicies();
-        const DTCPConfig& getDtcpConfiguration() const;
-        void setDtcpConfiguration(const DTCPConfig& dtcpConfiguration);
-        bool isDtcPpresent() const;
-        void setDtcPpresent(bool dtcPpresent);
-        int getSeqnumrolloverthreshold() const;
-        void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
+	const DTCPConfig& getDtcpConfiguration() const;
+	void setDtcpConfiguration(const DTCPConfig& dtcpConfiguration);
+	bool isDtcPpresent() const;
+	void setDtcPpresent(bool dtcPpresent);
+	const EFCPPolicyConfig& getInitialseqnumpolicy() const;
+	void setInitialseqnumpolicy(const EFCPPolicyConfig& initialseqnumpolicy);
+	int getSeqnumrolloverthreshold() const;
+	void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
 };
 
 /**

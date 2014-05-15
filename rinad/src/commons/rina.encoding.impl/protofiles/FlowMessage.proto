@@ -74,13 +74,13 @@ message dtcpConfig_t {  //configuration of DTCP for a connection
     optional efcpPolicyConfig_t rcvrtimerinactivitypolicy = 7;     //If no PDUs arrive in this time period, the receiver should expect a DRF in the next Transfer PDU
     optional efcpPolicyConfig_t sendertimerinactiviypolicy = 8;    //This timer is used to detect long periods of no traffic, indicating that a DRF should be sent
     optional efcpPolicyConfig_t lostcontrolpdupolicy = 9;          //Determines what action to take when the PM detects that a control PDU (Ack or Flow Control) may have been lost
-    optional efcpPolicyConfig_t initialseqnumpolicy = 10;          //Allows some discretion in selecting the initial sequence number, when DRF is going to be sent
 }
 
 message connectionPolicies_t { //configuration of the policies and parameters of an EFCP connection
 	optional bool dtcpPresent = 1;                          //indicates if this connection is using DTCP
 	optional dtcpConfig_t dtcpConfiguration = 2;            //the DTCP Configuration for this connection
-	optional uint64 seqnumrolloverthreshold = 3;            //the sequence number rollover threshold
+	optional efcpPolicyConfig_t initialseqnumpolicy = 3;    //allows some discretion in selecting the initial sequence number, when DRF is going to be sent
+	optional uint64 seqnumrolloverthreshold = 4;            //the sequence number rollover threshold
 }
 
 message Flow{  //Contains the information to setup a new flow

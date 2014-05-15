@@ -110,8 +110,13 @@ public class FlowEncoder implements Encoder{
 	
 	private ConnectionPolicies getConnectionPolicies(connectionPolicies_t connectionPolicies){
 		ConnectionPolicies result = new ConnectionPolicies();
+		EFCPPolicyConfig policyConfig = null;
 		
 		result.setDtcPpresent(connectionPolicies.getDtcpPresent());
+		policyConfig = getEFCPPolicyConfig(connectionPolicies.getInitialseqnumpolicy());
+		if (policyConfig != null) {
+			result.setInitialseqnumpolicy(policyConfig);
+		}
 		result.setSeqnumrolloverthreshold((int)connectionPolicies.getSeqnumrolloverthreshold());
 		if (result.isDtcPpresent()) {
 			result.setDtcpConfiguration(getDTCPConfig(connectionPolicies.getDtcpConfiguration()));
@@ -138,10 +143,6 @@ public class FlowEncoder implements Encoder{
 		}
 		result.setInitialrecvrinactivitytime(dtcpConfig.getInitialrecvrinactivitytime());
 		result.setInitialsenderinactivitytime(dtcpConfig.getInitialsenderinactivitytime());
-		policyConfig = getEFCPPolicyConfig(dtcpConfig.getInitialseqnumpolicy());
-		if (policyConfig != null) {
-			result.setInitialseqnumpolicy(policyConfig);
-		}
 		policyConfig = getEFCPPolicyConfig(dtcpConfig.getLostcontrolpdupolicy());
 		if (policyConfig != null) {
 			result.setLostcontrolpdupolicy(policyConfig);
@@ -414,6 +415,7 @@ public class FlowEncoder implements Encoder{
 		result = FlowMessage.connectionPolicies_t.newBuilder().
 				setDtcpPresent(connectionPolicies.isDtcPpresent()).
 				setDtcpConfiguration(dtcpConfig).
+				setInitialseqnumpolicy(getEFCPPolicyConfigType(connectionPolicies.getInitialseqnumpolicy())).
 				setSeqnumrolloverthreshold(connectionPolicies.getSeqnumrolloverthreshold()).
 				build();
 
@@ -446,7 +448,6 @@ public class FlowEncoder implements Encoder{
 				setRtxControlConfig(rtxConfig).
 				setInitialrecvrinactivitytime(dtcpConfig.getInitialrecvrinactivitytime()).
 				setInitialsenderinactivitytime(dtcpConfig.getInitialsenderinactivitytime()).
-				setInitialseqnumpolicy(getEFCPPolicyConfigType(dtcpConfig.getInitialseqnumpolicy())).
 				setLostcontrolpdupolicy(getEFCPPolicyConfigType(dtcpConfig.getLostcontrolpdupolicy())).
 				setSendertimerinactiviypolicy(getEFCPPolicyConfigType(dtcpConfig.getSendertimerinactiviypolicy())).
 				setRcvrtimerinactivitypolicy(getEFCPPolicyConfigType(dtcpConfig.getRcvrtimerinactivitypolicy())).

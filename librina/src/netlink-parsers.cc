@@ -2469,7 +2469,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
 int putDTCPConfigObject(nl_msg* netlinkMessage,
                 const DTCPConfig& object) {
         struct nlattr *flowControlConfig, *rtxControlConfig, *rtimerInacPolicy,
-        *stimerInacPolicy, *lostControlPduPolicy, *initSeqNumPolicy;
+        *stimerInacPolicy, *lostControlPduPolicy;
 
         if (object.isFlowcontrol()) {
                 NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_FLOW_CONTROL);
@@ -2543,18 +2543,6 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
 
         nla_nest_end(netlinkMessage, lostControlPduPolicy);
 
-        if (!(initSeqNumPolicy = nla_nest_start(netlinkMessage,
-                        DCA_ATTR_INIT_SEQ_NUM_POLICY))) {
-                goto nla_put_failure;
-        }
-
-        if (putEFCPPolicyConfigObject(netlinkMessage,
-                        object.getInitialseqnumpolicy())< 0) {
-                goto nla_put_failure;
-        }
-
-        nla_nest_end(netlinkMessage, initSeqNumPolicy);
-
         return 0;
 
         nla_put_failure: LOG_ERR(
@@ -2592,9 +2580,6 @@ parseDTCPConfigObject(nlattr *nested) {
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].minlen = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].maxlen = 0;
-        attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].type = NLA_NESTED;
-        attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].minlen = 0;
-        attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].maxlen = 0;
         struct nlattr *attrs[DCA_ATTR_MAX + 1];
 
         int err = nla_parse_nested(attrs, DCA_ATTR_MAX, nested, attr_policy);
@@ -2610,7 +2595,6 @@ parseDTCPConfigObject(nlattr *nested) {
         EFCPPolicyConfig * sTimerInacPolicy;
         EFCPPolicyConfig * rTimerInacPolicy;
         EFCPPolicyConfig * lostControlPduPolicy;
-        EFCPPolicyConfig * initSeqNumPolicy;
 
         if (attrs[DCA_ATTR_FLOW_CONTROL]) {
                 result->setFlowcontrol(true);
@@ -2702,25 +2686,13 @@ parseDTCPConfigObject(nlattr *nested) {
                 }
         }
 
-        if (attrs[DCA_ATTR_INIT_SEQ_NUM_POLICY]){
-                initSeqNumPolicy = parseEFCPPolicyConfigObject(
-                                attrs[DCA_ATTR_INIT_SEQ_NUM_POLICY]);
-                if (initSeqNumPolicy == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->setInitialseqnumpolicy(*initSeqNumPolicy);
-                        delete initSeqNumPolicy;
-                }
-        }
-
         return result;
 }
 
 int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 		const ConnectionPolicies& object) {
 
-        struct nlattr *dtcpConfig;
+        struct nlattr *dtcpConfig, *initSeqNumPolicy;
 
         if (object.isDtcPpresent()){
                 NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_DTCP_PRESENT);
@@ -2736,6 +2708,18 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 
                 nla_nest_end(netlinkMessage, dtcpConfig);
         }
+
+        if (!(initSeqNumPolicy = nla_nest_start(netlinkMessage,
+                        CPA_ATTR_INIT_SEQ_NUM_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putEFCPPolicyConfigObject(netlinkMessage,
+                        object.getInitialseqnumpolicy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, initSeqNumPolicy);
 
         NLA_PUT_U32(netlinkMessage, CPA_ATTR_SEQ_NUM_ROLLOVER,
                         object.getSeqnumrolloverthreshold());
@@ -2756,6 +2740,9 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	attr_policy[CPA_ATTR_DTCP_CONFIG].type = NLA_NESTED;
 	attr_policy[CPA_ATTR_DTCP_CONFIG].minlen = 0;
 	attr_policy[CPA_ATTR_DTCP_CONFIG].maxlen = 0;
+	attr_policy[CPA_ATTR_INIT_SEQ_NUM_POLICY].type = NLA_NESTED;
+	attr_policy[CPA_ATTR_INIT_SEQ_NUM_POLICY].minlen = 0;
+	attr_policy[CPA_ATTR_INIT_SEQ_NUM_POLICY].maxlen = 0;
 	attr_policy[CPA_ATTR_SEQ_NUM_ROLLOVER].type = NLA_U32;
 	attr_policy[CPA_ATTR_SEQ_NUM_ROLLOVER].minlen = 4;
 	attr_policy[CPA_ATTR_SEQ_NUM_ROLLOVER].maxlen = 4;
@@ -2771,6 +2758,7 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	ConnectionPolicies * result =
 			new ConnectionPolicies();
 	DTCPConfig * dtcpConfig;
+	EFCPPolicyConfig * initSeqNumPolicy;
 
 	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
 	        result->setDtcPpresent(true);
@@ -2791,6 +2779,18 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	        }
 	} else {
 	        result->setDtcPpresent(false);
+	}
+
+	if (attrs[CPA_ATTR_INIT_SEQ_NUM_POLICY]){
+	        initSeqNumPolicy = parseEFCPPolicyConfigObject(
+	                        attrs[CPA_ATTR_INIT_SEQ_NUM_POLICY]);
+	        if (initSeqNumPolicy == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->setInitialseqnumpolicy(*initSeqNumPolicy);
+	                delete initSeqNumPolicy;
+	        }
 	}
 
 	if (attrs[CPA_ATTR_SEQ_NUM_ROLLOVER]) {

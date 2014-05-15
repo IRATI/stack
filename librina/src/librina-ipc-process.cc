@@ -1044,15 +1044,6 @@ void DTCPConfig::setInitialsenderinactivitytime(
         this->initialsenderinactivitytime = initialsenderinactivitytime;
 }
 
-const EFCPPolicyConfig& DTCPConfig::getInitialseqnumpolicy() const {
-        return initialseqnumpolicy;
-}
-
-void DTCPConfig::setInitialseqnumpolicy(
-                const EFCPPolicyConfig& initialseqnumpolicy) {
-        this->initialseqnumpolicy = initialseqnumpolicy;
-}
-
 const EFCPPolicyConfig& DTCPConfig::getLostcontrolpdupolicy() const {
         return lostcontrolpdupolicy;
 }
@@ -1118,6 +1109,15 @@ bool ConnectionPolicies::isDtcPpresent() const {
 
 void ConnectionPolicies::setDtcPpresent(bool dtcPpresent) {
         DTCPpresent = dtcPpresent;
+}
+
+const EFCPPolicyConfig& ConnectionPolicies::getInitialseqnumpolicy() const {
+        return initialseqnumpolicy;
+}
+
+void ConnectionPolicies::setInitialseqnumpolicy(
+                const EFCPPolicyConfig& initialseqnumpolicy) {
+        this->initialseqnumpolicy = initialseqnumpolicy;
 }
 
 int ConnectionPolicies::getSeqnumrolloverthreshold() const {
