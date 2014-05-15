@@ -668,38 +668,454 @@ public:
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /**
+ * A parameter of the policy
+ */
+class PolicyParameter {
+        /** the name of the parameter */
+        std::string name;
+
+        /** the value of the parameter */
+        std::string value;
+
+public:
+        PolicyParameter();
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::string& getValue() const;
+        void setValue(const std::string& value);
+};
+
+/**
+ * Configuration of an EFCP policy (name/version/parameters)
+ */
+class EFCPPolicyConfig {
+
+        /** the name of policy */
+        std::string name;
+
+        /** the version of the policy */
+        short version;
+
+        /** optional name/value parameters to configure the policy */
+        std::list<PolicyParameter> parameters;
+
+public:
+        EFCPPolicyConfig();
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::list<PolicyParameter>& getParameters() const;
+        void setParameters(const std::list<PolicyParameter>& parameters);
+        void addParameter(const PolicyParameter& paremeter);
+        short getVersion() const;
+        void setVersion(short version);
+};
+
+/**
+ * The DTCP window based flow control configuration
+ */
+class DTCPWindowBasedFlowControlConfig {
+
+        /**
+         * Integer that the number PDUs that can be put on the
+         * ClosedWindowQueue before something must be done.
+         */
+        int maxclosedwindowqueuelength;
+
+        /** initial sequence number to get right window edge. */
+        int initialcredit;
+
+        /**
+         * Invoked when a Transfer PDU is received to give the receiving PM an
+         * opportunity to update the flow control allocations.
+         */
+        EFCPPolicyConfig rcvrflowcontrolpolicy;
+
+        /**
+         * Allows some discretion in when to send a Flow Control PDU when there
+         * is no Retransmission Control.
+         */
+        EFCPPolicyConfig receivingflowcontrolpolicy;
+
+public:
+        DTCPWindowBasedFlowControlConfig();
+        int getInitialcredit() const;
+        void setInitialcredit(int initialcredit);
+        int getMaxclosedwindowqueuelength() const;
+        void setMaxclosedwindowqueuelength(int maxclosedwindowqueuelength);
+        const EFCPPolicyConfig& getRcvrflowcontrolpolicy() const;
+        void setRcvrflowcontrolpolicy(
+                        const EFCPPolicyConfig& rcvrflowcontrolpolicy);
+        const EFCPPolicyConfig& getReceivingflowcontrolpolicy() const;
+        void setReceivingflowcontrolpolicy(
+                        const EFCPPolicyConfig& receivingflowcontrolpolicy);
+};
+
+/**
+ * The DTCP rate-basd flow control configuration
+ */
+class DTCPRateBasedFlowControlConfig {
+
+        /**
+         * the number of PDUs that may be sent in a TimePeriod. Used with
+         * rate-based flow control.
+         */
+        int sendingrate;
+
+        /**
+         * length of time in microseconds for pacing rate-based flow control.
+         */
+        int timeperiod;
+
+        /** used to momentarily lower the send rate below the rate allowed */
+        EFCPPolicyConfig norateslowdownpolicy;
+
+        /**
+         * Allows rate-based flow control to exceed its nominal rate.
+         * Presumably this would be for short periods and policies should
+         * enforce this.  Like all policies, if this returns True it creates
+         * the default action which is no override.
+         */
+        EFCPPolicyConfig nooverridedefaultpeakpolicy;
+
+        /**
+         * Allows an alternate action when using rate-based flow control and
+         * the number of free buffers is getting low.
+         */
+        EFCPPolicyConfig ratereductionpolicy;
+
+public:
+        DTCPRateBasedFlowControlConfig();
+        const EFCPPolicyConfig& getNooverridedefaultpeakpolicy() const;
+        void setNooverridedefaultpeakpolicy(
+                        const EFCPPolicyConfig& nooverridedefaultpeakpolicy);
+        const EFCPPolicyConfig& getNorateslowdownpolicy() const;
+        void setNorateslowdownpolicy(
+                        const EFCPPolicyConfig& norateslowdownpolicy);
+        const EFCPPolicyConfig& getRatereductionpolicy() const;
+        void setRatereductionpolicy(const EFCPPolicyConfig& ratereductionpolicy);
+        int getSendingrate() const;
+        void setSendingrate(int sendingrate);
+        int getTimeperiod() const;
+        void setTimeperiod(int timeperiod);
+};
+
+/**
+ * The flow control configuration of a DTCP instance
+ */
+class DTCPFlowControlConfig {
+
+        /** indicates whether window-based flow control is in use */
+        bool windowbased;
+
+        /** the window-based flow control configuration */
+        DTCPWindowBasedFlowControlConfig windowbasedconfig;
+
+        /** indicates whether window-based flow control is in use */
+        bool ratebased;
+
+        /** the rate-based flow control configuration */
+        DTCPRateBasedFlowControlConfig ratebasedconfig;
+
+        /**
+         * The number of free bytes below which flow control should slow or
+         * block the user from doing any more Writes.
+         */
+        int sentbytesthreshold;
+
+        /**
+         * The percent of free bytes below, which flow control should slow or
+         * block the user from doing any more Writes.
+         */
+        int sentbytespercentthreshold;
+
+        /**
+         * The number of free buffers below which flow control should slow or
+         * block the user from doing any more Writes.
+         */
+        int sentbuffersthreshold;
+
+        /**
+         * The number of free bytes below which flow control does not move or
+         * decreases the amount the Right Window Edge is moved.
+         */
+        int rcvbytesthreshold;
+
+        /**
+         * The number of free buffers at which flow control does not advance
+         * or decreases the amount the Right Window Edge is moved.
+         */
+        int rcvbytespercentthreshold;
+
+        /**
+         * The percent of free buffers below which flow control should not
+         * advance or decreases the amount the Right Window Edge is moved.
+         */
+        int rcvbuffersthreshold;
+
+        /**
+         * Used with flow control to determine the action to be taken when the
+         * receiver has not extended more credit to allow the sender to send more
+         * PDUs. Typically, the action will be to queue the PDUs until credit is
+         * extended. This action is taken by DTCP, not DTP.
+         */
+        EFCPPolicyConfig closedwindowpolicy;
+
+        /**
+         * Determines what action to take if the receiver receives PDUs but the
+         * credit or rate has been exceeded
+         */
+        EFCPPolicyConfig flowcontroloverrunpolicy;
+
+        /**
+         * Invoked when both Credit and Rate based flow control are in use and
+         * they disagree on whether the PM can send or receive data. If it
+         * returns True, then the PM can send or receive; if False, it cannot.
+         */
+        EFCPPolicyConfig reconcileflowcontrolpolicy;
+
+public:
+        DTCPFlowControlConfig();
+        const EFCPPolicyConfig& getClosedwindowpolicy() const;
+        void setClosedwindowpolicy(const EFCPPolicyConfig& closedwindowpolicy);
+        const EFCPPolicyConfig& getFlowcontroloverrunpolicy() const;
+        void setFlowcontroloverrunpolicy(
+                        const EFCPPolicyConfig& flowcontroloverrunpolicy);
+        bool isRatebased() const;
+        void setRatebased(bool ratebased);
+        const DTCPRateBasedFlowControlConfig& getRatebasedconfig() const;
+        void setRatebasedconfig(
+                        const DTCPRateBasedFlowControlConfig& ratebasedconfig);
+        int getRcvbuffersthreshold() const;
+        void setRcvbuffersthreshold(int rcvbuffersthreshold);
+        int getRcvbytespercentthreshold() const;
+        void setRcvbytespercentthreshold(int rcvbytespercentthreshold);
+        int getRcvbytesthreshold() const;
+        void setRcvbytesthreshold(int rcvbytesthreshold);
+        const EFCPPolicyConfig& getReconcileflowcontrolpolicy() const;
+        void setReconcileflowcontrolpolicy(
+                        const EFCPPolicyConfig& reconcileflowcontrolpolicy);
+        int getSentbuffersthreshold() const;
+        void setSentbuffersthreshold(int sentbuffersthreshold);
+        int getSentbytespercentthreshold() const;
+        void setSentbytespercentthreshold(int sentbytespercentthreshold);
+        int getSentbytesthreshold() const;
+        void setSentbytesthreshold(int sentbytesthreshold);
+        bool isWindowbased() const;
+        void setWindowbased(bool windowbased);
+        const DTCPWindowBasedFlowControlConfig& getWindowbasedconfig() const;
+        void setWindowbasedconfig(
+                        const DTCPWindowBasedFlowControlConfig&
+                        windowbasedconfig);
+};
+
+/**
+ * The configuration of the retransmission control functions of a
+ * DTCP instance
+ */
+class DTCPRtxControlConfig{
+
+        /**
+         * the number of times the retransmission of a PDU will be attempted
+         * before some other action must be taken.
+         */
+        int datarxmsnmax;
+
+        /**
+         * indicates the maximum time that a receiver will wait before sending
+         * an Ack. Some DIFs may wish to set a maximum value for the DIF.
+         */
+        int initialATimer;
+
+        /**
+         * Executed by the sender to estimate the duration of the retx timer.
+         * This policy will be based on an estimate of round-trip time and the
+         * Ack or Ack List policy in use
+         */
+        EFCPPolicyConfig rttestimatorpolicy;
+
+        /**
+         * Executed by the sender when a Retransmission Timer Expires. If this
+         * policy returns True, then all PDUs with sequence number less than
+         * or equal to the sequence number of the PDU associated with this
+         * timeout are retransmitted; otherwise the procedure must determine
+         * what action to take. This policy must be executed in less than the
+         * maximum time to Ack
+         */
+        EFCPPolicyConfig rtxtimerexpirypolicy;
+
+        /**
+         * Executed by the sender and provides the Sender with some discretion
+         * on when PDUs may be deleted from the ReTransmissionQ. This is useful
+         * for multicast and similar situations where one might want to delay
+         * discarding PDUs from the retransmission queue.
+         */
+        EFCPPolicyConfig senderackpolicy;
+
+        /**
+         *  Executed by the Sender and provides the Sender with some discretion
+         *  on when PDUs may be deleted from the ReTransmissionQ. This policy
+         *  is used in conjunction with the selective acknowledgement aspects
+         *  of the mechanism and may be useful for multicast and similar
+         *  situations where there may be a requirement to delay discarding PDUs
+         *  from the retransmission queue
+         */
+        EFCPPolicyConfig recvingacklistpolicy;
+
+        /**
+         * Executed by the receiver of the PDU and provides some discretion in
+         * the action taken.  The default action is to either Ack immediately
+         * or to start the A-Timer and Ack the LeftWindowEdge when it expires.
+         */
+        EFCPPolicyConfig rcvrackpolicy;
+
+        /**
+         * This policy allows an alternate action when the A-Timer expires when
+         * DTCP is present.
+         */
+        EFCPPolicyConfig sendingackpolicy;
+
+        /** Allows an alternate action when a Control Ack PDU is received. */
+        EFCPPolicyConfig rcvrcontrolackpolicy;
+
+public:
+        DTCPRtxControlConfig();
+        int getDatarxmsnmax() const;
+        void setDatarxmsnmax(int datarxmsnmax);
+        int getInitialATimer() const;
+        void setInitialATimer(int initialATimer);
+        const EFCPPolicyConfig& getRcvrackpolicy() const;
+        void setRcvrackpolicy(const EFCPPolicyConfig& rcvrackpolicy);
+        const EFCPPolicyConfig& getRcvrcontrolackpolicy() const;
+        void setRcvrcontrolackpolicy(
+                        const EFCPPolicyConfig& rcvrcontrolackpolicy);
+        const EFCPPolicyConfig& getRecvingacklistpolicy() const;
+        void setRecvingacklistpolicy(
+                        const EFCPPolicyConfig& recvingacklistpolicy);
+        const EFCPPolicyConfig& getRttestimatorpolicy() const;
+        void setRttestimatorpolicy(const EFCPPolicyConfig& rttestimatorpolicy);
+        const EFCPPolicyConfig& getRtxtimerexpirypolicy() const;
+        void setRtxtimerexpirypolicy(
+                        const EFCPPolicyConfig& rtxtimerexpirypolicy);
+        const EFCPPolicyConfig& getSenderackpolicy() const;
+        void setSenderackpolicy(const EFCPPolicyConfig& senderackpolicy);
+        const EFCPPolicyConfig& getSendingackpolicy() const;
+        void setSendingackpolicy(const EFCPPolicyConfig& sendingackpolicy);
+};
+
+/**
+ * Configuration of the DTCP instance, including policies and its parameters
+ */
+class DTCPConfig {
+
+        /** True if flow control is required */
+        bool flowcontrol;
+
+        /** the flow control configuration of a DTCP instance */
+        DTCPFlowControlConfig flowcontrolconfig;
+
+        /** True if rtx control is required */
+        bool rtxcontrol;
+
+        /** the rtx control configuration of a DTCP instance */
+        DTCPRtxControlConfig rtxcontrolconfig;
+
+        /**
+         * should be approximately 2Δt. This must be bounded. A DIF
+         * specification may want to specify a maximum value.
+         */
+        int initialsenderinactivitytime;
+
+        /**
+         * should be approximately 3Δt. This must be bounded. A DIF
+         * specification may want to specify a maximum value.
+         */
+        int initialrecvrinactivitytime;
+
+        /**
+         * used when DTCP is in use. If no PDUs arrive in this time period,
+         * the receiver should expect a DRF in the next Transfer PDU. If not,
+         * something is very wrong. The timeout value should generally be set
+         * to 3(MPL+R+A).
+         */
+        EFCPPolicyConfig rcvrtimerinactivitypolicy;
+
+        /**
+         * used when DTCP is in use. This timer is used to detect long periods
+         * of no traffic, indicating that a DRF should be sent. If not,
+         * something is very wrong. The timeout value should generally be set
+         * to 2(MPL+R+A).
+         */
+        EFCPPolicyConfig sendertimerinactiviypolicy;
+
+        /**
+         * This policy determines what action to take when the PM detects that
+         * a control PDU (Ack or Flow Control) may have been lost.  If this
+         * procedure returns True, then the PM will send a Control Ack and an
+         * empty Transfer PDU.  If it returns False, then any action is determined
+         * by the policy
+         */
+        EFCPPolicyConfig lostcontrolpdupolicy;
+
+        /**
+         * This policy allows some discretion in selecting the initial sequence
+         * number, when DRF is going to be sent.
+         */
+        EFCPPolicyConfig initialseqnumpolicy;
+
+public:
+        DTCPConfig();
+        bool isFlowcontrol() const;
+        void setFlowcontrol(bool flowcontrol);
+        const DTCPFlowControlConfig& getFlowcontrolconfig() const;
+        void setFlowcontrolconfig(
+                        const DTCPFlowControlConfig& flowcontrolconfig);
+        int getInitialrecvrinactivitytime() const;
+        void setInitialrecvrinactivitytime(int initialrecvrinactivitytime);
+        int getInitialsenderinactivitytime() const;
+        void setInitialsenderinactivitytime(int initialsenderinactivitytime);
+        const EFCPPolicyConfig& getInitialseqnumpolicy() const;
+        void setInitialseqnumpolicy(const EFCPPolicyConfig& initialseqnumpolicy);
+        const EFCPPolicyConfig& getLostcontrolpdupolicy() const;
+        void setLostcontrolpdupolicy(
+                        const EFCPPolicyConfig& lostcontrolpdupolicy);
+        const EFCPPolicyConfig& getRcvrtimerinactivitypolicy() const;
+        void setRcvrtimerinactivitypolicy(
+                        const EFCPPolicyConfig& rcvrtimerinactivitypolicy);
+        bool isRtxcontrol() const;
+        void setRtxcontrol(bool rtxcontrol);
+        const DTCPRtxControlConfig& getRtxcontrolconfig() const;
+        void setRtxcontrolconfig(const DTCPRtxControlConfig& rtxcontrolconfig);
+        const EFCPPolicyConfig& getSendertimerinactiviypolicy() const;
+        void setSendertimerinactiviypolicy(
+                        const EFCPPolicyConfig& sendertimerinactiviypolicy);
+};
+
+/**
  * This class defines the policies paramenters for an EFCP connection
  */
-class ConnectionPoliciesParameters {
+class ConnectionPolicies {
 	/** Indicates if DTCP is required */
 	bool DTCPpresent;
 
-	/** Indicates if Flow Control is required */
-	bool flowControl;
+	/** The configuration of the DTCP instance */
+	DTCPConfig dtcpConfiguration;
 
-	/** Indicates if  Retransmission Control is required */
-	bool RTXcontrol;
-
-	/** Indicates if  Flow Control is window based */
-	bool windowBasedFlowControl;
-
-	/** Indicates if  Flow Control is rate based */
-	bool rateBasedFlowControl;
+	/**
+	 * When the sequence number is increasing beyond this value, the
+	 * sequence number space is close to rolling over, a new connection
+	 * should be instantiated and bound to the same port-ids, so that new
+	 * PDUs can be sent on the new connection.
+	 */
+	int seqnumrolloverthreshold;
 
 public:
-	ConnectionPoliciesParameters();
-	bool operator==(const ConnectionPoliciesParameters &other) const;
-	bool operator!=(const ConnectionPoliciesParameters &other) const;
-	bool isDTCPpresent() const;
-	void setDTCPpresent(bool DTCPpresent);
-	bool isFlowControl() const;
-	void setFlowControl(bool flowControl);
-	bool isRTXcontrol() const;
-	void setRTXcontrol(bool RTXcontrol);
-	bool isWindowBasedFlowControl() const;
-	void setWindowBasedFlowControl(bool windowBasedFlowControl);
-	bool isRateBasedFlowControl() const;
-	void setRateBasedFlowControl(bool rateBasedFlowControl);
+	ConnectionPolicies();
+        const DTCPConfig& getDtcpConfiguration() const;
+        void setDtcpConfiguration(const DTCPConfig& dtcpConfiguration);
+        bool isDtcPpresent() const;
+        void setDtcPpresent(bool dtcPpresent);
+        int getSeqnumrolloverthreshold() const;
+        void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
 };
 
 /**
@@ -734,9 +1150,9 @@ class Connection {
         int destCepId;
 
         /**
-         * The EFCP connection policies paramenters 
+         * The EFCP connection policies
          */
-        ConnectionPoliciesParameters connPoliciesParams;
+        ConnectionPolicies connPoliciesParams;
 
         /**
          * The id of the IPC Process using the flow supported by this
@@ -760,8 +1176,8 @@ public:
         void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
         int getSourceCepId() const;
         void setSourceCepId(int sourceCepId);
-        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
-        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
+        const ConnectionPolicies& getConnPolicies() const;
+        void setConnPolicies(const ConnectionPolicies& connPParams);
         const std::string toString();
 };
 
