@@ -1617,7 +1617,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 static int tcp_udp_destroy(struct ipcp_factory_data *data,
                            struct ipcp_instance *instance)
 {
-        struct ipcp_instance_data *pos, *next;
+        struct ipcp_instance_data * pos, * next;
 
         LOG_HBEAT;
 
@@ -1718,20 +1718,20 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        struct rcv_data * recvd;
-	struct app_register_data * app;
+        struct rcv_data * recvd, *nxt;
+	struct app_register_data * app, * next;
 
         LOG_HBEAT;
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
 
-        list_for_each_entry(recvd, &rcv_wq_data, list) {
+        list_for_each_entry_safe(recvd, nxt, &rcv_wq_data, list) {
                 list_del(&recvd->list);
                 rkfree(recvd);
         }
 
-	list_for_each_entry(app, &applications, list) {
+	list_for_each_entry_safe(app, next, &applications, list) {
 		list_del(&app->list);
                 name_destroy(app->app_name);
 		rkfree(app);
