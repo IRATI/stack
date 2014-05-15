@@ -19,6 +19,7 @@ EXTRA_DIST =					\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
 	LICENSE					\
+	INSTALL					\
 	README
 
 .PHONY: AUTHORS
