@@ -38,7 +38,7 @@
 #include "dt-utils.h"
 
 #ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 0
+#define DTCP_TEST_ENABLE 1
 #endif
 
 struct efcp {
@@ -288,6 +288,8 @@ static int efcp_receive(struct efcp * efcp,
 
                 if (dtcp_common_rcv_control(dtcp, pdu)) 
                         return -1;
+
+                return 0;
         }
 
         dtp = dt_dtp(efcp->dt);
@@ -499,6 +501,8 @@ int efcp_connection_destroy(struct efcp_container * container,
                             cep_id_t                id)
 {
         struct efcp * tmp;
+
+        LOG_DBG("EFCP connection destroy called");
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
