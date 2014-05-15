@@ -401,10 +401,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
 #if DTCP_TEST_ENABLE
         connection->policies_params.dtcp_present = true;
-        connection->policies_params.flow_ctrl = true;
-        connection->policies_params.rate_based_fctrl = false;
-        connection->policies_params.rtx_ctrl = false;
-        connection->policies_params.window_based_fctrl = true;
+        connection->policies_params.dtcp_cfg = dtcp_config_create();
+        connection->policies_params.dtp_cfg = dtp_config_create();
+        dtcp_flow_ctrl_set(connection->policies_params.dtcp_cfg, true);
+        dtcp_rtx_ctrl_set(connection->policies_params.dtcp_cfg, true);
+        dtcp_window_based_fctrl_set(connection->policies_params.dtcp_cfg, true);
+        dtcp_rate_based_fctrl_set(connection->policies_params.dtcp_cfg, false);
 #endif
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
