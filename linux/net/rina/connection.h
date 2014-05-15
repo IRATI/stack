@@ -27,7 +27,7 @@
 #include "common.h"
 #include "qos.h"
 
-struct dtp_config;
+struct policies;
 struct dtcp_config;
 
 /* FIXME: Move RNL structure to RNL placeholder files */
@@ -35,8 +35,8 @@ struct dtcp_config;
 struct conn_policies {
         /* FIXME: Anyone using this variable? To be removed */
         bool                  dtcp_present;
-        struct  dtp_config  * dtp_cfg;
         struct  dtcp_config * dtcp_cfg;
+        struct policy *       initial_sequence_number;
         /* Sequence number rollover threshold */
         int                   seq_num_ro_th;
 };

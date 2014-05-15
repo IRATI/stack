@@ -30,26 +30,29 @@
 #include "common.h"
 #include "connection.h"
 #include "dtcp-utils.h"
-#include "dtp.h"
+#include "policies.h"
 
 struct connection * connection_create(void)
 {
         struct connection * tmp;
-        struct dtp_config * dtp_cfg;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
-        dtp_cfg = dtp_config_create();
-
-        tmp->policies_params.dtp_cfg = dtp_cfg;
-        if (!tmp->policies_params.dtp_cfg)
-                return NULL;
-
         tmp->policies_params.dtcp_cfg = dtcp_config_create();
-        if (!tmp->policies_params.dtcp_cfg)
+        if (!tmp->policies_params.dtcp_cfg) {
+                rkfree(tmp);
                 return NULL;
+        }
+
+        tmp->policies_params.initial_sequence_number = 
+                policy_create();
+        if (!tmp->policies_params.initial_sequence_number){
+                dtcp_config_destroy(tmp->policies_params.dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -75,10 +78,10 @@ int connection_destroy(struct connection * conn)
         if (!conn)
                 return -1;
 
-        if(dtp_config_destroy(conn->policies_params.dtp_cfg))
+        if(dtcp_config_destroy(conn->policies_params.dtcp_cfg))
                 return -1;
 
-        if(dtcp_config_destroy(conn->policies_params.dtcp_cfg))
+        if(policy_destroy(conn->policies_params.initial_sequence_number))
                 return -1;
 
         rkfree(conn);
