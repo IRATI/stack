@@ -13,7 +13,7 @@ Packages required to install the stack into Debian/Linux 7.0 (wheezy):
    installation instructions):
 
   * To compile the kernel parts:
-     * kernel-package 
+     * kernel-package
        * libncurses5-dev [for 'make menuconfig']
 
   * To compile the user-space parts:
@@ -22,9 +22,9 @@ Packages required to install the stack into Debian/Linux 7.0 (wheezy):
      * libtool
      * pkg-config
      * git
-     * libnl-genl-3-dev 
-     * libnl-3-dev 
-     * maven 
+     * libnl-genl-3-dev
+     * libnl-3-dev
+     * maven
      * openjdk-6-jdk
 
      * SWIG version 2.x, from http://swig.org (>2.0.8 required)
