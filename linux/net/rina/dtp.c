@@ -363,6 +363,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
+        LOG_DBG("State Vector %d", tmp->sv->window_based);
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -520,9 +521,10 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-
+                LOG_DBG("We are about to enter Window Based Flow Control");
                 if (sv->window_based) {
                         LOG_DBG("WindowBased");
+                        LOG_DBG("Send SEQ %d", pci_sequence_number_get(pci));
                         if (!dt_sv_window_closed(dt) &&
                             pci_sequence_number_get(pci) <
                             dtcp_snd_rt_win(dtcp)) {
@@ -675,8 +677,8 @@ int dtp_receive(struct dtp * instance,
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
-                pdu_destroy(pdu);
-                return -1;
+                /*pdu_destroy(pdu);
+                return -1;*/
         }
 
         seq_num = pci_sequence_number_get(pci);
@@ -725,6 +727,7 @@ int dtp_receive(struct dtp * instance,
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
                 max_seq_nr_rcv_set(sv, seq_num);
                 if (dtcp) {
+                        LOG_DBG("DTCP update");
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
                                 pdu_destroy(pdu);
@@ -739,6 +742,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
         } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
+                max_seq_nr_rcv_set(sv, seq_num);
                 LOG_MISSING;
 
         } else {

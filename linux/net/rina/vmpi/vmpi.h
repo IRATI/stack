@@ -26,7 +26,7 @@ typedef struct vmpi_info vmpi_info_t;
 /* Do not call this function directly, use the wrappers instead. */
 ssize_t vmpi_write_common(vmpi_info_t *mpi, unsigned int channel,
                           const struct iovec *iv, unsigned long iovlen,
-                          int user);
+                          bool user);
 
 /* Use vmpi_write() when writing an userspace buffer. */
 static inline ssize_t

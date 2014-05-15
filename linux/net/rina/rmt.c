@@ -470,6 +470,9 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
+        LOG_ERR("PDU posted in the EGRESS WQ");
+        LOG_ERR("ITEM  : %pK", item);
+
         return 0;
 }
 EXPORT_SYMBOL(rmt_send_port_id);
@@ -933,6 +936,7 @@ static int receive_worker(void * o)
                          * don't process it now ...
                          */
                         process_dt_sdu(tmp, port_id, sdu);
+                        LOG_DBG("Finishing process_dt_sdu");
                         break;
 
                 default:

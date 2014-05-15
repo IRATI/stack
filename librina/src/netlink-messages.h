@@ -1069,7 +1069,7 @@ class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
         unsigned int qosId;
 
         /** The policies parameters */
-        ConnectionPoliciesParameters connPoliciesParams;
+        ConnectionPolicies connPolicies;
 
 public:
         IpcpConnectionCreateRequestMessage();
@@ -1081,8 +1081,8 @@ public:
         void setQosId(unsigned int qosId);
         unsigned int getSourceAddress() const;
         void setSourceAddress(unsigned int sourceAddress);
-        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
-        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
+        const ConnectionPolicies& getConnPolicies() const;
+        void setConnPolicies(const ConnectionPolicies& connPolicies);
         IPCEvent* toIPCEvent();
 };
 
@@ -1186,7 +1186,7 @@ class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
         int destCepId;
 
         /** The policies parameters */
-        ConnectionPoliciesParameters connPoliciesParameters;
+        ConnectionPolicies connPolicies;
 
         /**
          * The id of the IPC Process that will be using the flow
@@ -1208,8 +1208,8 @@ public:
         void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
         int getDestCepId() const;
         void setDestCepId(int sourceCepId);
-        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
-        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
+        const ConnectionPolicies& getConnPolicies() const;
+        void setConnPolicies(const ConnectionPolicies& connPParams);
         IPCEvent* toIPCEvent();
 };
 

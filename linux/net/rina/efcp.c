@@ -39,7 +39,7 @@
 #include "dt-utils.h"
 
 #ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 0
+#define DTCP_TEST_ENABLE 1
 #endif
 
 struct efcp {
@@ -289,6 +289,8 @@ static int efcp_receive(struct efcp * efcp,
 
                 if (dtcp_common_rcv_control(dtcp, pdu)) 
                         return -1;
+
+                return 0;
         }
 
         dtp = dt_dtp(efcp->dt);
@@ -397,6 +399,14 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         connection->source_cep_id = cep_id;
         tmp->connection           = connection;
 
+#if DTCP_TEST_ENABLE
+        connection->policies_params.dtcp_present = true;
+        connection->policies_params.flow_ctrl = true;
+        connection->policies_params.rate_based_fctrl = false;
+        connection->policies_params.rtx_ctrl = false;
+        connection->policies_params.window_based_fctrl = true;
+#endif
+
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
@@ -416,14 +426,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         dtcp = NULL;
-
-#if DTCP_TEST_ENABLE
-        connection->policies_params.dtcp_present = true;
-        connection->policies_params.flow_ctrl = true;
-        connection->policies_params.rate_based_fctrl = false;
-        connection->policies_params.rtx_ctrl = false;
-        connection->policies_params.window_based_fctrl = true;
-#endif
 
         if (connection->policies_params.dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
@@ -500,6 +502,8 @@ int efcp_connection_destroy(struct efcp_container * container,
                             cep_id_t                id)
 {
         struct efcp * tmp;
+
+        LOG_DBG("EFCP connection destroy called");
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
