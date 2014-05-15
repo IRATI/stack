@@ -500,6 +500,7 @@ int dtp_write(struct dtp * instance,
                                 /*
                                  * Might close window
                                  */
+                                LOG_DBG("Transmission control");
                                 if (policies->transmission_control(instance,
                                                                    pdu)) {
                                         LOG_ERR("Problems with transmission "
@@ -507,6 +508,7 @@ int dtp_write(struct dtp * instance,
                                         return -1;
                                 }
                         } else {
+                                LOG_DBG("Closed Window Queue");
                                 dt_sv_window_closed_set(dt, true);
                                 if (policies->closed_window(instance, pdu)) {
                                         LOG_ERR("Problems with the "

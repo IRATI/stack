@@ -578,10 +578,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
 
-        LOG_ERR("SEQ NUM: %d", seq_num);
+        LOG_DBG("SEQ NUM: %d", seq_num);
 
         last_ctrl = last_rcv_ctrl_seq(dtcp);
-        LOG_ERR("LAST SEQ: %d", last_ctrl);
+        LOG_DBG("LAST SEQ: %d", last_ctrl);
         if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
@@ -606,6 +606,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                         LOG_ERR("Failed lost control PDU policy");
         }
         last_rcv_ctrl_seq_set(dtcp, seq_num);
+        last_ctrl = last_rcv_ctrl_seq(dtcp);
+        LOG_DBG("LAST SEQ: %d", last_ctrl);
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
@@ -797,12 +799,12 @@ static struct dtcp_sv default_sv = {
         .data_retransmit_max    = 0,
         .last_rcv_data_ack      = 0,
         .time_unit              = 0,
-        .sndr_credit            = 0,
-        .snd_rt_wind_edge       = 100000,
+        .sndr_credit            = 1,
+        .snd_rt_wind_edge       = 100,
         .sndr_rate              = 0,
         .pdus_sent_in_time_unit = 0,
         .rcvr_credit            = 1,
-        .rcvr_rt_wind_edge      = 0,
+        .rcvr_rt_wind_edge      = 100,
         .rcvr_rate              = 0,
         .pdus_rcvd_in_time_unit = 0,
         .acks                   = 0,

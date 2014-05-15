@@ -470,9 +470,6 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
-        LOG_ERR("PDU posted in the EGRESS WQ");
-        LOG_ERR("ITEM  : %pK", item);
-
         return 0;
 }
 EXPORT_SYMBOL(rmt_send_port_id);
