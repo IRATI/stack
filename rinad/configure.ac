@@ -71,10 +71,13 @@ AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
 AC_CONFIG_FILES([
     Makefile
+
     src/Makefile
     src/common/Makefile
     src/ipcp/Makefile
     src/ipcm/Makefile
+
+    doc/Makefile
 ])
 
 AC_OUTPUT
