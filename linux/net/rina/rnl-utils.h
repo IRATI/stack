@@ -73,10 +73,9 @@ enum ipcp_config_entry_attrs_list {
 
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
-        CPP_ATTR_FLOW_CONTROL,
-        CPP_ATTR_RTX_CONTROL,
-        CPP_ATTR_WINDOW_BASED_FLOW_CONTROL,
-        CPP_ATTR_RATE_BASED_FLOW_CONTROL,
+        CPP_ATTR_DTCP_CONFIG,
+        CPP_ATTR_INIT_SEQ_NUM_POL,
+        CPP_ATTR_SEQ_NUM_ROLLOVER,
         __CPP_ATTR_MAX,
 };
 #define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)

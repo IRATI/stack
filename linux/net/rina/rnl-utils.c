@@ -33,6 +33,8 @@
 #include "utils.h"
 #include "rnl.h"
 #include "rnl-utils.h"
+#include "dtcp-utils.h"
+#include "policies.h"
 
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
@@ -1035,8 +1037,10 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         struct nlattr *attrs[RIBO_ATTR_MAX + 1];
 
         attr_policy[RIBO_ATTR_OBJECT_CLASS].type    = NLA_U32;
+        attr_policy[RIBO_ATTR_OBJECT_CLASS].len     = 4;
         attr_policy[RIBO_ATTR_OBJECT_NAME].type     = NLA_STRING;
         attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U32;
+        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].len  = 4;
 
         if (nla_parse_nested(attrs,
                              RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
@@ -1056,22 +1060,32 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         return 0;
 }
 
+static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int parse_policy(struct nlattr * attr, struct policy * p)
+{
+        LOG_MISSING;
+        return 0;
+}
+
 static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                                       struct conn_policies * cpp_struct)
 {
         struct nla_policy attr_policy[CPP_ATTR_MAX + 1];
         struct nlattr * attrs[CPP_ATTR_MAX + 1];
 
-        attr_policy[CPP_ATTR_DTCP_PRESENT].type              = NLA_FLAG;
-        attr_policy[CPP_ATTR_DTCP_PRESENT].len               = 0;
-        attr_policy[CPP_ATTR_FLOW_CONTROL].type              = NLA_FLAG;
-        attr_policy[CPP_ATTR_FLOW_CONTROL].len               = 0;
-        attr_policy[CPP_ATTR_RTX_CONTROL].type               = NLA_FLAG;
-        attr_policy[CPP_ATTR_RTX_CONTROL].len                = 0;
-        attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].type = NLA_FLAG;
-        attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].len  = 0;
-        attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type   = NLA_FLAG;
-        attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].len    = 0;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].type     = NLA_FLAG;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].len      = 0;
+        attr_policy[CPP_ATTR_DTCP_CONFIG].type      = NLA_NESTED;
+        attr_policy[CPP_ATTR_DTCP_CONFIG].len       = 0;
+        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POL].type = NLA_NESTED;
+        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POL].len  = 0;
+        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].type = NLA_U32;
+        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].len  = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
@@ -1082,23 +1096,25 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->dtcp_present =
                         nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        /* FIXME: To be removed */
-        /* if (attrs[CPP_ATTR_FLOW_CONTROL])
-                cpp_struct->flow_ctrl =
-                        nla_get_flag(attrs[CPP_ATTR_FLOW_CONTROL]);
+        if (attrs[CPP_ATTR_DTCP_PRESENT])
+                cpp_struct->dtcp_present =
+                        nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        if (attrs[CPP_ATTR_RTX_CONTROL])
-                cpp_struct->rtx_ctrl =
-                        nla_get_flag(attrs[CPP_ATTR_RTX_CONTROL]);
+        if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG], cpp_struct->dtcp_cfg)) {
+                LOG_ERR("Could not parse dtcp config");
+                return -1;
+        }
 
-        if (attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL])
-                cpp_struct->window_based_fctrl =
-                        nla_get_flag(attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL]);
+        if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POL],
+                         cpp_struct->initial_sequence_number)) {
+                LOG_ERR("Could not parse initial_sequence_numberp policy");
+                return -1;
+        }
 
-        if (attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL])
-                cpp_struct->rate_based_fctrl =
-                        nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]);
-        */
+        if (attrs[CPP_ATTR_SEQ_NUM_ROLLOVER])
+                cpp_struct->seq_num_ro_th =
+                        nla_get_u32(attrs[CPP_ATTR_SEQ_NUM_ROLLOVER]);
+
         return 0;
 }
 
