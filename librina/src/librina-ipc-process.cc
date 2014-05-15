@@ -640,6 +640,14 @@ Singleton<ExtendedIPCManager> extendedIPCManager;
 PolicyParameter::PolicyParameter(){
 }
 
+bool PolicyParameter::operator==(const PolicyParameter &other) const {
+        return other.getName().compare(name) == 0;
+}
+
+bool PolicyParameter::operator!=(const PolicyParameter &other) const {
+        return !(*this == other);
+}
+
 const std::string& PolicyParameter::getName() const {
         return name;
 }
@@ -1354,7 +1362,8 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(const Connection& connection)
+unsigned int KernelIPCProcess::createConnection(const Connection& connection,
+                const ConnectionPolicies& connectionPolicies)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -1366,6 +1375,7 @@ throw (CreateConnectionException) {
         message.setSourceAddress(connection.getSourceAddress());
         message.setDestAddress(connection.getDestAddress());
         message.setQosId(connection.getQosId());
+        message.setConnPolicies(connectionPolicies);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -1413,7 +1423,8 @@ throw (UpdateConnectionException) {
 }
 
 unsigned int KernelIPCProcess::
-createConnectionArrived(const Connection& connection)
+createConnectionArrived(const Connection& connection,
+                const ConnectionPolicies& connectionPolicies)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -1427,6 +1438,7 @@ throw (CreateConnectionException) {
         message.setQosId(connection.getQosId());
         message.setDestCepId(connection.getDestCepId());
         message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.setConnPolicies(connectionPolicies);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);

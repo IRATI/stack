@@ -679,6 +679,8 @@ class PolicyParameter {
 
 public:
         PolicyParameter();
+        bool operator==(const PolicyParameter &other) const;
+        bool operator!=(const PolicyParameter &other) const;
         const std::string& getName() const;
         void setName(const std::string& name);
         const std::string& getValue() const;
@@ -810,7 +812,7 @@ class DTCPFlowControlConfig {
         /** the window-based flow control configuration */
         DTCPWindowBasedFlowControlConfig windowbasedconfig;
 
-        /** indicates whether window-based flow control is in use */
+        /** indicates whether rate-based flow control is in use */
         bool ratebased;
 
         /** the rate-based flow control configuration */
@@ -1287,10 +1289,12 @@ public:
          * EFCP connection to the kernel components of the IPC Process
          *
          * @param connection
+         * @param connectionPolicies the policies for this EFCP connection
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnection(const Connection& connection)
+        unsigned int createConnection(const Connection& connection,
+                        const ConnectionPolicies& connectionPolicies)
         throw (CreateConnectionException);
 
         /**
@@ -1310,10 +1314,12 @@ public:
          * (receiving side of the Flow allocation procedure)
          *
          * @param connection
+         * @param connectionPolicies the policies for this EFCP connection
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnectionArrived(const Connection& connection)
+        unsigned int createConnectionArrived(const Connection& connection,
+                        const ConnectionPolicies& connectionPolicies)
         throw (CreateConnectionException);
 
         /**
