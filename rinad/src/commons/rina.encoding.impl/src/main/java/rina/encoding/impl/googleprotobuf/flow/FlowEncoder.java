@@ -300,9 +300,7 @@ public class FlowEncoder implements Encoder{
 			return result;
 		}
 		
-		result = new EFCPPolicyConfig();
-		result.setName(policyConfig.getName());
-		result.setVersion((short)policyConfig.getVersion());
+		result = new EFCPPolicyConfig(policyConfig.getName(), (short)policyConfig.getVersion());
 		if (policyConfig.getParametersCount() > 0) {
 			List<policyParameter_t> parameters = policyConfig.getParametersList();
 			for(int i=0; i<parameters.size(); i++){
@@ -314,15 +312,11 @@ public class FlowEncoder implements Encoder{
 	}
 	
 	private PolicyParameter getPolicyParameter(policyParameter_t parameter) {
-		PolicyParameter result = new PolicyParameter();
 		if (parameter == null){
-			return result;
+			return new PolicyParameter();
 		}
 		
-		result.setName(parameter.getName());
-		result.setValue(parameter.getValue());
-		
-		return result;
+		return new PolicyParameter(parameter.getName(), parameter.getValue());
 	}
 	
 	public synchronized byte[] encode(Object object) throws Exception {

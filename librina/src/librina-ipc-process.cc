@@ -640,6 +640,12 @@ Singleton<ExtendedIPCManager> extendedIPCManager;
 PolicyParameter::PolicyParameter(){
 }
 
+PolicyParameter::PolicyParameter(const std::string& name,
+                const std::string& value){
+        this->name = name;
+        this->value = value;
+}
+
 bool PolicyParameter::operator==(const PolicyParameter &other) const {
         return other.getName().compare(name) == 0;
 }
@@ -652,30 +658,23 @@ const std::string& PolicyParameter::getName() const {
         return name;
 }
 
-void PolicyParameter::setName(const std::string& name) {
-        this->name = name;
-}
-
 const std::string& PolicyParameter::getValue() const {
         return value;
 }
 
-void PolicyParameter::setValue(const std::string& value){
-        this->value = value;
-}
-
 /* CLASS EFCP POLICY CONFIGURATION */
 EFCPPolicyConfig::EFCPPolicyConfig() {
-        name = "default";
-        version = 0;
+        name = RINA_DEFAULT_POLICY_NAME;
+        version = RINA_DEFAULT_POLICY_VERSION;
+}
+
+EFCPPolicyConfig::EFCPPolicyConfig(const std::string& name, short version) {
+        this->name = name;
+        this->version = version;
 }
 
 const std::string& EFCPPolicyConfig::getName() const {
         return name;
-}
-
-void EFCPPolicyConfig::setName(const std::string& name) {
-        this->name = name;
 }
 
 const std::list<PolicyParameter>&
@@ -694,10 +693,6 @@ void EFCPPolicyConfig::addParameter(const PolicyParameter& paremeter) {
 
 short EFCPPolicyConfig::getVersion() const {
         return version;
-}
-
-void EFCPPolicyConfig::setVersion(short version) {
-        this->version = version;
 }
 
 /* CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG */

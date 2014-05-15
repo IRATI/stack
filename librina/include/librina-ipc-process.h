@@ -22,6 +22,9 @@
 #include "librina-common.h"
 #include "librina-application.h"
 
+#define RINA_DEFAULT_POLICY_NAME "default"
+#define RINA_DEFAULT_POLICY_VERSION 0
+
 namespace rina {
 
 /**
@@ -679,12 +682,11 @@ class PolicyParameter {
 
 public:
         PolicyParameter();
+        PolicyParameter(const std::string& name, const std::string& value);
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
         const std::string& getName() const;
-        void setName(const std::string& name);
         const std::string& getValue() const;
-        void setValue(const std::string& value);
 };
 
 /**
@@ -703,13 +705,12 @@ class EFCPPolicyConfig {
 
 public:
         EFCPPolicyConfig();
+        EFCPPolicyConfig(const std::string& name, short version);
         const std::string& getName() const;
-        void setName(const std::string& name);
         const std::list<PolicyParameter>& getParameters() const;
         void setParameters(const std::list<PolicyParameter>& parameters);
         void addParameter(const PolicyParameter& paremeter);
         short getVersion() const;
-        void setVersion(short version);
 };
 
 /**

@@ -1574,17 +1574,18 @@ PolicyParameter * parsePolicyParameterObject(nlattr *nested) {
                 return 0;
         }
 
-        PolicyParameter * result = new PolicyParameter();
+        std::string name;
+        std::string value;
 
         if (attrs[PPA_ATTR_NAME]) {
-                result->setName(nla_get_string(attrs[PPA_ATTR_NAME]));
+                name = nla_get_string(attrs[PPA_ATTR_NAME]);
         }
 
         if (attrs[PPA_ATTR_VALUE]) {
-                result->setValue(nla_get_string(attrs[PPA_ATTR_VALUE]));
+                value = nla_get_string(attrs[PPA_ATTR_VALUE]);
         }
 
-        return result;
+        return new PolicyParameter(name, value);
 }
 
 int putListOfPolicyParameters(nl_msg* netlinkMessage,
@@ -1687,15 +1688,18 @@ parseEFCPPolicyConfigObject(nlattr *nested) {
                 return 0;
         }
 
-        EFCPPolicyConfig * result = new EFCPPolicyConfig();
+        std::string name;
+        short version = 0;
 
         if (attrs[EPC_ATTR_NAME]) {
-                result->setName(nla_get_string(attrs[EPC_ATTR_NAME]));
+                name = nla_get_string(attrs[EPC_ATTR_NAME]);
         }
 
         if (attrs[EPC_ATTR_VERSION]) {
-                result->setVersion(nla_get_u32(attrs[EPC_ATTR_VERSION]));
+                version = nla_get_u32(attrs[EPC_ATTR_VERSION]);
         }
+
+        EFCPPolicyConfig * result = new EFCPPolicyConfig(name, version);
 
         int status = 0;
         if (attrs[EPC_ATTR_PARAMETERS]) {
