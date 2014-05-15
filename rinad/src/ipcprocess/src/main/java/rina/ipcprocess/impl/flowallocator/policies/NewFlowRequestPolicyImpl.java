@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import eu.irati.librina.Connection;
+import eu.irati.librina.ConnectionPolicies;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
 
@@ -22,12 +23,16 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		flow.setState(State.ALLOCATION_IN_PROGRESS);
 		List<Connection> connections = new ArrayList<Connection>();
 		
+		//TODO select qos cube properly
 		int qosId = 1;
 		Connection connection = new Connection();
 		connection.setQosId(qosId);
 		connection.setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
 		connections.add(connection);
 		flow.setConnections(connections);
+		
+		//TODO generate connection policies properly
+		flow.setConnectionPolicies(new ConnectionPolicies());
 		
 		return flow;
 	}

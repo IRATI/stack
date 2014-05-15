@@ -928,7 +928,6 @@ enum DTCPConfigAttributes {
         DCA_ATTR_RCVR_TIMER_INAC_POLICY,
         DCA_ATTR_SNDR_TIMER_INAC_POLICY,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
-        DCA_ATTR_INIT_SEQ_NUM_POLICY,
         __DCA_ATTR_MAX,
 };
 
@@ -944,6 +943,7 @@ parseDTCPConfigObject(nlattr *nested);
 enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_PRESENT = 1,
 	CPA_ATTR_DTCP_CONFIG,
+	CPA_ATTR_INIT_SEQ_NUM_POLICY,
 	CPA_ATTR_SEQ_NUM_ROLLOVER,
 	__CPA_ATTR_MAX,
 };
