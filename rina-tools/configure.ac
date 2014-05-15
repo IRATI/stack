@@ -51,24 +51,24 @@ ax_cv_have_matplotlib=yes
 AM_PATH_PYTHON([2.0],[
     AX_PYTHON_MODULE([re],,[
         AC_MSG_WARN([Python module re seems missing (???), some features will be disabled])
-        ax_cv_have_python=no 
+        ax_cv_have_python=no
     ])
     AX_PYTHON_MODULE([sys],,[
         AC_MSG_WARN([Python module sys seems missing (???), some features will be disabled])
-        ax_cv_have_python=no 
+        ax_cv_have_python=no
     ])
     AX_PYTHON_MODULE([argparse],,[
         AC_MSG_WARN([Python module arparse seems missing (???), some features will be disabled])
-        ax_cv_have_python=no 
+        ax_cv_have_python=no
     ])
     AX_PYTHON_MODULE([matplotlib],,[
         AC_MSG_WARN([Python module matplotlib seems missing, some features will be disabled])
-        ax_cv_have_matplotlib=no 
+        ax_cv_have_matplotlib=no
     ])
 ],[
-    AC_MSG_WARN([Python (>= 2.0) seems missing, some features will be disabled]) 
-        ax_cv_have_python=no 
-        ax_cv_have_matplotlib=no 
+    AC_MSG_WARN([Python (>= 2.0) seems missing, some features will be disabled])
+        ax_cv_have_python=no
+        ax_cv_have_matplotlib=no
 ])
 AM_CONDITIONAL([HAVE_PYTHON], [ test "$ax_cv_have_python" != "no" ])
 AM_CONDITIONAL([HAVE_PYTHON_MATPLOT_LIB], [ test "$ax_cv_have_matplotlib" != "no" ])
@@ -79,6 +79,8 @@ AC_CONFIG_FILES([
     Makefile
 
     src/Makefile
+
+    doc/Makefile
 ])
 
 AC_OUTPUT

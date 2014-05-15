@@ -6,9 +6,14 @@
 
 include Makefile.inc
 
-EXTRA_DIST       = doxygen.cfg.in
+EXTRA_DIST       =
 BUILT_SOURCES    =
 MOSTLYCLEANFILES =
+
+# FIXME: Remove this workaround
+EXTRA_DIST  = *.md
+
+EXTRA_DIST += doxygen.cfg.in
 
 if DX_COND_doc
 

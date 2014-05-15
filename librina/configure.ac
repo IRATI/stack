@@ -115,7 +115,7 @@ AS_IF([test "$build_bindings" = "yes"],[
         # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
         # bindings generation
         #
-    
+
         SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
         AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
             AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
