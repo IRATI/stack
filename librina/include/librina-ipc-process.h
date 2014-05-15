@@ -1873,58 +1873,60 @@ class IPCPFlow {
  * Delimits and undelimits SDUs, to allow multiple SDUs to be concatenated in the same PDU
  *
  */
-class Delimiter {
-	/*	Constructors and Destructors	*/
-	public:
-		virtual ~Delimiter(){};
-	/*	Accessors	*/
-	public:
-		/**
-		 * Takes a single rawSdu and produces a single delimited byte array, consisting in
-		 * [length][sdu]
-		 * @param rawSdus
-		 * @return
-		 */
-		virtual char* getDelimitedSdu(char rawSdu[]) = 0;
-		/**
-		 * Takes a list of raw sdus and produces a single delimited byte array, consisting in
-		 * the concatenation of the sdus followed by their encoded length: [length][sdu][length][sdu] ...
-		 * @param rawSdus
-		 * @return
-		 */
-		virtual char* getDelimitedSdus(const std::list<char*>& rawSdus) = 0;
-		/**
-		 * Assumes that the first length bytes of the "byteArray" are an encoded varint (encoding an integer of 32 bytes max), and returns the value
-		 * of this varint. If the byteArray is still not a complete varint, doesn't start with a varint or it is encoding an
-		 * integer of more than 4 bytes the function will return -1.
-		 * @param byteArray
-		 * @return the value of the integer encoded as a varint, or -1 if there is not a valid encoded varint32, or -2 if
-		 * this may be a complete varint32 but still more bytes are needed
-		 */
-		virtual int readVarint32(char byteArray[], int length) = 0;
-		/**
-		 * Takes a delimited byte array ([length][sdu][length][sdu] ..) and extracts the sdus
-		 * @param delimitedSdus
-		 * @return
-		 */
-		virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
+class IDelimiter
+{
+  /*	Constructors and Destructors	*/
+public:
+  virtual ~IDelimiter() {};
+  /*	Accessors	*/
+public:
+  /**
+   * Takes a single rawSdu and produces a single delimited byte array, consisting in
+   * [length][sdu]
+   * @param rawSdus
+   * @return
+   */
+  virtual char* getDelimitedSdu(char rawSdu[]) = 0;
+  /**
+   * Takes a list of raw sdus and produces a single delimited byte array, consisting in
+   * the concatenation of the sdus followed by their encoded length: [length][sdu][length][sdu] ...
+   * @param rawSdus
+   * @return
+   */
+  virtual char* getDelimitedSdus(const std::list<char*>& rawSdus) = 0;
+  /**
+   * Assumes that the first length bytes of the "byteArray" are an encoded varint (encoding an integer of 32 bytes max), and returns the value
+   * of this varint. If the byteArray is still not a complete varint, doesn't start with a varint or it is encoding an
+   * integer of more than 4 bytes the function will return -1.
+   * @param byteArray
+   * @return the value of the integer encoded as a varint, or -1 if there is not a valid encoded varint32, or -2 if
+   * this may be a complete varint32 but still more bytes are needed
+   */
+  virtual int readVarint32(char byteArray[], int length) = 0;
+  /**
+   * Takes a delimited byte array ([length][sdu][length][sdu] ..) and extracts the sdus
+   * @param delimitedSdus
+   * @return
+   */
+  virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
 };
 
-class ADataUnitHandler {
-	/*	Constructors and Destructors	*/
-	public:
-		virtual ~ADataUnitHandler(){};
-	/*	Functionalitites	*/
-	public:
-		/** Set the new A-Data PDU Forwarding Table */
-		//void setPDUForwardingTable(PDUForwardingTableEntryList entries);
-		/** Get the port-id of the N-1 flow to reach the destination address*/
-		long getNextHop(long destinationAddress) throw (IPCException);
+class IADataUnitHandler
+{
+  /*	Constructors and Destructors	*/
+public:
+  virtual
+  ~IADataUnitHandler(){};
+  /*	Functionalitites	*/
+public:
+  /** Set the new A-Data PDU Forwarding Table */
+  //void setPDUForwardingTable(PDUForwardingTableEntryList entries);
+  /** Get the port-id of the N-1 flow to reach the destination address*/
+  long virtual getNextHop(long destinationAddress) throw (IPCException);
 
-		/** Send a message encapsulated in an A-Data-Unit PDU */
-		void sendADataUnit(long destinationAddress, const CDAPMessage &cdapMessage,
-				const CDAPMessageHandler &cdapMessageHandler) throw (IPCException);
-
+  /** Send a message encapsulated in an A-Data-Unit PDU */
+  void virtual sendADataUnit(long destinationAddress, const CDAPMessage &cdapMessage,
+      const ICDAPMessageHandler &cdapMessageHandler) throw (IPCException) = 0;
 };
 
 }

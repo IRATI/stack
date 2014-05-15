@@ -21,6 +21,7 @@
 
 #include <stdexcept>
 
+namespace rina {
 class Exception : public std::exception {
 public:
         Exception() { }
@@ -69,7 +70,6 @@ class ApplicationProcessException: public std::exception{
 };
 
 class CDAPMessage;
-
 class CDAPException: public Exception{
 	/*	Members	*/
 	protected:
@@ -91,6 +91,7 @@ class CDAPException: public Exception{
 		CDAPMessage* cdapMessage;
 	/*	Constructors and Destructors	*/
 	public:
+		CDAPException();
 		CDAPException(Exception ex);
 		CDAPException(std::string operation, int result, std::string resultReason);
 		CDAPException(int result, std::string resultReason);
@@ -155,6 +156,8 @@ class RIBDaemonException: public Exception{
 	public:
         virtual const char * what() const throw();
 };
+
+}
 
 #endif
 

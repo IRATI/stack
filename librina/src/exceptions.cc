@@ -1,5 +1,6 @@
 #include "exceptions.h"
 
+namespace rina {
 /*	CLASS ApplicationProcessException */
 const int ApplicationProcessException::UNEXISTING_SYNOYM = 1;
 const int ApplicationProcessException::WRONG_APPLICATION_PROCES_NAME = 2;
@@ -45,4 +46,29 @@ void ApplicationProcessException::setErrorCode(int errorCode)
 const char* ApplicationProcessException::what() const throw()
 {
 	return message;
+}
+
+/* CLASS CDAPException */
+CDAPException::CDAPException() {
+}
+CDAPException::CDAPException() {
+
+}
+
+CDAPException::CDAPException(std::string operation, int result, std::string resultReason) {
+
+}
+
+CDAPException::CDAPException(int result, std::string resultReason){
+
+}
+
+CDAPException::CDAPException(std::string resultReason) {
+
+}
+
+CDAPException::CDAPException(std::string arg0, const CDAPMessage &arg1) {
+	resultReason = arg0;
+	cdapMessage = arg1;
+}
 }
