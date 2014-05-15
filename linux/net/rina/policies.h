@@ -33,10 +33,16 @@ struct p_param * policy_param_create(void);
 struct p_param * policy_param_create_ni(void);
 int              policy_param_destroy(struct p_param * param);
 int              policy_destroy(struct policy * p);
-int              policy_param_add (struct policy *  policy,
-                                   struct p_param * param);
-int              policy_param_rem (struct policy *  policy,
-                                   struct p_param * param);
+struct p_param * policy_param_find_by_name(struct policy * policy,
+                                           struct p_param * param);
+int              policy_param_is_present(struct policy *  policy,
+                                         struct p_param * param);
+int              policy_param_add(struct policy *  policy,
+                                  struct p_param * param);
+int              policy_param_rem(struct policy *  policy,
+                                  struct p_param * param);
+int              policy_param_rem_and_del(struct policy *  policy,
+                                          struct p_param * param);
 
 
 #endif

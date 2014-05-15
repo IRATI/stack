@@ -22,6 +22,7 @@
 #define RINA_PREFIX "policies"
 
 #include <linux/list.h>
+#include <linux/types.h>
 
 #include "policies.h"
 #include "utils.h"
@@ -89,7 +90,6 @@ int policy_param_destroy(struct p_param * param)
 
         if (param->name) rkfree(param->name);
         if (param->value) rkfree(param->value);
-        list_del(&param->next);
         rkfree(param);
 
         return 0;
@@ -117,10 +117,45 @@ int policy_destroy(struct policy * p)
 }
 EXPORT_SYMBOL(policy_destroy);
 
-int policy_param_add (struct policy *  policy,
-                      struct p_param * param)
+struct p_param * policy_param_find_by_name(struct policy * policy,
+                                           struct p_param * param)
+{
+        struct p_param * pos;
+
+        if (!policy || ! param)
+                return NULL;
+
+         list_for_each_entry(pos, &policy->params, next) {
+                if (!strcmp(pos->name, param->name))
+                        return pos;
+         }
+
+         return NULL;
+}
+EXPORT_SYMBOL(policy_param_find_by_name);
+
+int policy_param_is_present(struct policy *  policy,
+                            struct p_param * param)
+{
+        if (!policy || ! param)
+                return 0;
+       
+        if (policy_param_find_by_name(policy, param))
+                return 1;
+        else
+                return 0;
+                
+}
+EXPORT_SYMBOL(policy_param_is_present);
+
+int policy_param_add(struct policy *  policy,
+                     struct p_param * param)
 { 
-        LOG_MISSING;
+        if (!policy || ! param)
+                return -1;
+
+        list_add_tail(&param->next, &policy->params);
+
         return 0;
 }
 EXPORT_SYMBOL(policy_param_add);
@@ -128,9 +163,25 @@ EXPORT_SYMBOL(policy_param_add);
 int policy_param_rem(struct policy *  policy,
                      struct p_param * param)
 { 
-        LOG_MISSING;
+        if (!policy || ! param)
+                return -1;
+
+        if (!policy_param_is_present(policy, param))
+                return -1;
+        
+        list_del(&param->next);
+        
         return 0;
 }
 EXPORT_SYMBOL(policy_param_rem);
 
+int policy_param_rem_and_del(struct policy *  policy,
+                             struct p_param * param)
+{
+        if (policy_param_rem(policy, param))
+                return -1;
+
+        return policy_param_destroy(param);
+}                
+EXPORT_SYMBOL(policy_param_rem_and_del);
 
