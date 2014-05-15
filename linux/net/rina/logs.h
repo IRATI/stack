@@ -48,7 +48,7 @@
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
 #define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
 
-#ifdef RINA_DEBUG_HEARTBEATS
+#ifdef CONFIG_RINA_DEBUG_HEARTBEATS
 #define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
                           __FUNCTION__, __FILE__, __LINE__)
 #else
