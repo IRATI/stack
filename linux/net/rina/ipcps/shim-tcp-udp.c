@@ -542,7 +542,8 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data *data,
                 return -1;
         }
 
-        if (flow->fspec_id == 1 && flow->port_id == PORT_STATE_ALLOCATED) {
+        if (flow->fspec_id == 1 && 
+                        flow->port_id_state == PORT_STATE_ALLOCATED) {
                 LOG_DBG("closing socket");
                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                 sock_release(flow->sock);
@@ -581,7 +582,7 @@ int recv_msg(struct socket *      sock,
         msg.msg_namelen = lother;
 
         size = kernel_recvmsg(sock, &msg, &iov, 1, len, msg.msg_flags);
-        if (size > 0)
+        if (size >= 0)
                 LOG_DBG("received message with %d bytes", size);
 
         return size;
