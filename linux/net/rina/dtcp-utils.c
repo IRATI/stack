@@ -57,8 +57,6 @@ struct dtcp_fctrl_config {
         struct policy *              closed_window;
         struct policy *              flow_control_overrun;
         struct policy *              reconcile_flow_conflict;
-        struct policy *              receiver_inactivity_timer;
-        struct policy *              sender_inactivity_timer;
 };
 
 struct dtcp_rxctrl_config {
@@ -76,11 +74,13 @@ struct dtcp_rxctrl_config {
 /* This is the DTCP configurations from connection policies */
 struct dtcp_config {
         bool                        flow_ctrl;
-        bool                        rtx_ctrl;
         struct dtcp_fctrl_config *  fctrl_cfg;
+        bool                        rtx_ctrl;
         struct dtcp_rxctrl_config * rxctrl_cfg;
         timeout_t                   receiver_inactivity;
         timeout_t                   sender_inactivity;
+        struct policy *             receiver_inactivity_timer;
+        struct policy *             sender_inactivity_timer;
         struct policy *             lost_control_pdu;
 };
 
@@ -175,10 +175,6 @@ static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
                 policy_destroy(cfg->flow_control_overrun);
         if(cfg->reconcile_flow_conflict)   
                 policy_destroy(cfg->reconcile_flow_conflict);
-        if(cfg->receiver_inactivity_timer) 
-                policy_destroy(cfg->receiver_inactivity_timer);
-        if(cfg->sender_inactivity_timer)   
-                policy_destroy(cfg->sender_inactivity_timer);
 
         rkfree(cfg);
 
@@ -204,13 +200,9 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
         tmp->closed_window             = policy_create_gfp(flags);
         tmp->flow_control_overrun      = policy_create_gfp(flags);
         tmp->reconcile_flow_conflict   = policy_create_gfp(flags);
-        tmp->receiver_inactivity_timer = policy_create_gfp(flags);
-        tmp->sender_inactivity_timer   = policy_create_gfp(flags);
         if (!tmp->closed_window              ||
             !tmp->flow_control_overrun       ||
-            !tmp->reconcile_flow_conflict    ||
-            !tmp->receiver_inactivity_timer  ||
-            !tmp->sender_inactivity_timer)
+            !tmp->reconcile_flow_conflict)
                 goto clean;
 
         return tmp;
@@ -286,6 +278,10 @@ int dtcp_config_destroy(struct dtcp_config * cfg)
                 dtcp_fctrl_config_destroy(cfg->fctrl_cfg);
         if (cfg->rxctrl_cfg)
                 dtcp_rxctrl_config_destroy(cfg->rxctrl_cfg);
+        if(cfg->receiver_inactivity_timer) 
+                policy_destroy(cfg->receiver_inactivity_timer);
+        if(cfg->sender_inactivity_timer)   
+                policy_destroy(cfg->sender_inactivity_timer);
         if (cfg->lost_control_pdu)
                 policy_destroy(cfg->lost_control_pdu);
 
@@ -309,6 +305,14 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
 
         tmp->rxctrl_cfg = dtcp_rxctrl_config_create_gfp(flags);
         if (!tmp->rxctrl_cfg)
+                goto clean;
+
+        tmp->receiver_inactivity_timer = policy_create_gfp(flags);
+        if (!tmp->receiver_inactivity_timer)
+                goto clean;
+
+        tmp->sender_inactivity_timer   = policy_create_gfp(flags);
+        if (!tmp->sender_inactivity_timer)
                 goto clean;
 
         tmp->lost_control_pdu = policy_create_gfp(flags);
@@ -594,30 +598,6 @@ int dtcp_reconcile_flow_conflict_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_reconcile_flow_conflict_set);
 
-int dtcp_receiver_inactivity_timer_set(struct dtcp_config * cfg,
-                                       struct policy * rcvr_inactivity_timer)
-{
-        if (!cfg) return -1;
-        if (!rcvr_inactivity_timer) return -1;
-
-        cfg->fctrl_cfg->receiver_inactivity_timer = rcvr_inactivity_timer;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_receiver_inactivity_timer_set);
-
-int dtcp_sender_inactivity_timer_set(struct dtcp_config * cfg,
-                                     struct policy * sender_inactivity_timer)
-{
-        if (!cfg) return -1;
-        if (!sender_inactivity_timer) return -1;
-
-        cfg->fctrl_cfg->sender_inactivity_timer = sender_inactivity_timer;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_sender_inactivity_timer_set);
-
 /* dtcp_rxctrl_config */
 int dtcp_data_retransmit_max_set(struct dtcp_config * cfg,
                                  uint_t data_retransmit_max)
@@ -795,6 +775,30 @@ int dtcp_sender_inactivity_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_sender_inactivity_set);
 
+int dtcp_receiver_inactivity_timer_set(struct dtcp_config * cfg,
+                                       struct policy * rcvr_inactivity_timer)
+{
+        if (!cfg) return -1;
+        if (!rcvr_inactivity_timer) return -1;
+
+        cfg->receiver_inactivity_timer = rcvr_inactivity_timer;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_receiver_inactivity_timer_set);
+
+int dtcp_sender_inactivity_timer_set(struct dtcp_config * cfg,
+                                     struct policy * sender_inactivity_timer)
+{
+        if (!cfg) return -1;
+        if (!sender_inactivity_timer) return -1;
+
+        cfg->sender_inactivity_timer = sender_inactivity_timer;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_sender_inactivity_timer_set);
+
 int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
                               struct policy * lost_control_pdu)
 {
@@ -965,20 +969,6 @@ struct policy * dtcp_reconcile_flow_conflict(struct dtcp_config * cfg)
 }
 EXPORT_SYMBOL(dtcp_reconcile_flow_conflict);
 
-struct policy * dtcp_receiver_inactivity_timer(struct dtcp_config * cfg)
-{
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->receiver_inactivity_timer;
-}
-EXPORT_SYMBOL(dtcp_receiver_inactivity_timer);
-
-struct policy * dtcp_sender_inactivity_timer(struct dtcp_config * cfg)
-{
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->sender_inactivity_timer;
-}
-EXPORT_SYMBOL(dtcp_sender_inactivity_timer);
-
 /* dtcp_rxctrl_config */
 uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg)
 {
@@ -1085,6 +1075,20 @@ timeout_t dtcp_sender_inactivity(struct dtcp_config * cfg)
 	return cfg->sender_inactivity;
 }
 EXPORT_SYMBOL(dtcp_sender_inactivity);
+
+struct policy * dtcp_receiver_inactivity_timer(struct dtcp_config * cfg)
+{
+	ASSERT(cfg);
+	return cfg->receiver_inactivity_timer;
+}
+EXPORT_SYMBOL(dtcp_receiver_inactivity_timer);
+
+struct policy * dtcp_sender_inactivity_timer(struct dtcp_config * cfg)
+{
+	ASSERT(cfg);
+	return cfg->sender_inactivity_timer;
+}
+EXPORT_SYMBOL(dtcp_sender_inactivity_timer);
 
 struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg)
 {

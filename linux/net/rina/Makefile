@@ -12,8 +12,8 @@ obj-$(CONFIG_RINA) +=				\
 	core.o personality.o syscalls.o		\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
 	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
-	ipcp-utils.o		\
-	common.o policies.o 
+	ipcp-utils.o connection.o	\
+	common.o policies.o dtcp-utils.o 
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
@@ -21,10 +21,10 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 rina_personality_default-y :=					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
-	dtcp-utils.o pft.o rmt.o						\
+	pft.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
-	connection.o default.o
+	default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina_personality_default-y +=			\
