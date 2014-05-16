@@ -1911,12 +1911,12 @@ public:
   virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
 };
 
-class IADataUnitHandler
+class ADataUnitHandlerInterface
 {
   /*	Constructors and Destructors	*/
 public:
   virtual
-  ~IADataUnitHandler(){};
+  ~ADataUnitHandlerInterface(){};
   /*	Functionalitites	*/
 public:
   /** Set the new A-Data PDU Forwarding Table */
@@ -1926,7 +1926,7 @@ public:
 
   /** Send a message encapsulated in an A-Data-Unit PDU */
   void virtual sendADataUnit(long destinationAddress, const CDAPMessage &cdapMessage,
-      const ICDAPMessageHandler &cdapMessageHandler) throw (IPCException) = 0;
+      const CDAPMessageHandlerInterface &cdapMessageHandler) throw (IPCException) = 0;
 };
 
 }

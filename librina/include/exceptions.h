@@ -20,6 +20,7 @@
 #ifdef __cplusplus
 
 #include <stdexcept>
+#include <string>
 
 namespace rina {
 class Exception : public std::exception {
@@ -32,7 +33,7 @@ public:
         virtual const char * what() const throw()
         { return description_.c_str(); }
 
-private:
+protected:
         std::string description_;
 };
 
@@ -41,9 +42,8 @@ private:
  *
  */
 class ApplicationProcessException: public std::exception{
-	/*	Constants	*/
 	public:
-		/*	Error Codes	*/
+	/*	Constants	*/
 		static const int UNEXISTING_SYNOYM ;
 		static const int WRONG_APPLICATION_PROCES_NAME;
 		static const int NULL_OR_MALFORMED_SYNONYM;
@@ -51,32 +51,50 @@ class ApplicationProcessException: public std::exception{
 		static const int NULL_OR_MALFORMED_WHATEVERCAST_NAME;
 		static const int ALREADY_EXISTING_WHATEVERCAST_NAME;
 		static const int UNEXISTING_WHATEVERCAST_NAME;
-	/*	Members	*/
-	protected:
-		int errorCode;
-		char* message;
 	/*	Constructors and Destructors	*/
-	public:
 		ApplicationProcessException();
 		ApplicationProcessException(int errorCode);
 		ApplicationProcessException(int errorCode, std::string message);
 		~ApplicationProcessException() throw();
 	/*	Accessors	*/
-	public:
 		int getErrorCode() const;
 		void setErrorCode(int errorCode);
 	/*	Methods	*/
 		virtual const char* what() const throw();
+	/*	Members	*/
+	private:
+		int errorCode;
+		char* error_message;
 };
 
 class CDAPMessage;
 class CDAPException: public Exception{
-	/*	Members	*/
-	protected:
+	public:
+	/*	Constructors and Destructors	*/
+		CDAPException();
+		CDAPException(Exception &ex);
+		CDAPException(std::string operation, int result, std::string result_reason);
+		CDAPException(int result, std::string result_reason);
+		CDAPException(std::string result_reason);
+		CDAPException(std::string result_reason, const CDAPMessage &cdap_message);
+        virtual ~CDAPException() throw() {};
+    /*	Accessors	*/
+		std::string get_operation() const;
+		void set_operation(std::string operation);
+		int get_result() const;
+		void set_result(int result);
+		std::string get_result_reason() const;
+		void set_result_reason(std::string result_reason);
+		const CDAPMessage& get_cdap_message() const;
+		void set_cdap_message(const CDAPMessage &cdap_message);
+	/*	Methods	*/
+        virtual const char * what() const throw();
+	private:
+    /*	Members	*/
 		/**
 		 * Name of the operation that failed
 		 */
-		std::string operation;
+		std::string error_message;
 		/**
 		 * Operation result code
 		 */
@@ -84,33 +102,11 @@ class CDAPException: public Exception{
 		/**
 		 * Result reason
 		 */
-		std::string resultReason;
+		std::string result_reason;
 		/**
 		 * The CDAPMessage that caused the exception
 		 */
-		CDAPMessage* cdapMessage;
-	/*	Constructors and Destructors	*/
-	public:
-		CDAPException();
-		CDAPException(Exception ex);
-		CDAPException(std::string operation, int result, std::string resultReason);
-		CDAPException(int result, std::string resultReason);
-		CDAPException(std::string resultReason);
-		CDAPException(std::string resultReason, const CDAPMessage &cdapMessage);
-        virtual ~CDAPException() throw() {};
-    /*	Accessors	*/
-	public:
-		std::string getOperation() const;
-		void setOperation(std::string operation);
-		int getResult() const;
-		void setResult(int result);
-		std::string getResultReason() const;
-		void setResultReason(std::string resultReason);
-		const CDAPMessage& getCDAPMessage() const;
-		void setCDAPMessage(const CDAPMessage &cdapMessage);
-	/*	Functionalities	*/
-	public:
-        virtual const char * what() const throw();
+		CDAPMessage* cdap_message;
 };
 
 /**
@@ -147,7 +143,7 @@ class RIBDaemonException: public Exception{
 		RIBDaemonException(int errorCode);
 		RIBDaemonException(int errorCode, std::string message);
 		RIBDaemonException(int errorCode, Exception &ex);
-        virtual ~RIBDaemonException() throw() {};
+        virtual ~RIBDaemonException() throw(){};
 	/*	Accessors	*/
 	public:
 		int getErrorCode();
