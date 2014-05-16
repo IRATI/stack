@@ -725,8 +725,8 @@ extern Singleton<IPCEventProducer> ipcEventProducer;
  */
 class IPCException: public Exception {
 public:
-	IPCException(const std::string& description);
-	static const std::string operation_not_implemented_error;
+	IPCException(const char* description);
+	static const char* operation_not_implemented_error;
 };
 
 /**
@@ -737,7 +737,7 @@ public:
         AssignToDIFException():
                 IPCException("Problems assigning IPC Process to DIF"){
         }
-        AssignToDIFException(const std::string& description):
+        AssignToDIFException(const char* description):
                 IPCException(description){
         }
 };
@@ -750,7 +750,7 @@ public:
         UpdateDIFConfigurationException():
                 IPCException("Problems updating DIF configuration"){
         }
-        UpdateDIFConfigurationException(const std::string& description):
+        UpdateDIFConfigurationException(const char* description):
                 IPCException(description){
         }
 };
@@ -1099,7 +1099,7 @@ public:
 	InitializationException():
 		IPCException("Problems initializing librina"){
 	}
-	InitializationException(const std::string& description):
+	InitializationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -1112,7 +1112,7 @@ public:
         EnrollException():
                 IPCException("Problems causing an IPC Process to enroll to a DIF"){
         }
-        EnrollException(const std::string& description):
+        EnrollException(const char* description):
                 IPCException(description){
         }
 };

@@ -64,7 +64,7 @@ public:
 		IPCException(
 				"Invalid operation invoked when the flow is not allocated "){
 	}
-	FlowNotAllocatedException(const std::string& description):
+	FlowNotAllocatedException(const char* description):
 		IPCException(description){
 	}
 };
@@ -77,7 +77,7 @@ public:
 	ReadSDUException():
 		IPCException("Problems reading SDU from flow"){
 	}
-	ReadSDUException(const std::string& description):
+	ReadSDUException(const char* description):
 		IPCException(description){
 	}
 };
@@ -90,7 +90,7 @@ public:
 	WriteSDUException():
 		IPCException("Problems writing SDU to flow"){
 	}
-	WriteSDUException(const std::string& description):
+	WriteSDUException(const char* description):
 		IPCException(description){
 	}
 };
@@ -103,7 +103,7 @@ public:
 	ApplicationRegistrationException():
 		IPCException("Problems registering application to DIF"){
 	}
-	ApplicationRegistrationException(const std::string& description):
+	ApplicationRegistrationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -116,7 +116,7 @@ public:
 	ApplicationUnregistrationException():
 		IPCException("Problems unregistering application from DIF"){
 	}
-	ApplicationUnregistrationException(const std::string& description):
+	ApplicationUnregistrationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -129,7 +129,7 @@ public:
 	FlowAllocationException():
 		IPCException("Problems allocating flow"){
 	}
-	FlowAllocationException(const std::string& description):
+	FlowAllocationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -142,7 +142,7 @@ public:
 	FlowDeallocationException():
 		IPCException("Problems deallocating flow"){
 	}
-	FlowDeallocationException(const std::string& description):
+	FlowDeallocationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -155,7 +155,7 @@ public:
 	GetDIFPropertiesException():
 		IPCException("Problems getting DIF properties"){
 	}
-	GetDIFPropertiesException(const std::string& description):
+	GetDIFPropertiesException(const char* description):
 		IPCException(description){
 	}
 };

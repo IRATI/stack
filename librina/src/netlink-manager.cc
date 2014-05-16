@@ -35,7 +35,7 @@
 namespace rina {
 
 /* CLASS NETLINK EXCEPTION */
-NetlinkException::NetlinkException(const std::string& description) :
+NetlinkException::NetlinkException(const char* description) :
 		Exception(description) {
 }
 
@@ -100,7 +100,7 @@ void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
 	        if (result != 0) {
 	                LOG_CRIT("Could not allocate enough memory to receive msg buffer: %d"
 	                                , result);
-	                throw NetlinkException(NetlinkException::error_connecting_netlink_socket);
+	                throw NetlinkException(NetlinkException::error_connecting_netlink_socket.c_str());
 	        }
 	}
 
@@ -113,7 +113,7 @@ void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
 				NetlinkException::error_connecting_netlink_socket.c_str(),
 				result);
 		throw NetlinkException(
-				NetlinkException::error_connecting_netlink_socket);
+				NetlinkException::error_connecting_netlink_socket.c_str());
 	}
 
 	family = genl_ctrl_resolve(socket, RINA_GENERIC_NETLINK_FAMILY_NAME);
@@ -122,7 +122,7 @@ void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
 				NetlinkException::error_resolving_netlink_family.c_str(),
 				family);
 		throw NetlinkException(
-				NetlinkException::error_resolving_netlink_family);
+				NetlinkException::error_resolving_netlink_family.c_str());
 	}
 	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
@@ -137,7 +137,7 @@ throw(NetlinkException) {
                 LOG_ERR("%s",
                                 NetlinkException::error_allocating_netlink_message.c_str());
                 throw NetlinkException(
-                                NetlinkException::error_allocating_netlink_message);
+                                NetlinkException::error_allocating_netlink_message.c_str());
         }
 
         int flags = 0;
@@ -156,7 +156,7 @@ throw(NetlinkException) {
                 LOG_ERR("%s",
                                 NetlinkException::error_generating_netlink_message.c_str());
                 throw NetlinkException(
-                                NetlinkException::error_generating_netlink_message);
+                                NetlinkException::error_generating_netlink_message.c_str());
         }
         myHeader->sourceIPCProcessId = message->getSourceIpcProcessId();
         myHeader->destIPCProcessId = message->getDestIpcProcessId();
@@ -168,7 +168,7 @@ throw(NetlinkException) {
                                 NetlinkException::error_generating_netlink_message.c_str(),
                                 result);
                 throw NetlinkException(
-                                NetlinkException::error_generating_netlink_message);
+                                NetlinkException::error_generating_netlink_message.c_str());
         }
 
         //Set destination and send the message
@@ -180,7 +180,7 @@ throw(NetlinkException) {
                                 NetlinkException::error_sending_netlink_message.c_str(),
                                 result, message->getDestPortId());
                 throw NetlinkException(
-                                NetlinkException::error_sending_netlink_message);
+                                NetlinkException::error_sending_netlink_message.c_str());
         }
         LOG_DBG("Sent message of %d bytes. %s", result,
                         message->toString().c_str());
@@ -237,7 +237,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 				NetlinkException::error_receiving_netlink_message.c_str(),
 				numBytes);
 		throw NetlinkException(
-				NetlinkException::error_receiving_netlink_message);
+				NetlinkException::error_receiving_netlink_message.c_str());
 	}
 
 	LOG_DBG("Received %d bytes, parsing the message", numBytes);
@@ -248,7 +248,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 	if (!msg) {
 		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
 		throw NetlinkException(
-				NetlinkException::error_parsing_netlink_message);
+				NetlinkException::error_parsing_netlink_message.c_str());
 	}
 
 	nlmsg_set_src(msg, &nla);
@@ -268,7 +268,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		free(creds);
 		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
 		throw NetlinkException(
-				NetlinkException::error_parsing_netlink_message);
+				NetlinkException::error_parsing_netlink_message.c_str());
 	}
 
 	BaseNetlinkMessage * result = parseBaseNetlinkMessage(hdr);
@@ -279,7 +279,7 @@ BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
 		free(creds);
 		LOG_ERR("%s", NetlinkException::error_parsing_netlink_message.c_str());
 		throw NetlinkException(
-				NetlinkException::error_parsing_netlink_message);
+				NetlinkException::error_parsing_netlink_message.c_str());
 	}
 
 	if(hdr->nlmsg_seq == 0){

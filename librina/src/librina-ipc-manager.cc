@@ -191,7 +191,7 @@ throw (AssignToDIFException) {
                 message =  message + "This IPC Process is already assigned "+
                                 "to the DIF " + currentDIFName;
                 LOG_ERR("%s", message.c_str());
-                throw AssignToDIFException(message);
+                throw AssignToDIFException(message.c_str());
         }
 
 #if STUB_API
@@ -251,7 +251,7 @@ unsigned int IPCProcess::updateDIFConfiguration(
                                 "to any DIF, or a DIF configuration " +
                                 "operation is ongoing";
                 LOG_ERR("%s", message.c_str());
-                throw UpdateDIFConfigurationException(message);
+                throw UpdateDIFConfigurationException(message.c_str());
         }
 
 #if STUB_API
@@ -303,8 +303,8 @@ throw (NotifyRegistrationToDIFException) {
                                   nMinusOneDIFs.end(), difName);
         if (it != nMinusOneDIFs.end()) {
                 throw NotifyRegistrationToDIFException(
-                                "IPCProcess already registered to N-1 DIF"
-                                + difName.getProcessName());
+                                ("IPCProcess already registered to N-1 DIF"
+                                + difName.getProcessName()).c_str());
         }
 
 #if STUB_API
@@ -337,8 +337,8 @@ throw (NotifyUnregistrationFromDIFException) {
                                         nMinusOneDIFs.end(), difName);
         if (it == nMinusOneDIFs.end()) {
                 throw NotifyRegistrationToDIFException(
-                                "IPCProcess not registered to N-1 DIF"
-                                + difName.getProcessName());
+                                ("IPCProcess not registered to N-1 DIF"
+                                + difName.getProcessName()).c_str());
         }
 
 #if STUB_API
@@ -435,7 +435,7 @@ unsigned int IPCProcess::registerApplication(
 throw (IpcmRegisterApplicationException) {
 	if (!difMember){
 		throw IpcmRegisterApplicationException(
-		                IPCProcess::error_not_a_dif_member);
+		                IPCProcess::error_not_a_dif_member.c_str());
 	}
 
 	unsigned int seqNum = 0;
@@ -469,7 +469,7 @@ void IPCProcess::registerApplicationResult(
 throw (IpcmRegisterApplicationException) {
         if (!difMember){
                 throw IpcmRegisterApplicationException(
-                                IPCProcess::error_not_a_dif_member);
+                                IPCProcess::error_not_a_dif_member.c_str());
         }
 
         ApplicationProcessNamingInformation appName;
@@ -495,7 +495,7 @@ unsigned int IPCProcess::unregisterApplication(
 throw (IpcmUnregisterApplicationException) {
         if (!difMember){
                 throw IpcmUnregisterApplicationException(
-                                IPCProcess::error_not_a_dif_member);
+                                IPCProcess::error_not_a_dif_member.c_str());
         }
 
         bool found = false;
@@ -542,7 +542,7 @@ void IPCProcess::unregisterApplicationResult(unsigned int sequenceNumber, bool s
 throw (IpcmUnregisterApplicationException) {
         if (!difMember){
                 throw IpcmRegisterApplicationException(
-                                IPCProcess::error_not_a_dif_member);
+                                IPCProcess::error_not_a_dif_member.c_str());
         }
 
         ApplicationProcessNamingInformation appName;
@@ -562,7 +562,7 @@ throw (IpcmUnregisterApplicationException) {
 unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest)
 throw (AllocateFlowException) {
 	if (!difMember){
-		throw AllocateFlowException(IPCProcess::error_not_a_dif_member);
+		throw AllocateFlowException(IPCProcess::error_not_a_dif_member.c_str());
 	}
 
 	unsigned int seqNum = 0;
@@ -607,7 +607,7 @@ void IPCProcess::allocateFlowResult(
 	throw (AllocateFlowException) {
 	if (!difMember){
 		throw AllocateFlowException(
-				IPCProcess::error_not_a_dif_member);
+				IPCProcess::error_not_a_dif_member.c_str());
 	}
 
 	FlowInformation flowInformation;
@@ -910,7 +910,7 @@ throw (DestroyIPCProcessException) {
 	{
 		unlock();
 		throw DestroyIPCProcessException(
-		                IPCProcessFactory::unknown_ipc_process_error);
+		                IPCProcessFactory::unknown_ipc_process_error.c_str());
 	}
 
 #if STUB_API
@@ -937,7 +937,7 @@ throw (DestroyIPCProcessException) {
 	        error = error + "Result in user space:  " +
 	                        intToCharArray(resultUserSpace);
 	        LOG_ERR("%s", error.c_str());
-	        throw DestroyIPCProcessException(error);
+	        throw DestroyIPCProcessException(error.c_str());
 	}
 }
 

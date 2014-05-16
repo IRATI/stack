@@ -37,7 +37,7 @@ public:
 	NotifyRegistrationToDIFException():
 		IPCException("Problems notifying an IPC Process that it has been registered to an N-1 DIF"){
 	}
-	NotifyRegistrationToDIFException(const std::string& description):
+	NotifyRegistrationToDIFException(const char* description):
 		IPCException(description){
 	}
 };
@@ -51,7 +51,7 @@ public:
 	NotifyUnregistrationFromDIFException():
 		IPCException("Problems notifying an IPC Process that it has been unregistered from an N-1 DIF"){
 	}
-	NotifyUnregistrationFromDIFException(const std::string& description):
+	NotifyUnregistrationFromDIFException(const char* description):
 		IPCException(description){
 	}
 };
@@ -65,7 +65,7 @@ public:
 	DisconnectFromNeighborException():
 		IPCException("Problems causing an IPC Process to disconnect from a neighbour"){
 	}
-	DisconnectFromNeighborException(const std::string& description):
+	DisconnectFromNeighborException(const char* description):
 		IPCException(description){
 	}
 };
@@ -79,7 +79,7 @@ public:
 	IpcmRegisterApplicationException():
 		IPCException("Problems while the IPC Process was trying to register an application"){
 	}
-	IpcmRegisterApplicationException(const std::string& description):
+	IpcmRegisterApplicationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -93,7 +93,7 @@ public:
 	IpcmUnregisterApplicationException():
 		IPCException("Problems while the IPC Process was trying to unregister an application"){
 	}
-	IpcmUnregisterApplicationException(const std::string& description):
+	IpcmUnregisterApplicationException(const char* description):
 		IPCException(description){
 	}
 };
@@ -106,7 +106,7 @@ public:
 	AllocateFlowException():
 		IPCException("Problems while the IPC Process was trying to allocate a flow"){
 	}
-	AllocateFlowException(const std::string& description):
+	AllocateFlowException(const char* description):
 		IPCException(description){
 	}
 };
@@ -119,7 +119,7 @@ public:
 	QueryRIBException():
 		IPCException("Problems while querying the RIB of an IPC Process"){
 	}
-	QueryRIBException(const std::string& description):
+	QueryRIBException(const char* description):
 		IPCException(description){
 	}
 };
@@ -132,7 +132,7 @@ public:
 	CreateIPCProcessException():
 		IPCException("Problems while creating an IPC Process"){
 	}
-	CreateIPCProcessException(const std::string& description):
+	CreateIPCProcessException(const char* description):
 		IPCException(description){
 	}
 };
@@ -145,7 +145,7 @@ public:
         GetIPCProcessException():
                 IPCException("Problems while searching an IPC Process"){
         }
-        GetIPCProcessException(const std::string& description):
+        GetIPCProcessException(const char* description):
                 IPCException(description){
         }
 };
@@ -159,7 +159,7 @@ public:
 	DestroyIPCProcessException():
 		IPCException("Problems while destroying an IPC Process"){
 	}
-	DestroyIPCProcessException(const std::string& description):
+	DestroyIPCProcessException(const char* description):
 		IPCException(description){
 	}
 };
@@ -173,7 +173,7 @@ public:
 	NotifyApplicationRegisteredException():
 		IPCException("Problems notifying an application about its registration to a DIF"){
 	}
-	NotifyApplicationRegisteredException(const std::string& description):
+	NotifyApplicationRegisteredException(const char* description):
 		IPCException(description){
 	}
 };
@@ -187,7 +187,7 @@ public:
 	NotifyApplicationUnregisteredException():
 		IPCException("Problems notifying an application about its unregistration from a DIF"){
 	}
-	NotifyApplicationUnregisteredException(const std::string& description):
+	NotifyApplicationUnregisteredException(const char* description):
 		IPCException(description){
 	}
 };
@@ -201,7 +201,7 @@ public:
 	NotifyFlowAllocatedException():
 		IPCException("Problems notifying an application about the allocation of a flow"){
 	}
-	NotifyFlowAllocatedException(const std::string& description):
+	NotifyFlowAllocatedException(const char* description):
 		IPCException(description){
 	}
 };
@@ -215,7 +215,7 @@ public:
 	GetDIFPropertiesResponseException():
 		IPCException("Problems notifying an application about the query of DIF properties"){
 	}
-	GetDIFPropertiesResponseException(const std::string& description):
+	GetDIFPropertiesResponseException(const char* description):
 		IPCException(description){
 	}
 };
@@ -229,7 +229,7 @@ public:
 	AppFlowArrivedException():
 		IPCException("Problems notifying an application about a new flow allocation request"){
 	}
-	AppFlowArrivedException(const std::string& description):
+	AppFlowArrivedException(const char* description):
 		IPCException(description){
 	}
 };
@@ -242,7 +242,7 @@ public:
 	IpcmDeallocateFlowException():
 		IPCException("Problems deallocating a flow. "){
 	}
-	IpcmDeallocateFlowException(const std::string& description):
+	IpcmDeallocateFlowException(const char* description):
 		IPCException(description){
 	}
 };
@@ -256,7 +256,7 @@ public:
 	NotifyFlowDeallocatedException():
 		IPCException("Problems notifying about flow deallocation. "){
 	}
-	NotifyFlowDeallocatedException(const std::string& description):
+	NotifyFlowDeallocatedException(const char* description):
 		IPCException(description){
 	}
 };

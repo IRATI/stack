@@ -378,7 +378,7 @@ void ExtendedIPCManager::appUnregistered(
         if (!applicationRegistration) {
                 unlock();
                 throw ApplicationUnregistrationException(
-                                IPCManager::application_not_registered_error);
+                                IPCManager::application_not_registered_error.c_str());
         }
 
         std::list<ApplicationProcessNamingInformation>::const_iterator iterator;

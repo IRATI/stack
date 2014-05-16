@@ -100,7 +100,7 @@ ThreadAttributes::ThreadAttributes() {
 	if (pthread_attr_init(&thread_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_initialize_thread_attributes);
+				ConcurrentException::error_initialize_thread_attributes.c_str());
 	}
 }
 
@@ -119,7 +119,7 @@ bool ThreadAttributes::isJoinable() {
 	if (pthread_attr_getdetachstate(&thread_attr_, &dettachState)) {
 		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_get_thread_attributes);
+				ConcurrentException::error_get_thread_attributes.c_str());
 	}
 
 	if (dettachState == PTHREAD_CREATE_JOINABLE) {
@@ -133,7 +133,7 @@ void ThreadAttributes::setDetachState(int detachState) {
 	if (pthread_attr_setdetachstate(&thread_attr_, detachState)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_thread_attributes);
+				ConcurrentException::error_set_thread_attributes.c_str());
 	}
 }
 
@@ -154,7 +154,7 @@ bool ThreadAttributes::isSystemScope() {
 	if (pthread_attr_getscope(&thread_attr_, &scope)) {
 		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_get_thread_attributes);
+				ConcurrentException::error_get_thread_attributes.c_str());
 	}
 
 	if (scope == PTHREAD_SCOPE_SYSTEM) {
@@ -168,7 +168,7 @@ void ThreadAttributes::setScope(int scope) {
 	if (pthread_attr_setscope(&thread_attr_, scope)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_thread_attributes);
+				ConcurrentException::error_set_thread_attributes.c_str());
 	}
 }
 
@@ -189,7 +189,7 @@ bool ThreadAttributes::isInheritedScheduling() {
 	if (pthread_attr_getinheritsched(&thread_attr_, &inheritedScheduling)) {
 		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_get_thread_attributes);
+				ConcurrentException::error_get_thread_attributes.c_str());
 	}
 
 	if (inheritedScheduling == PTHREAD_INHERIT_SCHED) {
@@ -203,7 +203,7 @@ void ThreadAttributes::setInheritedScheduling(int inheritedScheduling) {
 	if (pthread_attr_setinheritsched(&thread_attr_, inheritedScheduling)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_thread_attributes);
+				ConcurrentException::error_set_thread_attributes.c_str());
 	}
 }
 
@@ -223,7 +223,7 @@ void ThreadAttributes::getSchedulingPolicy(int * schedulingPolicy) {
 	if (pthread_attr_getschedpolicy(&thread_attr_, schedulingPolicy)) {
 		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_get_thread_attributes);
+				ConcurrentException::error_get_thread_attributes.c_str());
 	}
 }
 
@@ -241,7 +241,7 @@ void ThreadAttributes::setSchedulingPolicy(int schedulingPolicy) {
 	if (pthread_attr_setschedpolicy(&thread_attr_, schedulingPolicy)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_thread_attributes);
+				ConcurrentException::error_set_thread_attributes.c_str());
 	}
 }
 
@@ -283,7 +283,7 @@ Thread::Thread(ThreadAttributes * threadAttributes,
 	if (pthread_create(&thread_id_, threadAttributes->getThreadAttributes(),
 			startFunction, arg)) {
 		LOG_CRIT("%s", ConcurrentException::error_create_thread.c_str());
-		throw ConcurrentException(ConcurrentException::error_create_thread);
+		throw ConcurrentException(ConcurrentException::error_create_thread.c_str());
 	}
 }
 
@@ -301,14 +301,14 @@ pthread_t Thread::getThreadType() const{
 void Thread::join(void ** status){
 	if(pthread_join(thread_id_, status)){
 		LOG_CRIT("%s", ConcurrentException::error_join_thread.c_str());
-		throw ConcurrentException(ConcurrentException::error_join_thread);
+		throw ConcurrentException(ConcurrentException::error_join_thread.c_str());
 	}
 }
 
 void Thread::detach(){
 	if(pthread_detach(thread_id_)){
 		LOG_CRIT("%s", ConcurrentException::error_detach_thread.c_str());
-		throw ConcurrentException(ConcurrentException::error_detach_thread);
+		throw ConcurrentException(ConcurrentException::error_detach_thread.c_str());
 	}
 }
 
@@ -347,7 +347,7 @@ Lockable::Lockable() {
 	if (pthread_mutexattr_init(&mutex_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_mutex_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_initialize_mutex_attributes);
+				ConcurrentException::error_initialize_mutex_attributes.c_str());
 	}
 
 #ifdef _DEBUG
@@ -360,18 +360,18 @@ Lockable::Lockable() {
 	if (pthread_mutexattr_settype(&mutex_attr_, PTHREAD_MUTEX_NORMAL)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_mutex_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_mutex_attributes);
+				ConcurrentException::error_set_mutex_attributes.c_str());
 	}
 #endif
 
 	if (pthread_mutex_init(&mutex_, &mutex_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_mutex.c_str());
-		throw ConcurrentException(ConcurrentException::error_initialize_mutex);
+		throw ConcurrentException(ConcurrentException::error_initialize_mutex.c_str());
 	}
 	if (pthread_mutexattr_destroy(&mutex_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_destroy_mutex_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_destroy_mutex_attributes);
+				ConcurrentException::error_destroy_mutex_attributes.c_str());
 	}
 
 	LOG_DBG("Lockable created successfully");
@@ -386,7 +386,7 @@ Lockable::~Lockable() throw () {
 void Lockable::lock() {
 	if (pthread_mutex_lock(&mutex_)) {
 		LOG_CRIT("%s", ConcurrentException::error_lock_mutex.c_str());
-		throw ConcurrentException(ConcurrentException::error_lock_mutex);
+		throw ConcurrentException(ConcurrentException::error_lock_mutex.c_str());
 	}
 }
 
@@ -398,11 +398,11 @@ bool Lockable::trylock() {
 	}
 	case EINVAL: {
 		LOG_CRIT("%s", ConcurrentException::error_invalid_mutex.c_str());
-		throw ConcurrentException(ConcurrentException::error_invalid_mutex);
+		throw ConcurrentException(ConcurrentException::error_invalid_mutex.c_str());
 	}
 	case EDEADLK: {
 		LOG_CRIT("%s", ConcurrentException::error_deadlock.c_str());
-		throw ConcurrentException(ConcurrentException::error_deadlock);
+		throw ConcurrentException(ConcurrentException::error_deadlock.c_str());
 	}
 	default: {
 		return false;
@@ -413,7 +413,7 @@ bool Lockable::trylock() {
 void Lockable::unlock() {
 	if (pthread_mutex_unlock(&mutex_)) {
 		LOG_CRIT("%s", ConcurrentException::error_unlock_mutex.c_str());
-		throw ConcurrentException(ConcurrentException::error_unlock_mutex);
+		throw ConcurrentException(ConcurrentException::error_unlock_mutex.c_str());
 	}
 }
 
@@ -426,25 +426,25 @@ ReadWriteLockable::ReadWriteLockable() {
 	if (pthread_rwlockattr_init(&rwlock_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_rw_lock_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_initialize_rw_lock_attributes);
+				ConcurrentException::error_initialize_rw_lock_attributes.c_str());
 	}
 
 	if (pthread_rwlockattr_setpshared(&rwlock_attr_, PTHREAD_PROCESS_PRIVATE)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_rw_lock_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_rw_lock_attributes);
+				ConcurrentException::error_set_rw_lock_attributes.c_str());
 	}
 
 	if (pthread_rwlock_init(&rwlock_, &rwlock_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_rw_lock.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_initialize_rw_lock);
+				ConcurrentException::error_initialize_rw_lock.c_str());
 	}
 
 	if (pthread_rwlockattr_destroy(&rwlock_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_destroy_rw_lock_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_destroy_rw_lock_attributes);
+				ConcurrentException::error_destroy_rw_lock_attributes.c_str());
 	}
 
 	LOG_DBG("Read/Write Lockable created successfully");
@@ -460,7 +460,7 @@ void ReadWriteLockable::writelock() {
 	if (pthread_rwlock_wrlock(&rwlock_)) {
 		LOG_CRIT("%s", ConcurrentException::error_write_lock_rw_lock.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_write_lock_rw_lock);
+				ConcurrentException::error_write_lock_rw_lock.c_str());
 	}
 }
 
@@ -476,7 +476,7 @@ bool ReadWriteLockable::trywritelock() {
 	default: {
 		LOG_CRIT("%s", ConcurrentException::error_write_lock_rw_lock.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_write_lock_rw_lock);
+				ConcurrentException::error_write_lock_rw_lock.c_str());
 	}
 	}
 }
@@ -484,7 +484,7 @@ bool ReadWriteLockable::trywritelock() {
 void ReadWriteLockable::readlock() {
 	if (pthread_rwlock_rdlock(&rwlock_)) {
 		LOG_CRIT("%s", ConcurrentException::error_read_lock_rw_lock.c_str());
-		throw ConcurrentException(ConcurrentException::error_read_lock_rw_lock);
+		throw ConcurrentException(ConcurrentException::error_read_lock_rw_lock.c_str());
 	}
 }
 
@@ -499,7 +499,7 @@ bool ReadWriteLockable::tryreadlock() {
 	}
 	default: {
 		LOG_CRIT("%s", ConcurrentException::error_read_lock_rw_lock.c_str());
-		throw ConcurrentException(ConcurrentException::error_read_lock_rw_lock);
+		throw ConcurrentException(ConcurrentException::error_read_lock_rw_lock.c_str());
 	}
 	}
 }
@@ -507,7 +507,7 @@ bool ReadWriteLockable::tryreadlock() {
 void ReadWriteLockable::unlock() {
 	if (pthread_rwlock_unlock(&rwlock_)) {
 		LOG_CRIT("%s", ConcurrentException::error_unlock_rw_lock.c_str());
-		throw ConcurrentException(ConcurrentException::error_unlock_rw_lock);
+		throw ConcurrentException(ConcurrentException::error_unlock_rw_lock.c_str());
 	}
 }
 
@@ -520,25 +520,25 @@ ConditionVariable::ConditionVariable():Lockable() {
 	if (pthread_condattr_init(&cond_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_cond_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_initialize_cond_attributes);
+				ConcurrentException::error_initialize_cond_attributes.c_str());
 	}
 
 	if (pthread_condattr_setpshared(&cond_attr_, PTHREAD_PROCESS_PRIVATE)) {
 		LOG_CRIT("%s", ConcurrentException::error_set_cond_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_set_cond_attributes);
+				ConcurrentException::error_set_cond_attributes.c_str());
 	}
 
 	if (pthread_cond_init(&cond_, &cond_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_initialize_cond.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_initialize_cond);
+				ConcurrentException::error_initialize_cond.c_str());
 	}
 
 	if (pthread_condattr_destroy(&cond_attr_)) {
 		LOG_CRIT("%s", ConcurrentException::error_destroy_cond_attributes.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_destroy_cond_attributes);
+				ConcurrentException::error_destroy_cond_attributes.c_str());
 	}
 
 	LOG_DBG("Condition variable created successfully");
@@ -554,7 +554,7 @@ void ConditionVariable::signal(){
 	if (pthread_cond_signal(&cond_)){
 		LOG_CRIT("%s", ConcurrentException::error_signal_cond.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_signal_cond);
+				ConcurrentException::error_signal_cond.c_str());
 	}
 }
 
@@ -562,7 +562,7 @@ void ConditionVariable::broadcast(){
 	if (pthread_cond_broadcast(&cond_)){
 		LOG_CRIT("%s", ConcurrentException::error_broadcast_cond.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_broadcast_cond);
+				ConcurrentException::error_broadcast_cond.c_str());
 	}
 }
 
@@ -570,7 +570,7 @@ void ConditionVariable::doWait(){
 	if (pthread_cond_wait(&cond_, getMutex())){
 		LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
 		throw ConcurrentException(
-				ConcurrentException::error_wait_cond);
+				ConcurrentException::error_wait_cond.c_str());
 	}
 }
 
@@ -585,12 +585,12 @@ void ConditionVariable::timedwait(long seconds, long nanoseconds){
 
 	if (response == ETIMEDOUT){
 		throw ConcurrentException(
-				ConcurrentException::error_timeout);
+				ConcurrentException::error_timeout.c_str());
 	}
 
 	LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
 	throw ConcurrentException(
-			ConcurrentException::error_wait_cond);
+			ConcurrentException::error_wait_cond.c_str());
 }
 
 }

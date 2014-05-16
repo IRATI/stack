@@ -32,7 +32,7 @@ namespace rina{
 class ConcurrentException : public Exception {
 public:
 	ConcurrentException() { }
-	ConcurrentException(const std::string & s) : Exception(s) { }
+	ConcurrentException(const char* s) : Exception(s) { }
 	static const std::string error_initialize_thread_attributes;
 	static const std::string error_destroy_thread_attributes;
 	static const std::string error_set_thread_attributes;

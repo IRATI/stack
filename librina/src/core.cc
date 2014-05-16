@@ -111,7 +111,7 @@ RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
 		LOG_ERR("Could not find the netlink endpoint of IPC Process %d",
 				ipcProcessId);
 		throw NetlinkException(
-				NetlinkException::error_fetching_netlink_port_id);
+				NetlinkException::error_fetching_netlink_port_id.c_str());
 	}
 
 	return it->second;
@@ -139,7 +139,7 @@ RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
 		LOG_ERR("Could not find the netlink endpoint of Application %s",
 				apName.toString().c_str());
 		throw NetlinkException(
-				NetlinkException::error_fetching_netlink_port_id);
+				NetlinkException::error_fetching_netlink_port_id.c_str());
 	};
 
 	return it->second;
