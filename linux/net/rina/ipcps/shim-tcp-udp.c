@@ -116,12 +116,12 @@ struct shim_tcp_udp_flow {
 static struct list_head applications;
 
 struct app_register_data {
-	struct list_head	list;
+        struct list_head	list;
 
-	struct name *		app_name;
+        struct name *		app_name;
 
-	int 			ip_address;
-	int			port;
+        int                     ip_address;
+        int			port;
 };
 
 struct rcv_data {
@@ -131,18 +131,18 @@ struct rcv_data {
 
 static struct app_register_data * find_app_data(const struct name * app_name)
 {
-	struct app_register_data *app;
+        struct app_register_data *app;
 
-	if (!app_name)
-		return NULL;
+        if (!app_name)
+                return NULL;
 
-	list_for_each_entry(app, &applications, list) {
-		if (name_is_equal(app->app_name, app_name)) {
-			return app;
-		}
-	}
+        list_for_each_entry(app, &applications, list) {
+                if (name_is_equal(app->app_name, app_name)) {
+                        return app;
+                }
+        }
 
-	return NULL;
+        return NULL;
 }
 
 static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data *data,
@@ -183,7 +183,7 @@ find_tcp_flow_by_socket(struct ipcp_instance_data * data,
 }
 
 static bool compare_addr(const struct sockaddr_in * f,
-                        const struct sockaddr_in * s)
+                         const struct sockaddr_in * s)
 {
         ASSERT(f);
         ASSERT(s);
@@ -334,7 +334,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct app_data *          app;
-	struct app_register_data * app_data;
+        struct app_register_data * app_data;
         int                        err;
 
         LOG_HBEAT;
@@ -368,12 +368,12 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 LOG_DBG("allocate request flow added");
 
                 /* this should be done with DNS or DHT */
-		app_data = find_app_data(dest);
-		if (!app_data) {
-			LOG_ERR("application data not found");
-		}
+                app_data = find_app_data(dest);
+                if (!app_data) {
+                        LOG_ERR("application data not found");
+                }
 
-		LOG_DBG("application data found");
+                LOG_DBG("application data found");
 
                 flow->addr.sin_addr.s_addr = htonl(app_data->ip_address);
                 flow->addr.sin_family      = AF_INET;
@@ -398,8 +398,8 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                              sizeof(struct sockaddr), 0);
                         if (err < 0) {
                                 LOG_ERR("could not connect tcp socket");
-				sock_release(flow->sock);
-				deallocate_and_destroy_flow(data, flow);
+                                sock_release(flow->sock);
+                                deallocate_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -419,7 +419,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
-			deallocate_and_destroy_flow(data, flow);
+                        deallocate_and_destroy_flow(data, flow);
 
                         return -1;
                 }
@@ -433,7 +433,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
-			deallocate_and_destroy_flow(data, flow);
+                        deallocate_and_destroy_flow(data, flow);
                         return -1;
                 }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
@@ -787,7 +787,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         int size;
         __be16        nlen;
 
-        if ((size = recv_msg(sock, NULL, 0, buf, 2)) == 0) 
+        if ((size = recv_msg(sock, NULL, 0, buf, 2)) == 0)
                 return 0;
 
         if (size != 2) {
@@ -800,7 +800,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
         LOG_DBG("incoming message is %d bytes long", flow->bytes_left);
 
-        if ((size = recv_msg(sock, NULL, 0, buf, flow->bytes_left)) <= 0) { 
+        if ((size = recv_msg(sock, NULL, 0, buf, flow->bytes_left)) <= 0) {
                 LOG_ERR("error during tcp receive: %d", size);
                 return size;
         }
@@ -844,11 +844,11 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                         spin_unlock(&data->flow_lock);
                         sdu_destroy(du);
                 }
- 
+
                 return size;
         } else {
                 LOG_DBG("didn't receive complete message");
- 
+
                 flow->buf = rkmalloc(flow->bytes_left, GFP_KERNEL);
                 flow->lbuf = flow->bytes_left;
                 flow->bytes_left = flow->bytes_left - size;
@@ -870,7 +870,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
         start = flow->lbuf - flow->bytes_left;
 
         size = recv_msg(sock, NULL, 0, &flow->buf[start], flow->bytes_left);
-        if (size <= 0) { 
+        if (size <= 0) {
                 LOG_ERR("error during tcp receive: %d", size);
                 return size;
         }
@@ -916,11 +916,11 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                         spin_unlock(&data->flow_lock);
                         sdu_destroy(du);
                 }
- 
+
                 return size;
         } else {
                 LOG_DBG("still didn't receive complete message");
- 
+
                 flow->bytes_left = flow->bytes_left - size;
 
                 return -1;
@@ -947,7 +947,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                 sock_release(flow->sock);
                 return 0;
         }
-        
+
         return size;
 }
 
@@ -1104,7 +1104,7 @@ static void tcp_udp_rcv_worker(struct work_struct *work)
                         } else {
                                 last = NULL;
                         }
-                } else 
+                } else
                         last = NULL;
 
                 spin_lock_irqsave(&rcv_wq_lock, flags);
@@ -1125,7 +1125,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data *data,
 {
         struct app_data *app;
         struct sockaddr_in sin;
-	struct app_register_data * app_data;
+        struct app_register_data * app_data;
         int err;
 
         LOG_HBEAT;
@@ -1153,11 +1153,11 @@ static int tcp_udp_application_register(struct ipcp_instance_data *data,
                 return -1;
         }
 
-	app_data = find_app_data(name);
-	if (!app_data) {
-		LOG_ERR("application data not found");
-	}
-	LOG_DBG("application data found");
+        app_data = find_app_data(name);
+        if (!app_data) {
+                LOG_ERR("application data not found");
+        }
+        LOG_DBG("application data found");
 
         app->port = app_data->port;
 
@@ -1341,7 +1341,7 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                 if (size < 0) {
                         LOG_ERR("error during sdu write");
                         return -1;
-                } 
+                }
                 total += size;
         }
 
@@ -1391,7 +1391,7 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                 }
         } else {
                 if (tcp_sdu_write(flow, buffer_length(sdu->buffer),
-                                        (char*)buffer_data_rw(sdu->buffer))) {
+                                  (char*)buffer_data_rw(sdu->buffer))) {
                         LOG_ERR("could not send sdu on tcp flow");
                         sdu_destroy(sdu);
                         return -1;
@@ -1670,7 +1670,7 @@ static struct ipcp_factory *shim = NULL;
 
 static int __init mod_init(void)
 {
-	struct app_register_data * app;
+        struct app_register_data * app;
 
         LOG_HBEAT;
 
@@ -1686,32 +1686,32 @@ static int __init mod_init(void)
         if (!shim)
                 return -1;
 
-	INIT_LIST_HEAD(&applications);
-	app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
+        INIT_LIST_HEAD(&applications);
+        app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
 
-	INIT_LIST_HEAD(&app->list);
-	app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (3);
-	app->port = 2325;
-	app->app_name = name_create_ni();
-	if (!name_init_from_ni(app->app_name,
-				"rina.utils.apps.echo.server", "1", "", "")) {
-		name_destroy(app->app_name);
-		return -1;
-	}
-	list_add(&app->list, &applications);
+        INIT_LIST_HEAD(&app->list);
+        app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (3);
+        app->port = 2325;
+        app->app_name = name_create_ni();
+        if (!name_init_from_ni(app->app_name,
+                               "rina.utils.apps.echo.server", "1", "", "")) {
+                name_destroy(app->app_name);
+                return -1;
+        }
+        list_add(&app->list, &applications);
 
-	app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
+        app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
 
-	INIT_LIST_HEAD(&app->list);
-	app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (2);
-	app->port = 2325;
-	app->app_name = name_create_ni();
-	if (!name_init_from_ni(app->app_name,
-				"rina.utils.apps.echo.client", "1", "", "")) {
-		name_destroy(app->app_name);
-		return -1;
-	}
-	list_add(&app->list, &applications);
+        INIT_LIST_HEAD(&app->list);
+        app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (2);
+        app->port = 2325;
+        app->app_name = name_create_ni();
+        if (!name_init_from_ni(app->app_name,
+                               "rina.utils.apps.echo.client", "1", "", "")) {
+                name_destroy(app->app_name);
+                return -1;
+        }
+        list_add(&app->list, &applications);
 
         return 0;
 }
@@ -1719,7 +1719,7 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         struct rcv_data * recvd, *nxt;
-	struct app_register_data * app, * next;
+        struct app_register_data * app, * next;
 
         LOG_HBEAT;
 
@@ -1731,11 +1731,11 @@ static void __exit mod_exit(void)
                 rkfree(recvd);
         }
 
-	list_for_each_entry_safe(app, next, &applications, list) {
-		list_del(&app->list);
+        list_for_each_entry_safe(app, next, &applications, list) {
+                list_del(&app->list);
                 name_destroy(app->app_name);
-		rkfree(app);
-	}
+                rkfree(app);
+        }
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim);
 }
