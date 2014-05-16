@@ -135,9 +135,10 @@ int dt_dtp_bind(struct dt * dt, struct dtp * dtp)
 
         spin_lock(&dt->lock);
         if (dt->dtp) {
+                spin_unlock(&dt->lock);
+
                 LOG_ERR("A DTP instance is already bound to instance %pK, "
                         "unbind it first", dt);
-                spin_unlock(&dt->lock);
                 return -1;
         }
         dt->dtp = dtp;
@@ -157,9 +158,10 @@ struct dtp * dt_dtp_unbind(struct dt * dt)
 
         spin_lock(&dt->lock);
         if (!dt->dtp) {
+                spin_unlock(&dt->lock);
+
                 LOG_ERR("No DTP instance bound to instance %pK, "
                         "cannot bind", dt);
-                spin_unlock(&dt->lock);
                 return NULL;
         }
 
@@ -183,9 +185,10 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
 
         spin_lock(&dt->lock);
         if (dt->dtcp) {
+                spin_unlock(&dt->lock);
+
                 LOG_ERR("A DTCP instance already bound to instance %pK, "
                         "unbind it first", dt);
-                spin_unlock(&dt->lock);
                 return -1;
         }
 
@@ -206,8 +209,9 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
 
         spin_lock(&dt->lock);
         if (!dt->dtcp) {
-                LOG_ERR("No DTCP bound to instance %pK", dt);
                 spin_unlock(&dt->lock);
+
+                LOG_ERR("No DTCP bound to instance %pK", dt);
                 return NULL;
         }
 
@@ -233,6 +237,7 @@ int dt_cwq_bind(struct dt * dt, struct cwq * cwq)
         spin_lock(&dt->lock);
         if (dt->cwq) {
                 spin_unlock(&dt->lock);
+
                 LOG_ERR("A CWQ already bound to instance %pK", dt);
                 return -1;
         }
@@ -254,6 +259,7 @@ struct cwq * dt_cwq_unbind(struct dt * dt)
         spin_lock(&dt->lock);
         if (!dt->cwq) {
                 spin_unlock(&dt->lock);
+
                 LOG_ERR("No CWQ bound to instance %pK", dt);
                 return NULL;
         }
@@ -277,6 +283,7 @@ struct rtxq * dt_rtxq_unbind(struct dt * dt)
         spin_lock(&dt->lock);
         if (!dt->rtxq) {
                 spin_unlock(&dt->lock);
+
                 LOG_ERR("No RTXQ bound to instance %pK", dt);
                 return NULL;
         }
@@ -303,6 +310,7 @@ int dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq)
         spin_lock(&dt->lock);
         if (dt->rtxq) {
                 spin_unlock(&dt->lock);
+
                 LOG_ERR("A CWQ already bound to instance %pK", dt);
                 return -1;
         }
@@ -531,4 +539,3 @@ struct connection * dt_connection(struct dt * dt)
 
         return tmp;
 }
-
