@@ -29,14 +29,14 @@
 #include "logs.h"
 
 struct p_param {
-        char *           name;
-        char *           value;
+        string_t *       name;
+        string_t *       value;
         struct list_head next;
 };
 
 struct policy {
-        char *           name;
-        char *           version;
+        string_t *       name;
+        string_t *       version;
         struct list_head params;
 };
 
@@ -185,3 +185,92 @@ int policy_param_rem_and_del(struct policy *  policy,
 }                
 EXPORT_SYMBOL(policy_param_rem_and_del);
 
+string_t * policy_param_name(struct p_param *  param)
+{
+        if (!param)
+                return NULL;
+
+        return param->name;
+}
+EXPORT_SYMBOL(policy_param_name);
+
+string_t * policy_param_value(struct p_param *  param)
+{
+        if (!param)
+                return NULL;
+
+        return param->value;
+}
+EXPORT_SYMBOL(policy_param_value);
+
+string_t * policy_name(struct policy *  policy)
+{
+        if (!policy)
+                return NULL;
+
+        return policy->name;
+}
+EXPORT_SYMBOL(policy_name);
+
+string_t * policy_version(struct policy *  policy)
+{
+        if (!policy)
+                return NULL;
+
+        return policy->version;
+}
+EXPORT_SYMBOL(policy_version);
+
+struct list_head * policy_params(struct policy * policy)
+{
+        if (!policy)
+                return NULL;
+
+        return &policy->params;
+}
+EXPORT_SYMBOL(policy_params);
+
+/* setters */
+int policy_param_name_set(struct p_param * param,
+                          string_t *       name)
+{
+        if (!param)
+                return -1;
+
+        param->name = name;
+        return 0;
+}
+EXPORT_SYMBOL(policy_param_name_set);
+
+int policy_param_value_set(struct p_param * param,
+                           string_t *       value)
+{
+        if (!param)
+                return -1;
+
+        param->value = value;
+        return 0;
+}
+EXPORT_SYMBOL(policy_param_value_set);
+
+int policy_name_set(struct policy * policy,
+                    string_t *      name)
+{
+        if (!policy)
+                return -1;
+
+        policy->name = name;
+        return 0;
+}
+EXPORT_SYMBOL(policy_name_set);
+
+int policy_version_set(struct policy * policy,
+                       string_t *      version) 
+{
+        if (!policy)
+                return -1;
+
+        policy->version = version;
+        return 0;
+}
+EXPORT_SYMBOL(policy_version_set);

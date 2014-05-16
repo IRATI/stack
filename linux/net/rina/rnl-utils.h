@@ -71,10 +71,39 @@ enum ipcp_config_entry_attrs_list {
 };
 #define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
 
+enum policy_param_attrs_list {
+        PPA_ATTR_NAME = 1,
+        PPA_ATTR_VALUE,
+        __PPA_ATTR_MAX,
+};
+#define PPA_ATTR_MAX (__PPA_ATTR_MAX - 1)
+
+enum policy_attrs_list {
+        PA_ATTR_NAME = 1,
+        PA_ATTR_VERSION,
+        PA_ATTR_PARAMETERS,
+        __PA_ATTR_MAX,
+};
+#define PA_ATTR_MAX (__PA_ATTR_MAX - 1)
+ 
+enum dtcp_config_params_attrs_list {
+        DCA_ATTR_FLOW_CONTROL = 1,
+        DCA_ATTR_FLOW_CONTROL_CONFIG,
+        DCA_ATTR_RETX_CONTROL,
+        DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_INIT_SINAC_TIME,
+        DCA_ATTR_INIT_RINAC_TIME,
+        DCA_ATTR_RCVR_TIMER_INAC_POLICY,
+        DCA_ATTR_SNDR_TIMER_INAC_POLICY,
+        DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        __DCA_ATTR_MAX,
+};
+#define DCA_ATTR_MAX (__DCA_ATTR_MAX - 1)
+
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
         CPP_ATTR_DTCP_CONFIG,
-        CPP_ATTR_INIT_SEQ_NUM_POL,
+        CPP_ATTR_INIT_SEQ_NUM_POLICY,
         CPP_ATTR_SEQ_NUM_ROLLOVER,
         __CPP_ATTR_MAX,
 };

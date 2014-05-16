@@ -1066,9 +1066,45 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         return 0;
 }
 
-static int parse_policy(struct nlattr * attr, struct policy * p)
+static int parse_policy_param_list(struct nlattr * p_attr, struct policy * p)
 {
         LOG_MISSING;
+        return 0;
+}
+
+static int parse_policy(struct nlattr * p_attr, struct policy * p)
+{
+        struct nla_policy attr_policy[PA_ATTR_MAX + 1];
+        struct nlattr *   attrs[PA_ATTR_MAX + 1];
+
+        if (!p_attr || !p) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+        attr_policy[PA_ATTR_NAME].type       = NLA_STRING;
+        attr_policy[PA_ATTR_NAME].len        = 0;
+        attr_policy[PA_ATTR_VERSION].type    = NLA_STRING;
+        attr_policy[PA_ATTR_VERSION].len     = 0;
+        attr_policy[PA_ATTR_PARAMETERS].type = NLA_NESTED;
+        attr_policy[PA_ATTR_PARAMETERS].len  = 0;
+
+        if (nla_parse_nested(attrs, PA_ATTR_MAX, p_attr, attr_policy))
+                return -1;
+
+        if (attrs[PA_ATTR_NAME])
+                policy_name_set(p, nla_dup_string(attrs[PA_ATTR_NAME], GFP_KERNEL));
+        else
+                policy_name_set(p, NULL);
+
+        if (attrs[PA_ATTR_VERSION])
+                policy_version_set(p, nla_dup_string(attrs[PA_ATTR_VERSION], GFP_KERNEL));
+        else
+                policy_version_set(p, NULL);
+
+        if (parse_policy_param_list(attrs[PA_ATTR_PARAMETERS], p))
+                return -1;
+
         return 0;
 }
 
@@ -1078,14 +1114,14 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         struct nla_policy attr_policy[CPP_ATTR_MAX + 1];
         struct nlattr * attrs[CPP_ATTR_MAX + 1];
 
-        attr_policy[CPP_ATTR_DTCP_PRESENT].type     = NLA_FLAG;
-        attr_policy[CPP_ATTR_DTCP_PRESENT].len      = 0;
-        attr_policy[CPP_ATTR_DTCP_CONFIG].type      = NLA_NESTED;
-        attr_policy[CPP_ATTR_DTCP_CONFIG].len       = 0;
-        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POL].type = NLA_NESTED;
-        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POL].len  = 0;
-        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].type = NLA_U32;
-        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].len  = 4;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].type        = NLA_FLAG;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].len         = 0;
+        attr_policy[CPP_ATTR_DTCP_CONFIG].type         = NLA_NESTED;
+        attr_policy[CPP_ATTR_DTCP_CONFIG].len          = 0;
+        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POLICY].type = NLA_NESTED;
+        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POLICY].len  = 0;
+        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].type    = NLA_U32;
+        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].len     = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
@@ -1105,12 +1141,12 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 return -1;
         }
 
-        if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POL],
+        if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY],
                          cpp_struct->initial_sequence_number)) {
                 LOG_ERR("Could not parse initial_sequence_numberp policy");
                 return -1;
         }
-
+        
         if (attrs[CPP_ATTR_SEQ_NUM_ROLLOVER])
                 cpp_struct->seq_num_ro_th =
                         nla_get_u32(attrs[CPP_ATTR_SEQ_NUM_ROLLOVER]);
