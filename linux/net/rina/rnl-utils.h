@@ -85,7 +85,39 @@ enum policy_attrs_list {
         __PA_ATTR_MAX,
 };
 #define PA_ATTR_MAX (__PA_ATTR_MAX - 1)
- 
+
+enum dtcp_fctrl_config_attrs_lists {
+        DFCC_ATTR_WINDOW_BASED = 1,
+        DFCC_ATTR_WINDOW_BASED_CONFIG,
+        DFCC_ATTR_RATE_BASED,
+        DFCC_ATTR_RATE_BASED_CONFIG,
+        DFCC_ATTR_SBYTES_THRES,
+        DFCC_ATTR_SBYTES_PER_THRES,
+        DFCC_ATTR_SBUFFER_THRES,
+        DFCC_ATTR_RBYTES_THRES,
+        DFCC_ATTR_RBYTES_PER_THRES,
+        DFCC_ATTR_RBUFFER_THRES,
+        DFCC_ATTR_CLOSED_WINDOW_POLICY,
+        DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY,
+        DFCC_ATTR_RECON_FLOW_CTRL_POLICY,
+        __DFCC_ATTR_MAX,
+};
+#define DFCC_ATTR_MAX (__DFCC_ATTR_MAX -1)
+
+enum dtcp_rctrl_config_attrs_list {
+        DRCC_ATTR_DATA_RXMSN_MAX = 1,
+        DRCC_ATTR_INIT_A_TIMER,
+        DRCC_ATTR_RTT_EST_POLICY,
+        DRCC_ATTR_RTX_TIME_EXP_POLICY,
+        DRCC_ATTR_SACK_POLICY,
+        DRCC_ATTR_RACK_LIST_POLICY,
+        DRCC_ATTR_RACK_POLICY,
+        DRCC_ATTR_SDING_ACK_POLICY,
+        DRCC_ATTR_RCONTROL_ACK_POLICY,
+        __DRCC_ATTR_MAX,
+};
+#define DRCC_ATTR_MAX (__DRCC_ATTR_MAX -1)
+
 enum dtcp_config_params_attrs_list {
         DCA_ATTR_FLOW_CONTROL = 1,
         DCA_ATTR_FLOW_CONTROL_CONFIG,

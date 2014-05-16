@@ -1184,10 +1184,114 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
         return 0;
 }
 
+static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
+                                      struct dtcp_config * cfg) 
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static int parse_dtcp_rb_fctrl_config(struct nlattr * attr,
+                                      struct dtcp_config * cfg) 
+{
+        LOG_MISSING;
+        return 0;
+}
+
 static int parse_dtcp_fctrl_config(struct nlattr * attr,
                                    struct dtcp_config * cfg)
 {
-        LOG_MISSING;
+        struct nla_policy attr_policy[DFCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DFCC_ATTR_MAX + 1];
+
+        attr_policy[DFCC_ATTR_WINDOW_BASED].type             = NLA_FLAG;
+        attr_policy[DFCC_ATTR_WINDOW_BASED].len              = 0;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].type      = NLA_NESTED;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].len       = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED].type               = NLA_FLAG;
+        attr_policy[DFCC_ATTR_RATE_BASED].len                = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].type        = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].len         = 0;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].type             = NLA_U32;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].len              = 4;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].type         = NLA_U32;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].len          = 4;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].type            = NLA_U32;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].len             = 4;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].type             = NLA_U32;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].len              = 4;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].type         = NLA_U32;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].len          = 4;
+        attr_policy[DFCC_ATTR_RBUFFER_THRES].type            = NLA_U32;
+        attr_policy[DFCC_ATTR_RBUFFER_THRES].len             = 4;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].type     = NLA_NESTED;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].len      = 0;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].len  = 0;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type   = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].len    = 0;
+
+        if (nla_parse_nested(attrs,
+                             DFCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DFCC_ATTR_WINDOW_BASED])
+                dtcp_window_based_fctrl_set(cfg,
+                                   nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
+
+        if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG])
+                parse_dtcp_wb_fctrl_config(attrs[DFCC_ATTR_WINDOW_BASED_CONFIG],
+                                           cfg);
+
+        if (attrs[DFCC_ATTR_RATE_BASED])
+                dtcp_rate_based_fctrl_set(cfg,
+                                   nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
+
+        if (attrs[DFCC_ATTR_RATE_BASED_CONFIG])
+                parse_dtcp_rb_fctrl_config(attrs[DFCC_ATTR_RATE_BASED_CONFIG],
+                                           cfg);
+
+        if (attrs[DFCC_ATTR_SBYTES_THRES])
+                dtcp_sent_bytes_th_set(cfg,
+                                   nla_get_u32(attrs[DFCC_ATTR_SBYTES_THRES]));
+
+        if (attrs[DFCC_ATTR_SBYTES_PER_THRES])
+                dtcp_sent_bytes_percent_th_set(cfg,
+                               nla_get_u32(attrs[DFCC_ATTR_SBYTES_PER_THRES]));
+
+        if (attrs[DFCC_ATTR_SBUFFER_THRES])
+                dtcp_sent_buffers_th_set(cfg,
+                                 nla_get_u32(attrs[DFCC_ATTR_SBUFFER_THRES]));
+
+        if (attrs[DFCC_ATTR_RBYTES_THRES])
+                dtcp_rcvd_bytes_th_set(cfg,
+                                   nla_get_u32(attrs[DFCC_ATTR_RBYTES_THRES]));
+
+        if (attrs[DFCC_ATTR_RBYTES_PER_THRES])
+                dtcp_rcvd_bytes_percent_th_set(cfg,
+                               nla_get_u32(attrs[DFCC_ATTR_RBYTES_PER_THRES]));
+
+        if (attrs[DFCC_ATTR_RBUFFER_THRES])
+                dtcp_rcvd_buffers_th_set(cfg,
+                                 nla_get_u32(attrs[DFCC_ATTR_RBUFFER_THRES]));
+
+        if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY],
+                                 dtcp_closed_window(cfg)))
+                        return -1;
+
+        if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY],
+                                 dtcp_flow_control_overrun(cfg)))
+                        return -1;
+
+        if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY],
+                                 dtcp_reconcile_flow_conflict(cfg)))
+                        return -1;
+
+
         return 0;
 }
 
