@@ -86,6 +86,25 @@ enum policy_attrs_list {
 };
 #define PA_ATTR_MAX (__PA_ATTR_MAX - 1)
 
+enum dtcp_wb_fctrl_config_attrs_list {
+        DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH = 1,
+        DWFCC_ATTR_INITIAL_CREDIT,
+        DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY,
+        DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
+        __DWFCC_ATTR_MAX,
+};
+#define DWFCC_ATTR_MAX (__DWFCC_ATTR_MAX -1)
+
+enum dtcp_rb_fctrl_config_attrs_list {
+        DRFCC_ATTR_SEND_RATE = 1,
+        DRFCC_ATTR_TIME_PERIOD,
+        DRFCC_ATTR_NO_RATE_SDOWN_POLICY,
+        DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY,
+        DRFCC_ATTR_RATE_REDUC_POLICY,
+        __DRFCC_ATTR_MAX,
+};
+#define DRFCC_ATTR_MAX (__DRFCC_ATTR_MAX -1)
+
 enum dtcp_fctrl_config_attrs_lists {
         DFCC_ATTR_WINDOW_BASED = 1,
         DFCC_ATTR_WINDOW_BASED_CONFIG,

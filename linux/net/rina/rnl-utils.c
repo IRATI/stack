@@ -1187,14 +1187,89 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
 static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
                                       struct dtcp_config * cfg) 
 {
-        LOG_MISSING;
+        struct nla_policy attr_policy[DWFCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DWFCC_ATTR_MAX + 1];
+
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].type = NLA_U32;
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].len  = 4;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].type             = NLA_U32;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].len              = 4;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].type      = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].len       = 0;
+        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type    = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].len     = 0;
+
+        if (nla_parse_nested(attrs,
+                             DWFCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH])
+                dtcp_max_closed_winq_length_set(cfg,
+                     nla_get_u32(attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]));
+
+        if (attrs[DWFCC_ATTR_INITIAL_CREDIT])
+                dtcp_initial_credit_set(cfg,
+                                 nla_get_u32(attrs[DWFCC_ATTR_INITIAL_CREDIT]));
+
+        if (attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY],
+                                 dtcp_rcvr_flow_control(cfg)))
+                        return -1;
+
+        if (attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY],
+                                 dtcp_receiving_flow_control(cfg)))
+                        return -1;
+
         return 0;
 }
 
 static int parse_dtcp_rb_fctrl_config(struct nlattr * attr,
                                       struct dtcp_config * cfg) 
 {
-        LOG_MISSING;
+        struct nla_policy attr_policy[DRFCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DRFCC_ATTR_MAX + 1];
+
+        attr_policy[DRFCC_ATTR_SEND_RATE].type                = NLA_U32;
+        attr_policy[DRFCC_ATTR_SEND_RATE].len                 = 4;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].type              = NLA_U32;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].len               = 4;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].type     = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].len      = 0;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].type = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].len  = 0;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].type        = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].len         = 0;
+
+        if (nla_parse_nested(attrs,
+                             DRFCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DRFCC_ATTR_SEND_RATE])
+                dtcp_sending_rate_set(cfg,
+                                      nla_get_u32(attrs[DRFCC_ATTR_SEND_RATE]));
+
+        if (attrs[DRFCC_ATTR_TIME_PERIOD])
+                dtcp_time_period_set(cfg,
+                                    nla_get_u32(attrs[DRFCC_ATTR_TIME_PERIOD]));
+
+        if (attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY])
+                if (parse_policy(attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY],
+                                 dtcp_no_rate_slow_down(cfg)))
+                        return -1;
+
+        if (attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY])
+                if (parse_policy(attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY],
+                                 dtcp_receiving_flow_control(cfg)))
+                        return -1;
+
+        if (attrs[DRFCC_ATTR_RATE_REDUC_POLICY])
+                if (parse_policy(attrs[DRFCC_ATTR_RATE_REDUC_POLICY],
+                                 dtcp_rate_reduction(cfg)))
+                        return -1;
+
         return 0;
 }
 
