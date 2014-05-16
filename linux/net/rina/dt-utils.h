@@ -30,6 +30,7 @@
 struct cwq;
 
 struct cwq *    cwq_create(void);
+struct cwq *    cwq_create_ni(void);
 int             cwq_destroy(struct cwq * q);
 
 int             cwq_push(struct cwq * q,
@@ -42,6 +43,7 @@ struct rtxq;
 struct dt;
 
 struct rtxq *   rtxq_create(struct dt * dt);
+struct rtxq *   rtxq_create_ni(struct dt * dt);
 int             rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */

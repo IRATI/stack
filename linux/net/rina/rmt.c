@@ -933,6 +933,7 @@ static int receive_worker(void * o)
                          * don't process it now ...
                          */
                         process_dt_sdu(tmp, port_id, sdu);
+                        LOG_DBG("Finishing process_dt_sdu");
                         break;
 
                 default:
