@@ -1373,7 +1373,76 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
 static int parse_dtcp_rctrl_config(struct nlattr * attr,
                                    struct dtcp_config * cfg)
 {
-        LOG_MISSING;
+        struct nla_policy attr_policy[DRCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DRCC_ATTR_MAX + 1];
+
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type      = NLA_U32;
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].len       = 4;
+        attr_policy[DRCC_ATTR_INIT_A_TIMER].type        = NLA_U32;
+        attr_policy[DRCC_ATTR_INIT_A_TIMER].len         = 4;
+        attr_policy[DRCC_ATTR_RTT_EST_POLICY].type      = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RTT_EST_POLICY].len       = 0;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].len  = 0;
+        attr_policy[DRCC_ATTR_SACK_POLICY].type         = NLA_NESTED;
+        attr_policy[DRCC_ATTR_SACK_POLICY].len          = 0;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].type    = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].len     = 0;
+        attr_policy[DRCC_ATTR_RACK_POLICY].type         = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RACK_POLICY].len          = 0;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].type    = NLA_NESTED;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].len     = 0;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].len  = 0;
+
+        if (nla_parse_nested(attrs,
+                             DRCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DRCC_ATTR_DATA_RXMSN_MAX])
+                dtcp_data_retransmit_max_set(cfg,
+                                   nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+
+        if (attrs[DRCC_ATTR_INIT_A_TIMER])
+                dtcp_initial_a_set(cfg,
+                                   nla_get_u32(attrs[DRCC_ATTR_INIT_A_TIMER]));
+                                      
+        if (attrs[DRCC_ATTR_RTT_EST_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RTT_EST_POLICY],
+                                 dtcp_rtt_estimator(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY],
+                                 dtcp_retransmission_timer_expiry(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_SACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_SACK_POLICY],
+                                 dtcp_sender_ack(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RACK_LIST_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RACK_LIST_POLICY],
+                                 dtcp_receiving_ack_list(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RACK_POLICY],
+                                 dtcp_rcvr_ack(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_SDING_ACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_SDING_ACK_POLICY],
+                                 dtcp_sending_ack(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RCONTROL_ACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RCONTROL_ACK_POLICY],
+                                 dtcp_rcvr_control_ack(cfg)))
+                        return -1;
+
         return 0;
 }
 
