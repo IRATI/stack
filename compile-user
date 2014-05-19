@@ -8,7 +8,7 @@
 ME=compile-user
 
 PREFIX=`echo "$1"|sed -e "s,\/$,,"`
-(cd librina && make) && (cd rinad && make) && (cd rina-tools && make) || {{
+(cd librina && make) && (cd rinad && make) && (cd rina-tools && make) || {
     echo "$ME: Cannot complete compilation phase"
     exit 1
 }
