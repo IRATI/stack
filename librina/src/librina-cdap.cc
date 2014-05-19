@@ -150,47 +150,15 @@ bool ObjectValue::operator==(const ObjectValue &other) const {
 /* CLASS CDAPException */
 CDAPException::CDAPException(): Exception("CDAP message caused an Exception") {
 }
-
-CDAPException::CDAPException(const char* arg0, int arg1, const char* arg2): Exception(arg2) {
+CDAPException::CDAPException(std::string arg0): Exception(arg0.c_str()) {
+}
+CDAPException::CDAPException(int arg0, std::string arg1): Exception(arg1.c_str()){
+	result_ = arg0;
+}
+CDAPException::CDAPException(std::string arg0, int arg1, std::string arg2): Exception(arg2.c_str()) {
 	error_message_ = arg0;
 	result_ = arg1;
 }
-
-CDAPException::CDAPException(int arg0, const char* arg1): Exception(arg1){
-	result_ = arg0;
-}
-
-CDAPException::CDAPException(const char* arg0): Exception(arg0) {
-}
-
-CDAPException::CDAPException(const char* arg0, const CDAPMessage* arg1): Exception(arg0) {
-	cdap_message_ = arg1;
-}
-
-void CDAPException::set_error_message(const char* arg0){
-	error_message_ = arg0;
-}
-
-const char* CDAPException::get_error_message() const{
-	return error_message_;
-}
-
-int CDAPException::get_result() const {
-	return result_;
-}
-
-void CDAPException::set_result(int arg0) {
-	result_ = arg0;
-}
-
-const CDAPMessage* CDAPException::get_cdap_message() const {
-	return cdap_message_;
-}
-
-void CDAPException::set_cdap_message(const CDAPMessage* arg0) {
-	cdap_message_ = arg0;
-}
-
 
 /* CLASS CDAPMessageValidator */
 void CDAPMessageValidator::validate(const CDAPMessage &message)
@@ -225,15 +193,13 @@ void CDAPMessageValidator::validateAbsSyntax(const CDAPMessage &message)
 		if (message.get_op_code() == CDAPMessage::M_CONNECT
 				|| message.get_op_code() == CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"AbsSyntax must be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"AbsSyntax must be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	} else {
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
 			throw CDAPException(
-					"AbsSyntax can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+					"AbsSyntax can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -244,8 +210,7 @@ void CDAPMessageValidator::validateAuthMech(const CDAPMessage &message)
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"AuthMech can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"AuthMech can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -255,8 +220,7 @@ void CDAPMessageValidator::validateAuthValue(const CDAPMessage &message)
 	if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 			&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
 		throw CDAPException(
-						"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages",
-				&message);
+						"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
 	}
 }
 
@@ -266,8 +230,7 @@ void CDAPMessageValidator::validateDestAEInst(const CDAPMessage &message)
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
 			throw CDAPException(
-							"dest_ae_inst can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"dest_ae_inst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -278,8 +241,7 @@ void CDAPMessageValidator::validateDestAEName(const CDAPMessage &message)
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
 			throw CDAPException(
-							"DestAEName can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"DestAEName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -290,8 +252,7 @@ void CDAPMessageValidator::validateDestApInst(const CDAPMessage &message)
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"DestApInst can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"DestApInst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -300,8 +261,7 @@ void CDAPMessageValidator::validateDestApName(const CDAPMessage &message)
 		throw (CDAPException) {
 	if (!message.get_dest_ap_name().empty()) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT) {
-			throw CDAPException("DestApName must be set for the M_CONNECT message",
-					&message);
+			throw CDAPException("DestApName must be set for the M_CONNECT message");
 		} else if (message.get_op_code() == CDAPMessage::M_CONNECT_R) {
 			//TODO not sure what to do
 		}
@@ -309,8 +269,7 @@ void CDAPMessageValidator::validateDestApName(const CDAPMessage &message)
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"DestApName can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"DestApName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -325,8 +284,7 @@ void CDAPMessageValidator::validateFilter(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_START
 				&& message.get_op_code() != CDAPMessage::M_STOP) {
 			throw CDAPException(
-							"The filter parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages",
-					&message);
+							"The filter parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages");
 		}
 	}
 }
@@ -345,8 +303,7 @@ void CDAPMessageValidator::validateInvokeID(const CDAPMessage &message)
 				|| message.get_op_code() == CDAPMessage::M_WRITE_R
 				|| message.get_op_code() == CDAPMessage::M_START_R
 				|| message.get_op_code() == CDAPMessage::M_STOP_R) {
-			throw CDAPException("The invoke id parameter cannot be 0",
-					&message);
+			throw CDAPException("The invoke id parameter cannot be 0");
 		}
 	}
 }
@@ -356,8 +313,7 @@ void CDAPMessageValidator::validateObjClass(const CDAPMessage &message)
 	if (!message.get_obj_class().empty()) {
 		if (!message.get_obj_name().empty()) {
 			throw CDAPException(
-					"If the objClass parameter is set, the objName parameter also has to be set",
-					&message);
+					"If the objClass parameter is set, the objName parameter also has to be set");
 		}
 		if (message.get_op_code() != CDAPMessage::M_CREATE
 				&& message.get_op_code() != CDAPMessage::M_CREATE_R
@@ -372,8 +328,7 @@ void CDAPMessageValidator::validateObjClass(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_START_R
 				&& message.get_op_code() != CDAPMessage::M_STOP_R) {
 			throw CDAPException(
-							"The objClass parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R, M_STOP_R messages",
-					&message);
+							"The objClass parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R, M_STOP_R messages");
 		}
 	}
 }
@@ -393,8 +348,7 @@ void CDAPMessageValidator::validateObjInst(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_STOP
 				&& message.get_op_code() != CDAPMessage::M_START_R
 				&& message.get_op_code() != CDAPMessage::M_STOP_R) {
-			throw CDAPException("The objInst parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_START_R, M_STOP and M_STOP_R messages",
-					&message);
+			throw CDAPException("The objInst parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_START_R, M_STOP and M_STOP_R messages");
 		}
 	}
 }
@@ -403,9 +357,7 @@ void CDAPMessageValidator::validateObjName(const CDAPMessage &message)
 		throw (CDAPException) {
 	if (!message.get_obj_name().empty()) {
 		if (message.get_obj_class().empty()) {
-			throw new CDAPException(
-							"If the objName parameter is set, the objClass parameter also has to be set",
-					&message);
+			throw new CDAPException("If the objName parameter is set, the objClass parameter also has to be set");
 		}
 		if (message.get_op_code() != CDAPMessage::M_CREATE
 				&& message.get_op_code() != CDAPMessage::M_CREATE_R
@@ -419,9 +371,7 @@ void CDAPMessageValidator::validateObjName(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_STOP
 				&& message.get_op_code() != CDAPMessage::M_START_R
 				&& message.get_op_code() != CDAPMessage::M_STOP_R) {
-			throw CDAPException(
-							"The objName parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R and M_STOP_R messages",
-					&message);
+			throw CDAPException("The objName parameter can only be set for M_CREATE, M_CREATE_R, M_DELETE, M_DELETE_R, M_READ, M_READ_R, M_WRITE, M_WRITE_R, M_START, M_STOP, M_START_R and M_STOP_R messages");
 		}
 	}
 }
@@ -432,9 +382,7 @@ void CDAPMessageValidator::validateObjValue(const CDAPMessage &message)
 	ObjectValue emptyObj;
 	if (message.get_obj_value() == emptyObj) {
 		if (message.get_op_code() == CDAPMessage::M_WRITE) {
-			throw CDAPException(
-							"The objValue parameter must be set for M_WRITE messages",
-					&message);
+			throw CDAPException("The objValue parameter must be set for M_WRITE messages");
 		}
 	} else {
 		if (message.get_op_code() != CDAPMessage::M_CREATE
@@ -449,8 +397,7 @@ void CDAPMessageValidator::validateObjValue(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_DELETE
 				&& message.get_op_code() != CDAPMessage::M_READ) {
 			throw CDAPException(
-							"The objValue parameter can only be set for M_CREATE, M_DELETE, M_CREATE_R, M_READ_R, M_WRITE, M_START, M_START_R, M_STOP, M_STOP_R and M_WRITE_R messages",
-					&message);
+							"The objValue parameter can only be set for M_CREATE, M_DELETE, M_CREATE_R, M_READ_R, M_WRITE, M_START, M_START_R, M_STOP, M_STOP_R and M_WRITE_R messages");
 		}
 	}
 }
@@ -458,8 +405,7 @@ void CDAPMessageValidator::validateObjValue(const CDAPMessage &message)
 void CDAPMessageValidator::validateOpcode(const CDAPMessage &message)
 		throw (CDAPException) {
 	if (message.get_op_code() == CDAPMessage::NONE_OPCODE) {
-		throw CDAPException("The opcode must be set for all the messages",
-				&message);
+		throw CDAPException("The opcode must be set for all the messages");
 	}
 }
 
@@ -483,8 +429,7 @@ void CDAPMessageValidator::validateResultReason(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_START_R
 				&& message.get_op_code() != CDAPMessage::M_STOP_R) {
 			throw CDAPException(
-							"The resultReason parameter can only be set for M_CREATE_R, M_DELETE_R, M_READ_R, M_WRITE_R, M_START_R, M_STOP_R, M_CONNECT_R, M_RELEASE_R, M_CANCELREAD and M_CANCELREAD_R messages",
-					&message);
+							"The resultReason parameter can only be set for M_CREATE_R, M_DELETE_R, M_READ_R, M_WRITE_R, M_START_R, M_STOP_R, M_CONNECT_R, M_RELEASE_R, M_CANCELREAD and M_CANCELREAD_R messages");
 		}
 	}
 }
@@ -499,8 +444,7 @@ void CDAPMessageValidator::validateScope(const CDAPMessage &message)
 				&& message.get_op_code() != CDAPMessage::M_START
 				&& message.get_op_code() != CDAPMessage::M_STOP) {
 			throw CDAPException(
-							"The scope parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages",
-					&message);
+							"The scope parameter can only be set for M_CREATE, M_DELETE, M_READ, M_WRITE, M_START or M_STOP messages");
 		}
 	}
 }
@@ -511,8 +455,7 @@ void CDAPMessageValidator::validateSrcAEInst(const CDAPMessage &message)
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"SrcAEInst can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"SrcAEInst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -525,8 +468,7 @@ void CDAPMessageValidator::validateSrcAEName(const CDAPMessage &message)
 	if (message.get_op_code() != CDAPMessage::M_CONNECT
 			&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 		throw CDAPException(
-						"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages",
-				&message);
+						"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
 	}
 }
 
@@ -536,8 +478,7 @@ void CDAPMessageValidator::validateSrcApInst(const CDAPMessage &message)
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"SrcApInst can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"SrcApInst can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -547,8 +488,7 @@ void CDAPMessageValidator::validateSrcApName(const CDAPMessage &message)
 	if (message.get_src_ap_name().empty()) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT) {
 			throw CDAPException(
-							"SrcApName must be set for the M_CONNECT message",
-					&message);
+							"SrcApName must be set for the M_CONNECT message");
 		} else if (message.get_op_code() == CDAPMessage::M_CONNECT_R) {
 			//TODO not sure what to do
 		}
@@ -556,8 +496,7 @@ void CDAPMessageValidator::validateSrcApName(const CDAPMessage &message)
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"SrcApName can only be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"SrcApName can only be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -568,8 +507,7 @@ void CDAPMessageValidator::validateVersion(const CDAPMessage &message)
 		if (message.get_op_code() == CDAPMessage::M_CONNECT
 				|| message.get_op_code() == CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
-							"Version must be set for M_CONNECT and M_CONNECT_R messages",
-					&message);
+							"Version must be set for M_CONNECT and M_CONNECT_R messages");
 		}
 	}
 }
@@ -1006,84 +944,6 @@ std::string toString() {
 CDAPSessionDescriptor::~CDAPSessionDescriptor() {
 	delete ap_naming_info_;
 }
-int CDAPSessionDescriptor::get_abs_syntax() const {
-	return abs_syntax_;
-}
-void CDAPSessionDescriptor::set_abs_syntax(int arg0) {
-	abs_syntax_ = arg0;
-}
-const CDAPMessage::AuthTypes& CDAPSessionDescriptor::get_auth_mech() const {
-	return auth_mech_;
-}
-void CDAPSessionDescriptor::set_auth_mech(const CDAPMessage::AuthTypes &arg0) {
-	auth_mech_ = arg0;
-}
-const AuthValue& CDAPSessionDescriptor::get_auth_value() const {
-	return auth_value_;
-}
-void CDAPSessionDescriptor::set_auth_value(const AuthValue &arg0) {
-	auth_value_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_dest_ae_inst() const {
-	return dest_ae_inst_;
-}
-void CDAPSessionDescriptor::set_dest_ae_inst(const std::string &arg0) {
-	dest_ae_inst_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_dest_ae_name() const {
-	return dest_ae_name_;
-}
-void CDAPSessionDescriptor::set_dest_ae_name(const std::string &arg0) {
-	dest_ae_name_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_dest_ap_inst() const {
-	return dest_ap_inst_;
-}
-void CDAPSessionDescriptor::set_dest_ap_inst(const std::string &arg0) {
-	dest_ap_inst_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_dest_ap_name() const {
-	return dest_ap_name_;
-}
-void CDAPSessionDescriptor::set_dest_ap_name(const std::string &arg0) {
-	dest_ap_name_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_src_ae_inst() const {
-	return src_ae_inst_;
-}
-void CDAPSessionDescriptor::set_src_ae_inst(const std::string &arg0) {
-	src_ae_inst_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_src_ae_name() const {
-	return src_ae_name_;
-}
-void CDAPSessionDescriptor::set_src_ae_name(const std::string &arg0) {
-	src_ae_name_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_src_ap_inst() const {
-	return src_ap_inst_;
-}
-void CDAPSessionDescriptor::set_src_ap_inst(const std::string &arg0) {
-	src_ap_inst_ = arg0;
-}
-const std::string CDAPSessionDescriptor::get_src_ap_name() const {
-	return src_ap_name_;
-}
-void CDAPSessionDescriptor::set_src_ap_name(const std::string &arg0) {
-	src_ap_name_ = arg0;
-}
-long CDAPSessionDescriptor::get_version() const {
-	return version_;
-}
-void CDAPSessionDescriptor::set_version(long arg0) {
-	version_ = arg0;
-}
-int CDAPSessionDescriptor::get_port_id() const {
-	return port_id_;
-}
-void CDAPSessionDescriptor::set_port_id(int arg0) {
-	port_id_ = arg0;
-}
 const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_source_application_process_naming_info() {
 	ap_naming_info_ = new ApplicationProcessNamingInformation(src_ap_name_, src_ap_inst_);
 	if (!src_ae_name_.empty()){
@@ -1131,18 +991,6 @@ RIBDaemonException::RIBDaemonException(int arg0): Exception("RIBDaemon caused an
 }
 
 RIBDaemonException::RIBDaemonException(int arg0, const char* arg1): Exception(arg1) {
-	error_code_ = arg0;
-}
-
-RIBDaemonException::RIBDaemonException(int arg0, Exception arg1): Exception(arg1){
-	error_code_ = arg0;
-}
-
-int RIBDaemonException::get_error_code() {
-	return error_code_;
-}
-
-void RIBDaemonException::set_error_code(int arg0){
 	error_code_ = arg0;
 }
 }

@@ -24,35 +24,24 @@
 
 namespace rina {
 
-/**
- * Encapsulates the data of an AuthValue
- *
- */
+
+///Encapsulates the data of an AuthValue
 class AuthValue {
 public:
-	/*	Constructors and Destructors	*/
 	AuthValue();
-	/*	Accessors	*/
 	std::string get_auth_name() const;
 	void set_auth_name(std::string auth_name);
 	std::string get_auth_password() const;
 	void set_auth_password(std::string auth_password);
 	char* get_auth_other() const;
 	void set_auth_other(char* auth_other);
-protected:
-	/**
-	 * Authentication name
-	 */
+private:
+	/// Authentication name
 	std::string auth_name_;
-	/**
-	 * Authentication password
-	 */
+	/// Authentication password
 	std::string auth_password_;
-	/**
-	 * Additional authentication information
-	 */
+	 /// Additional authentication information
 	char* auth_other_;
-
 };
 
 /**
@@ -60,7 +49,7 @@ protected:
  */
 class ObjectValue {
 	/*	Members	*/
-protected:
+private:
 	int intval_;
 	int sintval_;
 	long int64val_;
@@ -96,74 +85,24 @@ public:
 	bool operator==(const ObjectValue &other) const;
 };
 
-/**
- * Validates that a CDAP message is well formed
- */
+/// Exception produced in the CDAP
 class CDAPMessage;
 
 class CDAPException: public Exception {
 public:
-	/*	Constructors and Destructors	*/
-<<<<<<< HEAD
-	CDAPException();
-	CDAPException(const char* error_message, int result,
-			const char* result_reason);
-	CDAPException(int result, const char* result_reason);
-	CDAPException(const char* result_reason);
-	CDAPException(const char* result_reason, const CDAPMessage* cdap_message);
-	/*	Accessors	*/
-	void set_error_message(const char* error_message);
-	const char* get_error_message() const;
-	int get_result() const;
-	void set_result(int result);
-	const char* get_description() const;
-	const CDAPMessage* get_cdap_message() const;
-	void set_cdap_message(const CDAPMessage* cdap_message);
-private:
-	/*	Members	*/
-	/**
-	 * Name of the operation that failed
-	 */
-	const char* error_message_;
-	/**
-	 * Operation result code
-	 */
-	int result_;
-	/**
-	 * The CDAPMessage that caused the exception
-	 */
-	const CDAPMessage* cdap_message_;
-=======
 		CDAPException();
-		CDAPException(const char* error_message, int result, const char* result_reason);
-		CDAPException(int result, const char* result_reason);
-		CDAPException(const char* result_reason);
-		CDAPException(const char* result_reason, const CDAPMessage* cdap_message);
-    /*	Accessors	*/
-		void set_error_message(const char* error_message);
-		const char* get_error_message() const;
-		int get_result() const;
-		void set_result(int result);
-		//const char* get_description() const;
-		const CDAPMessage* get_cdap_message() const;
-		void set_cdap_message(const CDAPMessage* cdap_message);
+		CDAPException(std::string result_reason);
+		CDAPException(int result, std::string result_reason);
+		CDAPException(std::string error_message, int result, std::string result_reason);
+		virtual ~CDAPException() throw(){};
 	private:
-    /*	Members	*/
-		/**
-		 * Name of the operation that failed
-		 */
-		const char* error_message;
-		/**
-		 * Operation result code
-		 */
-		int result;
-		/**
-		 * The CDAPMessage that caused the exception
-		 */
-		const CDAPMessage* cdap_message;
->>>>>>> 7b81396606296448c4e855db101bfcb2101f686e
+		/// Name of the operation that failed
+		std::string error_message_;
+		/// Operation result code
+		int result_;
 };
 
+/// Validates that a CDAP message is well formed
 class CDAPMessageValidator {
 public:
 	/**
@@ -537,66 +476,25 @@ private:
 
 };
 
-/**
- * Describes a CDAPSession, by identifying the source and destination application processes.
- * Note that "source" and "destination" are just placeholders, as both parties in a CDAP exchange have
- * the same role, because the CDAP session is bidirectional.
- * @author eduardgrasa
- *
- */
+
+///Describes a CDAPSession, by identifying the source and destination application processes.
+///Note that "source" and "destination" are just placeholders, as both parties in a CDAP exchange have
+///the same role, because the CDAP session is bidirectional.
 class CDAPSessionDescriptor {
 public:
-	/*	Constructors and Destructors	*/
 	~CDAPSessionDescriptor();
-	/*	Accessors	*/
-	int get_abs_syntax() const;
-	void set_abs_syntax(int absSyntax);
-	const CDAPMessage::AuthTypes& get_auth_mech() const;
-	void set_auth_mech(const CDAPMessage::AuthTypes &auth_mech);
-	const AuthValue& get_auth_value() const;
-	void set_auth_value(const AuthValue &auth_value);
-	const std::string get_dest_ae_inst() const;
-	void set_dest_ae_inst(const std::string &dest_ae_inst);
-	const std::string get_dest_ae_name() const;
-	void set_dest_ae_name(const std::string &dest_ae_name);
-	const std::string get_dest_ap_inst() const;
-	void set_dest_ap_inst(const std::string &dest_ap_inst);
-	const std::string get_dest_ap_name() const;
-	void set_dest_ap_name(const std::string &dest_ap_name);
-	const std::string get_src_ae_inst() const;
-	void set_src_ae_inst(const std::string &src_ae_inst);
-	const std::string get_src_ae_name() const;
-	void set_src_ae_name(const std::string &src_ae_name);
-	const std::string get_src_ap_inst() const;
-	void set_src_ap_inst(const std::string &src_ap_inst);
-	const std::string get_src_ap_name() const;
-	void set_src_ap_name(const std::string &src_ap_name);
-	long get_version() const;
-	void set_version(long version);
-	int get_port_id() const;
-	void set_port_id(int port_id);
-	/**
-	 * The source naming information is always the naming information of the local Application process
-	 * @return
-	 */
+	 /// The source naming information is always the naming information of the local Application process
 	const ApplicationProcessNamingInformation* get_source_application_process_naming_info();
-	/**
-	 * The destination naming information is always the naming information of the remote application process
-	 * @return
-	 */
+	 /// The destination naming information is always the naming information of the remote application process
 	const ApplicationProcessNamingInformation* get_destination_application_process_naming_info();
 private:
-	/*	Members	*/
-	/**
-	 * AbstractSyntaxID (int32), mandatory. The specific version of the
-	 * CDAP protocol message declarations that the message conforms to
-	 */
+	 /// AbstractSyntaxID (int32), mandatory. The specific version of the
+	 /// CDAP protocol message declarations that the message conforms to
+	 ///
 	int abs_syntax_;
-	/**
-	 * AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
-	 * Identification of the method to be used by the destination application to
-	 * authenticate the source application
-	 */
+	/// AuthenticationMechanismName (authtypes), optional, not validated by CDAP.
+	/// Identification of the method to be used by the destination application to
+	/// authenticate the source application
 	CDAPMessage::AuthTypes auth_mech_;
 	/**
 	 * AuthenticationValue (authvalue), optional, not validated by CDAP.
@@ -604,64 +502,43 @@ private:
 	 * appropiate to the selected auth_mech
 	 */
 	AuthValue auth_value_;
-	/**
-	 * DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
-	 * Specific instance of the Application Entity that the source application
-	 * wishes to connect to in the destination application.
-	 */
+	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
+	/// Specific instance of the Application Entity that the source application
+	/// wishes to connect to in the destination application.
 	std::string dest_ae_inst_;
-	/**
-	 * DestinationApplication-Entity-Name (string), mandatory (optional for the response).
-	 * Name of the Application Entity that the source application wishes
-	 * to connect to in the destination application.
-	 */
+	/// DestinationApplication-Entity-Name (string), mandatory (optional for the response).
+	/// Name of the Application Entity that the source application wishes
+	/// to connect to in the destination application.
 	std::string dest_ae_name_;
-	/**
-	 * DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
-	 * Name of the Application Process Instance that the source wishes to
-	 * connect to a the destination.
-	 */
+	 /// DestinationApplication-Process-Instance-Id (string), optional, not validated by CDAP.
+	 /// Name of the Application Process Instance that the source wishes to
+	 /// connect to a the destination.
 	std::string dest_ap_inst_;
-	/**
-	 * DestinationApplication-Process-Name (string), mandatory (optional for the response).
-	 * Name of the application process that the source application wishes to connect to
-	 * in the destination application
-	 */
+	 /// DestinationApplication-Process-Name (string), mandatory (optional for the response).
+	 /// Name of the application process that the source application wishes to connect to
+	 /// in the destination application
 	std::string dest_ap_name_;
-	/**
-	 * SourceApplication-Entity-Instance-Id (string).
-	 * AE instance within the application originating the message
-	 */
+	 /// SourceApplication-Entity-Instance-Id (string).
+	 /// AE instance within the application originating the message
 	std::string src_ae_inst_;
-	/**
-	 * SourceApplication-Entity-Name (string).
-	 * Name of the AE within the application originating the message
-	 */
+	 /// SourceApplication-Entity-Name (string).
+	 /// Name of the AE within the application originating the message
 	std::string src_ae_name_;
-	/**
-	 * SourceApplication-Process-Instance-Id (string), optional, not validated by CDAP.
-	 * Application instance originating the message
-	 */
+	 /// SourceApplication-Process-Instance-Id (string), optional, not validated by CDAP.
+	 /// Application instance originating the message
 	std::string src_ap_inst_;
-
-	/**
-	 * SourceApplicatio-Process-Name (string), mandatory (optional in the response).
-	 * Name of the application originating the message
-	 */
+	 /// SourceApplicatio-Process-Name (string), mandatory (optional in the response).
+	 /// Name of the application originating the message
 	std::string src_ap_name_;
-	/**
-	 * Version (int32). Mandatory in connect request and response, optional otherwise.
-	 * Version of RIB and object set_ to use in the conversation. Note that the
-	 * abstract syntax refers to the CDAP message syntax, while version refers to the
-	 * version of the AE RIB objects, their values, vocabulary of object id's, and
-	 * related behaviors that are subject to change over time. See text for details
-	 * of use.
-	 */
+	 /// Version (int32). Mandatory in connect request and response, optional otherwise.
+	 /// Version of RIB and object set_ to use in the conversation. Note that the
+	 /// abstract syntax refers to the CDAP message syntax, while version refers to the
+	 /// version of the AE RIB objects, their values, vocabulary of object id's, and
+	 /// related behaviors that are subject to change over time. See text for details
+	 /// of use.
 	long version_;
-	/**
-	 * Uniquely identifies this CDAP session in this IPC process. It matches the port_id
-	 * of the (N-1) flow that supports the CDAP Session
-	 */
+	 /// Uniquely identifies this CDAP session in this IPC process. It matches the port_id
+	 /// of the (N-1) flow that supports the CDAP Session
 	int port_id_;
 
 	ApplicationProcessNamingInformation *ap_naming_info_;
@@ -1194,12 +1071,9 @@ public:
 	static const int PROBLEMS_DECODING_OBJECT;
 	static const int OBJECT_VALUE_IS_NULL;
 	/* Constructors and Destructors	 */
+	RIBDaemonException();
 	RIBDaemonException(int error_code);
 	RIBDaemonException(int error_code, const char* error_message);
-	RIBDaemonException(int error_code, Exception ex);
-	/*	Accessors	*/
-	int get_error_code();
-	void set_error_code(int error_code);
 	/*	Members	*/
 private:
 	int error_code_;
