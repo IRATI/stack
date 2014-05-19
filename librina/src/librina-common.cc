@@ -1044,7 +1044,7 @@ Singleton<IPCEventProducer> ipcEventProducer;
 /* CLASS IPC EXCEPTION */
 
 IPCException::IPCException(const std::string& description) :
-        Exception(description)
+        Exception(description.c_str())
 { }
 
 const std::string IPCException::operation_not_implemented_error =

@@ -36,7 +36,7 @@ namespace rina {
 
 /* CLASS NETLINK EXCEPTION */
 NetlinkException::NetlinkException(const std::string& description) :
-		Exception(description) {
+		Exception(description.c_str()) {
 }
 
 const std::string NetlinkException::error_resolving_netlink_family =
