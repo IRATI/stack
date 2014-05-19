@@ -8,6 +8,7 @@ allsources =					\
 	logs.cc					\
 	concurrency.cc				\
 	core.cc					\
+	exceptions.cc				\
 	librina.cc				\
 	librina-common.cc			\
 	librina-application.cc			\

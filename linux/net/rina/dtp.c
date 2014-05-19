@@ -48,6 +48,7 @@ struct dtp_sv {
 
         bool                window_based;
         bool                rexmsn_ctrl;
+        bool                rate_based;
 };
 
 /* FIXME: Has to be rearranged */
@@ -90,8 +91,9 @@ static struct dtp_sv default_sv = {
         .max_cwq_len                   = 0,
         .drf_flag                      = false,
         .a                             = 0,
-        .window_based                  = true,
-        .rexmsn_ctrl                   = true,
+        .window_based                  = false,
+        .rexmsn_ctrl                   = false,
+        .rate_based                    = false,
 };
 
 static uint_t max_cwq_len_get(struct dtp_sv * sv)
@@ -257,6 +259,21 @@ static void tf_receiver_inactivity(void * data)
 static void tf_a(void * data)
 { }
 
+static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
+{
+        ASSERT(sv);
+        ASSERT(conn);
+
+        if (conn->policies_params.rtx_ctrl)
+                sv->rexmsn_ctrl = true;
+
+        if (conn->policies_params.window_based_fctrl)
+                sv->window_based = true;
+
+        if (conn->policies_params.rate_based_fctrl)
+                sv->rate_based = true;
+}
+
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct kfa *        kfa,
@@ -298,6 +315,7 @@ struct dtp * dtp_create(struct dt *         dt,
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
+        sv_policies_apply(tmp->sv, connection);
 
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
@@ -314,6 +332,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
+        LOG_DBG("State Vector %d", tmp->sv->window_based);
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -367,8 +386,8 @@ int dtp_write(struct dtp * instance,
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
-                sdu_destroy(sdu);
-                return -1;
+                /* sdu_destroy(sdu);
+                return -1; */
         }
 #endif
 
@@ -383,7 +402,7 @@ int dtp_write(struct dtp * instance,
         policies = instance->policies;
         ASSERT(policies);
 
-        pci = pci_create();
+        pci = pci_create_ni();
         if (!pci) {
                 sdu_destroy(sdu);
                 return -1;
@@ -411,7 +430,7 @@ int dtp_write(struct dtp * instance,
 
         /* FIXME: Check if we need to set DRF */
 
-        pdu = pdu_create();
+        pdu = pdu_create_ni();
         if (!pdu) {
                 pci_destroy(pci);
                 sdu_destroy(sdu);
@@ -444,6 +463,7 @@ int dtp_write(struct dtp * instance,
          * the first and default case if both are present.
          */
 
+        LOG_DBG("DTCP instance: %pK", dtcp);
         if (dtcp) {
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
@@ -470,15 +490,17 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-
+                LOG_DBG("We are about to enter Window Based Flow Control");
                 if (sv->window_based) {
                         LOG_DBG("WindowBased");
+                        LOG_DBG("Send SEQ %d", pci_sequence_number_get(pci));
                         if (!dt_sv_window_closed(dt) &&
                             pci_sequence_number_get(pci) <
                             dtcp_snd_rt_win(dtcp)) {
                                 /*
                                  * Might close window
                                  */
+                                LOG_DBG("Transmission control");
                                 if (policies->transmission_control(instance,
                                                                    pdu)) {
                                         LOG_ERR("Problems with transmission "
@@ -486,6 +508,7 @@ int dtp_write(struct dtp * instance,
                                         return -1;
                                 }
                         } else {
+                                LOG_DBG("Closed Window Queue");
                                 dt_sv_window_closed_set(dt, true);
                                 if (policies->closed_window(instance, pdu)) {
                                         LOG_ERR("Problems with the "
@@ -625,8 +648,8 @@ int dtp_receive(struct dtp * instance,
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
-                pdu_destroy(pdu);
-                return -1;
+                /*pdu_destroy(pdu);
+                return -1;*/
         }
 
         seq_num = pci_sequence_number_get(pci);
@@ -675,6 +698,7 @@ int dtp_receive(struct dtp * instance,
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
                 max_seq_nr_rcv_set(sv, seq_num);
                 if (dtcp) {
+                        LOG_DBG("DTCP update");
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
                                 pdu_destroy(pdu);
@@ -689,6 +713,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
         } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
+                max_seq_nr_rcv_set(sv, seq_num);
                 LOG_MISSING;
 
         } else {

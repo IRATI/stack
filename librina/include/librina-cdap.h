@@ -104,6 +104,7 @@ class CDAPMessage;
 class CDAPException: public Exception {
 public:
 	/*	Constructors and Destructors	*/
+<<<<<<< HEAD
 	CDAPException();
 	CDAPException(const char* error_message, int result,
 			const char* result_reason);
@@ -132,6 +133,35 @@ private:
 	 * The CDAPMessage that caused the exception
 	 */
 	const CDAPMessage* cdap_message_;
+=======
+		CDAPException();
+		CDAPException(const char* error_message, int result, const char* result_reason);
+		CDAPException(int result, const char* result_reason);
+		CDAPException(const char* result_reason);
+		CDAPException(const char* result_reason, const CDAPMessage* cdap_message);
+    /*	Accessors	*/
+		void set_error_message(const char* error_message);
+		const char* get_error_message() const;
+		int get_result() const;
+		void set_result(int result);
+		//const char* get_description() const;
+		const CDAPMessage* get_cdap_message() const;
+		void set_cdap_message(const CDAPMessage* cdap_message);
+	private:
+    /*	Members	*/
+		/**
+		 * Name of the operation that failed
+		 */
+		const char* error_message;
+		/**
+		 * Operation result code
+		 */
+		int result;
+		/**
+		 * The CDAPMessage that caused the exception
+		 */
+		const CDAPMessage* cdap_message;
+>>>>>>> 7b81396606296448c4e855db101bfcb2101f686e
 };
 
 class CDAPMessageValidator {

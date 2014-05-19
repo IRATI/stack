@@ -1,48 +1,20 @@
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
+
 #include "exceptions.h"
 
-//namespace rina {
-///*	CLASS ApplicationProcessException */
-//const int ApplicationProcessException::UNEXISTING_SYNOYM = 1;
-//const int ApplicationProcessException::WRONG_APPLICATION_PROCES_NAME = 2;
-//const int ApplicationProcessException::NULL_OR_MALFORMED_SYNONYM = 3;
-//const int ApplicationProcessException::ALREADY_EXISTING_SYNOYM = 4;
-//const int ApplicationProcessException::NULL_OR_MALFORMED_WHATEVERCAST_NAME = 5;
-//const int ApplicationProcessException::ALREADY_EXISTING_WHATEVERCAST_NAME = 6;
-//const int ApplicationProcessException::UNEXISTING_WHATEVERCAST_NAME = 7;
-//
-//ApplicationProcessException::ApplicationProcessException()
-//{
-//	error_code = 0;
-//}
-//
-//ApplicationProcessException::ApplicationProcessException(int arg0)
-//{
-//	error_code = arg0;
-//}
-//
-//ApplicationProcessException::ApplicationProcessException(int arg0, const char* arg1)
-//{
-//	error_code = arg0;
-//	error_message = arg1;
-//}
-//
-//ApplicationProcessException::~ApplicationProcessException() throw()
-//{
-//	delete[] error_message;
-//}
-//
-//int ApplicationProcessException::get_error_code() const
-//{
-//	return error_code;
-//}
-//
-//void ApplicationProcessException::set_error_code(int arg0)
-//{
-//	error_code = arg0;
-//}
-//
-//const char* ApplicationProcessException::what() const throw()
-//{
-//	return error_message;
-//}
-//}
+const char * Exception::what() const throw()
+{ return description_.c_str(); }

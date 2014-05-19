@@ -183,10 +183,6 @@ void CDAPException::set_result(int arg0) {
 	result_ = arg0;
 }
 
-const char* CDAPException::get_description() const {
-	return description_;
-}
-
 const CDAPMessage* CDAPException::get_cdap_message() const {
 	return cdap_message_;
 }
