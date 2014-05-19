@@ -1,18 +1,18 @@
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 #ifndef LIBRINA_EXCEPTIONS_H
 #define LIBRINA_EXCEPTIONS_H
@@ -28,42 +28,11 @@ public:
 
         virtual ~Exception() throw() { }
 
-        virtual const char * what() const throw()
-        { return description_; }
+        virtual const char * what() const throw();
 
-protected:
-        const char* description_;
+private:
+        std::string description_;
 };
-
-/**
- * General exceptions thrown by Application Processes
- *
- */
-//class ApplicationProcessException: public Exception{
-//	public:
-//	/*	Constants	*/
-//		static const int UNEXISTING_SYNOYM ;
-//		static const int WRONG_APPLICATION_PROCES_NAME;
-//		static const int NULL_OR_MALFORMED_SYNONYM;
-//		static const int ALREADY_EXISTING_SYNOYM;
-//		static const int NULL_OR_MALFORMED_WHATEVERCAST_NAME;
-//		static const int ALREADY_EXISTING_WHATEVERCAST_NAME;
-//		static const int UNEXISTING_WHATEVERCAST_NAME;
-//	/*	Constructors and Destructors	*/
-//		ApplicationProcessException();
-//		ApplicationProcessException(int errorCode);
-//		ApplicationProcessException(int errorCode, const char* message);
-//		~ApplicationProcessException() throw();
-//	/*	Accessors	*/
-//		int get_error_code() const;
-//		void set_error_code(int error_code);
-//	/*	Methods	*/
-//		virtual const char* what() const throw();
-//	/*	Members	*/
-//	private:
-//		int error_code;
-//		char* error_message;
-//};
 
 #endif
 
