@@ -213,7 +213,7 @@ rnl_ipcp_conn_create_req_msg_attrs_create(void)
         tmp->cp_params = conn_policies_create();
         if (!tmp->cp_params){
                 rkfree(tmp);
-                return -1;
+                return NULL;
         }
 
         return tmp;
@@ -228,6 +228,12 @@ rnl_ipcp_conn_create_arrived_msg_attrs_create(void)
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if  (!tmp)
                 return NULL;
+
+        tmp->cp_params = conn_policies_create();
+        if (!tmp->cp_params) {
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -1732,7 +1738,7 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
         if (info->attrs[ICCRQ_ATTR_POLICIES_PARAMS]) {
                 if (parse_conn_policies_params(info->attrs                     \
                                                [ICCRQ_ATTR_POLICIES_PARAMS],
-                                               &(msg_attrs->cp_params))) {
+                                               msg_attrs->cp_params)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION"
                                                         "_CREATE_REQUEST"));
                         return -1;
@@ -1767,7 +1773,7 @@ rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
         if (info->attrs[ICCA_ATTR_POLICIES_PARAMS]) {
                 if (parse_conn_policies_params(info->attrs                     \
                                                [ICCA_ATTR_POLICIES_PARAMS],
-                                               &(msg_attrs->cp_params))) {
+                                               msg_attrs->cp_params)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECT"
                                                         "ION_CREATE_ARRIVED"));
                         return -1;
