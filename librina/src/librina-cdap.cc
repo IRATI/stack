@@ -21,126 +21,126 @@ namespace rina {
 /* CLASS AuthValue      */
 
 AuthValue::AuthValue() {
-	auth_other = NULL;
+	auth_other_ = NULL;
 }
 
 std::string AuthValue::get_auth_name() const {
-	return auth_name;
+	return auth_name_;
 }
 
 void AuthValue::set_auth_name(std::string arg0) {
-	auth_name = arg0;
+	auth_name_ = arg0;
 }
 
 std::string AuthValue::get_auth_password() const {
-	return auth_password;
+	return auth_password_;
 }
 
 void AuthValue::set_auth_password(std::string arg0) {
-	auth_password = arg0;
+	auth_password_ = arg0;
 }
 
 char* AuthValue::get_auth_other() const {
-	return auth_other;
+	return auth_other_;
 }
 
 void AuthValue::set_auth_other(char* arg0) {
-	auth_other = arg0;
+	auth_other_ = arg0;
 }
 
 /* CLASS ObjectValue */
 ObjectValue::ObjectValue() {
-	intval = 0;
-	sintval = 0;
-	int64val = 0;
-	sint64val = 0;
-	byteval = NULL;
-	floatval = 0;
-	doubleval = 0;
-	booleanval = false;
+	intval_ = 0;
+	sintval_ = 0;
+	int64val_ = 0;
+	sint64val_ = 0;
+	byteval_ = NULL;
+	floatval_ = 0;
+	doubleval_ = 0;
+	booleanval_ = false;
 }
 
 int ObjectValue::get_intval() const {
-	return intval;
+	return intval_;
 }
 
 void ObjectValue::set_intval(int arg0) {
-	intval = arg0;
+	intval_ = arg0;
 }
 
 int ObjectValue::get_sintval() const {
-	return sintval;
+	return sintval_;
 }
 
 void ObjectValue::set_sintval(int arg0) {
-	sintval = arg0;
+	sintval_ = arg0;
 }
 
 long ObjectValue::get_int64val() const {
-	return int64val;
+	return int64val_;
 }
 
 void ObjectValue::set_int64val(long arg0) {
-	int64val = arg0;
+	int64val_ = arg0;
 }
 
 long ObjectValue::get_sint64val() const {
-	return sint64val;
+	return sint64val_;
 }
 
 void ObjectValue::set_sint64val(long arg0) {
-	sint64val = arg0;
+	sint64val_ = arg0;
 }
 
 std::string ObjectValue::get_strval() const {
-	return strval;
+	return strval_;
 }
 
 void ObjectValue::set_strval(std::string arg0) {
-	strval = arg0;
+	strval_ = arg0;
 }
 
 char* ObjectValue::get_byteval() const {
-	return byteval;
+	return byteval_;
 }
 
 void ObjectValue::set_byteval(char arg0[]) {
-	byteval = arg0;
+	byteval_ = arg0;
 }
 
 int ObjectValue::get_floatval() const {
-	return floatval;
+	return floatval_;
 }
 
 void ObjectValue::set_floatval(int arg0) {
-	floatval = arg0;
+	floatval_ = arg0;
 }
 
 long ObjectValue::get_doubleval() const {
-	return doubleval;
+	return doubleval_;
 }
 
 void ObjectValue::set_doubleval(long arg0) {
-	doubleval = arg0;
+	doubleval_ = arg0;
 }
 
 void ObjectValue::set_booleanval(bool arg0) {
-	booleanval = arg0;
+	booleanval_ = arg0;
 }
 
 bool ObjectValue::is_booleanval() const {
-	return booleanval;
+	return booleanval_;
 
 }
 
 bool ObjectValue::operator==(const ObjectValue &other) const {
-	if (intval == other.get_intval() && sintval == other.get_sintval()
-			&& int64val == other.get_int64val()
-			&& sint64val == other.get_sint64val()
-			&& byteval == other.get_byteval()
-			&& floatval == other.get_floatval()
-			&& doubleval == other.get_doubleval()
-			&& booleanval == other.is_booleanval())
+	if (intval_ == other.get_intval() && sintval_ == other.get_sintval()
+			&& int64val_ == other.get_int64val()
+			&& sint64val_ == other.get_sint64val()
+			&& byteval_ == other.get_byteval()
+			&& floatval_ == other.get_floatval()
+			&& doubleval_ == other.get_doubleval()
+			&& booleanval_ == other.is_booleanval())
 		return true;
 	else
 		return false;
@@ -152,35 +152,35 @@ CDAPException::CDAPException(): Exception("CDAP message caused an Exception") {
 }
 
 CDAPException::CDAPException(const char* arg0, int arg1, const char* arg2): Exception(arg2) {
-	error_message = arg0;
-	result = arg1;
+	error_message_ = arg0;
+	result_ = arg1;
 }
 
 CDAPException::CDAPException(int arg0, const char* arg1): Exception(arg1){
-	result = arg0;
+	result_ = arg0;
 }
 
 CDAPException::CDAPException(const char* arg0): Exception(arg0) {
 }
 
 CDAPException::CDAPException(const char* arg0, const CDAPMessage* arg1): Exception(arg0) {
-	cdap_message = arg1;
+	cdap_message_ = arg1;
 }
 
 void CDAPException::set_error_message(const char* arg0){
-	error_message = arg0;
+	error_message_ = arg0;
 }
 
 const char* CDAPException::get_error_message() const{
-	return error_message;
+	return error_message_;
 }
 
 int CDAPException::get_result() const {
-	return result;
+	return result_;
 }
 
 void CDAPException::set_result(int arg0) {
-	result = arg0;
+	result_ = arg0;
 }
 
 const char* CDAPException::get_description() const {
@@ -188,11 +188,11 @@ const char* CDAPException::get_description() const {
 }
 
 const CDAPMessage* CDAPException::get_cdap_message() const {
-	return cdap_message;
+	return cdap_message_;
 }
 
 void CDAPException::set_cdap_message(const CDAPMessage* arg0) {
-	cdap_message = arg0;
+	cdap_message_ = arg0;
 }
 
 
@@ -581,16 +581,16 @@ void CDAPMessageValidator::validateVersion(const CDAPMessage &message)
 /* CLASS CDAPMessage */
 const int CDAPMessage::ABSTRACT_SYNTAX_VERSION = 0x0073;
 CDAPMessage::CDAPMessage() {
-	abs_syntax = 0;
-	auth_mech = AUTH_NONE;
-	filter = NULL;
-	flags = NONE_FLAGS;
-	invoke_id = 0;
-	obj_inst = 0;
-	op_code = NONE_OPCODE;
-	result = 0;
-	scope = 0;
-	version = 0;
+	abs_syntax_ = 0;
+	auth_mech_ = AUTH_NONE;
+	filter_ = NULL;
+	flags_ = NONE_FLAGS;
+	invoke_id_ = 0;
+	obj_inst_ = 0;
+	op_code_ = NONE_OPCODE;
+	result_ = 0;
+	scope_ = 0;
+	version_ = 0;
 }
 
 void CDAPMessage::getOpenConnectionRequestMessage(CDAPMessage &cdapMessage,
@@ -862,194 +862,253 @@ void CDAPMessage::getCancelReadResponseMessage(CDAPMessage &cdapMessage,
 	cdapMessage.set_result_reason(resultReason);
 	CDAPMessageValidator::validate(cdapMessage);
 }
-
 /*	TODO: Implement these functions	*/
 int CDAPMessage::get_abs_syntax() const {
-	return abs_syntax;
+	return abs_syntax_;
 }
-
 void CDAPMessage::set_abs_syntax(int arg0) {
-	abs_syntax = arg0;
+	abs_syntax_ = arg0;
 }
-
 CDAPMessage::AuthTypes CDAPMessage::get_auth_mech() const {
-	return auth_mech;
+	return auth_mech_;
 }
-
 void CDAPMessage::set_auth_mech(AuthTypes arg0) {
-	auth_mech = arg0;
+	auth_mech_ = arg0;
 }
-
 const AuthValue& CDAPMessage::get_auth_value() const {
-	return auth_value;
+	return auth_value_;
 }
-
 void CDAPMessage::set_auth_value(AuthValue arg0) {
-	auth_value = arg0;
+	auth_value_ = arg0;
 }
-
 std::string CDAPMessage::get_dest_ae_inst() const {
-	return dest_ae_inst;
+	return dest_ae_inst_;
 }
-
 void CDAPMessage::set_dest_ae_inst(std::string arg0) {
-	dest_ae_inst = arg0;
+	dest_ae_inst_ = arg0;
 }
-
 std::string CDAPMessage::get_dest_ae_name() const {
-	return dest_ae_name;
+	return dest_ae_name_;
 }
-
 void CDAPMessage::set_dest_ae_name(std::string arg0) {
-	dest_ae_name = arg0;
+	dest_ae_name_ = arg0;
 }
-
 std::string CDAPMessage::get_dest_ap_inst() const {
-	return dest_ap_inst;
+	return dest_ap_inst_;
 }
-
 void CDAPMessage::set_dest_ap_inst(std::string arg0) {
-	dest_ap_inst = arg0;
+	dest_ap_inst_ = arg0;
 }
-
 std::string CDAPMessage::get_dest_ap_name() const {
-	return dest_ap_name;
+	return dest_ap_name_;
 }
-
 void CDAPMessage::set_dest_ap_name(std::string arg0) {
-	dest_ap_name = arg0;
+	dest_ap_name_ = arg0;
 }
-
 char* CDAPMessage::get_filter() const {
-	return filter;
+	return filter_;
 }
-
 void CDAPMessage::set_filter(char arg0[]) {
-	filter = arg0;
+	filter_ = arg0;
 }
-
 CDAPMessage::Flags CDAPMessage::get_flags() const {
-	return flags;
+	return flags_;
 }
-
 void CDAPMessage::set_flags(Flags arg0) {
-	flags = arg0;
+	flags_ = arg0;
 }
-
 int CDAPMessage::get_invoke_id() const {
-	return invoke_id;
+	return invoke_id_;
 }
-
 void CDAPMessage::set_invoke_id(int arg0) {
-	invoke_id = arg0;
+	invoke_id_ = arg0;
 }
-
 std::string CDAPMessage::get_obj_class() const {
-	return obj_class;
+	return obj_class_;
 }
-
 void CDAPMessage::set_obj_class(std::string arg0) {
-	obj_class = arg0;
+	obj_class_ = arg0;
 }
-
 long CDAPMessage::get_obj_inst() const {
-	return obj_inst;
+	return obj_inst_;
 }
-
 void CDAPMessage::set_obj_inst(long arg0) {
-	obj_inst = arg0;
+	obj_inst_ = arg0;
 }
-
 std::string CDAPMessage::get_obj_name() const {
-	return obj_name;
+	return obj_name_;
 }
-
 void CDAPMessage::set_obj_name(std::string arg0) {
-	obj_name = arg0;
+	obj_name_ = arg0;
 }
-
 const ObjectValue& CDAPMessage::get_obj_value() const {
-	return obj_value;
+	return obj_value_;
 }
-
 void CDAPMessage::set_obj_value(const ObjectValue &arg0) {
-	obj_value = arg0;
+	obj_value_ = arg0;
 }
-
 CDAPMessage::Opcode CDAPMessage::get_op_code() const {
-	return op_code;
+	return op_code_;
 }
-
 void CDAPMessage::set_op_code(Opcode arg0) {
-	op_code = arg0;
+	op_code_ = arg0;
 }
-
 int CDAPMessage::get_result() const {
-	return result;
+	return result_;
 }
-
 void CDAPMessage::set_result(int arg0) {
-	result = arg0;
+	result_ = arg0;
 }
-
 std::string CDAPMessage::get_result_reason() const {
-	return result_reason;
+	return result_reason_;
 }
-
 void CDAPMessage::set_result_reason(std::string arg0) {
-	result_reason = arg0;
+	result_reason_ = arg0;
 }
-
 int CDAPMessage::get_scope() const {
-	return scope;
+	return scope_;
 }
-
 void CDAPMessage::set_scope(int arg0) {
-	scope = arg0;
+	scope_ = arg0;
 }
-
 std::string CDAPMessage::get_src_ae_inst() const {
-	return src_ae_inst;
+	return src_ae_inst_;
 }
-
 void CDAPMessage::set_src_ae_inst(std::string arg0) {
-	src_ae_inst = arg0;
+	src_ae_inst_ = arg0;
 }
-
 std::string CDAPMessage::get_src_ae_name() const {
-	return src_ae_name;
+	return src_ae_name_;
 }
-
 void CDAPMessage::set_src_ae_name(std::string arg0) {
-	src_ae_name = arg0;
+	src_ae_name_ = arg0;
 }
-
 std::string CDAPMessage::get_src_ap_inst() const {
-	return src_ap_inst;
+	return src_ap_inst_;
 }
-
 void CDAPMessage::set_src_ap_inst(std::string arg0) {
-	src_ap_inst = arg0;
+	src_ap_inst_ = arg0;
 }
-
 std::string CDAPMessage::get_src_ap_name() const {
-	return src_ap_name;
+	return src_ap_name_;
 }
 
 void CDAPMessage::set_src_ap_name(std::string arg0) {
-	src_ap_name = arg0;
+	src_ap_name_ = arg0;
 }
-
 long CDAPMessage::get_version() const {
-	return version;
+	return version_;
 }
-
 void CDAPMessage::set_version(long arg0) {
-	version = arg0;
+	version_ = arg0;
 }
-
 std::string toString() {
 	return std::string("return");
+}
+
+/*	class CDAPSessionDescriptor	*/
+CDAPSessionDescriptor::~CDAPSessionDescriptor() {
+	delete ap_naming_info_;
+}
+int CDAPSessionDescriptor::get_abs_syntax() const {
+	return abs_syntax_;
+}
+void CDAPSessionDescriptor::set_abs_syntax(int arg0) {
+	abs_syntax_ = arg0;
+}
+const CDAPMessage::AuthTypes& CDAPSessionDescriptor::get_auth_mech() const {
+	return auth_mech_;
+}
+void CDAPSessionDescriptor::set_auth_mech(const CDAPMessage::AuthTypes &arg0) {
+	auth_mech_ = arg0;
+}
+const AuthValue& CDAPSessionDescriptor::get_auth_value() const {
+	return auth_value_;
+}
+void CDAPSessionDescriptor::set_auth_value(const AuthValue &arg0) {
+	auth_value_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_dest_ae_inst() const {
+	return dest_ae_inst_;
+}
+void CDAPSessionDescriptor::set_dest_ae_inst(const std::string &arg0) {
+	dest_ae_inst_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_dest_ae_name() const {
+	return dest_ae_name_;
+}
+void CDAPSessionDescriptor::set_dest_ae_name(const std::string &arg0) {
+	dest_ae_name_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_dest_ap_inst() const {
+	return dest_ap_inst_;
+}
+void CDAPSessionDescriptor::set_dest_ap_inst(const std::string &arg0) {
+	dest_ap_inst_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_dest_ap_name() const {
+	return dest_ap_name_;
+}
+void CDAPSessionDescriptor::set_dest_ap_name(const std::string &arg0) {
+	dest_ap_name_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_src_ae_inst() const {
+	return src_ae_inst_;
+}
+void CDAPSessionDescriptor::set_src_ae_inst(const std::string &arg0) {
+	src_ae_inst_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_src_ae_name() const {
+	return src_ae_name_;
+}
+void CDAPSessionDescriptor::set_src_ae_name(const std::string &arg0) {
+	src_ae_name_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_src_ap_inst() const {
+	return src_ap_inst_;
+}
+void CDAPSessionDescriptor::set_src_ap_inst(const std::string &arg0) {
+	src_ap_inst_ = arg0;
+}
+const std::string CDAPSessionDescriptor::get_src_ap_name() const {
+	return src_ap_name_;
+}
+void CDAPSessionDescriptor::set_src_ap_name(const std::string &arg0) {
+	src_ap_name_ = arg0;
+}
+long CDAPSessionDescriptor::get_version() const {
+	return version_;
+}
+void CDAPSessionDescriptor::set_version(long arg0) {
+	version_ = arg0;
+}
+int CDAPSessionDescriptor::get_port_id() const {
+	return port_id_;
+}
+void CDAPSessionDescriptor::set_port_id(int arg0) {
+	port_id_ = arg0;
+}
+const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_source_application_process_naming_info() {
+	ap_naming_info_ = new ApplicationProcessNamingInformation(src_ap_name_, src_ap_inst_);
+	if (!src_ae_name_.empty()){
+		ap_naming_info_->setEntityName(src_ae_name_);
+	}
+
+	if (!src_ae_inst_.empty()){
+		ap_naming_info_->setEntityInstance(src_ae_inst_);
+	}
+	return ap_naming_info_;
+}
+const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_destination_application_process_naming_info() {
+	ap_naming_info_ = new ApplicationProcessNamingInformation(dest_ap_name_, dest_ap_inst_);
+	if (!dest_ae_name_.empty()){
+		ap_naming_info_->setEntityName(dest_ae_name_);
+	}
+
+	if (!dest_ae_inst_.empty()) {
+		ap_naming_info_->setEntityInstance(dest_ae_inst_);
+	}
+	return ap_naming_info_;
 }
 
 /*	CLASS RIBDaemonException	*/
@@ -1072,22 +1131,22 @@ const int RIBDaemonException::PROBLEMS_DECODING_OBJECT = 16;
 const int RIBDaemonException::OBJECT_VALUE_IS_NULL = 17;
 
 RIBDaemonException::RIBDaemonException(int arg0): Exception("RIBDaemon caused an exception"){
-	error_code = arg0;
+	error_code_ = arg0;
 }
 
 RIBDaemonException::RIBDaemonException(int arg0, const char* arg1): Exception(arg1) {
-	error_code = arg0;
+	error_code_ = arg0;
 }
 
 RIBDaemonException::RIBDaemonException(int arg0, Exception arg1): Exception(arg1){
-	error_code = arg0;
+	error_code_ = arg0;
 }
 
 int RIBDaemonException::get_error_code() {
-	return error_code;
+	return error_code_;
 }
 
 void RIBDaemonException::set_error_code(int arg0){
-	error_code = arg0;
+	error_code_ = arg0;
 }
 }
