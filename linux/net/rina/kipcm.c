@@ -785,6 +785,10 @@ static int notify_ipcp_conn_create_req(void *             data,
 
         attrs = msg->attrs;
 
+        LOG_DBG("LEODBUG KIPCM\n attrs->cp_params : %pk\n"
+                "attrs->cp_params->dtcp_cfg: %pk",
+                attrs->cp_params, attrs->cp_params->dtcp_cfg);
+
         if (rnl_parse_msg(info, msg))
                 goto fail;
 

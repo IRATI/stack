@@ -110,7 +110,7 @@ static struct window_fctrl_config * window_fctrl_config_create_gfp(gfp_t flags)
         tmp->rcvr_flow_control      = policy_create_gfp(flags);
         tmp->receiving_flow_control = policy_create_gfp(flags);
 
-        if (!tmp->rcvr_flow_control || tmp->receiving_flow_control)
+        if (!tmp->rcvr_flow_control || !tmp->receiving_flow_control)
                 goto clean;
 
         return tmp;
@@ -190,20 +190,26 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
                 return NULL;
 
         tmp->wfctrl_cfg = window_fctrl_config_create_gfp(flags);
-        if (!tmp->wfctrl_cfg)
+        if (!tmp->wfctrl_cfg) {
+                LOG_ERR("Could not create wfctrl_cfg");
                 goto clean;
+        }
 
         tmp->rfctrl_cfg = rate_fctrl_config_create_gfp(flags);
-        if (!tmp->rfctrl_cfg)
+        if (!tmp->rfctrl_cfg) {
+                LOG_ERR("Could not create rfctrl_cfg");
                 goto clean;
+        }
 
         tmp->closed_window             = policy_create_gfp(flags);
         tmp->flow_control_overrun      = policy_create_gfp(flags);
         tmp->reconcile_flow_conflict   = policy_create_gfp(flags);
         if (!tmp->closed_window              ||
             !tmp->flow_control_overrun       ||
-            !tmp->reconcile_flow_conflict)
+            !tmp->reconcile_flow_conflict) {
+                LOG_ERR("Could not create a polici in dtcp_fctrl_config_create");
                 goto clean;
+        }
 
         return tmp;
 
@@ -259,8 +265,10 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
            !tmp->receiving_ack_list          ||
            !tmp->rcvr_ack                    ||
            !tmp->sending_ack                 ||
-           !tmp->rcvr_control_ack)
+           !tmp->rcvr_control_ack) {
+                LOG_ERR("Could not create policy in dtcp_rxctrl_config_create_gfp");
                 goto clean;
+        }
 
         return tmp;
 
@@ -300,24 +308,37 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
                 return NULL;
 
         tmp->fctrl_cfg = dtcp_fctrl_config_create_gfp(flags);
-        if (!tmp->fctrl_cfg) 
+        if (!tmp->fctrl_cfg) {
+                LOG_ERR("Could not create fctrl_cfg in dtcp_config_create");
                 goto clean;
+        }
 
         tmp->rxctrl_cfg = dtcp_rxctrl_config_create_gfp(flags);
-        if (!tmp->rxctrl_cfg)
+        if (!tmp->rxctrl_cfg){
+                LOG_ERR("Could not create rxctrl_cfg in dtcp_config_create");
                 goto clean;
+        }
 
         tmp->receiver_inactivity_timer = policy_create_gfp(flags);
-        if (!tmp->receiver_inactivity_timer)
+        if (!tmp->receiver_inactivity_timer) {
+                LOG_ERR("Could not create receiver_inactivity_timer"
+                        "in dtcp_config_create");
                 goto clean;
+        }
 
         tmp->sender_inactivity_timer   = policy_create_gfp(flags);
-        if (!tmp->sender_inactivity_timer)
+        if (!tmp->sender_inactivity_timer) {
+                LOG_ERR("Could not create sender_inactivity_timer"
+                        "in dtcp_config_create");
                 goto clean;
+        }
 
         tmp->lost_control_pdu = policy_create_gfp(flags);
-        if (!tmp->lost_control_pdu)
+        if (!tmp->lost_control_pdu) {
+                LOG_ERR("Could not create lost_control_pdu"
+                        "in dtcp_config_create");
                 goto clean;
+        }
 
         return tmp;
 

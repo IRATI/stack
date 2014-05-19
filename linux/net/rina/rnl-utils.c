@@ -1191,8 +1191,9 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
         else
                 policy_version_set(p, NULL);
 
-        if (parse_policy_param_list(attrs[PA_ATTR_PARAMETERS], p))
-                return -1;
+        if (attrs[PA_ATTR_PARAMETERS])
+                if (parse_policy_param_list(attrs[PA_ATTR_PARAMETERS], p))
+                        return -1;
 
         return 0;
 }
@@ -1476,8 +1477,6 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         attr_policy[DCA_ATTR_INIT_SINAC_TIME].len          = 4;
         attr_policy[DCA_ATTR_INIT_RINAC_TIME].type         = NLA_U32;
         attr_policy[DCA_ATTR_INIT_RINAC_TIME].len          = 4;
-        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].type     = NLA_NESTED;
-        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].len      = 0;
         attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].type  = NLA_NESTED;
         attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].len   = 0;
         attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].type  = NLA_NESTED;
@@ -1485,10 +1484,17 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].len  = 0;
 
+        if (!attr || !cfg) {
+               LOG_ERR("Bogus input to parse dtcp_config");
+               return -1;
+        }
+
         if (nla_parse_nested(attrs,
                              DCA_ATTR_MAX,
-                             attr, attr_policy))
+                             attr, attr_policy)) {
+                LOG_ERR("Could not parse nested in parse_dtcp_config");
                 return -1;
+        }
 
         if (attrs[DCA_ATTR_FLOW_CONTROL])
                 dtcp_flow_ctrl_set(cfg,
@@ -1561,15 +1567,19 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->dtcp_present =
                         nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG], cpp_struct->dtcp_cfg)) {
-                LOG_ERR("Could not parse dtcp config");
+        
+        if (attrs[CPP_ATTR_DTCP_CONFIG])
+                if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG], cpp_struct->dtcp_cfg)) {
+                        LOG_ERR("Could not parse dtcp config");
+                        return -1;
+                }
+        
+        if (attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY]) {
+                if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY],
+                                       cpp_struct->initial_sequence_number)) {
+                LOG_ERR("Could not parse initial_sequence_number policy");
                 return -1;
-        }
-
-        if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY],
-                         cpp_struct->initial_sequence_number)) {
-                LOG_ERR("Could not parse initial_sequence_numberp policy");
-                return -1;
+                }
         }
         
         if (attrs[CPP_ATTR_SEQ_NUM_ROLLOVER])

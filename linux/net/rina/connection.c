@@ -54,12 +54,14 @@ struct conn_policies * conn_policies_create(void)
 
         tmp->dtcp_cfg = dtcp_config_create();
         if (!tmp->dtcp_cfg) {
+                LOG_ERR("Could not create dtcp_config");
                 rkfree(tmp);
                 return NULL;
         }
 
         tmp->initial_sequence_number = policy_create();
         if (!tmp->initial_sequence_number){
+                LOG_ERR("Could not create initial_sequence_number");
                 dtcp_config_destroy(tmp->dtcp_cfg);
                 rkfree(tmp);
                 return NULL;
