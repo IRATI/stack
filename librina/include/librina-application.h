@@ -64,7 +64,7 @@ public:
 		IPCException(
 				"Invalid operation invoked when the flow is not allocated "){
 	}
-	FlowNotAllocatedException(const char* description):
+	FlowNotAllocatedException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -77,7 +77,7 @@ public:
 	ReadSDUException():
 		IPCException("Problems reading SDU from flow"){
 	}
-	ReadSDUException(const char* description):
+	ReadSDUException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -90,7 +90,7 @@ public:
 	WriteSDUException():
 		IPCException("Problems writing SDU to flow"){
 	}
-	WriteSDUException(const char* description):
+	WriteSDUException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -103,7 +103,7 @@ public:
 	ApplicationRegistrationException():
 		IPCException("Problems registering application to DIF"){
 	}
-	ApplicationRegistrationException(const char* description):
+	ApplicationRegistrationException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -116,7 +116,7 @@ public:
 	ApplicationUnregistrationException():
 		IPCException("Problems unregistering application from DIF"){
 	}
-	ApplicationUnregistrationException(const char* description):
+	ApplicationUnregistrationException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -129,7 +129,7 @@ public:
 	FlowAllocationException():
 		IPCException("Problems allocating flow"){
 	}
-	FlowAllocationException(const char* description):
+	FlowAllocationException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -142,7 +142,7 @@ public:
 	FlowDeallocationException():
 		IPCException("Problems deallocating flow"){
 	}
-	FlowDeallocationException(const char* description):
+	FlowDeallocationException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -155,7 +155,7 @@ public:
 	GetDIFPropertiesException():
 		IPCException("Problems getting DIF properties"){
 	}
-	GetDIFPropertiesException(const char* description):
+	GetDIFPropertiesException(const std::string& description):
 		IPCException(description){
 	}
 };

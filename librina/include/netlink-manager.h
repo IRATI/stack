@@ -40,7 +40,7 @@ namespace rina{
  */
 class NetlinkException: public Exception {
 public:
-	NetlinkException(const char* description);
+	NetlinkException(const std::string& description);
 	static const std::string error_resolving_netlink_family;
 	static const std::string error_connecting_netlink_socket;
 	static const std::string error_allocating_netlink_message;

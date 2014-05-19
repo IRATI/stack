@@ -242,7 +242,7 @@ public:
 	AssignToDIFResponseException():
 		IPCException("Problems informing the IPC Manager about the result of an assign to DIF operation"){
 	}
-	AssignToDIFResponseException(const char* description):
+	AssignToDIFResponseException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -256,7 +256,7 @@ public:
 	RegisterApplicationResponseException():
 		IPCException("Problems informing the IPC Manager about the result of a register application response operation"){
 	}
-	RegisterApplicationResponseException(const char* description):
+	RegisterApplicationResponseException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -270,7 +270,7 @@ public:
 	UnregisterApplicationResponseException():
 		IPCException("Problems informing the IPC Manager about the result of an unegister application response operation"){
 	}
-	UnregisterApplicationResponseException(const char* description):
+	UnregisterApplicationResponseException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -284,7 +284,7 @@ public:
 	AllocateFlowResponseException():
 		IPCException("Problems informing the IPC Manager about the result of an unegister application response operation"){
 	}
-	AllocateFlowResponseException(const char* description):
+	AllocateFlowResponseException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -298,7 +298,7 @@ public:
 	QueryRIBResponseException():
 		IPCException("Problems informing the IPC Manager about the result of a query RIB response operation"){
 	}
-	QueryRIBResponseException(const char* description):
+	QueryRIBResponseException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -312,7 +312,7 @@ public:
 	AllocateFlowRequestArrivedException():
 		IPCException("Problems allocating a remote flow to a local application"){
 	}
-	AllocateFlowRequestArrivedException(const char* description):
+	AllocateFlowRequestArrivedException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -327,7 +327,7 @@ public:
 	DeallocateFlowResponseException():
 		IPCException("Problems informing the application about the result of a deallocate operation"){
 	}
-	DeallocateFlowResponseException(const char* description):
+	DeallocateFlowResponseException(const std::string& description):
 		IPCException(description){
 	}
 };
@@ -340,7 +340,7 @@ public:
         CreateConnectionException():
                 IPCException("Problems creating an EFCP connection"){
         }
-        CreateConnectionException(const char* description):
+        CreateConnectionException(const std::string& description):
                 IPCException(description){
         }
 };
@@ -353,7 +353,7 @@ public:
         UpdateConnectionException():
                 IPCException("Problems updating an EFCP connection"){
         }
-        UpdateConnectionException(const char* description):
+        UpdateConnectionException(const std::string& description):
                 IPCException(description){
         }
 };
@@ -366,7 +366,7 @@ public:
         DestroyConnectionException():
                 IPCException("Problems destroying an EFCP connection"){
         }
-        DestroyConnectionException(const char* description):
+        DestroyConnectionException(const std::string& description):
                 IPCException(description){
         }
 };
@@ -380,7 +380,7 @@ public:
         PortAllocationException():
                 IPCException("Problems requesting the allocation/deallocation of a port-id"){
         }
-        PortAllocationException(const char* description):
+        PortAllocationException(const std::string& description):
                 IPCException(description){
         }
 };
@@ -395,7 +395,7 @@ public:
         PDUForwardingTableException():
                 IPCException("Problems requesting modification of PDU Forwarding Table"){
         }
-        PDUForwardingTableException(const char* description):
+        PDUForwardingTableException(const std::string& description):
                 IPCException(description){
         }
 };

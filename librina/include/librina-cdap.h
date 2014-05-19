@@ -100,6 +100,39 @@ public:
  * Validates that a CDAP message is well formed
  */
 class CDAPMessage;
+
+class CDAPException: public Exception{
+	public:
+	/*	Constructors and Destructors	*/
+		CDAPException();
+		CDAPException(const char* error_message, int result, const char* result_reason);
+		CDAPException(int result, const char* result_reason);
+		CDAPException(const char* result_reason);
+		CDAPException(const char* result_reason, const CDAPMessage* cdap_message);
+    /*	Accessors	*/
+		void set_error_message(const char* error_message);
+		const char* get_error_message() const;
+		int get_result() const;
+		void set_result(int result);
+		const char* get_description() const;
+		const CDAPMessage* get_cdap_message() const;
+		void set_cdap_message(const CDAPMessage* cdap_message);
+	private:
+    /*	Members	*/
+		/**
+		 * Name of the operation that failed
+		 */
+		const char* error_message;
+		/**
+		 * Operation result code
+		 */
+		int result;
+		/**
+		 * The CDAPMessage that caused the exception
+		 */
+		const CDAPMessage* cdap_message;
+};
+
 class CDAPMessageValidator {
 public:
 	/**
@@ -626,6 +659,7 @@ public:
 	virtual void reserveInvokeId(int invoke_id) = 0;
 };
 
+
 /**
  * Represents a CDAP session. Clients of the library are the ones managing the invoke ids. Application entities must
  * use the CDAP library this way:
@@ -1099,6 +1133,44 @@ public:
 			CDAPMessage::Flags flags, int invoke_id, int result,
 			std::string result_reason) throw (CDAPException);
 };
+
+/**
+ * Exceptions thrown by the RIB Daemon
+ *
+ */
+class RIBDaemonException: public Exception{
+	/*	Constants	*/
+	public:
+		/** Error codes **/
+		static const int UNKNOWN_OBJECT_CLASS;
+		static const int MALFORMED_MESSAGE_SUBSCRIPTION_REQUEST;
+		static const int MALFORMED_MESSAGE_UNSUBSCRIPTION_REQUEST;
+		static const int SUBSCRIBER_WAS_NOT_SUBSCRIBED;
+		static const int OBJECTCLASS_AND_OBJECT_NAME_OR_OBJECT_INSTANCE_NOT_SPECIFIED;
+		static const int OBJECTNAME_NOT_PRESENT_IN_THE_RIB;
+		static const int RESPONSE_REQUIRED_BUT_MESSAGE_HANDLER_IS_NULL;
+		static const int PROBLEMS_SENDING_CDAP_MESSAGE;
+		static const int OPERATION_NOT_ALLOWED_AT_THIS_OBJECT;
+		static const int UNRECOGNIZED_OBJECT_NAME;
+		static const int OBJECTCLASS_DOES_NOT_MATCH_OBJECTNAME;
+		static const int OBJECT_ALREADY_HAS_THIS_CHILD;
+		static const int CHILD_NOT_FOUND;
+		static const int OBJECT_ALREADY_EXISTS;
+		static const int RIB_OBJECT_AND_OBJECT_NAME_NULL;
+		static const int PROBLEMS_DECODING_OBJECT;
+		static const int OBJECT_VALUE_IS_NULL;
+	/* Constructors and Destructors	 */
+		RIBDaemonException(int error_code);
+		RIBDaemonException(int error_code, const char* error_message);
+		RIBDaemonException(int error_code, Exception ex);
+	/*	Accessors	*/
+		int get_error_code();
+		void set_error_code(int error_code);
+	/*	Members	*/
+	private:
+		int error_code;
+};
+
 
 /**
  * Handles CDAP messages

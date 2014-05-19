@@ -485,7 +485,7 @@ unsigned int IPCManager::requestApplicationUnregistration(
         if (!applicationRegistration){
                 unlock();
                 throw ApplicationUnregistrationException(
-                                IPCManager::application_not_registered_error.c_str());
+                                IPCManager::application_not_registered_error);
         }
 
         std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
@@ -500,7 +500,7 @@ unsigned int IPCManager::requestApplicationUnregistration(
         if (!found) {
                 unlock();
                 throw ApplicationUnregistrationException(
-                                IPCManager::application_not_registered_error.c_str());
+                                IPCManager::application_not_registered_error);
         }
 
         ApplicationRegistrationInformation appRegInfo;
@@ -554,7 +554,7 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
        if (!applicationRegistration){
                unlock();
                throw ApplicationUnregistrationException(
-                       IPCManager::application_not_registered_error.c_str());
+                       IPCManager::application_not_registered_error);
        }
 
        if (!success) {
@@ -608,7 +608,7 @@ Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
         flow = getPendingFlow(sequenceNumber);
         if (flow == 0) {
                 unlock();
-                throw FlowDeallocationException(IPCManager::unknown_flow_error.c_str());
+                throw FlowDeallocationException(IPCManager::unknown_flow_error);
         }
 
         pendingFlows.erase(sequenceNumber);
@@ -631,7 +631,7 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
         flow = getPendingFlow(sequenceNumber);
         if (flow == 0) {
                 unlock();
-                throw FlowDeallocationException(IPCManager::unknown_flow_error.c_str());
+                throw FlowDeallocationException(IPCManager::unknown_flow_error);
         }
 
         pendingFlows.erase(sequenceNumber);
@@ -658,13 +658,13 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
         if (flow == 0) {
                 unlock();
                 throw FlowDeallocationException(
-                                IPCManager::unknown_flow_error.c_str());
+                                IPCManager::unknown_flow_error);
         }
 
         if (flow->getState() != FLOW_ALLOCATED) {
                 unlock();
                 throw FlowDeallocationException(
-                                IPCManager::wrong_flow_state.c_str());
+                                IPCManager::wrong_flow_state);
         }
 
 #if STUB_API
@@ -705,13 +705,13 @@ void IPCManager::flowDeallocationResult(int portId, bool success)
         if (flow == 0) {
                 unlock();
                 throw FlowDeallocationException(
-                                IPCManager::unknown_flow_error.c_str());
+                                IPCManager::unknown_flow_error);
         }
 
         if (flow->getState() != FLOW_DEALLOCATION_REQUESTED) {
                 unlock();
                 throw FlowDeallocationException(
-                                IPCManager::wrong_flow_state.c_str());
+                                IPCManager::wrong_flow_state);
         }
 
         if (success) {

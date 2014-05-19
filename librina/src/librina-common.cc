@@ -1043,11 +1043,11 @@ Singleton<IPCEventProducer> ipcEventProducer;
 
 /* CLASS IPC EXCEPTION */
 
-IPCException::IPCException(const char* description) :
-        Exception(description)
+IPCException::IPCException(const std::string& description) :
+        Exception(description.c_str())
 { }
 
-const char* IPCException::operation_not_implemented_error =
+const std::string IPCException::operation_not_implemented_error =
 		"This operation is not yet implemented";
 
 /* CLASS POLICY */
