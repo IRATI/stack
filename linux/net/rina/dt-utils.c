@@ -103,8 +103,9 @@ int cwq_push(struct cwq * queue,
                 return -1;
         }
 
+        LOG_DBG("Pushing in the Closed Window Queue");
         spin_lock(&queue->lock);
-        if (rqueue_tail_push(queue->q, pdu)) {
+        if (rqueue_tail_push_ni(queue->q, pdu)) {
                 LOG_ERR("Failed to add PDU");
                 pdu_destroy(pdu);
                 spin_unlock(&queue->lock);
