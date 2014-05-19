@@ -247,13 +247,13 @@ static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
         ASSERT(sv);
         ASSERT(conn);
 
-        if (dtcp_rtx_ctrl(conn->policies_params.dtcp_cfg))
+        if (dtcp_rtx_ctrl(conn->policies_params->dtcp_cfg))
                 sv->rexmsn_ctrl = true;
 
-        if (dtcp_window_based_fctrl(conn->policies_params.dtcp_cfg))
+        if (dtcp_window_based_fctrl(conn->policies_params->dtcp_cfg))
                 sv->window_based = true;
 
-        if (dtcp_rate_based_fctrl(conn->policies_params.dtcp_cfg))
+        if (dtcp_rate_based_fctrl(conn->policies_params->dtcp_cfg))
                 sv->rate_based = true;
 }
 

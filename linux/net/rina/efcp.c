@@ -400,12 +400,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         tmp->connection           = connection;
 
 #if DTCP_TEST_ENABLE
-        connection->policies_params.dtcp_present = true;
-        connection->policies_params.dtcp_cfg = dtcp_config_create();
-        dtcp_flow_ctrl_set(connection->policies_params.dtcp_cfg, true);
-        dtcp_rtx_ctrl_set(connection->policies_params.dtcp_cfg, true);
-        dtcp_window_based_fctrl_set(connection->policies_params.dtcp_cfg, true);
-        dtcp_rate_based_fctrl_set(connection->policies_params.dtcp_cfg, false);
+        connection->policies_params->dtcp_present = true;
+        connection->policies_params->dtcp_cfg = dtcp_config_create();
+        dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
+        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, true);
+        dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg, true);
+        dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg, false);
 #endif
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
@@ -428,7 +428,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         dtcp = NULL;
 
-        if (connection->policies_params.dtcp_present) {
+        if (connection->policies_params->dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
                         efcp_destroy(tmp);
@@ -442,7 +442,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(connection->policies_params.dtcp_cfg)) {
+        if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
@@ -456,7 +456,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_rtx_ctrl(connection->policies_params.dtcp_cfg)) {
+        if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");

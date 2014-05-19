@@ -210,7 +210,14 @@ rnl_ipcp_conn_create_req_msg_attrs_create(void)
         if  (!tmp)
                 return NULL;
 
+        tmp->cp_params = conn_policies_create();
+        if (!tmp->cp_params){
+                rkfree(tmp);
+                return -1;
+        }
+
         return tmp;
+
 }
 
 static struct rnl_ipcp_conn_create_arrived_msg_attrs *

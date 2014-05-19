@@ -44,24 +44,26 @@ struct conn_policies {
 /* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */
 /* FIXME: Add setters/getters to struct connection*/
 struct connection {
-        port_id_t             port_id;
+        port_id_t              port_id;
 
-        address_t             source_address;
-        address_t             destination_address;
+        address_t              source_address;
+        address_t              destination_address;
 
-        cep_id_t              source_cep_id;
-        cep_id_t              destination_cep_id;
+        cep_id_t               source_cep_id;
+        cep_id_t               destination_cep_id;
 
-        qos_id_t              qos_id;
+        qos_id_t               qos_id;
 
         /* FIXME: Are we sure about the next fixme? */
         /* FIXME: Add the list of policies associated with this connection */
-        struct conn_policies policies_params;
+        struct conn_policies * policies_params;
 };
 
-struct connection * connection_create(void);
-struct connection * connection_dup_from_user(const
-                                             struct connection __user * conn);
-int                 connection_destroy(struct connection * conn);
+struct conn_policies * conn_policies_create(void);
+struct connection *    connection_create(void);
+struct connection *    connection_dup_from_user(const
+                                               struct connection __user * conn);
+int                    conn_policies_destroy(struct conn_policies * cp_params);
+int                    connection_destroy(struct connection * conn);
 
 #endif

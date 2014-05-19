@@ -176,14 +176,14 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    address_t                   source,
                                    address_t                   dest,
                                    qos_id_t                    qos_id,
-                                   struct conn_policies        cp_params)
+                                   struct conn_policies *      cp_params)
 {
         cep_id_t               cep_id;
         struct connection *    conn;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
 
-        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
+        conn = connection_create();
         if (!conn)
                 return -1;
 
@@ -191,6 +191,7 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         conn->source_address      = source;
         conn->port_id             = port_id;
         conn->qos_id              = qos_id;
+        conn->policies_params     = cp_params;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
         if (!is_cep_id_ok(cep_id)) {
@@ -315,7 +316,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          struct conn_policies        cp_params)
+                          struct conn_policies *      cp_params)
 {
         struct connection *    conn;
         cep_id_t               cep_id;
@@ -332,6 +333,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->port_id             = port_id;
         conn->qos_id              = qos_id;
         conn->destination_cep_id  = dst_cep_id;
+        conn->policies_params     = cp_params;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
         if (!is_cep_id_ok(cep_id)) {
