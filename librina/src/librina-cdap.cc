@@ -22,55 +22,81 @@ namespace rina {
 AuthValue::AuthValue() {
 }
 
-// CLASS ObjectValue
-ObjectValue::ObjectValue() {
-	intval_ = 0;
-	sintval_ = 0;
-	int64val_ = 0;
-	sint64val_ = 0;
-	byteval_ = 0;
-	floatval_ = 0;
-	doubleval_ = 0;
-	booleanval_ = false;
+// CLASS AbstractObjectValue
+template<typename T>
+AbstractObjectValue<T>::AbstractObjectValue() {
+	empty_ = true;
 }
-int ObjectValue::get_intval() const {
-	return intval_;
+template<typename T>
+AbstractObjectValue<T>::AbstractObjectValue(T &value) {
+	value_ = value;
+	empty_ = false;
 }
-int ObjectValue::get_sintval() const {
-	return sintval_;
+template<typename T>
+AbstractObjectValue<T>::~AbstractObjectValue() {}
+template<typename T>
+T AbstractObjectValue<T>::get_value() const{
+	return value_;
 }
-long ObjectValue::get_int64val() const {
-	return int64val_;
+template<typename T>
+bool AbstractObjectValue<T>::is_empty() const {
+	return empty_;
 }
-long ObjectValue::get_sint64val() const {
-	return sint64val_;
+
+// CLASS IntObjectValue
+IntObjectValue::IntObjectValue() : AbstractObjectValue() {}
+IntObjectValue::IntObjectValue(int value) : AbstractObjectValue(value) {}
+bool IntObjectValue::operator==(const AbstractObjectValue<int> &other) {
+	return value_ == other.get_value();
 }
-std::string ObjectValue::get_strval() const {
-	return strval_;
+
+// CLASS SIntObjectValue
+SIntObjectValue::SIntObjectValue() : AbstractObjectValue() {}
+SIntObjectValue::SIntObjectValue(short int value) : AbstractObjectValue(value) {}
+bool SIntObjectValue::operator==(const AbstractObjectValue<short int> &other) {
+	return value_ == other.get_value();
 }
-char* ObjectValue::get_byteval() const {
-	return byteval_;
+
+// CLASS LongObjectValue
+LongObjectValue::LongObjectValue() : AbstractObjectValue() {}
+LongObjectValue::LongObjectValue(long long value) : AbstractObjectValue(value) {}
+bool LongObjectValue::operator==(const AbstractObjectValue<long long> &other) {
+	return value_ == other.get_value();
 }
-int ObjectValue::get_floatval() const {
-	return floatval_;
+
+// CLASS SLongObjectValue
+SLongObjectValue::SLongObjectValue() : AbstractObjectValue() {}
+SLongObjectValue::SLongObjectValue(long value) : AbstractObjectValue(value) {}
+bool SLongObjectValue::operator==(const AbstractObjectValue<long> &other) {
+	return value_ == other.get_value();
 }
-long ObjectValue::get_doubleval() const {
-	return doubleval_;
+
+// CLASS StringObjectValue
+StringObjectValue::StringObjectValue() : AbstractObjectValue() {}
+StringObjectValue::StringObjectValue(std::string value) : AbstractObjectValue(value) {}
+bool StringObjectValue::operator==(const AbstractObjectValue<std::string> &other) {
+	return value_ == other.get_value();
 }
-bool ObjectValue::is_booleanval() const {
-	return booleanval_;
+
+// CLASS ByteArrayObjectValue
+ByteArrayObjectValue::ByteArrayObjectValue() : AbstractObjectValue() {}
+ByteArrayObjectValue::ByteArrayObjectValue(char* value) : AbstractObjectValue(value) {}
+bool ByteArrayObjectValue::operator==(const AbstractObjectValue<char*> &other) {
+	return value_ == other.get_value();
 }
-bool ObjectValue::operator==(const ObjectValue &other) const {
-	if (intval_ == other.get_intval() && sintval_ == other.get_sintval()
-			&& int64val_ == other.get_int64val()
-			&& sint64val_ == other.get_sint64val()
-			&& byteval_ == other.get_byteval()
-			&& floatval_ == other.get_floatval()
-			&& doubleval_ == other.get_doubleval()
-			&& booleanval_ == other.is_booleanval())
-		return true;
-	else
-		return false;
+
+// CLASS FloatObjectValue
+FloatObjectValue::FloatObjectValue() : AbstractObjectValue() {}
+FloatObjectValue::FloatObjectValue(float value) : AbstractObjectValue(value) {}
+bool FloatObjectValue::operator==(const AbstractObjectValue<float> &other) {
+	return value_ == other.get_value();
+}
+
+// CLASS BooleanObjectValue
+BooleanObjectValue::BooleanObjectValue() : AbstractObjectValue() {}
+BooleanObjectValue::BooleanObjectValue(bool value) : AbstractObjectValue(value) {}
+bool BooleanObjectValue::operator==(const AbstractObjectValue<bool> &other) {
+	return value_ == other.get_value();
 }
 
 // CLASS CDAPException
@@ -323,9 +349,7 @@ void CDAPMessageValidator::validateObjName(const CDAPMessage &message)
 
 void CDAPMessageValidator::validateObjValue(const CDAPMessage &message)
 		throw (CDAPException) {
-	/*FIXME: See if this can be done in a better way	*/
-	ObjectValue emptyObj;
-	if (message.get_obj_value() == emptyObj) {
+	if (message.get_obj_value()->is_empty()) {
 		if (message.get_op_code() == CDAPMessage::M_WRITE) {
 			throw CDAPException(
 					"The objValue parameter must be set for M_WRITE messages");
@@ -477,12 +501,15 @@ CDAPMessage::CDAPMessage() {
 	flags_ = NONE_FLAGS;
 	invoke_id_ = 0;
 	obj_inst_ = 0;
+	obj_value_ = new ByteArrayObjectValue;
 	op_code_ = NONE_OPCODE;
 	result_ = 0;
 	scope_ = 0;
 	version_ = 0;
 }
-
+CDAPMessage::~CDAPMessage() {
+	delete obj_value_;
+}
 void CDAPMessage::getOpenConnectionRequestMessage(CDAPMessage &cdapMessage,
 		AuthTypes authMech, const AuthValue &authValue,
 		const std::string &dest_ae_inst, const std::string &destAEName,
@@ -560,7 +587,7 @@ void CDAPMessage::getReleaseConnectionResponseMessage(CDAPMessage &cdapMessage,
 
 void CDAPMessage::getCreateObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
-		const std::string &objName, const ObjectValue &objValue, int scope)
+		const std::string &objName, const ObjectValueInterface &objValue, int scope)
 				throw (CDAPException) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
@@ -576,7 +603,7 @@ void CDAPMessage::getCreateObjectRequestMessage(CDAPMessage &cdapMessage,
 
 void CDAPMessage::getCreateObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objClass, long objInst,
-		const std::string &objName, const ObjectValue &objValue, int result,
+		const std::string &objName, const ObjectValueInterface &objValue, int result,
 		const std::string &resultReason, int invokeID) throw (CDAPException) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
@@ -593,7 +620,7 @@ void CDAPMessage::getCreateObjectResponseMessage(CDAPMessage &cdapMessage,
 
 void CDAPMessage::getDeleteObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
-		const std::string &objName, const ObjectValue &objectValue, int scope)
+		const std::string &objName, const ObjectValueInterface &objectValue, int scope)
 				throw (CDAPException) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
@@ -623,7 +650,7 @@ void CDAPMessage::getDeleteObjectResponseMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getStartObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass,
-		const ObjectValue &objValue, long objInst, const std::string &objName,
+		const ObjectValueInterface &objValue, long objInst, const std::string &objName,
 		int scope) throw (CDAPException) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
@@ -649,7 +676,7 @@ void CDAPMessage::getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objectClass,
-		const ObjectValue &objectValue, long objInst,
+		const ObjectValueInterface &objectValue, long objInst,
 		const std::string &objName, int result, const std::string &resultReason,
 		int invokeID) throw (CDAPException) {
 	cdapMessage.set_flags(flags);
@@ -665,7 +692,7 @@ void CDAPMessage::getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getStopObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass,
-		const ObjectValue &objValue, long objInst, const std::string &objName,
+		const ObjectValueInterface &objValue, long objInst, const std::string &objName,
 		int scope) throw (CDAPException) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
@@ -701,7 +728,7 @@ void CDAPMessage::getReadObjectRequestMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getReadObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objClass, long objInst,
-		const std::string &objName, const ObjectValue &objValue, int result,
+		const std::string &objName, const ObjectValueInterface &objValue, int result,
 		const std::string &resultReason, int invokeID) throw (CDAPException) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
@@ -716,7 +743,7 @@ void CDAPMessage::getReadObjectResponseMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getWriteObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
-		const ObjectValue &objValue, const std::string &objName, int scope)
+		const ObjectValueInterface &objValue, const std::string &objName, int scope)
 				throw (CDAPException) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
@@ -771,31 +798,31 @@ void CDAPMessage::set_auth_mech(AuthTypes arg0) {
 const AuthValue& CDAPMessage::get_auth_value() const {
 	return auth_value_;
 }
-void CDAPMessage::set_auth_value(AuthValue arg0) {
+void CDAPMessage::set_auth_value(const AuthValue &arg0) {
 	auth_value_ = arg0;
 }
-std::string CDAPMessage::get_dest_ae_inst() const {
+const std::string& CDAPMessage::get_dest_ae_inst() const {
 	return dest_ae_inst_;
 }
-void CDAPMessage::set_dest_ae_inst(std::string arg0) {
+void CDAPMessage::set_dest_ae_inst(const std::string &arg0) {
 	dest_ae_inst_ = arg0;
 }
-std::string CDAPMessage::get_dest_ae_name() const {
+const std::string& CDAPMessage::get_dest_ae_name() const {
 	return dest_ae_name_;
 }
-void CDAPMessage::set_dest_ae_name(std::string arg0) {
+void CDAPMessage::set_dest_ae_name(const std::string &arg0) {
 	dest_ae_name_ = arg0;
 }
-std::string CDAPMessage::get_dest_ap_inst() const {
+const std::string& CDAPMessage::get_dest_ap_inst() const {
 	return dest_ap_inst_;
 }
-void CDAPMessage::set_dest_ap_inst(std::string arg0) {
+void CDAPMessage::set_dest_ap_inst(const std::string &arg0) {
 	dest_ap_inst_ = arg0;
 }
-std::string CDAPMessage::get_dest_ap_name() const {
+const std::string& CDAPMessage::get_dest_ap_name() const {
 	return dest_ap_name_;
 }
-void CDAPMessage::set_dest_ap_name(std::string arg0) {
+void CDAPMessage::set_dest_ap_name(const std::string &arg0) {
 	dest_ap_name_ = arg0;
 }
 char* CDAPMessage::get_filter() const {
@@ -816,10 +843,10 @@ int CDAPMessage::get_invoke_id() const {
 void CDAPMessage::set_invoke_id(int arg0) {
 	invoke_id_ = arg0;
 }
-std::string CDAPMessage::get_obj_class() const {
+const std::string& CDAPMessage::get_obj_class() const {
 	return obj_class_;
 }
-void CDAPMessage::set_obj_class(std::string arg0) {
+void CDAPMessage::set_obj_class(const std::string &arg0) {
 	obj_class_ = arg0;
 }
 long CDAPMessage::get_obj_inst() const {
@@ -828,17 +855,18 @@ long CDAPMessage::get_obj_inst() const {
 void CDAPMessage::set_obj_inst(long arg0) {
 	obj_inst_ = arg0;
 }
-std::string CDAPMessage::get_obj_name() const {
+const std::string& CDAPMessage::get_obj_name() const {
 	return obj_name_;
 }
-void CDAPMessage::set_obj_name(std::string arg0) {
+void CDAPMessage::set_obj_name(const std::string &arg0) {
 	obj_name_ = arg0;
 }
-const ObjectValue& CDAPMessage::get_obj_value() const {
+const ObjectValueInterface* CDAPMessage::get_obj_value() const {
 	return obj_value_;
 }
-void CDAPMessage::set_obj_value(const ObjectValue &arg0) {
-	obj_value_ = arg0;
+void CDAPMessage::set_obj_value(const ObjectValueInterface &arg0) {
+	delete obj_value_;
+	*obj_value_ = arg0;
 }
 CDAPMessage::Opcode CDAPMessage::get_op_code() const {
 	return op_code_;
@@ -852,10 +880,10 @@ int CDAPMessage::get_result() const {
 void CDAPMessage::set_result(int arg0) {
 	result_ = arg0;
 }
-std::string CDAPMessage::get_result_reason() const {
+const std::string& CDAPMessage::get_result_reason() const {
 	return result_reason_;
 }
-void CDAPMessage::set_result_reason(std::string arg0) {
+void CDAPMessage::set_result_reason(const std::string &arg0) {
 	result_reason_ = arg0;
 }
 int CDAPMessage::get_scope() const {
@@ -864,29 +892,29 @@ int CDAPMessage::get_scope() const {
 void CDAPMessage::set_scope(int arg0) {
 	scope_ = arg0;
 }
-std::string CDAPMessage::get_src_ae_inst() const {
+const std::string& CDAPMessage::get_src_ae_inst() const {
 	return src_ae_inst_;
 }
-void CDAPMessage::set_src_ae_inst(std::string arg0) {
+void CDAPMessage::set_src_ae_inst(const std::string &arg0) {
 	src_ae_inst_ = arg0;
 }
-std::string CDAPMessage::get_src_ae_name() const {
+const std::string& CDAPMessage::get_src_ae_name() const {
 	return src_ae_name_;
 }
-void CDAPMessage::set_src_ae_name(std::string arg0) {
+void CDAPMessage::set_src_ae_name(const std::string& arg0) {
 	src_ae_name_ = arg0;
 }
-std::string CDAPMessage::get_src_ap_inst() const {
+const std::string& CDAPMessage::get_src_ap_inst() const {
 	return src_ap_inst_;
 }
-void CDAPMessage::set_src_ap_inst(std::string arg0) {
+void CDAPMessage::set_src_ap_inst(const std::string& arg0) {
 	src_ap_inst_ = arg0;
 }
-std::string CDAPMessage::get_src_ap_name() const {
+const std::string& CDAPMessage::get_src_ap_name() const {
 	return src_ap_name_;
 }
 
-void CDAPMessage::set_src_ap_name(std::string arg0) {
+void CDAPMessage::set_src_ap_name(const std::string& arg0) {
 	src_ap_name_ = arg0;
 }
 long CDAPMessage::get_version() const {
