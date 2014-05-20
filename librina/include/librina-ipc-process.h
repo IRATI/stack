@@ -24,6 +24,9 @@
 #include "librina-ipc-manager.h"
 #include "librina-cdap.h"
 
+#define RINA_DEFAULT_POLICY_NAME "default"
+#define RINA_DEFAULT_POLICY_VERSION 0
+
 namespace rina {
 
 /**
@@ -681,10 +684,11 @@ class PolicyParameter {
 
 public:
         PolicyParameter();
+        PolicyParameter(const std::string& name, const std::string& value);
+        bool operator==(const PolicyParameter &other) const;
+        bool operator!=(const PolicyParameter &other) const;
         const std::string& getName() const;
-        void setName(const std::string& name);
         const std::string& getValue() const;
-        void setValue(const std::string& value);
 };
 
 /**
@@ -703,13 +707,12 @@ class EFCPPolicyConfig {
 
 public:
         EFCPPolicyConfig();
+        EFCPPolicyConfig(const std::string& name, short version);
         const std::string& getName() const;
-        void setName(const std::string& name);
         const std::list<PolicyParameter>& getParameters() const;
         void setParameters(const std::list<PolicyParameter>& parameters);
         void addParameter(const PolicyParameter& paremeter);
         short getVersion() const;
-        void setVersion(short version);
 };
 
 /**
@@ -812,7 +815,7 @@ class DTCPFlowControlConfig {
         /** the window-based flow control configuration */
         DTCPWindowBasedFlowControlConfig windowbasedconfig;
 
-        /** indicates whether window-based flow control is in use */
+        /** indicates whether rate-based flow control is in use */
         bool ratebased;
 
         /** the rate-based flow control configuration */
@@ -1058,12 +1061,6 @@ class DTCPConfig {
          */
         EFCPPolicyConfig lostcontrolpdupolicy;
 
-        /**
-         * This policy allows some discretion in selecting the initial sequence
-         * number, when DRF is going to be sent.
-         */
-        EFCPPolicyConfig initialseqnumpolicy;
-
 public:
         DTCPConfig();
         bool isFlowcontrol() const;
@@ -1075,8 +1072,6 @@ public:
         void setInitialrecvrinactivitytime(int initialrecvrinactivitytime);
         int getInitialsenderinactivitytime() const;
         void setInitialsenderinactivitytime(int initialsenderinactivitytime);
-        const EFCPPolicyConfig& getInitialseqnumpolicy() const;
-        void setInitialseqnumpolicy(const EFCPPolicyConfig& initialseqnumpolicy);
         const EFCPPolicyConfig& getLostcontrolpdupolicy() const;
         void setLostcontrolpdupolicy(
                         const EFCPPolicyConfig& lostcontrolpdupolicy);
@@ -1103,6 +1098,12 @@ class ConnectionPolicies {
 	DTCPConfig dtcpConfiguration;
 
 	/**
+	 * This policy allows some discretion in selecting the initial sequence
+	 * number, when DRF is going to be sent.
+	 */
+	EFCPPolicyConfig initialseqnumpolicy;
+
+	/**
 	 * When the sequence number is increasing beyond this value, the
 	 * sequence number space is close to rolling over, a new connection
 	 * should be instantiated and bound to the same port-ids, so that new
@@ -1112,12 +1113,14 @@ class ConnectionPolicies {
 
 public:
 	ConnectionPolicies();
-        const DTCPConfig& getDtcpConfiguration() const;
-        void setDtcpConfiguration(const DTCPConfig& dtcpConfiguration);
-        bool isDtcPpresent() const;
-        void setDtcPpresent(bool dtcPpresent);
-        int getSeqnumrolloverthreshold() const;
-        void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
+	const DTCPConfig& getDtcpConfiguration() const;
+	void setDtcpConfiguration(const DTCPConfig& dtcpConfiguration);
+	bool isDtcPpresent() const;
+	void setDtcPpresent(bool dtcPpresent);
+	const EFCPPolicyConfig& getInitialseqnumpolicy() const;
+	void setInitialseqnumpolicy(const EFCPPolicyConfig& initialseqnumpolicy);
+	int getSeqnumrolloverthreshold() const;
+	void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
 };
 
 /**
@@ -1289,10 +1292,12 @@ public:
          * EFCP connection to the kernel components of the IPC Process
          *
          * @param connection
+         * @param connectionPolicies the policies for this EFCP connection
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnection(const Connection& connection)
+        unsigned int createConnection(const Connection& connection,
+                        const ConnectionPolicies& connectionPolicies)
         throw (CreateConnectionException);
 
         /**
@@ -1312,10 +1317,12 @@ public:
          * (receiving side of the Flow allocation procedure)
          *
          * @param connection
+         * @param connectionPolicies the policies for this EFCP connection
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnectionArrived(const Connection& connection)
+        unsigned int createConnectionArrived(const Connection& connection,
+                        const ConnectionPolicies& connectionPolicies)
         throw (CreateConnectionException);
 
         /**

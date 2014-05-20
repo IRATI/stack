@@ -728,30 +728,41 @@ Singleton<ExtendedIPCManager> extendedIPCManager;
 PolicyParameter::PolicyParameter()
 { }
 
-const std::string& PolicyParameter::getName() const
-{ return name; }
-
-void PolicyParameter::setName(const std::string& name)
-{ this->name = name; }
-
-const std::string& PolicyParameter::getValue() const
-{ return value; }
-
-void PolicyParameter::setValue(const std::string& value)
-{ this->value = value; }
-
-/* CLASS EFCP POLICY CONFIGURATION */
-EFCPPolicyConfig::EFCPPolicyConfig()
-{
-        name = "default";
-        version = 0;
+PolicyParameter::PolicyParameter(const std::string& name,
+                const std::string& value){
+        this->name = name;
+        this->value = value;
 }
 
-const std::string& EFCPPolicyConfig::getName() const
-{ return name; }
+bool PolicyParameter::operator==(const PolicyParameter &other) const {
+        return other.getName().compare(name) == 0;
+}
 
-void EFCPPolicyConfig::setName(const std::string& name) {
+bool PolicyParameter::operator!=(const PolicyParameter &other) const {
+        return !(*this == other);
+}
+
+const std::string& PolicyParameter::getName() const {
+        return name;
+}
+
+const std::string& PolicyParameter::getValue() const {
+        return value;
+}
+
+/* CLASS EFCP POLICY CONFIGURATION */
+EFCPPolicyConfig::EFCPPolicyConfig() {
+        name = RINA_DEFAULT_POLICY_NAME;
+        version = RINA_DEFAULT_POLICY_VERSION;
+}
+
+EFCPPolicyConfig::EFCPPolicyConfig(const std::string& name, short version) {
         this->name = name;
+        this->version = version;
+}
+
+const std::string& EFCPPolicyConfig::getName() const {
+        return name;
 }
 
 const std::list<PolicyParameter>&
@@ -770,10 +781,6 @@ void EFCPPolicyConfig::addParameter(const PolicyParameter& paremeter) {
 
 short EFCPPolicyConfig::getVersion() const {
         return version;
-}
-
-void EFCPPolicyConfig::setVersion(short version) {
-        this->version = version;
 }
 
 /* CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG */
@@ -1125,15 +1132,6 @@ void DTCPConfig::setInitialsenderinactivitytime(
         this->initialsenderinactivitytime = initialsenderinactivitytime;
 }
 
-const EFCPPolicyConfig& DTCPConfig::getInitialseqnumpolicy() const {
-        return initialseqnumpolicy;
-}
-
-void DTCPConfig::setInitialseqnumpolicy(
-                const EFCPPolicyConfig& initialseqnumpolicy) {
-        this->initialseqnumpolicy = initialseqnumpolicy;
-}
-
 const EFCPPolicyConfig& DTCPConfig::getLostcontrolpdupolicy() const {
         return lostcontrolpdupolicy;
 }
@@ -1199,6 +1197,15 @@ bool ConnectionPolicies::isDtcPpresent() const {
 
 void ConnectionPolicies::setDtcPpresent(bool dtcPpresent) {
         DTCPpresent = dtcPpresent;
+}
+
+const EFCPPolicyConfig& ConnectionPolicies::getInitialseqnumpolicy() const {
+        return initialseqnumpolicy;
+}
+
+void ConnectionPolicies::setInitialseqnumpolicy(
+                const EFCPPolicyConfig& initialseqnumpolicy) {
+        this->initialseqnumpolicy = initialseqnumpolicy;
 }
 
 int ConnectionPolicies::getSeqnumrolloverthreshold() const {
@@ -1441,19 +1448,22 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(const Connection& connection)
+unsigned int KernelIPCProcess::createConnection(const Connection& connection,
+                const ConnectionPolicies& connectionPolicies)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
 #if STUB_API
         // Do nothing
         (void) connection;
+        (void) connectionPolicies;
 #else
         IpcpConnectionCreateRequestMessage message;
         message.setPortId(connection.getPortId());
         message.setSourceAddress(connection.getSourceAddress());
         message.setDestAddress(connection.getDestAddress());
         message.setQosId(connection.getQosId());
+        message.setConnPolicies(connectionPolicies);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -1503,7 +1513,8 @@ throw (UpdateConnectionException) {
 }
 
 unsigned int KernelIPCProcess::
-createConnectionArrived(const Connection& connection)
+createConnectionArrived(const Connection& connection,
+                const ConnectionPolicies& connectionPolicies)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -1511,6 +1522,7 @@ throw (CreateConnectionException) {
         // Do nothing
 
         (void) connection;
+        (void) connectionPolicies;
 #else
         IpcpConnectionCreateArrivedMessage message;
         message.setPortId(connection.getPortId());
@@ -1519,6 +1531,7 @@ throw (CreateConnectionException) {
         message.setQosId(connection.getQosId());
         message.setDestCepId(connection.getDestCepId());
         message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.setConnPolicies(connectionPolicies);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
