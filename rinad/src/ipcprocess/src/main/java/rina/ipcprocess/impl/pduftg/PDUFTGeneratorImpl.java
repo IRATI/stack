@@ -39,7 +39,12 @@ public class PDUFTGeneratorImpl implements PDUFTableGenerator {
 	
 	public void setDIFConfiguration(DIFConfiguration difConfiguration) {
 		PDUFTableGeneratorConfiguration pduftgConfig = difConfiguration.getPDUFTableGeneratorConfiguration();
-		//TODO make this configurable
+		
+		if (!pduftgConfig.getPduFtGeneratorPolicy().getName().equals("LinkState")) {
+			log.warn("Unsupported PDU Forwarding Table Generation policy: "+pduftgConfig.getPduFtGeneratorPolicy().getName() 
+					+ "; using 'LinkState' instead." );
+		}
+		
 		pduFTGeneratorPolicy = new LinkStatePDUFTGeneratorPolicyImpl();
 		pduFTGeneratorPolicy.setIPCProcess(ipcProcess);
 		pduFTGeneratorPolicy.setDIFConfiguration(pduftgConfig);

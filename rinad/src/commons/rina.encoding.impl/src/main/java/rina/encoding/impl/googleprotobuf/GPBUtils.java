@@ -13,15 +13,20 @@ import org.apache.commons.logging.LogFactory;
 import rina.utils.Property;
 import rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage;
 import rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage.applicationProcessNamingInfo_t;
+import rina.encoding.impl.googleprotobuf.common.CommonMessages;
+import rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t;
+import rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage;
+import rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t;
 import rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification;
-import rina.encoding.impl.googleprotobuf.property.PropertyMessage;
-import rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t;
 import rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t;
 
 import com.google.protobuf.ByteString;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.FlowSpecification;
+import eu.irati.librina.PolicyConfig;
+import eu.irati.librina.PolicyParameter;
+import eu.irati.librina.PolicyParameterList;
 
 /**
  * Utility classes to work with Google Protocol Buffers
@@ -63,9 +68,55 @@ public class GPBUtils {
 		}
 	}
 	
+	public static policyDescriptor_t getPolicyDescriptorType(PolicyConfig policyConfig) {
+		policyDescriptor_t result = PolicyDescriptorMessage.policyDescriptor_t.getDefaultInstance();
+		
+		if (policyConfig == null) {
+			return result;
+		}
+		
+		List<property_t> parameters = getAllPolicyParameters(policyConfig.getParameters());
+				
+		result = PolicyDescriptorMessage.policyDescriptor_t.newBuilder().
+				setPolicyImplName(policyConfig.getName()).
+				setVersion(policyConfig.getVersion()).
+				addAllPolicyParameters(parameters).
+				build();
+		
+		return result;
+	}
+	
+	private static List<property_t> getAllPolicyParameters(PolicyParameterList list) {
+		List<property_t> result = new ArrayList<property_t>();
+		if (list == null || list.isEmpty()) {
+			return result;
+		}
+		
+		Iterator<PolicyParameter> iterator = list.iterator();
+		while (iterator.hasNext()) {
+			result.add(getPropertyType(iterator.next()));
+		}
+		
+		return result;
+	}
+	
+	private static property_t getPropertyType(PolicyParameter parameter) {
+		property_t result = null;
+		if (parameter == null){
+			return CommonMessages.property_t.getDefaultInstance();
+		}
+		
+		result = CommonMessages.property_t.newBuilder().
+				setName(parameter.getName()).
+				setValue(parameter.getValue()).
+				build();
+		
+		return result;
+	}
+	
 	public static property_t getPropertyT(Property property){
 		if (property != null){
-			return PropertyMessage.property_t.newBuilder().
+			return CommonMessages.property_t.newBuilder().
 					setName(property.getName()).
 					setValue(property.getValue()).
 				    build();
@@ -75,7 +126,7 @@ public class GPBUtils {
 	}
 	
 	private static property_t getPropertyT(Entry<String, String> entry){
-		return PropertyMessage.property_t.newBuilder().
+		return CommonMessages.property_t.newBuilder().
 			setName(entry.getKey()).
 			setValue(entry.getValue()).
 			build();
@@ -105,6 +156,37 @@ public class GPBUtils {
 		property.setValue(property_t.getValue());
 		
 		return property;
+	}
+	
+	public static PolicyConfig getPolicyConfig(policyDescriptor_t policyConfig) {
+		PolicyConfig result = null;
+		
+		if (policyConfig == null || policyConfig.getPolicyImplName() == null) {
+			return result;
+		}
+		
+		if (policyConfig.getPolicyImplName() != null && 
+				policyConfig.getPolicyImplName().equals("default")) {
+			return result;
+		}
+		
+		result = new PolicyConfig(policyConfig.getPolicyImplName(), (short)policyConfig.getVersion());
+		if (policyConfig.getPolicyParametersCount() > 0) {
+			List<property_t> parameters = policyConfig.getPolicyParametersList();
+			for(int i=0; i<parameters.size(); i++){
+				result.addParameter(getPolicyParameter(parameters.get(i)));
+			}
+		}
+		
+		return result;
+	}
+	
+	private static PolicyParameter getPolicyParameter(property_t parameter) {
+		if (parameter == null){
+			return new PolicyParameter();
+		}
+		
+		return new PolicyParameter(parameter.getName(), parameter.getValue());
 	}
 	
 	public static Map<String, String> getProperties(List<property_t> gpbProperties){

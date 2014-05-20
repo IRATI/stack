@@ -16,7 +16,6 @@ import rina.cdap.api.message.ObjectValue;
 import rina.encoding.api.Encoder;
 import rina.events.api.Event;
 import rina.events.api.EventListener;
-import rina.configuration.RINAConfiguration;
 import rina.ipcprocess.api.IPCProcess;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
@@ -167,7 +166,18 @@ public class LinkStatePDUFTGeneratorPolicyImpl implements PDUFTGeneratorPolicy, 
 	
 	public void setDIFConfiguration(PDUFTableGeneratorConfiguration pduftgConfig)
 	{
-		//TODO fix it so that all configurable values are read from pduftgConfig
+		if (pduftgConfig == null) {
+			log.warn("PDU Forwarding Table Configuration is null, using a default one");
+			pduftgConfig = new PDUFTableGeneratorConfiguration();
+			log.warn("Defulat config: " +
+					pduftgConfig.getLinkStateRoutingConfiguration().toString());
+		}
+		
+		String routingAlgorithmName = pduftgConfig.getLinkStateRoutingConfiguration().getRoutingAlgorithm();
+		if (!routingAlgorithmName.equals("Dijkstra")) {
+			log.warn("Routing algorithm: "+routingAlgorithmName+" currently not supported, using Dijkstra instead");
+		}
+		
 		RoutingAlgorithmInt routingAlgorithm = new DijkstraAlgorithm();
 		VertexInt sourceVertex = new Vertex(ipcProcess.getAddress());
 		log.info("Algorithm " + routingAlgorithm.getClass() + " setted");
@@ -175,33 +185,25 @@ public class LinkStatePDUFTGeneratorPolicyImpl implements PDUFTGeneratorPolicy, 
 		this.sourceVertex = sourceVertex;
 		if(!test)
 		{
-			RINAConfiguration rinaConf = RINAConfiguration.getInstance();
-			if (rinaConf.getDIFConfiguration(this.ipcProcess.getDIFInformation().getDifName().getProcessName()).
-					getPdufTableGeneratorConfiguration() != null)
-			{
-				pduftGeneratorConfiguration = rinaConf.getDIFConfiguration(this.ipcProcess.getDIFInformation().getDifName().getProcessName()).
-					getPdufTableGeneratorConfiguration();
-			}
-			else
-			{
-				pduftGeneratorConfiguration = new PDUFTableGeneratorConfiguration();
-			}
-			this.maximumAge = pduftGeneratorConfiguration.getObjectMaximumAge();
+			this.maximumAge = pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getObjectMaximumAge();
 
 			/*	Time to compute PDUFT	*/	
 			pduFTComputationTimer = new Timer();
-			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), pduftGeneratorConfiguration.getWaitUntilPDUFTComputation(), 
-					pduftGeneratorConfiguration.getWaitUntilPDUFTComputation());
+			pduFTComputationTimer.scheduleAtFixedRate(new ComputePDUFT(this), 
+					pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilPDUFTComputation(), 
+					pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilPDUFTComputation());
 			
 			/*	Time to increment age	*/
 			ageIncrementationTimer = new Timer();
-			ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), pduftGeneratorConfiguration.getWaitUntilAgeIncrement(), 
-					pduftGeneratorConfiguration.getWaitUntilAgeIncrement());
+			ageIncrementationTimer.scheduleAtFixedRate(new UpdateAge(this), 
+					pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilAgeIncrement(), 
+					pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilAgeIncrement());
 	
 			/* Timer to propagate modified FSO */
 			fsodbPropagationTimer = new Timer();
-			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), pduftGeneratorConfiguration.getWaitUntilFSODBPropagation(), 
-					pduftGeneratorConfiguration.getWaitUntilFSODBPropagation());
+			fsodbPropagationTimer.scheduleAtFixedRate(new PropagateFSODB(this), 
+					pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilFSODBPropagation(), 
+					pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilFSODBPropagation());
 		}
 	}
 	
@@ -311,8 +313,9 @@ public class LinkStatePDUFTGeneratorPolicyImpl implements PDUFTGeneratorPolicy, 
 				log.debug("Launch timer to check write back");
 				EnrollmentTimer timer = new EnrollmentTimer(portId);
 				sendCDAPTimers.add(timer);
-				timer.getTimer().schedule(new SendReadCDAP(portId, cdapSessionManager, ribDaemon, pduftGeneratorConfiguration.getWaitUntilError(), 
-						pduftCDAPmessageHandler), pduftGeneratorConfiguration.getWaitUntilReadCDAP());
+				timer.getTimer().schedule(new SendReadCDAP(portId, cdapSessionManager, ribDaemon, 
+						pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilError(), pduftCDAPmessageHandler), 
+						pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilReadCDAP());
 			}
 		}
 	}

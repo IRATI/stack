@@ -1238,10 +1238,67 @@ const std::string DataTransferConstants::toString(){
         return ss.str();
 }
 
+/* CLASS POLICY PAREMETER */
+PolicyParameter::PolicyParameter(){
+}
 
+PolicyParameter::PolicyParameter(const std::string& name,
+                const std::string& value){
+        this->name = name;
+        this->value = value;
+}
 
-/* CLASS PDUFTableConfiguration */
-PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration()
+bool PolicyParameter::operator==(const PolicyParameter &other) const {
+        return other.getName().compare(name) == 0;
+}
+
+bool PolicyParameter::operator!=(const PolicyParameter &other) const {
+        return !(*this == other);
+}
+
+const std::string& PolicyParameter::getName() const {
+        return name;
+}
+
+const std::string& PolicyParameter::getValue() const {
+        return value;
+}
+
+/* CLASS POLICY CONFIGURATION */
+PolicyConfig::PolicyConfig() {
+        name = RINA_DEFAULT_POLICY_NAME;
+        version = RINA_DEFAULT_POLICY_VERSION;
+}
+
+PolicyConfig::PolicyConfig(const std::string& name, short version) {
+        this->name = name;
+        this->version = version;
+}
+
+const std::string& PolicyConfig::getName() const {
+        return name;
+}
+
+const std::list<PolicyParameter>&
+PolicyConfig::getParameters() const {
+        return parameters;
+}
+
+void PolicyConfig::setParameters(
+                const std::list<PolicyParameter>& parameters) {
+        this->parameters = parameters;
+}
+
+void PolicyConfig::addParameter(const PolicyParameter& paremeter) {
+        parameters.push_back(paremeter);
+}
+
+short PolicyConfig::getVersion() const {
+        return version;
+}
+
+/* CLASS LinkStateRouting Configuraiton */
+LinkStateRoutingConfiguration::LinkStateRoutingConfiguration()
 {
 	waitUntilReadCDAP = WAIT_UNTIL_READ_CDAP_DEFAULT;
 	waitUntilError = WAIT_UNTIL_ERROR_DEFAULT;
@@ -1249,10 +1306,13 @@ PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration()
 	waitUntilFSODBPropagation = WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT;
 	waitUntilAgeIncrement = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
 	objectMaximumAge = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
+	routingAlgorithm = DEFAULT_ROUTING_ALGORITHM;
 }
 
-const std::string PDUFTableGeneratorConfiguration::toString()
-{
+const std::string LinkStateRoutingConfiguration::DEFAULT_ROUTING_ALGORITHM =
+                "Dijkstra";
+
+const std::string LinkStateRoutingConfiguration::toString() {
     std::stringstream ss;
 
     ss<<"Timer until send a Read CDAP message (ms): " << waitUntilReadCDAP <<std::endl;
@@ -1266,52 +1326,93 @@ const std::string PDUFTableGeneratorConfiguration::toString()
 }
 
 
-int PDUFTableGeneratorConfiguration::getWaitUntilAgeIncrement() const {
+int LinkStateRoutingConfiguration::getWaitUntilAgeIncrement() const {
 	return waitUntilAgeIncrement;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilAgeIncrement(int waitUntilAgeIncrement) {
+void LinkStateRoutingConfiguration::setWaitUntilAgeIncrement(int waitUntilAgeIncrement) {
 	this->waitUntilAgeIncrement = waitUntilAgeIncrement;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilError() const {
+int LinkStateRoutingConfiguration::getWaitUntilError() const {
 	return waitUntilError;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilError(int waitUntilError) {
+void LinkStateRoutingConfiguration::setWaitUntilError(int waitUntilError) {
 	this->waitUntilError = waitUntilError;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilFSODBPropagation() const {
+int LinkStateRoutingConfiguration::getWaitUntilFSODBPropagation() const {
 	return waitUntilFSODBPropagation;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilFSODBPropagation(int waitUntilFsodbPropagation) {
+void LinkStateRoutingConfiguration::setWaitUntilFSODBPropagation(int waitUntilFsodbPropagation) {
 	waitUntilFSODBPropagation = waitUntilFsodbPropagation;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilPDUFTComputation() const {
+int LinkStateRoutingConfiguration::getWaitUntilPDUFTComputation() const {
 	return waitUntilPDUFTComputation;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilPDUFTComputation(int waitUntilPduftComputation) {
+void LinkStateRoutingConfiguration::setWaitUntilPDUFTComputation(int waitUntilPduftComputation) {
 	waitUntilPDUFTComputation = waitUntilPduftComputation;
 }
 
-int PDUFTableGeneratorConfiguration::getWaitUntilReadCDAP() const {
+int LinkStateRoutingConfiguration::getWaitUntilReadCDAP() const {
 	return waitUntilReadCDAP;
 }
 
-void PDUFTableGeneratorConfiguration::setWaitUntilReadCDAP(int waitUntilReadCdap) {
+void LinkStateRoutingConfiguration::setWaitUntilReadCDAP(int waitUntilReadCdap) {
 	waitUntilReadCDAP = waitUntilReadCdap;
 }
 
-int PDUFTableGeneratorConfiguration::getObjectMaximumAge() const {
+int LinkStateRoutingConfiguration::getObjectMaximumAge() const {
 	return objectMaximumAge;
 }
 
-void PDUFTableGeneratorConfiguration::setObjectMaximumAge(const int objectMaximumAge) {
+void LinkStateRoutingConfiguration::setObjectMaximumAge(const int objectMaximumAge) {
 	this->objectMaximumAge = objectMaximumAge;
+}
+
+const std::string& LinkStateRoutingConfiguration::getRoutingAlgorithm() const {
+        return routingAlgorithm;
+}
+
+void LinkStateRoutingConfiguration::setRoutingAlgorithm(
+                const std::string& routingAlgorithm) {
+        this->routingAlgorithm = routingAlgorithm;
+}
+
+/* CLAS PDUFTableGeneratorConfiguration */
+PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(){
+        setPduFtGeneratorPolicy(PolicyConfig("LinkState",
+                        RINA_DEFAULT_POLICY_VERSION));
+}
+
+PDUFTableGeneratorConfiguration::PDUFTableGeneratorConfiguration(
+                const PolicyConfig& pduFTGeneratorPolicy) {
+        setPduFtGeneratorPolicy(pduFTGeneratorPolicy);
+}
+
+const LinkStateRoutingConfiguration&
+PDUFTableGeneratorConfiguration::getLinkStateRoutingConfiguration() const {
+        return linkStateRoutingConfiguration;
+}
+
+void PDUFTableGeneratorConfiguration::setLinkStateRoutingConfiguration(
+                const LinkStateRoutingConfiguration& linkStateRoutingConfiguration){
+        this->linkStateRoutingConfiguration =
+                        linkStateRoutingConfiguration;
+}
+
+const PolicyConfig&
+PDUFTableGeneratorConfiguration::getPduFtGeneratorPolicy() const {
+        return pduFTGeneratorPolicy;
+}
+
+void PDUFTableGeneratorConfiguration::setPduFtGeneratorPolicy(
+                const PolicyConfig& pduFtGeneratorPolicy){
+        this->pduFTGeneratorPolicy = pduFtGeneratorPolicy;
 }
 
 /* CLASS DIF INFORMATION */

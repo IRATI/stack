@@ -1,8 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.policy";
-import "protofiles/PolicyDescriptorMessage.proto";
-
-message efcpPolicy_t{												//Describes an EFCP policy
-	optional bytes qosId = 1;											//The QoS id that this policy is related to
-	optional rina.messages.policyDescriptor_t policyDescriptor = 2;		//Describes the policy
-}

@@ -867,24 +867,69 @@ public:
 };
 
 /**
- * Link state algorithm configurations
+ * A parameter of the policy
  */
-class PDUFTableGeneratorConfiguration {
-	private:
-		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
-		static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
-		static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
-		static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
-		static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
-		static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-		int objectMaximumAge;
-		int waitUntilReadCDAP;
-		int waitUntilError;
-		int waitUntilPDUFTComputation;
-		int waitUntilFSODBPropagation;
-		int waitUntilAgeIncrement;
-	public:
-		PDUFTableGeneratorConfiguration();
+class PolicyParameter {
+        /** the name of the parameter */
+        std::string name;
+
+        /** the value of the parameter */
+        std::string value;
+
+public:
+        PolicyParameter();
+        PolicyParameter(const std::string& name, const std::string& value);
+        bool operator==(const PolicyParameter &other) const;
+        bool operator!=(const PolicyParameter &other) const;
+        const std::string& getName() const;
+        const std::string& getValue() const;
+};
+
+/**
+ * Configuration of a policy (name/version/parameters)
+ */
+class PolicyConfig {
+
+        /** the name of policy */
+        std::string name;
+
+        /** the version of the policy */
+        short version;
+
+        /** optional name/value parameters to configure the policy */
+        std::list<PolicyParameter> parameters;
+
+public:
+        PolicyConfig();
+        PolicyConfig(const std::string& name, short version);
+        const std::string& getName() const;
+        const std::list<PolicyParameter>& getParameters() const;
+        void setParameters(const std::list<PolicyParameter>& parameters);
+        void addParameter(const PolicyParameter& paremeter);
+        short getVersion() const;
+};
+
+/**
+ * Link State routing configuration
+ */
+class LinkStateRoutingConfiguration {
+private:
+        static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+        static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
+        static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
+        static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
+        static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
+        static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+        static const std::string DEFAULT_ROUTING_ALGORITHM;
+        int objectMaximumAge;
+        int waitUntilReadCDAP;
+        int waitUntilError;
+        int waitUntilPDUFTComputation;
+        int waitUntilFSODBPropagation;
+        int waitUntilAgeIncrement;
+        std::string routingAlgorithm;
+public:
+        LinkStateRoutingConfiguration();
         const std::string toString();
         int getWaitUntilAgeIncrement() const;
         void setWaitUntilAgeIncrement(const int waitUntilAgeIncrement);
@@ -898,6 +943,31 @@ class PDUFTableGeneratorConfiguration {
         void setWaitUntilReadCDAP(const int waitUntilReadCdap);
         int getObjectMaximumAge() const;
         void setObjectMaximumAge(const int objectMaximumAge);
+        const std::string& getRoutingAlgorithm() const;
+        void setRoutingAlgorithm(const std::string& routingAlgorithm);
+};
+
+/**
+ * PDU F Table Generator Configuration
+ */
+class PDUFTableGeneratorConfiguration {
+private:
+        /** Name, version and configuration of the PDU FT Generator policy */
+        PolicyConfig pduFTGeneratorPolicy;
+
+        /**
+         * Link state routing configuration parameters - only relevant if a
+         * link-state routing PDU FT Generation policy is used
+         */
+        LinkStateRoutingConfiguration linkStateRoutingConfiguration;
+public:
+        PDUFTableGeneratorConfiguration();
+        PDUFTableGeneratorConfiguration(const PolicyConfig& pduFTGeneratorPolicy);
+        const PolicyConfig& getPduFtGeneratorPolicy() const;
+        void setPduFtGeneratorPolicy(const PolicyConfig& pduFtGeneratorPolicy);
+        const LinkStateRoutingConfiguration& getLinkStateRoutingConfiguration() const;
+        void setLinkStateRoutingConfiguration(
+                        const LinkStateRoutingConfiguration& linkStateRoutingConfiguration);
 };
 
 /**

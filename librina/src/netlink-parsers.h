@@ -815,11 +815,11 @@ int putListOfPolicyParameters(nl_msg* netlinkMessage,
 PolicyParameter *
 parsePolicyParameterObject(nlattr *nested);
 
-int parseListOfEFCPPolicyConfigPolicyParameters(nlattr *nested,
-                EFCPPolicyConfig * efcpPolicyConfig);
+int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
+                PolicyConfig * efcpPolicyConfig);
 
-/* EFCPPolicyConfig class */
-enum EFCPPolicyConfigAttributes {
+/* PolicyConfig class */
+enum PolicyConfigAttributes {
         EPC_ATTR_NAME = 1,
         EPC_ATTR_VERSION,
         EPC_ATTR_PARAMETERS,
@@ -828,11 +828,11 @@ enum EFCPPolicyConfigAttributes {
 
 #define EPC_ATTR_MAX (__EPC_ATTR_MAX -1)
 
-int putEFCPPolicyConfigObject(nl_msg * netlinkMessage,
-                const EFCPPolicyConfig& object);
+int putPolicyConfigObject(nl_msg * netlinkMessage,
+                const PolicyConfig& object);
 
-EFCPPolicyConfig *
-parseEFCPPolicyConfigObject(nlattr *nested);
+PolicyConfig *
+parsePolicyConfigObject(nlattr *nested);
 
 /* DTCPWindowBasedFlowControlConfig class */
 enum DTCPWindowBasedFlowControlConfigAttributes {

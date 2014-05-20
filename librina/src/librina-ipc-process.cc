@@ -636,65 +636,6 @@ void ExtendedIPCManager::deallocatePortId(int portId)
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
-/* CLASS POLICY PAREMETER */
-PolicyParameter::PolicyParameter(){
-}
-
-PolicyParameter::PolicyParameter(const std::string& name,
-                const std::string& value){
-        this->name = name;
-        this->value = value;
-}
-
-bool PolicyParameter::operator==(const PolicyParameter &other) const {
-        return other.getName().compare(name) == 0;
-}
-
-bool PolicyParameter::operator!=(const PolicyParameter &other) const {
-        return !(*this == other);
-}
-
-const std::string& PolicyParameter::getName() const {
-        return name;
-}
-
-const std::string& PolicyParameter::getValue() const {
-        return value;
-}
-
-/* CLASS EFCP POLICY CONFIGURATION */
-EFCPPolicyConfig::EFCPPolicyConfig() {
-        name = RINA_DEFAULT_POLICY_NAME;
-        version = RINA_DEFAULT_POLICY_VERSION;
-}
-
-EFCPPolicyConfig::EFCPPolicyConfig(const std::string& name, short version) {
-        this->name = name;
-        this->version = version;
-}
-
-const std::string& EFCPPolicyConfig::getName() const {
-        return name;
-}
-
-const std::list<PolicyParameter>&
-EFCPPolicyConfig::getParameters() const {
-        return parameters;
-}
-
-void EFCPPolicyConfig::setParameters(
-                const std::list<PolicyParameter>& parameters) {
-        this->parameters = parameters;
-}
-
-void EFCPPolicyConfig::addParameter(const PolicyParameter& paremeter) {
-        parameters.push_back(paremeter);
-}
-
-short EFCPPolicyConfig::getVersion() const {
-        return version;
-}
-
 /* CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG */
 DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig() {
         initialcredit = 0;
@@ -718,23 +659,23 @@ void DTCPWindowBasedFlowControlConfig::setMaxclosedwindowqueuelength(
         this->maxclosedwindowqueuelength = maxclosedwindowqueuelength;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPWindowBasedFlowControlConfig::getRcvrflowcontrolpolicy() const {
         return rcvrflowcontrolpolicy;
 }
 
 void DTCPWindowBasedFlowControlConfig::setRcvrflowcontrolpolicy(
-                const EFCPPolicyConfig& rcvrflowcontrolpolicy) {
+                const PolicyConfig& rcvrflowcontrolpolicy) {
         this->rcvrflowcontrolpolicy = rcvrflowcontrolpolicy;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPWindowBasedFlowControlConfig::getReceivingflowcontrolpolicy() const {
         return receivingflowcontrolpolicy;
 }
 
 void DTCPWindowBasedFlowControlConfig::setReceivingflowcontrolpolicy(
-                const EFCPPolicyConfig& receivingflowcontrolpolicy) {
+                const PolicyConfig& receivingflowcontrolpolicy) {
         this->receivingflowcontrolpolicy = receivingflowcontrolpolicy;
 }
 
@@ -744,33 +685,33 @@ DTCPRateBasedFlowControlConfig::DTCPRateBasedFlowControlConfig() {
         timeperiod = 0;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPRateBasedFlowControlConfig::getNooverridedefaultpeakpolicy() const {
         return nooverridedefaultpeakpolicy;
 }
 
 void DTCPRateBasedFlowControlConfig::setNooverridedefaultpeakpolicy(
-                const EFCPPolicyConfig& nooverridedefaultpeakpolicy) {
+                const PolicyConfig& nooverridedefaultpeakpolicy) {
         this->nooverridedefaultpeakpolicy = nooverridedefaultpeakpolicy;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPRateBasedFlowControlConfig::getNorateslowdownpolicy() const {
         return norateslowdownpolicy;
 }
 
 void DTCPRateBasedFlowControlConfig::setNorateslowdownpolicy(
-                const EFCPPolicyConfig& norateslowdownpolicy) {
+                const PolicyConfig& norateslowdownpolicy) {
         this->norateslowdownpolicy = norateslowdownpolicy;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPRateBasedFlowControlConfig::getRatereductionpolicy() const {
         return ratereductionpolicy;
 }
 
 void DTCPRateBasedFlowControlConfig::setRatereductionpolicy(
-                const EFCPPolicyConfig& ratereductionpolicy) {
+                const PolicyConfig& ratereductionpolicy) {
         this->ratereductionpolicy = ratereductionpolicy;
 }
 
@@ -802,22 +743,22 @@ DTCPFlowControlConfig::DTCPFlowControlConfig() {
         sentbytesthreshold = 0;
 }
 
-const EFCPPolicyConfig& DTCPFlowControlConfig::getClosedwindowpolicy() const {
+const PolicyConfig& DTCPFlowControlConfig::getClosedwindowpolicy() const {
         return closedwindowpolicy;
 }
 
 void DTCPFlowControlConfig::setClosedwindowpolicy(
-                const EFCPPolicyConfig& closedwindowpolicy) {
+                const PolicyConfig& closedwindowpolicy) {
         this->closedwindowpolicy = closedwindowpolicy;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPFlowControlConfig::getFlowcontroloverrunpolicy() const {
         return flowcontroloverrunpolicy;
 }
 
 void DTCPFlowControlConfig::setFlowcontroloverrunpolicy(
-                const EFCPPolicyConfig& flowcontroloverrunpolicy) {
+                const PolicyConfig& flowcontroloverrunpolicy) {
         this->flowcontroloverrunpolicy = flowcontroloverrunpolicy;
 }
 
@@ -864,13 +805,13 @@ void DTCPFlowControlConfig::setRcvbytesthreshold(int rcvbytesthreshold) {
         this->rcvbytesthreshold = rcvbytesthreshold;
 }
 
-const EFCPPolicyConfig&
+const PolicyConfig&
 DTCPFlowControlConfig::getReconcileflowcontrolpolicy() const {
         return reconcileflowcontrolpolicy;
 }
 
 void DTCPFlowControlConfig::setReconcileflowcontrolpolicy(
-                const EFCPPolicyConfig& reconcileflowcontrolpolicy) {
+                const PolicyConfig& reconcileflowcontrolpolicy) {
         this->reconcileflowcontrolpolicy = reconcileflowcontrolpolicy;
 }
 
@@ -939,65 +880,65 @@ void DTCPRtxControlConfig::setInitialATimer(int initialATimer) {
         this->initialATimer = initialATimer;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getRcvrackpolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getRcvrackpolicy() const {
         return rcvrackpolicy;
 }
 
-void DTCPRtxControlConfig::setRcvrackpolicy(const EFCPPolicyConfig& rcvrackpolicy) {
+void DTCPRtxControlConfig::setRcvrackpolicy(const PolicyConfig& rcvrackpolicy) {
         this->rcvrackpolicy = rcvrackpolicy;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getRcvrcontrolackpolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getRcvrcontrolackpolicy() const {
         return rcvrcontrolackpolicy;
 }
 
 void DTCPRtxControlConfig::setRcvrcontrolackpolicy(
-                const EFCPPolicyConfig& rcvrcontrolackpolicy) {
+                const PolicyConfig& rcvrcontrolackpolicy) {
         this->rcvrcontrolackpolicy = rcvrcontrolackpolicy;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getRecvingacklistpolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getRecvingacklistpolicy() const {
         return recvingacklistpolicy;
 }
 
 void DTCPRtxControlConfig::setRecvingacklistpolicy(
-                const EFCPPolicyConfig& recvingacklistpolicy) {
+                const PolicyConfig& recvingacklistpolicy) {
         this->recvingacklistpolicy = recvingacklistpolicy;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getRttestimatorpolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getRttestimatorpolicy() const {
         return rttestimatorpolicy;
 }
 
 void DTCPRtxControlConfig::setRttestimatorpolicy(
-                const EFCPPolicyConfig& rttestimatorpolicy) {
+                const PolicyConfig& rttestimatorpolicy) {
         this->rttestimatorpolicy = rttestimatorpolicy;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getRtxtimerexpirypolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getRtxtimerexpirypolicy() const {
         return rtxtimerexpirypolicy;
 }
 
 void DTCPRtxControlConfig::setRtxtimerexpirypolicy(
-                const EFCPPolicyConfig& rtxtimerexpirypolicy) {
+                const PolicyConfig& rtxtimerexpirypolicy) {
         this->rtxtimerexpirypolicy = rtxtimerexpirypolicy;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getSenderackpolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getSenderackpolicy() const {
         return senderackpolicy;
 }
 
 void DTCPRtxControlConfig::setSenderackpolicy(
-                const EFCPPolicyConfig& senderackpolicy) {
+                const PolicyConfig& senderackpolicy) {
         this->senderackpolicy = senderackpolicy;
 }
 
-const EFCPPolicyConfig& DTCPRtxControlConfig::getSendingackpolicy() const {
+const PolicyConfig& DTCPRtxControlConfig::getSendingackpolicy() const {
         return sendingackpolicy;
 }
 
 void DTCPRtxControlConfig::setSendingackpolicy(
-                const EFCPPolicyConfig& sendingackpolicy) {
+                const PolicyConfig& sendingackpolicy) {
         this->sendingackpolicy = sendingackpolicy;
 }
 
@@ -1044,21 +985,21 @@ void DTCPConfig::setInitialsenderinactivitytime(
         this->initialsenderinactivitytime = initialsenderinactivitytime;
 }
 
-const EFCPPolicyConfig& DTCPConfig::getLostcontrolpdupolicy() const {
+const PolicyConfig& DTCPConfig::getLostcontrolpdupolicy() const {
         return lostcontrolpdupolicy;
 }
 
 void DTCPConfig::setLostcontrolpdupolicy(
-                const EFCPPolicyConfig& lostcontrolpdupolicy) {
+                const PolicyConfig& lostcontrolpdupolicy) {
         this->lostcontrolpdupolicy = lostcontrolpdupolicy;
 }
 
-const EFCPPolicyConfig& DTCPConfig::getRcvrtimerinactivitypolicy() const {
+const PolicyConfig& DTCPConfig::getRcvrtimerinactivitypolicy() const {
         return rcvrtimerinactivitypolicy;
 }
 
 void DTCPConfig::setRcvrtimerinactivitypolicy(
-                const EFCPPolicyConfig& rcvrtimerinactivitypolicy) {
+                const PolicyConfig& rcvrtimerinactivitypolicy) {
         this->rcvrtimerinactivitypolicy = rcvrtimerinactivitypolicy;
 }
 
@@ -1079,12 +1020,12 @@ void DTCPConfig::setRtxcontrolconfig(
         this->rtxcontrolconfig = rtxcontrolconfig;
 }
 
-const EFCPPolicyConfig& DTCPConfig::getSendertimerinactiviypolicy() const {
+const PolicyConfig& DTCPConfig::getSendertimerinactiviypolicy() const {
         return sendertimerinactiviypolicy;
 }
 
 void DTCPConfig::setSendertimerinactiviypolicy(
-                const EFCPPolicyConfig& sendertimerinactiviypolicy) {
+                const PolicyConfig& sendertimerinactiviypolicy) {
         this->sendertimerinactiviypolicy = sendertimerinactiviypolicy;
 }
 
@@ -1111,12 +1052,12 @@ void ConnectionPolicies::setDtcPpresent(bool dtcPpresent) {
         DTCPpresent = dtcPpresent;
 }
 
-const EFCPPolicyConfig& ConnectionPolicies::getInitialseqnumpolicy() const {
+const PolicyConfig& ConnectionPolicies::getInitialseqnumpolicy() const {
         return initialseqnumpolicy;
 }
 
 void ConnectionPolicies::setInitialseqnumpolicy(
-                const EFCPPolicyConfig& initialseqnumpolicy) {
+                const PolicyConfig& initialseqnumpolicy) {
         this->initialseqnumpolicy = initialseqnumpolicy;
 }
 
