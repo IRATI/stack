@@ -437,8 +437,6 @@ MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list
 MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighbor);
 /* Define iterator for Unsigned int list */
 MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
-/* Define iterator for PolicyParameter list */
-MAKE_COLLECTION_ITERABLE(PolicyParameterListIterator, PolicyParameter, std::list, rina::PolicyParameter);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -456,5 +454,4 @@ MAKE_COLLECTION_ITERABLE(PolicyParameterListIterator, PolicyParameter, std::list
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(NeighborList) std::list<rina::Neighbor>;
 %template(UnsignedIntList) std::list<unsigned int>;
-%template(PolicyParameterList) std::list<rina::PolicyParameter>;
 
