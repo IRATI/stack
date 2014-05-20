@@ -24,8 +24,19 @@
 
 #include "pdu.h"
 
-/* TODO: Add serialize/deserialize methods here */
+struct pdu_ser;
+/* struct sdu_ser; */
 
+/* PDU serialization/deserialization */
+struct pdu_ser * serdes_pdu_ser(struct pdu * pdu);
+struct buffer *  serdes_pdu_buffer(struct pdu_ser * pdu);
+int              serdes_pdu_destroy(struct pdu_ser * pdu);
 
+struct pdu *     serdes_pdu_deser(struct pdu_ser * pdu);
+
+/* FIXME: Do we need these? */
+/* SDU serialization/deserialization */
+/* struct sdu *     serdes_sdu_deser(struct sdu_ser * pdu); */
+/* struct sdu_ser * serdes_sdu_ser(struct sdu * pdu); */
 
 #endif

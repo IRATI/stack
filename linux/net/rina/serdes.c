@@ -22,3 +22,35 @@
 #define RINA_PREFIX "serdes"
 
 #include "serdes.h"
+
+struct pdu_ser {
+        struct buffer * buf;
+};
+
+struct pdu_ser * serdes_pdu_ser(struct pdu * pdu)
+{
+        LOG_MISSING;
+
+        return NULL;
+}
+
+struct buffer *  serdes_pdu_buffer(struct pdu_ser * pdu)
+{
+        LOG_MISSING;
+        
+        return NULL;
+}
+
+int serdes_pdu_destroy(struct pdu_ser * pdu) 
+{
+        LOG_MISSING;
+
+        return -1;
+}
+
+struct pdu * serdes_pdu_deser(struct pdu_ser * pdu) 
+{
+        LOG_MISSING;
+        
+        return NULL;
+}

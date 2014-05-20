@@ -360,9 +360,10 @@ static int send_worker(void * o)
                            ntmp,
                            entry,
                            hlist) {
-                struct sdu * sdu;
-                struct pdu * pdu;
-                port_id_t    port_id;
+                struct sdu *     sdu;
+                struct pdu *     pdu;
+                struct pdu_ser * pdu_ser;
+                port_id_t        port_id;
 
                 ASSERT(entry);
 
@@ -379,12 +380,20 @@ static int send_worker(void * o)
 
                 ASSERT(pdu);
 
-                sdu = sdu_create_pdu_with(pdu);
-                if (!sdu) {
-                        LOG_ERR("Error creating SDU from PDU, "
-                                "dropping PDU!");
+                pdu_ser = serdes_pdu_ser(pdu);
+                if (!pdu_ser) {
+                        LOG_ERR("Error creating serialized PDU");
                         spin_lock(&tmp->egress.queues->lock);
                         pdu_destroy(pdu);
+                        continue;
+                }
+
+                sdu = sdu_create_buffer_with(serdes_buffer(pdu_ser));
+                if (!sdu) {
+                        LOG_ERR("Error creating SDU from serialized PDU, "
+                                "dropping PDU!");
+                        spin_lock(&tmp->egress.queues->lock);
+                        serdes_pdu_destroy(pdu_ser);
                         continue;
                 }
 
