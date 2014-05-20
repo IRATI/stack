@@ -59,6 +59,8 @@ struct dtp_policies {
                                      struct pdu * pdu);
         int (* closed_window)(struct dtp * instance,
                               struct pdu * pdu);
+        int (* flow_control_overrun)(struct dtp * instance,
+                                     struct pdu * pdu);
         int (* initial_sequence_number)(struct dtp * instance);
 };
 
@@ -94,10 +96,19 @@ static struct dtp_sv default_sv = {
         .rate_based                    = false,
 };
 
+static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
+{
+        /* FIXME: How to block further write API calls? */
+        LOG_MISSING;
+        LOG_DBG("Default Flow Control");
+        return 0;
+}
+
 static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 {
         struct cwq * cwq;
         struct dt *  dt;
+        uint_t       max_len;
 
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
@@ -112,8 +123,10 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                 return -1;
         }
 
-        /* FIXME: change this when merging with miquel */
-        if (cwq_size(cwq) < TEMP_MAX_CWQ_LEN-1) {
+        LOG_DBG("Closed Window Queue");
+        max_len = dtcp_max_closed_winq_length(
+                          dtp->sv->connection->policies_params->dtcp_cfg);
+        if (cwq_size(cwq) < max_len -1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push to cwq");
                         pdu_destroy(pdu);
@@ -123,7 +136,12 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                 return 0;
         }
 
-        return -1;
+        if (dtp->policies->flow_control_overrun(dtp, pdu)) {
+                LOG_ERR("Failed Flow Control Overrun");
+                return -1;
+        }
+
+        return 0;
 }
 
 static int default_transmission(struct dtp * dtp, struct pdu * pdu)
@@ -142,6 +160,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 static struct dtp_policies default_policies = {
         .transmission_control      = default_transmission,
         .closed_window             = default_closed_window,
+        .flow_control_overrun      = default_flow_control_overrun,
         .initial_sequence_number   = NULL,
 };
 
