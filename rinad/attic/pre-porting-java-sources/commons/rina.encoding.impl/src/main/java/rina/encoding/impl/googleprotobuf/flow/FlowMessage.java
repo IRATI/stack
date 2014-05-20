@@ -370,6 +370,4533 @@ public final class FlowMessage {
     // @@protoc_insertion_point(class_scope:rina.messages.connectionId_t)
   }
   
+  public static final class policyParameter_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use policyParameter_t.newBuilder() to construct.
+    private policyParameter_t() {
+      initFields();
+    }
+    private policyParameter_t(boolean noInit) {}
+    
+    private static final policyParameter_t defaultInstance;
+    public static policyParameter_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public policyParameter_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_policyParameter_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_policyParameter_t_fieldAccessorTable;
+    }
+    
+    // optional string name = 1;
+    public static final int NAME_FIELD_NUMBER = 1;
+    private boolean hasName;
+    private java.lang.String name_ = "";
+    public boolean hasName() { return hasName; }
+    public java.lang.String getName() { return name_; }
+    
+    // optional string value = 2;
+    public static final int VALUE_FIELD_NUMBER = 2;
+    private boolean hasValue;
+    private java.lang.String value_ = "";
+    public boolean hasValue() { return hasValue; }
+    public java.lang.String getValue() { return value_; }
+    
+    private void initFields() {
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasName()) {
+        output.writeString(1, getName());
+      }
+      if (hasValue()) {
+        output.writeString(2, getValue());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasName()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeStringSize(1, getName());
+      }
+      if (hasValue()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeStringSize(2, getValue());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.getDefaultInstance()) return this;
+        if (other.hasName()) {
+          setName(other.getName());
+        }
+        if (other.hasValue()) {
+          setValue(other.getValue());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              setName(input.readString());
+              break;
+            }
+            case 18: {
+              setValue(input.readString());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional string name = 1;
+      public boolean hasName() {
+        return result.hasName();
+      }
+      public java.lang.String getName() {
+        return result.getName();
+      }
+      public Builder setName(java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  result.hasName = true;
+        result.name_ = value;
+        return this;
+      }
+      public Builder clearName() {
+        result.hasName = false;
+        result.name_ = getDefaultInstance().getName();
+        return this;
+      }
+      
+      // optional string value = 2;
+      public boolean hasValue() {
+        return result.hasValue();
+      }
+      public java.lang.String getValue() {
+        return result.getValue();
+      }
+      public Builder setValue(java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  result.hasValue = true;
+        result.value_ = value;
+        return this;
+      }
+      public Builder clearValue() {
+        result.hasValue = false;
+        result.value_ = getDefaultInstance().getValue();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.policyParameter_t)
+    }
+    
+    static {
+      defaultInstance = new policyParameter_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.policyParameter_t)
+  }
+  
+  public static final class efcpPolicyConfig_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use efcpPolicyConfig_t.newBuilder() to construct.
+    private efcpPolicyConfig_t() {
+      initFields();
+    }
+    private efcpPolicyConfig_t(boolean noInit) {}
+    
+    private static final efcpPolicyConfig_t defaultInstance;
+    public static efcpPolicyConfig_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public efcpPolicyConfig_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_efcpPolicyConfig_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_efcpPolicyConfig_t_fieldAccessorTable;
+    }
+    
+    // optional string name = 1;
+    public static final int NAME_FIELD_NUMBER = 1;
+    private boolean hasName;
+    private java.lang.String name_ = "";
+    public boolean hasName() { return hasName; }
+    public java.lang.String getName() { return name_; }
+    
+    // optional uint32 version = 2;
+    public static final int VERSION_FIELD_NUMBER = 2;
+    private boolean hasVersion;
+    private int version_ = 0;
+    public boolean hasVersion() { return hasVersion; }
+    public int getVersion() { return version_; }
+    
+    // repeated .rina.messages.policyParameter_t parameters = 3;
+    public static final int PARAMETERS_FIELD_NUMBER = 3;
+    private java.util.List<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t> parameters_ =
+      java.util.Collections.emptyList();
+    public java.util.List<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t> getParametersList() {
+      return parameters_;
+    }
+    public int getParametersCount() { return parameters_.size(); }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t getParameters(int index) {
+      return parameters_.get(index);
+    }
+    
+    private void initFields() {
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasName()) {
+        output.writeString(1, getName());
+      }
+      if (hasVersion()) {
+        output.writeUInt32(2, getVersion());
+      }
+      for (rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t element : getParametersList()) {
+        output.writeMessage(3, element);
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasName()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeStringSize(1, getName());
+      }
+      if (hasVersion()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, getVersion());
+      }
+      for (rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t element : getParametersList()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, element);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        if (result.parameters_ != java.util.Collections.EMPTY_LIST) {
+          result.parameters_ =
+            java.util.Collections.unmodifiableList(result.parameters_);
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) return this;
+        if (other.hasName()) {
+          setName(other.getName());
+        }
+        if (other.hasVersion()) {
+          setVersion(other.getVersion());
+        }
+        if (!other.parameters_.isEmpty()) {
+          if (result.parameters_.isEmpty()) {
+            result.parameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t>();
+          }
+          result.parameters_.addAll(other.parameters_);
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              setName(input.readString());
+              break;
+            }
+            case 16: {
+              setVersion(input.readUInt32());
+              break;
+            }
+            case 26: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addParameters(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional string name = 1;
+      public boolean hasName() {
+        return result.hasName();
+      }
+      public java.lang.String getName() {
+        return result.getName();
+      }
+      public Builder setName(java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  result.hasName = true;
+        result.name_ = value;
+        return this;
+      }
+      public Builder clearName() {
+        result.hasName = false;
+        result.name_ = getDefaultInstance().getName();
+        return this;
+      }
+      
+      // optional uint32 version = 2;
+      public boolean hasVersion() {
+        return result.hasVersion();
+      }
+      public int getVersion() {
+        return result.getVersion();
+      }
+      public Builder setVersion(int value) {
+        result.hasVersion = true;
+        result.version_ = value;
+        return this;
+      }
+      public Builder clearVersion() {
+        result.hasVersion = false;
+        result.version_ = 0;
+        return this;
+      }
+      
+      // repeated .rina.messages.policyParameter_t parameters = 3;
+      public java.util.List<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t> getParametersList() {
+        return java.util.Collections.unmodifiableList(result.parameters_);
+      }
+      public int getParametersCount() {
+        return result.getParametersCount();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t getParameters(int index) {
+        return result.getParameters(index);
+      }
+      public Builder setParameters(int index, rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.parameters_.set(index, value);
+        return this;
+      }
+      public Builder setParameters(int index, rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.Builder builderForValue) {
+        result.parameters_.set(index, builderForValue.build());
+        return this;
+      }
+      public Builder addParameters(rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        if (result.parameters_.isEmpty()) {
+          result.parameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t>();
+        }
+        result.parameters_.add(value);
+        return this;
+      }
+      public Builder addParameters(rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.Builder builderForValue) {
+        if (result.parameters_.isEmpty()) {
+          result.parameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t>();
+        }
+        result.parameters_.add(builderForValue.build());
+        return this;
+      }
+      public Builder addAllParameters(
+          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t> values) {
+        if (result.parameters_.isEmpty()) {
+          result.parameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t>();
+        }
+        super.addAll(values, result.parameters_);
+        return this;
+      }
+      public Builder clearParameters() {
+        result.parameters_ = java.util.Collections.emptyList();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.efcpPolicyConfig_t)
+    }
+    
+    static {
+      defaultInstance = new efcpPolicyConfig_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.efcpPolicyConfig_t)
+  }
+  
+  public static final class dtcpWindowBasedFlowControlConfig_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use dtcpWindowBasedFlowControlConfig_t.newBuilder() to construct.
+    private dtcpWindowBasedFlowControlConfig_t() {
+      initFields();
+    }
+    private dtcpWindowBasedFlowControlConfig_t(boolean noInit) {}
+    
+    private static final dtcpWindowBasedFlowControlConfig_t defaultInstance;
+    public static dtcpWindowBasedFlowControlConfig_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public dtcpWindowBasedFlowControlConfig_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_fieldAccessorTable;
+    }
+    
+    // optional uint64 maxclosedwindowqueuelength = 1;
+    public static final int MAXCLOSEDWINDOWQUEUELENGTH_FIELD_NUMBER = 1;
+    private boolean hasMaxclosedwindowqueuelength;
+    private long maxclosedwindowqueuelength_ = 0L;
+    public boolean hasMaxclosedwindowqueuelength() { return hasMaxclosedwindowqueuelength; }
+    public long getMaxclosedwindowqueuelength() { return maxclosedwindowqueuelength_; }
+    
+    // optional uint64 initialcredit = 2;
+    public static final int INITIALCREDIT_FIELD_NUMBER = 2;
+    private boolean hasInitialcredit;
+    private long initialcredit_ = 0L;
+    public boolean hasInitialcredit() { return hasInitialcredit; }
+    public long getInitialcredit() { return initialcredit_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t rcvrflowcontrolpolicy = 3;
+    public static final int RCVRFLOWCONTROLPOLICY_FIELD_NUMBER = 3;
+    private boolean hasRcvrflowcontrolpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t rcvrflowcontrolpolicy_;
+    public boolean hasRcvrflowcontrolpolicy() { return hasRcvrflowcontrolpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrflowcontrolpolicy() { return rcvrflowcontrolpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t receivingflowcontrolpolicy = 4;
+    public static final int RECEIVINGFLOWCONTROLPOLICY_FIELD_NUMBER = 4;
+    private boolean hasReceivingflowcontrolpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t receivingflowcontrolpolicy_;
+    public boolean hasReceivingflowcontrolpolicy() { return hasReceivingflowcontrolpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getReceivingflowcontrolpolicy() { return receivingflowcontrolpolicy_; }
+    
+    private void initFields() {
+      rcvrflowcontrolpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      receivingflowcontrolpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasMaxclosedwindowqueuelength()) {
+        output.writeUInt64(1, getMaxclosedwindowqueuelength());
+      }
+      if (hasInitialcredit()) {
+        output.writeUInt64(2, getInitialcredit());
+      }
+      if (hasRcvrflowcontrolpolicy()) {
+        output.writeMessage(3, getRcvrflowcontrolpolicy());
+      }
+      if (hasReceivingflowcontrolpolicy()) {
+        output.writeMessage(4, getReceivingflowcontrolpolicy());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasMaxclosedwindowqueuelength()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, getMaxclosedwindowqueuelength());
+      }
+      if (hasInitialcredit()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, getInitialcredit());
+      }
+      if (hasRcvrflowcontrolpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, getRcvrflowcontrolpolicy());
+      }
+      if (hasReceivingflowcontrolpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getReceivingflowcontrolpolicy());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.getDefaultInstance()) return this;
+        if (other.hasMaxclosedwindowqueuelength()) {
+          setMaxclosedwindowqueuelength(other.getMaxclosedwindowqueuelength());
+        }
+        if (other.hasInitialcredit()) {
+          setInitialcredit(other.getInitialcredit());
+        }
+        if (other.hasRcvrflowcontrolpolicy()) {
+          mergeRcvrflowcontrolpolicy(other.getRcvrflowcontrolpolicy());
+        }
+        if (other.hasReceivingflowcontrolpolicy()) {
+          mergeReceivingflowcontrolpolicy(other.getReceivingflowcontrolpolicy());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setMaxclosedwindowqueuelength(input.readUInt64());
+              break;
+            }
+            case 16: {
+              setInitialcredit(input.readUInt64());
+              break;
+            }
+            case 26: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRcvrflowcontrolpolicy()) {
+                subBuilder.mergeFrom(getRcvrflowcontrolpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRcvrflowcontrolpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 34: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasReceivingflowcontrolpolicy()) {
+                subBuilder.mergeFrom(getReceivingflowcontrolpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setReceivingflowcontrolpolicy(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional uint64 maxclosedwindowqueuelength = 1;
+      public boolean hasMaxclosedwindowqueuelength() {
+        return result.hasMaxclosedwindowqueuelength();
+      }
+      public long getMaxclosedwindowqueuelength() {
+        return result.getMaxclosedwindowqueuelength();
+      }
+      public Builder setMaxclosedwindowqueuelength(long value) {
+        result.hasMaxclosedwindowqueuelength = true;
+        result.maxclosedwindowqueuelength_ = value;
+        return this;
+      }
+      public Builder clearMaxclosedwindowqueuelength() {
+        result.hasMaxclosedwindowqueuelength = false;
+        result.maxclosedwindowqueuelength_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 initialcredit = 2;
+      public boolean hasInitialcredit() {
+        return result.hasInitialcredit();
+      }
+      public long getInitialcredit() {
+        return result.getInitialcredit();
+      }
+      public Builder setInitialcredit(long value) {
+        result.hasInitialcredit = true;
+        result.initialcredit_ = value;
+        return this;
+      }
+      public Builder clearInitialcredit() {
+        result.hasInitialcredit = false;
+        result.initialcredit_ = 0L;
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t rcvrflowcontrolpolicy = 3;
+      public boolean hasRcvrflowcontrolpolicy() {
+        return result.hasRcvrflowcontrolpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrflowcontrolpolicy() {
+        return result.getRcvrflowcontrolpolicy();
+      }
+      public Builder setRcvrflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRcvrflowcontrolpolicy = true;
+        result.rcvrflowcontrolpolicy_ = value;
+        return this;
+      }
+      public Builder setRcvrflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRcvrflowcontrolpolicy = true;
+        result.rcvrflowcontrolpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRcvrflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRcvrflowcontrolpolicy() &&
+            result.rcvrflowcontrolpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.rcvrflowcontrolpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.rcvrflowcontrolpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.rcvrflowcontrolpolicy_ = value;
+        }
+        result.hasRcvrflowcontrolpolicy = true;
+        return this;
+      }
+      public Builder clearRcvrflowcontrolpolicy() {
+        result.hasRcvrflowcontrolpolicy = false;
+        result.rcvrflowcontrolpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t receivingflowcontrolpolicy = 4;
+      public boolean hasReceivingflowcontrolpolicy() {
+        return result.hasReceivingflowcontrolpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getReceivingflowcontrolpolicy() {
+        return result.getReceivingflowcontrolpolicy();
+      }
+      public Builder setReceivingflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasReceivingflowcontrolpolicy = true;
+        result.receivingflowcontrolpolicy_ = value;
+        return this;
+      }
+      public Builder setReceivingflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasReceivingflowcontrolpolicy = true;
+        result.receivingflowcontrolpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeReceivingflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasReceivingflowcontrolpolicy() &&
+            result.receivingflowcontrolpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.receivingflowcontrolpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.receivingflowcontrolpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.receivingflowcontrolpolicy_ = value;
+        }
+        result.hasReceivingflowcontrolpolicy = true;
+        return this;
+      }
+      public Builder clearReceivingflowcontrolpolicy() {
+        result.hasReceivingflowcontrolpolicy = false;
+        result.receivingflowcontrolpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.dtcpWindowBasedFlowControlConfig_t)
+    }
+    
+    static {
+      defaultInstance = new dtcpWindowBasedFlowControlConfig_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.dtcpWindowBasedFlowControlConfig_t)
+  }
+  
+  public static final class dtcpRateBasedFlowControlConfig_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use dtcpRateBasedFlowControlConfig_t.newBuilder() to construct.
+    private dtcpRateBasedFlowControlConfig_t() {
+      initFields();
+    }
+    private dtcpRateBasedFlowControlConfig_t(boolean noInit) {}
+    
+    private static final dtcpRateBasedFlowControlConfig_t defaultInstance;
+    public static dtcpRateBasedFlowControlConfig_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public dtcpRateBasedFlowControlConfig_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_fieldAccessorTable;
+    }
+    
+    // optional uint64 sendingrate = 1;
+    public static final int SENDINGRATE_FIELD_NUMBER = 1;
+    private boolean hasSendingrate;
+    private long sendingrate_ = 0L;
+    public boolean hasSendingrate() { return hasSendingrate; }
+    public long getSendingrate() { return sendingrate_; }
+    
+    // optional uint64 timeperiod = 2;
+    public static final int TIMEPERIOD_FIELD_NUMBER = 2;
+    private boolean hasTimeperiod;
+    private long timeperiod_ = 0L;
+    public boolean hasTimeperiod() { return hasTimeperiod; }
+    public long getTimeperiod() { return timeperiod_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t norateslowdownpolicy = 3;
+    public static final int NORATESLOWDOWNPOLICY_FIELD_NUMBER = 3;
+    private boolean hasNorateslowdownpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t norateslowdownpolicy_;
+    public boolean hasNorateslowdownpolicy() { return hasNorateslowdownpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getNorateslowdownpolicy() { return norateslowdownpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t nooverridedefaultpeakpolicy = 4;
+    public static final int NOOVERRIDEDEFAULTPEAKPOLICY_FIELD_NUMBER = 4;
+    private boolean hasNooverridedefaultpeakpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t nooverridedefaultpeakpolicy_;
+    public boolean hasNooverridedefaultpeakpolicy() { return hasNooverridedefaultpeakpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getNooverridedefaultpeakpolicy() { return nooverridedefaultpeakpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t ratereductionpolicy = 5;
+    public static final int RATEREDUCTIONPOLICY_FIELD_NUMBER = 5;
+    private boolean hasRatereductionpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t ratereductionpolicy_;
+    public boolean hasRatereductionpolicy() { return hasRatereductionpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRatereductionpolicy() { return ratereductionpolicy_; }
+    
+    private void initFields() {
+      norateslowdownpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      nooverridedefaultpeakpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      ratereductionpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasSendingrate()) {
+        output.writeUInt64(1, getSendingrate());
+      }
+      if (hasTimeperiod()) {
+        output.writeUInt64(2, getTimeperiod());
+      }
+      if (hasNorateslowdownpolicy()) {
+        output.writeMessage(3, getNorateslowdownpolicy());
+      }
+      if (hasNooverridedefaultpeakpolicy()) {
+        output.writeMessage(4, getNooverridedefaultpeakpolicy());
+      }
+      if (hasRatereductionpolicy()) {
+        output.writeMessage(5, getRatereductionpolicy());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasSendingrate()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, getSendingrate());
+      }
+      if (hasTimeperiod()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, getTimeperiod());
+      }
+      if (hasNorateslowdownpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, getNorateslowdownpolicy());
+      }
+      if (hasNooverridedefaultpeakpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getNooverridedefaultpeakpolicy());
+      }
+      if (hasRatereductionpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, getRatereductionpolicy());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.getDefaultInstance()) return this;
+        if (other.hasSendingrate()) {
+          setSendingrate(other.getSendingrate());
+        }
+        if (other.hasTimeperiod()) {
+          setTimeperiod(other.getTimeperiod());
+        }
+        if (other.hasNorateslowdownpolicy()) {
+          mergeNorateslowdownpolicy(other.getNorateslowdownpolicy());
+        }
+        if (other.hasNooverridedefaultpeakpolicy()) {
+          mergeNooverridedefaultpeakpolicy(other.getNooverridedefaultpeakpolicy());
+        }
+        if (other.hasRatereductionpolicy()) {
+          mergeRatereductionpolicy(other.getRatereductionpolicy());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setSendingrate(input.readUInt64());
+              break;
+            }
+            case 16: {
+              setTimeperiod(input.readUInt64());
+              break;
+            }
+            case 26: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasNorateslowdownpolicy()) {
+                subBuilder.mergeFrom(getNorateslowdownpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setNorateslowdownpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 34: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasNooverridedefaultpeakpolicy()) {
+                subBuilder.mergeFrom(getNooverridedefaultpeakpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setNooverridedefaultpeakpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 42: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRatereductionpolicy()) {
+                subBuilder.mergeFrom(getRatereductionpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRatereductionpolicy(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional uint64 sendingrate = 1;
+      public boolean hasSendingrate() {
+        return result.hasSendingrate();
+      }
+      public long getSendingrate() {
+        return result.getSendingrate();
+      }
+      public Builder setSendingrate(long value) {
+        result.hasSendingrate = true;
+        result.sendingrate_ = value;
+        return this;
+      }
+      public Builder clearSendingrate() {
+        result.hasSendingrate = false;
+        result.sendingrate_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 timeperiod = 2;
+      public boolean hasTimeperiod() {
+        return result.hasTimeperiod();
+      }
+      public long getTimeperiod() {
+        return result.getTimeperiod();
+      }
+      public Builder setTimeperiod(long value) {
+        result.hasTimeperiod = true;
+        result.timeperiod_ = value;
+        return this;
+      }
+      public Builder clearTimeperiod() {
+        result.hasTimeperiod = false;
+        result.timeperiod_ = 0L;
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t norateslowdownpolicy = 3;
+      public boolean hasNorateslowdownpolicy() {
+        return result.hasNorateslowdownpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getNorateslowdownpolicy() {
+        return result.getNorateslowdownpolicy();
+      }
+      public Builder setNorateslowdownpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasNorateslowdownpolicy = true;
+        result.norateslowdownpolicy_ = value;
+        return this;
+      }
+      public Builder setNorateslowdownpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasNorateslowdownpolicy = true;
+        result.norateslowdownpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeNorateslowdownpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasNorateslowdownpolicy() &&
+            result.norateslowdownpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.norateslowdownpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.norateslowdownpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.norateslowdownpolicy_ = value;
+        }
+        result.hasNorateslowdownpolicy = true;
+        return this;
+      }
+      public Builder clearNorateslowdownpolicy() {
+        result.hasNorateslowdownpolicy = false;
+        result.norateslowdownpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t nooverridedefaultpeakpolicy = 4;
+      public boolean hasNooverridedefaultpeakpolicy() {
+        return result.hasNooverridedefaultpeakpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getNooverridedefaultpeakpolicy() {
+        return result.getNooverridedefaultpeakpolicy();
+      }
+      public Builder setNooverridedefaultpeakpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasNooverridedefaultpeakpolicy = true;
+        result.nooverridedefaultpeakpolicy_ = value;
+        return this;
+      }
+      public Builder setNooverridedefaultpeakpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasNooverridedefaultpeakpolicy = true;
+        result.nooverridedefaultpeakpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeNooverridedefaultpeakpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasNooverridedefaultpeakpolicy() &&
+            result.nooverridedefaultpeakpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.nooverridedefaultpeakpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.nooverridedefaultpeakpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.nooverridedefaultpeakpolicy_ = value;
+        }
+        result.hasNooverridedefaultpeakpolicy = true;
+        return this;
+      }
+      public Builder clearNooverridedefaultpeakpolicy() {
+        result.hasNooverridedefaultpeakpolicy = false;
+        result.nooverridedefaultpeakpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t ratereductionpolicy = 5;
+      public boolean hasRatereductionpolicy() {
+        return result.hasRatereductionpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRatereductionpolicy() {
+        return result.getRatereductionpolicy();
+      }
+      public Builder setRatereductionpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRatereductionpolicy = true;
+        result.ratereductionpolicy_ = value;
+        return this;
+      }
+      public Builder setRatereductionpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRatereductionpolicy = true;
+        result.ratereductionpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRatereductionpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRatereductionpolicy() &&
+            result.ratereductionpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.ratereductionpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.ratereductionpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.ratereductionpolicy_ = value;
+        }
+        result.hasRatereductionpolicy = true;
+        return this;
+      }
+      public Builder clearRatereductionpolicy() {
+        result.hasRatereductionpolicy = false;
+        result.ratereductionpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.dtcpRateBasedFlowControlConfig_t)
+    }
+    
+    static {
+      defaultInstance = new dtcpRateBasedFlowControlConfig_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.dtcpRateBasedFlowControlConfig_t)
+  }
+  
+  public static final class dtcpFlowControlConfig_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use dtcpFlowControlConfig_t.newBuilder() to construct.
+    private dtcpFlowControlConfig_t() {
+      initFields();
+    }
+    private dtcpFlowControlConfig_t(boolean noInit) {}
+    
+    private static final dtcpFlowControlConfig_t defaultInstance;
+    public static dtcpFlowControlConfig_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public dtcpFlowControlConfig_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpFlowControlConfig_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpFlowControlConfig_t_fieldAccessorTable;
+    }
+    
+    // optional bool windowBased = 1;
+    public static final int WINDOWBASED_FIELD_NUMBER = 1;
+    private boolean hasWindowBased;
+    private boolean windowBased_ = false;
+    public boolean hasWindowBased() { return hasWindowBased; }
+    public boolean getWindowBased() { return windowBased_; }
+    
+    // optional .rina.messages.dtcpWindowBasedFlowControlConfig_t windowBasedConfig = 2;
+    public static final int WINDOWBASEDCONFIG_FIELD_NUMBER = 2;
+    private boolean hasWindowBasedConfig;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t windowBasedConfig_;
+    public boolean hasWindowBasedConfig() { return hasWindowBasedConfig; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t getWindowBasedConfig() { return windowBasedConfig_; }
+    
+    // optional bool rateBased = 3;
+    public static final int RATEBASED_FIELD_NUMBER = 3;
+    private boolean hasRateBased;
+    private boolean rateBased_ = false;
+    public boolean hasRateBased() { return hasRateBased; }
+    public boolean getRateBased() { return rateBased_; }
+    
+    // optional .rina.messages.dtcpRateBasedFlowControlConfig_t rateBasedConfig = 4;
+    public static final int RATEBASEDCONFIG_FIELD_NUMBER = 4;
+    private boolean hasRateBasedConfig;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t rateBasedConfig_;
+    public boolean hasRateBasedConfig() { return hasRateBasedConfig; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t getRateBasedConfig() { return rateBasedConfig_; }
+    
+    // optional uint64 sentbytesthreshold = 5;
+    public static final int SENTBYTESTHRESHOLD_FIELD_NUMBER = 5;
+    private boolean hasSentbytesthreshold;
+    private long sentbytesthreshold_ = 0L;
+    public boolean hasSentbytesthreshold() { return hasSentbytesthreshold; }
+    public long getSentbytesthreshold() { return sentbytesthreshold_; }
+    
+    // optional uint64 sentbytespercentthreshold = 6;
+    public static final int SENTBYTESPERCENTTHRESHOLD_FIELD_NUMBER = 6;
+    private boolean hasSentbytespercentthreshold;
+    private long sentbytespercentthreshold_ = 0L;
+    public boolean hasSentbytespercentthreshold() { return hasSentbytespercentthreshold; }
+    public long getSentbytespercentthreshold() { return sentbytespercentthreshold_; }
+    
+    // optional uint64 sentbuffersthreshold = 7;
+    public static final int SENTBUFFERSTHRESHOLD_FIELD_NUMBER = 7;
+    private boolean hasSentbuffersthreshold;
+    private long sentbuffersthreshold_ = 0L;
+    public boolean hasSentbuffersthreshold() { return hasSentbuffersthreshold; }
+    public long getSentbuffersthreshold() { return sentbuffersthreshold_; }
+    
+    // optional uint64 rcvbytesthreshold = 8;
+    public static final int RCVBYTESTHRESHOLD_FIELD_NUMBER = 8;
+    private boolean hasRcvbytesthreshold;
+    private long rcvbytesthreshold_ = 0L;
+    public boolean hasRcvbytesthreshold() { return hasRcvbytesthreshold; }
+    public long getRcvbytesthreshold() { return rcvbytesthreshold_; }
+    
+    // optional uint64 rcvbytespercentthreshold = 9;
+    public static final int RCVBYTESPERCENTTHRESHOLD_FIELD_NUMBER = 9;
+    private boolean hasRcvbytespercentthreshold;
+    private long rcvbytespercentthreshold_ = 0L;
+    public boolean hasRcvbytespercentthreshold() { return hasRcvbytespercentthreshold; }
+    public long getRcvbytespercentthreshold() { return rcvbytespercentthreshold_; }
+    
+    // optional uint64 rcvbuffersthreshold = 10;
+    public static final int RCVBUFFERSTHRESHOLD_FIELD_NUMBER = 10;
+    private boolean hasRcvbuffersthreshold;
+    private long rcvbuffersthreshold_ = 0L;
+    public boolean hasRcvbuffersthreshold() { return hasRcvbuffersthreshold; }
+    public long getRcvbuffersthreshold() { return rcvbuffersthreshold_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t closedwindowpolicy = 11;
+    public static final int CLOSEDWINDOWPOLICY_FIELD_NUMBER = 11;
+    private boolean hasClosedwindowpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t closedwindowpolicy_;
+    public boolean hasClosedwindowpolicy() { return hasClosedwindowpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getClosedwindowpolicy() { return closedwindowpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t flowcontroloverrunpolicy = 12;
+    public static final int FLOWCONTROLOVERRUNPOLICY_FIELD_NUMBER = 12;
+    private boolean hasFlowcontroloverrunpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t flowcontroloverrunpolicy_;
+    public boolean hasFlowcontroloverrunpolicy() { return hasFlowcontroloverrunpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getFlowcontroloverrunpolicy() { return flowcontroloverrunpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t reconcileflowcontrolpolicy = 13;
+    public static final int RECONCILEFLOWCONTROLPOLICY_FIELD_NUMBER = 13;
+    private boolean hasReconcileflowcontrolpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t reconcileflowcontrolpolicy_;
+    public boolean hasReconcileflowcontrolpolicy() { return hasReconcileflowcontrolpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getReconcileflowcontrolpolicy() { return reconcileflowcontrolpolicy_; }
+    
+    private void initFields() {
+      windowBasedConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.getDefaultInstance();
+      rateBasedConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.getDefaultInstance();
+      closedwindowpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      flowcontroloverrunpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      reconcileflowcontrolpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasWindowBased()) {
+        output.writeBool(1, getWindowBased());
+      }
+      if (hasWindowBasedConfig()) {
+        output.writeMessage(2, getWindowBasedConfig());
+      }
+      if (hasRateBased()) {
+        output.writeBool(3, getRateBased());
+      }
+      if (hasRateBasedConfig()) {
+        output.writeMessage(4, getRateBasedConfig());
+      }
+      if (hasSentbytesthreshold()) {
+        output.writeUInt64(5, getSentbytesthreshold());
+      }
+      if (hasSentbytespercentthreshold()) {
+        output.writeUInt64(6, getSentbytespercentthreshold());
+      }
+      if (hasSentbuffersthreshold()) {
+        output.writeUInt64(7, getSentbuffersthreshold());
+      }
+      if (hasRcvbytesthreshold()) {
+        output.writeUInt64(8, getRcvbytesthreshold());
+      }
+      if (hasRcvbytespercentthreshold()) {
+        output.writeUInt64(9, getRcvbytespercentthreshold());
+      }
+      if (hasRcvbuffersthreshold()) {
+        output.writeUInt64(10, getRcvbuffersthreshold());
+      }
+      if (hasClosedwindowpolicy()) {
+        output.writeMessage(11, getClosedwindowpolicy());
+      }
+      if (hasFlowcontroloverrunpolicy()) {
+        output.writeMessage(12, getFlowcontroloverrunpolicy());
+      }
+      if (hasReconcileflowcontrolpolicy()) {
+        output.writeMessage(13, getReconcileflowcontrolpolicy());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasWindowBased()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, getWindowBased());
+      }
+      if (hasWindowBasedConfig()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getWindowBasedConfig());
+      }
+      if (hasRateBased()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, getRateBased());
+      }
+      if (hasRateBasedConfig()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getRateBasedConfig());
+      }
+      if (hasSentbytesthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(5, getSentbytesthreshold());
+      }
+      if (hasSentbytespercentthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(6, getSentbytespercentthreshold());
+      }
+      if (hasSentbuffersthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(7, getSentbuffersthreshold());
+      }
+      if (hasRcvbytesthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(8, getRcvbytesthreshold());
+      }
+      if (hasRcvbytespercentthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(9, getRcvbytespercentthreshold());
+      }
+      if (hasRcvbuffersthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(10, getRcvbuffersthreshold());
+      }
+      if (hasClosedwindowpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(11, getClosedwindowpolicy());
+      }
+      if (hasFlowcontroloverrunpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(12, getFlowcontroloverrunpolicy());
+      }
+      if (hasReconcileflowcontrolpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(13, getReconcileflowcontrolpolicy());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.getDefaultInstance()) return this;
+        if (other.hasWindowBased()) {
+          setWindowBased(other.getWindowBased());
+        }
+        if (other.hasWindowBasedConfig()) {
+          mergeWindowBasedConfig(other.getWindowBasedConfig());
+        }
+        if (other.hasRateBased()) {
+          setRateBased(other.getRateBased());
+        }
+        if (other.hasRateBasedConfig()) {
+          mergeRateBasedConfig(other.getRateBasedConfig());
+        }
+        if (other.hasSentbytesthreshold()) {
+          setSentbytesthreshold(other.getSentbytesthreshold());
+        }
+        if (other.hasSentbytespercentthreshold()) {
+          setSentbytespercentthreshold(other.getSentbytespercentthreshold());
+        }
+        if (other.hasSentbuffersthreshold()) {
+          setSentbuffersthreshold(other.getSentbuffersthreshold());
+        }
+        if (other.hasRcvbytesthreshold()) {
+          setRcvbytesthreshold(other.getRcvbytesthreshold());
+        }
+        if (other.hasRcvbytespercentthreshold()) {
+          setRcvbytespercentthreshold(other.getRcvbytespercentthreshold());
+        }
+        if (other.hasRcvbuffersthreshold()) {
+          setRcvbuffersthreshold(other.getRcvbuffersthreshold());
+        }
+        if (other.hasClosedwindowpolicy()) {
+          mergeClosedwindowpolicy(other.getClosedwindowpolicy());
+        }
+        if (other.hasFlowcontroloverrunpolicy()) {
+          mergeFlowcontroloverrunpolicy(other.getFlowcontroloverrunpolicy());
+        }
+        if (other.hasReconcileflowcontrolpolicy()) {
+          mergeReconcileflowcontrolpolicy(other.getReconcileflowcontrolpolicy());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setWindowBased(input.readBool());
+              break;
+            }
+            case 18: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.newBuilder();
+              if (hasWindowBasedConfig()) {
+                subBuilder.mergeFrom(getWindowBasedConfig());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setWindowBasedConfig(subBuilder.buildPartial());
+              break;
+            }
+            case 24: {
+              setRateBased(input.readBool());
+              break;
+            }
+            case 34: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.newBuilder();
+              if (hasRateBasedConfig()) {
+                subBuilder.mergeFrom(getRateBasedConfig());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRateBasedConfig(subBuilder.buildPartial());
+              break;
+            }
+            case 40: {
+              setSentbytesthreshold(input.readUInt64());
+              break;
+            }
+            case 48: {
+              setSentbytespercentthreshold(input.readUInt64());
+              break;
+            }
+            case 56: {
+              setSentbuffersthreshold(input.readUInt64());
+              break;
+            }
+            case 64: {
+              setRcvbytesthreshold(input.readUInt64());
+              break;
+            }
+            case 72: {
+              setRcvbytespercentthreshold(input.readUInt64());
+              break;
+            }
+            case 80: {
+              setRcvbuffersthreshold(input.readUInt64());
+              break;
+            }
+            case 90: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasClosedwindowpolicy()) {
+                subBuilder.mergeFrom(getClosedwindowpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setClosedwindowpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 98: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasFlowcontroloverrunpolicy()) {
+                subBuilder.mergeFrom(getFlowcontroloverrunpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setFlowcontroloverrunpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 106: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasReconcileflowcontrolpolicy()) {
+                subBuilder.mergeFrom(getReconcileflowcontrolpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setReconcileflowcontrolpolicy(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional bool windowBased = 1;
+      public boolean hasWindowBased() {
+        return result.hasWindowBased();
+      }
+      public boolean getWindowBased() {
+        return result.getWindowBased();
+      }
+      public Builder setWindowBased(boolean value) {
+        result.hasWindowBased = true;
+        result.windowBased_ = value;
+        return this;
+      }
+      public Builder clearWindowBased() {
+        result.hasWindowBased = false;
+        result.windowBased_ = false;
+        return this;
+      }
+      
+      // optional .rina.messages.dtcpWindowBasedFlowControlConfig_t windowBasedConfig = 2;
+      public boolean hasWindowBasedConfig() {
+        return result.hasWindowBasedConfig();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t getWindowBasedConfig() {
+        return result.getWindowBasedConfig();
+      }
+      public Builder setWindowBasedConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasWindowBasedConfig = true;
+        result.windowBasedConfig_ = value;
+        return this;
+      }
+      public Builder setWindowBasedConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.Builder builderForValue) {
+        result.hasWindowBasedConfig = true;
+        result.windowBasedConfig_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeWindowBasedConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t value) {
+        if (result.hasWindowBasedConfig() &&
+            result.windowBasedConfig_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.getDefaultInstance()) {
+          result.windowBasedConfig_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.newBuilder(result.windowBasedConfig_).mergeFrom(value).buildPartial();
+        } else {
+          result.windowBasedConfig_ = value;
+        }
+        result.hasWindowBasedConfig = true;
+        return this;
+      }
+      public Builder clearWindowBasedConfig() {
+        result.hasWindowBasedConfig = false;
+        result.windowBasedConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional bool rateBased = 3;
+      public boolean hasRateBased() {
+        return result.hasRateBased();
+      }
+      public boolean getRateBased() {
+        return result.getRateBased();
+      }
+      public Builder setRateBased(boolean value) {
+        result.hasRateBased = true;
+        result.rateBased_ = value;
+        return this;
+      }
+      public Builder clearRateBased() {
+        result.hasRateBased = false;
+        result.rateBased_ = false;
+        return this;
+      }
+      
+      // optional .rina.messages.dtcpRateBasedFlowControlConfig_t rateBasedConfig = 4;
+      public boolean hasRateBasedConfig() {
+        return result.hasRateBasedConfig();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t getRateBasedConfig() {
+        return result.getRateBasedConfig();
+      }
+      public Builder setRateBasedConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRateBasedConfig = true;
+        result.rateBasedConfig_ = value;
+        return this;
+      }
+      public Builder setRateBasedConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.Builder builderForValue) {
+        result.hasRateBasedConfig = true;
+        result.rateBasedConfig_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRateBasedConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t value) {
+        if (result.hasRateBasedConfig() &&
+            result.rateBasedConfig_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.getDefaultInstance()) {
+          result.rateBasedConfig_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.newBuilder(result.rateBasedConfig_).mergeFrom(value).buildPartial();
+        } else {
+          result.rateBasedConfig_ = value;
+        }
+        result.hasRateBasedConfig = true;
+        return this;
+      }
+      public Builder clearRateBasedConfig() {
+        result.hasRateBasedConfig = false;
+        result.rateBasedConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional uint64 sentbytesthreshold = 5;
+      public boolean hasSentbytesthreshold() {
+        return result.hasSentbytesthreshold();
+      }
+      public long getSentbytesthreshold() {
+        return result.getSentbytesthreshold();
+      }
+      public Builder setSentbytesthreshold(long value) {
+        result.hasSentbytesthreshold = true;
+        result.sentbytesthreshold_ = value;
+        return this;
+      }
+      public Builder clearSentbytesthreshold() {
+        result.hasSentbytesthreshold = false;
+        result.sentbytesthreshold_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 sentbytespercentthreshold = 6;
+      public boolean hasSentbytespercentthreshold() {
+        return result.hasSentbytespercentthreshold();
+      }
+      public long getSentbytespercentthreshold() {
+        return result.getSentbytespercentthreshold();
+      }
+      public Builder setSentbytespercentthreshold(long value) {
+        result.hasSentbytespercentthreshold = true;
+        result.sentbytespercentthreshold_ = value;
+        return this;
+      }
+      public Builder clearSentbytespercentthreshold() {
+        result.hasSentbytespercentthreshold = false;
+        result.sentbytespercentthreshold_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 sentbuffersthreshold = 7;
+      public boolean hasSentbuffersthreshold() {
+        return result.hasSentbuffersthreshold();
+      }
+      public long getSentbuffersthreshold() {
+        return result.getSentbuffersthreshold();
+      }
+      public Builder setSentbuffersthreshold(long value) {
+        result.hasSentbuffersthreshold = true;
+        result.sentbuffersthreshold_ = value;
+        return this;
+      }
+      public Builder clearSentbuffersthreshold() {
+        result.hasSentbuffersthreshold = false;
+        result.sentbuffersthreshold_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 rcvbytesthreshold = 8;
+      public boolean hasRcvbytesthreshold() {
+        return result.hasRcvbytesthreshold();
+      }
+      public long getRcvbytesthreshold() {
+        return result.getRcvbytesthreshold();
+      }
+      public Builder setRcvbytesthreshold(long value) {
+        result.hasRcvbytesthreshold = true;
+        result.rcvbytesthreshold_ = value;
+        return this;
+      }
+      public Builder clearRcvbytesthreshold() {
+        result.hasRcvbytesthreshold = false;
+        result.rcvbytesthreshold_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 rcvbytespercentthreshold = 9;
+      public boolean hasRcvbytespercentthreshold() {
+        return result.hasRcvbytespercentthreshold();
+      }
+      public long getRcvbytespercentthreshold() {
+        return result.getRcvbytespercentthreshold();
+      }
+      public Builder setRcvbytespercentthreshold(long value) {
+        result.hasRcvbytespercentthreshold = true;
+        result.rcvbytespercentthreshold_ = value;
+        return this;
+      }
+      public Builder clearRcvbytespercentthreshold() {
+        result.hasRcvbytespercentthreshold = false;
+        result.rcvbytespercentthreshold_ = 0L;
+        return this;
+      }
+      
+      // optional uint64 rcvbuffersthreshold = 10;
+      public boolean hasRcvbuffersthreshold() {
+        return result.hasRcvbuffersthreshold();
+      }
+      public long getRcvbuffersthreshold() {
+        return result.getRcvbuffersthreshold();
+      }
+      public Builder setRcvbuffersthreshold(long value) {
+        result.hasRcvbuffersthreshold = true;
+        result.rcvbuffersthreshold_ = value;
+        return this;
+      }
+      public Builder clearRcvbuffersthreshold() {
+        result.hasRcvbuffersthreshold = false;
+        result.rcvbuffersthreshold_ = 0L;
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t closedwindowpolicy = 11;
+      public boolean hasClosedwindowpolicy() {
+        return result.hasClosedwindowpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getClosedwindowpolicy() {
+        return result.getClosedwindowpolicy();
+      }
+      public Builder setClosedwindowpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasClosedwindowpolicy = true;
+        result.closedwindowpolicy_ = value;
+        return this;
+      }
+      public Builder setClosedwindowpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasClosedwindowpolicy = true;
+        result.closedwindowpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeClosedwindowpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasClosedwindowpolicy() &&
+            result.closedwindowpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.closedwindowpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.closedwindowpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.closedwindowpolicy_ = value;
+        }
+        result.hasClosedwindowpolicy = true;
+        return this;
+      }
+      public Builder clearClosedwindowpolicy() {
+        result.hasClosedwindowpolicy = false;
+        result.closedwindowpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t flowcontroloverrunpolicy = 12;
+      public boolean hasFlowcontroloverrunpolicy() {
+        return result.hasFlowcontroloverrunpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getFlowcontroloverrunpolicy() {
+        return result.getFlowcontroloverrunpolicy();
+      }
+      public Builder setFlowcontroloverrunpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasFlowcontroloverrunpolicy = true;
+        result.flowcontroloverrunpolicy_ = value;
+        return this;
+      }
+      public Builder setFlowcontroloverrunpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasFlowcontroloverrunpolicy = true;
+        result.flowcontroloverrunpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeFlowcontroloverrunpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasFlowcontroloverrunpolicy() &&
+            result.flowcontroloverrunpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.flowcontroloverrunpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.flowcontroloverrunpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.flowcontroloverrunpolicy_ = value;
+        }
+        result.hasFlowcontroloverrunpolicy = true;
+        return this;
+      }
+      public Builder clearFlowcontroloverrunpolicy() {
+        result.hasFlowcontroloverrunpolicy = false;
+        result.flowcontroloverrunpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t reconcileflowcontrolpolicy = 13;
+      public boolean hasReconcileflowcontrolpolicy() {
+        return result.hasReconcileflowcontrolpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getReconcileflowcontrolpolicy() {
+        return result.getReconcileflowcontrolpolicy();
+      }
+      public Builder setReconcileflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasReconcileflowcontrolpolicy = true;
+        result.reconcileflowcontrolpolicy_ = value;
+        return this;
+      }
+      public Builder setReconcileflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasReconcileflowcontrolpolicy = true;
+        result.reconcileflowcontrolpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeReconcileflowcontrolpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasReconcileflowcontrolpolicy() &&
+            result.reconcileflowcontrolpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.reconcileflowcontrolpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.reconcileflowcontrolpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.reconcileflowcontrolpolicy_ = value;
+        }
+        result.hasReconcileflowcontrolpolicy = true;
+        return this;
+      }
+      public Builder clearReconcileflowcontrolpolicy() {
+        result.hasReconcileflowcontrolpolicy = false;
+        result.reconcileflowcontrolpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.dtcpFlowControlConfig_t)
+    }
+    
+    static {
+      defaultInstance = new dtcpFlowControlConfig_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.dtcpFlowControlConfig_t)
+  }
+  
+  public static final class dtcpRtxControlConfig_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use dtcpRtxControlConfig_t.newBuilder() to construct.
+    private dtcpRtxControlConfig_t() {
+      initFields();
+    }
+    private dtcpRtxControlConfig_t(boolean noInit) {}
+    
+    private static final dtcpRtxControlConfig_t defaultInstance;
+    public static dtcpRtxControlConfig_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public dtcpRtxControlConfig_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpRtxControlConfig_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpRtxControlConfig_t_fieldAccessorTable;
+    }
+    
+    // optional uint32 datarxmsnmax = 1;
+    public static final int DATARXMSNMAX_FIELD_NUMBER = 1;
+    private boolean hasDatarxmsnmax;
+    private int datarxmsnmax_ = 0;
+    public boolean hasDatarxmsnmax() { return hasDatarxmsnmax; }
+    public int getDatarxmsnmax() { return datarxmsnmax_; }
+    
+    // optional uint32 initialATimer = 2;
+    public static final int INITIALATIMER_FIELD_NUMBER = 2;
+    private boolean hasInitialATimer;
+    private int initialATimer_ = 0;
+    public boolean hasInitialATimer() { return hasInitialATimer; }
+    public int getInitialATimer() { return initialATimer_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t rttestimatorpolicy = 3;
+    public static final int RTTESTIMATORPOLICY_FIELD_NUMBER = 3;
+    private boolean hasRttestimatorpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t rttestimatorpolicy_;
+    public boolean hasRttestimatorpolicy() { return hasRttestimatorpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRttestimatorpolicy() { return rttestimatorpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t rtxtimerexpirypolicy = 4;
+    public static final int RTXTIMEREXPIRYPOLICY_FIELD_NUMBER = 4;
+    private boolean hasRtxtimerexpirypolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t rtxtimerexpirypolicy_;
+    public boolean hasRtxtimerexpirypolicy() { return hasRtxtimerexpirypolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRtxtimerexpirypolicy() { return rtxtimerexpirypolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t senderackpolicy = 5;
+    public static final int SENDERACKPOLICY_FIELD_NUMBER = 5;
+    private boolean hasSenderackpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t senderackpolicy_;
+    public boolean hasSenderackpolicy() { return hasSenderackpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getSenderackpolicy() { return senderackpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t recvingacklistpolicy = 6;
+    public static final int RECVINGACKLISTPOLICY_FIELD_NUMBER = 6;
+    private boolean hasRecvingacklistpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t recvingacklistpolicy_;
+    public boolean hasRecvingacklistpolicy() { return hasRecvingacklistpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRecvingacklistpolicy() { return recvingacklistpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t rcvrackpolicy = 7;
+    public static final int RCVRACKPOLICY_FIELD_NUMBER = 7;
+    private boolean hasRcvrackpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t rcvrackpolicy_;
+    public boolean hasRcvrackpolicy() { return hasRcvrackpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrackpolicy() { return rcvrackpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t sendingackpolicy = 8;
+    public static final int SENDINGACKPOLICY_FIELD_NUMBER = 8;
+    private boolean hasSendingackpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t sendingackpolicy_;
+    public boolean hasSendingackpolicy() { return hasSendingackpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getSendingackpolicy() { return sendingackpolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t rcvrcontrolackpolicy = 9;
+    public static final int RCVRCONTROLACKPOLICY_FIELD_NUMBER = 9;
+    private boolean hasRcvrcontrolackpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t rcvrcontrolackpolicy_;
+    public boolean hasRcvrcontrolackpolicy() { return hasRcvrcontrolackpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrcontrolackpolicy() { return rcvrcontrolackpolicy_; }
+    
+    private void initFields() {
+      rttestimatorpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      rtxtimerexpirypolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      senderackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      recvingacklistpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      rcvrackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      sendingackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      rcvrcontrolackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasDatarxmsnmax()) {
+        output.writeUInt32(1, getDatarxmsnmax());
+      }
+      if (hasInitialATimer()) {
+        output.writeUInt32(2, getInitialATimer());
+      }
+      if (hasRttestimatorpolicy()) {
+        output.writeMessage(3, getRttestimatorpolicy());
+      }
+      if (hasRtxtimerexpirypolicy()) {
+        output.writeMessage(4, getRtxtimerexpirypolicy());
+      }
+      if (hasSenderackpolicy()) {
+        output.writeMessage(5, getSenderackpolicy());
+      }
+      if (hasRecvingacklistpolicy()) {
+        output.writeMessage(6, getRecvingacklistpolicy());
+      }
+      if (hasRcvrackpolicy()) {
+        output.writeMessage(7, getRcvrackpolicy());
+      }
+      if (hasSendingackpolicy()) {
+        output.writeMessage(8, getSendingackpolicy());
+      }
+      if (hasRcvrcontrolackpolicy()) {
+        output.writeMessage(9, getRcvrcontrolackpolicy());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasDatarxmsnmax()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, getDatarxmsnmax());
+      }
+      if (hasInitialATimer()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, getInitialATimer());
+      }
+      if (hasRttestimatorpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, getRttestimatorpolicy());
+      }
+      if (hasRtxtimerexpirypolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getRtxtimerexpirypolicy());
+      }
+      if (hasSenderackpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(5, getSenderackpolicy());
+      }
+      if (hasRecvingacklistpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(6, getRecvingacklistpolicy());
+      }
+      if (hasRcvrackpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, getRcvrackpolicy());
+      }
+      if (hasSendingackpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, getSendingackpolicy());
+      }
+      if (hasRcvrcontrolackpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(9, getRcvrcontrolackpolicy());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.getDefaultInstance()) return this;
+        if (other.hasDatarxmsnmax()) {
+          setDatarxmsnmax(other.getDatarxmsnmax());
+        }
+        if (other.hasInitialATimer()) {
+          setInitialATimer(other.getInitialATimer());
+        }
+        if (other.hasRttestimatorpolicy()) {
+          mergeRttestimatorpolicy(other.getRttestimatorpolicy());
+        }
+        if (other.hasRtxtimerexpirypolicy()) {
+          mergeRtxtimerexpirypolicy(other.getRtxtimerexpirypolicy());
+        }
+        if (other.hasSenderackpolicy()) {
+          mergeSenderackpolicy(other.getSenderackpolicy());
+        }
+        if (other.hasRecvingacklistpolicy()) {
+          mergeRecvingacklistpolicy(other.getRecvingacklistpolicy());
+        }
+        if (other.hasRcvrackpolicy()) {
+          mergeRcvrackpolicy(other.getRcvrackpolicy());
+        }
+        if (other.hasSendingackpolicy()) {
+          mergeSendingackpolicy(other.getSendingackpolicy());
+        }
+        if (other.hasRcvrcontrolackpolicy()) {
+          mergeRcvrcontrolackpolicy(other.getRcvrcontrolackpolicy());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setDatarxmsnmax(input.readUInt32());
+              break;
+            }
+            case 16: {
+              setInitialATimer(input.readUInt32());
+              break;
+            }
+            case 26: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRttestimatorpolicy()) {
+                subBuilder.mergeFrom(getRttestimatorpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRttestimatorpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 34: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRtxtimerexpirypolicy()) {
+                subBuilder.mergeFrom(getRtxtimerexpirypolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRtxtimerexpirypolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 42: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasSenderackpolicy()) {
+                subBuilder.mergeFrom(getSenderackpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setSenderackpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 50: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRecvingacklistpolicy()) {
+                subBuilder.mergeFrom(getRecvingacklistpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRecvingacklistpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 58: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRcvrackpolicy()) {
+                subBuilder.mergeFrom(getRcvrackpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRcvrackpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 66: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasSendingackpolicy()) {
+                subBuilder.mergeFrom(getSendingackpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setSendingackpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 74: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRcvrcontrolackpolicy()) {
+                subBuilder.mergeFrom(getRcvrcontrolackpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRcvrcontrolackpolicy(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional uint32 datarxmsnmax = 1;
+      public boolean hasDatarxmsnmax() {
+        return result.hasDatarxmsnmax();
+      }
+      public int getDatarxmsnmax() {
+        return result.getDatarxmsnmax();
+      }
+      public Builder setDatarxmsnmax(int value) {
+        result.hasDatarxmsnmax = true;
+        result.datarxmsnmax_ = value;
+        return this;
+      }
+      public Builder clearDatarxmsnmax() {
+        result.hasDatarxmsnmax = false;
+        result.datarxmsnmax_ = 0;
+        return this;
+      }
+      
+      // optional uint32 initialATimer = 2;
+      public boolean hasInitialATimer() {
+        return result.hasInitialATimer();
+      }
+      public int getInitialATimer() {
+        return result.getInitialATimer();
+      }
+      public Builder setInitialATimer(int value) {
+        result.hasInitialATimer = true;
+        result.initialATimer_ = value;
+        return this;
+      }
+      public Builder clearInitialATimer() {
+        result.hasInitialATimer = false;
+        result.initialATimer_ = 0;
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t rttestimatorpolicy = 3;
+      public boolean hasRttestimatorpolicy() {
+        return result.hasRttestimatorpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRttestimatorpolicy() {
+        return result.getRttestimatorpolicy();
+      }
+      public Builder setRttestimatorpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRttestimatorpolicy = true;
+        result.rttestimatorpolicy_ = value;
+        return this;
+      }
+      public Builder setRttestimatorpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRttestimatorpolicy = true;
+        result.rttestimatorpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRttestimatorpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRttestimatorpolicy() &&
+            result.rttestimatorpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.rttestimatorpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.rttestimatorpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.rttestimatorpolicy_ = value;
+        }
+        result.hasRttestimatorpolicy = true;
+        return this;
+      }
+      public Builder clearRttestimatorpolicy() {
+        result.hasRttestimatorpolicy = false;
+        result.rttestimatorpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t rtxtimerexpirypolicy = 4;
+      public boolean hasRtxtimerexpirypolicy() {
+        return result.hasRtxtimerexpirypolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRtxtimerexpirypolicy() {
+        return result.getRtxtimerexpirypolicy();
+      }
+      public Builder setRtxtimerexpirypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRtxtimerexpirypolicy = true;
+        result.rtxtimerexpirypolicy_ = value;
+        return this;
+      }
+      public Builder setRtxtimerexpirypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRtxtimerexpirypolicy = true;
+        result.rtxtimerexpirypolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRtxtimerexpirypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRtxtimerexpirypolicy() &&
+            result.rtxtimerexpirypolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.rtxtimerexpirypolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.rtxtimerexpirypolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.rtxtimerexpirypolicy_ = value;
+        }
+        result.hasRtxtimerexpirypolicy = true;
+        return this;
+      }
+      public Builder clearRtxtimerexpirypolicy() {
+        result.hasRtxtimerexpirypolicy = false;
+        result.rtxtimerexpirypolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t senderackpolicy = 5;
+      public boolean hasSenderackpolicy() {
+        return result.hasSenderackpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getSenderackpolicy() {
+        return result.getSenderackpolicy();
+      }
+      public Builder setSenderackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasSenderackpolicy = true;
+        result.senderackpolicy_ = value;
+        return this;
+      }
+      public Builder setSenderackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasSenderackpolicy = true;
+        result.senderackpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeSenderackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasSenderackpolicy() &&
+            result.senderackpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.senderackpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.senderackpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.senderackpolicy_ = value;
+        }
+        result.hasSenderackpolicy = true;
+        return this;
+      }
+      public Builder clearSenderackpolicy() {
+        result.hasSenderackpolicy = false;
+        result.senderackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t recvingacklistpolicy = 6;
+      public boolean hasRecvingacklistpolicy() {
+        return result.hasRecvingacklistpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRecvingacklistpolicy() {
+        return result.getRecvingacklistpolicy();
+      }
+      public Builder setRecvingacklistpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRecvingacklistpolicy = true;
+        result.recvingacklistpolicy_ = value;
+        return this;
+      }
+      public Builder setRecvingacklistpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRecvingacklistpolicy = true;
+        result.recvingacklistpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRecvingacklistpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRecvingacklistpolicy() &&
+            result.recvingacklistpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.recvingacklistpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.recvingacklistpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.recvingacklistpolicy_ = value;
+        }
+        result.hasRecvingacklistpolicy = true;
+        return this;
+      }
+      public Builder clearRecvingacklistpolicy() {
+        result.hasRecvingacklistpolicy = false;
+        result.recvingacklistpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t rcvrackpolicy = 7;
+      public boolean hasRcvrackpolicy() {
+        return result.hasRcvrackpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrackpolicy() {
+        return result.getRcvrackpolicy();
+      }
+      public Builder setRcvrackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRcvrackpolicy = true;
+        result.rcvrackpolicy_ = value;
+        return this;
+      }
+      public Builder setRcvrackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRcvrackpolicy = true;
+        result.rcvrackpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRcvrackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRcvrackpolicy() &&
+            result.rcvrackpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.rcvrackpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.rcvrackpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.rcvrackpolicy_ = value;
+        }
+        result.hasRcvrackpolicy = true;
+        return this;
+      }
+      public Builder clearRcvrackpolicy() {
+        result.hasRcvrackpolicy = false;
+        result.rcvrackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t sendingackpolicy = 8;
+      public boolean hasSendingackpolicy() {
+        return result.hasSendingackpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getSendingackpolicy() {
+        return result.getSendingackpolicy();
+      }
+      public Builder setSendingackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasSendingackpolicy = true;
+        result.sendingackpolicy_ = value;
+        return this;
+      }
+      public Builder setSendingackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasSendingackpolicy = true;
+        result.sendingackpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeSendingackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasSendingackpolicy() &&
+            result.sendingackpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.sendingackpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.sendingackpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.sendingackpolicy_ = value;
+        }
+        result.hasSendingackpolicy = true;
+        return this;
+      }
+      public Builder clearSendingackpolicy() {
+        result.hasSendingackpolicy = false;
+        result.sendingackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t rcvrcontrolackpolicy = 9;
+      public boolean hasRcvrcontrolackpolicy() {
+        return result.hasRcvrcontrolackpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrcontrolackpolicy() {
+        return result.getRcvrcontrolackpolicy();
+      }
+      public Builder setRcvrcontrolackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRcvrcontrolackpolicy = true;
+        result.rcvrcontrolackpolicy_ = value;
+        return this;
+      }
+      public Builder setRcvrcontrolackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRcvrcontrolackpolicy = true;
+        result.rcvrcontrolackpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRcvrcontrolackpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRcvrcontrolackpolicy() &&
+            result.rcvrcontrolackpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.rcvrcontrolackpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.rcvrcontrolackpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.rcvrcontrolackpolicy_ = value;
+        }
+        result.hasRcvrcontrolackpolicy = true;
+        return this;
+      }
+      public Builder clearRcvrcontrolackpolicy() {
+        result.hasRcvrcontrolackpolicy = false;
+        result.rcvrcontrolackpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.dtcpRtxControlConfig_t)
+    }
+    
+    static {
+      defaultInstance = new dtcpRtxControlConfig_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.dtcpRtxControlConfig_t)
+  }
+  
+  public static final class dtcpConfig_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use dtcpConfig_t.newBuilder() to construct.
+    private dtcpConfig_t() {
+      initFields();
+    }
+    private dtcpConfig_t(boolean noInit) {}
+    
+    private static final dtcpConfig_t defaultInstance;
+    public static dtcpConfig_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public dtcpConfig_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpConfig_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_dtcpConfig_t_fieldAccessorTable;
+    }
+    
+    // optional bool flowControl = 1;
+    public static final int FLOWCONTROL_FIELD_NUMBER = 1;
+    private boolean hasFlowControl;
+    private boolean flowControl_ = false;
+    public boolean hasFlowControl() { return hasFlowControl; }
+    public boolean getFlowControl() { return flowControl_; }
+    
+    // optional .rina.messages.dtcpFlowControlConfig_t flowControlConfig = 2;
+    public static final int FLOWCONTROLCONFIG_FIELD_NUMBER = 2;
+    private boolean hasFlowControlConfig;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t flowControlConfig_;
+    public boolean hasFlowControlConfig() { return hasFlowControlConfig; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t getFlowControlConfig() { return flowControlConfig_; }
+    
+    // optional bool rtxControl = 3;
+    public static final int RTXCONTROL_FIELD_NUMBER = 3;
+    private boolean hasRtxControl;
+    private boolean rtxControl_ = false;
+    public boolean hasRtxControl() { return hasRtxControl; }
+    public boolean getRtxControl() { return rtxControl_; }
+    
+    // optional .rina.messages.dtcpRtxControlConfig_t rtxControlConfig = 4;
+    public static final int RTXCONTROLCONFIG_FIELD_NUMBER = 4;
+    private boolean hasRtxControlConfig;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t rtxControlConfig_;
+    public boolean hasRtxControlConfig() { return hasRtxControlConfig; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t getRtxControlConfig() { return rtxControlConfig_; }
+    
+    // optional uint32 initialsenderinactivitytime = 5;
+    public static final int INITIALSENDERINACTIVITYTIME_FIELD_NUMBER = 5;
+    private boolean hasInitialsenderinactivitytime;
+    private int initialsenderinactivitytime_ = 0;
+    public boolean hasInitialsenderinactivitytime() { return hasInitialsenderinactivitytime; }
+    public int getInitialsenderinactivitytime() { return initialsenderinactivitytime_; }
+    
+    // optional uint32 initialrecvrinactivitytime = 6;
+    public static final int INITIALRECVRINACTIVITYTIME_FIELD_NUMBER = 6;
+    private boolean hasInitialrecvrinactivitytime;
+    private int initialrecvrinactivitytime_ = 0;
+    public boolean hasInitialrecvrinactivitytime() { return hasInitialrecvrinactivitytime; }
+    public int getInitialrecvrinactivitytime() { return initialrecvrinactivitytime_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t rcvrtimerinactivitypolicy = 7;
+    public static final int RCVRTIMERINACTIVITYPOLICY_FIELD_NUMBER = 7;
+    private boolean hasRcvrtimerinactivitypolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t rcvrtimerinactivitypolicy_;
+    public boolean hasRcvrtimerinactivitypolicy() { return hasRcvrtimerinactivitypolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrtimerinactivitypolicy() { return rcvrtimerinactivitypolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t sendertimerinactiviypolicy = 8;
+    public static final int SENDERTIMERINACTIVIYPOLICY_FIELD_NUMBER = 8;
+    private boolean hasSendertimerinactiviypolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t sendertimerinactiviypolicy_;
+    public boolean hasSendertimerinactiviypolicy() { return hasSendertimerinactiviypolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getSendertimerinactiviypolicy() { return sendertimerinactiviypolicy_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t lostcontrolpdupolicy = 9;
+    public static final int LOSTCONTROLPDUPOLICY_FIELD_NUMBER = 9;
+    private boolean hasLostcontrolpdupolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t lostcontrolpdupolicy_;
+    public boolean hasLostcontrolpdupolicy() { return hasLostcontrolpdupolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getLostcontrolpdupolicy() { return lostcontrolpdupolicy_; }
+    
+    private void initFields() {
+      flowControlConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.getDefaultInstance();
+      rtxControlConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.getDefaultInstance();
+      rcvrtimerinactivitypolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      sendertimerinactiviypolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+      lostcontrolpdupolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasFlowControl()) {
+        output.writeBool(1, getFlowControl());
+      }
+      if (hasFlowControlConfig()) {
+        output.writeMessage(2, getFlowControlConfig());
+      }
+      if (hasRtxControl()) {
+        output.writeBool(3, getRtxControl());
+      }
+      if (hasRtxControlConfig()) {
+        output.writeMessage(4, getRtxControlConfig());
+      }
+      if (hasInitialsenderinactivitytime()) {
+        output.writeUInt32(5, getInitialsenderinactivitytime());
+      }
+      if (hasInitialrecvrinactivitytime()) {
+        output.writeUInt32(6, getInitialrecvrinactivitytime());
+      }
+      if (hasRcvrtimerinactivitypolicy()) {
+        output.writeMessage(7, getRcvrtimerinactivitypolicy());
+      }
+      if (hasSendertimerinactiviypolicy()) {
+        output.writeMessage(8, getSendertimerinactiviypolicy());
+      }
+      if (hasLostcontrolpdupolicy()) {
+        output.writeMessage(9, getLostcontrolpdupolicy());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasFlowControl()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, getFlowControl());
+      }
+      if (hasFlowControlConfig()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getFlowControlConfig());
+      }
+      if (hasRtxControl()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(3, getRtxControl());
+      }
+      if (hasRtxControlConfig()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, getRtxControlConfig());
+      }
+      if (hasInitialsenderinactivitytime()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(5, getInitialsenderinactivitytime());
+      }
+      if (hasInitialrecvrinactivitytime()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, getInitialrecvrinactivitytime());
+      }
+      if (hasRcvrtimerinactivitypolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(7, getRcvrtimerinactivitypolicy());
+      }
+      if (hasSendertimerinactiviypolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(8, getSendertimerinactiviypolicy());
+      }
+      if (hasLostcontrolpdupolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(9, getLostcontrolpdupolicy());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.getDefaultInstance()) return this;
+        if (other.hasFlowControl()) {
+          setFlowControl(other.getFlowControl());
+        }
+        if (other.hasFlowControlConfig()) {
+          mergeFlowControlConfig(other.getFlowControlConfig());
+        }
+        if (other.hasRtxControl()) {
+          setRtxControl(other.getRtxControl());
+        }
+        if (other.hasRtxControlConfig()) {
+          mergeRtxControlConfig(other.getRtxControlConfig());
+        }
+        if (other.hasInitialsenderinactivitytime()) {
+          setInitialsenderinactivitytime(other.getInitialsenderinactivitytime());
+        }
+        if (other.hasInitialrecvrinactivitytime()) {
+          setInitialrecvrinactivitytime(other.getInitialrecvrinactivitytime());
+        }
+        if (other.hasRcvrtimerinactivitypolicy()) {
+          mergeRcvrtimerinactivitypolicy(other.getRcvrtimerinactivitypolicy());
+        }
+        if (other.hasSendertimerinactiviypolicy()) {
+          mergeSendertimerinactiviypolicy(other.getSendertimerinactiviypolicy());
+        }
+        if (other.hasLostcontrolpdupolicy()) {
+          mergeLostcontrolpdupolicy(other.getLostcontrolpdupolicy());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setFlowControl(input.readBool());
+              break;
+            }
+            case 18: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.newBuilder();
+              if (hasFlowControlConfig()) {
+                subBuilder.mergeFrom(getFlowControlConfig());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setFlowControlConfig(subBuilder.buildPartial());
+              break;
+            }
+            case 24: {
+              setRtxControl(input.readBool());
+              break;
+            }
+            case 34: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.newBuilder();
+              if (hasRtxControlConfig()) {
+                subBuilder.mergeFrom(getRtxControlConfig());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRtxControlConfig(subBuilder.buildPartial());
+              break;
+            }
+            case 40: {
+              setInitialsenderinactivitytime(input.readUInt32());
+              break;
+            }
+            case 48: {
+              setInitialrecvrinactivitytime(input.readUInt32());
+              break;
+            }
+            case 58: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasRcvrtimerinactivitypolicy()) {
+                subBuilder.mergeFrom(getRcvrtimerinactivitypolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setRcvrtimerinactivitypolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 66: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasSendertimerinactiviypolicy()) {
+                subBuilder.mergeFrom(getSendertimerinactiviypolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setSendertimerinactiviypolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 74: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasLostcontrolpdupolicy()) {
+                subBuilder.mergeFrom(getLostcontrolpdupolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setLostcontrolpdupolicy(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional bool flowControl = 1;
+      public boolean hasFlowControl() {
+        return result.hasFlowControl();
+      }
+      public boolean getFlowControl() {
+        return result.getFlowControl();
+      }
+      public Builder setFlowControl(boolean value) {
+        result.hasFlowControl = true;
+        result.flowControl_ = value;
+        return this;
+      }
+      public Builder clearFlowControl() {
+        result.hasFlowControl = false;
+        result.flowControl_ = false;
+        return this;
+      }
+      
+      // optional .rina.messages.dtcpFlowControlConfig_t flowControlConfig = 2;
+      public boolean hasFlowControlConfig() {
+        return result.hasFlowControlConfig();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t getFlowControlConfig() {
+        return result.getFlowControlConfig();
+      }
+      public Builder setFlowControlConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasFlowControlConfig = true;
+        result.flowControlConfig_ = value;
+        return this;
+      }
+      public Builder setFlowControlConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.Builder builderForValue) {
+        result.hasFlowControlConfig = true;
+        result.flowControlConfig_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeFlowControlConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t value) {
+        if (result.hasFlowControlConfig() &&
+            result.flowControlConfig_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.getDefaultInstance()) {
+          result.flowControlConfig_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.newBuilder(result.flowControlConfig_).mergeFrom(value).buildPartial();
+        } else {
+          result.flowControlConfig_ = value;
+        }
+        result.hasFlowControlConfig = true;
+        return this;
+      }
+      public Builder clearFlowControlConfig() {
+        result.hasFlowControlConfig = false;
+        result.flowControlConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional bool rtxControl = 3;
+      public boolean hasRtxControl() {
+        return result.hasRtxControl();
+      }
+      public boolean getRtxControl() {
+        return result.getRtxControl();
+      }
+      public Builder setRtxControl(boolean value) {
+        result.hasRtxControl = true;
+        result.rtxControl_ = value;
+        return this;
+      }
+      public Builder clearRtxControl() {
+        result.hasRtxControl = false;
+        result.rtxControl_ = false;
+        return this;
+      }
+      
+      // optional .rina.messages.dtcpRtxControlConfig_t rtxControlConfig = 4;
+      public boolean hasRtxControlConfig() {
+        return result.hasRtxControlConfig();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t getRtxControlConfig() {
+        return result.getRtxControlConfig();
+      }
+      public Builder setRtxControlConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRtxControlConfig = true;
+        result.rtxControlConfig_ = value;
+        return this;
+      }
+      public Builder setRtxControlConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.Builder builderForValue) {
+        result.hasRtxControlConfig = true;
+        result.rtxControlConfig_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRtxControlConfig(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t value) {
+        if (result.hasRtxControlConfig() &&
+            result.rtxControlConfig_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.getDefaultInstance()) {
+          result.rtxControlConfig_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.newBuilder(result.rtxControlConfig_).mergeFrom(value).buildPartial();
+        } else {
+          result.rtxControlConfig_ = value;
+        }
+        result.hasRtxControlConfig = true;
+        return this;
+      }
+      public Builder clearRtxControlConfig() {
+        result.hasRtxControlConfig = false;
+        result.rtxControlConfig_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional uint32 initialsenderinactivitytime = 5;
+      public boolean hasInitialsenderinactivitytime() {
+        return result.hasInitialsenderinactivitytime();
+      }
+      public int getInitialsenderinactivitytime() {
+        return result.getInitialsenderinactivitytime();
+      }
+      public Builder setInitialsenderinactivitytime(int value) {
+        result.hasInitialsenderinactivitytime = true;
+        result.initialsenderinactivitytime_ = value;
+        return this;
+      }
+      public Builder clearInitialsenderinactivitytime() {
+        result.hasInitialsenderinactivitytime = false;
+        result.initialsenderinactivitytime_ = 0;
+        return this;
+      }
+      
+      // optional uint32 initialrecvrinactivitytime = 6;
+      public boolean hasInitialrecvrinactivitytime() {
+        return result.hasInitialrecvrinactivitytime();
+      }
+      public int getInitialrecvrinactivitytime() {
+        return result.getInitialrecvrinactivitytime();
+      }
+      public Builder setInitialrecvrinactivitytime(int value) {
+        result.hasInitialrecvrinactivitytime = true;
+        result.initialrecvrinactivitytime_ = value;
+        return this;
+      }
+      public Builder clearInitialrecvrinactivitytime() {
+        result.hasInitialrecvrinactivitytime = false;
+        result.initialrecvrinactivitytime_ = 0;
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t rcvrtimerinactivitypolicy = 7;
+      public boolean hasRcvrtimerinactivitypolicy() {
+        return result.hasRcvrtimerinactivitypolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getRcvrtimerinactivitypolicy() {
+        return result.getRcvrtimerinactivitypolicy();
+      }
+      public Builder setRcvrtimerinactivitypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasRcvrtimerinactivitypolicy = true;
+        result.rcvrtimerinactivitypolicy_ = value;
+        return this;
+      }
+      public Builder setRcvrtimerinactivitypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasRcvrtimerinactivitypolicy = true;
+        result.rcvrtimerinactivitypolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeRcvrtimerinactivitypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasRcvrtimerinactivitypolicy() &&
+            result.rcvrtimerinactivitypolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.rcvrtimerinactivitypolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.rcvrtimerinactivitypolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.rcvrtimerinactivitypolicy_ = value;
+        }
+        result.hasRcvrtimerinactivitypolicy = true;
+        return this;
+      }
+      public Builder clearRcvrtimerinactivitypolicy() {
+        result.hasRcvrtimerinactivitypolicy = false;
+        result.rcvrtimerinactivitypolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t sendertimerinactiviypolicy = 8;
+      public boolean hasSendertimerinactiviypolicy() {
+        return result.hasSendertimerinactiviypolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getSendertimerinactiviypolicy() {
+        return result.getSendertimerinactiviypolicy();
+      }
+      public Builder setSendertimerinactiviypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasSendertimerinactiviypolicy = true;
+        result.sendertimerinactiviypolicy_ = value;
+        return this;
+      }
+      public Builder setSendertimerinactiviypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasSendertimerinactiviypolicy = true;
+        result.sendertimerinactiviypolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeSendertimerinactiviypolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasSendertimerinactiviypolicy() &&
+            result.sendertimerinactiviypolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.sendertimerinactiviypolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.sendertimerinactiviypolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.sendertimerinactiviypolicy_ = value;
+        }
+        result.hasSendertimerinactiviypolicy = true;
+        return this;
+      }
+      public Builder clearSendertimerinactiviypolicy() {
+        result.hasSendertimerinactiviypolicy = false;
+        result.sendertimerinactiviypolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t lostcontrolpdupolicy = 9;
+      public boolean hasLostcontrolpdupolicy() {
+        return result.hasLostcontrolpdupolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getLostcontrolpdupolicy() {
+        return result.getLostcontrolpdupolicy();
+      }
+      public Builder setLostcontrolpdupolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasLostcontrolpdupolicy = true;
+        result.lostcontrolpdupolicy_ = value;
+        return this;
+      }
+      public Builder setLostcontrolpdupolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasLostcontrolpdupolicy = true;
+        result.lostcontrolpdupolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeLostcontrolpdupolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasLostcontrolpdupolicy() &&
+            result.lostcontrolpdupolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.lostcontrolpdupolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.lostcontrolpdupolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.lostcontrolpdupolicy_ = value;
+        }
+        result.hasLostcontrolpdupolicy = true;
+        return this;
+      }
+      public Builder clearLostcontrolpdupolicy() {
+        result.hasLostcontrolpdupolicy = false;
+        result.lostcontrolpdupolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.dtcpConfig_t)
+    }
+    
+    static {
+      defaultInstance = new dtcpConfig_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.dtcpConfig_t)
+  }
+  
+  public static final class connectionPolicies_t extends
+      com.google.protobuf.GeneratedMessage {
+    // Use connectionPolicies_t.newBuilder() to construct.
+    private connectionPolicies_t() {
+      initFields();
+    }
+    private connectionPolicies_t(boolean noInit) {}
+    
+    private static final connectionPolicies_t defaultInstance;
+    public static connectionPolicies_t getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public connectionPolicies_t getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_connectionPolicies_t_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return rina.encoding.impl.googleprotobuf.flow.FlowMessage.internal_static_rina_messages_connectionPolicies_t_fieldAccessorTable;
+    }
+    
+    // optional bool dtcpPresent = 1;
+    public static final int DTCPPRESENT_FIELD_NUMBER = 1;
+    private boolean hasDtcpPresent;
+    private boolean dtcpPresent_ = false;
+    public boolean hasDtcpPresent() { return hasDtcpPresent; }
+    public boolean getDtcpPresent() { return dtcpPresent_; }
+    
+    // optional .rina.messages.dtcpConfig_t dtcpConfiguration = 2;
+    public static final int DTCPCONFIGURATION_FIELD_NUMBER = 2;
+    private boolean hasDtcpConfiguration;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t dtcpConfiguration_;
+    public boolean hasDtcpConfiguration() { return hasDtcpConfiguration; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t getDtcpConfiguration() { return dtcpConfiguration_; }
+    
+    // optional .rina.messages.efcpPolicyConfig_t initialseqnumpolicy = 3;
+    public static final int INITIALSEQNUMPOLICY_FIELD_NUMBER = 3;
+    private boolean hasInitialseqnumpolicy;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t initialseqnumpolicy_;
+    public boolean hasInitialseqnumpolicy() { return hasInitialseqnumpolicy; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getInitialseqnumpolicy() { return initialseqnumpolicy_; }
+    
+    // optional uint64 seqnumrolloverthreshold = 4;
+    public static final int SEQNUMROLLOVERTHRESHOLD_FIELD_NUMBER = 4;
+    private boolean hasSeqnumrolloverthreshold;
+    private long seqnumrolloverthreshold_ = 0L;
+    public boolean hasSeqnumrolloverthreshold() { return hasSeqnumrolloverthreshold; }
+    public long getSeqnumrolloverthreshold() { return seqnumrolloverthreshold_; }
+    
+    private void initFields() {
+      dtcpConfiguration_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.getDefaultInstance();
+      initialseqnumpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+    }
+    public final boolean isInitialized() {
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (hasDtcpPresent()) {
+        output.writeBool(1, getDtcpPresent());
+      }
+      if (hasDtcpConfiguration()) {
+        output.writeMessage(2, getDtcpConfiguration());
+      }
+      if (hasInitialseqnumpolicy()) {
+        output.writeMessage(3, getInitialseqnumpolicy());
+      }
+      if (hasSeqnumrolloverthreshold()) {
+        output.writeUInt64(4, getSeqnumrolloverthreshold());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (hasDtcpPresent()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, getDtcpPresent());
+      }
+      if (hasDtcpConfiguration()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getDtcpConfiguration());
+      }
+      if (hasInitialseqnumpolicy()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, getInitialseqnumpolicy());
+      }
+      if (hasSeqnumrolloverthreshold()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, getSeqnumrolloverthreshold());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder> {
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t result;
+      
+      // Construct using rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.newBuilder()
+      private Builder() {}
+      
+      private static Builder create() {
+        Builder builder = new Builder();
+        builder.result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t();
+        return builder;
+      }
+      
+      protected rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t internalGetResult() {
+        return result;
+      }
+      
+      public Builder clear() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "Cannot call clear() after build().");
+        }
+        result = new rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(result);
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.getDescriptor();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t getDefaultInstanceForType() {
+        return rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.getDefaultInstance();
+      }
+      
+      public boolean isInitialized() {
+        return result.isInitialized();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t build() {
+        if (result != null && !isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return buildPartial();
+      }
+      
+      private rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        if (!isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return buildPartial();
+      }
+      
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t buildPartial() {
+        if (result == null) {
+          throw new IllegalStateException(
+            "build() has already been called on this Builder.");
+        }
+        rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t returnMe = result;
+        result = null;
+        return returnMe;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t) {
+          return mergeFrom((rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t other) {
+        if (other == rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.getDefaultInstance()) return this;
+        if (other.hasDtcpPresent()) {
+          setDtcpPresent(other.getDtcpPresent());
+        }
+        if (other.hasDtcpConfiguration()) {
+          mergeDtcpConfiguration(other.getDtcpConfiguration());
+        }
+        if (other.hasInitialseqnumpolicy()) {
+          mergeInitialseqnumpolicy(other.getInitialseqnumpolicy());
+        }
+        if (other.hasSeqnumrolloverthreshold()) {
+          setSeqnumrolloverthreshold(other.getSeqnumrolloverthreshold());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              setDtcpPresent(input.readBool());
+              break;
+            }
+            case 18: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.newBuilder();
+              if (hasDtcpConfiguration()) {
+                subBuilder.mergeFrom(getDtcpConfiguration());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setDtcpConfiguration(subBuilder.buildPartial());
+              break;
+            }
+            case 26: {
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder();
+              if (hasInitialseqnumpolicy()) {
+                subBuilder.mergeFrom(getInitialseqnumpolicy());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setInitialseqnumpolicy(subBuilder.buildPartial());
+              break;
+            }
+            case 32: {
+              setSeqnumrolloverthreshold(input.readUInt64());
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // optional bool dtcpPresent = 1;
+      public boolean hasDtcpPresent() {
+        return result.hasDtcpPresent();
+      }
+      public boolean getDtcpPresent() {
+        return result.getDtcpPresent();
+      }
+      public Builder setDtcpPresent(boolean value) {
+        result.hasDtcpPresent = true;
+        result.dtcpPresent_ = value;
+        return this;
+      }
+      public Builder clearDtcpPresent() {
+        result.hasDtcpPresent = false;
+        result.dtcpPresent_ = false;
+        return this;
+      }
+      
+      // optional .rina.messages.dtcpConfig_t dtcpConfiguration = 2;
+      public boolean hasDtcpConfiguration() {
+        return result.hasDtcpConfiguration();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t getDtcpConfiguration() {
+        return result.getDtcpConfiguration();
+      }
+      public Builder setDtcpConfiguration(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasDtcpConfiguration = true;
+        result.dtcpConfiguration_ = value;
+        return this;
+      }
+      public Builder setDtcpConfiguration(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.Builder builderForValue) {
+        result.hasDtcpConfiguration = true;
+        result.dtcpConfiguration_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeDtcpConfiguration(rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t value) {
+        if (result.hasDtcpConfiguration() &&
+            result.dtcpConfiguration_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.getDefaultInstance()) {
+          result.dtcpConfiguration_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.newBuilder(result.dtcpConfiguration_).mergeFrom(value).buildPartial();
+        } else {
+          result.dtcpConfiguration_ = value;
+        }
+        result.hasDtcpConfiguration = true;
+        return this;
+      }
+      public Builder clearDtcpConfiguration() {
+        result.hasDtcpConfiguration = false;
+        result.dtcpConfiguration_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional .rina.messages.efcpPolicyConfig_t initialseqnumpolicy = 3;
+      public boolean hasInitialseqnumpolicy() {
+        return result.hasInitialseqnumpolicy();
+      }
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t getInitialseqnumpolicy() {
+        return result.getInitialseqnumpolicy();
+      }
+      public Builder setInitialseqnumpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasInitialseqnumpolicy = true;
+        result.initialseqnumpolicy_ = value;
+        return this;
+      }
+      public Builder setInitialseqnumpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder builderForValue) {
+        result.hasInitialseqnumpolicy = true;
+        result.initialseqnumpolicy_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeInitialseqnumpolicy(rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t value) {
+        if (result.hasInitialseqnumpolicy() &&
+            result.initialseqnumpolicy_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance()) {
+          result.initialseqnumpolicy_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.newBuilder(result.initialseqnumpolicy_).mergeFrom(value).buildPartial();
+        } else {
+          result.initialseqnumpolicy_ = value;
+        }
+        result.hasInitialseqnumpolicy = true;
+        return this;
+      }
+      public Builder clearInitialseqnumpolicy() {
+        result.hasInitialseqnumpolicy = false;
+        result.initialseqnumpolicy_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
+        return this;
+      }
+      
+      // optional uint64 seqnumrolloverthreshold = 4;
+      public boolean hasSeqnumrolloverthreshold() {
+        return result.hasSeqnumrolloverthreshold();
+      }
+      public long getSeqnumrolloverthreshold() {
+        return result.getSeqnumrolloverthreshold();
+      }
+      public Builder setSeqnumrolloverthreshold(long value) {
+        result.hasSeqnumrolloverthreshold = true;
+        result.seqnumrolloverthreshold_ = value;
+        return this;
+      }
+      public Builder clearSeqnumrolloverthreshold() {
+        result.hasSeqnumrolloverthreshold = false;
+        result.seqnumrolloverthreshold_ = 0L;
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:rina.messages.connectionPolicies_t)
+    }
+    
+    static {
+      defaultInstance = new connectionPolicies_t(true);
+      rina.encoding.impl.googleprotobuf.flow.FlowMessage.internalForceInit();
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:rina.messages.connectionPolicies_t)
+  }
+  
   public static final class Flow extends
       com.google.protobuf.GeneratedMessage {
     // Use Flow.newBuilder() to construct.
@@ -472,53 +4999,36 @@ public final class FlowMessage {
     public boolean hasQosParameters() { return hasQosParameters; }
     public rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t getQosParameters() { return qosParameters_; }
     
-    // repeated .rina.messages.property_t policies = 11;
-    public static final int POLICIES_FIELD_NUMBER = 11;
-    private java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> policies_ =
-      java.util.Collections.emptyList();
-    public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPoliciesList() {
-      return policies_;
-    }
-    public int getPoliciesCount() { return policies_.size(); }
-    public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicies(int index) {
-      return policies_.get(index);
-    }
+    // optional .rina.messages.connectionPolicies_t connectionPolicies = 11;
+    public static final int CONNECTIONPOLICIES_FIELD_NUMBER = 11;
+    private boolean hasConnectionPolicies;
+    private rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t connectionPolicies_;
+    public boolean hasConnectionPolicies() { return hasConnectionPolicies; }
+    public rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t getConnectionPolicies() { return connectionPolicies_; }
     
-    // repeated .rina.messages.property_t policyParemeters = 12;
-    public static final int POLICYPAREMETERS_FIELD_NUMBER = 12;
-    private java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> policyParemeters_ =
-      java.util.Collections.emptyList();
-    public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPolicyParemetersList() {
-      return policyParemeters_;
-    }
-    public int getPolicyParemetersCount() { return policyParemeters_.size(); }
-    public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicyParemeters(int index) {
-      return policyParemeters_.get(index);
-    }
-    
-    // optional bytes accessControl = 13;
-    public static final int ACCESSCONTROL_FIELD_NUMBER = 13;
+    // optional bytes accessControl = 12;
+    public static final int ACCESSCONTROL_FIELD_NUMBER = 12;
     private boolean hasAccessControl;
     private com.google.protobuf.ByteString accessControl_ = com.google.protobuf.ByteString.EMPTY;
     public boolean hasAccessControl() { return hasAccessControl; }
     public com.google.protobuf.ByteString getAccessControl() { return accessControl_; }
     
-    // optional uint32 maxCreateFlowRetries = 14;
-    public static final int MAXCREATEFLOWRETRIES_FIELD_NUMBER = 14;
+    // optional uint32 maxCreateFlowRetries = 13;
+    public static final int MAXCREATEFLOWRETRIES_FIELD_NUMBER = 13;
     private boolean hasMaxCreateFlowRetries;
     private int maxCreateFlowRetries_ = 0;
     public boolean hasMaxCreateFlowRetries() { return hasMaxCreateFlowRetries; }
     public int getMaxCreateFlowRetries() { return maxCreateFlowRetries_; }
     
-    // optional uint32 createFlowRetries = 15;
-    public static final int CREATEFLOWRETRIES_FIELD_NUMBER = 15;
+    // optional uint32 createFlowRetries = 14;
+    public static final int CREATEFLOWRETRIES_FIELD_NUMBER = 14;
     private boolean hasCreateFlowRetries;
     private int createFlowRetries_ = 0;
     public boolean hasCreateFlowRetries() { return hasCreateFlowRetries; }
     public int getCreateFlowRetries() { return createFlowRetries_; }
     
-    // optional uint32 hopCount = 16;
-    public static final int HOPCOUNT_FIELD_NUMBER = 16;
+    // optional uint32 hopCount = 15;
+    public static final int HOPCOUNT_FIELD_NUMBER = 15;
     private boolean hasHopCount;
     private int hopCount_ = 0;
     public boolean hasHopCount() { return hasHopCount; }
@@ -528,6 +5038,7 @@ public final class FlowMessage {
       sourceNamingInfo_ = rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage.applicationProcessNamingInfo_t.getDefaultInstance();
       destinationNamingInfo_ = rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage.applicationProcessNamingInfo_t.getDefaultInstance();
       qosParameters_ = rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t.getDefaultInstance();
+      connectionPolicies_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.getDefaultInstance();
     }
     public final boolean isInitialized() {
       if (!hasSourceNamingInfo) return false;
@@ -538,12 +5049,6 @@ public final class FlowMessage {
       if (!getDestinationNamingInfo().isInitialized()) return false;
       if (hasQosParameters()) {
         if (!getQosParameters().isInitialized()) return false;
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPoliciesList()) {
-        if (!element.isInitialized()) return false;
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPolicyParemetersList()) {
-        if (!element.isInitialized()) return false;
       }
       return true;
     }
@@ -581,23 +5086,20 @@ public final class FlowMessage {
       if (hasQosParameters()) {
         output.writeMessage(10, getQosParameters());
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPoliciesList()) {
-        output.writeMessage(11, element);
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPolicyParemetersList()) {
-        output.writeMessage(12, element);
+      if (hasConnectionPolicies()) {
+        output.writeMessage(11, getConnectionPolicies());
       }
       if (hasAccessControl()) {
-        output.writeBytes(13, getAccessControl());
+        output.writeBytes(12, getAccessControl());
       }
       if (hasMaxCreateFlowRetries()) {
-        output.writeUInt32(14, getMaxCreateFlowRetries());
+        output.writeUInt32(13, getMaxCreateFlowRetries());
       }
       if (hasCreateFlowRetries()) {
-        output.writeUInt32(15, getCreateFlowRetries());
+        output.writeUInt32(14, getCreateFlowRetries());
       }
       if (hasHopCount()) {
-        output.writeUInt32(16, getHopCount());
+        output.writeUInt32(15, getHopCount());
       }
       getUnknownFields().writeTo(output);
     }
@@ -648,29 +5150,25 @@ public final class FlowMessage {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(10, getQosParameters());
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPoliciesList()) {
+      if (hasConnectionPolicies()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(11, element);
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPolicyParemetersList()) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(12, element);
+          .computeMessageSize(11, getConnectionPolicies());
       }
       if (hasAccessControl()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(13, getAccessControl());
+          .computeBytesSize(12, getAccessControl());
       }
       if (hasMaxCreateFlowRetries()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(14, getMaxCreateFlowRetries());
+          .computeUInt32Size(13, getMaxCreateFlowRetries());
       }
       if (hasCreateFlowRetries()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(15, getCreateFlowRetries());
+          .computeUInt32Size(14, getCreateFlowRetries());
       }
       if (hasHopCount()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(16, getHopCount());
+          .computeUInt32Size(15, getHopCount());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -818,14 +5316,6 @@ public final class FlowMessage {
           result.connectionIds_ =
             java.util.Collections.unmodifiableList(result.connectionIds_);
         }
-        if (result.policies_ != java.util.Collections.EMPTY_LIST) {
-          result.policies_ =
-            java.util.Collections.unmodifiableList(result.policies_);
-        }
-        if (result.policyParemeters_ != java.util.Collections.EMPTY_LIST) {
-          result.policyParemeters_ =
-            java.util.Collections.unmodifiableList(result.policyParemeters_);
-        }
         rina.encoding.impl.googleprotobuf.flow.FlowMessage.Flow returnMe = result;
         result = null;
         return returnMe;
@@ -875,17 +5365,8 @@ public final class FlowMessage {
         if (other.hasQosParameters()) {
           mergeQosParameters(other.getQosParameters());
         }
-        if (!other.policies_.isEmpty()) {
-          if (result.policies_.isEmpty()) {
-            result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-          }
-          result.policies_.addAll(other.policies_);
-        }
-        if (!other.policyParemeters_.isEmpty()) {
-          if (result.policyParemeters_.isEmpty()) {
-            result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-          }
-          result.policyParemeters_.addAll(other.policyParemeters_);
+        if (other.hasConnectionPolicies()) {
+          mergeConnectionPolicies(other.getConnectionPolicies());
         }
         if (other.hasAccessControl()) {
           setAccessControl(other.getAccessControl());
@@ -982,30 +5463,27 @@ public final class FlowMessage {
               break;
             }
             case 90: {
-              rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.newBuilder();
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.newBuilder();
+              if (hasConnectionPolicies()) {
+                subBuilder.mergeFrom(getConnectionPolicies());
+              }
               input.readMessage(subBuilder, extensionRegistry);
-              addPolicies(subBuilder.buildPartial());
+              setConnectionPolicies(subBuilder.buildPartial());
               break;
             }
             case 98: {
-              rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addPolicyParemeters(subBuilder.buildPartial());
-              break;
-            }
-            case 106: {
               setAccessControl(input.readBytes());
               break;
             }
-            case 112: {
+            case 104: {
               setMaxCreateFlowRetries(input.readUInt32());
               break;
             }
-            case 120: {
+            case 112: {
               setCreateFlowRetries(input.readUInt32());
               break;
             }
-            case 128: {
+            case 120: {
               setHopCount(input.readUInt32());
               break;
             }
@@ -1284,109 +5762,44 @@ public final class FlowMessage {
         return this;
       }
       
-      // repeated .rina.messages.property_t policies = 11;
-      public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPoliciesList() {
-        return java.util.Collections.unmodifiableList(result.policies_);
+      // optional .rina.messages.connectionPolicies_t connectionPolicies = 11;
+      public boolean hasConnectionPolicies() {
+        return result.hasConnectionPolicies();
       }
-      public int getPoliciesCount() {
-        return result.getPoliciesCount();
+      public rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t getConnectionPolicies() {
+        return result.getConnectionPolicies();
       }
-      public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicies(int index) {
-        return result.getPolicies(index);
-      }
-      public Builder setPolicies(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
+      public Builder setConnectionPolicies(rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        result.policies_.set(index, value);
+        result.hasConnectionPolicies = true;
+        result.connectionPolicies_ = value;
         return this;
       }
-      public Builder setPolicies(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        result.policies_.set(index, builderForValue.build());
+      public Builder setConnectionPolicies(rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.Builder builderForValue) {
+        result.hasConnectionPolicies = true;
+        result.connectionPolicies_ = builderForValue.build();
         return this;
       }
-      public Builder addPolicies(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
-        if (value == null) {
-          throw new NullPointerException();
+      public Builder mergeConnectionPolicies(rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t value) {
+        if (result.hasConnectionPolicies() &&
+            result.connectionPolicies_ != rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.getDefaultInstance()) {
+          result.connectionPolicies_ =
+            rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.newBuilder(result.connectionPolicies_).mergeFrom(value).buildPartial();
+        } else {
+          result.connectionPolicies_ = value;
         }
-        if (result.policies_.isEmpty()) {
-          result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policies_.add(value);
+        result.hasConnectionPolicies = true;
         return this;
       }
-      public Builder addPolicies(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        if (result.policies_.isEmpty()) {
-          result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policies_.add(builderForValue.build());
-        return this;
-      }
-      public Builder addAllPolicies(
-          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> values) {
-        if (result.policies_.isEmpty()) {
-          result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        super.addAll(values, result.policies_);
-        return this;
-      }
-      public Builder clearPolicies() {
-        result.policies_ = java.util.Collections.emptyList();
+      public Builder clearConnectionPolicies() {
+        result.hasConnectionPolicies = false;
+        result.connectionPolicies_ = rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.getDefaultInstance();
         return this;
       }
       
-      // repeated .rina.messages.property_t policyParemeters = 12;
-      public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPolicyParemetersList() {
-        return java.util.Collections.unmodifiableList(result.policyParemeters_);
-      }
-      public int getPolicyParemetersCount() {
-        return result.getPolicyParemetersCount();
-      }
-      public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicyParemeters(int index) {
-        return result.getPolicyParemeters(index);
-      }
-      public Builder setPolicyParemeters(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        result.policyParemeters_.set(index, value);
-        return this;
-      }
-      public Builder setPolicyParemeters(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        result.policyParemeters_.set(index, builderForValue.build());
-        return this;
-      }
-      public Builder addPolicyParemeters(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        if (result.policyParemeters_.isEmpty()) {
-          result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policyParemeters_.add(value);
-        return this;
-      }
-      public Builder addPolicyParemeters(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        if (result.policyParemeters_.isEmpty()) {
-          result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policyParemeters_.add(builderForValue.build());
-        return this;
-      }
-      public Builder addAllPolicyParemeters(
-          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> values) {
-        if (result.policyParemeters_.isEmpty()) {
-          result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        super.addAll(values, result.policyParemeters_);
-        return this;
-      }
-      public Builder clearPolicyParemeters() {
-        result.policyParemeters_ = java.util.Collections.emptyList();
-        return this;
-      }
-      
-      // optional bytes accessControl = 13;
+      // optional bytes accessControl = 12;
       public boolean hasAccessControl() {
         return result.hasAccessControl();
       }
@@ -1407,7 +5820,7 @@ public final class FlowMessage {
         return this;
       }
       
-      // optional uint32 maxCreateFlowRetries = 14;
+      // optional uint32 maxCreateFlowRetries = 13;
       public boolean hasMaxCreateFlowRetries() {
         return result.hasMaxCreateFlowRetries();
       }
@@ -1425,7 +5838,7 @@ public final class FlowMessage {
         return this;
       }
       
-      // optional uint32 createFlowRetries = 15;
+      // optional uint32 createFlowRetries = 14;
       public boolean hasCreateFlowRetries() {
         return result.hasCreateFlowRetries();
       }
@@ -1443,7 +5856,7 @@ public final class FlowMessage {
         return this;
       }
       
-      // optional uint32 hopCount = 16;
+      // optional uint32 hopCount = 15;
       public boolean hasHopCount() {
         return result.hasHopCount();
       }
@@ -1479,6 +5892,46 @@ public final class FlowMessage {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_rina_messages_connectionId_t_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_policyParameter_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_policyParameter_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_efcpPolicyConfig_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_efcpPolicyConfig_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_dtcpFlowControlConfig_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_dtcpFlowControlConfig_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_dtcpRtxControlConfig_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_dtcpRtxControlConfig_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_dtcpConfig_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_dtcpConfig_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_rina_messages_connectionPolicies_t_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_rina_messages_connectionPolicies_t_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_rina_messages_Flow_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -1498,23 +5951,84 @@ public final class FlowMessage {
       "fication.proto\032 protofiles/PropertyMessa" +
       "ge.proto\"N\n\016connectionId_t\022\r\n\005qosId\030\001 \001(" +
       "\r\022\023\n\013sourceCEPId\030\002 \001(\r\022\030\n\020destinationCEP" +
-      "Id\030\003 \001(\r\"\346\004\n\004Flow\022G\n\020sourceNamingInfo\030\001 " +
-      "\002(\0132-.rina.messages.applicationProcessNa" +
-      "mingInfo_t\022L\n\025destinationNamingInfo\030\002 \002(" +
-      "\0132-.rina.messages.applicationProcessNami",
-      "ngInfo_t\022\024\n\014sourcePortId\030\003 \002(\004\022\031\n\021destin" +
-      "ationPortId\030\004 \001(\004\022\025\n\rsourceAddress\030\005 \002(\004" +
-      "\022\032\n\022destinationAddress\030\006 \001(\004\0224\n\rconnecti" +
-      "onIds\030\007 \003(\0132\035.rina.messages.connectionId" +
-      "_t\022 \n\030currentConnectionIdIndex\030\010 \001(\r\022\r\n\005" +
-      "state\030\t \001(\r\0228\n\rqosParameters\030\n \001(\0132!.rin" +
-      "a.messages.qosSpecification_t\022+\n\010policie" +
-      "s\030\013 \003(\0132\031.rina.messages.property_t\0223\n\020po" +
-      "licyParemeters\030\014 \003(\0132\031.rina.messages.pro" +
-      "perty_t\022\025\n\raccessControl\030\r \001(\014\022\034\n\024maxCre",
-      "ateFlowRetries\030\016 \001(\r\022\031\n\021createFlowRetrie" +
-      "s\030\017 \001(\r\022\020\n\010hopCount\030\020 \001(\rB(\n&rina.encodi" +
-      "ng.impl.googleprotobuf.flow"
+      "Id\030\003 \001(\r\"0\n\021policyParameter_t\022\014\n\004name\030\001 " +
+      "\001(\t\022\r\n\005value\030\002 \001(\t\"i\n\022efcpPolicyConfig_t" +
+      "\022\014\n\004name\030\001 \001(\t\022\017\n\007version\030\002 \001(\r\0224\n\nparam" +
+      "eters\030\003 \003(\0132 .rina.messages.policyParame",
+      "ter_t\"\350\001\n\"dtcpWindowBasedFlowControlConf" +
+      "ig_t\022\"\n\032maxclosedwindowqueuelength\030\001 \001(\004" +
+      "\022\025\n\rinitialcredit\030\002 \001(\004\022@\n\025rcvrflowcontr" +
+      "olpolicy\030\003 \001(\0132!.rina.messages.efcpPolic" +
+      "yConfig_t\022E\n\032receivingflowcontrolpolicy\030" +
+      "\004 \001(\0132!.rina.messages.efcpPolicyConfig_t" +
+      "\"\224\002\n dtcpRateBasedFlowControlConfig_t\022\023\n" +
+      "\013sendingrate\030\001 \001(\004\022\022\n\ntimeperiod\030\002 \001(\004\022?" +
+      "\n\024norateslowdownpolicy\030\003 \001(\0132!.rina.mess" +
+      "ages.efcpPolicyConfig_t\022F\n\033nooverridedef",
+      "aultpeakpolicy\030\004 \001(\0132!.rina.messages.efc" +
+      "pPolicyConfig_t\022>\n\023ratereductionpolicy\030\005" +
+      " \001(\0132!.rina.messages.efcpPolicyConfig_t\"" +
+      "\333\004\n\027dtcpFlowControlConfig_t\022\023\n\013windowBas" +
+      "ed\030\001 \001(\010\022L\n\021windowBasedConfig\030\002 \001(\01321.ri" +
+      "na.messages.dtcpWindowBasedFlowControlCo" +
+      "nfig_t\022\021\n\trateBased\030\003 \001(\010\022H\n\017rateBasedCo" +
+      "nfig\030\004 \001(\0132/.rina.messages.dtcpRateBased" +
+      "FlowControlConfig_t\022\032\n\022sentbytesthreshol" +
+      "d\030\005 \001(\004\022!\n\031sentbytespercentthreshold\030\006 \001",
+      "(\004\022\034\n\024sentbuffersthreshold\030\007 \001(\004\022\031\n\021rcvb" +
+      "ytesthreshold\030\010 \001(\004\022 \n\030rcvbytespercentth" +
+      "reshold\030\t \001(\004\022\033\n\023rcvbuffersthreshold\030\n \001" +
+      "(\004\022=\n\022closedwindowpolicy\030\013 \001(\0132!.rina.me" +
+      "ssages.efcpPolicyConfig_t\022C\n\030flowcontrol" +
+      "overrunpolicy\030\014 \001(\0132!.rina.messages.efcp" +
+      "PolicyConfig_t\022E\n\032reconcileflowcontrolpo" +
+      "licy\030\r \001(\0132!.rina.messages.efcpPolicyCon" +
+      "fig_t\"\372\003\n\026dtcpRtxControlConfig_t\022\024\n\014data" +
+      "rxmsnmax\030\001 \001(\r\022\025\n\rinitialATimer\030\002 \001(\r\022=\n",
+      "\022rttestimatorpolicy\030\003 \001(\0132!.rina.message" +
+      "s.efcpPolicyConfig_t\022?\n\024rtxtimerexpirypo" +
+      "licy\030\004 \001(\0132!.rina.messages.efcpPolicyCon" +
+      "fig_t\022:\n\017senderackpolicy\030\005 \001(\0132!.rina.me" +
+      "ssages.efcpPolicyConfig_t\022?\n\024recvingackl" +
+      "istpolicy\030\006 \001(\0132!.rina.messages.efcpPoli" +
+      "cyConfig_t\0228\n\rrcvrackpolicy\030\007 \001(\0132!.rina" +
+      ".messages.efcpPolicyConfig_t\022;\n\020sendinga" +
+      "ckpolicy\030\010 \001(\0132!.rina.messages.efcpPolic" +
+      "yConfig_t\022?\n\024rcvrcontrolackpolicy\030\t \001(\0132",
+      "!.rina.messages.efcpPolicyConfig_t\"\322\003\n\014d" +
+      "tcpConfig_t\022\023\n\013flowControl\030\001 \001(\010\022A\n\021flow" +
+      "ControlConfig\030\002 \001(\0132&.rina.messages.dtcp" +
+      "FlowControlConfig_t\022\022\n\nrtxControl\030\003 \001(\010\022" +
+      "?\n\020rtxControlConfig\030\004 \001(\0132%.rina.message" +
+      "s.dtcpRtxControlConfig_t\022#\n\033initialsende" +
+      "rinactivitytime\030\005 \001(\r\022\"\n\032initialrecvrina" +
+      "ctivitytime\030\006 \001(\r\022D\n\031rcvrtimerinactivity" +
+      "policy\030\007 \001(\0132!.rina.messages.efcpPolicyC" +
+      "onfig_t\022E\n\032sendertimerinactiviypolicy\030\010 ",
+      "\001(\0132!.rina.messages.efcpPolicyConfig_t\022?" +
+      "\n\024lostcontrolpdupolicy\030\t \001(\0132!.rina.mess" +
+      "ages.efcpPolicyConfig_t\"\304\001\n\024connectionPo" +
+      "licies_t\022\023\n\013dtcpPresent\030\001 \001(\010\0226\n\021dtcpCon" +
+      "figuration\030\002 \001(\0132\033.rina.messages.dtcpCon" +
+      "fig_t\022>\n\023initialseqnumpolicy\030\003 \001(\0132!.rin" +
+      "a.messages.efcpPolicyConfig_t\022\037\n\027seqnumr" +
+      "olloverthreshold\030\004 \001(\004\"\305\004\n\004Flow\022G\n\020sourc" +
+      "eNamingInfo\030\001 \002(\0132-.rina.messages.applic" +
+      "ationProcessNamingInfo_t\022L\n\025destinationN",
+      "amingInfo\030\002 \002(\0132-.rina.messages.applicat" +
+      "ionProcessNamingInfo_t\022\024\n\014sourcePortId\030\003" +
+      " \002(\004\022\031\n\021destinationPortId\030\004 \001(\004\022\025\n\rsourc" +
+      "eAddress\030\005 \002(\004\022\032\n\022destinationAddress\030\006 \001" +
+      "(\004\0224\n\rconnectionIds\030\007 \003(\0132\035.rina.message" +
+      "s.connectionId_t\022 \n\030currentConnectionIdI" +
+      "ndex\030\010 \001(\r\022\r\n\005state\030\t \001(\r\0228\n\rqosParamete" +
+      "rs\030\n \001(\0132!.rina.messages.qosSpecificatio" +
+      "n_t\022?\n\022connectionPolicies\030\013 \001(\0132#.rina.m" +
+      "essages.connectionPolicies_t\022\025\n\raccessCo",
+      "ntrol\030\014 \001(\014\022\034\n\024maxCreateFlowRetries\030\r \001(" +
+      "\r\022\031\n\021createFlowRetries\030\016 \001(\r\022\020\n\010hopCount" +
+      "\030\017 \001(\rB(\n&rina.encoding.impl.googleproto" +
+      "buf.flow"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1529,12 +6043,76 @@ public final class FlowMessage {
               new java.lang.String[] { "QosId", "SourceCEPId", "DestinationCEPId", },
               rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionId_t.class,
               rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionId_t.Builder.class);
-          internal_static_rina_messages_Flow_descriptor =
+          internal_static_rina_messages_policyParameter_t_descriptor =
             getDescriptor().getMessageTypes().get(1);
+          internal_static_rina_messages_policyParameter_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_policyParameter_t_descriptor,
+              new java.lang.String[] { "Name", "Value", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t.Builder.class);
+          internal_static_rina_messages_efcpPolicyConfig_t_descriptor =
+            getDescriptor().getMessageTypes().get(2);
+          internal_static_rina_messages_efcpPolicyConfig_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_efcpPolicyConfig_t_descriptor,
+              new java.lang.String[] { "Name", "Version", "Parameters", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t.Builder.class);
+          internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_descriptor =
+            getDescriptor().getMessageTypes().get(3);
+          internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_dtcpWindowBasedFlowControlConfig_t_descriptor,
+              new java.lang.String[] { "Maxclosedwindowqueuelength", "Initialcredit", "Rcvrflowcontrolpolicy", "Receivingflowcontrolpolicy", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t.Builder.class);
+          internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_descriptor =
+            getDescriptor().getMessageTypes().get(4);
+          internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_dtcpRateBasedFlowControlConfig_t_descriptor,
+              new java.lang.String[] { "Sendingrate", "Timeperiod", "Norateslowdownpolicy", "Nooverridedefaultpeakpolicy", "Ratereductionpolicy", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t.Builder.class);
+          internal_static_rina_messages_dtcpFlowControlConfig_t_descriptor =
+            getDescriptor().getMessageTypes().get(5);
+          internal_static_rina_messages_dtcpFlowControlConfig_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_dtcpFlowControlConfig_t_descriptor,
+              new java.lang.String[] { "WindowBased", "WindowBasedConfig", "RateBased", "RateBasedConfig", "Sentbytesthreshold", "Sentbytespercentthreshold", "Sentbuffersthreshold", "Rcvbytesthreshold", "Rcvbytespercentthreshold", "Rcvbuffersthreshold", "Closedwindowpolicy", "Flowcontroloverrunpolicy", "Reconcileflowcontrolpolicy", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_t.Builder.class);
+          internal_static_rina_messages_dtcpRtxControlConfig_t_descriptor =
+            getDescriptor().getMessageTypes().get(6);
+          internal_static_rina_messages_dtcpRtxControlConfig_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_dtcpRtxControlConfig_t_descriptor,
+              new java.lang.String[] { "Datarxmsnmax", "InitialATimer", "Rttestimatorpolicy", "Rtxtimerexpirypolicy", "Senderackpolicy", "Recvingacklistpolicy", "Rcvrackpolicy", "Sendingackpolicy", "Rcvrcontrolackpolicy", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t.Builder.class);
+          internal_static_rina_messages_dtcpConfig_t_descriptor =
+            getDescriptor().getMessageTypes().get(7);
+          internal_static_rina_messages_dtcpConfig_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_dtcpConfig_t_descriptor,
+              new java.lang.String[] { "FlowControl", "FlowControlConfig", "RtxControl", "RtxControlConfig", "Initialsenderinactivitytime", "Initialrecvrinactivitytime", "Rcvrtimerinactivitypolicy", "Sendertimerinactiviypolicy", "Lostcontrolpdupolicy", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpConfig_t.Builder.class);
+          internal_static_rina_messages_connectionPolicies_t_descriptor =
+            getDescriptor().getMessageTypes().get(8);
+          internal_static_rina_messages_connectionPolicies_t_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_rina_messages_connectionPolicies_t_descriptor,
+              new java.lang.String[] { "DtcpPresent", "DtcpConfiguration", "Initialseqnumpolicy", "Seqnumrolloverthreshold", },
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.class,
+              rina.encoding.impl.googleprotobuf.flow.FlowMessage.connectionPolicies_t.Builder.class);
+          internal_static_rina_messages_Flow_descriptor =
+            getDescriptor().getMessageTypes().get(9);
           internal_static_rina_messages_Flow_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_Flow_descriptor,
-              new java.lang.String[] { "SourceNamingInfo", "DestinationNamingInfo", "SourcePortId", "DestinationPortId", "SourceAddress", "DestinationAddress", "ConnectionIds", "CurrentConnectionIdIndex", "State", "QosParameters", "Policies", "PolicyParemeters", "AccessControl", "MaxCreateFlowRetries", "CreateFlowRetries", "HopCount", },
+              new java.lang.String[] { "SourceNamingInfo", "DestinationNamingInfo", "SourcePortId", "DestinationPortId", "SourceAddress", "DestinationAddress", "ConnectionIds", "CurrentConnectionIdIndex", "State", "QosParameters", "ConnectionPolicies", "AccessControl", "MaxCreateFlowRetries", "CreateFlowRetries", "HopCount", },
               rina.encoding.impl.googleprotobuf.flow.FlowMessage.Flow.class,
               rina.encoding.impl.googleprotobuf.flow.FlowMessage.Flow.Builder.class);
           return null;
