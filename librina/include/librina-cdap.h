@@ -38,29 +38,80 @@ private:
 };
 
 /// Encapsulates the data to set an object value
-class ObjectValue {
+class ObjectValueInterface {
 public:
-	ObjectValue();
-	int get_intval() const;
-	int get_sintval() const;
-	long get_int64val() const;
-	long get_sint64val() const;
-	std::string get_strval() const;
-	char* get_byteval() const;
-	int get_floatval() const;
-	long get_doubleval() const;
-	bool is_booleanval() const;
-	bool operator==(const ObjectValue &other) const;
-private:
-	int intval_;
-	int sintval_;
-	long int64val_;
-	long sint64val_;
-	std::string strval_;
-	char* byteval_;
-	int floatval_;
-	long doubleval_;
-	bool booleanval_;
+	virtual ~ObjectValueInterface() = 0;
+	virtual bool is_empty() const = 0;
+};
+
+template<typename T>
+class AbstractObjectValue: public ObjectValueInterface {
+public:
+	AbstractObjectValue();
+	AbstractObjectValue(T &value);
+	virtual ~AbstractObjectValue();
+	T get_value() const;
+	virtual bool operator==(const AbstractObjectValue<T> &other) = 0;
+	bool is_empty() const;
+protected:
+	T value_;
+	bool empty_;
+};
+
+class IntObjectValue: public AbstractObjectValue<int> {
+public:
+	IntObjectValue();
+	IntObjectValue(int value);
+	bool operator==(const AbstractObjectValue<int> &other);
+};
+
+class SIntObjectValue: public AbstractObjectValue<short int> {
+public:
+	SIntObjectValue();
+	SIntObjectValue(short int value);
+	bool operator==(const AbstractObjectValue<short int> &other);
+};
+
+class LongObjectValue: public AbstractObjectValue<long long> {
+public:
+	LongObjectValue();
+	LongObjectValue(long long value);
+	bool operator==(const AbstractObjectValue<long long> &other);
+};
+
+class SLongObjectValue: public AbstractObjectValue<long> {
+public:
+	SLongObjectValue();
+	SLongObjectValue(long value);
+	bool operator==(const AbstractObjectValue<long> &other);
+};
+
+class StringObjectValue: public AbstractObjectValue<std::string> {
+public:
+	StringObjectValue();
+	StringObjectValue(std::string value);
+	bool operator==(const AbstractObjectValue<std::string> &other);
+};
+
+class ByteArrayObjectValue: public AbstractObjectValue<char*> {
+public:
+	ByteArrayObjectValue();
+	ByteArrayObjectValue(char* value);
+	bool operator==(const AbstractObjectValue<char*> &other);
+};
+
+class FloatObjectValue: public AbstractObjectValue<float> {
+public:
+	FloatObjectValue();
+	FloatObjectValue(float value);
+	bool operator==(const AbstractObjectValue<float> &other);
+};
+
+class BooleanObjectValue: public AbstractObjectValue<bool> {
+public:
+	BooleanObjectValue();
+	BooleanObjectValue(bool value);
+	bool operator==(const AbstractObjectValue<bool> &other);
 };
 
 /// Exception produced in the CDAP
@@ -199,16 +250,16 @@ public:
 	static void getCreateObjectRequestMessage(CDAPMessage &cdapMessage,
 			char filter[], Flags flags, const std::string &obj_class,
 			long obj_inst, const std::string &obj_name,
-			const ObjectValue &obj_value, int scope) throw (CDAPException);
+			const ObjectValueInterface &obj_value, int scope) throw (CDAPException);
 	static void getCreateObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, const std::string &obj_class, long obj_inst,
-			const std::string &obj_name, const ObjectValue &obj_value,
+			const std::string &obj_name, const ObjectValueInterface &obj_value,
 			int result, const std::string &result_reason, int invoke_id)
 					throw (CDAPException);
 	static void getDeleteObjectRequestMessage(CDAPMessage &cdapMessage,
 			char filter[], Flags flags, const std::string &obj_class,
 			long obj_inst, const std::string &obj_name,
-			const ObjectValue &object_value, int scope) throw (CDAPException);
+			const ObjectValueInterface &object_value, int scope) throw (CDAPException);
 	static void getDeleteObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int result,
@@ -216,20 +267,20 @@ public:
 					throw (CDAPException);
 	static void getStartObjectRequestMessage(CDAPMessage &cdapMessage,
 			char filter[], Flags flags, const std::string &obj_class,
-			const ObjectValue &obj_value, long obj_inst,
+			const ObjectValueInterface &obj_value, long obj_inst,
 			const std::string &obj_name, int scope) throw (CDAPException);
 	static void getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, int result, const std::string &result_reason,
 			int invoke_id) throw (CDAPException);
 	static void getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, const std::string &objectClass,
-			const ObjectValue &object_value, long obj_inst,
+			const ObjectValueInterface &object_value, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id)
 					throw (CDAPException);
 	static void getStopObjectRequestMessage(CDAPMessage &cdapMessage,
 			char filter[], Flags flags, const std::string &obj_class,
-			const ObjectValue &obj_value, long obj_inst,
+			const ObjectValueInterface &obj_value, long obj_inst,
 			const std::string &obj_name, int scope) throw (CDAPException);
 	static void getStopObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, int result, const std::string &result_reason,
@@ -240,12 +291,12 @@ public:
 					throw (CDAPException);
 	static void getReadObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, const std::string &obj_class, long obj_inst,
-			const std::string &obj_name, const ObjectValue &obj_value,
+			const std::string &obj_name, const ObjectValueInterface &obj_value,
 			int result, const std::string &result_reason, int invoke_id)
 					throw (CDAPException);
 	static void getWriteObjectRequestMessage(CDAPMessage &cdapMessage,
 			char filter[], Flags flags, const std::string &obj_class,
-			long obj_inst, const ObjectValue &obj_value,
+			long obj_inst, const ObjectValueInterface &obj_value,
 			const std::string &obj_name, int scope) throw (CDAPException);
 	static void getWriteObjectResponseMessage(CDAPMessage &cdapMessage,
 			Flags flags, int result, int invoke_id,
@@ -288,8 +339,8 @@ public:
 	void set_obj_inst(long obj_inst);
 	std::string get_obj_name() const;
 	void set_obj_name(std::string obj_name);
-	const ObjectValue& get_obj_value() const;
-	void set_obj_value(const ObjectValue &obj_value);
+	const ObjectValueInterface& get_obj_value() const;
+	void set_obj_value(const ObjectValueInterface &obj_value);
 	Opcode get_op_code() const;
 	void set_op_code(Opcode op_code);
 	int get_result() const;
@@ -388,9 +439,9 @@ private:
 	 */
 	std::string obj_name_;
 	/**
-	 * ObjectValue (ObjectValue). The value of the object.
+	 * ObjectValueInterface (ObjectValueInterface). The value of the object.
 	 */
-	ObjectValue obj_value_;
+	ObjectValueInterface &obj_value_;
 	/**
 	 * Opcode (enum, int32), mandatory.
 	 * Message type of this message.
@@ -791,7 +842,7 @@ public:
 	 */
 	virtual const CDAPMessage& getCreateObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
-			long obj_inst, std::string obj_name, const ObjectValue &obj_value,
+			long obj_inst, std::string obj_name, const ObjectValueInterface &obj_value,
 			int scope, bool invoke_id) throw (CDAPException) = 0;
 	/**
 	 * Crate a M_CREATE_R CDAP Message
@@ -809,7 +860,7 @@ public:
 	 */
 	virtual const CDAPMessage& getCreateObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class, long obj_inst,
-			std::string obj_name, const ObjectValue &obj_value, int result,
+			std::string obj_name, const ObjectValueInterface &obj_value, int result,
 			std::string result_reason, int invoke_id) throw (CDAPException) = 0;
 	/**
 	 * Create a M_DELETE CDAP Message
@@ -828,7 +879,7 @@ public:
 	virtual const CDAPMessage& getDeleteObjectRequestMessage(int port_id,
 			char* filter, CDAPMessage::Flags flags, std::string obj_class,
 			long obj_inst, std::string obj_name,
-			const ObjectValue &object_value, int scope, bool invoke_id)
+			const ObjectValueInterface &object_value, int scope, bool invoke_id)
 					throw (CDAPException) = 0;
 	/**
 	 * Create a M_DELETE_R CDAP MESSAGE
@@ -863,7 +914,7 @@ public:
 	 */
 	virtual const CDAPMessage& getStartObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
-			const ObjectValue &obj_value, long obj_inst, std::string obj_name,
+			const ObjectValueInterface &obj_value, long obj_inst, std::string obj_name,
 			int scope, bool invoke_id) throw (CDAPException) = 0;
 	/**
 	 * Create a M_START_R CDAP Message
@@ -890,7 +941,7 @@ public:
 	 */
 	virtual const CDAPMessage& getStartObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class,
-			const ObjectValue &obj_value, long obj_inst, std::string obj_name,
+			const ObjectValueInterface &obj_value, long obj_inst, std::string obj_name,
 			int result, std::string result_reason, int invoke_id)
 					throw (CDAPException) = 0;
 	/**
@@ -909,7 +960,7 @@ public:
 	 */
 	virtual const CDAPMessage& getStopObjectRequestMessage(int port_id,
 			char* filter, CDAPMessage::Flags flags, std::string obj_class,
-			const ObjectValue &obj_value, long obj_inst, std::string obj_name,
+			const ObjectValueInterface &obj_value, long obj_inst, std::string obj_name,
 			int scope, bool invoke_id) throw (CDAPException) = 0;
 	/**
 	 * Create a M_STOP_R CDAP Message
@@ -957,7 +1008,7 @@ public:
 	 */
 	virtual const CDAPMessage& getReadObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class, long obj_inst,
-			std::string obj_name, const ObjectValue &obj_value, int result,
+			std::string obj_name, const ObjectValueInterface &obj_value, int result,
 			std::string result_reason, int invoke_id) throw (CDAPException) = 0;
 	/**
 	 * Create a M_WRITE CDAP Message
@@ -975,7 +1026,7 @@ public:
 	 */
 	virtual const CDAPMessage& getWriteObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
-			long obj_inst, const ObjectValue &obj_value, std::string obj_name,
+			long obj_inst, const ObjectValueInterface &obj_value, std::string obj_name,
 			int scope, bool invoke_id) throw (CDAPException) = 0;
 	/**
 	 * Create a M_WRITE_R CDAP Message
