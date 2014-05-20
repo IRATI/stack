@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.PDUForwardingTable;
+package rina.ipcprocess.impl.pduftg.linkstate;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -9,11 +9,6 @@ import java.util.ListIterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
-import rina.PDUForwardingTable.api.PDUFTable;
-import rina.PDUForwardingTable.api.RoutingAlgorithmInt;
-import rina.PDUForwardingTable.api.VertexInt;
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
@@ -23,15 +18,23 @@ import rina.events.api.Event;
 import rina.events.api.EventListener;
 import rina.configuration.RINAConfiguration;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
-import rina.ipcprocess.impl.PDUForwardingTable.timertasks.ComputePDUFT;
-import rina.ipcprocess.impl.PDUForwardingTable.timertasks.PropagateFSODB;
-import rina.ipcprocess.impl.PDUForwardingTable.timertasks.SendReadCDAP;
-import rina.ipcprocess.impl.PDUForwardingTable.timertasks.UpdateAge;
 import rina.ipcprocess.impl.events.NMinusOneFlowAllocatedEvent;
 import rina.ipcprocess.impl.events.NMinusOneFlowDeallocatedEvent;
 import rina.ipcprocess.impl.events.NeighborAddedEvent;
+import rina.ipcprocess.impl.pduftg.linkstate.FlowStateDatabase;
+import rina.ipcprocess.impl.pduftg.linkstate.PDUFTCDAPMessageHandler;
+import rina.ipcprocess.impl.pduftg.linkstate.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.DijkstraAlgorithm;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
+import rina.ipcprocess.impl.pduftg.linkstate.timertasks.ComputePDUFT;
+import rina.ipcprocess.impl.pduftg.linkstate.timertasks.PropagateFSODB;
+import rina.ipcprocess.impl.pduftg.linkstate.timertasks.SendReadCDAP;
+import rina.ipcprocess.impl.pduftg.linkstate.timertasks.UpdateAge;
+import rina.pduftg.api.PDUFTGeneratorPolicy;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
+import rina.pduftg.api.linkstate.RoutingAlgorithmInt;
+import rina.pduftg.api.linkstate.VertexInt;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBDaemonException;
 import eu.irati.librina.FlowInformation;
@@ -42,7 +45,7 @@ import eu.irati.librina.PDUForwardingTableEntryList;
 import eu.irati.librina.PDUForwardingTableException;
 import eu.irati.librina.rina;
 
-public class PDUFTImpl implements PDUFTable, EventListener {
+public class LinkStatePDUFTGeneratorPolicyImpl implements PDUFTGeneratorPolicy, EventListener {
 	
 	public class EnrollmentTimer
 	{
@@ -81,7 +84,7 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		}
 	}
 	
-	private static final Log log = LogFactory.getLog(PDUFTImpl.class);
+	private static final Log log = LogFactory.getLog(LinkStatePDUFTGeneratorPolicyImpl.class);
 	
 	protected final int MAXIMUM_BUFFER_SIZE = 4096;
 	
@@ -141,13 +144,12 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		return this.db;
 	}
 	
-	
 	/**
 	 * Constructor
 	 */
-	public PDUFTImpl ()
+	public LinkStatePDUFTGeneratorPolicyImpl ()
 	{
-		log.info("PDUFT Created");
+		log.info("PDUFTGenerator Created");
 		db = new FlowStateDatabase();
 		flowAllocatedList = new LinkedList<NMinusOneFlowAllocatedEvent>();
 		sendCDAPTimers = new ArrayList<EnrollmentTimer>();
@@ -163,8 +165,11 @@ public class PDUFTImpl implements PDUFTable, EventListener {
 		subscribeToEvents();
 	}
 	
-	public void setDIFConfiguration(RoutingAlgorithmInt routingAlgorithm, VertexInt sourceVertex)
+	public void setDIFConfiguration(PDUFTableGeneratorConfiguration pduftgConfig)
 	{
+		//TODO fix it so that all configurable values are read from pduftgConfig
+		RoutingAlgorithmInt routingAlgorithm = new DijkstraAlgorithm();
+		VertexInt sourceVertex = new Vertex(ipcProcess.getAddress());
 		log.info("Algorithm " + routingAlgorithm.getClass() + " setted");
 		this.routingAlgorithm = routingAlgorithm;
 		this.sourceVertex = sourceVertex;

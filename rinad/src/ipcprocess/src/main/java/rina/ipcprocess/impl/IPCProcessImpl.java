@@ -17,8 +17,6 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.adataunit.api.ADataUnitPDU;
 import rina.applicationprocess.api.WhatevercastName;
 import rina.utils.LogHelper;
@@ -52,22 +50,24 @@ import rina.flowallocator.api.DirectoryForwardingTableEntry;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.FlowAllocator;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.ecfp.DataTransferConstantsRIBObject;
 import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
+import rina.ipcprocess.impl.pduftg.PDUFTGeneratorImpl;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.DijkstraAlgorithm;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.registrationmanager.RegistrationManagerImpl;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
 import rina.ipcprocess.impl.ribobjects.WhatevercastNameSetRIBObject;
+import rina.pduftg.api.PDUFTableGenerator;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
 import rina.registrationmanager.api.RegistrationManager;
 import rina.resourceallocator.api.ResourceAllocator;
 import rina.ribdaemon.api.RIBDaemon;
 import rina.ribdaemon.api.RIBObject;
-import rina.PDUForwardingTable.api.*;
 
 import eu.irati.librina.AllocateFlowRequestResultEvent;
 import eu.irati.librina.AllocateFlowResponseEvent;
@@ -148,7 +148,7 @@ public class IPCProcessImpl implements IPCProcess {
 	private FlowAllocator flowAllocator = null;
 	
 	/** The PDU Forwarding Table */
-	private PDUFTable pduForwardingTable = null;
+	private PDUFTableGenerator pduForwardingTable = null;
 	
 	/** The IPC Process name */
 	private ApplicationProcessNamingInformation name = null;
@@ -186,7 +186,7 @@ public class IPCProcessImpl implements IPCProcess {
 		resourceAllocator = new ResourceAllocatorImpl();
 		registrationManager = new RegistrationManagerImpl();
 		flowAllocator = new FlowAllocatorImpl();
-		pduForwardingTable = new PDUFTImpl();
+		pduForwardingTable = new PDUFTGeneratorImpl();
 		ribDaemon.setIPCProcess(this);
 		enrollmentTask.setIPCProcess(this);
 		resourceAllocator.setIPCProcess(this);
@@ -539,7 +539,7 @@ public class IPCProcessImpl implements IPCProcess {
 			}
 			
 			/*TODO: Set algorithm by config*/
-			pduForwardingTable.setDIFConfiguration(new DijkstraAlgorithm(), new Vertex(getAddress()));
+			pduForwardingTable.setDIFConfiguration(difInformation.getDifConfiguration());
 			log.info("IPC Process successfully assigned to DIF "+ difInformation.getDifName());
 		} else {
 			log.error("The kernel couldn't successfully process the Assign to DIF Request: "+ event.getResult());

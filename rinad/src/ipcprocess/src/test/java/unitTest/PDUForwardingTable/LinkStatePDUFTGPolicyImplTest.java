@@ -1,8 +1,6 @@
 package unitTest.PDUForwardingTable;
 
-
 import java.util.ArrayList;
-import java.util.List;
 
 import junit.framework.Assert;
 
@@ -11,28 +9,28 @@ import org.apache.commons.logging.LogFactory;
 import org.junit.Before;
 import org.junit.Test;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
+import eu.irati.librina.PDUFTableGeneratorConfiguration;
+
 import rina.cdap.api.message.CDAPMessage;
 import rina.cdap.api.message.ObjectValue;
-import rina.configuration.ApplicationToDIFMapping;
-import rina.configuration.RINAConfiguration;
 import rina.encoding.impl.EncoderImpl;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
+import rina.ipcprocess.impl.pduftg.linkstate.LinkStatePDUFTGeneratorPolicyImpl;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.DijkstraAlgorithm;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
 import unitTest.PDUForwardingTable.fakeobjects.FakeIPCProcess;
 import unitTest.PDUForwardingTable.fakeobjects.FakeRIBDaemon;
 
-public class PDUFTImplTest {
+public class LinkStatePDUFTGPolicyImplTest {
 
-	private static final Log log = LogFactory.getLog(PDUFTImplTest.class);
+	private static final Log log = LogFactory.getLog(LinkStatePDUFTGPolicyImplTest.class);
 	
-	protected PDUFTImpl impl = null;
+	protected LinkStatePDUFTGeneratorPolicyImpl impl = null;
 	
 	static {
 		System.loadLibrary("rina_java");
@@ -43,7 +41,7 @@ public class PDUFTImplTest {
 	@Before
 	public void set()
 	{
-		impl = new PDUFTImpl();
+		impl = new LinkStatePDUFTGeneratorPolicyImpl();
 		impl.setTest(true);
 		rib = new FakeRIBDaemon();
 		EncoderImpl encoder = new EncoderImpl();
@@ -51,7 +49,8 @@ public class PDUFTImplTest {
         encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
 		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, encoder);
 		impl.setIPCProcess(ipc);
-		impl.setDIFConfiguration(new DijkstraAlgorithm(), new Vertex(1));
+		PDUFTableGeneratorConfiguration config = new PDUFTableGeneratorConfiguration();
+		impl.setDIFConfiguration(config);
 		/*	Rinaconfiguration	*/
 		/*
 		RINAConfiguration rinaConf = new RINAConfiguration();
@@ -67,7 +66,7 @@ public class PDUFTImplTest {
 	@Test
 	public void PDUFTImpl_Constructor_True()
 	{
-		Assert.assertEquals(impl.getClass(), PDUFTImpl.class);
+		Assert.assertEquals(impl.getClass(), LinkStatePDUFTGeneratorPolicyImpl.class);
 	}
 	
 	@Test

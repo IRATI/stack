@@ -1,22 +1,22 @@
-package rina.ipcprocess.impl.PDUForwardingTable.ribobjects;
+package rina.ipcprocess.impl.pduftg.linkstate.ribobjects;
 
 
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.ipcprocess.api.IPCProcess;
+import rina.ipcprocess.impl.pduftg.linkstate.LinkStatePDUFTGeneratorPolicyImpl;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
 import rina.ribdaemon.api.BaseRIBObject;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
-import rina.PDUForwardingTable.api.PDUFTable;
 
 public class FlowStateRIBObjectGroup extends BaseRIBObject{
 	
-	private PDUFTable pdufTable = null;
+	private LinkStatePDUFTGeneratorPolicyImpl pdufTable = null;
 	
 	/*		Constructors		*/
-	public FlowStateRIBObjectGroup(PDUFTable table, IPCProcess ipcProcess)
+	public FlowStateRIBObjectGroup(LinkStatePDUFTGeneratorPolicyImpl table, IPCProcess ipcProcess)
 	{
 		super(ipcProcess, FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_CLASS, 
 				ObjectInstanceGenerator.getObjectInstance(), FlowStateObjectGroup.FLOW_STATE_GROUP_RIB_OBJECT_NAME);

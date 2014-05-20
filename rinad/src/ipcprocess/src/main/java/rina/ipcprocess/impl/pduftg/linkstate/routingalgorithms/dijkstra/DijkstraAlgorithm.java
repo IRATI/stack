@@ -1,8 +1,4 @@
-package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
-
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.RoutingAlgorithmInt;
-import rina.PDUForwardingTable.api.VertexInt;
+package rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +8,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.RoutingAlgorithmInt;
+import rina.pduftg.api.linkstate.VertexInt;
 
 import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
@@ -174,7 +174,8 @@ public class DijkstraAlgorithm implements RoutingAlgorithmInt{
 	  {
 		  Graph graph = new Graph(fsoList);
 		  this.edges = new ArrayList<Edge>(graph.getEdges());
-		  this.nodes = new ArrayList<VertexInt>(graph.getVertices());
+		  this.nodes = new ArrayList<VertexInt>();
+		  this.nodes.addAll(graph.getVertices());
 		  this.execute(source);
 		  PDUForwardingTableEntryList pduftEntryList = new PDUForwardingTableEntryList();
 		  

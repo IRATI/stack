@@ -1,8 +1,8 @@
-package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
+package rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra;
 
 import java.util.ArrayList;
 
-import rina.PDUForwardingTable.api.VertexInt;
+import rina.pduftg.api.linkstate.VertexInt;
 
 public class Edge  {
 	  private final VertexInt v1;

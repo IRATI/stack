@@ -4,8 +4,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
+import rina.pduftg.api.linkstate.FlowStateObject;
 
 public class FlowStateObjectEncoderTest {
 

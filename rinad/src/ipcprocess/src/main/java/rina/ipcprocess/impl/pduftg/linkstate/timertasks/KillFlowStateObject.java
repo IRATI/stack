@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.PDUForwardingTable.timertasks;
+package rina.ipcprocess.impl.pduftg.linkstate.timertasks;
 
 import java.util.List;
 import java.util.TimerTask;
@@ -6,9 +6,9 @@ import java.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
-import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.pduftg.linkstate.FlowStateDatabase;
+import rina.ipcprocess.impl.pduftg.linkstate.ribobjects.FlowStateRIBObjectGroup;
+import rina.pduftg.api.linkstate.FlowStateObject;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class KillFlowStateObject extends TimerTask{

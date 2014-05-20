@@ -1,6 +1,7 @@
-package rina.PDUForwardingTable.api;
+package rina.pduftg.api.linkstate;
 
 import java.util.List;
+
 
 import eu.irati.librina.PDUForwardingTableEntryList;
 

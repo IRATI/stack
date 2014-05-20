@@ -1,15 +1,14 @@
-package rina.ipcprocess.impl.PDUForwardingTable;
+package rina.ipcprocess.impl.pduftg.linkstate;
 
-import rina.PDUForwardingTable.api.PDUFTable;
 import rina.cdap.api.CDAPMessageHandler;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.message.CDAPMessage;
 import rina.ribdaemon.api.RIBDaemonException;
 
 public class PDUFTCDAPMessageHandler implements CDAPMessageHandler {
-	protected PDUFTable pdufTable = null;
-	
-	PDUFTCDAPMessageHandler(PDUFTable pdufTable)
+	protected LinkStatePDUFTGeneratorPolicyImpl pdufTable = null;
+
+	public PDUFTCDAPMessageHandler(LinkStatePDUFTGeneratorPolicyImpl pdufTable)
 	{
 		this.pdufTable = pdufTable;
 	}

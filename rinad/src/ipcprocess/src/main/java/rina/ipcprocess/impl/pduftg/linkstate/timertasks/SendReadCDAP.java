@@ -1,14 +1,13 @@
-package rina.ipcprocess.impl.PDUForwardingTable.timertasks;
+package rina.ipcprocess.impl.pduftg.linkstate.timertasks;
 
 import java.util.Timer;
 import java.util.TimerTask;
 
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTCDAPMessageHandler;
+import rina.ipcprocess.impl.pduftg.linkstate.PDUFTCDAPMessageHandler;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
 import rina.ribdaemon.api.RIBDaemon;
-
 
 public class SendReadCDAP extends TimerTask{
 	

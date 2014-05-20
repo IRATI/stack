@@ -1,4 +1,4 @@
-package rina.PDUForwardingTable.api;
+package rina.pduftg.api.linkstate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,8 +9,8 @@ public class FlowStateObjectGroup {
 
 	public static final String FLOW_STATE_GROUP_RIB_OBJECT_NAME = RIBObjectNames.SEPARATOR + 
 			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
-			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
-			+ RIBObjectNames.FLOWSTATEOBJECTGROUP;
+			+ RIBObjectNames.SEPARATOR + RIBObjectNames.PDUFTG + RIBObjectNames.SEPARATOR 
+			+ RIBObjectNames.LINKSTATE + RIBObjectNames.SEPARATOR + RIBObjectNames.FLOWSTATEOBJECTGROUP; 
 	
 	public static final String FLOW_STATE_GROUP_RIB_OBJECT_CLASS = "flowstateobjectset";
 	

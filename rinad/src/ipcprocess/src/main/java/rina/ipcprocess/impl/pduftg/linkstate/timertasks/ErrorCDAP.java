@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.PDUForwardingTable.timertasks;
+package rina.ipcprocess.impl.pduftg.linkstate.timertasks;
 
 import java.util.TimerTask;
 

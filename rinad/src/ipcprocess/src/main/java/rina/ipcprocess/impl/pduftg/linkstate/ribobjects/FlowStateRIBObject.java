@@ -1,7 +1,7 @@
-package rina.ipcprocess.impl.PDUForwardingTable.ribobjects;
+package rina.ipcprocess.impl.pduftg.linkstate.ribobjects;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.ipcprocess.api.IPCProcess;
+import rina.pduftg.api.linkstate.FlowStateObject;
 import rina.ribdaemon.api.SimpleSetMemberRIBObject;
 
 public class FlowStateRIBObject extends SimpleSetMemberRIBObject{

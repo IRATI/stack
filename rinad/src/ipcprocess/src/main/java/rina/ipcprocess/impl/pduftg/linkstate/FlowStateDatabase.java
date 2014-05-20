@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.PDUForwardingTable;
+package rina.ipcprocess.impl.pduftg.linkstate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,11 +9,11 @@ import org.apache.commons.logging.LogFactory;
 
 import eu.irati.librina.FlowInformation;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.FlowStateObjectGroup;
 import rina.encoding.api.Encoder;
-import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
-import rina.ipcprocess.impl.PDUForwardingTable.timertasks.KillFlowStateObject;
+import rina.ipcprocess.impl.pduftg.linkstate.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.pduftg.linkstate.timertasks.KillFlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
 import rina.ribdaemon.api.ObjectInstanceGenerator;
 import rina.ribdaemon.api.RIBDaemonException;
 

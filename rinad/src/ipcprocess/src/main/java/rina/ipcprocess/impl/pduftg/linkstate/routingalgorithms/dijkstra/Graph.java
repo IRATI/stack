@@ -1,4 +1,4 @@
-package rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra;
+package rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObject;
 
 public class Graph {
 	  private static final Log log = LogFactory.getLog(Graph.class);

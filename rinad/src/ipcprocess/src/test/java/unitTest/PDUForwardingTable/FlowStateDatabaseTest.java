@@ -5,12 +5,12 @@ import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupEncoder;
 import rina.ipcprocess.api.IPCProcess;
-import rina.ipcprocess.impl.PDUForwardingTable.FlowStateDatabase;
-import rina.ipcprocess.impl.PDUForwardingTable.PDUFTImpl;
-import rina.ipcprocess.impl.PDUForwardingTable.ribobjects.FlowStateRIBObjectGroup;
+import rina.ipcprocess.impl.pduftg.linkstate.FlowStateDatabase;
+import rina.ipcprocess.impl.pduftg.linkstate.LinkStatePDUFTGeneratorPolicyImpl;
+import rina.ipcprocess.impl.pduftg.linkstate.ribobjects.FlowStateRIBObjectGroup;
+import rina.pduftg.api.linkstate.FlowStateObject;
 import rina.ribdaemon.api.RIBDaemonException;
 import unitTest.PDUForwardingTable.fakeobjects.FakeCDAPSessionManager;
 import unitTest.PDUForwardingTable.fakeobjects.FakeIPCProcess;
@@ -52,7 +52,8 @@ public class FlowStateDatabaseTest {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
 		
-		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(),ipc));
+		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), 
+				obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new LinkStatePDUFTGeneratorPolicyImpl(),ipc));
 		
 		Assert.assertTrue(db.isModified());
 	}
@@ -64,10 +65,11 @@ public class FlowStateDatabaseTest {
 		FakeRIBDaemon rib = new FakeRIBDaemon();
 		IPCProcess ipc = new FakeIPCProcess(new FakeCDAPSessionManager(), rib, new FlowStateGroupEncoder());
 		
-		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new PDUFTImpl(),ipc));
+		db.addObjectToGroup(obj1.getAddress(), obj1.getPortid(), obj1.getNeighborAddress(), 
+				obj1.getNeighborPortid(), new FlowStateRIBObjectGroup(new LinkStatePDUFTGeneratorPolicyImpl(),ipc));
 		db.setModified(false);
 		try {
-			db.incrementAge(3, new FlowStateRIBObjectGroup(new PDUFTImpl(),ipc));
+			db.incrementAge(3, new FlowStateRIBObjectGroup(new LinkStatePDUFTGeneratorPolicyImpl(),ipc));
 		} catch (RIBDaemonException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
