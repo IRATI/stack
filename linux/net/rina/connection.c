@@ -89,11 +89,16 @@ int conn_policies_destroy(struct conn_policies * cp_params)
 {
         int retval = 0;
 
-        if (dtcp_config_destroy(cp_params->dtcp_cfg))
-                retval = -1;
+        if (!cp_params)
+                return -1;
 
-        if (policy_destroy(cp_params->initial_sequence_number))
-                retval = -1;
+        if (cp_params->dtcp_cfg)
+                if (dtcp_config_destroy(cp_params->dtcp_cfg))
+                        retval = -1;
+
+        if (cp_params->initial_sequence_number)
+                if (policy_destroy(cp_params->initial_sequence_number))
+                        retval = -1;
 
         rkfree(cp_params);
         return retval;

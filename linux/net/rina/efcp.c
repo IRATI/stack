@@ -402,6 +402,10 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 #if DTCP_TEST_ENABLE
         connection->policies_params->dtcp_present = true;
         connection->policies_params->dtcp_cfg = dtcp_config_create();
+        if (!connection->policies_params->dtcp_cfg) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
         dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
         dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, true);
         dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg, true);
