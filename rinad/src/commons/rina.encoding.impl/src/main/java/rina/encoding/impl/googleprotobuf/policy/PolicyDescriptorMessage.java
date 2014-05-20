@@ -49,12 +49,12 @@ public final class PolicyDescriptorMessage {
     public boolean hasPolicyImplName() { return hasPolicyImplName; }
     public java.lang.String getPolicyImplName() { return policyImplName_; }
     
-    // optional uint32 version = 3;
+    // optional string version = 3;
     public static final int VERSION_FIELD_NUMBER = 3;
     private boolean hasVersion;
-    private int version_ = 0;
+    private java.lang.String version_ = "";
     public boolean hasVersion() { return hasVersion; }
-    public int getVersion() { return version_; }
+    public java.lang.String getVersion() { return version_; }
     
     // repeated .rina.messages.property_t policyParameters = 4;
     public static final int POLICYPARAMETERS_FIELD_NUMBER = 4;
@@ -87,7 +87,7 @@ public final class PolicyDescriptorMessage {
         output.writeString(2, getPolicyImplName());
       }
       if (hasVersion()) {
-        output.writeUInt32(3, getVersion());
+        output.writeString(3, getVersion());
       }
       for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getPolicyParametersList()) {
         output.writeMessage(4, element);
@@ -111,7 +111,7 @@ public final class PolicyDescriptorMessage {
       }
       if (hasVersion()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, getVersion());
+          .computeStringSize(3, getVersion());
       }
       for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getPolicyParametersList()) {
         size += com.google.protobuf.CodedOutputStream
@@ -327,8 +327,8 @@ public final class PolicyDescriptorMessage {
               setPolicyImplName(input.readString());
               break;
             }
-            case 24: {
-              setVersion(input.readUInt32());
+            case 26: {
+              setVersion(input.readString());
               break;
             }
             case 34: {
@@ -384,21 +384,24 @@ public final class PolicyDescriptorMessage {
         return this;
       }
       
-      // optional uint32 version = 3;
+      // optional string version = 3;
       public boolean hasVersion() {
         return result.hasVersion();
       }
-      public int getVersion() {
+      public java.lang.String getVersion() {
         return result.getVersion();
       }
-      public Builder setVersion(int value) {
-        result.hasVersion = true;
+      public Builder setVersion(java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  result.hasVersion = true;
         result.version_ = value;
         return this;
       }
       public Builder clearVersion() {
         result.hasVersion = false;
-        result.version_ = 0;
+        result.version_ = getDefaultInstance().getVersion();
         return this;
       }
       
@@ -483,7 +486,7 @@ public final class PolicyDescriptorMessage {
       "to\022\rrina.messages\032\037protofiles/CommonMess" +
       "ages.proto\"\206\001\n\022policyDescriptor_t\022\022\n\npol" +
       "icyName\030\001 \001(\t\022\026\n\016policyImplName\030\002 \001(\t\022\017\n" +
-      "\007version\030\003 \001(\r\0223\n\020policyParameters\030\004 \003(\013" +
+      "\007version\030\003 \001(\t\0223\n\020policyParameters\030\004 \003(\013" +
       "2\031.rina.messages.property_tB*\n(rina.enco" +
       "ding.impl.googleprotobuf.policy"
     };

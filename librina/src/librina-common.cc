@@ -1043,52 +1043,6 @@ IPCException::IPCException(const std::string& description) :
 const std::string IPCException::operation_not_implemented_error =
 		"This operation is not yet implemented";
 
-/* CLASS POLICY */
-bool Policy::operator==(const Policy &other) const {
-	return false;
-}
-
-bool Policy::operator!=(const Policy &other) const {
-	return !(*this == other);
-}
-
-Policy::Policy() {
-        this->id = 0;
-}
-
-Policy::Policy(unsigned int id, std::string name) {
-        this->id = id;
-        this->name = name;
-}
-
-unsigned int Policy::getId() const {
-        return id;
-}
-
-void Policy::setId(unsigned int id) {
-        this->id = id;
-}
-
-const std::string& Policy::getName() const {
-        return name;
-}
-
-void Policy::setName(const std::string& name) {
-        this->name = name;
-}
-
-const std::list<Parameter>& Policy::getParameters() const {
-        return parameters;
-}
-
-void Policy::setParameters(const std::list<Parameter>& parameters) {
-        this->parameters = parameters;
-}
-
-void Policy::addParameter(const Parameter& parameter) {
-        parameters.push_back(parameter);
-}
-
 /* CLASS PARAMETER */
 Parameter::Parameter(){
 }
@@ -1260,8 +1214,16 @@ const std::string& PolicyParameter::getName() const {
         return name;
 }
 
+void PolicyParameter::setName(const std::string& name) {
+        this->name = name;
+}
+
 const std::string& PolicyParameter::getValue() const {
         return value;
+}
+
+void PolicyParameter::setValue(const std::string& value) {
+        this->value = value;
 }
 
 /* CLASS POLICY CONFIGURATION */
@@ -1270,16 +1232,30 @@ PolicyConfig::PolicyConfig() {
         version = RINA_DEFAULT_POLICY_VERSION;
 }
 
-PolicyConfig::PolicyConfig(const std::string& name, short version) {
+PolicyConfig::PolicyConfig(const std::string& name,
+                const std::string& version) {
         this->name = name;
         this->version = version;
+}
+
+bool PolicyConfig::operator==(const PolicyConfig &other) const {
+        return other.getName().compare(name) == 0 &&
+                        other.getVersion().compare(version) == 0;
+}
+
+bool PolicyConfig::operator!=(const PolicyConfig &other) const {
+        return !(*this == other);
 }
 
 const std::string& PolicyConfig::getName() const {
         return name;
 }
 
-const std::list<PolicyParameter>&
+void PolicyConfig::setName(const std::string& name) {
+        this->name = name;
+}
+
+/*const std::list<PolicyParameter>&
 PolicyConfig::getParameters() const {
         return parameters;
 }
@@ -1291,10 +1267,14 @@ void PolicyConfig::setParameters(
 
 void PolicyConfig::addParameter(const PolicyParameter& paremeter) {
         parameters.push_back(paremeter);
+}*/
+
+const std::string& PolicyConfig::getVersion() const {
+        return version;
 }
 
-short PolicyConfig::getVersion() const {
-        return version;
+void PolicyConfig::setVersion(const std::string& version) {
+        this->version = version;
 }
 
 /* CLASS LinkStateRouting Configuraiton */
@@ -1453,15 +1433,15 @@ void DIFConfiguration::setAddress(unsigned int address) {
         this->address = address;
 }
 
-const std::list<Policy>& DIFConfiguration::getPolicies() {
+const std::list<PolicyConfig>& DIFConfiguration::getPolicies() {
 	return policies;
 }
 
-void DIFConfiguration::setPolicies(const std::list<Policy>& policies) {
+void DIFConfiguration::setPolicies(const std::list<PolicyConfig>& policies) {
 	this->policies = policies;
 }
 
-void DIFConfiguration::addPolicy(const Policy& policy) {
+void DIFConfiguration::addPolicy(const PolicyConfig& policy) {
         policies.push_back(policy);
 }
 

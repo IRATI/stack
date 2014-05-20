@@ -74,13 +74,10 @@ public class GPBUtils {
 		if (policyConfig == null) {
 			return result;
 		}
-		
-		List<property_t> parameters = getAllPolicyParameters(policyConfig.getParameters());
 				
 		result = PolicyDescriptorMessage.policyDescriptor_t.newBuilder().
 				setPolicyImplName(policyConfig.getName()).
 				setVersion(policyConfig.getVersion()).
-				addAllPolicyParameters(parameters).
 				build();
 		
 		return result;
@@ -170,13 +167,7 @@ public class GPBUtils {
 			return result;
 		}
 		
-		result = new PolicyConfig(policyConfig.getPolicyImplName(), (short)policyConfig.getVersion());
-		if (policyConfig.getPolicyParametersCount() > 0) {
-			List<property_t> parameters = policyConfig.getPolicyParametersList();
-			for(int i=0; i<parameters.size(); i++){
-				result.addParameter(getPolicyParameter(parameters.get(i)));
-			}
-		}
+		result = new PolicyConfig(policyConfig.getPolicyImplName(), policyConfig.getVersion());
 		
 		return result;
 	}

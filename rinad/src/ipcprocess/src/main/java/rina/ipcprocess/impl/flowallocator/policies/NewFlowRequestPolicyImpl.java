@@ -42,7 +42,7 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		connectionPolicies.setDtcPpresent(true);
 		connectionPolicies.setSeqnumrolloverthreshold(1234);
 		connectionPolicies.setInitialseqnumpolicy(
-				new PolicyConfig("policy1", (short)23));
+				new PolicyConfig("policy1", "23"));
 		DTCPConfig dtcpConfig = new DTCPConfig();
 		dtcpConfig.setRtxcontrol(true);
 		DTCPRtxControlConfig rtxConfig = new DTCPRtxControlConfig();

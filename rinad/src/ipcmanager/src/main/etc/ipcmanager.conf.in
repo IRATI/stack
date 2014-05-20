@@ -90,7 +90,7 @@
     	 "organization" : "IRATI"
       } ], 
      "pdufTableGeneratorConfiguration" : {
-        "pduFTGeneratorPolicy" : {
+        "pduFtGeneratorPolicy" : {
           "name" : "LinkState",
           "version" : 0
         },

@@ -173,7 +173,8 @@ public class LinkStatePDUFTGeneratorPolicyImpl implements PDUFTGeneratorPolicy, 
 					pduftgConfig.getLinkStateRoutingConfiguration().toString());
 		}
 		
-		String routingAlgorithmName = pduftgConfig.getLinkStateRoutingConfiguration().getRoutingAlgorithm();
+		pduftGeneratorConfiguration = pduftgConfig;
+		String routingAlgorithmName = pduftGeneratorConfiguration.getLinkStateRoutingConfiguration().getRoutingAlgorithm();
 		if (!routingAlgorithmName.equals("Dijkstra")) {
 			log.warn("Routing algorithm: "+routingAlgorithmName+" currently not supported, using Dijkstra instead");
 		}

@@ -772,35 +772,6 @@ public:
 };
 
 /**
- * Represents a policy. This is a generic placeholder which should be defined
- * during the second prototype activities
- */
-class Policy {
-
-        /** The id of the policy */
-        unsigned int id;
-
-        /** The name of the policy */
-        std::string name;
-
-        /** Parameters of the policy */
-        std::list<Parameter> parameters;
-
-public:
-	bool operator==(const Policy &other) const;
-	bool operator!=(const Policy &other) const;
-	Policy();
-	Policy(unsigned int id, std::string name);
-        unsigned int getId() const;
-        void setId(unsigned int id);
-        const std::string& getName() const;
-        void setName(const std::string& name);
-        const std::list<Parameter>& getParameters() const;
-        void setParameters(const std::list<Parameter>& parameters);
-        void addParameter(const Parameter& parameter);
-};
-
-/**
  * Contains the values of the constants for the Error and Flow Control
  * Protocol (EFCP)
  */
@@ -882,7 +853,9 @@ public:
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
         const std::string& getName() const;
+        void setName(const std::string& name);
         const std::string& getValue() const;
+        void setValue(const std::string& value);
 };
 
 /**
@@ -894,19 +867,23 @@ class PolicyConfig {
         std::string name;
 
         /** the version of the policy */
-        short version;
+        std::string version;
 
         /** optional name/value parameters to configure the policy */
         std::list<PolicyParameter> parameters;
 
 public:
         PolicyConfig();
-        PolicyConfig(const std::string& name, short version);
+        PolicyConfig(const std::string& name, const std::string& version);
+        bool operator==(const PolicyConfig &other) const;
+        bool operator!=(const PolicyConfig &other) const;
         const std::string& getName() const;
-        const std::list<PolicyParameter>& getParameters() const;
-        void setParameters(const std::list<PolicyParameter>& parameters);
-        void addParameter(const PolicyParameter& paremeter);
-        short getVersion() const;
+        void setName(const std::string& name);
+        //const std::list<PolicyParameter>& getParameters() const;
+        //void setParameters(const std::list<PolicyParameter>& parameters);
+        //void addParameter(const PolicyParameter& paremeter);
+        const std::string& getVersion() const;
+        void setVersion(const std::string& version);
 };
 
 /**
@@ -986,7 +963,7 @@ class DIFConfiguration {
 	std::list<QoSCube> qosCubes;
 
 	/** The policies of the DIF */
-	std::list<Policy> policies;
+	std::list<PolicyConfig> policies;
 
 	/** Configuration parameters */
 	std::list<Parameter> parameters;
@@ -995,9 +972,9 @@ class DIFConfiguration {
 	PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
 public:
-	const std::list<Policy>& getPolicies();
-	void setPolicies(const std::list<Policy>& policies);
-	void addPolicy(const Policy& policy);
+	const std::list<PolicyConfig>& getPolicies();
+	void setPolicies(const std::list<PolicyConfig>& policies);
+	void addPolicy(const PolicyConfig& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
 	void addQoSCube(const QoSCube& qosCube);
@@ -1006,10 +983,11 @@ public:
 	void addParameter(const Parameter& parameter);
 	const DataTransferConstants& getDataTransferConstants() const;
 	void setDataTransferConstants(
-					const DataTransferConstants& dataTransferConstants);
+	                const DataTransferConstants& dataTransferConstants);
 	unsigned int getAddress() const;
 	void setAddress(unsigned int address);
-	void setPDUFTableGeneratorConfiguration (const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+	void setPDUFTableGeneratorConfiguration(
+	                const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
 	const PDUFTableGeneratorConfiguration& getPDUFTableGeneratorConfiguration() const;
 };
 

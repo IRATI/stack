@@ -1616,14 +1616,13 @@ int putListOfPolicyParameters(nl_msg* netlinkMessage,
 
 int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
                 PolicyConfig * efcpPolicyConfig) {
-        nlattr * nla;
+       /* nlattr * nla;
         int rem;
         PolicyParameter * parameter;
 
         for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
                      nla_ok(nla, rem);
                      nla = nla_next(nla, &(rem))){
-                /* validate & parse attribute */
                 parameter = parsePolicyParameterObject(nla);
                 if (parameter == 0){
                         return -1;
@@ -1634,19 +1633,19 @@ int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
 
         if (rem > 0){
                 LOG_WARN("Missing bits to parse");
-        }
+        }*/
 
         return 0;
 }
 
 int putPolicyConfigObject(nl_msg * netlinkMessage,
                 const PolicyConfig& object) {
-        struct nlattr * parameters;
+        //struct nlattr * parameters;
 
         NLA_PUT_STRING(netlinkMessage, EPC_ATTR_NAME, object.getName().c_str());
-        NLA_PUT_U32(netlinkMessage, EPC_ATTR_VERSION, object.getVersion());
+        NLA_PUT_STRING(netlinkMessage, EPC_ATTR_VERSION, object.getVersion().c_str());
 
-        if (object.getParameters().size() > 0) {
+        /*if (object.getParameters().size() > 0) {
                 if (!(parameters = nla_nest_start(netlinkMessage,
                                 EPC_ATTR_PARAMETERS))) {
                         goto nla_put_failure;
@@ -1658,7 +1657,7 @@ int putPolicyConfigObject(nl_msg * netlinkMessage,
                 }
 
                 nla_nest_end(netlinkMessage, parameters);
-        }
+        }*/
 
         return 0;
 
@@ -1689,14 +1688,14 @@ parsePolicyConfigObject(nlattr *nested) {
         }
 
         std::string name;
-        short version = 0;
+        std::string version;
 
         if (attrs[EPC_ATTR_NAME]) {
                 name = nla_get_string(attrs[EPC_ATTR_NAME]);
         }
 
         if (attrs[EPC_ATTR_VERSION]) {
-                version = nla_get_u32(attrs[EPC_ATTR_VERSION]);
+                version = nla_get_string(attrs[EPC_ATTR_VERSION]);
         }
 
         PolicyConfig * result = new PolicyConfig(name, version);
