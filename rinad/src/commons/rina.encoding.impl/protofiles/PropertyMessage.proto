@@ -1,7 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.property";
-
-message property_t {         // carries the information of a name/value pair
-        required string name = 1;
-        required string value = 2;
-}

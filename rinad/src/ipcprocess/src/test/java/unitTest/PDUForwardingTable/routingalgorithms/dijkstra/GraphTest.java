@@ -1,15 +1,14 @@
 package unitTest.PDUForwardingTable.routingalgorithms.dijkstra;
 
-
 import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 
 import org.junit.Test;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Graph;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Graph;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
+import rina.pduftg.api.linkstate.FlowStateObject;
 
 public class GraphTest {
 

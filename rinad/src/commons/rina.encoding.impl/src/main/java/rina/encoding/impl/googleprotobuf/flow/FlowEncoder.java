@@ -1,7 +1,6 @@
 package rina.encoding.impl.googleprotobuf.flow;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import eu.irati.librina.Connection;
@@ -11,10 +10,8 @@ import eu.irati.librina.DTCPFlowControlConfig;
 import eu.irati.librina.DTCPRateBasedFlowControlConfig;
 import eu.irati.librina.DTCPRtxControlConfig;
 import eu.irati.librina.DTCPWindowBasedFlowControlConfig;
-import eu.irati.librina.EFCPPolicyConfig;
+import eu.irati.librina.PolicyConfig;
 import eu.irati.librina.FlowSpecification;
-import eu.irati.librina.PolicyParameter;
-import eu.irati.librina.PolicyParameterList;
 
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.GPBUtils;
@@ -25,8 +22,6 @@ import rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpFlowControlConfig_
 import rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRateBasedFlowControlConfig_t;
 import rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpRtxControlConfig_t;
 import rina.encoding.impl.googleprotobuf.flow.FlowMessage.dtcpWindowBasedFlowControlConfig_t;
-import rina.encoding.impl.googleprotobuf.flow.FlowMessage.efcpPolicyConfig_t;
-import rina.encoding.impl.googleprotobuf.flow.FlowMessage.policyParameter_t;
 import rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t;
 import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.Flow.State;
@@ -110,10 +105,10 @@ public class FlowEncoder implements Encoder{
 	
 	private ConnectionPolicies getConnectionPolicies(connectionPolicies_t connectionPolicies){
 		ConnectionPolicies result = new ConnectionPolicies();
-		EFCPPolicyConfig policyConfig = null;
+		PolicyConfig policyConfig = null;
 		
 		result.setDtcPpresent(connectionPolicies.getDtcpPresent());
-		policyConfig = getEFCPPolicyConfig(connectionPolicies.getInitialseqnumpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(connectionPolicies.getInitialseqnumpolicy());
 		if (policyConfig != null) {
 			result.setInitialseqnumpolicy(policyConfig);
 		}
@@ -127,7 +122,7 @@ public class FlowEncoder implements Encoder{
 	
 	private DTCPConfig getDTCPConfig(dtcpConfig_t dtcpConfig) {
 		DTCPConfig result = new DTCPConfig();
-		EFCPPolicyConfig policyConfig = null;
+		PolicyConfig policyConfig = null;
 		
 		if (dtcpConfig == null){
 			return result;
@@ -143,15 +138,15 @@ public class FlowEncoder implements Encoder{
 		}
 		result.setInitialrecvrinactivitytime(dtcpConfig.getInitialrecvrinactivitytime());
 		result.setInitialsenderinactivitytime(dtcpConfig.getInitialsenderinactivitytime());
-		policyConfig = getEFCPPolicyConfig(dtcpConfig.getLostcontrolpdupolicy());
+		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getLostcontrolpdupolicy());
 		if (policyConfig != null) {
 			result.setLostcontrolpdupolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(dtcpConfig.getRcvrtimerinactivitypolicy());
+		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getRcvrtimerinactivitypolicy());
 		if (policyConfig != null) {
 			result.setRcvrtimerinactivitypolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(dtcpConfig.getSendertimerinactiviypolicy());
+		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getSendertimerinactiviypolicy());
 		if (policyConfig != null) {
 			result.setSendertimerinactiviypolicy(policyConfig);
 		}
@@ -161,7 +156,7 @@ public class FlowEncoder implements Encoder{
 	
 	private DTCPRtxControlConfig getDTCPRtxControlConfig(dtcpRtxControlConfig_t rtxControlConfig) {
 		DTCPRtxControlConfig result = new DTCPRtxControlConfig();
-		EFCPPolicyConfig policyConfig = null;
+		PolicyConfig policyConfig = null;
 		
 		if (rtxControlConfig == null) {
 			return result;
@@ -169,31 +164,31 @@ public class FlowEncoder implements Encoder{
 		
 		result.setDatarxmsnmax(rtxControlConfig.getDatarxmsnmax());
 		result.setInitialATimer(rtxControlConfig.getInitialATimer());
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getRcvrackpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRcvrackpolicy());
 		if (policyConfig != null) {
 			result.setRcvrackpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getRcvrcontrolackpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRcvrcontrolackpolicy());
 		if (policyConfig != null) {
 			result.setRcvrcontrolackpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getRecvingacklistpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRecvingacklistpolicy());
 		if (policyConfig != null) {
 			result.setRecvingacklistpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getRttestimatorpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRttestimatorpolicy());
 		if (policyConfig != null) {
 			result.setRttestimatorpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getRtxtimerexpirypolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRtxtimerexpirypolicy());
 		if (policyConfig != null) {
 			result.setRtxtimerexpirypolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getSenderackpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getSenderackpolicy());
 		if (policyConfig != null) {
 			result.setSenderackpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(rtxControlConfig.getSendingackpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getSendingackpolicy());
 		if (policyConfig != null) {
 			result.setSendingackpolicy(policyConfig);
 		}
@@ -203,7 +198,7 @@ public class FlowEncoder implements Encoder{
 	 
 	private DTCPFlowControlConfig getDTCPFlowControlConfig(dtcpFlowControlConfig_t flowControlConfig) {
 		DTCPFlowControlConfig result = new DTCPFlowControlConfig();
-		EFCPPolicyConfig policyConfig = null;
+		PolicyConfig policyConfig = null;
 		
 		if (flowControlConfig == null) {
 			return result;
@@ -223,15 +218,15 @@ public class FlowEncoder implements Encoder{
 		result.setSentbuffersthreshold((int)flowControlConfig.getSentbuffersthreshold());
 		result.setSentbytespercentthreshold((int)flowControlConfig.getSentbytespercentthreshold());
 		result.setSentbytesthreshold((int)flowControlConfig.getSentbytesthreshold());
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getClosedwindowpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getClosedwindowpolicy());
 		if (policyConfig != null) {
 			result.setClosedwindowpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getFlowcontroloverrunpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getFlowcontroloverrunpolicy());
 		if (policyConfig != null) {
 			result.setFlowcontroloverrunpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getReconcileflowcontrolpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getReconcileflowcontrolpolicy());
 		if (policyConfig != null) {
 			result.setReconcileflowcontrolpolicy(policyConfig);
 		}
@@ -242,7 +237,7 @@ public class FlowEncoder implements Encoder{
 	private DTCPRateBasedFlowControlConfig getDTCPRateBasedFlowControlConfig(
 			dtcpRateBasedFlowControlConfig_t flowControlConfig) {
 		DTCPRateBasedFlowControlConfig result = new DTCPRateBasedFlowControlConfig();
-		EFCPPolicyConfig policyConfig = null;
+		PolicyConfig policyConfig = null;
 		
 		if (flowControlConfig == null) {
 			return result;
@@ -250,15 +245,15 @@ public class FlowEncoder implements Encoder{
 		
 		result.setSendingrate((int)flowControlConfig.getSendingrate());
 		result.setTimeperiod((int)flowControlConfig.getTimeperiod());
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getNooverridedefaultpeakpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getNooverridedefaultpeakpolicy());
 		if (policyConfig != null) {
 			result.setNooverridedefaultpeakpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getNorateslowdownpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getNorateslowdownpolicy());
 		if (policyConfig != null) {
 			result.setNorateslowdownpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getRatereductionpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getRatereductionpolicy());
 		if (policyConfig != null) {
 			result.setRatereductionpolicy(policyConfig);
 		}
@@ -269,7 +264,7 @@ public class FlowEncoder implements Encoder{
 	private DTCPWindowBasedFlowControlConfig getDTCPWindowBasedFlowControlConfig(
 			dtcpWindowBasedFlowControlConfig_t flowControlConfig) {
 		DTCPWindowBasedFlowControlConfig result = new DTCPWindowBasedFlowControlConfig();
-		EFCPPolicyConfig policyConfig = null;
+		PolicyConfig policyConfig = null;
 		
 		if (flowControlConfig == null) {
 			return result;
@@ -277,47 +272,16 @@ public class FlowEncoder implements Encoder{
 		
 		result.setInitialcredit((int)flowControlConfig.getInitialcredit());
 		result.setMaxclosedwindowqueuelength((int)flowControlConfig.getMaxclosedwindowqueuelength());
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getRcvrflowcontrolpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getRcvrflowcontrolpolicy());
 		if (policyConfig != null) {
 			result.setRcvrflowcontrolpolicy(policyConfig);
 		}
-		policyConfig = getEFCPPolicyConfig(flowControlConfig.getReceivingflowcontrolpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getReceivingflowcontrolpolicy());
 		if (policyConfig != null) {
 			result.setReceivingflowcontrolpolicy(policyConfig);
 		}
 		
 		return result;
-	}
-	
-	private EFCPPolicyConfig getEFCPPolicyConfig(efcpPolicyConfig_t policyConfig) {
-		EFCPPolicyConfig result = null;
-		
-		if (policyConfig == null || policyConfig.getName() == null) {
-			return result;
-		}
-		
-		if (policyConfig.getName() != null && 
-				policyConfig.getName().equals("default")) {
-			return result;
-		}
-		
-		result = new EFCPPolicyConfig(policyConfig.getName(), (short)policyConfig.getVersion());
-		if (policyConfig.getParametersCount() > 0) {
-			List<policyParameter_t> parameters = policyConfig.getParametersList();
-			for(int i=0; i<parameters.size(); i++){
-				result.addParameter(getPolicyParameter(parameters.get(i)));
-			}
-		}
-		
-		return result;
-	}
-	
-	private PolicyParameter getPolicyParameter(policyParameter_t parameter) {
-		if (parameter == null){
-			return new PolicyParameter();
-		}
-		
-		return new PolicyParameter(parameter.getName(), parameter.getValue());
 	}
 	
 	public synchronized byte[] encode(Object object) throws Exception {
@@ -415,7 +379,7 @@ public class FlowEncoder implements Encoder{
 		result = FlowMessage.connectionPolicies_t.newBuilder().
 				setDtcpPresent(connectionPolicies.isDtcPpresent()).
 				setDtcpConfiguration(dtcpConfig).
-				setInitialseqnumpolicy(getEFCPPolicyConfigType(connectionPolicies.getInitialseqnumpolicy())).
+				setInitialseqnumpolicy(GPBUtils.getPolicyDescriptorType(connectionPolicies.getInitialseqnumpolicy())).
 				setSeqnumrolloverthreshold(connectionPolicies.getSeqnumrolloverthreshold()).
 				build();
 
@@ -448,9 +412,9 @@ public class FlowEncoder implements Encoder{
 				setRtxControlConfig(rtxConfig).
 				setInitialrecvrinactivitytime(dtcpConfig.getInitialrecvrinactivitytime()).
 				setInitialsenderinactivitytime(dtcpConfig.getInitialsenderinactivitytime()).
-				setLostcontrolpdupolicy(getEFCPPolicyConfigType(dtcpConfig.getLostcontrolpdupolicy())).
-				setSendertimerinactiviypolicy(getEFCPPolicyConfigType(dtcpConfig.getSendertimerinactiviypolicy())).
-				setRcvrtimerinactivitypolicy(getEFCPPolicyConfigType(dtcpConfig.getRcvrtimerinactivitypolicy())).
+				setLostcontrolpdupolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getLostcontrolpdupolicy())).
+				setSendertimerinactiviypolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getSendertimerinactiviypolicy())).
+				setRcvrtimerinactivitypolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getRcvrtimerinactivitypolicy())).
 				build();
 	}
 	
@@ -462,13 +426,13 @@ public class FlowEncoder implements Encoder{
 		return FlowMessage.dtcpRtxControlConfig_t.newBuilder().
 				setDatarxmsnmax(rtxControl.getDatarxmsnmax()).
 				setInitialATimer(rtxControl.getInitialATimer()).
-				setRcvrackpolicy(getEFCPPolicyConfigType(rtxControl.getRcvrackpolicy())).
-				setRcvrcontrolackpolicy(getEFCPPolicyConfigType(rtxControl.getRcvrcontrolackpolicy())).
-				setRecvingacklistpolicy(getEFCPPolicyConfigType(rtxControl.getRecvingacklistpolicy())).
-				setRttestimatorpolicy(getEFCPPolicyConfigType(rtxControl.getRttestimatorpolicy())).
-				setRtxtimerexpirypolicy(getEFCPPolicyConfigType(rtxControl.getRtxtimerexpirypolicy())).
-				setSenderackpolicy(getEFCPPolicyConfigType(rtxControl.getSenderackpolicy())).
-				setSendingackpolicy(getEFCPPolicyConfigType(rtxControl.getSendingackpolicy())).build();
+				setRcvrackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrackpolicy())).
+				setRcvrcontrolackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrcontrolackpolicy())).
+				setRecvingacklistpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRecvingacklistpolicy())).
+				setRttestimatorpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRttestimatorpolicy())).
+				setRtxtimerexpirypolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRtxtimerexpirypolicy())).
+				setSenderackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getSenderackpolicy())).
+				setSendingackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getSendingackpolicy())).build();
 	}
 	
 	private dtcpFlowControlConfig_t getDTCPFlowControlConfigType(DTCPFlowControlConfig flowControl) {
@@ -500,9 +464,9 @@ public class FlowEncoder implements Encoder{
 				setSentbuffersthreshold(flowControl.getSentbuffersthreshold()).
 				setSentbytespercentthreshold(flowControl.getSentbytespercentthreshold()).
 				setSentbytesthreshold(flowControl.getSentbytesthreshold()).
-				setClosedwindowpolicy(getEFCPPolicyConfigType(flowControl.getClosedwindowpolicy())).
-				setFlowcontroloverrunpolicy(getEFCPPolicyConfigType(flowControl.getFlowcontroloverrunpolicy())).
-				setReconcileflowcontrolpolicy(getEFCPPolicyConfigType(flowControl.getReconcileflowcontrolpolicy())).
+				setClosedwindowpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getClosedwindowpolicy())).
+				setFlowcontroloverrunpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getFlowcontroloverrunpolicy())).
+				setReconcileflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getReconcileflowcontrolpolicy())).
 				build();
 	}
 	
@@ -515,9 +479,9 @@ public class FlowEncoder implements Encoder{
 		return FlowMessage.dtcpRateBasedFlowControlConfig_t.newBuilder().
 				setSendingrate(rate.getSendingrate()).
 				setTimeperiod(rate.getTimeperiod()).
-				setNooverridedefaultpeakpolicy(getEFCPPolicyConfigType(rate.getNooverridedefaultpeakpolicy())).
-				setNorateslowdownpolicy(getEFCPPolicyConfigType(rate.getNorateslowdownpolicy())).
-				setRatereductionpolicy(getEFCPPolicyConfigType(rate.getRatereductionpolicy())).
+				setNooverridedefaultpeakpolicy(GPBUtils.getPolicyDescriptorType(rate.getNooverridedefaultpeakpolicy())).
+				setNorateslowdownpolicy(GPBUtils.getPolicyDescriptorType(rate.getNorateslowdownpolicy())).
+				setRatereductionpolicy(GPBUtils.getPolicyDescriptorType(rate.getRatereductionpolicy())).
 				build();
 	}
 	
@@ -530,54 +494,8 @@ public class FlowEncoder implements Encoder{
 		return FlowMessage.dtcpWindowBasedFlowControlConfig_t.newBuilder().
 				setInitialcredit(window.getInitialcredit()).
 				setMaxclosedwindowqueuelength(window.getMaxclosedwindowqueuelength()).
-				setRcvrflowcontrolpolicy(getEFCPPolicyConfigType(window.getRcvrflowcontrolpolicy())).
-				setReceivingflowcontrolpolicy(getEFCPPolicyConfigType(window.getReceivingflowcontrolpolicy())).
+				setRcvrflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(window.getRcvrflowcontrolpolicy())).
+				setReceivingflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(window.getReceivingflowcontrolpolicy())).
 				build();
-	}
-	
-	private efcpPolicyConfig_t getEFCPPolicyConfigType(EFCPPolicyConfig policyConfig) {
-		efcpPolicyConfig_t result = FlowMessage.efcpPolicyConfig_t.getDefaultInstance();
-		
-		if (policyConfig == null) {
-			return result;
-		}
-		
-		List<policyParameter_t> parameters = getAllPolicyParameters(policyConfig.getParameters());
-				
-		result = FlowMessage.efcpPolicyConfig_t.newBuilder().
-				setName(policyConfig.getName()).
-				setVersion(policyConfig.getVersion()).
-				addAllParameters(parameters).
-				build();
-		
-		return result;
-	}
-	
-	List<policyParameter_t> getAllPolicyParameters(PolicyParameterList list) {
-		List<policyParameter_t> result = new ArrayList<policyParameter_t>();
-		if (list == null || list.isEmpty()) {
-			return result;
-		}
-		
-		Iterator<PolicyParameter> iterator = list.iterator();
-		while (iterator.hasNext()) {
-			result.add(getPolicyParameterType(iterator.next()));
-		}
-		
-		return result;
-	}
-	
-	policyParameter_t getPolicyParameterType(PolicyParameter parameter) {
-		policyParameter_t result = null;
-		if (parameter == null){
-			return FlowMessage.policyParameter_t.getDefaultInstance();
-		}
-		
-		result = FlowMessage.policyParameter_t.newBuilder().
-				setName(parameter.getName()).
-				setValue(parameter.getValue()).
-				build();
-		
-		return result;
 	}
 }

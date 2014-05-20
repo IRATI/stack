@@ -121,20 +121,20 @@ public final class QoSSpecification {
     
     // repeated .rina.messages.property_t extraParameters = 13;
     public static final int EXTRAPARAMETERS_FIELD_NUMBER = 13;
-    private java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> extraParameters_ =
+    private java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> extraParameters_ =
       java.util.Collections.emptyList();
-    public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getExtraParametersList() {
+    public java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> getExtraParametersList() {
       return extraParameters_;
     }
     public int getExtraParametersCount() { return extraParameters_.size(); }
-    public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getExtraParameters(int index) {
+    public rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t getExtraParameters(int index) {
       return extraParameters_.get(index);
     }
     
     private void initFields() {
     }
     public final boolean isInitialized() {
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getExtraParametersList()) {
+      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getExtraParametersList()) {
         if (!element.isInitialized()) return false;
       }
       return true;
@@ -179,7 +179,7 @@ public final class QoSSpecification {
       if (hasJitter()) {
         output.writeUInt32(12, getJitter());
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getExtraParametersList()) {
+      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getExtraParametersList()) {
         output.writeMessage(13, element);
       }
       getUnknownFields().writeTo(output);
@@ -239,7 +239,7 @@ public final class QoSSpecification {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(12, getJitter());
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getExtraParametersList()) {
+      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getExtraParametersList()) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(13, element);
       }
@@ -443,7 +443,7 @@ public final class QoSSpecification {
         }
         if (!other.extraParameters_.isEmpty()) {
           if (result.extraParameters_.isEmpty()) {
-            result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
+            result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
           }
           result.extraParameters_.addAll(other.extraParameters_);
         }
@@ -521,7 +521,7 @@ public final class QoSSpecification {
               break;
             }
             case 106: {
-              rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.newBuilder();
+              rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addExtraParameters(subBuilder.buildPartial());
               break;
@@ -751,47 +751,47 @@ public final class QoSSpecification {
       }
       
       // repeated .rina.messages.property_t extraParameters = 13;
-      public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getExtraParametersList() {
+      public java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> getExtraParametersList() {
         return java.util.Collections.unmodifiableList(result.extraParameters_);
       }
       public int getExtraParametersCount() {
         return result.getExtraParametersCount();
       }
-      public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getExtraParameters(int index) {
+      public rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t getExtraParameters(int index) {
         return result.getExtraParameters(index);
       }
-      public Builder setExtraParameters(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
+      public Builder setExtraParameters(int index, rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t value) {
         if (value == null) {
           throw new NullPointerException();
         }
         result.extraParameters_.set(index, value);
         return this;
       }
-      public Builder setExtraParameters(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
+      public Builder setExtraParameters(int index, rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.Builder builderForValue) {
         result.extraParameters_.set(index, builderForValue.build());
         return this;
       }
-      public Builder addExtraParameters(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
+      public Builder addExtraParameters(rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t value) {
         if (value == null) {
           throw new NullPointerException();
         }
         if (result.extraParameters_.isEmpty()) {
-          result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
+          result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
         }
         result.extraParameters_.add(value);
         return this;
       }
-      public Builder addExtraParameters(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
+      public Builder addExtraParameters(rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.Builder builderForValue) {
         if (result.extraParameters_.isEmpty()) {
-          result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
+          result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
         }
         result.extraParameters_.add(builderForValue.build());
         return this;
       }
       public Builder addAllExtraParameters(
-          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> values) {
+          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> values) {
         if (result.extraParameters_.isEmpty()) {
-          result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
+          result.extraParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
         }
         super.addAll(values, result.extraParameters_);
         return this;
@@ -828,18 +828,18 @@ public final class QoSSpecification {
   static {
     java.lang.String[] descriptorData = {
       "\n!protofiles/QoSSpecification.proto\022\rrin" +
-      "a.messages\032 protofiles/PropertyMessage.p" +
-      "roto\"\340\002\n\022qosSpecification_t\022\014\n\004name\030\001 \001(" +
-      "\t\022\r\n\005qosid\030\002 \001(\r\022\030\n\020averageBandwidth\030\003 \001" +
-      "(\004\022\033\n\023averageSDUBandwidth\030\004 \001(\004\022\035\n\025peakB" +
-      "andwidthDuration\030\005 \001(\r\022 \n\030peakSDUBandwid" +
-      "thDuration\030\006 \001(\r\022\036\n\026undetectedBitErrorRa" +
-      "te\030\007 \001(\001\022\027\n\017partialDelivery\030\010 \001(\010\022\r\n\005ord" +
-      "er\030\t \001(\010\022\032\n\022maxAllowableGapSdu\030\n \001(\005\022\r\n\005" +
-      "delay\030\013 \001(\r\022\016\n\006jitter\030\014 \001(\r\0222\n\017extraPara",
-      "meters\030\r \003(\0132\031.rina.messages.property_tB" +
-      "4\n2rina.encoding.impl.googleprotobuf.qos" +
-      "specification"
+      "a.messages\032\037protofiles/CommonMessages.pr" +
+      "oto\"\340\002\n\022qosSpecification_t\022\014\n\004name\030\001 \001(\t" +
+      "\022\r\n\005qosid\030\002 \001(\r\022\030\n\020averageBandwidth\030\003 \001(" +
+      "\004\022\033\n\023averageSDUBandwidth\030\004 \001(\004\022\035\n\025peakBa" +
+      "ndwidthDuration\030\005 \001(\r\022 \n\030peakSDUBandwidt" +
+      "hDuration\030\006 \001(\r\022\036\n\026undetectedBitErrorRat" +
+      "e\030\007 \001(\001\022\027\n\017partialDelivery\030\010 \001(\010\022\r\n\005orde" +
+      "r\030\t \001(\010\022\032\n\022maxAllowableGapSdu\030\n \001(\005\022\r\n\005d" +
+      "elay\030\013 \001(\r\022\016\n\006jitter\030\014 \001(\r\0222\n\017extraParam",
+      "eters\030\r \003(\0132\031.rina.messages.property_tB4" +
+      "\n2rina.encoding.impl.googleprotobuf.qoss" +
+      "pecification"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -860,7 +860,7 @@ public final class QoSSpecification {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          rina.encoding.impl.googleprotobuf.property.PropertyMessage.getDescriptor(),
+          rina.encoding.impl.googleprotobuf.common.CommonMessages.getDescriptor(),
         }, assigner);
   }
   
