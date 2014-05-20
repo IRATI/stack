@@ -40,7 +40,7 @@ private:
 /// Encapsulates the data to set an object value
 class ObjectValueInterface {
 public:
-	virtual ~ObjectValueInterface() = 0;
+	virtual ~ObjectValueInterface() {};
 	virtual bool is_empty() const = 0;
 };
 
@@ -227,6 +227,7 @@ public:
 		NONE_FLAGS, F_SYNC, F_RD_INCOMPLETE
 	};
 	CDAPMessage();
+	~CDAPMessage();
 	static void getOpenConnectionRequestMessage(CDAPMessage &cdapMessage,
 			AuthTypes auth_mech, const AuthValue &auth_value,
 			const std::string &dest_ae_inst, const std::string &dest_ae_name,
@@ -318,45 +319,45 @@ public:
 	AuthTypes get_auth_mech() const;
 	void set_auth_mech(AuthTypes auth_mech);
 	const AuthValue& get_auth_value() const;
-	void set_auth_value(AuthValue auth_value);
-	std::string get_dest_ae_inst() const;
-	void set_dest_ae_inst(std::string dest_ae_inst);
-	std::string get_dest_ae_name() const;
-	void set_dest_ae_name(std::string dest_ae_name);
-	std::string get_dest_ap_inst() const;
-	void set_dest_ap_inst(std::string dest_ap_inst);
-	std::string get_dest_ap_name() const;
-	void set_dest_ap_name(std::string dest_ap_name);
+	void set_auth_value(const AuthValue &auth_value);
+	const std::string& get_dest_ae_inst() const;
+	void set_dest_ae_inst(const std::string &dest_ae_inst);
+	const std::string& get_dest_ae_name() const;
+	void set_dest_ae_name(const std::string &dest_ae_name);
+	const std::string& get_dest_ap_inst() const;
+	void set_dest_ap_inst(const std::string &dest_ap_inst);
+	const std::string& get_dest_ap_name() const;
+	void set_dest_ap_name(const std::string &dest_ap_name);
 	char* get_filter() const;
 	void set_filter(char filter[]);
 	Flags get_flags() const;
 	void set_flags(Flags flags);
 	int get_invoke_id() const;
 	void set_invoke_id(int invoke_id);
-	std::string get_obj_class() const;
-	void set_obj_class(std::string obj_class);
+	const std::string& get_obj_class() const;
+	void set_obj_class(const std::string &obj_class);
 	long get_obj_inst() const;
 	void set_obj_inst(long obj_inst);
-	std::string get_obj_name() const;
-	void set_obj_name(std::string obj_name);
-	const ObjectValueInterface& get_obj_value() const;
+	const std::string& get_obj_name() const;
+	void set_obj_name(const std::string &obj_name);
+	const ObjectValueInterface* get_obj_value() const;
 	void set_obj_value(const ObjectValueInterface &obj_value);
 	Opcode get_op_code() const;
 	void set_op_code(Opcode op_code);
 	int get_result() const;
 	void set_result(int result);
-	std::string get_result_reason() const;
-	void set_result_reason(std::string result_reason);
+	const std::string& get_result_reason() const;
+	void set_result_reason(const std::string& result_reason);
 	int get_scope() const;
 	void set_scope(int scope);
-	std::string get_src_ae_inst() const;
-	void set_src_ae_inst(std::string src_ae_inst);
-	std::string get_src_ae_name() const;
-	void set_src_ae_name(std::string src_ae_name);
-	std::string get_src_ap_inst() const;
-	void set_src_ap_inst(std::string src_ap_inst);
-	std::string get_src_ap_name() const;
-	void set_src_ap_name(std::string src_ap_name);
+	const std::string& get_src_ae_inst() const;
+	void set_src_ae_inst(const std::string& src_ae_inst);
+	const std::string& get_src_ae_name() const;
+	void set_src_ae_name(const std::string& src_ae_name);
+	const std::string& get_src_ap_inst() const;
+	void set_src_ap_inst(const std::string& src_ap_inst);
+	const std::string& get_src_ap_name() const;
+	void set_src_ap_name(const std::string& src_ap_name);
 	long get_version() const;
 	void set_version(long version);
 private:
@@ -441,7 +442,7 @@ private:
 	/**
 	 * ObjectValueInterface (ObjectValueInterface). The value of the object.
 	 */
-	ObjectValueInterface &obj_value_;
+	ObjectValueInterface *obj_value_;
 	/**
 	 * Opcode (enum, int32), mandatory.
 	 * Message type of this message.
