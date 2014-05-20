@@ -96,19 +96,6 @@ static struct dtp_sv default_sv = {
         .rate_based                    = false,
 };
 
-static uint_t max_cwq_len_get(struct dtp_sv * sv)
-{
-        uint_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_cwq_len;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
-
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
         /* FIXME: How to block further write API calls? */
@@ -121,6 +108,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 {
         struct cwq * cwq;
         struct dt *  dt;
+        uint_t       max_len;
 
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
@@ -136,7 +124,9 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
         }
 
         LOG_DBG("Closed Window Queue");
-        if (cwq_size(cwq) < max_cwq_len_get(dtp->sv)-1) {
+        max_len = dtcp_max_closed_winq_length(
+                          dtp->sv->connection->policies_params->dtcp_cfg);
+        if (cwq_size(cwq) < max_len -1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push to cwq");
                         pdu_destroy(pdu);
