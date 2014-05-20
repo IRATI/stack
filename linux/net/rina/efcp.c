@@ -406,10 +406,14 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
+        dtcp_max_closed_winq_length_set(connection->policies_params->dtcp_cfg,
+                                        20);
         dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
-        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, true);
-        dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg, true);
-        dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg, false);
+        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, false);
+        dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg,
+                                    true);
+        dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg,
+                                  false);
 #endif
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
