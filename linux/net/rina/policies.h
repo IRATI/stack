@@ -39,10 +39,10 @@ struct policy;
 struct policy *      policy_create(void);
 struct policy *      policy_create_ni(void);
 int                  policy_destroy(struct policy * p);
-string_t *           policy_name(struct policy * policy);
+const string_t *     policy_name(struct policy * policy);
 int                  policy_name_set(struct policy * policy,
                                      string_t *      name);
-string_t *           policy_version(struct policy * policy);
+const string_t *     policy_version(struct policy * policy);
 int                  policy_version_set(struct policy * policy,
                                         string_t *      version);
 struct policy_parm * policy_param_find(struct policy *      policy,

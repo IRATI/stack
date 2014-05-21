@@ -190,7 +190,7 @@ const string_t * policy_param_value(const struct policy_parm * param)
 }
 EXPORT_SYMBOL(policy_param_value);
 
-string_t * policy_name(struct policy * policy)
+const string_t * policy_name(struct policy * policy)
 {
         if (!policy)
                 return NULL;
@@ -199,7 +199,7 @@ string_t * policy_name(struct policy * policy)
 }
 EXPORT_SYMBOL(policy_name);
 
-string_t * policy_version(struct policy * policy)
+const string_t * policy_version(struct policy * policy)
 {
         if (!policy)
                 return NULL;
