@@ -1,16 +1,13 @@
 package rina.flowallocator.api;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.primitives.UnsignedLongs;
 
 import eu.irati.librina.ApplicationProcessNamingInformation;
 import eu.irati.librina.Connection;
+import eu.irati.librina.ConnectionPolicies;
 import eu.irati.librina.FlowSpecification;
 
 import rina.ribdaemon.api.RIBObjectNames;
@@ -86,16 +83,9 @@ public class Flow {
 	private FlowSpecification flowSpec = null;
 	
 	/**
-	 * The list of policies that are used to control this flow. NOTE: Does this provide 
-	 * anything beyond the list used within the QoS-cube? Can we override or specialize those, 
-	 * somehow?
+	 * The policies for this EFCP connection and its parameters
 	 */
-	private Map<String, String> policies = null;
-	
-	/**
-	 * The merged list of parameters from QoS.policy-Default-Parameters and QoS-Params.
-	 */
-	private Map<String, String> policyParameters = null;
+	private ConnectionPolicies connectionPolicies = null;
 	
 	/**
 	 * TODO this is just a placeHolder for this piece of data
@@ -125,8 +115,6 @@ public class Flow {
 	
 	public Flow(){
 		this.connections = new ArrayList<Connection>();
-		this.policies = new ConcurrentHashMap<String, String>();
-		this.policyParameters = new ConcurrentHashMap<String, String>();
 	}
 
 	public boolean isSource() {
@@ -233,20 +221,12 @@ public class Flow {
 		this.flowSpec = flowSpec;
 	}
 
-	public Map<String, String> getPolicies() {
-		return policies;
+	public ConnectionPolicies getConnectionPolicies() {
+		return connectionPolicies;
 	}
 
-	public void setPolicies(Map<String, String> policies) {
-		this.policies = policies;
-	}
-
-	public Map<String, String> getPolicyParameters() {
-		return policyParameters;
-	}
-
-	public void setPolicyParameters(Map<String, String> policyParameters) {
-		this.policyParameters = policyParameters;
+	public void setConnectionPolicies(ConnectionPolicies connectionPolicies) {
+		this.connectionPolicies = connectionPolicies;
 	}
 
 	public byte[] getAccessControl() {
@@ -302,22 +282,19 @@ public class Flow {
 			}
 		}
 		result = result + "* Index of the current active connection for this flow: "+this.currentConnectionIndex +"\n";
-		if (!this.policies.isEmpty()){
-			result = result + "* Policies: \n";
-			Iterator<Entry<String, String>> iterator = this.policies.entrySet().iterator();
-			Entry<String, String> currentEntry = null;
-			while(iterator.hasNext()){
-				currentEntry= iterator.next();
-				result = result + "   * " + currentEntry.getKey()+ " = "+currentEntry.getValue() + "\n";
-			}
-		}
-		if (!this.policyParameters.isEmpty()){
-			result = result + "* Policy parameters: \n";
-			Iterator<Entry<String, String>> iterator = this.policyParameters.entrySet().iterator();
-			Entry<String, String> currentEntry = null;
-			while(iterator.hasNext()){
-				currentEntry = iterator.next();
-				result = result + "   * " + currentEntry.getKey()+ " = "+currentEntry.getValue() + "\n";
+		if (connectionPolicies != null) {
+			result = result + "* DTCP present: " + connectionPolicies.isDtcPpresent() + "\n";
+			result = result + "* Seq qnum rollover threshold: " + connectionPolicies.getSeqnumrolloverthreshold() + "\n";
+			if (connectionPolicies.isDtcPpresent()) {
+				result = result + "* DTCP configuration: " + "\n";
+				result = result + "   * Initial receiver inactivity timer: " + 
+						connectionPolicies.getDtcpConfiguration().getInitialrecvrinactivitytime() + "\n";
+				result = result + "   * Initial sender inactivity timer: " + 
+						connectionPolicies.getDtcpConfiguration().getInitialsenderinactivitytime() + "\n";
+				result = result + "   * Is rtx control enabled: " + 
+						connectionPolicies.getDtcpConfiguration().isRtxcontrol() + "\n";
+				result = result + "   * Is flow control enabled: " + 
+						connectionPolicies.getDtcpConfiguration().isFlowcontrol() + "\n";
 			}
 		}
 		return result;
