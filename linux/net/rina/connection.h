@@ -62,7 +62,7 @@ struct connection {
 struct conn_policies * conn_policies_create(void);
 struct connection *    connection_create(void);
 struct connection *    connection_dup_from_user(const
-                                               struct connection __user * conn);
+                                                struct connection __user * conn);
 int                    conn_policies_destroy(struct conn_policies * cp_params);
 int                    connection_destroy(struct connection * conn);
 

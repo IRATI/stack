@@ -66,7 +66,7 @@ struct conn_policies * conn_policies_create(void)
                 rkfree(tmp);
                 return NULL;
         }
-        
+
         return tmp;
 }
 
@@ -113,7 +113,7 @@ int connection_destroy(struct connection * conn)
         if (conn->policies_params)
                 if (conn_policies_destroy(conn->policies_params))
                         return -1;
-               
+
         rkfree(conn);
 
         return 0;
