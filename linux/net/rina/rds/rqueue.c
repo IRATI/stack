@@ -60,6 +60,7 @@ ssize_t rqueue_length(struct rqueue * q)
 
         return q->length;
 }
+EXPORT_SYMBOL(rqueue_length);
 
 struct rqueue * rqueue_create(void)
 { return rqueue_create_gfp(GFP_KERNEL); }

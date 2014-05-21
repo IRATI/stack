@@ -362,14 +362,12 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp)
                 return NULL;
         }
 
-        LOG_DBG("PDU created");
-
         pci = pci_create_ni();
         if (!pci) {
                 pdu_destroy(pdu);
                 return NULL;
         }
-        LOG_DBG("PCI created");
+
         seq = next_snd_ctl_seq(dtcp);
         if (pci_format(pci,
                        dtcp->conn->source_cep_id,
@@ -383,8 +381,7 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp)
                 pci_destroy(pci);
                 return NULL;
         }
-        LOG_DBG("PCI formatted");
-        LOG_DBG("PDU type is ok: %d", pci_is_ok(pci));
+
         if (pdu_pci_set(pdu, pci)) {
                 pdu_destroy(pdu);
                 pci_destroy(pci);
@@ -445,8 +442,6 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
                 pdu_destroy(pdu);
                 return NULL;
         }
-
-        LOG_DBG("PDU type: %d", pci_type(pci));
 
         if (pci_control_ack_seq_num_set(pci, ack_nack_seq)) {
                 pdu_destroy(pdu);
@@ -540,6 +535,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         LOG_DBG("Updating Window Edges");
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         snd_lft_win_set(dtcp, seq_num);
+        LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
+        LOG_DBG("Left Window Edge: %d", snd_lft_win(dtcp));
 
         /* FIXME: Verify values for the receiver side */
 
@@ -554,7 +551,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num_t    seq;
         seq_num_t    last_ctrl;
 
-        LOG_ERR("DTCP common receive control");
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
                 pdu_destroy(pdu);
@@ -583,11 +579,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         }
 
         seq_num = pci_sequence_number_get(pci);
-
-        LOG_DBG("SEQ NUM: %d", seq_num);
-
         last_ctrl = last_rcv_ctrl_seq(dtcp);
-        LOG_DBG("LAST SEQ: %d", last_ctrl);
         if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
@@ -613,7 +605,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         }
         last_rcv_ctrl_seq_set(dtcp, seq_num);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
-        LOG_DBG("LAST SEQ: %d", last_ctrl);
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
@@ -719,7 +710,6 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 
         /* FIXME: Missing update of right window edge */
 
-        LOG_ERR("We are in the default RCVR flow control");
         seq_ctl = next_snd_ctl_seq(dtcp);
         rt_wind_edge = update_rt_wind_edge(dtcp);
         lf_wind_edge = dt_sv_rcv_lft_win(dtcp->parent);
@@ -738,7 +728,6 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
                 return -1;
         }
 
-        LOG_ERR("We leave the default RCVR flow control");
         return 0;
 }
 
@@ -755,9 +744,6 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 
         if (!dtcp || !dtcp->conn)
                 return -1;
-
-        LOG_DBG("Update invoked");
-        /* FIXME: here it goes rcvr_flow_control_policy */
 
         if (dtcp_flow_ctrl(dtcp->conn->policies_params->dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(
@@ -794,7 +780,6 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        LOG_ERR("Leaving UPDATE with retval: %d", retval);
         return retval;
 }
 
