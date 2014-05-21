@@ -107,6 +107,7 @@ int policy_destroy(struct policy * p)
         if (p->version) rkfree(p->version);
         
         list_for_each_entry_safe(pos, nxt, &p->params, next) {
+                list_del(&pos->next);
                 if (policy_param_destroy(pos))
                         return -1;
         }       

@@ -785,10 +785,6 @@ static int notify_ipcp_conn_create_req(void *             data,
 
         attrs = msg->attrs;
 
-        LOG_DBG("LEODBUG KIPCM\n attrs->cp_params : %pk\n"
-                "attrs->cp_params->dtcp_cfg: %pk",
-                attrs->cp_params, attrs->cp_params->dtcp_cfg);
-
         if (rnl_parse_msg(info, msg))
                 goto fail;
 
@@ -803,6 +799,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                 goto fail;
         }
 
+        /* IPCP takes ownership of the cp_params */
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,

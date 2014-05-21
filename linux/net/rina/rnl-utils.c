@@ -217,7 +217,6 @@ rnl_ipcp_conn_create_req_msg_attrs_create(void)
         }
 
         return tmp;
-
 }
 
 static struct rnl_ipcp_conn_create_arrived_msg_attrs *
@@ -1092,13 +1091,15 @@ static int parse_policy_param(struct nlattr * attr, struct p_param * param)
         if (nla_parse_nested(attrs, PPA_ATTR_MAX, attr, attr_policy))
                 return -1;
 
-        if (attrs[PPA_ATTR_NAME])
+        if (attrs[PPA_ATTR_NAME] )
                 policy_param_name_set(param, nla_dup_string(attrs[PPA_ATTR_NAME], GFP_KERNEL));
+                //policy_param_name_set(param, nla_get_string(attrs[PPA_ATTR_NAME]));
         else
                 policy_param_name_set(param, NULL);
 
-        if (attrs[PPA_ATTR_VALUE])
+        if (attrs[PPA_ATTR_VALUE]) 
                 policy_param_value_set(param, nla_dup_string(attrs[PPA_ATTR_VALUE], GFP_KERNEL));
+                //policy_param_value_set(param, nla_get_string(attrs[PPA_ATTR_VALUE]));
         else
                 policy_param_value_set(param, NULL);
 
@@ -1181,13 +1182,13 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
 
         if (nla_parse_nested(attrs, PA_ATTR_MAX, p_attr, attr_policy))
                 return -1;
-
-        if (attrs[PA_ATTR_NAME])
+        
+        if (attrs[PA_ATTR_NAME]) 
                 policy_name_set(p, nla_dup_string(attrs[PA_ATTR_NAME], GFP_KERNEL));
         else
                 policy_name_set(p, NULL);
 
-        if (attrs[PA_ATTR_VERSION])
+        if (attrs[PA_ATTR_VERSION]) 
                 policy_version_set(p, nla_dup_string(attrs[PA_ATTR_VERSION], GFP_KERNEL));
         else
                 policy_version_set(p, NULL);
@@ -1277,7 +1278,7 @@ static int parse_dtcp_rb_fctrl_config(struct nlattr * attr,
 
         if (attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY])
                 if (parse_policy(attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY],
-                                 dtcp_receiving_flow_control(cfg)))
+                                 dtcp_no_override_default_peak(cfg)))
                         return -1;
 
         if (attrs[DRFCC_ATTR_RATE_REDUC_POLICY])

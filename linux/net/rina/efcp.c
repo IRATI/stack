@@ -101,7 +101,7 @@ static int efcp_destroy(struct efcp * instance)
                                      instance->connection->source_cep_id);
                 }
 
-                rkfree(instance->connection);
+                connection_destroy(instance->connection);
         }
 
         rkfree(instance);
@@ -401,13 +401,13 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
 #if DTCP_TEST_ENABLE
         connection->policies_params->dtcp_present = true;
-        connection->policies_params->dtcp_cfg = dtcp_config_create();
         if (!connection->policies_params->dtcp_cfg) {
+                LOG_ERR("DTCP config was not there for DTCP_TEST_ENABLE");
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
         dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
-        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, true);
+        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, false);
         dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg, true);
         dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg, false);
 #endif
@@ -479,11 +479,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                           tmp)) {
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
-
-                rkfree(connection);
-
-                if (dtp)  dtp_destroy(dtp);
-                if (dtcp) dtcp_destroy(dtcp);
 
                 efcp_destroy(tmp);
                 return cep_id_bad();
