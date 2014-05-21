@@ -53,6 +53,14 @@ struct rqueue * rqueue_create_gfp(gfp_t flags)
         return q;
 }
 
+struct rqueue * rqueue_create(void)
+{ return rqueue_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(rqueue_create);
+
+struct rqueue * rqueue_create_ni(void)
+{ return rqueue_create_gfp(GFP_ATOMIC); }
+EXPORT_SYMBOL(rqueue_create_ni);
+
 ssize_t rqueue_length(struct rqueue * q)
 {
         if (!q)
@@ -61,14 +69,6 @@ ssize_t rqueue_length(struct rqueue * q)
         return q->length;
 }
 EXPORT_SYMBOL(rqueue_length);
-
-struct rqueue * rqueue_create(void)
-{ return rqueue_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(rqueue_create);
-
-struct rqueue * rqueue_create_ni(void)
-{ return rqueue_create_gfp(GFP_ATOMIC); }
-EXPORT_SYMBOL(rqueue_create_ni);
 
 static struct rqueue_entry * entry_create(gfp_t flags, void * data)
 {
