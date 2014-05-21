@@ -761,14 +761,14 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 
         if (dtcp_flow_ctrl(dtcp->conn->policies_params->dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(
-                        dtcp->conn->policies_params->dtcp_cfg))
+                                            dtcp->conn->policies_params->dtcp_cfg))
                         if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
                         }
 
                 if (dtcp_rate_based_fctrl(
-                        dtcp->conn->policies_params->dtcp_cfg)){
+                                          dtcp->conn->policies_params->dtcp_cfg)){
                         LOG_DBG("Rate based fctrl invoked");
                         if (dtcp->policies->rate_reduction(dtcp)) {
                                 LOG_ERR("Failed Rate Reduction policy");

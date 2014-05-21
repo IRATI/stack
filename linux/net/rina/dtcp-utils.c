@@ -1,7 +1,8 @@
 /*
  * DTCP Utils (Data Transfer Control Protocol)
  *
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +33,7 @@ struct window_fctrl_config {
         uint_t          max_closed_winq_length; /* in cwq */
         uint_t          initial_credit; /* to initialize sv */
         struct policy * rcvr_flow_control;
-        struct policy * receiving_flow_control; 
+        struct policy * receiving_flow_control;
 };
 
 struct rate_fctrl_config {
@@ -84,7 +85,6 @@ struct dtcp_config {
         struct policy *             lost_control_pdu;
 };
 
-/* Constructors */
 static int dtcp_window_fctrl_config_destroy(struct window_fctrl_config * cfg)
 {
         if (!cfg)
@@ -110,15 +110,12 @@ static struct window_fctrl_config * window_fctrl_config_create_gfp(gfp_t flags)
         tmp->rcvr_flow_control      = policy_create_gfp(flags);
         tmp->receiving_flow_control = policy_create_gfp(flags);
 
-        if (!tmp->rcvr_flow_control || !tmp->receiving_flow_control)
-                goto clean;
+        if (!tmp->rcvr_flow_control || !tmp->receiving_flow_control) {
+                dtcp_window_fctrl_config_destroy(tmp);
+                return NULL;
+        }
 
         return tmp;
-
-        clean:
-
-        dtcp_window_fctrl_config_destroy(tmp);
-        return NULL;
 }
 
 static int dtcp_rate_fctrl_config_destroy(struct rate_fctrl_config * cfg)
@@ -151,29 +148,26 @@ static struct rate_fctrl_config * rate_fctrl_config_create_gfp(gfp_t flags)
 
         if (!tmp->no_rate_slow_down        ||
             !tmp->no_override_default_peak ||
-            !tmp->rate_reduction)
-                goto clean;
+            !tmp->rate_reduction) {
+                dtcp_rate_fctrl_config_destroy(tmp);
+                return NULL;
+        }
 
         return tmp;
-
-        clean:
-
-        dtcp_rate_fctrl_config_destroy(tmp);
-        return NULL;
 }
 
 static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
 {
         if (!cfg)
                 return -1;
-        if(cfg->wfctrl_cfg) dtcp_window_fctrl_config_destroy(cfg->wfctrl_cfg);
-        if(cfg->rfctrl_cfg) dtcp_rate_fctrl_config_destroy(cfg->rfctrl_cfg);
+        if (cfg->wfctrl_cfg) dtcp_window_fctrl_config_destroy(cfg->wfctrl_cfg);
+        if (cfg->rfctrl_cfg) dtcp_rate_fctrl_config_destroy(cfg->rfctrl_cfg);
 
-        if(cfg->closed_window)             
+        if (cfg->closed_window)
                 policy_destroy(cfg->closed_window);
-        if(cfg->flow_control_overrun)      
+        if (cfg->flow_control_overrun)
                 policy_destroy(cfg->flow_control_overrun);
-        if(cfg->reconcile_flow_conflict)   
+        if (cfg->reconcile_flow_conflict)
                 policy_destroy(cfg->reconcile_flow_conflict);
 
         rkfree(cfg);
@@ -213,7 +207,7 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
 
         return tmp;
 
-        clean:
+ clean:
 
         dtcp_fctrl_config_destroy(tmp);
         return NULL;
@@ -223,19 +217,19 @@ static int dtcp_rxctrl_config_destroy(struct dtcp_rxctrl_config * cfg)
 {
         if (!cfg)
                 return -1;
-        if(cfg->rtt_estimator)               
+        if (cfg->rtt_estimator)
                 policy_destroy(cfg->rtt_estimator);
-        if(cfg->retransmission_timer_expiry) 
+        if (cfg->retransmission_timer_expiry)
                 policy_destroy(cfg->retransmission_timer_expiry);
-        if(cfg->sender_ack)                  
+        if (cfg->sender_ack)
                 policy_destroy(cfg->sender_ack);
-        if(cfg->receiving_ack_list)          
+        if (cfg->receiving_ack_list)
                 policy_destroy(cfg->receiving_ack_list);
-        if(cfg->rcvr_ack)                    
+        if (cfg->rcvr_ack)
                 policy_destroy(cfg->rcvr_ack);
-        if(cfg->sending_ack)                 
+        if (cfg->sending_ack)
                 policy_destroy(cfg->sending_ack);
-        if(cfg->rcvr_control_ack)            
+        if (cfg->rcvr_control_ack)
                 policy_destroy(cfg->rcvr_control_ack);
 
         rkfree(cfg);
@@ -259,23 +253,19 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
         tmp->sending_ack                 = policy_create_gfp(flags);
         tmp->rcvr_control_ack            = policy_create_gfp(flags);
 
-        if(!tmp->rtt_estimator               ||
+        if (!tmp->rtt_estimator               ||
            !tmp->retransmission_timer_expiry ||
            !tmp->sender_ack                  ||
            !tmp->receiving_ack_list          ||
            !tmp->rcvr_ack                    ||
            !tmp->sending_ack                 ||
            !tmp->rcvr_control_ack) {
-                LOG_ERR("Could not create policy in dtcp_rxctrl_config_create_gfp");
-                goto clean;
+                LOG_ERR("Could not create policy");
+                dtcp_rxctrl_config_destroy(tmp);
+                return NULL;
         }
 
         return tmp;
-
-        clean:
-
-        dtcp_rxctrl_config_destroy(tmp);
-        return NULL;
 }
 
 int dtcp_config_destroy(struct dtcp_config * cfg)
@@ -286,15 +276,15 @@ int dtcp_config_destroy(struct dtcp_config * cfg)
                 dtcp_fctrl_config_destroy(cfg->fctrl_cfg);
         if (cfg->rxctrl_cfg)
                 dtcp_rxctrl_config_destroy(cfg->rxctrl_cfg);
-        if(cfg->receiver_inactivity_timer) 
+        if (cfg->receiver_inactivity_timer)
                 policy_destroy(cfg->receiver_inactivity_timer);
-        if(cfg->sender_inactivity_timer)   
+        if (cfg->sender_inactivity_timer)
                 policy_destroy(cfg->sender_inactivity_timer);
         if (cfg->lost_control_pdu)
                 policy_destroy(cfg->lost_control_pdu);
 
-         rkfree(cfg);
-                
+        rkfree(cfg);
+
         return 0;
 }
 EXPORT_SYMBOL(dtcp_config_destroy);
@@ -342,7 +332,7 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
 
         return tmp;
 
-        clean:
+ clean:
 
         dtcp_config_destroy(tmp);
         return NULL;
@@ -360,18 +350,18 @@ EXPORT_SYMBOL(dtcp_config_create_ni);
 /* FIXME: check better the inputs */
 /* window_fctrl_config */
 int dtcp_max_closed_winq_length_set(struct dtcp_config * cfg, uint_t len)
-{ 
+{
         if (!cfg)
                 return -1;
 
         cfg->fctrl_cfg->wfctrl_cfg->max_closed_winq_length = len;
-        
+
         return 0;
 }
 EXPORT_SYMBOL(dtcp_max_closed_winq_length_set);
 
 int dtcp_initial_credit_set(struct dtcp_config * cfg, uint_t ic)
-{ 
+{
         if (!cfg)
                 return -1;
 
@@ -383,7 +373,7 @@ EXPORT_SYMBOL(dtcp_initial_credit_set);
 
 int dtcp_rcvr_flow_control_set(struct dtcp_config * cfg,
                                struct policy * rcvr_flow_control)
-{ 
+{
         if (!cfg) return -1;
         if (!rcvr_flow_control) return -1;
 
@@ -394,7 +384,7 @@ int dtcp_rcvr_flow_control_set(struct dtcp_config * cfg,
 EXPORT_SYMBOL(dtcp_rcvr_flow_control_set);
 
 int dtcp_receiving_flow_control_set(struct dtcp_config * cfg,
-                                    struct policy * receiving_flow_control) 
+                                    struct policy * receiving_flow_control)
 {
         if (!cfg) return -1;
         if (!receiving_flow_control) return -1;
@@ -407,7 +397,7 @@ int dtcp_receiving_flow_control_set(struct dtcp_config * cfg,
 EXPORT_SYMBOL(dtcp_receiving_flow_control_set);
 
 /* rate_fctrl_cfg */
-int dtcp_sending_rate_set(struct dtcp_config * cfg, uint_t sending_rate) 
+int dtcp_sending_rate_set(struct dtcp_config * cfg, uint_t sending_rate)
 {
         if (!cfg)
                 return -1;
@@ -447,7 +437,7 @@ int dtcp_no_override_default_peak_set(struct dtcp_config * cfg,
         if (!cfg) return -1;
         if (!no_override_def_peak) return -1;
 
-        cfg->fctrl_cfg->rfctrl_cfg->no_override_default_peak = 
+        cfg->fctrl_cfg->rfctrl_cfg->no_override_default_peak =
                 no_override_def_peak;
 
         return 0;
@@ -656,7 +646,7 @@ int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
 EXPORT_SYMBOL(dtcp_rtt_estimator_set);
 
 int dtcp_retransmission_timer_expiry_set(struct dtcp_config * cfg,
-                                          struct policy * rtx_timer_expiry)
+                                         struct policy * rtx_timer_expiry)
 {
         if (!cfg) return -1;
         if (!rtx_timer_expiry) return -1;
@@ -836,285 +826,285 @@ EXPORT_SYMBOL(dtcp_lost_control_pdu_set);
 /* window_fctrl_config */
 uint_t dtcp_max_closed_winq_length(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->wfctrl_cfg->max_closed_winq_length;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->wfctrl_cfg->max_closed_winq_length;
 }
 EXPORT_SYMBOL(dtcp_max_closed_winq_length);
 
 uint_t dtcp_initial_credit(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->wfctrl_cfg->initial_credit;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->wfctrl_cfg->initial_credit;
 }
 EXPORT_SYMBOL(dtcp_initial_credit);
 
 struct policy * dtcp_rcvr_flow_control(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->wfctrl_cfg->rcvr_flow_control;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->wfctrl_cfg->rcvr_flow_control;
 }
 EXPORT_SYMBOL(dtcp_rcvr_flow_control);
 
-struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg) 
+struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->wfctrl_cfg->receiving_flow_control;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->wfctrl_cfg->receiving_flow_control;
 }
 EXPORT_SYMBOL(dtcp_receiving_flow_control);
 
 /* rate_fctrl_cfg */
-uint_t dtcp_sending_rate (struct dtcp_config * cfg) 
+uint_t dtcp_sending_rate (struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rfctrl_cfg->sending_rate;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rfctrl_cfg->sending_rate;
 }
 EXPORT_SYMBOL(dtcp_sending_rate);
 
 uint_t dtcp_time_period(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rfctrl_cfg->time_period;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rfctrl_cfg->time_period;
 }
 EXPORT_SYMBOL(dtcp_time_period);
 
 struct policy * dtcp_no_rate_slow_down(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rfctrl_cfg->no_rate_slow_down;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rfctrl_cfg->no_rate_slow_down;
 }
 EXPORT_SYMBOL(dtcp_no_rate_slow_down);
 
 struct policy * dtcp_no_override_default_peak(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rfctrl_cfg->no_override_default_peak;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rfctrl_cfg->no_override_default_peak;
 }
 EXPORT_SYMBOL(dtcp_no_override_default_peak);
 
 struct policy * dtcp_rate_reduction(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rfctrl_cfg->rate_reduction;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rfctrl_cfg->rate_reduction;
 }
 EXPORT_SYMBOL(dtcp_rate_reduction);
 
 /* fctrl_cfg */
 bool dtcp_window_based_fctrl(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->window_based_fctrl;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->window_based_fctrl;
 }
 EXPORT_SYMBOL(dtcp_window_based_fctrl);
 
 struct window_fctrl_config * dtcp_wfctrl_cfg(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->wfctrl_cfg;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->wfctrl_cfg;
 }
 EXPORT_SYMBOL(dtcp_wfctrl_cfg);
 
 bool dtcp_rate_based_fctrl(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rate_based_fctrl;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rate_based_fctrl;
 }
 EXPORT_SYMBOL(dtcp_rate_based_fctrl);
 
 struct rate_fctrl_config * dtcp_rfctrl_cfg(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rfctrl_cfg;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rfctrl_cfg;
 }
 EXPORT_SYMBOL(dtcp_rfctrl_cfg);
 
 uint_t dtcp_sent_bytes_th(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->sent_bytes_th;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->sent_bytes_th;
 }
 EXPORT_SYMBOL(dtcp_sent_bytes_th);
 
 uint_t dtcp_sent_bytes_percent_th(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->sent_bytes_percent_th;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->sent_bytes_percent_th;
 }
 EXPORT_SYMBOL(dtcp_sent_bytes_percent_th);
 
 uint_t dtcp_sent_buffers_th(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->sent_buffers_th;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->sent_buffers_th;
 }
 EXPORT_SYMBOL(dtcp_sent_buffers_th);
 
 uint_t dtcp_rcvd_bytes_th(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rcvd_bytes_th;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rcvd_bytes_th;
 }
 EXPORT_SYMBOL(dtcp_rcvd_bytes_th);
 
 uint_t dtcp_rcvd_bytes_percent_th(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rcvd_bytes_percent_th;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rcvd_bytes_percent_th;
 }
 EXPORT_SYMBOL(dtcp_rcvd_bytes_percent_th);
 
 uint_t dtcp_rcvd_buffers_th(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->rcvd_buffers_th;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->rcvd_buffers_th;
 }
 EXPORT_SYMBOL(dtcp_rcvd_buffers_th);
 
 struct policy * dtcp_closed_window(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->closed_window;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->closed_window;
 }
 EXPORT_SYMBOL(dtcp_closed_window);
 
 struct policy * dtcp_flow_control_overrun(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->flow_control_overrun;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->flow_control_overrun;
 }
 EXPORT_SYMBOL(dtcp_flow_control_overrun);
 
 struct policy * dtcp_reconcile_flow_conflict(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg->reconcile_flow_conflict;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg->reconcile_flow_conflict;
 }
 EXPORT_SYMBOL(dtcp_reconcile_flow_conflict);
 
 /* dtcp_rxctrl_config */
 uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->data_retransmit_max;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->data_retransmit_max;
 }
 EXPORT_SYMBOL(dtcp_data_retransmit_max);
 
 timeout_t dtcp_initial_a(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->initial_a;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->initial_a;
 }
 EXPORT_SYMBOL(dtcp_initial_a);
 
 struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->rtt_estimator;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->rtt_estimator;
 }
 EXPORT_SYMBOL(dtcp_rtt_estimator);
 
 struct policy * dtcp_retransmission_timer_expiry(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->retransmission_timer_expiry;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->retransmission_timer_expiry;
 }
 EXPORT_SYMBOL(dtcp_retransmission_timer_expiry);
 
 struct policy * dtcp_sender_ack(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->sender_ack;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->sender_ack;
 }
 EXPORT_SYMBOL(dtcp_sender_ack);
 
 struct policy * dtcp_receiving_ack_list(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->receiving_ack_list;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->receiving_ack_list;
 }
 EXPORT_SYMBOL(dtcp_receiving_ack_list);
 
 struct policy * dtcp_rcvr_ack(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->rcvr_ack;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->rcvr_ack;
 }
 EXPORT_SYMBOL(dtcp_rcvr_ack);
 
 struct policy * dtcp_sending_ack(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->sending_ack;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->sending_ack;
 }
 EXPORT_SYMBOL(dtcp_sending_ack);
 
 struct policy * dtcp_rcvr_control_ack(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg->rcvr_control_ack;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->rcvr_control_ack;
 }
 EXPORT_SYMBOL(dtcp_rcvr_control_ack);
 
 /* dtcp_config */
 bool dtcp_flow_ctrl(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->flow_ctrl;
+        ASSERT(cfg);
+        return cfg->flow_ctrl;
 }
 EXPORT_SYMBOL(dtcp_flow_ctrl);
 
 bool dtcp_rtx_ctrl(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rtx_ctrl;
+        ASSERT(cfg);
+        return cfg->rtx_ctrl;
 }
 EXPORT_SYMBOL(dtcp_rtx_ctrl);
 
 struct dtcp_fctrl_config * dtcp_fctrl_cfg(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->fctrl_cfg;
+        ASSERT(cfg);
+        return cfg->fctrl_cfg;
 }
 EXPORT_SYMBOL(dtcp_fctrl_cfg);
 
 struct dtcp_rxctrl_config * dtcp_rxctrl_cfg(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->rxctrl_cfg;
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg;
 }
 EXPORT_SYMBOL(dtcp_rxctrl_cfg);
 
 timeout_t dtcp_receiver_inactivity(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->receiver_inactivity;
+        ASSERT(cfg);
+        return cfg->receiver_inactivity;
 }
 EXPORT_SYMBOL(dtcp_receiver_inactivity);
 
 timeout_t dtcp_sender_inactivity(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->sender_inactivity;
+        ASSERT(cfg);
+        return cfg->sender_inactivity;
 }
 EXPORT_SYMBOL(dtcp_sender_inactivity);
 
 struct policy * dtcp_receiver_inactivity_timer(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->receiver_inactivity_timer;
+        ASSERT(cfg);
+        return cfg->receiver_inactivity_timer;
 }
 EXPORT_SYMBOL(dtcp_receiver_inactivity_timer);
 
 struct policy * dtcp_sender_inactivity_timer(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->sender_inactivity_timer;
+        ASSERT(cfg);
+        return cfg->sender_inactivity_timer;
 }
 EXPORT_SYMBOL(dtcp_sender_inactivity_timer);
 
 struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg)
 {
-	ASSERT(cfg);
-	return cfg->lost_control_pdu;
+        ASSERT(cfg);
+        return cfg->lost_control_pdu;
 }
 EXPORT_SYMBOL(dtcp_lost_control_pdu);
 

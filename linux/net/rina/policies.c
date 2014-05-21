@@ -1,7 +1,8 @@
 /*
- * Policies common structures
+ * Policies
  *
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,11 +41,11 @@ struct policy {
         struct list_head params;
 };
 
-struct policy * policy_create_gfp(gfp_t flags) 
+struct policy * policy_create_gfp(gfp_t flags)
 {
         struct policy * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), flags);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -62,11 +63,11 @@ struct policy * policy_create_ni()
 { return policy_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_create_ni);
 
-static struct p_param * policy_param_create_gfp(gfp_t flags) 
+static struct p_param * policy_param_create_gfp(gfp_t flags)
 {
         struct p_param * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), flags);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -78,7 +79,7 @@ static struct p_param * policy_param_create_gfp(gfp_t flags)
 struct p_param * policy_param_create()
 { return policy_param_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(policy_param_create);
-                                           
+
 struct p_param * policy_param_create_ni()
 { return policy_param_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_param_create_ni);
@@ -88,7 +89,7 @@ int policy_param_destroy(struct p_param * param)
         if (!param)
                 return -1;
 
-        if (param->name) rkfree(param->name);
+        if (param->name)  rkfree(param->name);
         if (param->value) rkfree(param->value);
         rkfree(param);
 
@@ -105,12 +106,12 @@ int policy_destroy(struct policy * p)
 
         if (p->name) rkfree(p->name);
         if (p->version) rkfree(p->version);
-        
+
         list_for_each_entry_safe(pos, nxt, &p->params, next) {
                 list_del(&pos->next);
                 if (policy_param_destroy(pos))
                         return -1;
-        }       
+        }
 
         rkfree(p);
 
@@ -118,7 +119,7 @@ int policy_destroy(struct policy * p)
 }
 EXPORT_SYMBOL(policy_destroy);
 
-struct p_param * policy_param_find_by_name(struct policy * policy,
+struct p_param * policy_param_find_by_name(struct policy *  policy,
                                            struct p_param * param)
 {
         struct p_param * pos;
@@ -126,12 +127,12 @@ struct p_param * policy_param_find_by_name(struct policy * policy,
         if (!policy || ! param)
                 return NULL;
 
-         list_for_each_entry(pos, &policy->params, next) {
+        list_for_each_entry(pos, &policy->params, next) {
                 if (!strcmp(pos->name, param->name))
                         return pos;
-         }
+        }
 
-         return NULL;
+        return NULL;
 }
 EXPORT_SYMBOL(policy_param_find_by_name);
 
@@ -140,18 +141,18 @@ int policy_param_is_present(struct policy *  policy,
 {
         if (!policy || ! param)
                 return 0;
-       
+
         if (policy_param_find_by_name(policy, param))
                 return 1;
         else
                 return 0;
-                
+
 }
 EXPORT_SYMBOL(policy_param_is_present);
 
 int policy_param_add(struct policy *  policy,
                      struct p_param * param)
-{ 
+{
         if (!policy || ! param)
                 return -1;
 
@@ -163,15 +164,15 @@ EXPORT_SYMBOL(policy_param_add);
 
 int policy_param_rem(struct policy *  policy,
                      struct p_param * param)
-{ 
+{
         if (!policy || ! param)
                 return -1;
 
         if (!policy_param_is_present(policy, param))
                 return -1;
-        
+
         list_del(&param->next);
-        
+
         return 0;
 }
 EXPORT_SYMBOL(policy_param_rem);
@@ -183,7 +184,7 @@ int policy_param_rem_and_del(struct policy *  policy,
                 return -1;
 
         return policy_param_destroy(param);
-}                
+}
 EXPORT_SYMBOL(policy_param_rem_and_del);
 
 string_t * policy_param_name(struct p_param *  param)
@@ -266,7 +267,7 @@ int policy_name_set(struct policy * policy,
 EXPORT_SYMBOL(policy_name_set);
 
 int policy_version_set(struct policy * policy,
-                       string_t *      version) 
+                       string_t *      version)
 {
         if (!policy)
                 return -1;

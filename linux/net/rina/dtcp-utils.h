@@ -1,7 +1,8 @@
 /*
  * DTCP Utils (Data Transfer Control Protocol)
  *
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +47,7 @@ int dtcp_rcvr_flow_control_set(struct dtcp_config * cfg,
 int dtcp_receiving_flow_control_set(struct dtcp_config * cfg,
                                     struct policy * receiving_flow_control);
 /* rate_fctrl_cfg */
-int dtcp_sending_rate_set(struct dtcp_config * cfg, uint_t sending_rate); 
+int dtcp_sending_rate_set(struct dtcp_config * cfg, uint_t sending_rate);
 int dtcp_time_period_set(struct dtcp_config * cfg, uint_t time_period);
 int dtcp_no_rate_slow_down_set(struct dtcp_config * cfg,
                                struct policy * no_rate_slow_down);
@@ -90,7 +91,7 @@ int dtcp_initial_a_set(struct dtcp_config * cfg, timeout_t initial_a);
 int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
                            struct policy * rtt_estimator);
 int dtcp_retransmission_timer_expiry_set(struct dtcp_config * cfg,
-                                          struct policy * rtx_timer_expiry);
+                                         struct policy * rtx_timer_expiry);
 int dtcp_sender_ack_set(struct dtcp_config * cfg,
                         struct policy * sender_ack);
 int dtcp_receiving_ack_list_set(struct dtcp_config * cfg,
@@ -119,10 +120,10 @@ int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
 uint_t          dtcp_max_closed_winq_length(struct dtcp_config * cfg);
 uint_t          dtcp_initial_credit(struct dtcp_config * cfg);
 struct policy * dtcp_rcvr_flow_control(struct dtcp_config * cfg);
-struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg); 
+struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg);
 
 /* rate_fctrl_config */
-uint_t          dtcp_sending_rate (struct dtcp_config * cfg); 
+uint_t          dtcp_sending_rate (struct dtcp_config * cfg);
 uint_t          dtcp_time_period(struct dtcp_config * cfg);
 struct policy * dtcp_no_rate_slow_down(struct dtcp_config * cfg);
 struct policy * dtcp_no_override_default_peak(struct dtcp_config * cfg);

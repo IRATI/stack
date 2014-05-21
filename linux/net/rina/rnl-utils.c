@@ -57,7 +57,7 @@
 
 /*
  * FIXME: Destination is usually at the end of the prototype, not at the
- * beginning (e.g. msg and name)
+ *        beginning (e.g. msg and name)
  */
 
 #define BUILD_STRERROR(X)                                       \
@@ -1092,14 +1092,16 @@ static int parse_policy_param(struct nlattr * attr, struct p_param * param)
                 return -1;
 
         if (attrs[PPA_ATTR_NAME] )
-                policy_param_name_set(param, nla_dup_string(attrs[PPA_ATTR_NAME], GFP_KERNEL));
-        //policy_param_name_set(param, nla_get_string(attrs[PPA_ATTR_NAME]));
+                policy_param_name_set(param,
+                                      nla_dup_string(attrs[PPA_ATTR_NAME],
+                                                     GFP_KERNEL));
         else
                 policy_param_name_set(param, NULL);
 
         if (attrs[PPA_ATTR_VALUE])
-                policy_param_value_set(param, nla_dup_string(attrs[PPA_ATTR_VALUE], GFP_KERNEL));
-        //policy_param_value_set(param, nla_get_string(attrs[PPA_ATTR_VALUE]));
+                policy_param_value_set(param,
+                                       nla_dup_string(attrs[PPA_ATTR_VALUE],
+                                                      GFP_KERNEL));
         else
                 policy_param_value_set(param, NULL);
 
@@ -1184,12 +1186,14 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
                 return -1;
 
         if (attrs[PA_ATTR_NAME])
-                policy_name_set(p, nla_dup_string(attrs[PA_ATTR_NAME], GFP_KERNEL));
+                policy_name_set(p, nla_dup_string(attrs[PA_ATTR_NAME],
+                                                  GFP_KERNEL));
         else
                 policy_name_set(p, NULL);
 
         if (attrs[PA_ATTR_VERSION])
-                policy_version_set(p, nla_dup_string(attrs[PA_ATTR_VERSION], GFP_KERNEL));
+                policy_version_set(p, nla_dup_string(attrs[PA_ATTR_VERSION],
+                                                     GFP_KERNEL));
         else
                 policy_version_set(p, NULL);
 
@@ -1382,7 +1386,6 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
                                  dtcp_reconcile_flow_conflict(cfg)))
                         return -1;
 
-
         return 0;
 }
 
@@ -1569,9 +1572,9 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->dtcp_present =
                         nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-
         if (attrs[CPP_ATTR_DTCP_CONFIG])
-                if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG], cpp_struct->dtcp_cfg)) {
+                if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG],
+                                      cpp_struct->dtcp_cfg)) {
                         LOG_ERR("Could not parse dtcp config");
                         return -1;
                 }
@@ -1579,7 +1582,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         if (attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY]) {
                 if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY],
                                  cpp_struct->initial_sequence_number)) {
-                        LOG_ERR("Could not parse initial_sequence_number policy");
+                        LOG_ERR("Could not parse initial_sequence_number "
+                                "policy");
                         return -1;
                 }
         }
@@ -1748,7 +1752,7 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
                 msg_attrs->qos_id   =
                         nla_get_u32(info->attrs[ICCRQ_ATTR_QOS_ID]);
         if (info->attrs[ICCRQ_ATTR_POLICIES_PARAMS]) {
-                if (parse_conn_policies_params(info->attrs                     \
+                if (parse_conn_policies_params(info->attrs
                                                [ICCRQ_ATTR_POLICIES_PARAMS],
                                                msg_attrs->cp_params)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION"
@@ -1783,7 +1787,7 @@ rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
                 msg_attrs->flow_user_ipc_process_id =
                         nla_get_u16(info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID]);
         if (info->attrs[ICCA_ATTR_POLICIES_PARAMS]) {
-                if (parse_conn_policies_params(info->attrs                     \
+                if (parse_conn_policies_params(info->attrs
                                                [ICCA_ATTR_POLICIES_PARAMS],
                                                msg_attrs->cp_params)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECT"

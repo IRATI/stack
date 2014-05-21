@@ -125,7 +125,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 
         LOG_DBG("Closed Window Queue");
         max_len = dtcp_max_closed_winq_length(
-                          dtp->sv->connection->policies_params->dtcp_cfg);
+                                              dtp->sv->connection->policies_params->dtcp_cfg);
         if (cwq_size(cwq) < max_len -1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push to cwq");
@@ -389,7 +389,7 @@ int dtp_write(struct dtp * instance,
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
-                return -1; */
+                   return -1; */
         }
 #endif
 
@@ -651,7 +651,7 @@ int dtp_receive(struct dtp * instance,
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
-                return -1;*/
+                  return -1;*/
         }
 
         seq_num = pci_sequence_number_get(pci);
