@@ -118,25 +118,25 @@ int policy_destroy(struct policy * p)
 }
 EXPORT_SYMBOL(policy_destroy);
 
-struct policy_parm * policy_param_find(struct policy *      policy,
-                                       struct policy_parm * param)
+struct policy_parm * policy_param_find(struct policy *  policy,
+                                       const string_t * name)
 {
         struct policy_parm * pos;
 
-        if (!policy || ! param)
+        if (!policy || ! name)
                 return NULL;
 
         list_for_each_entry(pos, &policy->params, next) {
-                if (!strcmp(pos->name, param->name))
+                if (!strcmp(pos->name, name))
                         return pos;
         }
-
+        
         return NULL;
 }
 EXPORT_SYMBOL(policy_param_find);
 
-int policy_param_add(struct policy *      policy,
-                     struct policy_parm * param)
+int policy_param_bind(struct policy *      policy,
+                      struct policy_parm * param)
 {
         if (!policy || ! param)
                 return -1;
@@ -145,32 +145,25 @@ int policy_param_add(struct policy *      policy,
 
         return 0;
 }
-EXPORT_SYMBOL(policy_param_add);
+EXPORT_SYMBOL(policy_param_bind);
 
-int policy_param_rem(struct policy *      policy,
-                     struct policy_parm * param)
+int policy_param_unbind(struct policy *      policy,
+                        struct policy_parm * param)
 {
         if (!policy || ! param)
                 return -1;
 
-        if (!policy_param_find(policy, param))
+        if (param->name)
+                return -1;
+
+        if (!policy_param_find(policy, param->name))
                 return -1;
 
         list_del(&param->next);
 
         return 0;
 }
-EXPORT_SYMBOL(policy_param_rem);
-
-int policy_param_rem_and_del(struct policy *      policy,
-                             struct policy_parm * param)
-{
-        if (policy_param_rem(policy, param))
-                return -1;
-
-        return policy_param_destroy(param);
-}
-EXPORT_SYMBOL(policy_param_rem_and_del);
+EXPORT_SYMBOL(policy_param_unbind);
 
 const string_t * policy_param_name(const struct policy_parm * param)
 {

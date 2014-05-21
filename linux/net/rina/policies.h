@@ -49,13 +49,11 @@ int                  policy_name_set(struct policy * policy,
 const string_t *     policy_version(struct policy * policy);
 int                  policy_version_set(struct policy * policy,
                                         string_t *      version);
-struct policy_parm * policy_param_find(struct policy *      policy,
+struct policy_parm * policy_param_find(struct policy *  policy,
+                                       const string_t * name);
+int                  policy_param_bind(struct policy *      policy,
                                        struct policy_parm * param);
-int                  policy_param_add(struct policy *      policy,
-                                      struct policy_parm * param);
-int                  policy_param_rem(struct policy *      policy,
-                                      struct policy_parm * param);
-int                  policy_param_rem_and_del(struct policy *      policy,
-                                              struct policy_parm * param);
+int                  policy_param_unbind(struct policy *      policy,
+                                         struct policy_parm * param);
 
 #endif

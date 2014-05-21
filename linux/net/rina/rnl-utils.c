@@ -1147,7 +1147,7 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
                         continue;
                 }
 
-                if(!policy_param_add(p, param)) {
+                if(!policy_param_bind(p, param)) {
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;
