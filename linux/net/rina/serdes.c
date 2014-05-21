@@ -22,13 +22,16 @@
 #define RINA_PREFIX "serdes"
 
 #include "serdes.h"
+#include "logs.h"
+#include "utils.h"
+#include "debug.h"
 
 struct pdu_ser {
         struct buffer * buf;
 };
 
 static bool serdes_pdu_is_ok(const struct pdu_ser * s)
-{ return (s && buffer_is_ok(s->buffer)) ? true : false; }
+{ return (s && buffer_is_ok(s->buf)) ? true : false; }
 
 static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
                                            struct pdu * pdu)
@@ -53,7 +56,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
         return tmp;
 }
 
-struct pdu_ser * serdes_pdu_ser_gfp(struct pdu * pdu)
+struct pdu_ser * serdes_pdu_ser(struct pdu * pdu)
 { return serdes_pdu_ser_gfp(GFP_KERNEL, pdu); }
 EXPORT_SYMBOL(serdes_pdu_ser);
 
