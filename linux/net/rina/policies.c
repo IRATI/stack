@@ -135,19 +135,6 @@ struct policy_parm * policy_param_find(struct policy *      policy,
 }
 EXPORT_SYMBOL(policy_param_find);
 
-bool policy_param_is_present(struct policy *     policy,
-                            struct policy_parm * param)
-{
-        if (!policy || ! param)
-                return false;
-
-        if (!policy_param_find(policy, param))
-                return false;
-
-        return true;
-}
-EXPORT_SYMBOL(policy_param_is_present);
-
 int policy_param_add(struct policy *      policy,
                      struct policy_parm * param)
 {
@@ -166,7 +153,7 @@ int policy_param_rem(struct policy *      policy,
         if (!policy || ! param)
                 return -1;
 
-        if (!policy_param_is_present(policy, param))
+        if (!policy_param_find(policy, param))
                 return -1;
 
         list_del(&param->next);

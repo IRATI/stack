@@ -49,8 +49,6 @@ struct list_head *   policy_parameters(struct policy * policy);
 
 struct policy_parm * policy_param_find(struct policy *      policy,
                                        struct policy_parm * param);
-bool                 policy_param_is_present(struct policy *      policy,
-                                             struct policy_parm * param);
 int                  policy_param_add(struct policy *      policy,
                                       struct policy_parm * param);
 int                  policy_param_rem(struct policy *      policy,
