@@ -27,6 +27,13 @@
 #include "common.h"
 
 struct policy_parm;
+
+struct policy_parm * policy_param_create(void);
+struct policy_parm * policy_param_create_ni(void);
+int                  policy_param_destroy(struct policy_parm * param);
+string_t *           policy_param_name(struct policy_parm * param);
+string_t *           policy_param_value(struct policy_parm * param);
+
 struct policy;
 
 struct policy *      policy_create(void);
@@ -40,12 +47,9 @@ int                  policy_version_set(struct policy * policy,
                                         string_t *      version);
 struct list_head *   policy_parameters(struct policy * policy);
 
-struct policy_parm * policy_param_create(void);
-struct policy_parm * policy_param_create_ni(void);
-int                  policy_param_destroy(struct policy_parm * param);
 struct policy_parm * policy_param_find(struct policy *      policy,
                                        struct policy_parm * param);
-int                  policy_param_is_present(struct policy *      policy,
+bool                 policy_param_is_present(struct policy *      policy,
                                              struct policy_parm * param);
 int                  policy_param_add(struct policy *      policy,
                                       struct policy_parm * param);
@@ -53,9 +57,6 @@ int                  policy_param_rem(struct policy *      policy,
                                       struct policy_parm * param);
 int                  policy_param_rem_and_del(struct policy *      policy,
                                               struct policy_parm * param);
-string_t *           policy_param_name(struct policy_parm * param);
-string_t *           policy_param_value(struct policy_parm * param);
-
 int                  policy_param_name_set(struct policy_parm * param,
                                            string_t *           name);
 int                  policy_param_value_set(struct policy_parm * param,

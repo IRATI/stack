@@ -133,19 +133,18 @@ struct policy_parm * policy_param_find(struct policy *      policy,
 
         return NULL;
 }
-EXPORT_SYMBOL(policy_param_find_by_name);
+EXPORT_SYMBOL(policy_param_find);
 
-int policy_param_is_present(struct policy *      policy,
+bool policy_param_is_present(struct policy *     policy,
                             struct policy_parm * param)
 {
         if (!policy || ! param)
-                return 0;
+                return false;
 
-        if (policy_param_find_by_name(policy, param))
-                return 1;
-        else
-                return 0;
+        if (!policy_param_find(policy, param))
+                return false;
 
+        return true;
 }
 EXPORT_SYMBOL(policy_param_is_present);
 
