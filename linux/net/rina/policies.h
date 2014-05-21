@@ -31,8 +31,8 @@ struct policy_parm;
 struct policy_parm * policy_param_create(void);
 struct policy_parm * policy_param_create_ni(void);
 int                  policy_param_destroy(struct policy_parm * param);
-string_t *           policy_param_name(struct policy_parm * param);
-string_t *           policy_param_value(struct policy_parm * param);
+const string_t *     policy_param_name(const struct policy_parm * param);
+const string_t *     policy_param_value(const struct policy_parm * param);
 
 struct policy;
 

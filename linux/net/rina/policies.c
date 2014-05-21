@@ -172,7 +172,7 @@ int policy_param_rem_and_del(struct policy *      policy,
 }
 EXPORT_SYMBOL(policy_param_rem_and_del);
 
-string_t * policy_param_name(struct policy_parm * param)
+const string_t * policy_param_name(const struct policy_parm * param)
 {
         if (!param)
                 return NULL;
@@ -181,7 +181,7 @@ string_t * policy_param_name(struct policy_parm * param)
 }
 EXPORT_SYMBOL(policy_param_name);
 
-string_t * policy_param_value(struct policy_parm * param)
+const string_t * policy_param_value(const struct policy_parm * param)
 {
         if (!param)
                 return NULL;
