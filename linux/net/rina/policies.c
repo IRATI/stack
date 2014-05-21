@@ -54,11 +54,11 @@ struct policy * policy_create_gfp(gfp_t flags)
 }
 EXPORT_SYMBOL(policy_create_gfp);
 
-struct policy * policy_create()
+struct policy * policy_create(void)
 { return policy_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(policy_create);
 
-struct policy * policy_create_ni()
+struct policy * policy_create_ni(void)
 { return policy_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_create_ni);
 
@@ -75,11 +75,11 @@ static struct policy_parm * policy_param_create_gfp(gfp_t flags)
         return tmp;
 }
 
-struct policy_parm * policy_param_create()
+struct policy_parm * policy_param_create(void)
 { return policy_param_create_gfp(GFP_KERNEL); }
 EXPORT_SYMBOL(policy_param_create);
 
-struct policy_parm * policy_param_create_ni()
+struct policy_parm * policy_param_create_ni(void)
 { return policy_param_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_param_create_ni);
 
