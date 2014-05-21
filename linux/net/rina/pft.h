@@ -1,5 +1,5 @@
 /*
- * PDU-FWD-T (PDU Forwarding Table)
+ * PFT (PDU Forwarding Table)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>

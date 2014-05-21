@@ -275,7 +275,7 @@ static int efcp_receive(struct efcp * efcp,
                 pdu_destroy(pdu);
                 return -1;
         }
-        
+
         ASSERT(efcp->dt);
 
         pdu_type = pci_type(pdu_pci_get_ro(pdu));
@@ -287,7 +287,7 @@ static int efcp_receive(struct efcp * efcp,
                         return -1;
                 }
 
-                if (dtcp_common_rcv_control(dtcp, pdu)) 
+                if (dtcp_common_rcv_control(dtcp, pdu))
                         return -1;
 
                 return 0;
