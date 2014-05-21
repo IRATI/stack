@@ -19,15 +19,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "dtcp-utils"
-
 #include <linux/kernel.h>
+
+#define RINA_PREFIX "dtcp-utils"
 
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
 #include "dtcp-utils.h"
 #include "policies.h"
+
+/* FIXME: These externs have to disappear from here */
+extern struct policy *    policy_create_gfp(gfp_t flags);
 
 struct window_fctrl_config {
         uint_t          max_closed_winq_length; /* in cwq */
@@ -160,6 +163,7 @@ static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
 {
         if (!cfg)
                 return -1;
+
         if (cfg->wfctrl_cfg) dtcp_window_fctrl_config_destroy(cfg->wfctrl_cfg);
         if (cfg->rfctrl_cfg) dtcp_rate_fctrl_config_destroy(cfg->rfctrl_cfg);
 
@@ -201,7 +205,8 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
         if (!tmp->closed_window              ||
             !tmp->flow_control_overrun       ||
             !tmp->reconcile_flow_conflict) {
-                LOG_ERR("Could not create a polici in dtcp_fctrl_config_create");
+                LOG_ERR("Could not create a policy in "
+                        "dtcp_fctrl_config_create");
                 goto clean;
         }
 
@@ -316,7 +321,7 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
                 goto clean;
         }
 
-        tmp->sender_inactivity_timer   = policy_create_gfp(flags);
+        tmp->sender_inactivity_timer = policy_create_gfp(flags);
         if (!tmp->sender_inactivity_timer) {
                 LOG_ERR("Could not create sender_inactivity_timer"
                         "in dtcp_config_create");
