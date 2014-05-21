@@ -36,6 +36,7 @@
 #include "rmt.h"
 #include "pft.h"
 #include "efcp-utils.h"
+#include "serdes.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
@@ -388,7 +389,7 @@ static int send_worker(void * o)
                         continue;
                 }
 
-                sdu = sdu_create_buffer_with(serdes_buffer(pdu_ser));
+                sdu = sdu_create_buffer_with(serdes_pdu_buffer(pdu_ser));
                 if (!sdu) {
                         LOG_ERR("Error creating SDU from serialized PDU, "
                                 "dropping PDU!");

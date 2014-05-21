@@ -27,26 +27,61 @@ struct pdu_ser {
         struct buffer * buf;
 };
 
-struct pdu_ser * serdes_pdu_ser(struct pdu * pdu)
-{
-        LOG_MISSING;
+static bool serdes_pdu_is_ok(const struct pdu_ser * s)
+{ return (s && buffer_is_ok(s->buffer)) ? true : false; }
 
-        return NULL;
-}
-
-struct buffer *  serdes_pdu_buffer(struct pdu_ser * pdu)
+static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
+                                           struct pdu * pdu)
 {
-        LOG_MISSING;
+        struct pdu_ser * tmp;
         
-        return NULL;
+        if (!pdu_is_ok(pdu))
+                return NULL;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        tmp->buf = buffer_dup(pdu_buffer_get_ro(pdu));
+        if (!tmp->buf) {
+                rkfree(tmp);
+                return NULL;
+        } 
+
+        pdu_destroy(pdu);
+
+        return tmp;
 }
+
+struct pdu_ser * serdes_pdu_ser_gfp(struct pdu * pdu)
+{ return serdes_pdu_ser_gfp(GFP_KERNEL, pdu); }
+EXPORT_SYMBOL(serdes_pdu_ser);
+
+struct buffer * serdes_pdu_buffer(struct pdu_ser * pdu)
+{
+        if (!serdes_pdu_is_ok(pdu))
+                return NULL;
+        
+        return pdu->buf;
+}
+EXPORT_SYMBOL(serdes_pdu_buffer);
 
 int serdes_pdu_destroy(struct pdu_ser * pdu) 
 {
         LOG_MISSING;
 
-        return -1;
+        if (!pdu) return -1;
+
+        if (pdu->buf)
+                buffer_destroy(pdu->buf);
+
+        rkfree(pdu);
+
+        return 0;
 }
+EXPORT_SYMBOL(serdes_pdu_destroy);
+
+
 
 struct pdu * serdes_pdu_deser(struct pdu_ser * pdu) 
 {
@@ -54,3 +89,4 @@ struct pdu * serdes_pdu_deser(struct pdu_ser * pdu)
         
         return NULL;
 }
+EXPORT_SYMBOL(serdes_pdu_deser);
