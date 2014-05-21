@@ -899,6 +899,7 @@ static int receive_worker(void * o)
                 if (!pci) {
                         LOG_ERR("No PCI to work with, dropping SDU!");
                         sdu_destroy(sdu);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
@@ -907,6 +908,7 @@ static int receive_worker(void * o)
                         LOG_ERR("Wrong PDU type, dropping SDU!");
                         pci_destroy(pci);
                         sdu_destroy(sdu);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
                 LOG_DBG("PDU type: %d", pdu_type);
