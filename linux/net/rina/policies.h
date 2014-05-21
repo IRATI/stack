@@ -45,8 +45,6 @@ int                  policy_name_set(struct policy * policy,
 string_t *           policy_version(struct policy * policy);
 int                  policy_version_set(struct policy * policy,
                                         string_t *      version);
-struct list_head *   policy_parameters(struct policy * policy);
-
 struct policy_parm * policy_param_find(struct policy *      policy,
                                        struct policy_parm * param);
 int                  policy_param_add(struct policy *      policy,

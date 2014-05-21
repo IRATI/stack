@@ -208,15 +208,6 @@ string_t * policy_version(struct policy * policy)
 }
 EXPORT_SYMBOL(policy_version);
 
-struct list_head * policy_parameters(struct policy * policy)
-{
-        if (!policy)
-                return NULL;
-
-        return &policy->params;
-}
-EXPORT_SYMBOL(policy_parameters);
-
 int policy_param_name_set(struct policy_parm * param,
                           string_t *           name)
 {
