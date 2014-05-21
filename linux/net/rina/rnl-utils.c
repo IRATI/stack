@@ -1093,17 +1093,17 @@ static int parse_policy_param(struct nlattr * attr, struct p_param * param)
 
         if (attrs[PPA_ATTR_NAME] )
                 policy_param_name_set(param, nla_dup_string(attrs[PPA_ATTR_NAME], GFP_KERNEL));
-                //policy_param_name_set(param, nla_get_string(attrs[PPA_ATTR_NAME]));
+        //policy_param_name_set(param, nla_get_string(attrs[PPA_ATTR_NAME]));
         else
                 policy_param_name_set(param, NULL);
 
-        if (attrs[PPA_ATTR_VALUE]) 
+        if (attrs[PPA_ATTR_VALUE])
                 policy_param_value_set(param, nla_dup_string(attrs[PPA_ATTR_VALUE], GFP_KERNEL));
-                //policy_param_value_set(param, nla_get_string(attrs[PPA_ATTR_VALUE]));
+        //policy_param_value_set(param, nla_get_string(attrs[PPA_ATTR_VALUE]));
         else
                 policy_param_value_set(param, NULL);
 
-        return 0;        
+        return 0;
 }
 
 static int parse_policy_param_list(struct nlattr * nested_attr,
@@ -1182,13 +1182,13 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
 
         if (nla_parse_nested(attrs, PA_ATTR_MAX, p_attr, attr_policy))
                 return -1;
-        
-        if (attrs[PA_ATTR_NAME]) 
+
+        if (attrs[PA_ATTR_NAME])
                 policy_name_set(p, nla_dup_string(attrs[PA_ATTR_NAME], GFP_KERNEL));
         else
                 policy_name_set(p, NULL);
 
-        if (attrs[PA_ATTR_VERSION]) 
+        if (attrs[PA_ATTR_VERSION])
                 policy_version_set(p, nla_dup_string(attrs[PA_ATTR_VERSION], GFP_KERNEL));
         else
                 policy_version_set(p, NULL);
@@ -1201,7 +1201,7 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
 }
 
 static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
-                                      struct dtcp_config * cfg) 
+                                      struct dtcp_config * cfg)
 {
         struct nla_policy attr_policy[DWFCC_ATTR_MAX + 1];
         struct nlattr * attrs[DWFCC_ATTR_MAX + 1];
@@ -1222,11 +1222,11 @@ static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
 
         if (attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH])
                 dtcp_max_closed_winq_length_set(cfg,
-                     nla_get_u32(attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]));
+                                                nla_get_u32(attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]));
 
         if (attrs[DWFCC_ATTR_INITIAL_CREDIT])
                 dtcp_initial_credit_set(cfg,
-                                 nla_get_u32(attrs[DWFCC_ATTR_INITIAL_CREDIT]));
+                                        nla_get_u32(attrs[DWFCC_ATTR_INITIAL_CREDIT]));
 
         if (attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY])
                 if (parse_policy(attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY],
@@ -1242,7 +1242,7 @@ static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
 }
 
 static int parse_dtcp_rb_fctrl_config(struct nlattr * attr,
-                                      struct dtcp_config * cfg) 
+                                      struct dtcp_config * cfg)
 {
         struct nla_policy attr_policy[DRFCC_ATTR_MAX + 1];
         struct nlattr * attrs[DRFCC_ATTR_MAX + 1];
@@ -1269,7 +1269,7 @@ static int parse_dtcp_rb_fctrl_config(struct nlattr * attr,
 
         if (attrs[DRFCC_ATTR_TIME_PERIOD])
                 dtcp_time_period_set(cfg,
-                                    nla_get_u32(attrs[DRFCC_ATTR_TIME_PERIOD]));
+                                     nla_get_u32(attrs[DRFCC_ATTR_TIME_PERIOD]));
 
         if (attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY])
                 if (parse_policy(attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY],
@@ -1329,7 +1329,7 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
 
         if (attrs[DFCC_ATTR_WINDOW_BASED])
                 dtcp_window_based_fctrl_set(cfg,
-                                   nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
+                                            nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
 
         if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG])
                 parse_dtcp_wb_fctrl_config(attrs[DFCC_ATTR_WINDOW_BASED_CONFIG],
@@ -1337,7 +1337,7 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
 
         if (attrs[DFCC_ATTR_RATE_BASED])
                 dtcp_rate_based_fctrl_set(cfg,
-                                   nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
+                                          nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
 
         if (attrs[DFCC_ATTR_RATE_BASED_CONFIG])
                 parse_dtcp_rb_fctrl_config(attrs[DFCC_ATTR_RATE_BASED_CONFIG],
@@ -1345,27 +1345,27 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
 
         if (attrs[DFCC_ATTR_SBYTES_THRES])
                 dtcp_sent_bytes_th_set(cfg,
-                                   nla_get_u32(attrs[DFCC_ATTR_SBYTES_THRES]));
+                                       nla_get_u32(attrs[DFCC_ATTR_SBYTES_THRES]));
 
         if (attrs[DFCC_ATTR_SBYTES_PER_THRES])
                 dtcp_sent_bytes_percent_th_set(cfg,
-                               nla_get_u32(attrs[DFCC_ATTR_SBYTES_PER_THRES]));
+                                               nla_get_u32(attrs[DFCC_ATTR_SBYTES_PER_THRES]));
 
         if (attrs[DFCC_ATTR_SBUFFER_THRES])
                 dtcp_sent_buffers_th_set(cfg,
-                                 nla_get_u32(attrs[DFCC_ATTR_SBUFFER_THRES]));
+                                         nla_get_u32(attrs[DFCC_ATTR_SBUFFER_THRES]));
 
         if (attrs[DFCC_ATTR_RBYTES_THRES])
                 dtcp_rcvd_bytes_th_set(cfg,
-                                   nla_get_u32(attrs[DFCC_ATTR_RBYTES_THRES]));
+                                       nla_get_u32(attrs[DFCC_ATTR_RBYTES_THRES]));
 
         if (attrs[DFCC_ATTR_RBYTES_PER_THRES])
                 dtcp_rcvd_bytes_percent_th_set(cfg,
-                               nla_get_u32(attrs[DFCC_ATTR_RBYTES_PER_THRES]));
+                                               nla_get_u32(attrs[DFCC_ATTR_RBYTES_PER_THRES]));
 
         if (attrs[DFCC_ATTR_RBUFFER_THRES])
                 dtcp_rcvd_buffers_th_set(cfg,
-                                 nla_get_u32(attrs[DFCC_ATTR_RBUFFER_THRES]));
+                                         nla_get_u32(attrs[DFCC_ATTR_RBUFFER_THRES]));
 
         if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY])
                 if (parse_policy(attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY],
@@ -1418,12 +1418,12 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
 
         if (attrs[DRCC_ATTR_DATA_RXMSN_MAX])
                 dtcp_data_retransmit_max_set(cfg,
-                                   nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+                                             nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
 
         if (attrs[DRCC_ATTR_INIT_A_TIMER])
                 dtcp_initial_a_set(cfg,
                                    nla_get_u32(attrs[DRCC_ATTR_INIT_A_TIMER]));
-                                      
+
         if (attrs[DRCC_ATTR_RTT_EST_POLICY])
                 if (parse_policy(attrs[DRCC_ATTR_RTT_EST_POLICY],
                                  dtcp_rtt_estimator(cfg)))
@@ -1487,8 +1487,8 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].len  = 0;
 
         if (!attr || !cfg) {
-               LOG_ERR("Bogus input to parse dtcp_config");
-               return -1;
+                LOG_ERR("Bogus input to parse dtcp_config");
+                return -1;
         }
 
         if (nla_parse_nested(attrs,
@@ -1517,11 +1517,11 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
 
         if (attrs[DCA_ATTR_INIT_SINAC_TIME])
                 dtcp_receiver_inactivity_set(cfg,
-                                 nla_get_u32(attrs[DCA_ATTR_INIT_SINAC_TIME]));
+                                             nla_get_u32(attrs[DCA_ATTR_INIT_SINAC_TIME]));
 
         if (attrs[DCA_ATTR_INIT_RINAC_TIME])
                 dtcp_sender_inactivity_set(cfg,
-                                 nla_get_u32(attrs[DCA_ATTR_INIT_SINAC_TIME]));
+                                           nla_get_u32(attrs[DCA_ATTR_INIT_SINAC_TIME]));
 
         if (attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY])
                 if (parse_policy(attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY],
@@ -1569,21 +1569,21 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->dtcp_present =
                         nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        
+
         if (attrs[CPP_ATTR_DTCP_CONFIG])
                 if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG], cpp_struct->dtcp_cfg)) {
                         LOG_ERR("Could not parse dtcp config");
                         return -1;
                 }
-        
+
         if (attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY]) {
                 if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY],
-                                       cpp_struct->initial_sequence_number)) {
-                LOG_ERR("Could not parse initial_sequence_number policy");
-                return -1;
+                                 cpp_struct->initial_sequence_number)) {
+                        LOG_ERR("Could not parse initial_sequence_number policy");
+                        return -1;
                 }
         }
-        
+
         if (attrs[CPP_ATTR_SEQ_NUM_ROLLOVER])
                 cpp_struct->seq_num_ro_th =
                         nla_get_u32(attrs[CPP_ATTR_SEQ_NUM_ROLLOVER]);
