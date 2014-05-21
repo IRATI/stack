@@ -118,8 +118,8 @@ int policy_destroy(struct policy * p)
 }
 EXPORT_SYMBOL(policy_destroy);
 
-struct policy_parm * policy_param_find_by_name(struct policy *      policy,
-                                               struct policy_parm * param)
+struct policy_parm * policy_param_find(struct policy *      policy,
+                                       struct policy_parm * param)
 {
         struct policy_parm * pos;
 

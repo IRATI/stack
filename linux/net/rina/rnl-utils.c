@@ -3260,10 +3260,10 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
+
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
                 LOG_ERR("Could not send unicast msg: %d", result);
