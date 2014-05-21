@@ -68,8 +68,6 @@ EXPORT_SYMBOL(serdes_pdu_buffer);
 
 int serdes_pdu_destroy(struct pdu_ser * pdu) 
 {
-        LOG_MISSING;
-
         if (!pdu) return -1;
 
         if (pdu->buf)
