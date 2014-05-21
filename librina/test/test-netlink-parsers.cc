@@ -2427,8 +2427,8 @@ int testIpcpCreateConnectionRequest() {
         dtcpFlowCtrlConfig.setSentbuffersthreshold(32);
         dtcpFlowCtrlConfig.setSentbytespercentthreshold(23);
         dtcpFlowCtrlConfig.setSentbytesthreshold(675);
-        EFCPPolicyConfig closedWindowPolicy =
-                        EFCPPolicyConfig("test-closed-window", 23);
+        PolicyConfig closedWindowPolicy =
+                        PolicyConfig("test-closed-window", 23);
         PolicyParameter policyParam = PolicyParameter("test", "window");
         closedWindowPolicy.addParameter(policyParam);
         dtcpFlowCtrlConfig.setClosedwindowpolicy(closedWindowPolicy);

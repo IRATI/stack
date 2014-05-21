@@ -13,7 +13,7 @@ import eu.irati.librina.DTCPFlowControlConfig;
 import eu.irati.librina.DTCPRateBasedFlowControlConfig;
 import eu.irati.librina.DTCPRtxControlConfig;
 import eu.irati.librina.DTCPWindowBasedFlowControlConfig;
-import eu.irati.librina.EFCPPolicyConfig;
+import eu.irati.librina.PolicyConfig;
 
 /**
  * Test if the serialization/deserialization mechanisms for the Flow object work
@@ -38,7 +38,7 @@ public class FlowEncoderTest {
 		connectionPolicies.setDtcPpresent(true);
 		connectionPolicies.setSeqnumrolloverthreshold(1234);
 		connectionPolicies.setInitialseqnumpolicy(
-				new EFCPPolicyConfig("policy1", (short)23));
+				new PolicyConfig("policy1", "23"));
 		DTCPConfig dtcpConfig = new DTCPConfig();
 		dtcpConfig.setRtxcontrol(true);
 		DTCPRtxControlConfig rtxConfig = new DTCPRtxControlConfig();

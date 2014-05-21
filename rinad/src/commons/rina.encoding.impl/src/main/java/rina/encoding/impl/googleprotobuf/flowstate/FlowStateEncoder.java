@@ -1,8 +1,8 @@
 package rina.encoding.impl.googleprotobuf.flowstate;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t;
+import rina.pduftg.api.linkstate.FlowStateObject;
 
 public class FlowStateEncoder implements Encoder{
 

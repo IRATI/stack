@@ -49,28 +49,31 @@ public final class PolicyDescriptorMessage {
     public boolean hasPolicyImplName() { return hasPolicyImplName; }
     public java.lang.String getPolicyImplName() { return policyImplName_; }
     
-    // optional uint32 version = 3;
+    // optional string version = 3;
     public static final int VERSION_FIELD_NUMBER = 3;
     private boolean hasVersion;
-    private int version_ = 0;
+    private java.lang.String version_ = "";
     public boolean hasVersion() { return hasVersion; }
-    public int getVersion() { return version_; }
+    public java.lang.String getVersion() { return version_; }
     
-    // repeated .rina.messages.nameValuePair_t policyParameters = 4;
+    // repeated .rina.messages.property_t policyParameters = 4;
     public static final int POLICYPARAMETERS_FIELD_NUMBER = 4;
-    private java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t> policyParameters_ =
+    private java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> policyParameters_ =
       java.util.Collections.emptyList();
-    public java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t> getPolicyParametersList() {
+    public java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> getPolicyParametersList() {
       return policyParameters_;
     }
     public int getPolicyParametersCount() { return policyParameters_.size(); }
-    public rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t getPolicyParameters(int index) {
+    public rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t getPolicyParameters(int index) {
       return policyParameters_.get(index);
     }
     
     private void initFields() {
     }
     public final boolean isInitialized() {
+      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getPolicyParametersList()) {
+        if (!element.isInitialized()) return false;
+      }
       return true;
     }
     
@@ -84,9 +87,9 @@ public final class PolicyDescriptorMessage {
         output.writeString(2, getPolicyImplName());
       }
       if (hasVersion()) {
-        output.writeUInt32(3, getVersion());
+        output.writeString(3, getVersion());
       }
-      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t element : getPolicyParametersList()) {
+      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getPolicyParametersList()) {
         output.writeMessage(4, element);
       }
       getUnknownFields().writeTo(output);
@@ -108,9 +111,9 @@ public final class PolicyDescriptorMessage {
       }
       if (hasVersion()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, getVersion());
+          .computeStringSize(3, getVersion());
       }
-      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t element : getPolicyParametersList()) {
+      for (rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t element : getPolicyParametersList()) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, element);
       }
@@ -287,7 +290,7 @@ public final class PolicyDescriptorMessage {
         }
         if (!other.policyParameters_.isEmpty()) {
           if (result.policyParameters_.isEmpty()) {
-            result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t>();
+            result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
           }
           result.policyParameters_.addAll(other.policyParameters_);
         }
@@ -324,12 +327,12 @@ public final class PolicyDescriptorMessage {
               setPolicyImplName(input.readString());
               break;
             }
-            case 24: {
-              setVersion(input.readUInt32());
+            case 26: {
+              setVersion(input.readString());
               break;
             }
             case 34: {
-              rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t.newBuilder();
+              rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
               addPolicyParameters(subBuilder.buildPartial());
               break;
@@ -381,66 +384,69 @@ public final class PolicyDescriptorMessage {
         return this;
       }
       
-      // optional uint32 version = 3;
+      // optional string version = 3;
       public boolean hasVersion() {
         return result.hasVersion();
       }
-      public int getVersion() {
+      public java.lang.String getVersion() {
         return result.getVersion();
       }
-      public Builder setVersion(int value) {
-        result.hasVersion = true;
+      public Builder setVersion(java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  result.hasVersion = true;
         result.version_ = value;
         return this;
       }
       public Builder clearVersion() {
         result.hasVersion = false;
-        result.version_ = 0;
+        result.version_ = getDefaultInstance().getVersion();
         return this;
       }
       
-      // repeated .rina.messages.nameValuePair_t policyParameters = 4;
-      public java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t> getPolicyParametersList() {
+      // repeated .rina.messages.property_t policyParameters = 4;
+      public java.util.List<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> getPolicyParametersList() {
         return java.util.Collections.unmodifiableList(result.policyParameters_);
       }
       public int getPolicyParametersCount() {
         return result.getPolicyParametersCount();
       }
-      public rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t getPolicyParameters(int index) {
+      public rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t getPolicyParameters(int index) {
         return result.getPolicyParameters(index);
       }
-      public Builder setPolicyParameters(int index, rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t value) {
+      public Builder setPolicyParameters(int index, rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t value) {
         if (value == null) {
           throw new NullPointerException();
         }
         result.policyParameters_.set(index, value);
         return this;
       }
-      public Builder setPolicyParameters(int index, rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t.Builder builderForValue) {
+      public Builder setPolicyParameters(int index, rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.Builder builderForValue) {
         result.policyParameters_.set(index, builderForValue.build());
         return this;
       }
-      public Builder addPolicyParameters(rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t value) {
+      public Builder addPolicyParameters(rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t value) {
         if (value == null) {
           throw new NullPointerException();
         }
         if (result.policyParameters_.isEmpty()) {
-          result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t>();
+          result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
         }
         result.policyParameters_.add(value);
         return this;
       }
-      public Builder addPolicyParameters(rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t.Builder builderForValue) {
+      public Builder addPolicyParameters(rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t.Builder builderForValue) {
         if (result.policyParameters_.isEmpty()) {
-          result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t>();
+          result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
         }
         result.policyParameters_.add(builderForValue.build());
         return this;
       }
       public Builder addAllPolicyParameters(
-          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t> values) {
+          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t> values) {
         if (result.policyParameters_.isEmpty()) {
-          result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.nameValuePair_t>();
+          result.policyParameters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.common.CommonMessages.property_t>();
         }
         super.addAll(values, result.policyParameters_);
         return this;
@@ -478,11 +484,11 @@ public final class PolicyDescriptorMessage {
     java.lang.String[] descriptorData = {
       "\n(protofiles/PolicyDescriptorMessage.pro" +
       "to\022\rrina.messages\032\037protofiles/CommonMess" +
-      "ages.proto\"\213\001\n\022policyDescriptor_t\022\022\n\npol" +
+      "ages.proto\"\206\001\n\022policyDescriptor_t\022\022\n\npol" +
       "icyName\030\001 \001(\t\022\026\n\016policyImplName\030\002 \001(\t\022\017\n" +
-      "\007version\030\003 \001(\r\0228\n\020policyParameters\030\004 \003(\013" +
-      "2\036.rina.messages.nameValuePair_tB*\n(rina" +
-      ".encoding.impl.googleprotobuf.policy"
+      "\007version\030\003 \001(\t\0223\n\020policyParameters\030\004 \003(\013" +
+      "2\031.rina.messages.property_tB*\n(rina.enco" +
+      "ding.impl.googleprotobuf.policy"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

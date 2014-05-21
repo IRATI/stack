@@ -34,6 +34,7 @@
 #include "dt.h"
 #include "dtp.h"
 #include "dtcp.h"
+#include "dtcp-utils.h"
 #include "rmt.h"
 #include "dt-utils.h"
 
@@ -48,11 +49,11 @@ struct efcp {
 };
 
 struct efcp_container {
-        struct efcp_imap *        instances;
-        struct cidm *             cidm;
-        struct dt_cons            dt_cons;
-        struct rmt *              rmt;
-        struct kfa *              kfa;
+        struct efcp_imap * instances;
+        struct cidm *      cidm;
+        struct dt_cons     dt_cons;
+        struct rmt *       rmt;
+        struct kfa *       kfa;
 };
 
 static struct efcp * efcp_create(void)
@@ -100,7 +101,7 @@ static int efcp_destroy(struct efcp * instance)
                                      instance->connection->source_cep_id);
                 }
 
-                rkfree(instance->connection);
+                connection_destroy(instance->connection);
         }
 
         rkfree(instance);
@@ -274,7 +275,7 @@ static int efcp_receive(struct efcp * efcp,
                 pdu_destroy(pdu);
                 return -1;
         }
-        
+
         ASSERT(efcp->dt);
 
         pdu_type = pci_type(pdu_pci_get_ro(pdu));
@@ -286,7 +287,7 @@ static int efcp_receive(struct efcp * efcp,
                         return -1;
                 }
 
-                if (dtcp_common_rcv_control(dtcp, pdu)) 
+                if (dtcp_common_rcv_control(dtcp, pdu))
                         return -1;
 
                 return 0;
@@ -399,11 +400,16 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         tmp->connection           = connection;
 
 #if DTCP_TEST_ENABLE
-        connection->policies_params.dtcp_present = true;
-        connection->policies_params.flow_ctrl = true;
-        connection->policies_params.rate_based_fctrl = false;
-        connection->policies_params.rtx_ctrl = false;
-        connection->policies_params.window_based_fctrl = true;
+        connection->policies_params->dtcp_present = true;
+        if (!connection->policies_params->dtcp_cfg) {
+                LOG_ERR("DTCP config was not there for DTCP_TEST_ENABLE");
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+        dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
+        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, false);
+        dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg, true);
+        dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg, false);
 #endif
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
@@ -426,7 +432,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         dtcp = NULL;
 
-        if (connection->policies_params.dtcp_present) {
+        if (connection->policies_params->dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
                         efcp_destroy(tmp);
@@ -440,7 +446,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (connection->policies_params.window_based_fctrl) {
+        if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
@@ -454,7 +460,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (connection->policies_params.rtx_ctrl) {
+        if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
@@ -473,11 +479,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                           tmp)) {
                 LOG_ERR("Cannot add a new instance into container %pK",
                         container);
-
-                rkfree(connection);
-
-                if (dtp)  dtp_destroy(dtp);
-                if (dtcp) dtcp_destroy(dtcp);
 
                 efcp_destroy(tmp);
                 return cep_id_bad();

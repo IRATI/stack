@@ -2,6 +2,7 @@
  * DTCP (Data Transfer Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,7 @@
 #include "rmt.h"
 #include "connection.h"
 #include "dt-utils.h"
+#include "dtcp-utils.h"
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
@@ -144,8 +146,7 @@ struct dtcp_policies {
         int (* rcvr_ack)(struct dtcp * instance, seq_num_t seq);
         int (* sender_ack)(struct dtcp * instance, seq_num_t seq);
         int (* sending_ack)(struct dtcp * instance);
-        int (* sending_ack_list)(struct dtcp * instance);
-        int (* initial_credit)(struct dtcp * instance);
+        int (* receiving_ack_list)(struct dtcp * instance);
         int (* initial_rate)(struct dtcp * instance);
         int (* receiving_flow_control)(struct dtcp * instance, seq_num_t seq);
         int (* update_credit)(struct dtcp * instance);
@@ -153,6 +154,11 @@ struct dtcp_policies {
         int (* reconcile_flow_conflict)(struct dtcp * instance);
         int (* rcvr_flow_control)(struct dtcp * instance, seq_num_t seq);
         int (* rate_reduction)(struct dtcp * instance);
+        int (* rcvr_control_ack)(struct dtcp * instance);
+        int (* no_rate_slow_down)(struct dtcp * instance);
+        int (* no_override_default_peak)(struct dtcp * instance);
+        int (* receiver_inactivity_timer)(struct dtcp * instance);
+        int (* sender_inactivity_timer)(struct dtcp * instance);
 };
 
 struct dtcp {
@@ -752,14 +758,17 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 
         LOG_DBG("Update invoked");
         /* FIXME: here it goes rcvr_flow_control_policy */
-        if (dtcp->conn->policies_params.flow_ctrl) {
-                if (dtcp->conn->policies_params.window_based_fctrl)
+
+        if (dtcp_flow_ctrl(dtcp->conn->policies_params->dtcp_cfg)) {
+                if (dtcp_window_based_fctrl(
+                                            dtcp->conn->policies_params->dtcp_cfg))
                         if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
                         }
 
-                if (dtcp->conn->policies_params.rate_based_fctrl) {
+                if (dtcp_rate_based_fctrl(
+                                          dtcp->conn->policies_params->dtcp_cfg)){
                         LOG_DBG("Rate based fctrl invoked");
                         if (dtcp->policies->rate_reduction(dtcp)) {
                                 LOG_ERR("Failed Rate Reduction policy");
@@ -768,7 +777,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp->conn->policies_params.rtx_ctrl) {
+        if (dtcp_rtx_ctrl(dtcp->conn->policies_params->dtcp_cfg)) {
                 LOG_DBG("Retransmission ctrl invoked");
                 if (dtcp->policies->rcvr_ack(dtcp, seq)) {
                         LOG_ERR("Failed Rcvr Ack policy");
@@ -776,8 +785,8 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp->conn->policies_params.flow_ctrl &&
-            !dtcp->conn->policies_params.rtx_ctrl) {
+        if (dtcp_flow_ctrl(dtcp->conn->policies_params->dtcp_cfg) &&
+            !dtcp_rtx_ctrl(dtcp->conn->policies_params->dtcp_cfg)){
                 LOG_DBG("Receiving flow ctrl invoked");
                 if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
                         LOG_ERR("Failed Receiving Flow Control policy");
@@ -820,8 +829,7 @@ static struct dtcp_policies default_policies = {
         .received_retransmission     = NULL,
         .sender_ack                  = default_sender_ack,
         .sending_ack                 = NULL,
-        .sending_ack_list            = NULL,
-        .initial_credit              = NULL,
+        .receiving_ack_list          = NULL,
         .initial_rate                = NULL,
         .receiving_flow_control      = default_receiving_flow_control,
         .update_credit               = NULL,
@@ -830,6 +838,11 @@ static struct dtcp_policies default_policies = {
         .rcvr_ack                    = default_rcvr_ack,
         .rcvr_flow_control           = default_rcvr_flow_control,
         .rate_reduction              = default_rate_reduction,
+        .rcvr_control_ack             = NULL,
+        .no_rate_slow_down           = NULL,
+        .no_override_default_peak    = NULL,
+        .receiver_inactivity_timer   = NULL,
+        .sender_inactivity_timer     = NULL,
 };
 
 struct dtcp * dtcp_create(struct dt *         dt,

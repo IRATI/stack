@@ -12,8 +12,9 @@ obj-$(CONFIG_RINA) +=				\
 	core.o personality.o syscalls.o		\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
 	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
-	serdes.o connection.o ipcp-utils.o	\
-	common.o
+	serdes.o ipcp-utils.o connection.o	\
+	common.o policies.o dtcp-utils.o 
+
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
