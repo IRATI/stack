@@ -66,12 +66,13 @@
 #define BUILD_STRERROR_BY_MTYPE(X)                      \
         "Could not parse Netlink message of type " X
 
+/* FIXME: These externs have to disappear from here */
 extern struct genl_family rnl_nl_family;
 
-char * nla_get_string(struct nlattr * nla)
+static char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
-char * nla_dup_string(struct nlattr * nla, gfp_t flags)
+static char * nla_dup_string(struct nlattr * nla, gfp_t flags)
 { return rkstrdup(nla_get_string(nla), flags); }
 
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
