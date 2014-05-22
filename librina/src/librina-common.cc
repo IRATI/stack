@@ -1262,7 +1262,7 @@ void PolicyConfig::setName(const std::string& name) {
         this->name = name;
 }
 
-/*const std::list<PolicyParameter>&
+const std::list<PolicyParameter>&
 PolicyConfig::getParameters() const {
         return parameters;
 }
@@ -1274,7 +1274,7 @@ void PolicyConfig::setParameters(
 
 void PolicyConfig::addParameter(const PolicyParameter& paremeter) {
         parameters.push_back(paremeter);
-}*/
+}
 
 const std::string& PolicyConfig::getVersion() const {
         return version;

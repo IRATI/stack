@@ -881,9 +881,9 @@ public:
         bool operator!=(const PolicyConfig &other) const;
         const std::string& getName() const;
         void setName(const std::string& name);
-        //const std::list<PolicyParameter>& getParameters() const;
-        //void setParameters(const std::list<PolicyParameter>& parameters);
-        //void addParameter(const PolicyParameter& paremeter);
+        const std::list<PolicyParameter>& getParameters() const;
+        void setParameters(const std::list<PolicyParameter>& parameters);
+        void addParameter(const PolicyParameter& paremeter);
         const std::string& getVersion() const;
         void setVersion(const std::string& version);
 };

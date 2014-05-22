@@ -1616,7 +1616,7 @@ int putListOfPolicyParameters(nl_msg* netlinkMessage,
 
 int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
                 PolicyConfig * efcpPolicyConfig) {
-       /* nlattr * nla;
+        nlattr * nla;
         int rem;
         PolicyParameter * parameter;
 
@@ -1633,19 +1633,19 @@ int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
 
         if (rem > 0){
                 LOG_WARN("Missing bits to parse");
-        }*/
+        }
 
         return 0;
 }
 
 int putPolicyConfigObject(nl_msg * netlinkMessage,
                 const PolicyConfig& object) {
-        //struct nlattr * parameters;
+        struct nlattr * parameters;
 
         NLA_PUT_STRING(netlinkMessage, EPC_ATTR_NAME, object.getName().c_str());
         NLA_PUT_STRING(netlinkMessage, EPC_ATTR_VERSION, object.getVersion().c_str());
 
-        /*if (object.getParameters().size() > 0) {
+        if (object.getParameters().size() > 0) {
                 if (!(parameters = nla_nest_start(netlinkMessage,
                                 EPC_ATTR_PARAMETERS))) {
                         goto nla_put_failure;
@@ -1657,7 +1657,7 @@ int putPolicyConfigObject(nl_msg * netlinkMessage,
                 }
 
                 nla_nest_end(netlinkMessage, parameters);
-        }*/
+        }
 
         return 0;
 
