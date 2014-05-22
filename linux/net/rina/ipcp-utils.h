@@ -24,6 +24,7 @@
 
 #include <linux/uaccess.h>
 
+#include "rds/rds.h"
 #include "common.h"
 #include "ipcp-instances.h"
 #include "efcp.h"
