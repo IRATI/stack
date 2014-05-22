@@ -1291,6 +1291,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	delete qosCube;
 	qosCube = new QoSCube("cube 2", 2);
 	difConfiguration.addQoSCube(*qosCube);
+	qosCube->setEfcpPolicies(ConnectionPolicies());
 	delete qosCube;
 	difInformation.setDifConfiguration(difConfiguration);
 	message.setDIFInformation(difInformation);
@@ -2428,9 +2429,7 @@ int testIpcpCreateConnectionRequest() {
         dtcpFlowCtrlConfig.setSentbytespercentthreshold(23);
         dtcpFlowCtrlConfig.setSentbytesthreshold(675);
         PolicyConfig closedWindowPolicy =
-                        PolicyConfig("test-closed-window", 23);
-        PolicyParameter policyParam = PolicyParameter("test", "window");
-        closedWindowPolicy.addParameter(policyParam);
+                        PolicyConfig("test-closed-window", "23");
         dtcpFlowCtrlConfig.setClosedwindowpolicy(closedWindowPolicy);
 
         DTCPRtxControlConfig dtcpRtxConfig;
@@ -2446,7 +2445,7 @@ int testIpcpCreateConnectionRequest() {
         dtcpConfig.setInitialsenderinactivitytime(123);
 
         ConnectionPolicies connectionPolicies;
-        connectionPolicies.setDtcPpresent(true);
+        connectionPolicies.setDtcpPresent(true);
         connectionPolicies.setDtcpConfiguration(dtcpConfig);
         connectionPolicies.setSeqnumrolloverthreshold(123456);
 
@@ -2500,8 +2499,8 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "QoS id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnPolicies().isDtcPpresent() !=
-                        recoveredMessage->getConnPolicies().isDtcPpresent()) {
+        } else if (message.getConnPolicies().isDtcpPresent() !=
+                        recoveredMessage->getConnPolicies().isDtcpPresent()) {
                 std::cout << "ConnPolicies.isDTCPPresent on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
@@ -2596,9 +2595,9 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.closedwindowpolicy.name on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnPolicies().getDtcpConfiguration().getFlowcontrolconfig().getClosedwindowpolicy().getVersion() !=
+        } else if (message.getConnPolicies().getDtcpConfiguration().getFlowcontrolconfig().getClosedwindowpolicy().getVersion().compare(
                         recoveredMessage->getConnPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getClosedwindowpolicy().getVersion()){
+                        getClosedwindowpolicy().getVersion()) != 0){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.closedwindowpolicy.version on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;

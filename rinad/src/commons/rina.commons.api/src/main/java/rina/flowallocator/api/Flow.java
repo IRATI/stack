@@ -283,19 +283,8 @@ public class Flow {
 		}
 		result = result + "* Index of the current active connection for this flow: "+this.currentConnectionIndex +"\n";
 		if (connectionPolicies != null) {
-			result = result + "* DTCP present: " + connectionPolicies.isDtcPpresent() + "\n";
-			result = result + "* Seq qnum rollover threshold: " + connectionPolicies.getSeqnumrolloverthreshold() + "\n";
-			if (connectionPolicies.isDtcPpresent()) {
-				result = result + "* DTCP configuration: " + "\n";
-				result = result + "   * Initial receiver inactivity timer: " + 
-						connectionPolicies.getDtcpConfiguration().getInitialrecvrinactivitytime() + "\n";
-				result = result + "   * Initial sender inactivity timer: " + 
-						connectionPolicies.getDtcpConfiguration().getInitialsenderinactivitytime() + "\n";
-				result = result + "   * Is rtx control enabled: " + 
-						connectionPolicies.getDtcpConfiguration().isRtxcontrol() + "\n";
-				result = result + "   * Is flow control enabled: " + 
-						connectionPolicies.getDtcpConfiguration().isFlowcontrol() + "\n";
-			}
+			result = result + "* Connection policies:\n";
+			result = result + this.getConnectionPolicies().toString();
 		}
 		return result;
 	}
