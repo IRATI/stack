@@ -784,7 +784,4 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
                                rnl_sn_t           seq_num,
                                u32                nl_port_id);
 
-char * nla_get_string(struct nlattr *nla);
-
-
 #endif

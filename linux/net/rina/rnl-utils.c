@@ -66,12 +66,13 @@
 #define BUILD_STRERROR_BY_MTYPE(X)                      \
         "Could not parse Netlink message of type " X
 
+/* FIXME: These externs have to disappear from here */
 extern struct genl_family rnl_nl_family;
 
-char * nla_get_string(struct nlattr * nla)
+static char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
-char * nla_dup_string(struct nlattr * nla, gfp_t flags)
+static char * nla_dup_string(struct nlattr * nla, gfp_t flags)
 { return rkstrdup(nla_get_string(nla), flags); }
 
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
@@ -1073,7 +1074,7 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         return 0;
 }
 
-static int parse_policy_param(struct nlattr * attr, struct p_param * param)
+static int parse_policy_param(struct nlattr * attr, struct policy_parm * param)
 {
         struct nla_policy attr_policy[PPA_ATTR_MAX + 1];
         struct nlattr *   attrs[PPA_ATTR_MAX + 1];
@@ -1111,11 +1112,10 @@ static int parse_policy_param(struct nlattr * attr, struct p_param * param)
 static int parse_policy_param_list(struct nlattr * nested_attr,
                                    struct policy * p)
 {
-        struct nlattr *  nla;
-        struct p_param * param;
-        int              rem                   = 0;
-        int              entries_with_problems = 0;
-        int              total_entries         = 0;
+        struct nlattr *      nla;
+        int                  rem                   = 0;
+        int                  entries_with_problems = 0;
+        int                  total_entries         = 0;
 
         if (!nested_attr) {
                 LOG_ERR("Bogus attribute passed, bailing out");
@@ -1127,10 +1127,12 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
                 return -1;
         }
 
-        for (nla = (struct nlattr*) nla_data(nested_attr),
+        for (nla = (struct nlattr *) nla_data(nested_attr),
                      rem = nla_len(nested_attr);
              nla_ok(nla, rem);
              nla = nla_next(nla, &(rem))) {
+                struct policy_parm * param;
+
                 total_entries++;
 
                 param = policy_param_create();
@@ -1145,12 +1147,11 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
                         continue;
                 }
 
-                if(!policy_param_add(p, param)) {
+                if(!policy_param_bind(p, param)) {
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;
                 }
-
         }
 
         if (rem > 0) {
@@ -3259,10 +3260,10 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
+
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
                 LOG_ERR("Could not send unicast msg: %d", result);

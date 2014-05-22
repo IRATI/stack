@@ -334,7 +334,6 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
-        LOG_DBG("State Vector %d", tmp->sv->window_based);
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -465,7 +464,6 @@ int dtp_write(struct dtp * instance,
          * the first and default case if both are present.
          */
 
-        LOG_DBG("DTCP instance: %pK", dtcp);
         if (dtcp) {
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
@@ -492,17 +490,13 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-                LOG_DBG("We are about to enter Window Based Flow Control");
                 if (sv->window_based) {
-                        LOG_DBG("WindowBased");
-                        LOG_DBG("Send SEQ %d", pci_sequence_number_get(pci));
                         if (!dt_sv_window_closed(dt) &&
                             pci_sequence_number_get(pci) <
                             dtcp_snd_rt_win(dtcp)) {
                                 /*
                                  * Might close window
                                  */
-                                LOG_DBG("Transmission control");
                                 if (policies->transmission_control(instance,
                                                                    pdu)) {
                                         LOG_ERR("Problems with transmission "
@@ -510,7 +504,6 @@ int dtp_write(struct dtp * instance,
                                         return -1;
                                 }
                         } else {
-                                LOG_DBG("Closed Window Queue");
                                 dt_sv_window_closed_set(dt, true);
                                 if (policies->closed_window(instance, pdu)) {
                                         LOG_ERR("Problems with the "
@@ -700,7 +693,6 @@ int dtp_receive(struct dtp * instance,
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
                 max_seq_nr_rcv_set(sv, seq_num);
                 if (dtcp) {
-                        LOG_DBG("DTCP update");
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
                                 pdu_destroy(pdu);
