@@ -32,7 +32,6 @@ struct dtp * dtp_create(struct dt *         dt,
                         struct kfa *        kfa,
                         struct connection * connection);
 int          dtp_destroy(struct dtp * instance);
-
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);

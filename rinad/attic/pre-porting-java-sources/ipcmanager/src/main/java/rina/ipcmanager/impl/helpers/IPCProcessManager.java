@@ -226,12 +226,18 @@ public class IPCProcessManager {
 					{
 						result = result + "        PDUFTableGeneratofConfiguration: \n";
 						PDUFTableGeneratorConfiguration pduftTableGeneratorConfiguration = difConfiguration.getPDUFTableGeneratorConfiguration();
-						result = result + "            objectMaximumAge: " + pduftTableGeneratorConfiguration.getObjectMaximumAge() + "\n";
-						result = result + "            waitUntilReadCDAP: " + pduftTableGeneratorConfiguration.getWaitUntilReadCDAP() + "\n";
-						result = result + "            waitUntilError: " + pduftTableGeneratorConfiguration.getWaitUntilError() + "\n";
-						result = result + "            waitUntilPDUFTComputation: " + pduftTableGeneratorConfiguration.getWaitUntilPDUFTComputation() + "\n";
-						result = result + "            waitUntilFSODBPropagation: " + pduftTableGeneratorConfiguration.getWaitUntilFSODBPropagation() + "\n";
-						result = result + "            waitUntilAgeIncrement: " + pduftTableGeneratorConfiguration.getWaitUntilAgeIncrement() + "\n";
+						result = result + "            objectMaximumAge: " + 
+								pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getObjectMaximumAge() + "\n";
+						result = result + "            waitUntilReadCDAP: " + 
+								pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilReadCDAP() + "\n";
+						result = result + "            waitUntilError: " + 
+								pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilError() + "\n";
+						result = result + "            waitUntilPDUFTComputation: " + 
+								pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilPDUFTComputation() + "\n";
+						result = result + "            waitUntilFSODBPropagation: " + 
+								pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilFSODBPropagation() + "\n";
+						result = result + "            waitUntilAgeIncrement: " +
+								pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilAgeIncrement() + "\n";
 					}
 					
 					Iterator<Neighbor> neighborIterator = ipcProcess.getNeighbors().iterator();

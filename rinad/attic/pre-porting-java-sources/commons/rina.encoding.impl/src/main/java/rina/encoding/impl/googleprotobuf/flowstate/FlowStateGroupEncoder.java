@@ -3,12 +3,13 @@ package rina.encoding.impl.googleprotobuf.flowstate;
 import java.util.ArrayList;
 import java.util.List;
 
-import rina.PDUForwardingTable.api.*;
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupMessage.flowStateObjectGroup_t;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateMessage.flowStateObject_t;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateGroupMessage.flowStateObjectGroup_t.Builder;
 import rina.encoding.impl.googleprotobuf.flowstate.FlowStateEncoder;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.FlowStateObjectGroup;
 
 public class FlowStateGroupEncoder implements Encoder{
 	public synchronized Object decode(byte[] serializedObject, Class<?> objectClass) throws Exception {

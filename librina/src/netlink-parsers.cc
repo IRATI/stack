@@ -1614,16 +1614,15 @@ int putListOfPolicyParameters(nl_msg* netlinkMessage,
         return -1;
 }
 
-int parseListOfEFCPPolicyConfigPolicyParameters(nlattr *nested,
-                EFCPPolicyConfig * efcpPolicyConfig) {
-        nlattr * nla;
+int parseListOfPolicyConfigPolicyParameters(nlattr *nested,
+                PolicyConfig * efcpPolicyConfig) {
+       /* nlattr * nla;
         int rem;
         PolicyParameter * parameter;
 
         for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
                      nla_ok(nla, rem);
                      nla = nla_next(nla, &(rem))){
-                /* validate & parse attribute */
                 parameter = parsePolicyParameterObject(nla);
                 if (parameter == 0){
                         return -1;
@@ -1634,19 +1633,19 @@ int parseListOfEFCPPolicyConfigPolicyParameters(nlattr *nested,
 
         if (rem > 0){
                 LOG_WARN("Missing bits to parse");
-        }
+        }*/
 
         return 0;
 }
 
-int putEFCPPolicyConfigObject(nl_msg * netlinkMessage,
-                const EFCPPolicyConfig& object) {
-        struct nlattr * parameters;
+int putPolicyConfigObject(nl_msg * netlinkMessage,
+                const PolicyConfig& object) {
+        //struct nlattr * parameters;
 
         NLA_PUT_STRING(netlinkMessage, EPC_ATTR_NAME, object.getName().c_str());
-        NLA_PUT_U32(netlinkMessage, EPC_ATTR_VERSION, object.getVersion());
+        NLA_PUT_STRING(netlinkMessage, EPC_ATTR_VERSION, object.getVersion().c_str());
 
-        if (object.getParameters().size() > 0) {
+        /*if (object.getParameters().size() > 0) {
                 if (!(parameters = nla_nest_start(netlinkMessage,
                                 EPC_ATTR_PARAMETERS))) {
                         goto nla_put_failure;
@@ -1658,17 +1657,17 @@ int putEFCPPolicyConfigObject(nl_msg * netlinkMessage,
                 }
 
                 nla_nest_end(netlinkMessage, parameters);
-        }
+        }*/
 
         return 0;
 
         nla_put_failure: LOG_ERR(
-                        "Error building EFCPPolicyConfig Netlink object");
+                        "Error building PolicyConfig Netlink object");
         return -1;
 }
 
-EFCPPolicyConfig *
-parseEFCPPolicyConfigObject(nlattr *nested) {
+PolicyConfig *
+parsePolicyConfigObject(nlattr *nested) {
         struct nla_policy attr_policy[EPC_ATTR_MAX + 1];
         attr_policy[EPC_ATTR_NAME].type = NLA_STRING;
         attr_policy[EPC_ATTR_NAME].minlen = 0;
@@ -1689,21 +1688,21 @@ parseEFCPPolicyConfigObject(nlattr *nested) {
         }
 
         std::string name;
-        short version = 0;
+        std::string version;
 
         if (attrs[EPC_ATTR_NAME]) {
                 name = nla_get_string(attrs[EPC_ATTR_NAME]);
         }
 
         if (attrs[EPC_ATTR_VERSION]) {
-                version = nla_get_u32(attrs[EPC_ATTR_VERSION]);
+                version = nla_get_string(attrs[EPC_ATTR_VERSION]);
         }
 
-        EFCPPolicyConfig * result = new EFCPPolicyConfig(name, version);
+        PolicyConfig * result = new PolicyConfig(name, version);
 
         int status = 0;
         if (attrs[EPC_ATTR_PARAMETERS]) {
-                status = parseListOfEFCPPolicyConfigPolicyParameters(
+                status = parseListOfPolicyConfigPolicyParameters(
                                 attrs[EPC_ATTR_PARAMETERS], result);
                 if (status != 0){
                         delete result;
@@ -1729,7 +1728,7 @@ int putDTCPWindowBasedFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRcvrflowcontrolpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -1741,7 +1740,7 @@ int putDTCPWindowBasedFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getReceivingflowcontrolpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -1780,8 +1779,8 @@ parseDTCPWindowBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         DTCPWindowBasedFlowControlConfig * result = new DTCPWindowBasedFlowControlConfig();
-        EFCPPolicyConfig * rcvrFlowControlPolicy;
-        EFCPPolicyConfig * recvingFlowControlPolicy;
+        PolicyConfig * rcvrFlowControlPolicy;
+        PolicyConfig * recvingFlowControlPolicy;
 
         if (attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]) {
                 result->setMaxclosedwindowqueuelength(
@@ -1794,7 +1793,7 @@ parseDTCPWindowBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY]){
-                rcvrFlowControlPolicy = parseEFCPPolicyConfigObject(
+                rcvrFlowControlPolicy = parsePolicyConfigObject(
                                 attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY]);
                 if (rcvrFlowControlPolicy == 0) {
                         delete result;
@@ -1806,7 +1805,7 @@ parseDTCPWindowBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY]){
-                recvingFlowControlPolicy = parseEFCPPolicyConfigObject(
+                recvingFlowControlPolicy = parsePolicyConfigObject(
                                 attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY]);
                 if (recvingFlowControlPolicy == 0) {
                         delete result;
@@ -1836,7 +1835,7 @@ int putDTCPRateBasedFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getNorateslowdownpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -1848,7 +1847,7 @@ int putDTCPRateBasedFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getNooverridedefaultpeakpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -1860,7 +1859,7 @@ int putDTCPRateBasedFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRatereductionpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -1902,9 +1901,9 @@ parseDTCPRateBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         DTCPRateBasedFlowControlConfig * result = new DTCPRateBasedFlowControlConfig();
-        EFCPPolicyConfig * noRateSlowdownPolicy;
-        EFCPPolicyConfig * noOverrideDefaultPeakPolicy;
-        EFCPPolicyConfig * rateReductionPolicy;
+        PolicyConfig * noRateSlowdownPolicy;
+        PolicyConfig * noOverrideDefaultPeakPolicy;
+        PolicyConfig * rateReductionPolicy;
 
         if (attrs[DRFCC_ATTR_SEND_RATE]) {
                 result->setSendingrate(
@@ -1917,7 +1916,7 @@ parseDTCPRateBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY]){
-                noRateSlowdownPolicy = parseEFCPPolicyConfigObject(
+                noRateSlowdownPolicy = parsePolicyConfigObject(
                                 attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY]);
                 if (noRateSlowdownPolicy == 0) {
                         delete result;
@@ -1929,7 +1928,7 @@ parseDTCPRateBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY]){
-                noOverrideDefaultPeakPolicy = parseEFCPPolicyConfigObject(
+                noOverrideDefaultPeakPolicy = parsePolicyConfigObject(
                                 attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY]);
                 if (noOverrideDefaultPeakPolicy == 0) {
                         delete result;
@@ -1941,7 +1940,7 @@ parseDTCPRateBasedFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRFCC_ATTR_RATE_REDUC_POLICY]){
-                rateReductionPolicy = parseEFCPPolicyConfigObject(
+                rateReductionPolicy = parsePolicyConfigObject(
                                 attrs[DRFCC_ATTR_RATE_REDUC_POLICY]);
                 if (rateReductionPolicy == 0) {
                         delete result;
@@ -2016,7 +2015,7 @@ int putDTCPFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getClosedwindowpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2028,7 +2027,7 @@ int putDTCPFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getFlowcontroloverrunpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2040,7 +2039,7 @@ int putDTCPFlowControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getReconcileflowcontrolpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2108,9 +2107,9 @@ parseDTCPFlowControlConfigObject(nlattr *nested) {
         DTCPFlowControlConfig * result = new DTCPFlowControlConfig();
         DTCPWindowBasedFlowControlConfig * windowBasedConfig;
         DTCPRateBasedFlowControlConfig * rateBasedConfig;
-        EFCPPolicyConfig * closedWindowPolicy;
-        EFCPPolicyConfig * flowControlOverrunPolicy;
-        EFCPPolicyConfig * reconcileFlowControlPolicy;
+        PolicyConfig * closedWindowPolicy;
+        PolicyConfig * flowControlOverrunPolicy;
+        PolicyConfig * reconcileFlowControlPolicy;
 
         if (attrs[DFCC_ATTR_WINDOW_BASED]) {
                 result->setWindowbased(true);
@@ -2181,7 +2180,7 @@ parseDTCPFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY]){
-                closedWindowPolicy = parseEFCPPolicyConfigObject(
+                closedWindowPolicy = parsePolicyConfigObject(
                                 attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY]);
                 if (closedWindowPolicy == 0) {
                         delete result;
@@ -2193,7 +2192,7 @@ parseDTCPFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY]){
-                flowControlOverrunPolicy = parseEFCPPolicyConfigObject(
+                flowControlOverrunPolicy = parsePolicyConfigObject(
                                 attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY]);
                 if (flowControlOverrunPolicy == 0) {
                         delete result;
@@ -2205,7 +2204,7 @@ parseDTCPFlowControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY]){
-                reconcileFlowControlPolicy = parseEFCPPolicyConfigObject(
+                reconcileFlowControlPolicy = parsePolicyConfigObject(
                                 attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY]);
                 if (reconcileFlowControlPolicy == 0) {
                         delete result;
@@ -2236,7 +2235,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRttestimatorpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2248,7 +2247,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRtxtimerexpirypolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2260,7 +2259,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getSenderackpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2272,7 +2271,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRecvingacklistpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2284,7 +2283,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRcvrackpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2296,7 +2295,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getSendingackpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2308,7 +2307,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRcvrcontrolackpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2361,13 +2360,13 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         DTCPRtxControlConfig * result = new DTCPRtxControlConfig();
-        EFCPPolicyConfig * rttEstimatorPolicy;
-        EFCPPolicyConfig * rtxTimerExpirationPolicy;
-        EFCPPolicyConfig * sackPolicy;
-        EFCPPolicyConfig * rackListPolicy;
-        EFCPPolicyConfig * rackPolicy;
-        EFCPPolicyConfig * sendingAckPolicy;
-        EFCPPolicyConfig * rControlAckPolicy;
+        PolicyConfig * rttEstimatorPolicy;
+        PolicyConfig * rtxTimerExpirationPolicy;
+        PolicyConfig * sackPolicy;
+        PolicyConfig * rackListPolicy;
+        PolicyConfig * rackPolicy;
+        PolicyConfig * sendingAckPolicy;
+        PolicyConfig * rControlAckPolicy;
 
         if (attrs[DRCC_ATTR_DATA_RXMSN_MAX]) {
                 result->setDatarxmsnmax(
@@ -2380,7 +2379,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_RTT_EST_POLICY]){
-                rttEstimatorPolicy = parseEFCPPolicyConfigObject(
+                rttEstimatorPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_RTT_EST_POLICY]);
                 if (rttEstimatorPolicy == 0) {
                         delete result;
@@ -2392,7 +2391,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY]){
-                rtxTimerExpirationPolicy = parseEFCPPolicyConfigObject(
+                rtxTimerExpirationPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY]);
                 if (rtxTimerExpirationPolicy == 0) {
                         delete result;
@@ -2404,7 +2403,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_SACK_POLICY]){
-                sackPolicy = parseEFCPPolicyConfigObject(
+                sackPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_SACK_POLICY]);
                 if (sackPolicy == 0) {
                         delete result;
@@ -2416,7 +2415,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_RACK_LIST_POLICY]){
-                rackListPolicy = parseEFCPPolicyConfigObject(
+                rackListPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_RACK_LIST_POLICY]);
                 if (rackListPolicy == 0) {
                         delete result;
@@ -2428,7 +2427,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_RACK_POLICY]){
-                rackPolicy = parseEFCPPolicyConfigObject(
+                rackPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_RACK_POLICY]);
                 if (rackPolicy == 0) {
                         delete result;
@@ -2440,7 +2439,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_SDING_ACK_POLICY]){
-                sendingAckPolicy = parseEFCPPolicyConfigObject(
+                sendingAckPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_SDING_ACK_POLICY]);
                 if (sendingAckPolicy == 0) {
                         delete result;
@@ -2452,7 +2451,7 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         }
 
         if (attrs[DRCC_ATTR_RCONTROL_ACK_POLICY]){
-                rControlAckPolicy = parseEFCPPolicyConfigObject(
+                rControlAckPolicy = parsePolicyConfigObject(
                                 attrs[DRCC_ATTR_RCONTROL_ACK_POLICY]);
                 if (rControlAckPolicy == 0) {
                         delete result;
@@ -2512,7 +2511,7 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getSendertimerinactiviypolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2524,7 +2523,7 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getRcvrtimerinactivitypolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2536,7 +2535,7 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getLostcontrolpdupolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2592,9 +2591,9 @@ parseDTCPConfigObject(nlattr *nested) {
         DTCPConfig * result = new DTCPConfig();
         DTCPFlowControlConfig * flowCtrlConfig;
         DTCPRtxControlConfig * rtxCtrlConfig;
-        EFCPPolicyConfig * sTimerInacPolicy;
-        EFCPPolicyConfig * rTimerInacPolicy;
-        EFCPPolicyConfig * lostControlPduPolicy;
+        PolicyConfig * sTimerInacPolicy;
+        PolicyConfig * rTimerInacPolicy;
+        PolicyConfig * lostControlPduPolicy;
 
         if (attrs[DCA_ATTR_FLOW_CONTROL]) {
                 result->setFlowcontrol(true);
@@ -2651,7 +2650,7 @@ parseDTCPConfigObject(nlattr *nested) {
         }
 
         if (attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]){
-                sTimerInacPolicy = parseEFCPPolicyConfigObject(
+                sTimerInacPolicy = parsePolicyConfigObject(
                                 attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]);
                 if (sTimerInacPolicy == 0) {
                         delete result;
@@ -2663,7 +2662,7 @@ parseDTCPConfigObject(nlattr *nested) {
         }
 
         if (attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]){
-                rTimerInacPolicy = parseEFCPPolicyConfigObject(
+                rTimerInacPolicy = parsePolicyConfigObject(
                                 attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]);
                 if (rTimerInacPolicy == 0) {
                         delete result;
@@ -2675,7 +2674,7 @@ parseDTCPConfigObject(nlattr *nested) {
         }
 
         if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]){
-                lostControlPduPolicy = parseEFCPPolicyConfigObject(
+                lostControlPduPolicy = parsePolicyConfigObject(
                                 attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]);
                 if (lostControlPduPolicy == 0) {
                         delete result;
@@ -2714,7 +2713,7 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putEFCPPolicyConfigObject(netlinkMessage,
+        if (putPolicyConfigObject(netlinkMessage,
                         object.getInitialseqnumpolicy())< 0) {
                 goto nla_put_failure;
         }
@@ -2758,7 +2757,7 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	ConnectionPolicies * result =
 			new ConnectionPolicies();
 	DTCPConfig * dtcpConfig;
-	EFCPPolicyConfig * initSeqNumPolicy;
+	PolicyConfig * initSeqNumPolicy;
 
 	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
 	        result->setDtcPpresent(true);
@@ -2782,7 +2781,7 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	}
 
 	if (attrs[CPA_ATTR_INIT_SEQ_NUM_POLICY]){
-	        initSeqNumPolicy = parseEFCPPolicyConfigObject(
+	        initSeqNumPolicy = parsePolicyConfigObject(
 	                        attrs[CPA_ATTR_INIT_SEQ_NUM_POLICY]);
 	        if (initSeqNumPolicy == 0) {
 	                delete result;

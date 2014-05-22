@@ -373,6 +373,12 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
 %rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
+%rename(equals) rina::PDUForwardingTableEntry::operator==(const PDUForwardingTableEntry &other) const;
+%rename(differs) rina::PDUForwardingTableEntry::operator!=(const PDUForwardingTableEntry &other) const;
+%rename(equals) rina::PolicyParameter::operator==(const PolicyParameter &other) const;
+%rename(differs) rina::PolicyParameter::operator!=(const PolicyParameter &other) const;
+%rename(equals) rina::PolicyConfig::operator==(const PolicyConfig &other) const;
+%rename(differs) rina::PolicyConfig::operator!=(const PolicyConfig &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
@@ -444,7 +450,7 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
 %template(QoSCubeList) std::list<rina::QoSCube>;
 %template(QoSCubeVector) std::vector<rina::QoSCube>;
-%template(PolicyList) std::list<rina::Policy>;
+%template(PolicyConfigList) std::list<rina::PolicyConfig>;
 %template(ParameterList) std::list<rina::Parameter>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;

@@ -228,7 +228,7 @@ shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
         iov.iov_len = len;
         ret = priv->vmpi.ops->write(priv->vmpi.ops, 0, &iov, 1);
         LOG_DBGF("vmpi_write_kernel(0, %d) --> %d",
-                (int) len, (int) ret);
+                 (int) len, (int) ret);
 
         return !(ret == len);
 }
@@ -520,7 +520,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         }
 
         LOG_DBGF("received ALLOCATE_REQ(ch = %u, src = %s, dst = %s)",
-                ch, src_name, dst_name);
+                 ch, src_name, dst_name);
 
         if (ch >= VMPI_MAX_CHANNELS) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
@@ -620,7 +620,7 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         }
 
         LOG_DBGF("received ALLOCATE_RESP(ch = %d, resp = %u)",
-                ch, response);
+                 ch, response);
 
         if (ch >= VMPI_MAX_CHANNELS) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
@@ -901,7 +901,7 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         }
 
         LOG_DBGF("ipcp %d assigned to DIF %s",
-                priv->id, priv->dif_name.process_name);
+                 priv->id, priv->dif_name.process_name);
 
         return 0;
 }
@@ -942,7 +942,7 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
         if (likely(n == iov.iov_len))
                 ret = 0;
         LOG_DBGF("vmpi_write_kernel(%u, %d) --> %d",
-                ch, (int) iov.iov_len, (int) n);
+                 ch, (int) iov.iov_len, (int) n);
 
  out:
         sdu_destroy(sdu);

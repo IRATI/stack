@@ -774,35 +774,6 @@ public:
 };
 
 /**
- * Represents a policy. This is a generic placeholder which should be defined
- * during the second prototype activities
- */
-class Policy {
-
-        /** The id of the policy */
-        unsigned int id;
-
-        /** The name of the policy */
-        std::string name;
-
-        /** Parameters of the policy */
-        std::list<Parameter> parameters;
-
-public:
-	bool operator==(const Policy &other) const;
-	bool operator!=(const Policy &other) const;
-	Policy();
-	Policy(unsigned int id, std::string name);
-        unsigned int getId() const;
-        void setId(unsigned int id);
-        const std::string& getName() const;
-        void setName(const std::string& name);
-        const std::list<Parameter>& getParameters() const;
-        void setParameters(const std::list<Parameter>& parameters);
-        void addParameter(const Parameter& parameter);
-};
-
-/**
  * Contains the values of the constants for the Error and Flow Control
  * Protocol (EFCP)
  */
@@ -869,24 +840,75 @@ public:
 };
 
 /**
- * Link state algorithm configurations
+ * A parameter of the policy
  */
-class PDUFTableGeneratorConfiguration {
-	private:
-		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
-		static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
-		static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
-		static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
-		static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
-		static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-		int objectMaximumAge;
-		int waitUntilReadCDAP;
-		int waitUntilError;
-		int waitUntilPDUFTComputation;
-		int waitUntilFSODBPropagation;
-		int waitUntilAgeIncrement;
-	public:
-		PDUFTableGeneratorConfiguration();
+class PolicyParameter {
+        /** the name of the parameter */
+        std::string name;
+
+        /** the value of the parameter */
+        std::string value;
+
+public:
+        PolicyParameter();
+        PolicyParameter(const std::string& name, const std::string& value);
+        bool operator==(const PolicyParameter &other) const;
+        bool operator!=(const PolicyParameter &other) const;
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::string& getValue() const;
+        void setValue(const std::string& value);
+};
+
+/**
+ * Configuration of a policy (name/version/parameters)
+ */
+class PolicyConfig {
+
+        /** the name of policy */
+        std::string name;
+
+        /** the version of the policy */
+        std::string version;
+
+        /** optional name/value parameters to configure the policy */
+        std::list<PolicyParameter> parameters;
+
+public:
+        PolicyConfig();
+        PolicyConfig(const std::string& name, const std::string& version);
+        bool operator==(const PolicyConfig &other) const;
+        bool operator!=(const PolicyConfig &other) const;
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        //const std::list<PolicyParameter>& getParameters() const;
+        //void setParameters(const std::list<PolicyParameter>& parameters);
+        //void addParameter(const PolicyParameter& paremeter);
+        const std::string& getVersion() const;
+        void setVersion(const std::string& version);
+};
+
+/**
+ * Link State routing configuration
+ */
+class LinkStateRoutingConfiguration {
+private:
+        static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+        static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
+        static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
+        static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
+        static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
+        static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+        static const std::string DEFAULT_ROUTING_ALGORITHM;
+        int objectMaximumAge;
+        int waitUntilReadCDAP;
+        int waitUntilError;
+        int waitUntilPDUFTComputation;
+        int waitUntilFSODBPropagation;
+        int waitUntilAgeIncrement;
+        std::string routingAlgorithm;
+public:
+        LinkStateRoutingConfiguration();
         const std::string toString();
         int getWaitUntilAgeIncrement() const;
         void setWaitUntilAgeIncrement(const int waitUntilAgeIncrement);
@@ -900,6 +922,31 @@ class PDUFTableGeneratorConfiguration {
         void setWaitUntilReadCDAP(const int waitUntilReadCdap);
         int getObjectMaximumAge() const;
         void setObjectMaximumAge(const int objectMaximumAge);
+        const std::string& getRoutingAlgorithm() const;
+        void setRoutingAlgorithm(const std::string& routingAlgorithm);
+};
+
+/**
+ * PDU F Table Generator Configuration
+ */
+class PDUFTableGeneratorConfiguration {
+private:
+        /** Name, version and configuration of the PDU FT Generator policy */
+        PolicyConfig pduFTGeneratorPolicy;
+
+        /**
+         * Link state routing configuration parameters - only relevant if a
+         * link-state routing PDU FT Generation policy is used
+         */
+        LinkStateRoutingConfiguration linkStateRoutingConfiguration;
+public:
+        PDUFTableGeneratorConfiguration();
+        PDUFTableGeneratorConfiguration(const PolicyConfig& pduFTGeneratorPolicy);
+        const PolicyConfig& getPduFtGeneratorPolicy() const;
+        void setPduFtGeneratorPolicy(const PolicyConfig& pduFtGeneratorPolicy);
+        const LinkStateRoutingConfiguration& getLinkStateRoutingConfiguration() const;
+        void setLinkStateRoutingConfiguration(
+                        const LinkStateRoutingConfiguration& linkStateRoutingConfiguration);
 };
 
 /**
@@ -918,7 +965,7 @@ class DIFConfiguration {
 	std::list<QoSCube> qosCubes;
 
 	/** The policies of the DIF */
-	std::list<Policy> policies;
+	std::list<PolicyConfig> policies;
 
 	/** Configuration parameters */
 	std::list<Parameter> parameters;
@@ -927,9 +974,9 @@ class DIFConfiguration {
 	PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
 public:
-	const std::list<Policy>& getPolicies();
-	void setPolicies(const std::list<Policy>& policies);
-	void addPolicy(const Policy& policy);
+	const std::list<PolicyConfig>& getPolicies();
+	void setPolicies(const std::list<PolicyConfig>& policies);
+	void addPolicy(const PolicyConfig& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
 	void addQoSCube(const QoSCube& qosCube);
@@ -938,10 +985,11 @@ public:
 	void addParameter(const Parameter& parameter);
 	const DataTransferConstants& getDataTransferConstants() const;
 	void setDataTransferConstants(
-					const DataTransferConstants& dataTransferConstants);
+	                const DataTransferConstants& dataTransferConstants);
 	unsigned int getAddress() const;
 	void setAddress(unsigned int address);
-	void setPDUFTableGeneratorConfiguration (const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+	void setPDUFTableGeneratorConfiguration(
+	                const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
 	const PDUFTableGeneratorConfiguration& getPDUFTableGeneratorConfiguration() const;
 };
 
