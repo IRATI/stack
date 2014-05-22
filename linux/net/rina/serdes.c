@@ -25,6 +25,12 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "du.h"
+
+/* FIXME: This extern has to disappear from here */
+struct buffer * buffer_create_with_gfp(gfp_t  flags,
+                                       void * data,
+                                       size_t size);
 
 struct pdu_ser {
         struct buffer * buf;
@@ -40,8 +46,10 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
         const void *          buffer_data;
         const struct buffer * buffer;
         const struct pci *    pci;
+        size_t                size;
         ssize_t               buffer_size;
         ssize_t               pci_size;
+        char *                data;
         
         if (!pdu_is_ok(pdu))
                 return NULL;
