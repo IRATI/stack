@@ -36,17 +36,67 @@ static bool serdes_pdu_is_ok(const struct pdu_ser * s)
 static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
                                            struct pdu * pdu)
 {
-        struct pdu_ser * tmp;
+        struct pdu_ser *      tmp;
+        const void *          buffer_data;
+        const struct buffer * buffer;
+        const struct pci *    pci;
+        ssize_t               buffer_size;
+        ssize_t               pci_size;
         
         if (!pdu_is_ok(pdu))
                 return NULL;
 
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
+        buffer = pdu_buffer_get_ro(pdu);
+        if (!buffer) {
+                pdu_destroy(pdu); 
                 return NULL;
+        }
 
-        tmp->buf = buffer_dup(pdu_buffer_get_ro(pdu));
+        buffer_data = buffer_data_ro(buffer);
+        if (!buffer_data) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        buffer_size = buffer_length(buffer);
+        if (buffer_size <= 0) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        /* TODO: Serialize the PCI here */
+
+        pci_size = pci_length(pci);
+        if (pci_size <= 0) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        size = pci_size + buffer_size;
+        data = rkmalloc(size, flags);
+        if (!data) {
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        memcpy(data, pci, pci_size);
+        memcpy(data + pci_size, buffer_data, buffer_size);
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp) {
+                rkfree(data);
+                return NULL;
+        }
+
+        tmp->buf = buffer_create_with_gfp(flags, data, size);
         if (!tmp->buf) {
+                rkfree(data);
                 rkfree(tmp);
                 return NULL;
         } 
