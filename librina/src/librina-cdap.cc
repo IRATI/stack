@@ -928,6 +928,9 @@ std::string toString() {
 }
 
 /*	class CDAPSessionDescriptor	*/
+CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
+	port_id_ = port_id;
+}
 CDAPSessionDescriptor::~CDAPSessionDescriptor() {
 	delete ap_naming_info_;
 }

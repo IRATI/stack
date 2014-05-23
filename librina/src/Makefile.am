@@ -20,7 +20,8 @@ allsources =					\
 	netlink-messages.cc			\
 	netlink-parsers.cc			\
 	netlink-manager.cc			\
-	rina-syscalls.cc
+	rina-syscalls.cc			\
+	cdap.cc
 
 EXTRA_DIST =					\
 	logs.h					\

@@ -464,6 +464,7 @@ private:
 ///the same role, because the CDAP session is bidirectional.
 class CDAPSessionDescriptor {
 public:
+	CDAPSessionDescriptor(int port_id);
 	~CDAPSessionDescriptor();
 	/// The source naming information is always the naming information of the local Application process
 	const ApplicationProcessNamingInformation* get_source_application_process_naming_info();
@@ -530,7 +531,7 @@ private:
 /// Manages the invoke ids of a session.
 class CDAPSessionInvokeIdManagerInterface {
 public:
-	virtual ~CDAPSessionInvokeIdManagerInterface() {};
+	virtual ~CDAPSessionInvokeIdManagerInterface() throw() {};
 	 /// Obtains a valid invoke id for this session
 	 /// @return
 	virtual int get_InvokeId() const = 0;
@@ -557,9 +558,7 @@ class CDAPSessionInterface {
 
 	/*	Constructors and Destructors	*/
 public:
-	virtual ~CDAPSessionInterface() {
-	}
-	;
+	virtual ~CDAPSessionInterface() throw() {};
 	/*	Accessors	*/
 	/**
 	 * Getter for the port_id
@@ -597,7 +596,7 @@ public:
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const CDAPMessage& messageReceived(char cdap_message[])
+	virtual const CDAPMessage* messageReceived(char cdap_message[])
 			throw (CDAPException) = 0;
 	/**
 	 * Tell the CDAP state machine that we've received a message. The state of the CDAP state machine will be updated
@@ -605,7 +604,7 @@ public:
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const CDAPMessage& messageReceived(const CDAPMessage &cdap_message)
+	virtual const CDAPMessage* messageReceived(const CDAPMessage &cdap_message)
 			throw (CDAPException) = 0;
 
 };
@@ -614,14 +613,14 @@ public:
 /// Manages the creation/deletion of CDAP sessions within an IPC process
 class CDAPSessionManagerInterface {
 public:
-	virtual ~CDAPSessionManagerInterface() {};
+	virtual ~CDAPSessionManagerInterface() throw() {};
 	/// Depending on the message received, it will create a new CDAP state machine (CDAP Session), or update
 	/// an existing one, or terminate one.
 	/// @param encodedCDAPMessage
 	/// @param port_id
 	/// @return Decoded CDAP Message
 	/// @throws CDAPException if the message is not consistent with the appropriate CDAP state machine
-	virtual const CDAPMessage& messageReceived(char encoded_cdap_message[],
+	virtual const CDAPMessage* messageReceived(char encoded_cdap_message[],
 			int port_id) throw (CDAPException) = 0;
 	/// Encodes the next CDAP message to be sent, and checks against the
 	/// CDAP state machine that this is a valid message to be sent
@@ -642,7 +641,7 @@ public:
 	/// Get a CDAP session that matches the port_id
 	/// @param port_id
 	/// @return
-	virtual const CDAPSessionInterface& getCDAPSession(int port_id) = 0;
+	virtual const CDAPSessionInterface* getCDAPSession(int port_id) = 0;
 	/// Get the identifiers of all the CDAP sessions
 	/// @return
 	virtual int* getAllCDAPSessionIds() = 0;
@@ -668,7 +667,7 @@ public:
 	/// @param cdap_message
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& decodeCDAPMessage(char cdap_message[])
+	virtual const CDAPMessage* decodeCDAPMessage(char cdap_message[])
 			throw (CDAPException) = 0;
 	/// Return the port_id of the (N-1) Flow that supports the CDAP Session
 	/// with the IPC process identified by destinationApplicationProcessName and destinationApplicationProcessInstance
@@ -691,7 +690,7 @@ public:
 	/// @param invoke_id true if one is requested, false otherwise
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getOpenConnectionRequestMessage(int port_id,
+	virtual const CDAPMessage* getOpenConnectionRequestMessage(int port_id,
 			CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
 			std::string dest_ae_inst, std::string dest_ae_name,
 			std::string dest_ap_inst, std::string dest_ap_name,
@@ -715,7 +714,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getOpenConnectionResponseMessage(int port_id,
+	virtual const CDAPMessage* getOpenConnectionResponseMessage(int port_id,
 			CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
 			std::string dest_ae_inst, std::string dest_ae_name,
 			std::string dest_ap_inst, std::string dest_ap_name, int result,
@@ -728,7 +727,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getReleaseConnectionRequestMessage(int port_id,
+	virtual const CDAPMessage* getReleaseConnectionRequestMessage(int port_id,
 			CDAPMessage::Flags flags, bool invoke_id) throw (CDAPException) = 0;
 	/// Create a M_RELEASE_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -738,7 +737,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getReleaseConnectionResponseMessage(int port_id,
+	virtual const CDAPMessage* getReleaseConnectionResponseMessage(int port_id,
 			CDAPMessage::Flags flags, int result, std::string result_reason,
 			int invoke_id) throw (CDAPException);
 	/// Create a M_CREATE CDAP Message
@@ -753,7 +752,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getCreateObjectRequestMessage(int port_id,
+	virtual const CDAPMessage* getCreateObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
 			long obj_inst, std::string obj_name,
 			const ObjectValueInterface &obj_value, int scope, bool invoke_id)
@@ -770,7 +769,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getCreateObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getCreateObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class, long obj_inst,
 			std::string obj_name, const ObjectValueInterface &obj_value,
 			int result, std::string result_reason, int invoke_id)
@@ -787,7 +786,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getDeleteObjectRequestMessage(int port_id,
+	virtual const CDAPMessage* getDeleteObjectRequestMessage(int port_id,
 			char* filter, CDAPMessage::Flags flags, std::string obj_class,
 			long obj_inst, std::string obj_name,
 			const ObjectValueInterface &object_value, int scope, bool invoke_id)
@@ -803,7 +802,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getDeleteObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getDeleteObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class, long obj_inst,
 			std::string obj_name, int result, std::string result_reason,
 			int invoke_id) throw (CDAPException) = 0;
@@ -819,7 +818,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getStartObjectRequestMessage(int port_id,
+	virtual const CDAPMessage* getStartObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
 			const ObjectValueInterface &obj_value, long obj_inst,
 			std::string obj_name, int scope, bool invoke_id)
@@ -832,7 +831,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getStartObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getStartObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, int result, std::string result_reason,
 			int invoke_id) throw (CDAPException) = 0;
 	/// Create a M_START_R CDAP Message
@@ -843,7 +842,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getStartObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getStartObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class,
 			const ObjectValueInterface &obj_value, long obj_inst,
 			std::string obj_name, int result, std::string result_reason,
@@ -860,7 +859,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getStopObjectRequestMessage(int port_id,
+	virtual const CDAPMessage* getStopObjectRequestMessage(int port_id,
 			char* filter, CDAPMessage::Flags flags, std::string obj_class,
 			const ObjectValueInterface &obj_value, long obj_inst,
 			std::string obj_name, int scope, bool invoke_id)
@@ -873,7 +872,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getStopObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getStopObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, int result, std::string result_reason,
 			int invoke_id) throw (CDAPException) = 0;
 	/// Create a M_READ CDAP Message
@@ -887,7 +886,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getReadObjectRequestMessage(int port_id,
+	virtual const CDAPMessage* getReadObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
 			long obj_inst, std::string obj_name, int scope, bool invoke_id)
 					throw (CDAPException) = 0;
@@ -903,7 +902,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getReadObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getReadObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, std::string obj_class, long obj_inst,
 			std::string obj_name, const ObjectValueInterface &obj_value,
 			int result, std::string result_reason, int invoke_id)
@@ -920,7 +919,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getWriteObjectRequestMessage(int port_id,
+	virtual const CDAPMessage* getWriteObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags, std::string obj_class,
 			long obj_inst, const ObjectValueInterface &obj_value,
 			std::string obj_name, int scope, bool invoke_id)
@@ -933,7 +932,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getWriteObjectResponseMessage(int port_id,
+	virtual const CDAPMessage* getWriteObjectResponseMessage(int port_id,
 			CDAPMessage::Flags flags, int result, std::string result_reason,
 			int invoke_id) throw (CDAPException) = 0;
 	/// Create a M_CANCELREAD CDAP Message
@@ -942,7 +941,7 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getCancelReadRequestMessage(int port_id,
+	virtual const CDAPMessage* getCancelReadRequestMessage(int port_id,
 			CDAPMessage::Flags flags, int invoke_id) throw (CDAPException) = 0;
 	/// Create a M_CANCELREAD_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -952,7 +951,7 @@ public:
 	/// @param result_reason
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage& getCancelReadResponseMessage(int port_id,
+	virtual const CDAPMessage* getCancelReadResponseMessage(int port_id,
 			CDAPMessage::Flags flags, int invoke_id, int result,
 			std::string result_reason) throw (CDAPException);
 };
@@ -991,7 +990,7 @@ private:
 /// Handles CDAP messages
 class CDAPMessageHandlerInterface {
 public:
-	virtual ~CDAPMessageHandlerInterface() {};
+	virtual ~CDAPMessageHandlerInterface() throw() {};
 	virtual void createResponse(const CDAPMessage &cdap_message,
 			const CDAPSessionDescriptor &cdap_session_descriptor)
 					throw (RIBDaemonException) = 0;
@@ -1018,7 +1017,7 @@ public:
 /// Provides a wire format for CDAP messages
 class WireMessageProviderInterface {
 public:
-	virtual ~WireMessageProviderInterface(){};
+	virtual ~WireMessageProviderInterface() throw() {};
 	/// Convert from wire format to CDAPMessage
 	/// @param message
 	/// @return
@@ -1034,14 +1033,14 @@ public:
 /// Factory to return a WireMessageProvider
 class WireMessageProviderFactoryInterface {
 public:
-	virtual ~WireMessageProviderFactoryInterface(){};
-	WireMessageProviderInterface& createWireMessageProvider() = 0;
+	virtual ~WireMessageProviderFactoryInterface() throw() {};
+	virtual WireMessageProviderInterface* createWireMessageProvider() = 0;
 };
 
 /// Manages the invoke ids of a session.
 class CDAPSessionInvokeIdManager {
 public:
-	virtual ~CDAPSessionInvokeIdManager() {};
+	virtual ~CDAPSessionInvokeIdManager() throw() {};
 	/// Obtains a valid invoke id for this session
 	/// @return
 	int getInvokeId();
@@ -1066,37 +1065,37 @@ public:
 ////
 class CDAPSession {
 public:
-	virtual ~CDAPSession();
+	virtual ~CDAPSession() throw() {};
 	/// Encodes the next CDAP message to be sent, and checks against the
 	/// CDAP state machine that this is a valid message to be sent
 	/// @param message
 	/// @return the serialized request message, ready to be sent to a flow
 	/// @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
-	char* encodeNextMessageToBeSent(CDAPMessage message) throw (CDAPException) = 0;
+	virtual char* encodeNextMessageToBeSent(CDAPMessage message) throw (CDAPException) = 0;
 	/// Tell the CDAP state machine that we've just sent the cdap Message,
 	/// so the internal state machine will be updated
 	/// @param message
 	/// @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
-	void messageSent(CDAPMessage message) throw (CDAPException) = 0;
+	virtual void messageSent(CDAPMessage message) throw (CDAPException) = 0;
 	/// Tell the CDAP state machine that we've received a message, and get
 	/// the deserialized CDAP message. The state of the CDAP state machine will be updated
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
-	CDAPMessage messageReceived(char cdapMessage[]) throw (CDAPException) = 0;
+	virtual CDAPMessage messageReceived(char cdapMessage[]) throw (CDAPException) = 0;
 	/// Tell the CDAP state machine that we've received a message. The state of the CDAP state machine will be updated
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
-	CDAPMessage messageReceived(CDAPMessage cdapMessage) throw (CDAPException) = 0;
+	virtual CDAPMessage messageReceived(CDAPMessage cdapMessage) throw (CDAPException) = 0;
 	/// Getter for the portId
 	/// @return a String that identifies a CDAP session within an IPC process
-	int getPortId() = 0;
+	virtual int getPortId() = 0;
 	/// Getter for the sessionDescriptor
 	/// @return the SessionDescriptor, provides all the data that describes this CDAP session (src and dest naming info,
 	/// authentication type, version, ...)
-	CDAPSessionDescriptor getSessionDescriptor() = 0;
-	CDAPSessionInvokeIdManager getInvokeIdManager() = 0;
+	virtual CDAPSessionDescriptor getSessionDescriptor() = 0;
+	virtual CDAPSessionInvokeIdManager getInvokeIdManager() = 0;
 };
 
 

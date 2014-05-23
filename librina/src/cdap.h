@@ -1,27 +1,149 @@
-/// cdap.h
-/// Created on: May 20, 2014
-/// Author: bernat
+/* cdap.h
+ * Created on: May 20, 2014
+ * Author: bernat
+ */
 
 #ifndef CDAP_H_
 #define CDAP_H_
 
 #ifdef __cplusplus
 
+#include <memory>
+#include <map>
 #include "librina-cdap.h"
 
 namespace rina {
 
-class CDAPSessionManagerImpl: public CDAPSessionManagerInterface {
+/// Implements the CDAP connection state machine
+class CDAPSessionImpl;
+class ConnectionStateMachine {
+public:
+	ConnectionStateMachine(CDAPSessionImpl *cdapSession, long timeout);
+	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
+	/// @throws CDAPException
+	// FIXME: synchronized
+	void checkConnect() throw (CDAPException);
+	void connectSentOrReceived(CDAPMessage cdapMessage, bool sent) throw (CDAPException);
+	/// Checks if the CDAP M_CONNECT_R message can be sent
+	/// @throws CDAPException
+	// FIXME: synchronized
+	void checkConnectResponse() throw (CDAPException);
+	// FIXME: synchronized
+	void connectResponseSentOrReceived(CDAPMessage cdapMessage, bool sent) throw (CDAPException);
+	/// Checks if the CDAP M_RELEASE message can be sent
+	/// @throws CDAPException
+	// FIXME: synchronized
+	void checkRelease() throw (CDAPException);
+	// FIXME: synchronized
+	void releaseSentOrReceived(CDAPMessage cdapMessage, bool sent) throw (CDAPException);
+	/// Checks if the CDAP M_RELEASE_R message can be sent
+	/// @throws CDAPException
+	// FIXME: synchronized
+	void checkReleaseResponse() throw (CDAPException);
+	// FIXME: synchronized
+	void releaseResponseSentOrReceived(CDAPMessage cdapMessage, bool sent) throw (CDAPException);
+private:
+	enum ConnectionState {NONE, AWAITCON, CONNECTED, AWAITCLOSE};
+	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
+	long timeout;
+	/// The flow that this CDAP connection operates over
+	CDAPSessionInterface *cdap_session;
+	/// The state of the CDAP connection, drives the CDAP connection
+	/// state machine
+	ConnectionState connection_state;
+	/// The AE has sent an M_CONNECT message
+	/// @throws CDAPException
+	// FIXME: synchronized
+	void connect() throw (CDAPException);
+	/// An M_CONNECT message has been received, update the state
+	/// @param message
+	// FIXME: synchronized
+	void connectReceived(CDAPMessage message) throw (CDAPException);
+	/// The AE has sent an M_CONNECT_R  message
+	/// @param openConnectionResponseMessage
+	/// @throws CDAPException
+	void connectResponse() throw (CDAPException);
+	/// An M_CONNECT_R message has been received
+	/// @param message
+	void connectResponseReceived(CDAPMessage message);
+	/// The AE has sent an M_RELEASE message
+	/// @param releaseConnectionRequestMessage
+	/// @throws CDAPException
+	void release(CDAPMessage cdapMessage) throw (CDAPException);
+	/// An M_RELEASE message has been received
+	/// @param message
+	void releaseReceived(CDAPMessage message) throw (CDAPException);
+	/// The AE has called the close response operation
+	/// @param releaseConnectionRequestMessage
+	/// @throws CDAPException
+	void releaseResponse() throw (CDAPException);
+	/// An M_RELEASE_R message has been received
+	/// @param message
+	void releaseResponseReceived() throw (CDAPException);
+};
+
+/// Implements a CDAP session. Has the necessary logic to ensure that a
+/// the operation of the CDAP protocol is consistent (correct states and proper
+/// invocation of operations)
+class CDAPSessionManager;
+class CDAPSessionImpl: public CDAPSession{
+public:
+	CDAPSessionImpl(CDAPSessionManager *cdap_session_manager, long timeout, WireMessageProviderInterface *wire_message_provider);
+	~CDAPSessionImpl() throw();
+	CDAPSessionInvokeIdManager getInvokeIdManager();
+	bool isConnected();
+	char* encodeNextMessageToBeSent(CDAPMessage cdap_message) throw (CDAPException);
+	void messageSent(CDAPMessage cdap_message) throw (CDAPException);
+	CDAPMessage messageReceived(char message[]) throw (CDAPException);
+	CDAPMessage messageReceived(CDAPMessage cdap_message) throw (CDAPException);
+	void setSessionDescriptor(CDAPSessionDescriptor sessionDescriptor);
+	int getPortId();
+protected:
+	void stopConnection();
+private:
+	CDAPMessage messageSentOrReceived(CDAPMessage cdap_message, bool sent) throw (CDAPException);
+	void freeOrReserveInvokeId(CDAPMessage cdap_message);
+	void checkIsConnected() throw (CDAPException);
+	void checkInvokeIdNotExists(CDAPMessage cdap_message) throw (CDAPException);
+	void checkCanSendOrReceiveCancelReadRequest(CDAPMessage cdap_message, bool sender) throw (CDAPException);
+	void requestMessageSentOrReceived(CDAPMessage cdap_message, CDAPMessage::Opcode op_code, bool sent) throw (CDAPException);
+	void cancelReadMessageSentOrReceived(CDAPMessage cdap_message, bool sender) throw (CDAPException);
+	void checkCanSendOrReceiveResponse(CDAPMessage cdap_message, CDAPMessage::Opcode op_code, bool send) throw (CDAPException);
+	void checkCanSendOrReceiveCancelReadResponse(CDAPMessage cdap_message, bool send) throw (CDAPException);
+	void responseMessageSentOrReceived(CDAPMessage cdap_message, CDAPMessage::Opcode op_code, bool sent) throw (CDAPException);
+	void cancelReadResponseMessageSentOrReceived(CDAPMessage cdap_message, bool sent) throw (CDAPException);
+	char* serializeMessage(CDAPMessage cdap_message) throw (CDAPException);
+	CDAPMessage deserializeMessage(char message[]) throw (CDAPException);
+	void populateSessionDescriptor(CDAPMessage cdap_message, bool send);
+	void emptySessionDescriptor();
+	/// Deals with the connection establishment and deletion messages and states
+	ConnectionStateMachine connection_state_machine_;
+	/// This map contains the invokeIds of the messages that
+	/// have requested a response, except for the M_CANCELREADs
+	//std::map<int, CDAPOperationState> pending_messages_;
+	//std::map<int, CDAPOperationState> cancel_read_pending_messages_;
+	WireMessageProviderInterface *wire_message_provider_;
+	CDAPSessionDescriptor session_descriptor_;
+	CDAPSessionManager *cdap_session_manager_;
+	CDAPSessionInvokeIdManager invoke_id_manager_;
+};
+
+/// Implements a CDAP session manager.
+class CDAPSessionManager: public CDAPSessionManagerInterface {
 public:
 	static const long DEFAULT_TIMEOUT_IN_MS = 10000;
-	CDAPSessionManagerImpl(
+	CDAPSessionManager();
+	CDAPSessionManager(
 			WireMessageProviderFactoryInterface &wire_message_provider_factory);
+	CDAPSessionManager(
+			WireMessageProviderFactoryInterface &wire_message_provider_factory, long timeout);
 	CDAPSession* createCDAPSession(int port_id);
+	~CDAPSessionManager() throw();
 	/// Get the identifiers of all the CDAP sessions
 	/// @return
 	int* getAllCDAPSessionIds();
 	std::list<CDAPSession> getAllCDAPSessions();
-	CDAPSession* getCDAPSession(int port_id);
+	CDAPSessionInterface* getCDAPSession(int port_id);
 	///  Encodes a CDAP message. It just converts a CDAP message into a byte
 	///  array, without caring about what session this CDAP message belongs to (and
 	///  therefore it doesn't update any CDAP session state machine). Called by
@@ -40,7 +162,7 @@ public:
 	/// @param cdap_message
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage decodeCDAPMessage(char cdap_message[]) throw (CDAPException);
+	CDAPMessage* decodeCDAPMessage(char cdap_message[]) throw (CDAPException);
 	/// Called by the CDAPSession state machine when the cdap session is terminated
 	/// @param portId
 	void removeCDAPSession(int portId);
@@ -58,7 +180,7 @@ public:
 	/// @param portId
 	/// @return Decoded CDAP Message
 	/// @throws CDAPException if the message is not consistent with the appropriate CDAP state machine
-	CDAPMessage messageReceived(char encodedCDAPMessage[], int portId)
+	CDAPMessage* messageReceived(char encodedCDAPMessage[], int portId)
 			throw (CDAPException);
 	/// Update the CDAP state machine because we've sent a message through the
 	/// flow identified by portId
@@ -88,7 +210,7 @@ public:
 	/// @param invokeId true if one is requested, false otherwise
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getOpenConnectionRequestMessage(int portId,
+	CDAPMessage* getOpenConnectionRequestMessage(int portId,
 			CDAPMessage::AuthTypes authMech, AuthValue authValue,
 			std::string destAEInst, std::string destAEName,
 			std::string destApInst, std::string destApName,
@@ -111,7 +233,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getOpenConnectionResponseMessage(int portId,
+	CDAPMessage* getOpenConnectionResponseMessage(int portId,
 			CDAPMessage::AuthTypes authMech, AuthValue authValue,
 			std::string destAEInst, std::string destAEName,
 			std::string destApInst, std::string destApName, int result,
@@ -124,7 +246,7 @@ public:
 	/// @param invokeID
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getReleaseConnectionRequestMessage(int portId,
+	CDAPMessage* getReleaseConnectionRequestMessage(int portId,
 			CDAPMessage::Flags flags, bool invokeID) throw (CDAPException);
 	/// Create a M_RELEASE_R CDAP Message
 	/// @param portId identifies the CDAP Session that this message is part of
@@ -135,7 +257,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 
-	CDAPMessage getReleaseConnectionResponseMessage(int portId,
+	CDAPMessage* getReleaseConnectionResponseMessage(int portId,
 			CDAPMessage::Flags flags, int result, std::string resultReason,
 			int invokeId) throw (CDAPException);
 	/// Create a M_CREATE CDAP Message
@@ -150,7 +272,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getCreateObjectRequestMessage(int portId, char filter[],
+	CDAPMessage* getCreateObjectRequestMessage(int portId, char filter[],
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			std::string objName, ObjectValueInterface &objValue, int scope,
 			bool invokeId) throw (CDAPException);
@@ -166,7 +288,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getCreateObjectResponseMessage(int portId,
+	CDAPMessage* getCreateObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			std::string objName, ObjectValueInterface &objValue, int result,
 			std::string resultReason, int invokeId) throw (CDAPException);
@@ -182,7 +304,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getDeleteObjectRequestMessage(int portId, char filter[],
+	CDAPMessage* getDeleteObjectRequestMessage(int portId, char filter[],
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			std::string objName, ObjectValueInterface &objectValue, int scope,
 			bool invokeId) throw (CDAPException);
@@ -197,7 +319,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getDeleteObjectResponseMessage(int portId,
+	CDAPMessage* getDeleteObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			std::string objName, int result, std::string resultReason,
 			int invokeId) throw (CDAPException);
@@ -213,7 +335,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getStartObjectRequestMessage(int portId, char filter[],
+	CDAPMessage* getStartObjectRequestMessage(int portId, char filter[],
 			CDAPMessage::Flags flags, std::string objClass,
 			ObjectValueInterface &objValue, long objInst, std::string objName,
 			int scope, bool invokeId) throw (CDAPException);
@@ -225,7 +347,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getStartObjectResponseMessage(int portId,
+	CDAPMessage* getStartObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, int result, std::string resultReason,
 			int invokeId) throw (CDAPException);
 	/// Create a M_START_R CDAP Message
@@ -236,7 +358,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getStartObjectResponseMessage(int portId,
+	CDAPMessage* getStartObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, std::string objClass,
 			ObjectValueInterface &objValue, long objInst, std::string objName,
 			int result, std::string resultReason, int invokeId)
@@ -253,7 +375,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getStopObjectRequestMessage(int portId, char filter[],
+	CDAPMessage* getStopObjectRequestMessage(int portId, char filter[],
 			CDAPMessage::Flags flags, std::string objClass,
 			ObjectValueInterface &objValue, long objInst, std::string objName,
 			int scope, bool invokeId) throw (CDAPException);
@@ -265,7 +387,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getStopObjectResponseMessage(int portId,
+	CDAPMessage* getStopObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, int result, std::string resultReason,
 			int invokeId) throw (CDAPException);
 	/// Create a M_READ CDAP Message
@@ -279,7 +401,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getReadObjectRequestMessage(int portId, char filter[],
+	CDAPMessage* getReadObjectRequestMessage(int portId, char filter[],
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			std::string objName, int scope, bool invokeId) throw (CDAPException);
 	/// Crate a M_READ_R CDAP Message
@@ -294,7 +416,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getReadObjectResponseMessage(int portId,
+	CDAPMessage* getReadObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			std::string objName, ObjectValueInterface &objValue, int result,
 			std::string resultReason, int invokeId) throw (CDAPException);
@@ -310,7 +432,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getWriteObjectRequestMessage(int portId, char filter[],
+	CDAPMessage* getWriteObjectRequestMessage(int portId, char filter[],
 			CDAPMessage::Flags flags, std::string objClass, long objInst,
 			ObjectValueInterface &objValue, std::string objName, int scope,
 			bool invokeId) throw (CDAPException);
@@ -322,7 +444,7 @@ public:
 	/// @param invokeId
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getWriteObjectResponseMessage(int portId,
+	CDAPMessage* getWriteObjectResponseMessage(int portId,
 			CDAPMessage::Flags flags, int result, std::string resultReason,
 			int invokeId) throw (CDAPException);
 	/// Create a M_CANCELREAD CDAP Message
@@ -331,7 +453,7 @@ public:
 	/// @param invokeID
 	/// @return
 	/// @throws CDAPException
-	CDAPMessage getCancelReadRequestMessage(int portId,
+	CDAPMessage* getCancelReadRequestMessage(int portId,
 			CDAPMessage::Flags flags, int invokeID) throw (CDAPException);
 	 /// Create a M_CANCELREAD_R CDAP Message
 	 /// @param portId identifies the CDAP Session that this message is part of
@@ -341,16 +463,16 @@ public:
 	 /// @param resultReason
 	 /// @return
 	 /// @throws CDAPException
-	CDAPMessage getCancelReadResponseMessage(int portId,
+	CDAPMessage* getCancelReadResponseMessage(int portId,
 			CDAPMessage::Flags flags, int invokeID, int result,
 			std::string resultReason) throw (CDAPException);
 private:
-	WireMessageProviderFactoryInterface* wire_message_provider_factory;
-	std::map<int, CDAPSession> cdap_sessions;
+	WireMessageProviderFactoryInterface* wire_message_provider_factory_;
+	std::map<int, CDAPSession*> cdap_sessions_;
 	/// Used by the serialize and unserialize operations
-	WireMessageProviderInterface& wire_message_provider;
+	WireMessageProviderInterface& wire_message_provider_;
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
-	long timeout;
+	long timeout_;
 	void assignInvokeId(CDAPMessage cdap_message, bool invoke_id, int port_id);
 };
 }
