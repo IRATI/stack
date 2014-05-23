@@ -24,7 +24,7 @@
 
 #include <linux/list.h>
 
-#include "common.h"
+#include "rds/rstr.h"
 
 struct policy_parm;
 

@@ -31,6 +31,8 @@
 #include "concurrency.h"
 #include "rina-syscalls.h"
 
+#define PAGE_SIZE 4096
+
 namespace rina{
 
 std::string _installationPath;
@@ -197,19 +199,21 @@ throw (AssignToDIFException) {
 #if STUB_API
         //Do nothing
 #else
-	IpcmAssignToDIFRequestMessage message;
-	message.setDIFInformation(difInformation);
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
+        IpcmAssignToDIFRequestMessage message;
+        message.setDIFInformation(difInformation);
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
 
-	try{
-	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
-	        throw AssignToDIFException(e.what());
-	}
+        try{
+                //FIXME, compute maximum message size dynamically
+                rinaManager->sendMessageOfMaxSize(&message,
+                                5*PAGE_SIZE);
+        }catch(NetlinkException &e){
+                throw AssignToDIFException(e.what());
+        }
 
-	seqNum = message.getSequenceNumber();
+        seqNum = message.getSequenceNumber();
 #endif
 
 	this->difInformation = difInformation;

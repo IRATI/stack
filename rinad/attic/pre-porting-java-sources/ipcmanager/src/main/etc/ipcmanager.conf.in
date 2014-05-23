@@ -60,18 +60,31 @@
     },
     "configParameters" : [ {
     	"name" : "bar", 
-    	"value" : "foo"
+    	"value" : "foo",
+         "eFCPPolicies" : {
+           "dtcpPresent" : false
+         }
       } ],
-     "qosCubes" : [ {
-         "name" : "reliable",
+    "qosCubes" : [ {
+         "name" : "unreliablewithflowcontrol",
          "id" : 1, 
          "partialDelivery" : false,
-         "orderedDelivery" : true
-      }, {
-         "name" : "unreliable",
-         "id" : 2, 
-         "partialDelivery" : true,
-         "orderedDelivery" : false 
+         "orderedDelivery" : false,
+         "efcpPolicies" : {
+           "dtcpPresent" : true,
+           "dtcpConfiguration" : {
+             "rtxcontrol" : false,
+             "flowcontrol" : true,
+             "flowcontrolconfig" : {
+               "ratebased" : false,
+               "windowbased" : true,
+               "windowbasedconfig" : {
+                 "maxclosedwindowqueuelength" : 200,
+                 "initialcredit" : 50
+               }
+             }
+           }
+         } 
      } ], 
      "knownIPCProcessAddresses" : [ {
     	 "apName" : "test1.IRATI",

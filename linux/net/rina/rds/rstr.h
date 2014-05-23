@@ -1,5 +1,5 @@
 /*
- * RINA Data Structures
+ * RINA Strings
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,19 +18,18 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RDS_H
-#define RINA_RDS_H
+#ifndef RINA_RSTR_H
+#define RINA_RSTR_H
 
-/* FIXME: This file is bad attitude and must be removed */
+#include <linux/uaccess.h>
 
-#include "rbmp.h"
-#include "rfifo.h"
-#include "rmap.h"
-#include "rmem.h"
-#include "rqueue.h"
-#include "rref.h"
-#include "rtimer.h"
-#include "rwq.h"
-#include "rstr.h"
+/* FIXME: This file and all associated definitions must disappear */
+
+typedef char string_t;
+
+string_t * string_from_user(const char __user * src);
+int        string_dup(const string_t * src, string_t ** dst);
+int        string_cmp(const string_t * a, const string_t * b);
+int        string_len(const string_t * s);
 
 #endif

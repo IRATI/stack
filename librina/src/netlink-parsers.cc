@@ -913,6 +913,9 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 	attr_policy[QOS_CUBE_ATTR_UND_BER].type = NLA_U32;
 	attr_policy[QOS_CUBE_ATTR_UND_BER].minlen = 4;
 	attr_policy[QOS_CUBE_ATTR_UND_BER].maxlen = 4;
+	attr_policy[QOS_CUBE_ATTR_EFCP_POLICIES].type = NLA_NESTED;
+	attr_policy[QOS_CUBE_ATTR_EFCP_POLICIES].minlen = 0;
+	attr_policy[QOS_CUBE_ATTR_EFCP_POLICIES].maxlen = 0;
 	struct nlattr *attrs[QOS_CUBE_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, QOS_CUBE_ATTR_MAX, nested, attr_policy);
@@ -925,6 +928,7 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 
 	QoSCube * result = new QoSCube(nla_get_string(attrs[QOS_CUBE_ATTR_NAME]),
 			nla_get_u32(attrs[QOS_CUBE_ATTR_ID]));
+	ConnectionPolicies * efcpPolicies;
 
 	if (attrs[QOS_CUBE_ATTR_AVG_BAND]) {
 		result->setAverageBandwidth(nla_get_u32(attrs[QOS_CUBE_ATTR_AVG_BAND]));
@@ -969,11 +973,24 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 				nla_get_u32(attrs[QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR]));
 	}
 
+	if (attrs[QOS_CUBE_ATTR_EFCP_POLICIES]) {
+	        efcpPolicies = parseConnectionPoliciesObject(
+	                        attrs[QOS_CUBE_ATTR_EFCP_POLICIES]);
+	        if (efcpPolicies == 0) {
+	                delete result;
+	                return 0;
+	        } else {
+	                result->setEfcpPolicies(*efcpPolicies);
+	                delete efcpPolicies;
+	        }
+	}
+
 	return result;
 }
 
 int putQoSCubeObject(nl_msg* netlinkMessage,
 		const QoSCube& object){
+        struct nlattr *efcpPolicies;
 
 	NLA_PUT_STRING(netlinkMessage, QOS_CUBE_ATTR_NAME,
 			object.getName().c_str());
@@ -1025,6 +1042,16 @@ int putQoSCubeObject(nl_msg* netlinkMessage,
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_UND_BER,
 				object.getUndetectedBitErrorRate());
 	}*/
+
+	if (!(efcpPolicies = nla_nest_start(netlinkMessage, QOS_CUBE_ATTR_EFCP_POLICIES))){
+	        goto nla_put_failure;
+	}
+
+	if (putConnectionPoliciesObject(netlinkMessage, object.getEfcpPolicies()) < 0) {
+	        goto nla_put_failure;
+	}
+
+	nla_nest_end(netlinkMessage, efcpPolicies);
 
 	return 0;
 
@@ -1672,9 +1699,9 @@ parsePolicyConfigObject(nlattr *nested) {
         attr_policy[EPC_ATTR_NAME].type = NLA_STRING;
         attr_policy[EPC_ATTR_NAME].minlen = 0;
         attr_policy[EPC_ATTR_NAME].maxlen = 65535;
-        attr_policy[EPC_ATTR_VERSION].type = NLA_U32;
-        attr_policy[EPC_ATTR_VERSION].minlen = 4;
-        attr_policy[EPC_ATTR_VERSION].maxlen = 4;
+        attr_policy[EPC_ATTR_VERSION].type = NLA_STRING;
+        attr_policy[EPC_ATTR_VERSION].minlen = 0;
+        attr_policy[EPC_ATTR_VERSION].maxlen = 65535;
         attr_policy[EPC_ATTR_PARAMETERS].type = NLA_NESTED;
         attr_policy[EPC_ATTR_PARAMETERS].minlen = 0;
         attr_policy[EPC_ATTR_PARAMETERS].maxlen = 0;
@@ -1682,7 +1709,7 @@ parsePolicyConfigObject(nlattr *nested) {
 
         int err = nla_parse_nested(attrs, EPC_ATTR_MAX, nested, attr_policy);
         if (err < 0) {
-                LOG_ERR("Error parsing EFCPPolicyConfig from Netlink message: %d",
+                LOG_ERR("Error parsing PolicyConfig from Netlink message: %d",
                                 err);
                 return 0;
         }
@@ -2693,7 +2720,7 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 
         struct nlattr *dtcpConfig, *initSeqNumPolicy;
 
-        if (object.isDtcPpresent()){
+        if (object.isDtcpPresent()){
                 NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_DTCP_PRESENT);
                 if (!(dtcpConfig = nla_nest_start(netlinkMessage,
                                 CPA_ATTR_DTCP_CONFIG))) {
@@ -2760,7 +2787,7 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	PolicyConfig * initSeqNumPolicy;
 
 	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
-	        result->setDtcPpresent(true);
+	        result->setDtcpPresent(true);
 
 	        if (attrs[CPA_ATTR_DTCP_CONFIG]){
 	                dtcpConfig = parseDTCPConfigObject(attrs[CPA_ATTR_DTCP_CONFIG]);
@@ -2777,7 +2804,7 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	                return 0;
 	        }
 	} else {
-	        result->setDtcPpresent(false);
+	        result->setDtcpPresent(false);
 	}
 
 	if (attrs[CPA_ATTR_INIT_SEQ_NUM_POLICY]){
