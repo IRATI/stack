@@ -522,7 +522,8 @@ int dtp_write(struct dtp * instance,
                                 }
                         }
                 }
-                else if (sv->window_based) {
+
+                if (sv->rate_based) {
                         LOG_MISSING;
                 }
 
