@@ -141,8 +141,8 @@ public:
 	~CDAPSessionManager() throw();
 	/// Get the identifiers of all the CDAP sessions
 	/// @return
-	int* getAllCDAPSessionIds();
-	std::list<CDAPSession> getAllCDAPSessions();
+	void getAllCDAPSessionIds(std::vector<int> &vector);
+	void getAllCDAPSessions(std::vector<CDAPSession*> &vector);
 	CDAPSessionInterface* getCDAPSession(int port_id);
 	///  Encodes a CDAP message. It just converts a CDAP message into a byte
 	///  array, without caring about what session this CDAP message belongs to (and

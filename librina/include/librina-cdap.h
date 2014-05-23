@@ -1022,7 +1022,7 @@ public:
 	/// @param message
 	/// @return
 	/// @throws CDAPException
-	virtual CDAPMessage deserializeMessage(char message[]) throw (CDAPException) = 0;
+	virtual CDAPMessage* deserializeMessage(char message[]) throw (CDAPException) = 0;
 	/// Convert from CDAP messages to wire format
 	/// @param cdapMessage
 	/// @return
