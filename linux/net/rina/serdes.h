@@ -27,7 +27,7 @@
 struct pdu_ser;
 
 struct pdu_ser * serdes_pdu_ser(struct pdu * pdu);
-/* FIXME: Change to read/write */
+/* FIXME: Change to read-write and/or read-only */
 struct buffer *  serdes_pdu_buffer(struct pdu_ser * pdu);
 int              serdes_pdu_destroy(struct pdu_ser * pdu);
 

@@ -27,10 +27,20 @@
 #include "debug.h"
 #include "du.h"
 
-/* FIXME: This extern has to disappear from here */
+/* FIXME: These externs have to disappear from here */
 struct buffer * buffer_create_with_gfp(gfp_t  flags,
                                        void * data,
                                        size_t size);
+
+struct buffer * buffer_create_from_gfp(gfp_t        flags,
+                                       const void * data,
+                                       size_t       size);
+
+struct pdu * pdu_create_gfp(gfp_t flags);
+
+struct pci *    pci_create_from_gfp(gfp_t        flags,
+                                    const void * data);
+
 
 struct pdu_ser {
         struct buffer * buf;
@@ -142,10 +152,60 @@ EXPORT_SYMBOL(serdes_pdu_destroy);
 
 
 
-struct pdu * serdes_pdu_deser(struct pdu_ser * pdu) 
+struct pdu * serdes_pdu_deser_gfp(gfp_t flags,
+                                  struct pdu_ser * pdu) 
 {
-        LOG_MISSING;
-        
-        return NULL;
+        struct pdu *          tmp_pdu;
+        const struct buffer * tmp_buff;
+        struct buffer *       new_buff;
+        struct pci *          new_pci;
+        const uint8_t *       ptr;
+        size_t                pci_size;
+
+        if (!serdes_pdu_is_ok(pdu))
+                return NULL;
+
+        tmp_buff = serdes_pdu_buffer(pdu);
+        ASSERT(tmp_buff);
+
+        if (buffer_length(tmp_buff) < pci_length_min())
+                return NULL;
+
+        /* FIXME: We should compute the real PCI length */
+        pci_size = pci_length_min();
+
+        tmp_pdu = pdu_create_gfp(flags);
+        if (!tmp_pdu)
+                return NULL;
+
+        ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
+        ASSERT(ptr);
+
+        new_pci = pci_create_from_gfp(flags, ptr);
+        if (!new_pci) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+        pdu_pci_set(tmp_pdu, new_pci);
+
+        new_buff = buffer_create_from_gfp(flags,
+                                          ptr + pci_size,
+                                          (buffer_length(pdu->buf) -
+                                           pci_size));
+        if (!new_buff) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+        pdu_buffer_set(tmp_pdu, new_buff);
+
+        ASSERT(pdu_is_ok(tmp_pdu));
+
+        serdes_pdu_destroy(pdu);
+
+        return tmp_pdu;        
 }
+
+
+struct pdu * serdes_pdu_deser(struct pdu_ser * pdu)
+{ return serdes_pdu_deser_gfp(GFP_KERNEL, pdu); }
 EXPORT_SYMBOL(serdes_pdu_deser);

@@ -892,7 +892,6 @@ static int receive_worker(void * o)
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
-                serdes_pdu_destroy(pdu_ser);
 
                 pci =  pdu_pci_get_ro(pdu);
                 if (!pci) {
