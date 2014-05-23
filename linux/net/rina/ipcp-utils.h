@@ -24,10 +24,10 @@
 
 #include <linux/uaccess.h>
 
-#include "rds/rds.h"
 #include "common.h"
 #include "ipcp-instances.h"
 #include "efcp.h"
+#include "rds/rstr.h"
 
 /*
  * Allocates a new name, returning the allocated object. In case of an error, a
@@ -100,7 +100,6 @@ char *        name_tostring(const struct name * n);
 char *        name_tostring_ni(const struct name * n);
 
 /* Inverse of name_tostring() */
-string_t *    string_from_user(const char __user * src);
 struct name * string_toname(const string_t * s);
 struct name * string_toname_ni(const string_t * s);
 

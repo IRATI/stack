@@ -35,7 +35,7 @@ public class FlowEncoderTest {
 		flow.setSourceNamingInfo(new ApplicationProcessNamingInformation("test", "1"));
 		flow.setDestinationNamingInfo(new ApplicationProcessNamingInformation("test2", "1"));
 		ConnectionPolicies connectionPolicies = new ConnectionPolicies();
-		connectionPolicies.setDtcPpresent(true);
+		connectionPolicies.setDtcpPresent(true);
 		connectionPolicies.setSeqnumrolloverthreshold(1234);
 		connectionPolicies.setInitialseqnumpolicy(
 				new PolicyConfig("policy1", "23"));
@@ -82,8 +82,8 @@ public class FlowEncoderTest {
 		Flow recoveredFlow = (Flow) flowEncoder.decode(encodedFlow, Flow.class);
 		Assert.assertEquals(flow.getDestinationAddress(), recoveredFlow.getDestinationAddress());
 		Assert.assertEquals(flow.getSourceAddress(), recoveredFlow.getDestinationAddress());
-		Assert.assertEquals(flow.getConnectionPolicies().isDtcPpresent(), 
-				recoveredFlow.getConnectionPolicies().isDtcPpresent());
+		Assert.assertEquals(flow.getConnectionPolicies().isDtcpPresent(), 
+				recoveredFlow.getConnectionPolicies().isDtcpPresent());
 		Assert.assertEquals(flow.getConnectionPolicies().getSeqnumrolloverthreshold(), 
 				recoveredFlow.getConnectionPolicies().getSeqnumrolloverthreshold());
 		Assert.assertEquals(flow.getConnectionPolicies().getInitialseqnumpolicy().getName(), 

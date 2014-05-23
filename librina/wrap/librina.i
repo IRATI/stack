@@ -781,6 +781,8 @@ MAKE_COLLECTION_ITERABLE(PDUForwardingTableListIterator, PDUForwardingTableEntry
 MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
 /* Define iterator for PolicyParameter list */
 MAKE_COLLECTION_ITERABLE(PolicyParameterListIterator, PolicyParameter, std::list, rina::PolicyParameter);
+/* Define iterator for Parameter list */
+MAKE_COLLECTION_ITERABLE(ParameterListIterator, Parameter, std::list, rina::Parameter);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
