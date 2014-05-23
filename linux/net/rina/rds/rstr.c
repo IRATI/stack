@@ -1,5 +1,5 @@
 /*
- * RINA Data Structures
+ * RINA Strings
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,19 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RDS_H
-#define RINA_RDS_H
+#define RINA_PREFIX "rstr"
 
-/* FIXME: This file is bad attitude and must be removed */
-
-#include "rbmp.h"
-#include "rfifo.h"
-#include "rmap.h"
-#include "rmem.h"
-#include "rqueue.h"
-#include "rref.h"
-#include "rtimer.h"
-#include "rwq.h"
+#include "logs.h"
+#include "debug.h"
 #include "rstr.h"
-
-#endif
