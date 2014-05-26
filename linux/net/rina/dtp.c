@@ -147,11 +147,15 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
+        struct dt * dt;
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
 
+        dt = dtp->parent;
+        ASSERT(dt);
+
         /* Start SenderInactivityTimer */
-        if (rtimer_restart(instance->timers.sender_inactivity,
+        if (rtimer_restart(dtp->timers.sender_inactivity,
                            2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start sender_inactiviy timer");
                 return -1;
@@ -696,6 +700,12 @@ int dtp_receive(struct dtp * instance,
                         LOG_ERR("Failed to send ack / flow control pdu");
                         return -1;
                 }
+                /* Start ReceiverInactivityTimer */
+                if (rtimer_restart(instance->timers.receiver_inactivity,
+                                   3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+                        LOG_ERR("Failed to start timer");
+                        return -1;
+                }
                 return 0;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
                    seq_num < max_seq_nr_rcv(sv)) {
@@ -768,8 +778,8 @@ int dtp_receive(struct dtp * instance,
 
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Start ReceiverInactivityTimer */
-        if (rtimer_start(instance->timers.receiver_inactivity,
-                         3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+        if (rtimer_restart(instance->timers.receiver_inactivity,
+                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start timer");
                 return -1;
         }

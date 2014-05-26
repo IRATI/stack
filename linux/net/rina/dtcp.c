@@ -934,6 +934,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp)
 
         return 0;
 }
+
 seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 {
         if (!dtcp || !dtcp->sv)
