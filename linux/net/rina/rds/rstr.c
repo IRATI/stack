@@ -18,8 +18,54 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/uaccess.h>
+
 #define RINA_PREFIX "rstr"
 
 #include "logs.h"
 #include "debug.h"
+#include "utils.h"
 #include "rstr.h"
+#include "rmem.h"
+
+string_t * string_from_user(const char __user * src)
+{ return strdup_from_user(src); }
+EXPORT_SYMBOL(string_from_user);
+
+int string_dup_gfp(gfp_t            flags,
+                   const string_t * src,
+                   string_t **      dst)
+{
+        if (!dst) {
+                LOG_ERR("Destination string is NULL, cannot copy");
+                return -1;
+        }
+
+        /*
+         * An empty source is allowed (ref. the chain of calls) and it must
+         * provoke no consequeunces
+         */
+        if (src) {
+                *dst = rkstrdup(src, flags);
+                if (!*dst) {
+                        LOG_ERR("Cannot duplicate source string "
+                                "in kernel-space");
+                        return -1;
+                }
+        } else {
+                LOG_DBG("Duplicating a NULL source string ...");
+                *dst = NULL;
+        }
+
+        return 0;
+}
+
+int string_dup(const string_t * src, string_t ** dst)
+{ return string_dup_gfp(GFP_KERNEL, src, dst); }
+
+int string_cmp(const string_t * a, const string_t * b)
+{ return strcmp(a, b); }
+
+/* FIXME: Should we assert here ? */
+int string_len(const string_t * s)
+{ return strlen(s); }

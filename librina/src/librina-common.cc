@@ -458,6 +458,541 @@ const std::string FlowInformation::toString(){
         return ss.str();
 }
 
+/* CLASS DTCP WINDOW-BASED FLOW CONTROL CONFIG */
+DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig() {
+        initialcredit = 0;
+        maxclosedwindowqueuelength = 0;
+}
+
+int DTCPWindowBasedFlowControlConfig::getInitialcredit() const {
+        return initialcredit;
+}
+
+void DTCPWindowBasedFlowControlConfig::setInitialcredit(int initialcredit) {
+        this->initialcredit = initialcredit;
+}
+
+int DTCPWindowBasedFlowControlConfig::getMaxclosedwindowqueuelength() const {
+        return maxclosedwindowqueuelength;
+}
+
+void DTCPWindowBasedFlowControlConfig::setMaxclosedwindowqueuelength(
+                int maxclosedwindowqueuelength) {
+        this->maxclosedwindowqueuelength = maxclosedwindowqueuelength;
+}
+
+const PolicyConfig&
+DTCPWindowBasedFlowControlConfig::getRcvrflowcontrolpolicy() const {
+        return rcvrflowcontrolpolicy;
+}
+
+void DTCPWindowBasedFlowControlConfig::setRcvrflowcontrolpolicy(
+                const PolicyConfig& rcvrflowcontrolpolicy) {
+        this->rcvrflowcontrolpolicy = rcvrflowcontrolpolicy;
+}
+
+const PolicyConfig&
+DTCPWindowBasedFlowControlConfig::getReceivingflowcontrolpolicy() const {
+        return receivingflowcontrolpolicy;
+}
+
+void DTCPWindowBasedFlowControlConfig::setReceivingflowcontrolpolicy(
+                const PolicyConfig& receivingflowcontrolpolicy) {
+        this->receivingflowcontrolpolicy = receivingflowcontrolpolicy;
+}
+
+const std::string DTCPWindowBasedFlowControlConfig::toString() {
+        std::stringstream ss;
+        ss<<"Max closed window queue length: "<<maxclosedwindowqueuelength;
+        ss<<"; Initial credit (PDUs): "<<initialcredit<<std::endl;
+        ss<<"Receiver flow control policy (name/version): "<<rcvrflowcontrolpolicy.getName();
+        ss<<"/"<<rcvrflowcontrolpolicy.getVersion();
+        ss<<"; Receiving flow control policy (name/version): "<<receivingflowcontrolpolicy.getName();
+        ss<<"/"<<receivingflowcontrolpolicy.getVersion()<<std::endl;
+        return ss.str();
+}
+
+/* CLASS DTCP RATE-BASED FLOW CONTROL CONFIG */
+DTCPRateBasedFlowControlConfig::DTCPRateBasedFlowControlConfig() {
+        sendingrate = 0;
+        timeperiod = 0;
+}
+
+const PolicyConfig&
+DTCPRateBasedFlowControlConfig::getNooverridedefaultpeakpolicy() const {
+        return nooverridedefaultpeakpolicy;
+}
+
+void DTCPRateBasedFlowControlConfig::setNooverridedefaultpeakpolicy(
+                const PolicyConfig& nooverridedefaultpeakpolicy) {
+        this->nooverridedefaultpeakpolicy = nooverridedefaultpeakpolicy;
+}
+
+const PolicyConfig&
+DTCPRateBasedFlowControlConfig::getNorateslowdownpolicy() const {
+        return norateslowdownpolicy;
+}
+
+void DTCPRateBasedFlowControlConfig::setNorateslowdownpolicy(
+                const PolicyConfig& norateslowdownpolicy) {
+        this->norateslowdownpolicy = norateslowdownpolicy;
+}
+
+const PolicyConfig&
+DTCPRateBasedFlowControlConfig::getRatereductionpolicy() const {
+        return ratereductionpolicy;
+}
+
+void DTCPRateBasedFlowControlConfig::setRatereductionpolicy(
+                const PolicyConfig& ratereductionpolicy) {
+        this->ratereductionpolicy = ratereductionpolicy;
+}
+
+int DTCPRateBasedFlowControlConfig::getSendingrate() const {
+        return sendingrate;
+}
+
+void DTCPRateBasedFlowControlConfig::setSendingrate(int sendingrate) {
+        this->sendingrate = sendingrate;
+}
+
+int DTCPRateBasedFlowControlConfig::getTimeperiod() const {
+        return timeperiod;
+}
+
+void DTCPRateBasedFlowControlConfig::setTimeperiod(int timeperiod) {
+        this->timeperiod = timeperiod;
+}
+
+const std::string DTCPRateBasedFlowControlConfig::toString() {
+        std::stringstream ss;
+        ss<<"Sending rate (PDUs/time period): "<<sendingrate;
+        ss<<"; Time period (in microseconds): "<<timeperiod<<std::endl;
+        ss<<"No rate slowdown policy (name/version): "<<norateslowdownpolicy.getName();
+        ss<<"/"<<norateslowdownpolicy.getVersion();
+        ss<<"; No override default peak policy (name/version): "<<nooverridedefaultpeakpolicy.getName();
+        ss<<"/"<<nooverridedefaultpeakpolicy.getVersion()<<std::endl;
+        ss<<"Rate reduction policy (name/version): "<<ratereductionpolicy.getName();
+        ss<<"/"<<ratereductionpolicy.getVersion()<<std::endl;
+        return ss.str();
+}
+
+/* CLASS DTCP FLOW CONTROL CONFIG */
+DTCPFlowControlConfig::DTCPFlowControlConfig() {
+        ratebased = false;
+        windowbased = false;
+        rcvbuffersthreshold = 0;
+        rcvbytespercentthreshold = 0;
+        rcvbytesthreshold = 0;
+        sentbuffersthreshold = 0;
+        sentbytespercentthreshold = 0;
+        sentbytesthreshold = 0;
+}
+
+const PolicyConfig& DTCPFlowControlConfig::getClosedwindowpolicy() const {
+        return closedwindowpolicy;
+}
+
+void DTCPFlowControlConfig::setClosedwindowpolicy(
+                const PolicyConfig& closedwindowpolicy) {
+        this->closedwindowpolicy = closedwindowpolicy;
+}
+
+const PolicyConfig&
+DTCPFlowControlConfig::getFlowcontroloverrunpolicy() const {
+        return flowcontroloverrunpolicy;
+}
+
+void DTCPFlowControlConfig::setFlowcontroloverrunpolicy(
+                const PolicyConfig& flowcontroloverrunpolicy) {
+        this->flowcontroloverrunpolicy = flowcontroloverrunpolicy;
+}
+
+bool DTCPFlowControlConfig::isRatebased() const {
+        return ratebased;
+}
+
+void DTCPFlowControlConfig::setRatebased(bool ratebased) {
+        this->ratebased = ratebased;
+}
+
+const DTCPRateBasedFlowControlConfig&
+DTCPFlowControlConfig::getRatebasedconfig() const {
+        return ratebasedconfig;
+}
+
+void DTCPFlowControlConfig::setRatebasedconfig(
+                const DTCPRateBasedFlowControlConfig& ratebasedconfig) {
+        this->ratebasedconfig = ratebasedconfig;
+}
+
+int DTCPFlowControlConfig::getRcvbuffersthreshold() const {
+        return rcvbuffersthreshold;
+}
+
+void DTCPFlowControlConfig::setRcvbuffersthreshold(int rcvbuffersthreshold) {
+        this->rcvbuffersthreshold = rcvbuffersthreshold;
+}
+
+int DTCPFlowControlConfig::getRcvbytespercentthreshold() const {
+        return rcvbytespercentthreshold;
+}
+
+void DTCPFlowControlConfig::setRcvbytespercentthreshold(
+                int rcvbytespercentthreshold) {
+        this->rcvbytespercentthreshold = rcvbytespercentthreshold;
+}
+
+int DTCPFlowControlConfig::getRcvbytesthreshold() const {
+        return rcvbytesthreshold;
+}
+
+void DTCPFlowControlConfig::setRcvbytesthreshold(int rcvbytesthreshold) {
+        this->rcvbytesthreshold = rcvbytesthreshold;
+}
+
+const PolicyConfig&
+DTCPFlowControlConfig::getReconcileflowcontrolpolicy() const {
+        return reconcileflowcontrolpolicy;
+}
+
+void DTCPFlowControlConfig::setReconcileflowcontrolpolicy(
+                const PolicyConfig& reconcileflowcontrolpolicy) {
+        this->reconcileflowcontrolpolicy = reconcileflowcontrolpolicy;
+}
+
+int DTCPFlowControlConfig::getSentbuffersthreshold() const {
+        return sentbuffersthreshold;
+}
+
+void DTCPFlowControlConfig::setSentbuffersthreshold(int sentbuffersthreshold) {
+        this->sentbuffersthreshold = sentbuffersthreshold;
+}
+
+int DTCPFlowControlConfig::getSentbytespercentthreshold() const {
+        return sentbytespercentthreshold;
+}
+
+void DTCPFlowControlConfig::setSentbytespercentthreshold(
+                int sentbytespercentthreshold) {
+        this->sentbytespercentthreshold = sentbytespercentthreshold;
+}
+
+int DTCPFlowControlConfig::getSentbytesthreshold() const {
+        return sentbytesthreshold;
+}
+
+void DTCPFlowControlConfig::setSentbytesthreshold(int sentbytesthreshold) {
+        this->sentbytesthreshold = sentbytesthreshold;
+}
+
+bool DTCPFlowControlConfig::isWindowbased() const {
+        return windowbased;
+}
+
+void DTCPFlowControlConfig::setWindowbased(bool windowbased) {
+        this->windowbased = windowbased;
+}
+
+const DTCPWindowBasedFlowControlConfig&
+DTCPFlowControlConfig::getWindowbasedconfig() const {
+        return windowbasedconfig;
+}
+
+void DTCPFlowControlConfig::setWindowbasedconfig(
+                const DTCPWindowBasedFlowControlConfig& windowbasedconfig) {
+        this->windowbasedconfig = windowbasedconfig;
+}
+
+const std::string DTCPFlowControlConfig::toString() {
+        std::stringstream ss;
+        ss<<"Sent bytes theshold: "<<sentbytesthreshold;
+        ss<<"; Sent bytes percent threshold: "<<sentbytespercentthreshold;
+        ss<<"; Sent buffers threshold: "<<sentbuffersthreshold<<std::endl;
+        ss<<"Received bytes theshold: "<<rcvbytesthreshold;
+        ss<<"; Received bytes percent threshold: "<<rcvbytespercentthreshold;
+        ss<<"; Received buffers threshold: "<<rcvbuffersthreshold<<std::endl;
+        ss<<"Closed window policy (name/version): "<<closedwindowpolicy.getName();
+        ss<<"/"<<closedwindowpolicy.getVersion();
+        ss<<"; Flow control overrrun policy (name/version): "<<flowcontroloverrunpolicy.getName();
+        ss<<"/"<<flowcontroloverrunpolicy.getVersion()<<std::endl;
+        ss<<"Reconcile flow control policy (name/version): "<<reconcileflowcontrolpolicy.getName();
+        ss<<"/"<<reconcileflowcontrolpolicy.getVersion();
+        ss<<"; Window based? "<<windowbased<<"; Rate based? "<<ratebased<<std::endl;
+        if (windowbased) {
+                ss<<"Window based flow control config: "<<windowbasedconfig.toString();
+        }
+        if (ratebased) {
+                ss<<"Rate based flow control config: "<<ratebasedconfig.toString();
+        }
+        return ss.str();
+}
+
+/* CLASS DTCP RX CONTROL CONFIG */
+DTCPRtxControlConfig::DTCPRtxControlConfig() {
+        datarxmsnmax = 0;
+        initialATimer = 0;
+}
+
+int DTCPRtxControlConfig::getDatarxmsnmax() const {
+        return datarxmsnmax;
+}
+
+void DTCPRtxControlConfig::setDatarxmsnmax(int datarxmsnmax) {
+        this->datarxmsnmax = datarxmsnmax;
+}
+
+int DTCPRtxControlConfig::getInitialATimer() const {
+        return initialATimer;
+}
+
+void DTCPRtxControlConfig::setInitialATimer(int initialATimer) {
+        this->initialATimer = initialATimer;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getRcvrackpolicy() const {
+        return rcvrackpolicy;
+}
+
+void DTCPRtxControlConfig::setRcvrackpolicy(const PolicyConfig& rcvrackpolicy) {
+        this->rcvrackpolicy = rcvrackpolicy;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getRcvrcontrolackpolicy() const {
+        return rcvrcontrolackpolicy;
+}
+
+void DTCPRtxControlConfig::setRcvrcontrolackpolicy(
+                const PolicyConfig& rcvrcontrolackpolicy) {
+        this->rcvrcontrolackpolicy = rcvrcontrolackpolicy;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getRecvingacklistpolicy() const {
+        return recvingacklistpolicy;
+}
+
+void DTCPRtxControlConfig::setRecvingacklistpolicy(
+                const PolicyConfig& recvingacklistpolicy) {
+        this->recvingacklistpolicy = recvingacklistpolicy;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getRttestimatorpolicy() const {
+        return rttestimatorpolicy;
+}
+
+void DTCPRtxControlConfig::setRttestimatorpolicy(
+                const PolicyConfig& rttestimatorpolicy) {
+        this->rttestimatorpolicy = rttestimatorpolicy;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getRtxtimerexpirypolicy() const {
+        return rtxtimerexpirypolicy;
+}
+
+void DTCPRtxControlConfig::setRtxtimerexpirypolicy(
+                const PolicyConfig& rtxtimerexpirypolicy) {
+        this->rtxtimerexpirypolicy = rtxtimerexpirypolicy;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getSenderackpolicy() const {
+        return senderackpolicy;
+}
+
+void DTCPRtxControlConfig::setSenderackpolicy(
+                const PolicyConfig& senderackpolicy) {
+        this->senderackpolicy = senderackpolicy;
+}
+
+const PolicyConfig& DTCPRtxControlConfig::getSendingackpolicy() const {
+        return sendingackpolicy;
+}
+
+void DTCPRtxControlConfig::setSendingackpolicy(
+                const PolicyConfig& sendingackpolicy) {
+        this->sendingackpolicy = sendingackpolicy;
+}
+
+const std::string DTCPRtxControlConfig::toString() {
+        std::stringstream ss;
+        ss<<"Initial A timer: "<<initialATimer;
+        ss<<"; Max number of retx attempts: "<<datarxmsnmax<<std::endl;
+        ss<<"RTT estimator policy (name/version): "<<rttestimatorpolicy.getName();
+        ss<<"/"<<rttestimatorpolicy.getVersion();
+        ss<<"; Rtx timer expiry policy (name/version): "<<rtxtimerexpirypolicy.getName();
+        ss<<"/"<<rtxtimerexpirypolicy.getVersion()<<std::endl;
+        ss<<"Sender ACK policy (name/version): "<<senderackpolicy.getName();
+        ss<<"/"<<senderackpolicy.getVersion();
+        ss<<"; Receiving ACK list policy (name/version): "<<recvingacklistpolicy.getName();
+        ss<<"/"<<recvingacklistpolicy.getVersion()<<std::endl;
+        ss<<"Reciver ACK policy (name/version): "<<rcvrackpolicy.getName();
+        ss<<"/"<<rcvrackpolicy.getVersion();
+        ss<<"; Sending ACK list policy (name/version): "<<sendingackpolicy.getName();
+        ss<<"/"<<sendingackpolicy.getVersion()<<std::endl;
+        ss<<"Reciver Control ACK policy (name/version): "<<rcvrcontrolackpolicy.getName();
+        ss<<"/"<<rcvrcontrolackpolicy.getVersion()<<std::endl;
+        return ss.str();
+}
+
+/* CLASS DTCP CONFIG */
+DTCPConfig::DTCPConfig() {
+        flowcontrol = false;
+        rtxcontrol = false;
+        initialrecvrinactivitytime = 0;
+        initialsenderinactivitytime = 0;
+}
+
+bool DTCPConfig::isFlowcontrol() const {
+        return flowcontrol;
+}
+
+void DTCPConfig::setFlowcontrol(bool flowcontrol) {
+        this->flowcontrol = flowcontrol;
+}
+
+const DTCPFlowControlConfig& DTCPConfig::getFlowcontrolconfig() const {
+        return flowcontrolconfig;
+}
+
+void DTCPConfig::setFlowcontrolconfig(
+                const DTCPFlowControlConfig& flowcontrolconfig) {
+        this->flowcontrolconfig = flowcontrolconfig;
+}
+
+int DTCPConfig::getInitialrecvrinactivitytime() const {
+        return initialrecvrinactivitytime;
+}
+
+void DTCPConfig::setInitialrecvrinactivitytime(
+                int initialrecvrinactivitytime) {
+        this->initialrecvrinactivitytime = initialrecvrinactivitytime;
+}
+
+int DTCPConfig::getInitialsenderinactivitytime() const {
+        return initialsenderinactivitytime;
+}
+
+void DTCPConfig::setInitialsenderinactivitytime(
+                int initialsenderinactivitytime) {
+        this->initialsenderinactivitytime = initialsenderinactivitytime;
+}
+
+const PolicyConfig& DTCPConfig::getLostcontrolpdupolicy() const {
+        return lostcontrolpdupolicy;
+}
+
+void DTCPConfig::setLostcontrolpdupolicy(
+                const PolicyConfig& lostcontrolpdupolicy) {
+        this->lostcontrolpdupolicy = lostcontrolpdupolicy;
+}
+
+const PolicyConfig& DTCPConfig::getRcvrtimerinactivitypolicy() const {
+        return rcvrtimerinactivitypolicy;
+}
+
+void DTCPConfig::setRcvrtimerinactivitypolicy(
+                const PolicyConfig& rcvrtimerinactivitypolicy) {
+        this->rcvrtimerinactivitypolicy = rcvrtimerinactivitypolicy;
+}
+
+bool DTCPConfig::isRtxcontrol() const {
+        return rtxcontrol;
+}
+
+void DTCPConfig::setRtxcontrol(bool rtxcontrol) {
+        this->rtxcontrol = rtxcontrol;
+}
+
+const DTCPRtxControlConfig& DTCPConfig::getRtxcontrolconfig() const {
+        return rtxcontrolconfig;
+}
+
+void DTCPConfig::setRtxcontrolconfig(
+                const DTCPRtxControlConfig& rtxcontrolconfig) {
+        this->rtxcontrolconfig = rtxcontrolconfig;
+}
+
+const PolicyConfig& DTCPConfig::getSendertimerinactiviypolicy() const {
+        return sendertimerinactiviypolicy;
+}
+
+void DTCPConfig::setSendertimerinactiviypolicy(
+                const PolicyConfig& sendertimerinactiviypolicy) {
+        this->sendertimerinactiviypolicy = sendertimerinactiviypolicy;
+}
+
+const std::string DTCPConfig::toString() {
+        std::stringstream ss;
+        ss<<"Initial rcvr inactivity time: "<<initialrecvrinactivitytime;
+        ss<<"; Initial sedr inactivity time: "<<initialsenderinactivitytime<<std::endl;
+        ss<<"; Sder time inactivity policy (name/version): "<<sendertimerinactiviypolicy.getName();
+        ss<<"/"<<sendertimerinactiviypolicy.getVersion();
+        ss<<"; Rcvr time inactivity policy (name/version): "<<rcvrtimerinactivitypolicy.getName();
+        ss<<"/"<<rcvrtimerinactivitypolicy.getVersion()<<std::endl;
+        ss<<"Flow control? "<<flowcontrol<<"; Retx control? "<<rtxcontrol;
+        ss<<"; Lost control PDU policy (name/version): "<<lostcontrolpdupolicy.getName();
+        ss<<"/"<<lostcontrolpdupolicy.getVersion()<<std::endl;
+        if (rtxcontrol) {
+                ss<<"Retx control config: "<<rtxcontrolconfig.toString();
+        }
+        if (flowcontrol) {
+                ss<<"Flow control config: "<<flowcontrolconfig.toString();
+        }
+        return ss.str();
+}
+
+/* CLASS CONNECTION POLICIES */
+ConnectionPolicies::ConnectionPolicies(){
+        DTCPpresent = false;
+        seqnumrolloverthreshold = 0;
+}
+
+const DTCPConfig& ConnectionPolicies::getDtcpConfiguration() const {
+        return dtcpConfiguration;
+}
+
+void ConnectionPolicies::setDtcpConfiguration(
+                const DTCPConfig& dtcpConfiguration) {
+        this->dtcpConfiguration = dtcpConfiguration;
+}
+
+bool ConnectionPolicies::isDtcpPresent() const {
+        return DTCPpresent;
+}
+
+void ConnectionPolicies::setDtcpPresent(bool dtcPpresent) {
+        DTCPpresent = dtcPpresent;
+}
+
+const PolicyConfig& ConnectionPolicies::getInitialseqnumpolicy() const {
+        return initialseqnumpolicy;
+}
+
+void ConnectionPolicies::setInitialseqnumpolicy(
+                const PolicyConfig& initialseqnumpolicy) {
+        this->initialseqnumpolicy = initialseqnumpolicy;
+}
+
+int ConnectionPolicies::getSeqnumrolloverthreshold() const {
+        return seqnumrolloverthreshold;
+}
+
+void ConnectionPolicies::setSeqnumrolloverthreshold(
+                int seqnumrolloverthreshold) {
+        this->seqnumrolloverthreshold = seqnumrolloverthreshold;
+}
+
+const std::string ConnectionPolicies::toString() {
+        std::stringstream ss;
+        ss<<"DTCP present: "<<DTCPpresent;
+        ss<<"; Seq. num roll. threshold: "<<seqnumrolloverthreshold;
+        ss<<"; Initial seq. num policy (name/version): ";
+        ss<<initialseqnumpolicy.getName()<<"/"<<initialseqnumpolicy.getVersion()<<std::endl;
+        if (DTCPpresent) {
+                ss<<"DTCP Configuration: "<<dtcpConfiguration.toString();
+        }
+        return ss.str();
+}
+
 /* CLASS QoS CUBE */
 QoSCube::QoSCube(){
         id = 0;
@@ -593,6 +1128,14 @@ void QoSCube::setUndetectedBitErrorRate(double undetectedBitErrorRate) {
 	this->undetectedBitErrorRate = undetectedBitErrorRate;
 }
 
+const ConnectionPolicies& QoSCube::getEfcpPolicies() const {
+        return efcpPolicies;
+}
+
+void QoSCube::setEfcpPolicies(const ConnectionPolicies& efcpPolicies){
+        this->efcpPolicies = efcpPolicies;
+}
+
 const std::string QoSCube::toString() {
         std::stringstream ss;
         ss<<"Name: "<<name<<"; Id: "<<id;
@@ -604,7 +1147,8 @@ const std::string QoSCube::toString() {
         ss<<"Average bandwidth (bytes/s): "<<averageBandwidth;
         ss<<"; Average SDU bandwidth (bytes/s): "<<averageSDUBandwidth<<std::endl;
         ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
-        ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
+        ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration<<std::endl;
+        ss<<"EFCP policies: "<<efcpPolicies.toString();
         return ss.str();
 }
 
