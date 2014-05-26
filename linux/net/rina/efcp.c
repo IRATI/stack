@@ -328,6 +328,7 @@ int efcp_container_receive(struct efcp_container * container,
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
                 LOG_ERR("Cannot find the requested instance");
+                /* FIXME: It should call unknown_flow policy of EFCP */
                 pdu_destroy(pdu);
                 return -1;
         }
