@@ -101,6 +101,9 @@ static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
         /* FIXME: How to block further write API calls? */
         LOG_MISSING;
         LOG_DBG("Default Flow Control");
+
+        pdu_destroy(pdu);
+
         return 0;
 }
 
@@ -125,7 +128,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 
         LOG_DBG("Closed Window Queue");
         max_len = dtcp_max_closed_winq_length(
-                                              dtp->sv->connection->policies_params->dtcp_cfg);
+                              dtp->sv->connection->policies_params->dtcp_cfg);
         if (cwq_size(cwq) < max_len -1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push to cwq");
@@ -270,7 +273,23 @@ static void tf_receiver_inactivity(void * data)
 { /* Runs the ReceiverInactivityTimerPolicy */ }
 
 static void tf_a(void * data)
-{ }
+{
+        struct dtp *  dtp;
+        struct dtcp * dtcp;
+
+        dtp = (struct dtp *) data;
+        if (!dtp) {
+                LOG_ERR("No dtp to work with");
+                return;
+        }
+
+        dtcp = dt_dtcp(dtp->parent);
+        if (dtcp){
+                LOG_MISSING;
+                return;
+        }
+
+}
 
 static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
 {
