@@ -130,7 +130,7 @@ struct policy_parm * policy_param_find(struct policy *  policy,
                 if (!strcmp(pos->name, name))
                         return pos;
         }
-        
+
         return NULL;
 }
 EXPORT_SYMBOL(policy_param_find);
