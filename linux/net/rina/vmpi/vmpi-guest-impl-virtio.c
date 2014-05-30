@@ -30,11 +30,8 @@
 #include "vmpi-guest-impl.h"
 #include "vmpi-structs.h"
 #include "vmpi.h"
-#include "vmpi-guest-test.h"
 
 
-
-#define VIRTIO_ID_MPI   15  //TODO move ASAP
 
 struct vmpi_impl_queue {
         struct virtqueue *vq;
@@ -404,10 +401,10 @@ virtio_mpi_probe(struct virtio_device *vdev)
 
         vi->status = 1;
 
-        vi->private = vmpi_init(vi, &err);
+        vi->private = vmpi_init(vi, &err, false);
         if (vi->private == NULL) {
                 printk("vmpi_init() failed\n");
-                goto vmpi_init;
+                goto vmpi_ini;
         }
 
         /* Setup some receive buffers. */
@@ -429,25 +426,14 @@ virtio_mpi_probe(struct virtio_device *vdev)
         }
         virtqueue_kick(vi->rq->vq);
 
-#ifdef VMPI_GUEST_TEST
-        err = vmpi_test_init();
-        if (err) {
-                printk("vmpi_test_init() failed\n");
-                goto vmpi_test_init;
-        }
-#endif  /* VMPI_GUEST_TEST */
-
         printk("virtio_mpi_probe completed\n");
 
         return 0;
 
-#ifdef VMPI_GUEST_TEST
- vmpi_test_init:
-#endif  /* VMPI_GUEST_TEST */
  setup_rxbufs:
         vmpi_impl_free_unused_bufs(vi);
-        vmpi_fini();
- vmpi_init:
+        vmpi_fini(false);
+ vmpi_ini:
         virtio_mpi_del_vqs(vi);
  init_vqs:
         kfree(vi);
@@ -460,11 +446,7 @@ virtio_mpi_remove(struct virtio_device *vdev)
 {
         struct vmpi_impl_info *vi = vdev->priv;
 
-#ifdef VMPI_GUEST_TEST
-        vmpi_test_fini();
-#endif  /* VMPI_GUEST_TEST */
-
-        vmpi_fini();
+        vmpi_fini(false);
 
         remove_vq_common(vi);
         kfree(vi);
@@ -472,7 +454,7 @@ virtio_mpi_remove(struct virtio_device *vdev)
         printk("virtio_mpi_remove completed\n");
 }
 
-#define VIRTIO_ID_MPI   15  //TODO move ASAP
+#define VIRTIO_ID_MPI   15
 
 static struct virtio_device_id id_table[] = {
         { VIRTIO_ID_MPI, VIRTIO_DEV_ANY_ID },

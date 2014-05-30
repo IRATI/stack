@@ -1,4 +1,4 @@
-/* Test operations for the host side VMPI.
+/* Test interface for VMPI.
  *
  * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
@@ -17,15 +17,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __VMPI_GUEST_TEST_H__
-#define __VMPI_GUEST_TEST_H__
+#ifndef __VMPI_TEST_H__
+#define __VMPI_TEST_H__
 
 /* Enable guest-side test interface. */
 //#define VMPI_GUEST_TEST
 
-#ifdef VMPI_GUEST_TEST
-int vmpi_test_init(void);
-void vmpi_test_fini(void);
-#endif  /* VMPI_GUEST_TEST */
+#ifdef VMPI_TEST
+int vmpi_test_init(void *, bool deferred);
+void vmpi_test_fini(bool deferred);
+#endif  /* VMPI_TEST */
 
-#endif  /* __VMPI_GUEST_TEST_H__ */
+#endif  /* __VMPI_TEST_H__ */
