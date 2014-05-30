@@ -200,7 +200,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		this.flowRequestEvent = event;
 		flow = newFlowRequestPolicy.generateFlowObject(event, 
 				ipcProcess.getDIFInformation().getDifName().getProcessName(), 
-				ipcProcess.getDIFInformation().getDifConfiguration().getQosCubes());
+				ipcProcess.getDIFInformation().getDifConfiguration().getEfcpConfiguration().getQosCubes());
 		log.debug("Generated flow object: "+flow.toString());
 		
 		//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
