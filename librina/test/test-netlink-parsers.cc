@@ -1273,7 +1273,9 @@ int testIpcmAssignToDIFRequestMessage() {
 	delete parameter;
 	parameter = new Parameter("vlanid", "430");
 	difConfiguration.addParameter(*parameter);
+	difConfiguration.setAddress(34);
 	delete parameter;
+	EFCPConfiguration efcpConfiguration;
 	DataTransferConstants dataTransferConstants;
 	dataTransferConstants.setAddressLength(1);
 	dataTransferConstants.setCepIdLength(2);
@@ -1284,15 +1286,15 @@ int testIpcmAssignToDIFRequestMessage() {
 	dataTransferConstants.setPortIdLength(6);
 	dataTransferConstants.setQosIdLenght(7);
 	dataTransferConstants.setSequenceNumberLength(8);
-	difConfiguration.setDataTransferConstants(dataTransferConstants);
-	difConfiguration.setAddress(34);
+	efcpConfiguration.setDataTransferConstants(dataTransferConstants);
 	QoSCube * qosCube = new QoSCube("cube 1", 1);
-	difConfiguration.addQoSCube(*qosCube);
+	efcpConfiguration.addQoSCube(*qosCube);
 	delete qosCube;
 	qosCube = new QoSCube("cube 2", 2);
-	difConfiguration.addQoSCube(*qosCube);
+	efcpConfiguration.addQoSCube(*qosCube);
 	qosCube->setEfcpPolicies(ConnectionPolicies());
 	delete qosCube;
+	difConfiguration.setEfcpConfiguration(efcpConfiguration);
 	difInformation.setDifConfiguration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1336,66 +1338,66 @@ int testIpcmAssignToDIFRequestMessage() {
 		std::cout << "DIFInformation.DIFConfiguration.parameters.size on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getDIFInformation().getDifConfiguration().
+	} else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
 	                getDataTransferConstants().getAddressLength() !=
 	                                recoveredMessage->getDIFInformation().getDifConfiguration().
-	                                getDataTransferConstants().getAddressLength()) {
+	                                getEfcpConfiguration().getDataTransferConstants().getAddressLength()) {
 	        std::cout << "DIFInformation.DIFConfiguration.dtc.addrLength on original and recovered messages"
 	                        << " are different\n";
 	        returnValue = -1;
-	} else if (message.getDIFInformation().getDifConfiguration().
+	} else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getCepIdLength() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getCepIdLength()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getCepIdLength()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.cepIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getLengthLength() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getLengthLength()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getLengthLength()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.lengthLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getMaxPduLifetime() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getMaxPduLifetime()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getMaxPduLifetime()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.maxPDULifetime on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getMaxPduSize() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getMaxPduSize()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getMaxPduSize()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.maxPDUSize on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getPortIdLength() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getPortIdLength()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getPortIdLength()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.portIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getQosIdLenght() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getQosIdLenght()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getQosIdLenght()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.qosIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().getSequenceNumberLength() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().getSequenceNumberLength()) {
+                                        getEfcpConfiguration().getDataTransferConstants().getSequenceNumberLength()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.seqNumLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
                         getDataTransferConstants().isDifIntegrity() !=
                                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getDataTransferConstants().isDifIntegrity()) {
+                                        getEfcpConfiguration().getDataTransferConstants().isDifIntegrity()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.difIntegrity on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
@@ -1405,9 +1407,9 @@ int testIpcmAssignToDIFRequestMessage() {
                 std::cout << "DIFInformation.DIFConfiguration.address original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getQosCubes().size() !=
+        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().getQosCubes().size() !=
                         recoveredMessage->getDIFInformation().getDifConfiguration().
-                        getQosCubes().size()) {
+                        getEfcpConfiguration().getQosCubes().size()) {
                 std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
@@ -2434,7 +2436,6 @@ int testIpcpCreateConnectionRequest() {
 
         DTCPRtxControlConfig dtcpRtxConfig;
         dtcpRtxConfig.setDatarxmsnmax(23424);
-        dtcpRtxConfig.setInitialATimer(34562);
 
         DTCPConfig dtcpConfig;
         dtcpConfig.setFlowcontrol(true);
@@ -2448,6 +2449,7 @@ int testIpcpCreateConnectionRequest() {
         connectionPolicies.setDtcpPresent(true);
         connectionPolicies.setDtcpConfiguration(dtcpConfig);
         connectionPolicies.setSeqnumrolloverthreshold(123456);
+        connectionPolicies.setInitialATimer(34562);
 
         IpcpConnectionCreateRequestMessage message;
         message.setPortId(25);
@@ -2535,10 +2537,9 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.datarnmsnmax on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnPolicies().getDtcpConfiguration().getRtxcontrolconfig().getInitialATimer() !=
-                        recoveredMessage->getConnPolicies().getDtcpConfiguration().
-                        getRtxcontrolconfig().getInitialATimer()){
-                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.initialAtimer on original and recovered messages"
+        } else if (message.getConnPolicies().getInitialATimer() !=
+                        recoveredMessage->getConnPolicies().getInitialATimer()){
+                std::cout << "ConnPolicies.initialAtimer on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getConnPolicies().getDtcpConfiguration().getFlowcontrolconfig().isRatebased() !=
