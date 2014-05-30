@@ -18,6 +18,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef RINA_RDS_H
+#define RINA_RDS_H
+
+/* FIXME: This file is bad attitude and must be removed */
+
 #include "rbmp.h"
 #include "rfifo.h"
 #include "rmap.h"
@@ -26,3 +31,6 @@
 #include "rref.h"
 #include "rtimer.h"
 #include "rwq.h"
+#include "rstr.h"
+
+#endif

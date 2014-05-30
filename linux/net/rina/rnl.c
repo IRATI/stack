@@ -32,8 +32,7 @@
 #include "rds/rwq.h"
 
 #define NETLINK_RINA "rina"
-
-#define RNL_WQ_NAME "rnl-wq"
+#define RNL_WQ_NAME  "rnl-wq"
 
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
 #define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)

@@ -60,18 +60,31 @@
     },
     "configParameters" : [ {
     	"name" : "bar", 
-    	"value" : "foo"
+    	"value" : "foo",
+         "eFCPPolicies" : {
+           "dtcpPresent" : false
+         }
       } ],
-     "qosCubes" : [ {
-         "name" : "reliable",
+    "qosCubes" : [ {
+         "name" : "unreliablewithflowcontrol",
          "id" : 1, 
          "partialDelivery" : false,
-         "orderedDelivery" : true
-      }, {
-         "name" : "unreliable",
-         "id" : 2, 
-         "partialDelivery" : true,
-         "orderedDelivery" : false 
+         "orderedDelivery" : false,
+         "efcpPolicies" : {
+           "dtcpPresent" : true,
+           "dtcpConfiguration" : {
+             "rtxcontrol" : false,
+             "flowcontrol" : true,
+             "flowcontrolconfig" : {
+               "ratebased" : false,
+               "windowbased" : true,
+               "windowbasedconfig" : {
+                 "maxclosedwindowqueuelength" : 200,
+                 "initialcredit" : 50
+               }
+             }
+           }
+         } 
      } ], 
      "knownIPCProcessAddresses" : [ {
     	 "apName" : "test1.IRATI",
@@ -88,14 +101,21 @@
   	  }, {
     	 "addressPrefix" : 16,
     	 "organization" : "IRATI"
-      } ],
+      } ], 
      "pdufTableGeneratorConfiguration" : {
-         "objectMaximumAge" : 10000,
-         "waitUntilReadCDAP" : 5001,
-         "waitUntilError" : 5001,
-         "waitUntilPDUFTComputation" : 103,
-         "waitUntilFSODBPropagation" : 101,
-         "waitUntilAgeIncrement" : 997
+        "pduFtGeneratorPolicy" : {
+          "name" : "LinkState",
+          "version" : 0
+        },
+        "linkStateRoutingConfiguration" : {
+          "objectMaximumAge" : 10000,
+          "waitUntilReadCDAP" : 5001,
+          "waitUntilError" : 5001,
+          "waitUntilPDUFTComputation" : 103,
+          "waitUntilFSODBPropagation" : 101,
+          "waitUntilAgeIncrement" : 997, 
+          "routingAlgorithm" : "Dijkstra"
+        }
      }
   } ]
 }

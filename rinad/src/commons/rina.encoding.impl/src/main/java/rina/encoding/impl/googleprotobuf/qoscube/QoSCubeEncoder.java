@@ -29,6 +29,7 @@ public class QoSCubeEncoder implements Encoder{
 		qosCube.setPeakBandwidthDuration(gpbQoSCube.getPeakBandwidthDuration());
 		qosCube.setPeakSduBandwidthDuration(gpbQoSCube.getPeakSDUBandwidthDuration());
 		qosCube.setUndetectedBitErrorRate(gpbQoSCube.getUndetectedBitErrorRate());
+		qosCube.setEfcpPolicies(GPBUtils.getConnectionPolicies(gpbQoSCube.getEfcpPolicies()));
 		
 		return qosCube;
 	}
@@ -56,6 +57,7 @@ public class QoSCubeEncoder implements Encoder{
 			setPeakSDUBandwidthDuration((int)qosCube.getPeakSduBandwidthDuration()).
 			setQosId(qosCube.getId()).
 			setUndetectedBitErrorRate(qosCube.getUndetectedBitErrorRate()).
+			setEfcpPolicies(GPBUtils.getConnectionPoliciesType(qosCube.getEfcpPolicies())).
 			build();
 		
 		return gpbQoSCube;

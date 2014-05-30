@@ -10,10 +10,10 @@ import org.junit.Test;
 import eu.irati.librina.PDUForwardingTableEntry;
 import eu.irati.librina.PDUForwardingTableEntryList;
 
-import rina.PDUForwardingTable.api.FlowStateObject;
-import rina.PDUForwardingTable.api.RoutingAlgorithmInt;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.DijkstraAlgorithm;
-import rina.ipcprocess.impl.PDUForwardingTable.routingalgorithms.dijkstra.Vertex;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.DijkstraAlgorithm;
+import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
+import rina.pduftg.api.linkstate.FlowStateObject;
+import rina.pduftg.api.linkstate.RoutingAlgorithmInt;
 
 public class DijkstraTest {
 

@@ -472,53 +472,36 @@ public final class FlowMessage {
     public boolean hasQosParameters() { return hasQosParameters; }
     public rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t getQosParameters() { return qosParameters_; }
     
-    // repeated .rina.messages.property_t policies = 11;
-    public static final int POLICIES_FIELD_NUMBER = 11;
-    private java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> policies_ =
-      java.util.Collections.emptyList();
-    public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPoliciesList() {
-      return policies_;
-    }
-    public int getPoliciesCount() { return policies_.size(); }
-    public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicies(int index) {
-      return policies_.get(index);
-    }
+    // optional .rina.messages.connectionPolicies_t connectionPolicies = 11;
+    public static final int CONNECTIONPOLICIES_FIELD_NUMBER = 11;
+    private boolean hasConnectionPolicies;
+    private rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t connectionPolicies_;
+    public boolean hasConnectionPolicies() { return hasConnectionPolicies; }
+    public rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t getConnectionPolicies() { return connectionPolicies_; }
     
-    // repeated .rina.messages.property_t policyParemeters = 12;
-    public static final int POLICYPAREMETERS_FIELD_NUMBER = 12;
-    private java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> policyParemeters_ =
-      java.util.Collections.emptyList();
-    public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPolicyParemetersList() {
-      return policyParemeters_;
-    }
-    public int getPolicyParemetersCount() { return policyParemeters_.size(); }
-    public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicyParemeters(int index) {
-      return policyParemeters_.get(index);
-    }
-    
-    // optional bytes accessControl = 13;
-    public static final int ACCESSCONTROL_FIELD_NUMBER = 13;
+    // optional bytes accessControl = 12;
+    public static final int ACCESSCONTROL_FIELD_NUMBER = 12;
     private boolean hasAccessControl;
     private com.google.protobuf.ByteString accessControl_ = com.google.protobuf.ByteString.EMPTY;
     public boolean hasAccessControl() { return hasAccessControl; }
     public com.google.protobuf.ByteString getAccessControl() { return accessControl_; }
     
-    // optional uint32 maxCreateFlowRetries = 14;
-    public static final int MAXCREATEFLOWRETRIES_FIELD_NUMBER = 14;
+    // optional uint32 maxCreateFlowRetries = 13;
+    public static final int MAXCREATEFLOWRETRIES_FIELD_NUMBER = 13;
     private boolean hasMaxCreateFlowRetries;
     private int maxCreateFlowRetries_ = 0;
     public boolean hasMaxCreateFlowRetries() { return hasMaxCreateFlowRetries; }
     public int getMaxCreateFlowRetries() { return maxCreateFlowRetries_; }
     
-    // optional uint32 createFlowRetries = 15;
-    public static final int CREATEFLOWRETRIES_FIELD_NUMBER = 15;
+    // optional uint32 createFlowRetries = 14;
+    public static final int CREATEFLOWRETRIES_FIELD_NUMBER = 14;
     private boolean hasCreateFlowRetries;
     private int createFlowRetries_ = 0;
     public boolean hasCreateFlowRetries() { return hasCreateFlowRetries; }
     public int getCreateFlowRetries() { return createFlowRetries_; }
     
-    // optional uint32 hopCount = 16;
-    public static final int HOPCOUNT_FIELD_NUMBER = 16;
+    // optional uint32 hopCount = 15;
+    public static final int HOPCOUNT_FIELD_NUMBER = 15;
     private boolean hasHopCount;
     private int hopCount_ = 0;
     public boolean hasHopCount() { return hasHopCount; }
@@ -528,6 +511,7 @@ public final class FlowMessage {
       sourceNamingInfo_ = rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage.applicationProcessNamingInfo_t.getDefaultInstance();
       destinationNamingInfo_ = rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage.applicationProcessNamingInfo_t.getDefaultInstance();
       qosParameters_ = rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.qosSpecification_t.getDefaultInstance();
+      connectionPolicies_ = rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.getDefaultInstance();
     }
     public final boolean isInitialized() {
       if (!hasSourceNamingInfo) return false;
@@ -539,11 +523,8 @@ public final class FlowMessage {
       if (hasQosParameters()) {
         if (!getQosParameters().isInitialized()) return false;
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPoliciesList()) {
-        if (!element.isInitialized()) return false;
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPolicyParemetersList()) {
-        if (!element.isInitialized()) return false;
+      if (hasConnectionPolicies()) {
+        if (!getConnectionPolicies().isInitialized()) return false;
       }
       return true;
     }
@@ -581,23 +562,20 @@ public final class FlowMessage {
       if (hasQosParameters()) {
         output.writeMessage(10, getQosParameters());
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPoliciesList()) {
-        output.writeMessage(11, element);
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPolicyParemetersList()) {
-        output.writeMessage(12, element);
+      if (hasConnectionPolicies()) {
+        output.writeMessage(11, getConnectionPolicies());
       }
       if (hasAccessControl()) {
-        output.writeBytes(13, getAccessControl());
+        output.writeBytes(12, getAccessControl());
       }
       if (hasMaxCreateFlowRetries()) {
-        output.writeUInt32(14, getMaxCreateFlowRetries());
+        output.writeUInt32(13, getMaxCreateFlowRetries());
       }
       if (hasCreateFlowRetries()) {
-        output.writeUInt32(15, getCreateFlowRetries());
+        output.writeUInt32(14, getCreateFlowRetries());
       }
       if (hasHopCount()) {
-        output.writeUInt32(16, getHopCount());
+        output.writeUInt32(15, getHopCount());
       }
       getUnknownFields().writeTo(output);
     }
@@ -648,29 +626,25 @@ public final class FlowMessage {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(10, getQosParameters());
       }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPoliciesList()) {
+      if (hasConnectionPolicies()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(11, element);
-      }
-      for (rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t element : getPolicyParemetersList()) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(12, element);
+          .computeMessageSize(11, getConnectionPolicies());
       }
       if (hasAccessControl()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(13, getAccessControl());
+          .computeBytesSize(12, getAccessControl());
       }
       if (hasMaxCreateFlowRetries()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(14, getMaxCreateFlowRetries());
+          .computeUInt32Size(13, getMaxCreateFlowRetries());
       }
       if (hasCreateFlowRetries()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(15, getCreateFlowRetries());
+          .computeUInt32Size(14, getCreateFlowRetries());
       }
       if (hasHopCount()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(16, getHopCount());
+          .computeUInt32Size(15, getHopCount());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -818,14 +792,6 @@ public final class FlowMessage {
           result.connectionIds_ =
             java.util.Collections.unmodifiableList(result.connectionIds_);
         }
-        if (result.policies_ != java.util.Collections.EMPTY_LIST) {
-          result.policies_ =
-            java.util.Collections.unmodifiableList(result.policies_);
-        }
-        if (result.policyParemeters_ != java.util.Collections.EMPTY_LIST) {
-          result.policyParemeters_ =
-            java.util.Collections.unmodifiableList(result.policyParemeters_);
-        }
         rina.encoding.impl.googleprotobuf.flow.FlowMessage.Flow returnMe = result;
         result = null;
         return returnMe;
@@ -875,17 +841,8 @@ public final class FlowMessage {
         if (other.hasQosParameters()) {
           mergeQosParameters(other.getQosParameters());
         }
-        if (!other.policies_.isEmpty()) {
-          if (result.policies_.isEmpty()) {
-            result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-          }
-          result.policies_.addAll(other.policies_);
-        }
-        if (!other.policyParemeters_.isEmpty()) {
-          if (result.policyParemeters_.isEmpty()) {
-            result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-          }
-          result.policyParemeters_.addAll(other.policyParemeters_);
+        if (other.hasConnectionPolicies()) {
+          mergeConnectionPolicies(other.getConnectionPolicies());
         }
         if (other.hasAccessControl()) {
           setAccessControl(other.getAccessControl());
@@ -982,30 +939,27 @@ public final class FlowMessage {
               break;
             }
             case 90: {
-              rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.newBuilder();
+              rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.newBuilder();
+              if (hasConnectionPolicies()) {
+                subBuilder.mergeFrom(getConnectionPolicies());
+              }
               input.readMessage(subBuilder, extensionRegistry);
-              addPolicies(subBuilder.buildPartial());
+              setConnectionPolicies(subBuilder.buildPartial());
               break;
             }
             case 98: {
-              rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.newBuilder();
-              input.readMessage(subBuilder, extensionRegistry);
-              addPolicyParemeters(subBuilder.buildPartial());
-              break;
-            }
-            case 106: {
               setAccessControl(input.readBytes());
               break;
             }
-            case 112: {
+            case 104: {
               setMaxCreateFlowRetries(input.readUInt32());
               break;
             }
-            case 120: {
+            case 112: {
               setCreateFlowRetries(input.readUInt32());
               break;
             }
-            case 128: {
+            case 120: {
               setHopCount(input.readUInt32());
               break;
             }
@@ -1284,109 +1238,44 @@ public final class FlowMessage {
         return this;
       }
       
-      // repeated .rina.messages.property_t policies = 11;
-      public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPoliciesList() {
-        return java.util.Collections.unmodifiableList(result.policies_);
+      // optional .rina.messages.connectionPolicies_t connectionPolicies = 11;
+      public boolean hasConnectionPolicies() {
+        return result.hasConnectionPolicies();
       }
-      public int getPoliciesCount() {
-        return result.getPoliciesCount();
+      public rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t getConnectionPolicies() {
+        return result.getConnectionPolicies();
       }
-      public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicies(int index) {
-        return result.getPolicies(index);
-      }
-      public Builder setPolicies(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
+      public Builder setConnectionPolicies(rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        result.policies_.set(index, value);
+        result.hasConnectionPolicies = true;
+        result.connectionPolicies_ = value;
         return this;
       }
-      public Builder setPolicies(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        result.policies_.set(index, builderForValue.build());
+      public Builder setConnectionPolicies(rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.Builder builderForValue) {
+        result.hasConnectionPolicies = true;
+        result.connectionPolicies_ = builderForValue.build();
         return this;
       }
-      public Builder addPolicies(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
-        if (value == null) {
-          throw new NullPointerException();
+      public Builder mergeConnectionPolicies(rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t value) {
+        if (result.hasConnectionPolicies() &&
+            result.connectionPolicies_ != rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.getDefaultInstance()) {
+          result.connectionPolicies_ =
+            rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.newBuilder(result.connectionPolicies_).mergeFrom(value).buildPartial();
+        } else {
+          result.connectionPolicies_ = value;
         }
-        if (result.policies_.isEmpty()) {
-          result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policies_.add(value);
+        result.hasConnectionPolicies = true;
         return this;
       }
-      public Builder addPolicies(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        if (result.policies_.isEmpty()) {
-          result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policies_.add(builderForValue.build());
-        return this;
-      }
-      public Builder addAllPolicies(
-          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> values) {
-        if (result.policies_.isEmpty()) {
-          result.policies_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        super.addAll(values, result.policies_);
-        return this;
-      }
-      public Builder clearPolicies() {
-        result.policies_ = java.util.Collections.emptyList();
+      public Builder clearConnectionPolicies() {
+        result.hasConnectionPolicies = false;
+        result.connectionPolicies_ = rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.getDefaultInstance();
         return this;
       }
       
-      // repeated .rina.messages.property_t policyParemeters = 12;
-      public java.util.List<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> getPolicyParemetersList() {
-        return java.util.Collections.unmodifiableList(result.policyParemeters_);
-      }
-      public int getPolicyParemetersCount() {
-        return result.getPolicyParemetersCount();
-      }
-      public rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t getPolicyParemeters(int index) {
-        return result.getPolicyParemeters(index);
-      }
-      public Builder setPolicyParemeters(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        result.policyParemeters_.set(index, value);
-        return this;
-      }
-      public Builder setPolicyParemeters(int index, rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        result.policyParemeters_.set(index, builderForValue.build());
-        return this;
-      }
-      public Builder addPolicyParemeters(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        if (result.policyParemeters_.isEmpty()) {
-          result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policyParemeters_.add(value);
-        return this;
-      }
-      public Builder addPolicyParemeters(rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t.Builder builderForValue) {
-        if (result.policyParemeters_.isEmpty()) {
-          result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        result.policyParemeters_.add(builderForValue.build());
-        return this;
-      }
-      public Builder addAllPolicyParemeters(
-          java.lang.Iterable<? extends rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t> values) {
-        if (result.policyParemeters_.isEmpty()) {
-          result.policyParemeters_ = new java.util.ArrayList<rina.encoding.impl.googleprotobuf.property.PropertyMessage.property_t>();
-        }
-        super.addAll(values, result.policyParemeters_);
-        return this;
-      }
-      public Builder clearPolicyParemeters() {
-        result.policyParemeters_ = java.util.Collections.emptyList();
-        return this;
-      }
-      
-      // optional bytes accessControl = 13;
+      // optional bytes accessControl = 12;
       public boolean hasAccessControl() {
         return result.hasAccessControl();
       }
@@ -1407,7 +1296,7 @@ public final class FlowMessage {
         return this;
       }
       
-      // optional uint32 maxCreateFlowRetries = 14;
+      // optional uint32 maxCreateFlowRetries = 13;
       public boolean hasMaxCreateFlowRetries() {
         return result.hasMaxCreateFlowRetries();
       }
@@ -1425,7 +1314,7 @@ public final class FlowMessage {
         return this;
       }
       
-      // optional uint32 createFlowRetries = 15;
+      // optional uint32 createFlowRetries = 14;
       public boolean hasCreateFlowRetries() {
         return result.hasCreateFlowRetries();
       }
@@ -1443,7 +1332,7 @@ public final class FlowMessage {
         return this;
       }
       
-      // optional uint32 hopCount = 16;
+      // optional uint32 hopCount = 15;
       public boolean hasHopCount() {
         return result.hasHopCount();
       }
@@ -1495,26 +1384,26 @@ public final class FlowMessage {
       "\n\034protofiles/FlowMessage.proto\022\rrina.mes" +
       "sages\0324protofiles/ApplicationProcessNami" +
       "ngInfoMessage.proto\032!protofiles/QoSSpeci" +
-      "fication.proto\032 protofiles/PropertyMessa" +
-      "ge.proto\"N\n\016connectionId_t\022\r\n\005qosId\030\001 \001(" +
-      "\r\022\023\n\013sourceCEPId\030\002 \001(\r\022\030\n\020destinationCEP" +
-      "Id\030\003 \001(\r\"\346\004\n\004Flow\022G\n\020sourceNamingInfo\030\001 " +
-      "\002(\0132-.rina.messages.applicationProcessNa" +
-      "mingInfo_t\022L\n\025destinationNamingInfo\030\002 \002(" +
-      "\0132-.rina.messages.applicationProcessNami",
-      "ngInfo_t\022\024\n\014sourcePortId\030\003 \002(\004\022\031\n\021destin" +
-      "ationPortId\030\004 \001(\004\022\025\n\rsourceAddress\030\005 \002(\004" +
-      "\022\032\n\022destinationAddress\030\006 \001(\004\0224\n\rconnecti" +
-      "onIds\030\007 \003(\0132\035.rina.messages.connectionId" +
-      "_t\022 \n\030currentConnectionIdIndex\030\010 \001(\r\022\r\n\005" +
-      "state\030\t \001(\r\0228\n\rqosParameters\030\n \001(\0132!.rin" +
-      "a.messages.qosSpecification_t\022+\n\010policie" +
-      "s\030\013 \003(\0132\031.rina.messages.property_t\0223\n\020po" +
-      "licyParemeters\030\014 \003(\0132\031.rina.messages.pro" +
-      "perty_t\022\025\n\raccessControl\030\r \001(\014\022\034\n\024maxCre",
-      "ateFlowRetries\030\016 \001(\r\022\031\n\021createFlowRetrie" +
-      "s\030\017 \001(\r\022\020\n\010hopCount\030\020 \001(\rB(\n&rina.encodi" +
-      "ng.impl.googleprotobuf.flow"
+      "fication.proto\032*protofiles/ConnectionPol" +
+      "iciesMessage.proto\"N\n\016connectionId_t\022\r\n\005" +
+      "qosId\030\001 \001(\r\022\023\n\013sourceCEPId\030\002 \001(\r\022\030\n\020dest" +
+      "inationCEPId\030\003 \001(\r\"\305\004\n\004Flow\022G\n\020sourceNam" +
+      "ingInfo\030\001 \002(\0132-.rina.messages.applicatio" +
+      "nProcessNamingInfo_t\022L\n\025destinationNamin" +
+      "gInfo\030\002 \002(\0132-.rina.messages.applicationP",
+      "rocessNamingInfo_t\022\024\n\014sourcePortId\030\003 \002(\004" +
+      "\022\031\n\021destinationPortId\030\004 \001(\004\022\025\n\rsourceAdd" +
+      "ress\030\005 \002(\004\022\032\n\022destinationAddress\030\006 \001(\004\0224" +
+      "\n\rconnectionIds\030\007 \003(\0132\035.rina.messages.co" +
+      "nnectionId_t\022 \n\030currentConnectionIdIndex" +
+      "\030\010 \001(\r\022\r\n\005state\030\t \001(\r\0228\n\rqosParameters\030\n" +
+      " \001(\0132!.rina.messages.qosSpecification_t\022" +
+      "?\n\022connectionPolicies\030\013 \001(\0132#.rina.messa" +
+      "ges.connectionPolicies_t\022\025\n\raccessContro" +
+      "l\030\014 \001(\014\022\034\n\024maxCreateFlowRetries\030\r \001(\r\022\031\n",
+      "\021createFlowRetries\030\016 \001(\r\022\020\n\010hopCount\030\017 \001" +
+      "(\rB(\n&rina.encoding.impl.googleprotobuf." +
+      "flow"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1534,7 +1423,7 @@ public final class FlowMessage {
           internal_static_rina_messages_Flow_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_Flow_descriptor,
-              new java.lang.String[] { "SourceNamingInfo", "DestinationNamingInfo", "SourcePortId", "DestinationPortId", "SourceAddress", "DestinationAddress", "ConnectionIds", "CurrentConnectionIdIndex", "State", "QosParameters", "Policies", "PolicyParemeters", "AccessControl", "MaxCreateFlowRetries", "CreateFlowRetries", "HopCount", },
+              new java.lang.String[] { "SourceNamingInfo", "DestinationNamingInfo", "SourcePortId", "DestinationPortId", "SourceAddress", "DestinationAddress", "ConnectionIds", "CurrentConnectionIdIndex", "State", "QosParameters", "ConnectionPolicies", "AccessControl", "MaxCreateFlowRetries", "CreateFlowRetries", "HopCount", },
               rina.encoding.impl.googleprotobuf.flow.FlowMessage.Flow.class,
               rina.encoding.impl.googleprotobuf.flow.FlowMessage.Flow.Builder.class);
           return null;
@@ -1545,7 +1434,7 @@ public final class FlowMessage {
         new com.google.protobuf.Descriptors.FileDescriptor[] {
           rina.encoding.impl.googleprotobuf.apnaminginfo.ApplicationProcessNamingInfoMessage.getDescriptor(),
           rina.encoding.impl.googleprotobuf.qosspecification.QoSSpecification.getDescriptor(),
-          rina.encoding.impl.googleprotobuf.property.PropertyMessage.getDescriptor(),
+          rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.getDescriptor(),
         }, assigner);
   }
   

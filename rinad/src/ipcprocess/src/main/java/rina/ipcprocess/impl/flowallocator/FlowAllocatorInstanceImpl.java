@@ -199,7 +199,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 	public void submitAllocateRequest(FlowRequestEvent event) throws IPCException {
 		this.flowRequestEvent = event;
 		flow = newFlowRequestPolicy.generateFlowObject(event, 
-				ipcProcess.getDIFInformation().getDifName().getProcessName());
+				ipcProcess.getDIFInformation().getDifName().getProcessName(), 
+				ipcProcess.getDIFInformation().getDifConfiguration().getQosCubes());
 		log.debug("Generated flow object: "+flow.toString());
 		
 		//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
@@ -226,7 +227,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//3 Request the creation of the connection(s) in the Kernel
 		try{
 			this.state = FAIState.CONNECTION_CREATE_REQUESTED;
-			kernelIPCProcess.createConnection(flow.getConnections().get(0));
+			kernelIPCProcess.createConnection(flow.getConnections().get(0), 
+					flow.getConnectionPolicies());
 		} catch(Exception ex) {
 			throw new IPCException("Problems requesting the kernel to create a connection: " 
 					+ ex.getMessage());
@@ -341,7 +343,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//4 Request creation of connection
 		try {
 			state = FAIState.CONNECTION_CREATE_REQUESTED;
-			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0));
+			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0), 
+					flow.getConnectionPolicies());
 			log.debug("Requested the creation of a connection to the kernel to support flow with port-id "+portId);
 		} catch (Exception ex) {
 			log.error("Problems requesting a connection to the kernel "+ex.getMessage());

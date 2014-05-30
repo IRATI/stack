@@ -636,69 +636,6 @@ void ExtendedIPCManager::deallocatePortId(int portId)
 
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
-
-/* CLASS CONNECTION */
-ConnectionPoliciesParameters::ConnectionPoliciesParameters() {
-        DTCPpresent = false;
-        flowControl = false;
-        RTXcontrol = false;
-        windowBasedFlowControl = false;
-        rateBasedFlowControl = false;
-}
-
-/*
-ConnectionPoliciesParameters::ConnectionPoliciesParameters(bool DTCPpresent,
-                bool flowControl,
-                bool RTXcontrol,
-                bool windowBasedFlowControl,
-                bool rateBasedFlowControl) {
-        this->DTCPpresent = DTCPpresent;
-        this->flowControl = flowControl;
-        this->RTXcontrol = RTXcontrol;
-        this->windowBasedFlowControl = windowBasedFlowControl;
-        this->rateBasedFlowControl = rateBasedFlowControl;
-}*/
-
-bool ConnectionPoliciesParameters::isDTCPpresent() const {
-	return DTCPpresent;
-}
-
-void ConnectionPoliciesParameters::setDTCPpresent(bool DTCPpresent) {
-	this->DTCPpresent = DTCPpresent;
-}
-
-bool ConnectionPoliciesParameters::isFlowControl() const {
-	return flowControl;
-}
-
-void ConnectionPoliciesParameters::setFlowControl(bool flowControl) {
-	this->flowControl = flowControl;
-}
-
-bool ConnectionPoliciesParameters::isRTXcontrol() const {
-	return RTXcontrol;
-}
-
-void ConnectionPoliciesParameters::setRTXcontrol(bool RTXcontrol) {
-	this->RTXcontrol = RTXcontrol;
-}
-
-bool ConnectionPoliciesParameters::isWindowBasedFlowControl() const {
-	return windowBasedFlowControl;
-}
-
-void ConnectionPoliciesParameters::setWindowBasedFlowControl(bool windowBasedFlowControl) {
-	this->windowBasedFlowControl = windowBasedFlowControl;
-}
-
-bool ConnectionPoliciesParameters::isRateBasedFlowControl() const {
-	return rateBasedFlowControl;
-}
-
-void ConnectionPoliciesParameters::setRateBasedFlowControl(bool rateBasedFlowControl) {
-	this->rateBasedFlowControl = rateBasedFlowControl;
-}
-
 /* CLASS CONNECTION */
 Connection::Connection() {
         portId = 0;
@@ -927,7 +864,8 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(const Connection& connection)
+unsigned int KernelIPCProcess::createConnection(const Connection& connection,
+                const ConnectionPolicies& connectionPolicies)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -939,6 +877,7 @@ throw (CreateConnectionException) {
         message.setSourceAddress(connection.getSourceAddress());
         message.setDestAddress(connection.getDestAddress());
         message.setQosId(connection.getQosId());
+        message.setConnPolicies(connectionPolicies);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -986,7 +925,8 @@ throw (UpdateConnectionException) {
 }
 
 unsigned int KernelIPCProcess::
-createConnectionArrived(const Connection& connection)
+createConnectionArrived(const Connection& connection,
+                const ConnectionPolicies& connectionPolicies)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -1000,6 +940,7 @@ throw (CreateConnectionException) {
         message.setQosId(connection.getQosId());
         message.setDestCepId(connection.getDestCepId());
         message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.setConnPolicies(connectionPolicies);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);

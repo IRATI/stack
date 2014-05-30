@@ -2,7 +2,7 @@ package rina.messages;
 option java_package="rina.encoding.impl.googleprotobuf.flow";
 import "protofiles/ApplicationProcessNamingInfoMessage.proto";
 import "protofiles/QoSSpecification.proto";
-import "protofiles/PropertyMessage.proto";
+import "protofiles/ConnectionPoliciesMessage.proto";
 
 message connectionId_t {  //information to identify a connection
 	optional uint32 qosId = 1; 				//identifies the QoS cube under which this flow is classified
@@ -21,10 +21,9 @@ message Flow{  //Contains the information to setup a new flow
 	optional uint32 currentConnectionIdIndex = 8;							//Identifies the index of the current active connection in the flow
 	optional uint32 state = 9; 												//
 	optional rina.messages.qosSpecification_t qosParameters = 10; 			//the QoS parameters specified by the application process that requested this flow
-	repeated property_t policies = 11; 											//the set of policies selected by the IPC process
-	repeated property_t policyParemeters = 12; 								//the set of parameters associated to the policies
-	optional bytes accessControl = 13; 										// ?
-	optional uint32 maxCreateFlowRetries = 14; 								//Maximum number of retries to create the flow before giving up
-	optional uint32 createFlowRetries = 15; 								//The current number of retries
-	optional uint32 hopCount = 16; 									//While the search rules that generate the forwarding table should allow for a natural termination condition, it seems wise to have the means to enforce termination
+	optional connectionPolicies_t connectionPolicies = 11;                  //the configuration for the policies and parameters of this EFCP connection
+	optional bytes accessControl = 12; 										// ?
+	optional uint32 maxCreateFlowRetries = 13; 								//Maximum number of retries to create the flow before giving up
+	optional uint32 createFlowRetries = 14; 								//The current number of retries
+	optional uint32 hopCount = 15; 									        //While the search rules that generate the forwarding table should allow for a natural termination condition, it seems wise to have the means to enforce termination
 }

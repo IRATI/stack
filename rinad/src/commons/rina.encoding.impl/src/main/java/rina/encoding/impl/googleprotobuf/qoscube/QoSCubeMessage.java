@@ -119,10 +119,21 @@ public final class QoSCubeMessage {
     public boolean hasJitter() { return hasJitter; }
     public int getJitter() { return jitter_; }
     
+    // optional .rina.messages.connectionPolicies_t efcpPolicies = 13;
+    public static final int EFCPPOLICIES_FIELD_NUMBER = 13;
+    private boolean hasEfcpPolicies;
+    private rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t efcpPolicies_;
+    public boolean hasEfcpPolicies() { return hasEfcpPolicies; }
+    public rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t getEfcpPolicies() { return efcpPolicies_; }
+    
     private void initFields() {
+      efcpPolicies_ = rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.getDefaultInstance();
     }
     public final boolean isInitialized() {
       if (!hasQosId) return false;
+      if (hasEfcpPolicies()) {
+        if (!getEfcpPolicies().isInitialized()) return false;
+      }
       return true;
     }
     
@@ -164,6 +175,9 @@ public final class QoSCubeMessage {
       }
       if (hasJitter()) {
         output.writeUInt32(12, getJitter());
+      }
+      if (hasEfcpPolicies()) {
+        output.writeMessage(13, getEfcpPolicies());
       }
       getUnknownFields().writeTo(output);
     }
@@ -221,6 +235,10 @@ public final class QoSCubeMessage {
       if (hasJitter()) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(12, getJitter());
+      }
+      if (hasEfcpPolicies()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(13, getEfcpPolicies());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -416,6 +434,9 @@ public final class QoSCubeMessage {
         if (other.hasJitter()) {
           setJitter(other.getJitter());
         }
+        if (other.hasEfcpPolicies()) {
+          mergeEfcpPolicies(other.getEfcpPolicies());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -487,6 +508,15 @@ public final class QoSCubeMessage {
             }
             case 96: {
               setJitter(input.readUInt32());
+              break;
+            }
+            case 106: {
+              rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.newBuilder();
+              if (hasEfcpPolicies()) {
+                subBuilder.mergeFrom(getEfcpPolicies());
+              }
+              input.readMessage(subBuilder, extensionRegistry);
+              setEfcpPolicies(subBuilder.buildPartial());
               break;
             }
           }
@@ -713,6 +743,43 @@ public final class QoSCubeMessage {
         return this;
       }
       
+      // optional .rina.messages.connectionPolicies_t efcpPolicies = 13;
+      public boolean hasEfcpPolicies() {
+        return result.hasEfcpPolicies();
+      }
+      public rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t getEfcpPolicies() {
+        return result.getEfcpPolicies();
+      }
+      public Builder setEfcpPolicies(rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        result.hasEfcpPolicies = true;
+        result.efcpPolicies_ = value;
+        return this;
+      }
+      public Builder setEfcpPolicies(rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.Builder builderForValue) {
+        result.hasEfcpPolicies = true;
+        result.efcpPolicies_ = builderForValue.build();
+        return this;
+      }
+      public Builder mergeEfcpPolicies(rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t value) {
+        if (result.hasEfcpPolicies() &&
+            result.efcpPolicies_ != rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.getDefaultInstance()) {
+          result.efcpPolicies_ =
+            rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.newBuilder(result.efcpPolicies_).mergeFrom(value).buildPartial();
+        } else {
+          result.efcpPolicies_ = value;
+        }
+        result.hasEfcpPolicies = true;
+        return this;
+      }
+      public Builder clearEfcpPolicies() {
+        result.hasEfcpPolicies = false;
+        result.efcpPolicies_ = rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.connectionPolicies_t.getDefaultInstance();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:rina.messages.qosCube_t)
     }
     
@@ -740,15 +807,18 @@ public final class QoSCubeMessage {
   static {
     java.lang.String[] descriptorData = {
       "\n\037protofiles/QoSCubeMessage.proto\022\rrina." +
-      "messages\"\243\002\n\tqosCube_t\022\r\n\005qosId\030\001 \002(\r\022\014\n" +
-      "\004name\030\002 \001(\t\022\030\n\020averageBandwidth\030\003 \001(\004\022\033\n" +
-      "\023averageSDUBandwidth\030\004 \001(\004\022\035\n\025peakBandwi" +
-      "dthDuration\030\005 \001(\r\022 \n\030peakSDUBandwidthDur" +
-      "ation\030\006 \001(\r\022\036\n\026undetectedBitErrorRate\030\007 " +
-      "\001(\001\022\027\n\017partialDelivery\030\010 \001(\010\022\r\n\005order\030\t " +
-      "\001(\010\022\032\n\022maxAllowableGapSdu\030\n \001(\r\022\r\n\005delay" +
-      "\030\013 \001(\r\022\016\n\006jitter\030\014 \001(\rB+\n)rina.encoding." +
-      "impl.googleprotobuf.qoscube"
+      "messages\032*protofiles/ConnectionPoliciesM" +
+      "essage.proto\"\336\002\n\tqosCube_t\022\r\n\005qosId\030\001 \002(" +
+      "\r\022\014\n\004name\030\002 \001(\t\022\030\n\020averageBandwidth\030\003 \001(" +
+      "\004\022\033\n\023averageSDUBandwidth\030\004 \001(\004\022\035\n\025peakBa" +
+      "ndwidthDuration\030\005 \001(\r\022 \n\030peakSDUBandwidt" +
+      "hDuration\030\006 \001(\r\022\036\n\026undetectedBitErrorRat" +
+      "e\030\007 \001(\001\022\027\n\017partialDelivery\030\010 \001(\010\022\r\n\005orde" +
+      "r\030\t \001(\010\022\032\n\022maxAllowableGapSdu\030\n \001(\r\022\r\n\005d" +
+      "elay\030\013 \001(\r\022\016\n\006jitter\030\014 \001(\r\0229\n\014efcpPolici",
+      "es\030\r \001(\0132#.rina.messages.connectionPolic" +
+      "ies_tB+\n)rina.encoding.impl.googleprotob" +
+      "uf.qoscube"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -760,7 +830,7 @@ public final class QoSCubeMessage {
           internal_static_rina_messages_qosCube_t_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_qosCube_t_descriptor,
-              new java.lang.String[] { "QosId", "Name", "AverageBandwidth", "AverageSDUBandwidth", "PeakBandwidthDuration", "PeakSDUBandwidthDuration", "UndetectedBitErrorRate", "PartialDelivery", "Order", "MaxAllowableGapSdu", "Delay", "Jitter", },
+              new java.lang.String[] { "QosId", "Name", "AverageBandwidth", "AverageSDUBandwidth", "PeakBandwidthDuration", "PeakSDUBandwidthDuration", "UndetectedBitErrorRate", "PartialDelivery", "Order", "MaxAllowableGapSdu", "Delay", "Jitter", "EfcpPolicies", },
               rina.encoding.impl.googleprotobuf.qoscube.QoSCubeMessage.qosCube_t.class,
               rina.encoding.impl.googleprotobuf.qoscube.QoSCubeMessage.qosCube_t.Builder.class);
           return null;
@@ -769,6 +839,7 @@ public final class QoSCubeMessage {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
+          rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.getDescriptor(),
         }, assigner);
   }
   

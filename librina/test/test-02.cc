@@ -85,7 +85,7 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
-	unsigned int handle = ipcProcess1->registerApplication(*sourceName);
+	unsigned int handle = ipcProcess1->registerApplication(*sourceName, 1);
 	ipcProcess1->registerApplicationResult(handle, true);
 
 	/* TEST UNREGISTER APPLICATION */
@@ -95,7 +95,7 @@ int main(int argc, char * argv[]) {
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
-			true, *sourceName, *difName, 1234);
+			true, *sourceName, *difName, 1234, 4545);
 	flowRequest->setPortId(430);
 	ipcProcess1->allocateFlow(*flowRequest);
 
@@ -118,7 +118,7 @@ int main(int argc, char * argv[]) {
 
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,
-			true, *sourceName, *destinationName, *difName, 3);
+			true, *sourceName, *destinationName, *difName, 3, 2323);
 	applicationManager->flowAllocated(*flowEvent);
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());

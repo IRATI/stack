@@ -4,6 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import eu.irati.librina.Connection;
+import eu.irati.librina.ConnectionPolicies;
+import eu.irati.librina.DTCPConfig;
+import eu.irati.librina.DTCPFlowControlConfig;
+import eu.irati.librina.DTCPRateBasedFlowControlConfig;
+import eu.irati.librina.DTCPRtxControlConfig;
+import eu.irati.librina.DTCPWindowBasedFlowControlConfig;
+import eu.irati.librina.PolicyConfig;
 import eu.irati.librina.FlowSpecification;
 
 import rina.encoding.api.Encoder;
@@ -38,8 +45,7 @@ public class FlowEncoder implements Encoder{
 		flow.setHopCount(gpbFlow.getHopCount());
 		flow.setMaxCreateFlowRetries(gpbFlow.getMaxCreateFlowRetries());
 		flow.setCreateFlowRetries(gpbFlow.getCreateFlowRetries());
-		flow.setPolicies(GPBUtils.getProperties(gpbFlow.getPoliciesList()));
-		flow.setPolicyParameters(GPBUtils.getProperties(gpbFlow.getPolicyParemetersList()));
+		flow.setConnectionPolicies(GPBUtils.getConnectionPolicies(gpbFlow.getConnectionPolicies()));
 		qosSpecification_t qosParams = gpbFlow.getQosParameters();
 		if (!qosParams.equals(qosSpecification_t.getDefaultInstance())){
 			flow.setFlowSpecification(GPBUtils.getFlowSpecification(qosParams));
@@ -90,7 +96,8 @@ public class FlowEncoder implements Encoder{
 		result.setSourceCepId(connectionId.getSourceCEPId());
 		return result;
 	}
-	 
+	
+	
 	
 	public synchronized byte[] encode(Object object) throws Exception {
 		if (object == null || !(object instanceof Flow)){
@@ -112,8 +119,7 @@ public class FlowEncoder implements Encoder{
 			setDestinationNamingInfo(GPBUtils.getApplicationProcessNamingInfoT(flow.getDestinationNamingInfo())).
 			setDestinationPortId(flow.getDestinationPortId()).
 			setHopCount(flow.getHopCount()).
-			addAllPolicies(GPBUtils.getProperties(flow.getPolicies())).
-			addAllPolicyParemeters(GPBUtils.getProperties(flow.getPolicyParameters())).
+			setConnectionPolicies(GPBUtils.getConnectionPoliciesType(flow.getConnectionPolicies())).
 			setQosParameters(qosSpecificationT).
 			setMaxCreateFlowRetries(flow.getMaxCreateFlowRetries()).
 			setSourceAddress(flow.getSourceAddress()).
@@ -156,8 +162,6 @@ public class FlowEncoder implements Encoder{
 		
 		return result;
 	}
-	
-	
 	
 	private connectionId_t getConnectionIdType(Connection connection){
 		if (connection == null){

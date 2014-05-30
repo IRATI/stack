@@ -26,6 +26,8 @@
 struct dtp;
 struct dtcp;
 struct dt;
+struct cwq;
+struct rtxq;
 
 /*
  * FIXME: The DT instance would represent the DTP/DTCP couple. It has to land
@@ -39,6 +41,12 @@ struct dtp *  dt_dtp_unbind(struct dt *  dt);
 
 int           dt_dtcp_bind(struct dt * dt, struct dtcp * dtp);
 struct dtcp * dt_dtcp_unbind(struct dt * dt);
+
+int           dt_cwq_bind(struct dt * dt, struct cwq * cwq);
+struct cwq *  dt_cwq_unbind(struct dt * dt);
+
+int           dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq);
+struct rtxq * dt_rtxq_unbind(struct dt * dt);
 
 struct dtp *  dt_dtp(struct dt * dt);
 struct dtcp * dt_dtcp(struct dt * dt);

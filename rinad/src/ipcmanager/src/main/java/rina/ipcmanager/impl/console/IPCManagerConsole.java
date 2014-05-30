@@ -195,7 +195,6 @@ public class IPCManagerConsole implements Runnable{
 					socket = null;
 				} catch (Exception e) {
 					log.error("Error closing socket: "+e.getMessage());
-					e.printStackTrace();
 				}
 
 			}

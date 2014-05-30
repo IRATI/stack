@@ -217,6 +217,469 @@ public:
 };
 
 /**
+ * A parameter of the policy
+ */
+class PolicyParameter {
+        /** the name of the parameter */
+        std::string name;
+
+        /** the value of the parameter */
+        std::string value;
+
+public:
+        PolicyParameter();
+        PolicyParameter(const std::string& name, const std::string& value);
+        bool operator==(const PolicyParameter &other) const;
+        bool operator!=(const PolicyParameter &other) const;
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        const std::string& getValue() const;
+        void setValue(const std::string& value);
+};
+
+/**
+ * Configuration of a policy (name/version/parameters)
+ */
+class PolicyConfig {
+
+        /** the name of policy */
+        std::string name;
+
+        /** the version of the policy */
+        std::string version;
+
+        /** optional name/value parameters to configure the policy */
+        std::list<PolicyParameter> parameters;
+
+public:
+        PolicyConfig();
+        PolicyConfig(const std::string& name, const std::string& version);
+        bool operator==(const PolicyConfig &other) const;
+        bool operator!=(const PolicyConfig &other) const;
+        const std::string& getName() const;
+        void setName(const std::string& name);
+        //const std::list<PolicyParameter>& getParameters() const;
+        //void setParameters(const std::list<PolicyParameter>& parameters);
+        //void addParameter(const PolicyParameter& paremeter);
+        const std::string& getVersion() const;
+        void setVersion(const std::string& version);
+};
+
+/**
+ * The DTCP window based flow control configuration
+ */
+class DTCPWindowBasedFlowControlConfig {
+
+        /**
+         * Integer that the number PDUs that can be put on the
+         * ClosedWindowQueue before something must be done.
+         */
+        int maxclosedwindowqueuelength;
+
+        /** initial sequence number to get right window edge. */
+        int initialcredit;
+
+        /**
+         * Invoked when a Transfer PDU is received to give the receiving PM an
+         * opportunity to update the flow control allocations.
+         */
+        PolicyConfig rcvrflowcontrolpolicy;
+
+        /**
+         * Allows some discretion in when to send a Flow Control PDU when there
+         * is no Retransmission Control.
+         */
+        PolicyConfig receivingflowcontrolpolicy;
+
+public:
+        DTCPWindowBasedFlowControlConfig();
+        int getInitialcredit() const;
+        void setInitialcredit(int initialcredit);
+        int getMaxclosedwindowqueuelength() const;
+        void setMaxclosedwindowqueuelength(int maxclosedwindowqueuelength);
+        const PolicyConfig& getRcvrflowcontrolpolicy() const;
+        void setRcvrflowcontrolpolicy(
+                        const PolicyConfig& rcvrflowcontrolpolicy);
+        const PolicyConfig& getReceivingflowcontrolpolicy() const;
+        void setReceivingflowcontrolpolicy(
+                        const PolicyConfig& receivingflowcontrolpolicy);
+        const std::string toString();
+};
+
+/**
+ * The DTCP rate-basd flow control configuration
+ */
+class DTCPRateBasedFlowControlConfig {
+
+        /**
+         * the number of PDUs that may be sent in a TimePeriod. Used with
+         * rate-based flow control.
+         */
+        int sendingrate;
+
+        /**
+         * length of time in microseconds for pacing rate-based flow control.
+         */
+        int timeperiod;
+
+        /** used to momentarily lower the send rate below the rate allowed */
+        PolicyConfig norateslowdownpolicy;
+
+        /**
+         * Allows rate-based flow control to exceed its nominal rate.
+         * Presumably this would be for short periods and policies should
+         * enforce this.  Like all policies, if this returns True it creates
+         * the default action which is no override.
+         */
+        PolicyConfig nooverridedefaultpeakpolicy;
+
+        /**
+         * Allows an alternate action when using rate-based flow control and
+         * the number of free buffers is getting low.
+         */
+        PolicyConfig ratereductionpolicy;
+
+public:
+        DTCPRateBasedFlowControlConfig();
+        const PolicyConfig& getNooverridedefaultpeakpolicy() const;
+        void setNooverridedefaultpeakpolicy(
+                        const PolicyConfig& nooverridedefaultpeakpolicy);
+        const PolicyConfig& getNorateslowdownpolicy() const;
+        void setNorateslowdownpolicy(
+                        const PolicyConfig& norateslowdownpolicy);
+        const PolicyConfig& getRatereductionpolicy() const;
+        void setRatereductionpolicy(const PolicyConfig& ratereductionpolicy);
+        int getSendingrate() const;
+        void setSendingrate(int sendingrate);
+        int getTimeperiod() const;
+        void setTimeperiod(int timeperiod);
+        const std::string toString();
+};
+
+/**
+ * The flow control configuration of a DTCP instance
+ */
+class DTCPFlowControlConfig {
+
+        /** indicates whether window-based flow control is in use */
+        bool windowbased;
+
+        /** the window-based flow control configuration */
+        DTCPWindowBasedFlowControlConfig windowbasedconfig;
+
+        /** indicates whether rate-based flow control is in use */
+        bool ratebased;
+
+        /** the rate-based flow control configuration */
+        DTCPRateBasedFlowControlConfig ratebasedconfig;
+
+        /**
+         * The number of free bytes below which flow control should slow or
+         * block the user from doing any more Writes.
+         */
+        int sentbytesthreshold;
+
+        /**
+         * The percent of free bytes below, which flow control should slow or
+         * block the user from doing any more Writes.
+         */
+        int sentbytespercentthreshold;
+
+        /**
+         * The number of free buffers below which flow control should slow or
+         * block the user from doing any more Writes.
+         */
+        int sentbuffersthreshold;
+
+        /**
+         * The number of free bytes below which flow control does not move or
+         * decreases the amount the Right Window Edge is moved.
+         */
+        int rcvbytesthreshold;
+
+        /**
+         * The number of free buffers at which flow control does not advance
+         * or decreases the amount the Right Window Edge is moved.
+         */
+        int rcvbytespercentthreshold;
+
+        /**
+         * The percent of free buffers below which flow control should not
+         * advance or decreases the amount the Right Window Edge is moved.
+         */
+        int rcvbuffersthreshold;
+
+        /**
+         * Used with flow control to determine the action to be taken when the
+         * receiver has not extended more credit to allow the sender to send more
+         * PDUs. Typically, the action will be to queue the PDUs until credit is
+         * extended. This action is taken by DTCP, not DTP.
+         */
+        PolicyConfig closedwindowpolicy;
+
+        /**
+         * Determines what action to take if the receiver receives PDUs but the
+         * credit or rate has been exceeded
+         */
+        PolicyConfig flowcontroloverrunpolicy;
+
+        /**
+         * Invoked when both Credit and Rate based flow control are in use and
+         * they disagree on whether the PM can send or receive data. If it
+         * returns True, then the PM can send or receive; if False, it cannot.
+         */
+        PolicyConfig reconcileflowcontrolpolicy;
+
+public:
+        DTCPFlowControlConfig();
+        const PolicyConfig& getClosedwindowpolicy() const;
+        void setClosedwindowpolicy(const PolicyConfig& closedwindowpolicy);
+        const PolicyConfig& getFlowcontroloverrunpolicy() const;
+        void setFlowcontroloverrunpolicy(
+                        const PolicyConfig& flowcontroloverrunpolicy);
+        bool isRatebased() const;
+        void setRatebased(bool ratebased);
+        const DTCPRateBasedFlowControlConfig& getRatebasedconfig() const;
+        void setRatebasedconfig(
+                        const DTCPRateBasedFlowControlConfig& ratebasedconfig);
+        int getRcvbuffersthreshold() const;
+        void setRcvbuffersthreshold(int rcvbuffersthreshold);
+        int getRcvbytespercentthreshold() const;
+        void setRcvbytespercentthreshold(int rcvbytespercentthreshold);
+        int getRcvbytesthreshold() const;
+        void setRcvbytesthreshold(int rcvbytesthreshold);
+        const PolicyConfig& getReconcileflowcontrolpolicy() const;
+        void setReconcileflowcontrolpolicy(
+                        const PolicyConfig& reconcileflowcontrolpolicy);
+        int getSentbuffersthreshold() const;
+        void setSentbuffersthreshold(int sentbuffersthreshold);
+        int getSentbytespercentthreshold() const;
+        void setSentbytespercentthreshold(int sentbytespercentthreshold);
+        int getSentbytesthreshold() const;
+        void setSentbytesthreshold(int sentbytesthreshold);
+        bool isWindowbased() const;
+        void setWindowbased(bool windowbased);
+        const DTCPWindowBasedFlowControlConfig& getWindowbasedconfig() const;
+        void setWindowbasedconfig(
+                        const DTCPWindowBasedFlowControlConfig&
+                        windowbasedconfig);
+        const std::string toString();
+};
+
+/**
+ * The configuration of the retransmission control functions of a
+ * DTCP instance
+ */
+class DTCPRtxControlConfig{
+
+        /**
+         * the number of times the retransmission of a PDU will be attempted
+         * before some other action must be taken.
+         */
+        int datarxmsnmax;
+
+        /**
+         * indicates the maximum time that a receiver will wait before sending
+         * an Ack. Some DIFs may wish to set a maximum value for the DIF.
+         */
+        int initialATimer;
+
+        /**
+         * Executed by the sender to estimate the duration of the retx timer.
+         * This policy will be based on an estimate of round-trip time and the
+         * Ack or Ack List policy in use
+         */
+        PolicyConfig rttestimatorpolicy;
+
+        /**
+         * Executed by the sender when a Retransmission Timer Expires. If this
+         * policy returns True, then all PDUs with sequence number less than
+         * or equal to the sequence number of the PDU associated with this
+         * timeout are retransmitted; otherwise the procedure must determine
+         * what action to take. This policy must be executed in less than the
+         * maximum time to Ack
+         */
+        PolicyConfig rtxtimerexpirypolicy;
+
+        /**
+         * Executed by the sender and provides the Sender with some discretion
+         * on when PDUs may be deleted from the ReTransmissionQ. This is useful
+         * for multicast and similar situations where one might want to delay
+         * discarding PDUs from the retransmission queue.
+         */
+        PolicyConfig senderackpolicy;
+
+        /**
+         *  Executed by the Sender and provides the Sender with some discretion
+         *  on when PDUs may be deleted from the ReTransmissionQ. This policy
+         *  is used in conjunction with the selective acknowledgement aspects
+         *  of the mechanism and may be useful for multicast and similar
+         *  situations where there may be a requirement to delay discarding PDUs
+         *  from the retransmission queue
+         */
+        PolicyConfig recvingacklistpolicy;
+
+        /**
+         * Executed by the receiver of the PDU and provides some discretion in
+         * the action taken.  The default action is to either Ack immediately
+         * or to start the A-Timer and Ack the LeftWindowEdge when it expires.
+         */
+        PolicyConfig rcvrackpolicy;
+
+        /**
+         * This policy allows an alternate action when the A-Timer expires when
+         * DTCP is present.
+         */
+        PolicyConfig sendingackpolicy;
+
+        /** Allows an alternate action when a Control Ack PDU is received. */
+        PolicyConfig rcvrcontrolackpolicy;
+
+public:
+        DTCPRtxControlConfig();
+        int getDatarxmsnmax() const;
+        void setDatarxmsnmax(int datarxmsnmax);
+        int getInitialATimer() const;
+        void setInitialATimer(int initialATimer);
+        const PolicyConfig& getRcvrackpolicy() const;
+        void setRcvrackpolicy(const PolicyConfig& rcvrackpolicy);
+        const PolicyConfig& getRcvrcontrolackpolicy() const;
+        void setRcvrcontrolackpolicy(
+                        const PolicyConfig& rcvrcontrolackpolicy);
+        const PolicyConfig& getRecvingacklistpolicy() const;
+        void setRecvingacklistpolicy(
+                        const PolicyConfig& recvingacklistpolicy);
+        const PolicyConfig& getRttestimatorpolicy() const;
+        void setRttestimatorpolicy(const PolicyConfig& rttestimatorpolicy);
+        const PolicyConfig& getRtxtimerexpirypolicy() const;
+        void setRtxtimerexpirypolicy(
+                        const PolicyConfig& rtxtimerexpirypolicy);
+        const PolicyConfig& getSenderackpolicy() const;
+        void setSenderackpolicy(const PolicyConfig& senderackpolicy);
+        const PolicyConfig& getSendingackpolicy() const;
+        void setSendingackpolicy(const PolicyConfig& sendingackpolicy);
+        const std::string toString();
+};
+
+/**
+ * Configuration of the DTCP instance, including policies and its parameters
+ */
+class DTCPConfig {
+
+        /** True if flow control is required */
+        bool flowcontrol;
+
+        /** the flow control configuration of a DTCP instance */
+        DTCPFlowControlConfig flowcontrolconfig;
+
+        /** True if rtx control is required */
+        bool rtxcontrol;
+
+        /** the rtx control configuration of a DTCP instance */
+        DTCPRtxControlConfig rtxcontrolconfig;
+
+        /**
+         * should be approximately 2Δt. This must be bounded. A DIF
+         * specification may want to specify a maximum value.
+         */
+        int initialsenderinactivitytime;
+
+        /**
+         * should be approximately 3Δt. This must be bounded. A DIF
+         * specification may want to specify a maximum value.
+         */
+        int initialrecvrinactivitytime;
+
+        /**
+         * used when DTCP is in use. If no PDUs arrive in this time period,
+         * the receiver should expect a DRF in the next Transfer PDU. If not,
+         * something is very wrong. The timeout value should generally be set
+         * to 3(MPL+R+A).
+         */
+        PolicyConfig rcvrtimerinactivitypolicy;
+
+        /**
+         * used when DTCP is in use. This timer is used to detect long periods
+         * of no traffic, indicating that a DRF should be sent. If not,
+         * something is very wrong. The timeout value should generally be set
+         * to 2(MPL+R+A).
+         */
+        PolicyConfig sendertimerinactiviypolicy;
+
+        /**
+         * This policy determines what action to take when the PM detects that
+         * a control PDU (Ack or Flow Control) may have been lost.  If this
+         * procedure returns True, then the PM will send a Control Ack and an
+         * empty Transfer PDU.  If it returns False, then any action is determined
+         * by the policy
+         */
+        PolicyConfig lostcontrolpdupolicy;
+
+public:
+        DTCPConfig();
+        bool isFlowcontrol() const;
+        void setFlowcontrol(bool flowcontrol);
+        const DTCPFlowControlConfig& getFlowcontrolconfig() const;
+        void setFlowcontrolconfig(
+                        const DTCPFlowControlConfig& flowcontrolconfig);
+        int getInitialrecvrinactivitytime() const;
+        void setInitialrecvrinactivitytime(int initialrecvrinactivitytime);
+        int getInitialsenderinactivitytime() const;
+        void setInitialsenderinactivitytime(int initialsenderinactivitytime);
+        const PolicyConfig& getLostcontrolpdupolicy() const;
+        void setLostcontrolpdupolicy(
+                        const PolicyConfig& lostcontrolpdupolicy);
+        const PolicyConfig& getRcvrtimerinactivitypolicy() const;
+        void setRcvrtimerinactivitypolicy(
+                        const PolicyConfig& rcvrtimerinactivitypolicy);
+        bool isRtxcontrol() const;
+        void setRtxcontrol(bool rtxcontrol);
+        const DTCPRtxControlConfig& getRtxcontrolconfig() const;
+        void setRtxcontrolconfig(const DTCPRtxControlConfig& rtxcontrolconfig);
+        const PolicyConfig& getSendertimerinactiviypolicy() const;
+        void setSendertimerinactiviypolicy(
+                        const PolicyConfig& sendertimerinactiviypolicy);
+        const std::string toString();
+};
+
+/**
+ * This class defines the policies paramenters for an EFCP connection
+ */
+class ConnectionPolicies {
+        /** Indicates if DTCP is required */
+        bool DTCPpresent;
+
+        /** The configuration of the DTCP instance */
+        DTCPConfig dtcpConfiguration;
+
+        /**
+         * This policy allows some discretion in selecting the initial sequence
+         * number, when DRF is going to be sent.
+         */
+        PolicyConfig initialseqnumpolicy;
+
+        /**
+         * When the sequence number is increasing beyond this value, the
+         * sequence number space is close to rolling over, a new connection
+         * should be instantiated and bound to the same port-ids, so that new
+         * PDUs can be sent on the new connection.
+         */
+        int seqnumrolloverthreshold;
+
+public:
+        ConnectionPolicies();
+        const DTCPConfig& getDtcpConfiguration() const;
+        void setDtcpConfiguration(const DTCPConfig& dtcpConfiguration);
+        bool isDtcpPresent() const;
+        void setDtcpPresent(bool dtcPpresent);
+        const PolicyConfig& getInitialseqnumpolicy() const;
+        void setInitialseqnumpolicy(const PolicyConfig& initialseqnumpolicy);
+        int getSeqnumrolloverthreshold() const;
+        void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
+        const std::string toString();
+};
+
+/**
  * Defines the properties that a QoSCube is able to provide
  */
 class QoSCube {
@@ -226,6 +689,11 @@ class QoSCube {
 
 	/** The id of the QoS cube */
 	int id;
+
+        /**
+         * The EFCP policies associated to this QoS Cube
+         */
+        ConnectionPolicies efcpPolicies;
 
 	/** Average bandwidth in bytes/s. A value of 0 means don't care. */
 	unsigned int averageBandwidth;
@@ -266,6 +734,7 @@ class QoSCube {
 	 * flow. A value of 0 indicates 'do not care'
 	 */
 	unsigned int jitter;
+
 public:
 	QoSCube();
 	QoSCube(const std::string& name, int id);
@@ -275,6 +744,8 @@ public:
 	int getId() const;
 	const std::string& getName() const;
 	void setName(const std::string& name);
+        const ConnectionPolicies& getEfcpPolicies() const;
+        void setEfcpPolicies(const ConnectionPolicies& efcpPolicies);
 	unsigned int getAverageBandwidth() const;
 	void setAverageBandwidth(unsigned int averageBandwidth);
 	unsigned int getAverageSduBandwidth() const;
@@ -772,35 +1243,6 @@ public:
 };
 
 /**
- * Represents a policy. This is a generic placeholder which should be defined
- * during the second prototype activities
- */
-class Policy {
-
-        /** The id of the policy */
-        unsigned int id;
-
-        /** The name of the policy */
-        std::string name;
-
-        /** Parameters of the policy */
-        std::list<Parameter> parameters;
-
-public:
-	bool operator==(const Policy &other) const;
-	bool operator!=(const Policy &other) const;
-	Policy();
-	Policy(unsigned int id, std::string name);
-        unsigned int getId() const;
-        void setId(unsigned int id);
-        const std::string& getName() const;
-        void setName(const std::string& name);
-        const std::list<Parameter>& getParameters() const;
-        void setParameters(const std::list<Parameter>& parameters);
-        void addParameter(const Parameter& parameter);
-};
-
-/**
  * Contains the values of the constants for the Error and Flow Control
  * Protocol (EFCP)
  */
@@ -867,24 +1309,26 @@ public:
 };
 
 /**
- * Link state algorithm configurations
+ * Link State routing configuration
  */
-class PDUFTableGeneratorConfiguration {
-	private:
-		static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
-		static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
-		static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
-		static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
-		static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
-		static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
-		int objectMaximumAge;
-		int waitUntilReadCDAP;
-		int waitUntilError;
-		int waitUntilPDUFTComputation;
-		int waitUntilFSODBPropagation;
-		int waitUntilAgeIncrement;
-	public:
-		PDUFTableGeneratorConfiguration();
+class LinkStateRoutingConfiguration {
+private:
+        static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
+        static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
+        static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
+        static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
+        static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
+        static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+        static const std::string DEFAULT_ROUTING_ALGORITHM;
+        int objectMaximumAge;
+        int waitUntilReadCDAP;
+        int waitUntilError;
+        int waitUntilPDUFTComputation;
+        int waitUntilFSODBPropagation;
+        int waitUntilAgeIncrement;
+        std::string routingAlgorithm;
+public:
+        LinkStateRoutingConfiguration();
         const std::string toString();
         int getWaitUntilAgeIncrement() const;
         void setWaitUntilAgeIncrement(const int waitUntilAgeIncrement);
@@ -898,6 +1342,31 @@ class PDUFTableGeneratorConfiguration {
         void setWaitUntilReadCDAP(const int waitUntilReadCdap);
         int getObjectMaximumAge() const;
         void setObjectMaximumAge(const int objectMaximumAge);
+        const std::string& getRoutingAlgorithm() const;
+        void setRoutingAlgorithm(const std::string& routingAlgorithm);
+};
+
+/**
+ * PDU F Table Generator Configuration
+ */
+class PDUFTableGeneratorConfiguration {
+private:
+        /** Name, version and configuration of the PDU FT Generator policy */
+        PolicyConfig pduFTGeneratorPolicy;
+
+        /**
+         * Link state routing configuration parameters - only relevant if a
+         * link-state routing PDU FT Generation policy is used
+         */
+        LinkStateRoutingConfiguration linkStateRoutingConfiguration;
+public:
+        PDUFTableGeneratorConfiguration();
+        PDUFTableGeneratorConfiguration(const PolicyConfig& pduFTGeneratorPolicy);
+        const PolicyConfig& getPduFtGeneratorPolicy() const;
+        void setPduFtGeneratorPolicy(const PolicyConfig& pduFtGeneratorPolicy);
+        const LinkStateRoutingConfiguration& getLinkStateRoutingConfiguration() const;
+        void setLinkStateRoutingConfiguration(
+                        const LinkStateRoutingConfiguration& linkStateRoutingConfiguration);
 };
 
 /**
@@ -916,7 +1385,7 @@ class DIFConfiguration {
 	std::list<QoSCube> qosCubes;
 
 	/** The policies of the DIF */
-	std::list<Policy> policies;
+	std::list<PolicyConfig> policies;
 
 	/** Configuration parameters */
 	std::list<Parameter> parameters;
@@ -925,9 +1394,9 @@ class DIFConfiguration {
 	PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
 public:
-	const std::list<Policy>& getPolicies();
-	void setPolicies(const std::list<Policy>& policies);
-	void addPolicy(const Policy& policy);
+	const std::list<PolicyConfig>& getPolicies();
+	void setPolicies(const std::list<PolicyConfig>& policies);
+	void addPolicy(const PolicyConfig& policy);
 	const std::list<QoSCube>& getQosCubes() const;
 	void setQosCubes(const std::list<QoSCube>& qosCubes);
 	void addQoSCube(const QoSCube& qosCube);
@@ -936,10 +1405,11 @@ public:
 	void addParameter(const Parameter& parameter);
 	const DataTransferConstants& getDataTransferConstants() const;
 	void setDataTransferConstants(
-					const DataTransferConstants& dataTransferConstants);
+	                const DataTransferConstants& dataTransferConstants);
 	unsigned int getAddress() const;
 	void setAddress(unsigned int address);
-	void setPDUFTableGeneratorConfiguration (const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+	void setPDUFTableGeneratorConfiguration(
+	                const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
 	const PDUFTableGeneratorConfiguration& getPDUFTableGeneratorConfiguration() const;
 };
 

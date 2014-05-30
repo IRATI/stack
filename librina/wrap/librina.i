@@ -707,6 +707,10 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
 %rename(equals) rina::PDUForwardingTableEntry::operator==(const PDUForwardingTableEntry &other) const;
 %rename(differs) rina::PDUForwardingTableEntry::operator!=(const PDUForwardingTableEntry &other) const;
+%rename(equals) rina::PolicyParameter::operator==(const PolicyParameter &other) const;
+%rename(differs) rina::PolicyParameter::operator!=(const PolicyParameter &other) const;
+%rename(equals) rina::PolicyConfig::operator==(const PolicyConfig &other) const;
+%rename(differs) rina::PolicyConfig::operator!=(const PolicyConfig &other) const;
 
 %include "exceptions.h"
 %include "patterns.h"
@@ -775,6 +779,10 @@ MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighb
 MAKE_COLLECTION_ITERABLE(PDUForwardingTableListIterator, PDUForwardingTableEntry, std::list, rina::PDUForwardingTableEntry);
 /* Define iterator for Unsigned int list */
 MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
+/* Define iterator for PolicyParameter list */
+MAKE_COLLECTION_ITERABLE(PolicyParameterListIterator, PolicyParameter, std::list, rina::PolicyParameter);
+/* Define iterator for Parameter list */
+MAKE_COLLECTION_ITERABLE(ParameterListIterator, Parameter, std::list, rina::Parameter);
 
 %template(DIFPropertiesVector) std::vector<rina::DIFProperties>;
 %template(FlowVector) std::vector<rina::Flow>;
@@ -782,7 +790,7 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
 %template(QoSCubeList) std::list<rina::QoSCube>;
 %template(QoSCubeVector) std::vector<rina::QoSCube>;
-%template(PolicyList) std::list<rina::Policy>;
+%template(PolicyConfigList) std::list<rina::PolicyConfig>;
 %template(ParameterList) std::list<rina::Parameter>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
@@ -799,4 +807,5 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(NeighborList) std::list<rina::Neighbor>;
 %template(PDUForwardingTableEntryList) std::list<rina::PDUForwardingTableEntry>;
 %template(UnsignedIntList) std::list<unsigned int>;
+%template(PolicyParameterList) std::list<rina::PolicyParameter>;
 

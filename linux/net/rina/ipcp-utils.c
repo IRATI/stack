@@ -30,6 +30,11 @@
 #include "common.h"
 #include "ipcp-utils.h"
 
+/* FIXME: These externs have to disappear from here */
+extern int string_dup_gfp(gfp_t            flags,
+                          const string_t * src,
+                          string_t **      dst);
+
 static struct name * name_create_gfp(gfp_t flags)
 { return rkzalloc(sizeof(struct name), flags); }
 
@@ -40,57 +45,6 @@ EXPORT_SYMBOL(name_create);
 struct name * name_create_ni(void)
 { return name_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(name_create_ni);
-
-/*
- * NOTE:
- *
- * No needs to export the following string_* symbols for the time being. They
- * will be grouped here and moved into their own placeholder later on (as well
- * as all the "common" utilities). Lot of them should even be dropped ...
- *
- *   Francesco
- */
-static int string_dup_gfp(gfp_t            flags,
-                          const string_t * src,
-                          string_t **      dst)
-{
-        if (!dst) {
-                LOG_ERR("Destination string is NULL, cannot copy");
-                return -1;
-        }
-
-        /*
-         * An empty source is allowed (ref. the chain of calls) and it must
-         * provoke no consequeunces
-         */
-        if (src) {
-                *dst = rkstrdup(src, flags);
-                if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string "
-                                "in kernel-space");
-                        return -1;
-                }
-        } else {
-                LOG_DBG("Duplicating a NULL source string ...");
-                *dst = NULL;
-        }
-
-        return 0;
-}
-
-string_t * string_from_user(const char __user * src)
-{ return strdup_from_user(src); }
-EXPORT_SYMBOL(string_from_user);
-
-static int string_dup(const string_t * src, string_t ** dst)
-{ return string_dup_gfp(GFP_KERNEL, src, dst); }
-
-static int string_cmp(const string_t * a, const string_t * b)
-{ return strcmp(a, b); }
-
-/* FIXME: Should we assert here ? */
-static int string_len(const string_t * s)
-{ return strlen(s); }
 
 /* FIXME: This thing is bogus and has to be fixed properly */
 #ifdef CONFIG_RINA_DEBUG
