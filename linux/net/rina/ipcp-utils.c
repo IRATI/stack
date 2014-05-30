@@ -29,6 +29,7 @@
 #include "debug.h"
 #include "common.h"
 #include "ipcp-utils.h"
+#include "policies.h"
 
 /* FIXME: These externs have to disappear from here */
 extern int string_dup_gfp(gfp_t            flags,
@@ -423,6 +424,36 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 }
 EXPORT_SYMBOL(flow_spec_dup);
 
+struct efcp_config * efcp_config_create(void) 
+{
+        struct efcp_config * tmp;
+        
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp) 
+                return NULL;
+        
+        tmp->unknown_flow = policy_create();
+        if (!tmp->unknown_flow) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(efcp_config_create);
+
+int efcp_config_destroy(struct efcp_config * efcp_config)
+{
+        if (efcp_config->dt_cons)
+                rkfree(efcp_config->dt_cons);
+
+        if (efcp_config->unknown_flow)
+                policy_destroy(efcp_config->unknown_flow);
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_config_destroy);
+
 struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
@@ -431,8 +462,8 @@ struct dif_config * dif_config_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->dt_cons = rkzalloc(sizeof(*tmp->dt_cons), GFP_KERNEL);
-        if (!tmp->dt_cons) {
+        tmp->efcp_config = efcp_config_create();
+        if (!tmp->efcp_config) {
                 rkfree(tmp);
                 return NULL;
         }
@@ -457,8 +488,6 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
-        if (dif_config->dt_cons)
-                rkfree(dif_config->dt_cons);
         rkfree(dif_config);
 
         return 0;

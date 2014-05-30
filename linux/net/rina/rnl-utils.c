@@ -890,190 +890,6 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
-static int parse_dt_cons(struct nlattr *  attr,
-                         struct dt_cons * dt_cons)
-{
-        struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
-        struct nlattr *   attrs[DTC_ATTR_MAX + 1];
-
-        attr_policy[DTC_ATTR_QOS_ID].type        = NLA_U16;
-        attr_policy[DTC_ATTR_QOS_ID].len         = 2;
-        attr_policy[DTC_ATTR_PORT_ID].type       = NLA_U16;
-        attr_policy[DTC_ATTR_PORT_ID].len        = 2;
-        attr_policy[DTC_ATTR_CEP_ID].type        = NLA_U16;
-        attr_policy[DTC_ATTR_CEP_ID].len         = 2;
-        attr_policy[DTC_ATTR_SEQ_NUM].type       = NLA_U16;
-        attr_policy[DTC_ATTR_SEQ_NUM].len        = 2;
-        attr_policy[DTC_ATTR_ADDRESS].type       = NLA_U16;
-        attr_policy[DTC_ATTR_ADDRESS].len        = 2;
-        attr_policy[DTC_ATTR_LENGTH].type        = NLA_U16;
-        attr_policy[DTC_ATTR_LENGTH].len         = 2;
-        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type  = NLA_U32;
-        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len   = 4;
-        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type  = NLA_U32;
-        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len   = 4;
-        attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
-        attr_policy[DTC_ATTR_DIF_INTEGRITY].len  = 0;
-
-        if (nla_parse_nested(attrs, DTC_ATTR_MAX, attr, attr_policy) < 0)
-                return -1;
-
-        if (attrs[DTC_ATTR_QOS_ID])
-                dt_cons->qos_id_length =
-                        nla_get_u16(attrs[DTC_ATTR_QOS_ID]);
-
-        if (attrs[DTC_ATTR_PORT_ID])
-                dt_cons->port_id_length =
-                        nla_get_u16(attrs[DTC_ATTR_PORT_ID]);
-
-        if (attrs[DTC_ATTR_CEP_ID])
-                dt_cons->cep_id_length =
-                        nla_get_u16(attrs[DTC_ATTR_CEP_ID]);
-
-        if (attrs[DTC_ATTR_SEQ_NUM])
-                dt_cons->seq_num_length =
-                        nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
-
-        if (attrs[DTC_ATTR_ADDRESS])
-                dt_cons->address_length =
-                        nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
-
-        if (attrs[DTC_ATTR_LENGTH])
-                dt_cons->length_length =
-                        nla_get_u16(attrs[DTC_ATTR_LENGTH]);
-
-        if (attrs[DTC_ATTR_MAX_PDU_SIZE])
-                dt_cons->max_pdu_size =
-                        nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]);
-
-        if (attrs[DTC_ATTR_MAX_PDU_LIFE])
-                dt_cons->max_pdu_life =
-                        nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
-
-        if (attrs[DTC_ATTR_DIF_INTEGRITY])
-                dt_cons->dif_integrity = true;
-
-        return 0;
-}
-
-static int parse_dif_config(struct nlattr *     dif_config_attr,
-                            struct dif_config * dif_config)
-{
-        struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
-        struct nlattr *   attrs[DCONF_ATTR_MAX + 1];
-
-        attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
-        attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len  = 0;
-        attr_policy[DCONF_ATTR_DATA_TRANS_CONS].type     = NLA_NESTED;
-        attr_policy[DCONF_ATTR_DATA_TRANS_CONS].len      = 0;
-        attr_policy[DCONF_ATTR_ADDRESS].type             = NLA_U32;
-        attr_policy[DCONF_ATTR_ADDRESS].len              = 4;
-        attr_policy[DCONF_ATTR_QOS_CUBES].type           = NLA_NESTED;
-        attr_policy[DCONF_ATTR_QOS_CUBES].len            = 0;
-
-        if (nla_parse_nested(attrs,
-                             DCONF_ATTR_MAX,
-                             dif_config_attr,
-                             attr_policy) < 0)
-                goto parse_fail;
-
-        if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
-                if (parse_list_of_ipcp_config_entries(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
-                                                      dif_config) < 0)
-                        goto parse_fail;
-        }
-
-        if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                if (!dif_config->dt_cons)
-                        goto parse_fail;
-
-                if (parse_dt_cons(attrs[DCONF_ATTR_DATA_TRANS_CONS],
-                                  dif_config->dt_cons) < 0) {
-                        goto parse_fail;
-                }
-        }
-
-        if (attrs[DCONF_ATTR_ADDRESS])
-                dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
-
-        return 0;
-
- parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attributes"));
-        return -1;
-}
-
-static int parse_dif_info(struct nlattr *   dif_config_attr,
-                          struct dif_info * dif_info)
-{
-        struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
-        struct nlattr *   attrs[DINFO_ATTR_MAX + 1];
-
-        attr_policy[DINFO_ATTR_DIF_TYPE].type = NLA_STRING;
-        attr_policy[DINFO_ATTR_DIF_TYPE].len  = 0;
-        attr_policy[DINFO_ATTR_DIF_NAME].type = NLA_NESTED;
-        attr_policy[DINFO_ATTR_DIF_NAME].len  = 0;
-        attr_policy[DINFO_ATTR_CONFIG].type   = NLA_NESTED;
-        attr_policy[DINFO_ATTR_CONFIG].len    = 0;
-
-        if (nla_parse_nested(attrs,
-                             DINFO_ATTR_MAX,
-                             dif_config_attr,
-                             attr_policy) < 0)
-                goto parse_fail;
-
-        if (attrs[DINFO_ATTR_DIF_TYPE])
-                dif_info->type = nla_dup_string(attrs[DINFO_ATTR_DIF_TYPE],
-                                                GFP_KERNEL);
-        else
-                dif_info->type = NULL;
-
-        if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
-                                dif_info->dif_name) < 0)
-                goto parse_fail;
-
-        if (attrs[DINFO_ATTR_CONFIG])
-                if (parse_dif_config(attrs[DINFO_ATTR_CONFIG],
-                                     dif_info->configuration) < 0)
-                        goto parse_fail;
-
-        return 0;
-
- parse_fail:
-        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif info attribute"));
-        return -1;
-}
-
-static int parse_rib_object(struct nlattr     * rib_obj_attr,
-                            struct rib_object * rib_obj_struct)
-{
-        struct nla_policy attr_policy[RIBO_ATTR_MAX + 1];
-        struct nlattr *attrs[RIBO_ATTR_MAX + 1];
-
-        attr_policy[RIBO_ATTR_OBJECT_CLASS].type    = NLA_U32;
-        attr_policy[RIBO_ATTR_OBJECT_CLASS].len     = 4;
-        attr_policy[RIBO_ATTR_OBJECT_NAME].type     = NLA_STRING;
-        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U32;
-        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].len  = 4;
-
-        if (nla_parse_nested(attrs,
-                             RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
-                return -1;
-
-        if (attrs[RIBO_ATTR_OBJECT_CLASS])
-                rib_obj_struct->rib_obj_class =
-                        nla_get_u32(&rib_obj_attr[RIBO_ATTR_OBJECT_CLASS]);
-
-        if (attrs[RIBO_ATTR_OBJECT_NAME])
-                nla_strlcpy(rib_obj_struct->rib_obj_name,
-                            attrs[RIBO_ATTR_OBJECT_NAME],
-                            sizeof(attrs[RIBO_ATTR_OBJECT_NAME]));
-        if (attrs[RIBO_ATTR_OBJECT_INSTANCE])
-                rib_obj_struct->rib_obj_instance =
-                        nla_get_u32(&rib_obj_attr[RIBO_ATTR_OBJECT_INSTANCE]);
-        return 0;
-}
-
 static int parse_policy_param(struct nlattr * attr, struct policy_parm * param)
 {
         struct nla_policy attr_policy[PPA_ATTR_MAX + 1];
@@ -1202,6 +1018,231 @@ static int parse_policy(struct nlattr * p_attr, struct policy * p)
                 if (parse_policy_param_list(attrs[PA_ATTR_PARAMETERS], p))
                         return -1;
 
+        return 0;
+}
+
+static int parse_dt_cons(struct nlattr *  attr,
+                         struct dt_cons * dt_cons)
+{
+        struct nla_policy attr_policy[DTC_ATTR_MAX + 1];
+        struct nlattr *   attrs[DTC_ATTR_MAX + 1];
+
+        attr_policy[DTC_ATTR_QOS_ID].type        = NLA_U16;
+        attr_policy[DTC_ATTR_QOS_ID].len         = 2;
+        attr_policy[DTC_ATTR_PORT_ID].type       = NLA_U16;
+        attr_policy[DTC_ATTR_PORT_ID].len        = 2;
+        attr_policy[DTC_ATTR_CEP_ID].type        = NLA_U16;
+        attr_policy[DTC_ATTR_CEP_ID].len         = 2;
+        attr_policy[DTC_ATTR_SEQ_NUM].type       = NLA_U16;
+        attr_policy[DTC_ATTR_SEQ_NUM].len        = 2;
+        attr_policy[DTC_ATTR_ADDRESS].type       = NLA_U16;
+        attr_policy[DTC_ATTR_ADDRESS].len        = 2;
+        attr_policy[DTC_ATTR_LENGTH].type        = NLA_U16;
+        attr_policy[DTC_ATTR_LENGTH].len         = 2;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].type  = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_SIZE].len   = 4;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].type  = NLA_U32;
+        attr_policy[DTC_ATTR_MAX_PDU_LIFE].len   = 4;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].type = NLA_FLAG;
+        attr_policy[DTC_ATTR_DIF_INTEGRITY].len  = 0;
+
+        if (nla_parse_nested(attrs, DTC_ATTR_MAX, attr, attr_policy) < 0)
+                return -1;
+
+        if (attrs[DTC_ATTR_QOS_ID])
+                dt_cons->qos_id_length =
+                        nla_get_u16(attrs[DTC_ATTR_QOS_ID]);
+
+        if (attrs[DTC_ATTR_PORT_ID])
+                dt_cons->port_id_length =
+                        nla_get_u16(attrs[DTC_ATTR_PORT_ID]);
+
+        if (attrs[DTC_ATTR_CEP_ID])
+                dt_cons->cep_id_length =
+                        nla_get_u16(attrs[DTC_ATTR_CEP_ID]);
+
+        if (attrs[DTC_ATTR_SEQ_NUM])
+                dt_cons->seq_num_length =
+                        nla_get_u16(attrs[DTC_ATTR_SEQ_NUM]);
+
+        if (attrs[DTC_ATTR_ADDRESS])
+                dt_cons->address_length =
+                        nla_get_u16(attrs[DTC_ATTR_ADDRESS]);
+
+        if (attrs[DTC_ATTR_LENGTH])
+                dt_cons->length_length =
+                        nla_get_u16(attrs[DTC_ATTR_LENGTH]);
+
+        if (attrs[DTC_ATTR_MAX_PDU_SIZE])
+                dt_cons->max_pdu_size =
+                        nla_get_u32(attrs[DTC_ATTR_MAX_PDU_SIZE]);
+
+        if (attrs[DTC_ATTR_MAX_PDU_LIFE])
+                dt_cons->max_pdu_life =
+                        nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
+
+        if (attrs[DTC_ATTR_DIF_INTEGRITY])
+                dt_cons->dif_integrity = true;
+
+        return 0;
+}
+
+static int parse_efcp_config(struct nlattr *      efcp_config_attr,
+                             struct efcp_config * efcp_config)
+{
+        struct nla_policy attr_policy[EFCPC_ATTR_MAX + 1];
+        struct nlattr *   attrs[EFCPC_ATTR_MAX + 1];
+
+        attr_policy[EFCPC_ATTR_DATA_TRANS_CONS].type     = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_DATA_TRANS_CONS].len      = 0;
+        attr_policy[EFCPC_ATTR_QOS_CUBES].type           = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_QOS_CUBES].len            = 0;
+        attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].type = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].len = 0;
+
+        if (nla_parse_nested(attrs,
+                             EFCPC_ATTR_MAX,
+                             efcp_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[EFCPC_ATTR_DATA_TRANS_CONS]) {
+                if (!efcp_config->dt_cons)
+                        goto parse_fail;
+
+                if (parse_dt_cons(attrs[EFCPC_ATTR_DATA_TRANS_CONS],
+                                  efcp_config->dt_cons)) 
+                        goto parse_fail;
+        }
+
+        if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
+                if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
+                                 efcp_config->unknown_flow))
+                        return -1;
+        }
+
+        return 0;
+ 
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("efcp config attributes"));
+        return -1;
+}
+
+static int parse_dif_config(struct nlattr *     dif_config_attr,
+                            struct dif_config * dif_config)
+{
+        struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
+        struct nlattr *   attrs[DCONF_ATTR_MAX + 1];
+
+        attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
+        attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len  = 0;
+        attr_policy[DCONF_ATTR_ADDRESS].type             = NLA_U32;
+        attr_policy[DCONF_ATTR_ADDRESS].len              = 4;
+        attr_policy[DCONF_ATTR_EFCPC].type               = NLA_NESTED;
+        attr_policy[DCONF_ATTR_EFCPC].len                = 0;
+        attr_policy[DCONF_ATTR_RMTC].type                = NLA_NESTED;
+        attr_policy[DCONF_ATTR_RMTC].len                 = 0;
+
+        if (nla_parse_nested(attrs,
+                             DCONF_ATTR_MAX,
+                             dif_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES]) {
+                if (parse_list_of_ipcp_config_entries(attrs[DCONF_ATTR_IPCP_CONFIG_ENTRIES],
+                                                      dif_config) < 0)
+                        goto parse_fail;
+        }
+
+        if (attrs[DCONF_ATTR_ADDRESS])
+                dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
+
+        if (attrs[DCONF_ATTR_EFCPC]) {
+                if (!dif_config->efcp_config)
+                        goto parse_fail;
+
+                if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
+                                  dif_config->efcp_config)) {
+                        goto parse_fail;
+                }
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attributes"));
+        return -1;
+}
+
+static int parse_dif_info(struct nlattr *   dif_config_attr,
+                          struct dif_info * dif_info)
+{
+        struct nla_policy attr_policy[DINFO_ATTR_MAX + 1];
+        struct nlattr *   attrs[DINFO_ATTR_MAX + 1];
+
+        attr_policy[DINFO_ATTR_DIF_TYPE].type = NLA_STRING;
+        attr_policy[DINFO_ATTR_DIF_TYPE].len  = 0;
+        attr_policy[DINFO_ATTR_DIF_NAME].type = NLA_NESTED;
+        attr_policy[DINFO_ATTR_DIF_NAME].len  = 0;
+        attr_policy[DINFO_ATTR_CONFIG].type   = NLA_NESTED;
+        attr_policy[DINFO_ATTR_CONFIG].len    = 0;
+
+        if (nla_parse_nested(attrs,
+                             DINFO_ATTR_MAX,
+                             dif_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[DINFO_ATTR_DIF_TYPE])
+                dif_info->type = nla_dup_string(attrs[DINFO_ATTR_DIF_TYPE],
+                                                GFP_KERNEL);
+        else
+                dif_info->type = NULL;
+
+        if (parse_app_name_info(attrs[DINFO_ATTR_DIF_NAME],
+                                dif_info->dif_name) < 0)
+                goto parse_fail;
+
+        if (attrs[DINFO_ATTR_CONFIG])
+                if (parse_dif_config(attrs[DINFO_ATTR_CONFIG],
+                                     dif_info->configuration) < 0)
+                        goto parse_fail;
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif info attribute"));
+        return -1;
+}
+
+static int parse_rib_object(struct nlattr     * rib_obj_attr,
+                            struct rib_object * rib_obj_struct)
+{
+        struct nla_policy attr_policy[RIBO_ATTR_MAX + 1];
+        struct nlattr *attrs[RIBO_ATTR_MAX + 1];
+
+        attr_policy[RIBO_ATTR_OBJECT_CLASS].type    = NLA_U32;
+        attr_policy[RIBO_ATTR_OBJECT_CLASS].len     = 4;
+        attr_policy[RIBO_ATTR_OBJECT_NAME].type     = NLA_STRING;
+        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U32;
+        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].len  = 4;
+
+        if (nla_parse_nested(attrs,
+                             RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
+                return -1;
+
+        if (attrs[RIBO_ATTR_OBJECT_CLASS])
+                rib_obj_struct->rib_obj_class =
+                        nla_get_u32(&rib_obj_attr[RIBO_ATTR_OBJECT_CLASS]);
+
+        if (attrs[RIBO_ATTR_OBJECT_NAME])
+                nla_strlcpy(rib_obj_struct->rib_obj_name,
+                            attrs[RIBO_ATTR_OBJECT_NAME],
+                            sizeof(attrs[RIBO_ATTR_OBJECT_NAME]));
+        if (attrs[RIBO_ATTR_OBJECT_INSTANCE])
+                rib_obj_struct->rib_obj_instance =
+                        nla_get_u32(&rib_obj_attr[RIBO_ATTR_OBJECT_INSTANCE]);
         return 0;
 }
 

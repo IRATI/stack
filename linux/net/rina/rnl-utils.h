@@ -394,11 +394,19 @@ enum data_transfer_cons_attrs_list {
 };
 #define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
 
+enum efcp_config_attrs_list {
+        EFCPC_ATTR_DATA_TRANS_CONS = 1,
+        EFCPC_ATTR_QOS_CUBES,
+        EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
+        __EFCPC_ATTR_MAX,
+};
+#define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
-        DCONF_ATTR_DATA_TRANS_CONS,
         DCONF_ATTR_ADDRESS,
-        DCONF_ATTR_QOS_CUBES,
+        DCONF_ATTR_EFCPC,
+        DCONF_ATTR_RMTC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
