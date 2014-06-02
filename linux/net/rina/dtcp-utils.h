@@ -89,9 +89,6 @@ int dtcp_receiving_flow_control_set(struct dtcp_config * cfg,
 /* dtcp_rxctrl_config */
 int dtcp_data_retransmit_max_set(struct dtcp_config * cfg,
                                  uint_t data_retransmit_max);
-int dtcp_initial_a_set(struct dtcp_config * cfg, timeout_t initial_a);
-int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
-                           struct policy * rtt_estimator);
 int dtcp_retransmission_timer_expiry_set(struct dtcp_config * cfg,
                                          struct policy * rtx_timer_expiry);
 int dtcp_sender_ack_set(struct dtcp_config * cfg,
@@ -116,6 +113,8 @@ int dtcp_sender_inactivity_set(struct dtcp_config * cfg,
                                timeout_t sender_inactivity);
 int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
                               struct policy * lost_control_pdu);
+int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
+                           struct policy * rtt_estimator);
 
 /* Getters */
 /* window_fctrl_config */
@@ -151,8 +150,6 @@ struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg);
 
 /* dtcp_rxctrl_config */
 uint_t          dtcp_data_retransmit_max(struct dtcp_config * cfg);
-timeout_t       dtcp_initial_a(struct dtcp_config * cfg);
-struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg);
 struct policy * dtcp_retransmission_timer_expiry(struct dtcp_config * cfg);
 struct policy * dtcp_sender_ack(struct dtcp_config * cfg);
 struct policy * dtcp_receiving_ack_list(struct dtcp_config * cfg);
@@ -168,6 +165,7 @@ struct dtcp_rxctrl_config * dtcp_rxctrl_cfg(struct dtcp_config * cfg);
 timeout_t                   dtcp_receiver_inactivity(struct dtcp_config * cfg);
 timeout_t                   dtcp_sender_inactivity(struct dtcp_config * cfg);
 struct policy *             dtcp_lost_control_pdu(struct dtcp_config * cfg);
+struct policy *             dtcp_rtt_estimator(struct dtcp_config * cfg);
 
 #endif
 

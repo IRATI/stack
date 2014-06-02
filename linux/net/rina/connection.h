@@ -39,6 +39,7 @@ struct conn_policies {
         struct policy *       initial_sequence_number;
         /* Sequence number rollover threshold */
         int                   seq_num_ro_th;
+        timeout_t             initial_a_timer;
 };
 
 /* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */

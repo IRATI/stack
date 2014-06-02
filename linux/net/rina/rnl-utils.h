@@ -126,8 +126,6 @@ enum dtcp_fctrl_config_attrs_lists {
 
 enum dtcp_rctrl_config_attrs_list {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
-        DRCC_ATTR_INIT_A_TIMER,
-        DRCC_ATTR_RTT_EST_POLICY,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,
@@ -148,6 +146,7 @@ enum dtcp_config_params_attrs_list {
         DCA_ATTR_RCVR_TIMER_INAC_POLICY,
         DCA_ATTR_SNDR_TIMER_INAC_POLICY,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
 };
 #define DCA_ATTR_MAX (__DCA_ATTR_MAX - 1)
@@ -157,6 +156,7 @@ enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_CONFIG,
         CPP_ATTR_INIT_SEQ_NUM_POLICY,
         CPP_ATTR_SEQ_NUM_ROLLOVER,
+        CPP_ATTR_INIT_A_TIMER,
         __CPP_ATTR_MAX,
 };
 #define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)

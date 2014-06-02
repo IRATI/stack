@@ -66,8 +66,6 @@ struct dtcp_fctrl_config {
 
 struct dtcp_rxctrl_config {
         uint_t          data_retransmit_max;
-        timeout_t       initial_a;
-        struct policy * rtt_estimator;
         struct policy * retransmission_timer_expiry;
         struct policy * sender_ack;
         struct policy * receiving_ack_list;
@@ -87,6 +85,7 @@ struct dtcp_config {
         struct policy *             receiver_inactivity_timer;
         struct policy *             sender_inactivity_timer;
         struct policy *             lost_control_pdu;
+        struct policy *             rtt_estimator;
 };
 
 static int dtcp_window_fctrl_config_destroy(struct window_fctrl_config * cfg)
@@ -227,8 +226,6 @@ static int dtcp_rxctrl_config_destroy(struct dtcp_rxctrl_config * cfg)
 {
         if (!cfg)
                 return -1;
-        if (cfg->rtt_estimator)
-                policy_destroy(cfg->rtt_estimator);
         if (cfg->retransmission_timer_expiry)
                 policy_destroy(cfg->retransmission_timer_expiry);
         if (cfg->sender_ack)
@@ -255,7 +252,6 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
-        tmp->rtt_estimator               = policy_create_gfp(flags);
         tmp->retransmission_timer_expiry = policy_create_gfp(flags);
         tmp->sender_ack                  = policy_create_gfp(flags);
         tmp->receiving_ack_list          = policy_create_gfp(flags);
@@ -263,8 +259,7 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
         tmp->sending_ack                 = policy_create_gfp(flags);
         tmp->rcvr_control_ack            = policy_create_gfp(flags);
 
-        if (!tmp->rtt_estimator               ||
-           !tmp->retransmission_timer_expiry ||
+        if (tmp->retransmission_timer_expiry ||
            !tmp->sender_ack                  ||
            !tmp->receiving_ack_list          ||
            !tmp->rcvr_ack                    ||
@@ -292,6 +287,8 @@ int dtcp_config_destroy(struct dtcp_config * cfg)
                 policy_destroy(cfg->sender_inactivity_timer);
         if (cfg->lost_control_pdu)
                 policy_destroy(cfg->lost_control_pdu);
+        if (cfg->rtt_estimator)
+                policy_destroy(cfg->rtt_estimator);
 
         rkfree(cfg);
 
@@ -336,6 +333,13 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
         tmp->lost_control_pdu = policy_create_gfp(flags);
         if (!tmp->lost_control_pdu) {
                 LOG_ERR("Could not create lost_control_pdu"
+                        "in dtcp_config_create");
+                goto clean;
+        }
+
+        tmp->rtt_estimator= policy_create_gfp(flags);
+        if (!tmp->rtt_estimator) {
+                LOG_ERR("Could not create rtt_estimator"
                         "in dtcp_config_create");
                 goto clean;
         }
@@ -644,29 +648,6 @@ int dtcp_data_retransmit_max_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_data_retransmit_max_set);
 
-int dtcp_initial_a_set(struct dtcp_config * cfg, timeout_t initial_a)
-{
-        if (!cfg)
-                return -1;
-
-        cfg->rxctrl_cfg->initial_a = initial_a;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_initial_a_set);
-
-int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
-                           struct policy * rtt_estimator)
-{
-        if (!cfg) return -1;
-        if (!rtt_estimator) return -1;
-
-        cfg->rxctrl_cfg->rtt_estimator = rtt_estimator;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_rtt_estimator_set);
-
 int dtcp_retransmission_timer_expiry_set(struct dtcp_config * cfg,
                                          struct policy * rtx_timer_expiry)
 {
@@ -844,6 +825,18 @@ int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_lost_control_pdu_set);
 
+int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
+                           struct policy * rtt_estimator)
+{
+        if (!cfg) return -1;
+        if (!rtt_estimator) return -1;
+
+        cfg->rtt_estimator = rtt_estimator;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_rtt_estimator_set);
+
 /* Getters */
 /* window_fctrl_config */
 uint_t dtcp_max_closed_winq_length(struct dtcp_config * cfg)
@@ -1017,20 +1010,6 @@ uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg)
 }
 EXPORT_SYMBOL(dtcp_data_retransmit_max);
 
-timeout_t dtcp_initial_a(struct dtcp_config * cfg)
-{
-        ASSERT(cfg);
-        return cfg->rxctrl_cfg->initial_a;
-}
-EXPORT_SYMBOL(dtcp_initial_a);
-
-struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg)
-{
-        ASSERT(cfg);
-        return cfg->rxctrl_cfg->rtt_estimator;
-}
-EXPORT_SYMBOL(dtcp_rtt_estimator);
-
 struct policy * dtcp_retransmission_timer_expiry(struct dtcp_config * cfg)
 {
         ASSERT(cfg);
@@ -1137,3 +1116,9 @@ struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg)
 }
 EXPORT_SYMBOL(dtcp_lost_control_pdu);
 
+struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg)
+{
+        ASSERT(cfg);
+        return cfg->rtt_estimator;
+}
+EXPORT_SYMBOL(dtcp_rtt_estimator);

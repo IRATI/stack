@@ -1441,10 +1441,6 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
 
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type      = NLA_U32;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].len       = 4;
-        attr_policy[DRCC_ATTR_INIT_A_TIMER].type        = NLA_U32;
-        attr_policy[DRCC_ATTR_INIT_A_TIMER].len         = 4;
-        attr_policy[DRCC_ATTR_RTT_EST_POLICY].type      = NLA_NESTED;
-        attr_policy[DRCC_ATTR_RTT_EST_POLICY].len       = 0;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].len  = 0;
         attr_policy[DRCC_ATTR_SACK_POLICY].type         = NLA_NESTED;
@@ -1466,15 +1462,6 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
         if (attrs[DRCC_ATTR_DATA_RXMSN_MAX])
                 dtcp_data_retransmit_max_set(cfg,
                                              nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
-
-        if (attrs[DRCC_ATTR_INIT_A_TIMER])
-                dtcp_initial_a_set(cfg,
-                                   nla_get_u32(attrs[DRCC_ATTR_INIT_A_TIMER]));
-
-        if (attrs[DRCC_ATTR_RTT_EST_POLICY])
-                if (parse_policy(attrs[DRCC_ATTR_RTT_EST_POLICY],
-                                 dtcp_rtt_estimator(cfg)))
-                        return -1;
 
         if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY])
                 if (parse_policy(attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY],
@@ -1532,6 +1519,8 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
         attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].len   = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].len  = 0;
+        attr_policy[DCA_ATTR_RTT_EST_POLICY].type          = NLA_NESTED;
+        attr_policy[DCA_ATTR_RTT_EST_POLICY].len           = 0;
 
         if (!attr || !cfg) {
                 LOG_ERR("Bogus input to parse dtcp_config");
@@ -1585,6 +1574,11 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
                                  dtcp_lost_control_pdu(cfg)))
                         return -1;
 
+        if (attrs[DCA_ATTR_RTT_EST_POLICY])
+                if (parse_policy(attrs[DCA_ATTR_RTT_EST_POLICY],
+                                 dtcp_rtt_estimator(cfg)))
+                        return -1;
+
         return 0;
 }
 
@@ -1602,6 +1596,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_INIT_SEQ_NUM_POLICY].len  = 0;
         attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].type    = NLA_U32;
         attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].len     = 4;
+        attr_policy[CPP_ATTR_INIT_A_TIMER].type        = NLA_U32;
+        attr_policy[CPP_ATTR_INIT_A_TIMER].len         = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
@@ -1635,6 +1631,10 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         if (attrs[CPP_ATTR_SEQ_NUM_ROLLOVER])
                 cpp_struct->seq_num_ro_th =
                         nla_get_u32(attrs[CPP_ATTR_SEQ_NUM_ROLLOVER]);
+
+        if (attrs[CPP_ATTR_INIT_A_TIMER])
+                cpp_struct->initial_a_timer =
+                                   nla_get_u32(attrs[CPP_ATTR_INIT_A_TIMER]);
 
         return 0;
 }
