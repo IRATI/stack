@@ -1,4 +1,4 @@
-package rina.PDUForwardingTable.api;
+package rina.pduftg.api.linkstate;
 
 public interface VertexInt {
 	public long getAddress();

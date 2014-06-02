@@ -34,6 +34,7 @@ import eu.irati.librina.IpcmUnregisterApplicationResponseEvent;
 import eu.irati.librina.Neighbor;
 import eu.irati.librina.NeighborsModifiedNotificationEvent;
 import eu.irati.librina.PDUFTableGeneratorConfiguration;
+import eu.irati.librina.Parameter;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.UpdateDIFConfigurationResponseEvent;
 
@@ -190,6 +191,24 @@ public class IPCProcessManager {
 						difInformation.getDifName().getProcessName() + "\n"; 
 				if (difInformation.getDifConfiguration() != null) {
 					DIFConfiguration difConfiguration = difInformation.getDifConfiguration();
+					
+					if (!ipcProcess.getType().equals(IPCManager.NORMAL_IPC_PROCESS_TYPE)) {
+						if (difConfiguration.getParameters() != null && 
+								difConfiguration.getParameters().size() > 0){
+							Iterator<Parameter> paramIterator = difConfiguration.getParameters().iterator();
+							result = result + "        Parameters: \n";
+							Parameter next = null;
+							while (paramIterator.hasNext()){
+								next = paramIterator.next();
+								result = result + "            Name: " + next.getName() 
+										+ "; Value: " + next.getValue() + "\n";
+							}
+						}
+						
+						result = result + "\n";
+						continue;
+					}
+					
 					if (difConfiguration.getAddress() > 0) {
 						result = result + "        Address: " + difConfiguration.getAddress() + "\n";
 					}
@@ -218,6 +237,7 @@ public class IPCProcessManager {
 						result = result + "            Id: " + qosCube.getId() + "\n";
 						result = result + "            Ordered delivery: " + qosCube.isOrderedDelivery() + "\n";
 						result = result + "            Partial delivery: " + qosCube.isOrderedDelivery() + "\n";
+						result = result + "            EFCP policies: " + qosCube.getEfcpPolicies();
 						result = result + "            --------------------: \n";
 					}
 					
@@ -226,12 +246,22 @@ public class IPCProcessManager {
 					{
 						result = result + "        PDUFTableGeneratofConfiguration: \n";
 						PDUFTableGeneratorConfiguration pduftTableGeneratorConfiguration = difConfiguration.getPDUFTableGeneratorConfiguration();
-						result = result + "            objectMaximumAge: " + pduftTableGeneratorConfiguration.getObjectMaximumAge() + "\n";
-						result = result + "            waitUntilReadCDAP: " + pduftTableGeneratorConfiguration.getWaitUntilReadCDAP() + "\n";
-						result = result + "            waitUntilError: " + pduftTableGeneratorConfiguration.getWaitUntilError() + "\n";
-						result = result + "            waitUntilPDUFTComputation: " + pduftTableGeneratorConfiguration.getWaitUntilPDUFTComputation() + "\n";
-						result = result + "            waitUntilFSODBPropagation: " + pduftTableGeneratorConfiguration.getWaitUntilFSODBPropagation() + "\n";
-						result = result + "            waitUntilAgeIncrement: " + pduftTableGeneratorConfiguration.getWaitUntilAgeIncrement() + "\n";
+						result = result + "            PDUFTG policy: " + pduftTableGeneratorConfiguration.getPduFtGeneratorPolicy().getName()+"/" 
+									+ pduftTableGeneratorConfiguration.getPduFtGeneratorPolicy().getVersion() + "\n";
+						if (pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration() != null) {
+							result = result + "            objectMaximumAge: " + 
+									pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getObjectMaximumAge() + "\n";
+							result = result + "            waitUntilReadCDAP: " + 
+									pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilReadCDAP() + "\n";
+							result = result + "            waitUntilError: " + 
+									pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilError() + "\n";
+							result = result + "            waitUntilPDUFTComputation: " + 
+									pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilPDUFTComputation() + "\n";
+							result = result + "            waitUntilFSODBPropagation: " + 
+									pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilFSODBPropagation() + "\n";
+							result = result + "            waitUntilAgeIncrement: " +
+									pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration().getWaitUntilAgeIncrement() + "\n";
+						}
 					}
 					
 					Iterator<Neighbor> neighborIterator = ipcProcess.getNeighbors().iterator();

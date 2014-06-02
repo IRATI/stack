@@ -1,4 +1,4 @@
-package rina.PDUForwardingTable.api;
+package rina.pduftg.api.linkstate;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -17,8 +17,9 @@ public class FlowStateObject{
 	
 	protected String ID = RIBObjectNames.SEPARATOR + 
 			RIBObjectNames.DIF + RIBObjectNames.SEPARATOR + RIBObjectNames.MANAGEMENT
-			+ RIBObjectNames.SEPARATOR + RIBObjectNames.ROUTING + RIBObjectNames.SEPARATOR 
-			+ RIBObjectNames.FLOWSTATEOBJECTGROUP + RIBObjectNames.SEPARATOR;
+			+ RIBObjectNames.SEPARATOR + RIBObjectNames.PDUFTG + RIBObjectNames.SEPARATOR 
+			+ RIBObjectNames.LINKSTATE + RIBObjectNames.SEPARATOR + RIBObjectNames.FLOWSTATEOBJECTGROUP 
+			+ RIBObjectNames.SEPARATOR;
 	
 	/* The address of the IPC Process */ 
 	protected long address;

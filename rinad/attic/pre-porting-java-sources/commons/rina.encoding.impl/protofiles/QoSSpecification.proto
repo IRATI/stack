@@ -1,6 +1,6 @@
 package rina.messages;
 option java_package="rina.encoding.impl.googleprotobuf.qosspecification";
-import "protofiles/PropertyMessage.proto";
+import "protofiles/CommonMessages.proto";
 
 message qosSpecification_t{									//The QoS parameters requested by an application for a certain flow
 	optional string name = 1;						//The name of the QoS cube, if known

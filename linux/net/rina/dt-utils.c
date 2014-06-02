@@ -106,9 +106,9 @@ int cwq_push(struct cwq * queue,
         LOG_DBG("Pushing in the Closed Window Queue");
         spin_lock(&queue->lock);
         if (rqueue_tail_push_ni(queue->q, pdu)) {
-                LOG_ERR("Failed to add PDU");
                 pdu_destroy(pdu);
                 spin_unlock(&queue->lock);
+                LOG_ERR("Failed to add PDU");
                 return -1;
         }
         spin_unlock(&queue->lock);
@@ -149,10 +149,17 @@ bool cwq_is_empty(struct cwq * queue)
         return ret;
 }
 
-size_t cwq_size(struct cwq * queue)
+ssize_t cwq_size(struct cwq * queue)
 {
-        LOG_MISSING;
-        return 0;
+        ssize_t tmp;
+
+        if (!queue)
+                return -1;
+        spin_lock(&queue->lock);
+        tmp = rqueue_length(queue->q);
+        spin_unlock(&queue->lock);
+
+        return tmp;
 }
 
 struct rtxq_entry {

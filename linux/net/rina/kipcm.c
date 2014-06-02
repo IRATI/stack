@@ -799,6 +799,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                 goto fail;
         }
 
+        /* IPCP takes ownership of the cp_params */
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,

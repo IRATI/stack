@@ -31,7 +31,8 @@ public interface RIBObjectNames {
 	public static final String SEPARATOR = "/";
 	public static final String SYNONYMS = "synonyms";
 	public static final String WHATEVERCAST_NAMES = "whatevercastnames";
-	public static final String ROUTING = "routing";
+	public static final String PDUFTG = "pduftgenerator";
+	public static final String LINKSTATE = "pduftgenerator";
 	public static final String FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
 	
 	/* Full names */

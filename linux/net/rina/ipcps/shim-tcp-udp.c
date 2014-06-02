@@ -116,12 +116,12 @@ struct shim_tcp_udp_flow {
 static struct list_head applications;
 
 struct app_register_data {
-        struct list_head	list;
+        struct list_head        list;
 
-        struct name *		app_name;
+        struct name *           app_name;
 
         int                     ip_address;
-        int			port;
+        int                     port;
 };
 
 struct rcv_data {
