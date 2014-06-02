@@ -42,8 +42,9 @@ void vmpi_impl_callbacks_register(vmpi_impl_info_t *vi,
 void vmpi_impl_callbacks_unregister(vmpi_impl_info_t *vi);
 
 vmpi_info_t *vmpi_info_from_vmpi_impl_info(vmpi_impl_info_t *vi);
-vmpi_info_t *vmpi_init(vmpi_impl_info_t *vi, int *err);
-void vmpi_fini(void);
+vmpi_info_t *vmpi_init(vmpi_impl_info_t *vi, int *err,
+                       bool deferred_test_init);
+void vmpi_fini(bool deferred_test_fini);
 
 
 #endif  /* __VMPI_GUEST_IMPL_H__ */

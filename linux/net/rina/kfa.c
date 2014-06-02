@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +41,7 @@
 #include "rmt.h"
 
 struct kfa {
-        spinlock_t        lock;
+        struct mutex     lock;
         struct pidm *     pidm;
         struct kfa_pmap * flows;
 };
@@ -85,7 +86,7 @@ struct kfa * kfa_create(void)
                 return NULL;
         }
 
-        spin_lock_init(&instance->lock);
+        mutex_init(&instance->lock);
 
         return instance;
 }
@@ -134,17 +135,17 @@ int kfa_flow_create(struct kfa *     instance,
 
         init_waitqueue_head(&flow->wait_queue);
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
                 LOG_ERR("Could not map flow and port-id %d", pid);
                 rkfree(flow);
 
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return 0;
 }
@@ -160,22 +161,22 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
                 return port_id_bad();
         }
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         if (!instance->pidm) {
                 LOG_ERR("This KFA instance doesn't have a PIDM");
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return port_id_bad();
         }
 
         pid = pidm_allocate(instance->pidm);
         if (!is_port_id_ok(pid)) {
                 LOG_ERR("Cannot get a port-id");
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return port_id_bad();
         }
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return pid;
 }
@@ -194,21 +195,21 @@ int  kfa_port_id_release(struct kfa * instance,
                 return -1;
         }
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         if (!instance->pidm) {
                 LOG_ERR("This KFA instance doesn't have a PIDM");
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
         if (pidm_release(instance->pidm, port_id)) {
                 LOG_ERR("Could not release pid %d from the map", port_id);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return 0;
 }
@@ -237,19 +238,19 @@ int kfa_flow_bind(struct kfa *           instance,
         }
         /* FIXME: Check the ipc-id */
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 LOG_ERR("The flow with port-id %d is not pending, "
                         "cannot commit it", pid);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
         if (flow->state != PORT_STATE_PENDING) {
                 LOG_ERR("Flow on port-id %d already committed", pid);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
@@ -258,14 +259,14 @@ int kfa_flow_bind(struct kfa *           instance,
         if (!flow->sdu_ready) {
                 kfa_pmap_remove(instance->flows, pid);
                 rkfree(flow);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return 0;
 }
@@ -283,18 +284,18 @@ int kfa_flow_rmt_bind(struct kfa * instance,
         if (!is_port_id_ok(pid))
                 return -1;
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 LOG_ERR("The flow with port-id %d does not exist, "
                         "cannot bind rmt", pid);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
         flow->rmt = rmt;
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return 0;
 }
@@ -311,18 +312,18 @@ int kfa_flow_rmt_unbind(struct kfa * instance,
         if (!is_port_id_ok(pid))
                 return -1;
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 LOG_ERR("The flow with port-id %d does not exist, "
                         "cannot unbind rmt", pid);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
         flow->rmt = NULL;
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return 0;
 }
@@ -400,12 +401,12 @@ int kfa_flow_deallocate(struct kfa * instance,
                 return -1;
         }
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow created with port-id %d", id);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
@@ -415,11 +416,11 @@ int kfa_flow_deallocate(struct kfa * instance,
             (atomic_read(&flow->writers) == 0)) {
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return 0;
         }
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         wake_up_all(&flow->wait_queue);
 
@@ -473,18 +474,18 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         LOG_DBG("Trying to write SDU to port-id %d", id);
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 sdu_destroy(sdu);
                 return -1;
         }
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -492,7 +493,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
         atomic_inc(&flow->writers);
 
         while (flow->state == PORT_STATE_PENDING) {
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
 
                 LOG_DBG("Going to sleep on wait queue %pK (writing)",
                         &flow->wait_queue);
@@ -503,13 +504,13 @@ int kfa_flow_sdu_write(struct kfa * instance,
                         LOG_ERR("Wait-event interrupted (%d)", retval);
                 LOG_DBG("Write woken up");
 
-                spin_lock(&instance->lock);
+                mutex_lock(&instance->lock);
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
-                        spin_unlock(&instance->lock);
+                        mutex_unlock(&instance->lock);
                         sdu_destroy(sdu);
                         return -1;
                 }
@@ -545,7 +546,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return retval;
 }
@@ -583,12 +584,12 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         LOG_DBG("Trying to read SDU from port-id %d", id);
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
         if (flow->state == PORT_STATE_DEALLOCATED) {
@@ -600,7 +601,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         while (flow->state == PORT_STATE_PENDING ||
                rfifo_is_empty(flow->sdu_ready)) {
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
 
                 LOG_DBG("Going to sleep on wait queue %pK (reading)",
                         &flow->wait_queue);
@@ -609,14 +610,14 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 if (retval)
                         LOG_ERR("Wait-event interrupted (%d)", retval);
 
-                spin_lock(&instance->lock);
+                mutex_lock(&instance->lock);
                 LOG_DBG("Read Woken up");
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
-                        spin_unlock(&instance->lock);
+                        mutex_unlock(&instance->lock);
                         return -1;
                 }
 
@@ -648,7 +649,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return retval;
 }
@@ -675,11 +676,11 @@ int kfa_sdu_post(struct kfa * instance,
 
         LOG_DBG("Posting SDU to port-id %d ", id);
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
@@ -688,7 +689,7 @@ int kfa_sdu_post(struct kfa * instance,
                         LOG_ERR("Could not write %zd bytes into "
                                 "port-id %d fifo",
                                 sizeof(struct sdu *), id);
-                        spin_unlock(&instance->lock);
+                        mutex_unlock(&instance->lock);
                         return -1;
                 }
                 wq = &flow->wait_queue;
@@ -697,7 +698,7 @@ int kfa_sdu_post(struct kfa * instance,
                 LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
                         wq, wq->task_list.next, wq->task_list.prev);
 
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
 
                 LOG_DBG("SDU posted");
 
@@ -709,12 +710,12 @@ int kfa_sdu_post(struct kfa * instance,
         } else {
                 if (rmt_receive(flow->rmt, sdu, id)) {
                         LOG_ERR("Could not post SDU into the RMT");
-                        spin_unlock(&instance->lock);
+                        mutex_unlock(&instance->lock);
                         return -1;
                 }
 
                 LOG_DBG("SDU posted to RMT");
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return 0;
         }
 }
@@ -728,9 +729,9 @@ struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
         if (!instance)
                 return NULL;
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
         tmp = kfa_pmap_find(instance->flows, pid);
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return tmp;
 }
@@ -777,18 +778,18 @@ int kfa_flow_ipcp_bind(struct kfa *           instance,
         if (!ipcp)
                 return -1;
 
-        spin_lock(&instance->lock);
+        mutex_lock(&instance->lock);
 
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 LOG_ERR("There is no flow with port-id %d, "
                         "cannot bind it", pid);
-                spin_unlock(&instance->lock);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
         flow->ipc_process = ipcp;
 
-        spin_unlock(&instance->lock);
+        mutex_unlock(&instance->lock);
 
         return 0;
 }

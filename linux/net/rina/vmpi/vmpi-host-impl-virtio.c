@@ -36,7 +36,6 @@
 #include "vmpi-structs.h"
 #include "vmpi.h"
 #include "vmpi-host-impl.h"
-#include "vmpi-host-test.h"
 
 
 #ifdef VERBOSE
@@ -411,7 +410,14 @@ vhost_mpi_open(struct inode *inode, struct file *f)
 
         init_waitqueue_head(&vi->wqh_poll);
 
-        vi->mpi = vmpi_init(vi, &r);
+        /* We tell vmpi_test_init() to do its work in another
+         * process context, in order to avoid a deadlock.
+         * The deadlock would show up because in this point
+         * we hold the misc_open() mutex, and the same mutex
+         * is required by misc_register(), which is necessary
+         * to init the test device.
+         */
+        vi->mpi = vmpi_init(vi, &r, true);
         if (vi->mpi == NULL) {
                 goto buf_alloc_fail;
         }
@@ -495,7 +501,10 @@ vhost_mpi_release(struct inode *inode, struct file *f)
         /* We do an extra flush before freeing memory,
          * since jobs can re-queue themselves. */
         vhost_mpi_flush(vi);
-        vmpi_fini(vi->mpi);
+        /* Here the same reasoning explained above (right
+         * before the vmpi_init() call) apply.
+         */
+        vmpi_fini(vi->mpi, true);
         kfree(vi->dev.vqs);
         kfree(vi);
 
@@ -730,14 +739,6 @@ vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buffer *buf)
 
 }
 
-#ifdef VMPI_HOST_TEST
-vmpi_info_t *
-vmpi_info_from_vmpi_impl_info(struct vmpi_impl_info *vi)
-{
-        return vi->mpi;
-}
-#endif  /* VMPI_HOST_TEST */
-
 static const struct file_operations vhost_mpi_fops = {
         .owner          = THIS_MODULE,
         .release        = vhost_mpi_release,
@@ -747,12 +748,6 @@ static const struct file_operations vhost_mpi_fops = {
 #endif
         .poll           = vhost_mpi_poll,
         .open           = vhost_mpi_open,
-#ifdef VMPI_HOST_TEST
-        .write          = do_sync_write,
-        .aio_write      = vhost_mpi_aio_write,
-        .read           = do_sync_read,
-        .aio_read       = vhost_mpi_aio_read,
-#endif  /* VMPI_HOST_TEST */
         .llseek         = noop_llseek,
 };
 
