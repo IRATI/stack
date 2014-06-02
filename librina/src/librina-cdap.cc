@@ -22,6 +22,12 @@ namespace rina {
 AuthValue::AuthValue() {
 }
 
+bool AuthValue::is_empty() const {
+	if (auth_name_.empty() && auth_password_.empty() && auth_other_.empty())
+		return true;
+	else
+		return false;
+}
 // CLASS AbstractObjectValue
 template<typename T>
 AbstractObjectValue<T>::AbstractObjectValue() {
@@ -113,7 +119,7 @@ CDAPException::CDAPException(int arg0, std::string arg1) :
 
 /* CLASS CDAPMessageValidator */
 void CDAPMessageValidator::validate(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	validateAbsSyntax(message);
 	validateAuthMech(message);
 	validateAuthValue(message);
@@ -139,7 +145,7 @@ void CDAPMessageValidator::validate(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateAbsSyntax(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_abs_syntax() == 0) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT
 				|| message.get_op_code() == CDAPMessage::M_CONNECT_R) {
@@ -158,7 +164,7 @@ void CDAPMessageValidator::validateAbsSyntax(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateAuthMech(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_auth_mech() != CDAPMessage::AUTH_NONE) {
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
@@ -170,7 +176,7 @@ void CDAPMessageValidator::validateAuthMech(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateAuthValue(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 			&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
 		throw CDAPException(
@@ -180,7 +186,7 @@ void CDAPMessageValidator::validateAuthValue(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateDestAEInst(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_dest_ae_inst().empty()) {
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
@@ -192,7 +198,7 @@ void CDAPMessageValidator::validateDestAEInst(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateDestAEName(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_dest_ae_name().empty()) {
 		if ((message.get_op_code() != CDAPMessage::M_CONNECT)
 				&& (message.get_op_code() != CDAPMessage::M_CONNECT_R)) {
@@ -204,7 +210,7 @@ void CDAPMessageValidator::validateDestAEName(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateDestApInst(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_dest_ap_inst().empty()) {
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
@@ -216,7 +222,7 @@ void CDAPMessageValidator::validateDestApInst(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateDestApName(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_dest_ap_name().empty()) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT) {
 			throw CDAPException(
@@ -236,7 +242,7 @@ void CDAPMessageValidator::validateDestApName(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateFilter(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_filter() != 0) {
 		if (message.get_op_code() != CDAPMessage::M_CREATE
 				&& message.get_op_code() != CDAPMessage::M_DELETE
@@ -252,7 +258,7 @@ void CDAPMessageValidator::validateFilter(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateInvokeID(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_invoke_id() == 0) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT
 				|| message.get_op_code() == CDAPMessage::M_CONNECT_R
@@ -272,7 +278,7 @@ void CDAPMessageValidator::validateInvokeID(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateObjClass(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_obj_class().empty()) {
 		if (!message.get_obj_name().empty()) {
 			throw CDAPException(
@@ -299,7 +305,7 @@ void CDAPMessageValidator::validateObjClass(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateObjInst(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_obj_inst() != 0) {
 		if (message.get_op_code() != CDAPMessage::M_CREATE
 				&& message.get_op_code() != CDAPMessage::M_CREATE_R
@@ -321,7 +327,7 @@ void CDAPMessageValidator::validateObjInst(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateObjName(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_obj_name().empty()) {
 		if (message.get_obj_class().empty()) {
 			throw new CDAPException(
@@ -348,7 +354,7 @@ void CDAPMessageValidator::validateObjName(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateObjValue(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_obj_value()->is_empty()) {
 		if (message.get_op_code() == CDAPMessage::M_WRITE) {
 			throw CDAPException(
@@ -374,7 +380,7 @@ void CDAPMessageValidator::validateObjValue(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateOpcode(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_op_code() == CDAPMessage::NONE_OPCODE) {
 		throw CDAPException(
 				std::string("The opcode must be set for all the messages"));
@@ -382,13 +388,13 @@ void CDAPMessageValidator::validateOpcode(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateResult(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	/* FIXME: Do something with sense */
 	message.get_abs_syntax();
 }
 
 void CDAPMessageValidator::validateResultReason(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_result_reason().empty()) {
 		if (message.get_op_code() != CDAPMessage::M_CREATE_R
 				&& message.get_op_code() != CDAPMessage::M_DELETE_R
@@ -408,7 +414,7 @@ void CDAPMessageValidator::validateResultReason(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateScope(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_scope() != 0) {
 		if (message.get_op_code() != CDAPMessage::M_CREATE
 				&& message.get_op_code() != CDAPMessage::M_DELETE
@@ -424,7 +430,7 @@ void CDAPMessageValidator::validateScope(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateSrcAEInst(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_src_ae_inst().empty()) {
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
@@ -436,7 +442,7 @@ void CDAPMessageValidator::validateSrcAEInst(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateSrcAEName(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (!message.get_src_ae_name().empty()) {
 
 	}
@@ -449,7 +455,7 @@ void CDAPMessageValidator::validateSrcAEName(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateSrcApInst(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_src_ap_inst().empty()) {
 		if (message.get_op_code() != CDAPMessage::M_CONNECT
 				&& message.get_op_code() != CDAPMessage::M_CONNECT_R) {
@@ -461,7 +467,7 @@ void CDAPMessageValidator::validateSrcApInst(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateSrcApName(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_src_ap_name().empty()) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT) {
 			throw CDAPException(
@@ -481,7 +487,7 @@ void CDAPMessageValidator::validateSrcApName(const CDAPMessage &message)
 }
 
 void CDAPMessageValidator::validateVersion(const CDAPMessage &message)
-		throw (CDAPException) {
+		 {
 	if (message.get_version() == 0) {
 		if (message.get_op_code() == CDAPMessage::M_CONNECT
 				|| message.get_op_code() == CDAPMessage::M_CONNECT_R) {
@@ -516,7 +522,7 @@ void CDAPMessage::getOpenConnectionRequestMessage(CDAPMessage &cdapMessage,
 		const std::string &destApInst, const std::string &destApName,
 		const std::string &srcAEInst, const std::string &srcAEName,
 		const std::string &srcApInst, const std::string &srcApName,
-		int invokeID) throw (CDAPException) {
+		int invokeID) {
 	cdapMessage.set_abs_syntax(ABSTRACT_SYNTAX_VERSION);
 	cdapMessage.set_auth_mech(authMech);
 	cdapMessage.set_auth_value(authValue);
@@ -543,7 +549,7 @@ void CDAPMessage::getOpenConnectionResponseMessage(CDAPMessage &cdapMessage,
 		int result, const std::string &resultReason,
 		const std::string &srcAEInst, const std::string &srcAEName,
 		const std::string &srcApInst, const std::string &srcApName,
-		int invokeID) throw (CDAPException) {
+		int invokeID) {
 	cdapMessage.set_abs_syntax(ABSTRACT_SYNTAX_VERSION);
 	cdapMessage.set_auth_mech(authMech);
 	cdapMessage.set_auth_value(authValue);
@@ -566,7 +572,7 @@ void CDAPMessage::getOpenConnectionResponseMessage(CDAPMessage &cdapMessage,
 }
 
 void CDAPMessage::getReleaseConnectionRequestMessage(CDAPMessage &cdapMessage,
-		Flags flags) throw (CDAPException) {
+		Flags flags) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_op_code(M_RELEASE);
 	CDAPMessageValidator::validate(cdapMessage);
@@ -575,7 +581,7 @@ void CDAPMessage::getReleaseConnectionRequestMessage(CDAPMessage &cdapMessage,
 
 void CDAPMessage::getReleaseConnectionResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, int result, const std::string &resultReason, int invokeID)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_op_code(M_RELEASE_R);
@@ -588,7 +594,7 @@ void CDAPMessage::getReleaseConnectionResponseMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getCreateObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
 		const std::string &objName, const ObjectValueInterface &objValue, int scope)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_obj_class(objClass);
@@ -604,7 +610,7 @@ void CDAPMessage::getCreateObjectRequestMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getCreateObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objClass, long objInst,
 		const std::string &objName, const ObjectValueInterface &objValue, int result,
-		const std::string &resultReason, int invokeID) throw (CDAPException) {
+		const std::string &resultReason, int invokeID) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_obj_class(objClass);
@@ -621,7 +627,7 @@ void CDAPMessage::getCreateObjectResponseMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getDeleteObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
 		const std::string &objName, const ObjectValueInterface &objectValue, int scope)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_obj_class(objClass);
@@ -636,7 +642,7 @@ void CDAPMessage::getDeleteObjectRequestMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getDeleteObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objClass, long objInst,
 		const std::string &objName, int result, const std::string &resultReason,
-		int invokeID) throw (CDAPException) {
+		int invokeID) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_obj_class(objClass);
@@ -651,7 +657,7 @@ void CDAPMessage::getDeleteObjectResponseMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getStartObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass,
 		const ObjectValueInterface &objValue, long objInst, const std::string &objName,
-		int scope) throw (CDAPException) {
+		int scope) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_obj_class(objClass);
@@ -665,7 +671,7 @@ void CDAPMessage::getStartObjectRequestMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, int result, const std::string &resultReason, int invokeID)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_op_code(M_START_R);
@@ -678,7 +684,7 @@ void CDAPMessage::getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objectClass,
 		const ObjectValueInterface &objectValue, long objInst,
 		const std::string &objName, int result, const std::string &resultReason,
-		int invokeID) throw (CDAPException) {
+		int invokeID) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_op_code(M_START_R);
@@ -693,7 +699,7 @@ void CDAPMessage::getStartObjectResponseMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getStopObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass,
 		const ObjectValueInterface &objValue, long objInst, const std::string &objName,
-		int scope) throw (CDAPException) {
+		int scope) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_obj_class(objClass);
@@ -706,7 +712,7 @@ void CDAPMessage::getStopObjectRequestMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getStopObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, int result, const std::string &resultReason, int invokeID)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_op_code(M_STOP_R);
@@ -716,7 +722,7 @@ void CDAPMessage::getStopObjectResponseMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getReadObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
-		const std::string &objName, int scope) throw (CDAPException) {
+		const std::string &objName, int scope) {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_obj_class(objClass);
@@ -729,7 +735,7 @@ void CDAPMessage::getReadObjectRequestMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getReadObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, const std::string &objClass, long objInst,
 		const std::string &objName, const ObjectValueInterface &objValue, int result,
-		const std::string &resultReason, int invokeID) throw (CDAPException) {
+		const std::string &resultReason, int invokeID) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_obj_class(objClass);
@@ -744,7 +750,7 @@ void CDAPMessage::getReadObjectResponseMessage(CDAPMessage &cdapMessage,
 void CDAPMessage::getWriteObjectRequestMessage(CDAPMessage &cdapMessage,
 		char filter[], Flags flags, const std::string &objClass, long objInst,
 		const ObjectValueInterface &objValue, const std::string &objName, int scope)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_filter(filter);
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_obj_class(objClass);
@@ -757,7 +763,7 @@ void CDAPMessage::getWriteObjectRequestMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getWriteObjectResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, int result, int invokeID, const std::string &resultReason)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_op_code(M_WRITE_R);
 	cdapMessage.set_result(result);
@@ -766,7 +772,7 @@ void CDAPMessage::getWriteObjectResponseMessage(CDAPMessage &cdapMessage,
 	CDAPMessageValidator::validate(cdapMessage);
 }
 void CDAPMessage::getCancelReadRequestMessage(CDAPMessage &cdapMessage,
-		Flags flags, int invokeID) throw (CDAPException) {
+		Flags flags, int invokeID) {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_op_code(M_CANCELREAD);
@@ -774,7 +780,7 @@ void CDAPMessage::getCancelReadRequestMessage(CDAPMessage &cdapMessage,
 }
 void CDAPMessage::getCancelReadResponseMessage(CDAPMessage &cdapMessage,
 		Flags flags, int invokeID, int result, const std::string &resultReason)
-				throw (CDAPException) {
+				 {
 	cdapMessage.set_flags(flags);
 	cdapMessage.set_invoke_id(invokeID);
 	cdapMessage.set_op_code(M_CANCELREAD_R);
@@ -782,6 +788,65 @@ void CDAPMessage::getCancelReadResponseMessage(CDAPMessage &cdapMessage,
 	cdapMessage.set_result_reason(resultReason);
 	CDAPMessageValidator::validate(cdapMessage);
 }
+std::string CDAPMessage::toString() const {
+	std::stringstream ss;
+	ss << std::endl << get_op_code() << std::endl;
+	if (get_op_code() == CDAPMessage::M_CONNECT|| get_op_code() == CDAPMessage::M_CONNECT_R){
+		ss << "Abstract syntax: " << get_abs_syntax() << std::endl;
+		ss << "Authentication mechanism: " << get_auth_mech() << std::endl;
+		if (!get_auth_value().is_empty())
+			ss << "Authentication value: " << get_auth_value() << std::endl;
+		if (!get_src_ap_name().empty())
+			ss << "Source AP name: " << get_src_ap_name()  << std::endl;
+		if (!get_src_ap_inst().empty())
+			ss << "Source AP instance: " << get_src_ap_inst() << std::endl;
+		if (!get_src_ae_name().empty())
+			ss << "Source AE name: " << get_src_ae_name() << std::endl;
+		if (!get_src_ae_inst().empty())
+			ss << "Source AE instance: " << get_src_ae_inst() << std::endl;
+		if (!get_dest_ap_name().empty())
+			ss << "Destination AP name: " << get_dest_ap_name() << std::endl;
+		if (!get_dest_ap_inst().empty())
+			ss << "Destination AP instance: " << get_dest_ap_inst() << std::endl;
+		if (!get_dest_ae_name().empty())
+			ss << "Destination AE name: " << get_dest_ae_name() << std::endl;
+		if (!get_dest_ae_inst().empty())
+			ss << "Destination AE instance: " << get_dest_ae_inst() << std::endl;
+	}
+	if (get_filter() != 0)
+		ss << "Filter: " << get_filter() << std::endl;
+	if (get_flags() != CDAPMessage::NONE_FLAGS)
+		ss << "Flags: " << get_flags() << std::endl;
+	if (get_invoke_id() != 0)
+		ss << "Invoke id: " << get_invoke_id() << std::endl;
+	if (!get_obj_class().empty())
+		ss << "Object class: " << get_obj_class() << std::endl;
+	if (!get_obj_name().empty())
+		ss << "Object name: " << get_obj_name() << std::endl;
+	if (get_obj_inst() != 0)
+		ss << "Object instance: "+ get_obj_inst() << std::endl;
+	if (!get_obj_value()->is_empty())
+		ss << "Object value: " << get_obj_value() << std::endl;
+	if (get_op_code() == CDAPMessage::M_CONNECT_R || get_op_code() == CDAPMessage::M_RELEASE_R
+			|| get_op_code == CDAPMessage::M_READ_R || get_op_code == CDAPMessage::M_WRITE_R
+			|| get_op_code == CDAPMessage::M_CANCELREAD_R || get_op_code == CDAPMessage::M_START_R
+			|| get_op_code == CDAPMessage::M_STOP_R || get_op_code == CDAPMessage::M_CREATE_R
+			|| get_op_code == CDAPMessage::M_DELETE_R){
+		ss << "Result: " << get_result() << std::endl;
+		if (!get_result_reason().empty())
+			ss << "Result Reason: " << get_result_reason() << std::endl;
+	}
+	if (get_op_code == CDAPMessage::M_READ || get_op_code == CDAPMessage::M_WRITE
+			|| get_op_code == CDAPMessage::M_CANCELREAD || get_op_code == CDAPMessage::M_START
+			|| get_op_code == CDAPMessage::M_STOP || get_op_code == CDAPMessage::M_CREATE
+			|| get_op_code == CDAPMessage::M_DELETE){
+		ss << "Scope: " << get_scope()<< std::endl;
+	}
+	if (get_version() != 0)
+		ss << "Version: " << get_version() << std::endl;
+	return ss.str();
+}
+
 /*	TODO: Implement these functions	*/
 int CDAPMessage::get_abs_syntax() const {
 	return abs_syntax_;
@@ -930,11 +995,19 @@ std::string toString() {
 /*	class CDAPSessionDescriptor	*/
 CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
 	port_id_ = port_id;
+	ap_naming_info_ = 0;
+}
+CDAPSessionDescriptor::CDAPSessionDescriptor(int abs_syntax, CDAPMessage::AuthTypes auth_mech, AuthValue auth_value) {
+	abs_syntax_ = abs_syntax;
+	auth_mech_ = auth_mech;
+	auth_value_ = auth_value;
+	ap_naming_info_ = 0;
 }
 CDAPSessionDescriptor::~CDAPSessionDescriptor() {
 	delete ap_naming_info_;
 }
 const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_source_application_process_naming_info() {
+	delete ap_naming_info_;
 	ap_naming_info_ = new ApplicationProcessNamingInformation(src_ap_name_,
 			src_ap_inst_);
 	if (!src_ae_name_.empty()) {
@@ -947,6 +1020,7 @@ const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_source_app
 	return ap_naming_info_;
 }
 const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_destination_application_process_naming_info() {
+	delete ap_naming_info_;
 	ap_naming_info_ = new ApplicationProcessNamingInformation(dest_ap_name_,
 			dest_ap_inst_);
 	if (!dest_ae_name_.empty()) {
@@ -959,6 +1033,43 @@ const ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_destinatio
 	return ap_naming_info_;
 }
 
+void CDAPSessionDescriptor::set_dest_ae_inst(const std::string dest_ae_inst) {
+	dest_ae_inst_ = dest_ae_inst;
+}
+void CDAPSessionDescriptor::set_dest_ae_name(const std::string dest_ae_name) {
+	dest_ae_name_ = dest_ae_name;
+}
+void CDAPSessionDescriptor::set_dest_ap_inst(const std::string dest_ap_inst) {
+	dest_ap_inst_ = dest_ap_inst;
+}
+void CDAPSessionDescriptor::set_dest_ap_name(const std::string dest_ap_name) {
+	dest_ap_name_ = dest_ap_name;
+}
+void CDAPSessionDescriptor::set_src_ae_inst(const std::string src_ae_inst) {
+	src_ae_inst_ = src_ae_inst;
+}
+void CDAPSessionDescriptor::set_src_ae_name(const std::string src_ae_name) {
+	src_ae_name_ = src_ae_name;
+}
+void CDAPSessionDescriptor::set_src_ap_inst(const std::string src_ap_inst) {
+	src_ap_inst_ = src_ap_inst;
+}
+void CDAPSessionDescriptor::set_src_ap_name(const std::string src_ap_name) {
+	src_ap_name_ = src_ap_name;
+}
+void CDAPSessionDescriptor::set_version(const long version) {
+	version_ = version;
+}
+void CDAPSessionDescriptor::set_ap_naming_info(ApplicationProcessNamingInformation* ap_naming_info) {
+	delete ap_naming_info_;
+	ap_naming_info_ = ap_naming_info;
+}
+int CDAPSessionDescriptor::get_port_id() const {
+	return port_id_;
+}
+ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_ap_naming_info() const {
+	return ap_naming_info_;
+}
 /*	CLASS RIBDaemonException	*/
 
 RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
