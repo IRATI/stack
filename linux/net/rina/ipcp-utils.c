@@ -427,20 +427,22 @@ EXPORT_SYMBOL(flow_spec_dup);
 struct efcp_config * efcp_config_create(void) 
 {
         struct efcp_config * tmp;
+        struct dt_cons *     tmp_dt;
         
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp) 
                 return NULL;
         
-        tmp->dt_cons = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp->dt_cons) {
+        tmp_dt = rkzalloc(sizeof(*tmp_dt), GFP_KERNEL);
+        if (!tmp_dt) {
                 rkfree(tmp);
                 return NULL;
         }
+        tmp->dt_cons = tmp_dt;
 
         tmp->unknown_flow = policy_create();
         if (!tmp->unknown_flow) {
-                rkfree(tmp->dt_cons);
+                rkfree(tmp_dt);
                 rkfree(tmp);
                 return NULL;
         }
