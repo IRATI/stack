@@ -1353,12 +1353,61 @@ private:
         std::list<QoSCube> qosCubes;
 };
 
+class FlowAllocatorConfiguration {
+public:
+        FlowAllocatorConfiguration();
+        const PolicyConfig& getAllocateNotifyPolicy() const;
+        void setAllocateNotifyPolicy(const PolicyConfig& allocateNotifyPolicy);
+        const PolicyConfig& getAllocateRetryPolicy() const;
+        void setAllocateRetryPolicy(const PolicyConfig& allocateRetryPolicy);
+        int getMaxCreateFlowRetries() const;
+        void setMaxCreateFlowRetries(int maxCreateFlowRetries);
+        const PolicyConfig& getNewFlowRequestPolicy() const;
+        void setNewFlowRequestPolicy(const PolicyConfig& newFlowRequestPolicy);
+        const PolicyConfig& getSeqRollOverPolicy() const;
+        void setSeqRollOverPolicy(const PolicyConfig& seqRollOverPolicy);
+
+private:
+        /** Maximum number of attempts to retry the flow allocation */
+        int maxCreateFlowRetries;
+
+        /**
+         * This policy determines when the requesting application is given
+         * an Allocate_Response primitive. In general, the choices are once
+         * the request is determined to be well-formed and a create_flow
+         * request has been sent, or withheld until a create_flow response has
+         * been received and MaxCreateRetires has been exhausted.
+         */
+        PolicyConfig allocateNotifyPolicy;
+
+        /**
+         * This policy is used when the destination has refused the create_flow
+         * request, and the FAI can overcome the cause for refusal and try
+         * again. This policy should re-formulate the request. This policy
+         * should formulate the contents of the reply.
+         */
+        PolicyConfig allocateRetryPolicy;
+
+        /**
+         * This policy is used to convert an allocate request to a create flow
+         * request. Its primary task is to translate the request into the
+         * proper QoS-class set, flow set and access control capabilities.
+         */
+        PolicyConfig newFlowRequestPolicy;
+
+        /**
+         * This policy is used when the SeqRollOverThres event occurs and
+         * action may be required by the Flow Allocator to modify the bindings
+         * between connection-endpoint-ids and port-ids.
+         */
+        PolicyConfig seqRollOverPolicy;
+};
+
 /**
  * Contains the configuration data of the Relaying and Multiplexing Task for a
  * particular DIF
  */
 class RMTConfiguration {
-
 public:
         RMTConfiguration();
         const PolicyConfig& getMaxQueuePolicy() const;
@@ -1474,6 +1523,9 @@ class DIFConfiguration {
 	/** PDUFT Configuration parameters of the DIF	*/
 	PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
+	/** Flow Allocator configuration parameters of the DIF */
+	FlowAllocatorConfiguration faConfiguration;
+
 	/** Other configuration parameters of the DIF */
 	std::list<Parameter> parameters;
 
@@ -1497,6 +1549,9 @@ public:
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
+        const FlowAllocatorConfiguration& getFaConfiguration() const;
+        void setFaConfiguration(
+                        const FlowAllocatorConfiguration& faConfiguration);
 };
 
 /**

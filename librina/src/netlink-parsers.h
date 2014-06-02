@@ -988,13 +988,31 @@ int putConnectionPoliciesObject(nl_msg * netlinkMessage,
 ConnectionPolicies *
 parseConnectionPoliciesObject(nlattr *nested);
 
+/* Connection class */
+enum ConnectionAttributes {
+        CONN_ATTR_PORT_ID = 1,
+        CONN_ATTR_SOURCE_ADDRESS,
+        CONN_ATTR_DEST_ADDRESS,
+        CONN_ATTR_QOS_ID,
+        CONN_ATTR_SOURCE_CEP_ID,
+        CONN_ATTR_DEST_CEP_ID,
+        CONN_ATTR_PARTIAL_DELIVERY,
+        CONN_ATTR_IN_ORDER_DELIVERY,
+        CONN_ATTR_MAX_SDU_GAP,
+        CONN_ATTR_POLICIES,
+        CONN_ATTR_FLOW_USER_IPCP_ID,
+        __CONN_ATTR_MAX,
+};
+
+#define CONN_ATTR_MAX (__CONN_ATTR_MAX -1)
+
+int putConnectionObject(nl_msg * netlinkMessage, const Connection& object);
+
+Connection * parseConnectionObject(nlattr *nested);
+
 /* IpcpConnectionCreateRequestMessage CLASS*/
 enum IpcpConnectionCreateRequestMessageAttributes {
-        ICCRM_ATTR_PORT_ID = 1,
-        ICCRM_ATTR_SRC_ADDRESS,
-        ICCRM_ATTR_DEST_ADDRESS,
-        ICCRM_ATTR_QOS_ID,
-        ICCRM_ATTR_POLICIES,
+        ICCRM_ATTR_CONNECTION = 1,
         __ICCRM_ATTR_MAX,
 };
 
@@ -1055,13 +1073,7 @@ IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
 
 /* IpcpConnectionCreateArrivedMessage CLASS*/
 enum IpcpConnectionCreateArrivedMessageAttributes {
-        ICCAM_ATTR_PORT_ID = 1,
-        ICCAM_ATTR_SRC_ADDRESS,
-        ICCAM_ATTR_DEST_ADDRESS,
-        ICCAM_ATTR_DEST_CEP_ID,
-        ICCAM_ATTR_QOS_ID,
-        ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
-        ICCAM_ATTR_POLICIES,
+        ICCAM_ATTR_CONNECTION = 1,
         __ICCAM_ATTR_MAX,
 };
 

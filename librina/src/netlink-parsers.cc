@@ -2855,6 +2855,164 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	return result;
 }
 
+int putConnectionObject(nl_msg* netlinkMessage,
+                const Connection& object) {
+        struct nlattr *policies;
+
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_SOURCE_ADDRESS,
+                        object.getSourceAddress());
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_DEST_ADDRESS,
+                        object.getDestAddress());
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_QOS_ID, object.getQosId());
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_SOURCE_CEP_ID,
+                        object.getSourceCepId());
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_DEST_CEP_ID,
+                        object.getDestCepId());
+        if (object.isInOrderDelivery()){
+                NLA_PUT_FLAG(netlinkMessage, CONN_ATTR_IN_ORDER_DELIVERY);
+        }
+        if (object.isPartialDelivery()){
+                NLA_PUT_FLAG(netlinkMessage, CONN_ATTR_PARTIAL_DELIVERY);
+        }
+        NLA_PUT_U32(netlinkMessage, CONN_ATTR_MAX_SDU_GAP,
+                                object.getMaxSduGap());
+
+
+        if (!(policies = nla_nest_start(netlinkMessage, CONN_ATTR_POLICIES))) {
+                goto nla_put_failure;
+        }
+
+        if (putConnectionPoliciesObject(netlinkMessage,
+                        object.getPolicies())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, policies);
+
+        NLA_PUT_U16(netlinkMessage, CONN_ATTR_FLOW_USER_IPCP_ID,
+                        object.getFlowUserIpcProcessId());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building Connection Netlink object");
+        return -1;
+}
+
+Connection * parseConnectionObject(nlattr *nested) {
+        struct nla_policy attr_policy[CONN_ATTR_MAX + 1];
+        attr_policy[CONN_ATTR_PORT_ID].type = NLA_U32;
+        attr_policy[CONN_ATTR_PORT_ID].minlen = 4;
+        attr_policy[CONN_ATTR_PORT_ID].maxlen = 4;
+        attr_policy[CONN_ATTR_SOURCE_ADDRESS].type = NLA_U32;
+        attr_policy[CONN_ATTR_SOURCE_ADDRESS].minlen = 4;
+        attr_policy[CONN_ATTR_SOURCE_ADDRESS].maxlen = 4;
+        attr_policy[CONN_ATTR_DEST_ADDRESS].type = NLA_U32;
+        attr_policy[CONN_ATTR_DEST_ADDRESS].minlen = 4;
+        attr_policy[CONN_ATTR_DEST_ADDRESS].maxlen = 4;
+        attr_policy[CONN_ATTR_QOS_ID].type = NLA_U32;
+        attr_policy[CONN_ATTR_QOS_ID].minlen = 4;
+        attr_policy[CONN_ATTR_QOS_ID].maxlen = 4;
+        attr_policy[CONN_ATTR_SOURCE_CEP_ID].type = NLA_U32;
+        attr_policy[CONN_ATTR_SOURCE_CEP_ID].minlen = 4;
+        attr_policy[CONN_ATTR_SOURCE_CEP_ID].maxlen = 4;
+        attr_policy[CONN_ATTR_DEST_CEP_ID].type = NLA_U32;
+        attr_policy[CONN_ATTR_DEST_CEP_ID].minlen = 4;
+        attr_policy[CONN_ATTR_DEST_CEP_ID].maxlen = 4;
+        attr_policy[CONN_ATTR_PARTIAL_DELIVERY].type = NLA_FLAG;
+        attr_policy[CONN_ATTR_PARTIAL_DELIVERY].minlen = 0;
+        attr_policy[CONN_ATTR_PARTIAL_DELIVERY].maxlen = 0;
+        attr_policy[CONN_ATTR_IN_ORDER_DELIVERY].type = NLA_FLAG;
+        attr_policy[CONN_ATTR_IN_ORDER_DELIVERY].minlen = 0;
+        attr_policy[CONN_ATTR_IN_ORDER_DELIVERY].maxlen = 0;
+        attr_policy[CONN_ATTR_MAX_SDU_GAP].type = NLA_U32;
+        attr_policy[CONN_ATTR_MAX_SDU_GAP].minlen = 4;
+        attr_policy[CONN_ATTR_MAX_SDU_GAP].maxlen = 4;
+        attr_policy[CONN_ATTR_POLICIES].type = NLA_NESTED;
+        attr_policy[CONN_ATTR_POLICIES].minlen = 0;
+        attr_policy[CONN_ATTR_POLICIES].maxlen = 0;
+        attr_policy[CONN_ATTR_FLOW_USER_IPCP_ID].type = NLA_U16;
+        attr_policy[CONN_ATTR_FLOW_USER_IPCP_ID].minlen = 2;
+        attr_policy[CONN_ATTR_FLOW_USER_IPCP_ID].maxlen = 2;
+        struct nlattr *attrs[CONN_ATTR_MAX + 1];
+
+        int err = nla_parse_nested(attrs, CONN_ATTR_MAX, nested, attr_policy);
+        if (err < 0) {
+                LOG_ERR("Error parsing Connection information from Netlink message: %d",
+                                err);
+                return 0;
+        }
+
+        Connection * result = new Connection();
+        ConnectionPolicies * connectionPolicies;
+
+        if (attrs[CONN_ATTR_PORT_ID]) {
+                result->setPortId(nla_get_u32(attrs[CONN_ATTR_PORT_ID]));
+        }
+
+        if (attrs[CONN_ATTR_SOURCE_ADDRESS]) {
+                result->setSourceAddress(
+                                nla_get_u32(attrs[CONN_ATTR_SOURCE_ADDRESS]));
+        }
+
+        if (attrs[CONN_ATTR_DEST_ADDRESS]) {
+                result->setDestAddress(
+                                nla_get_u32(attrs[CONN_ATTR_DEST_ADDRESS]));
+        }
+
+        if (attrs[CONN_ATTR_QOS_ID]) {
+                result->setQosId(nla_get_u32(attrs[CONN_ATTR_QOS_ID]));
+        }
+
+        if (attrs[CONN_ATTR_SOURCE_CEP_ID]) {
+                result->setSourceCepId(
+                                nla_get_u32(attrs[CONN_ATTR_SOURCE_CEP_ID]));
+        }
+
+        if (attrs[CONN_ATTR_DEST_CEP_ID]) {
+                result->setDestCepId(
+                                nla_get_u32(attrs[CONN_ATTR_DEST_CEP_ID]));
+        }
+
+        if (attrs[CONN_ATTR_PARTIAL_DELIVERY]) {
+                result->setPartialDelivery(true);
+        } else {
+                result->setPartialDelivery(false);
+        }
+
+        if (attrs[CONN_ATTR_IN_ORDER_DELIVERY]) {
+                result->setInOrderDelivery(true);
+        } else {
+                result->setInOrderDelivery(false);
+        }
+
+        if (attrs[CONN_ATTR_MAX_SDU_GAP]) {
+                result->setMaxSduGap(
+                                nla_get_u32(attrs[CONN_ATTR_MAX_SDU_GAP]));
+        }
+
+        if (attrs[CONN_ATTR_POLICIES]){
+                connectionPolicies = parseConnectionPoliciesObject(
+                                attrs[CONN_ATTR_POLICIES]);
+                if (connectionPolicies == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setPolicies(*connectionPolicies);
+                        delete connectionPolicies;
+                }
+        }
+
+        if (attrs[CONN_ATTR_FLOW_USER_IPCP_ID]) {
+                result->setFlowUserIpcProcessId(
+                                nla_get_u16(attrs[CONN_ATTR_FLOW_USER_IPCP_ID]));
+        }
+
+
+        return result;
+}
+
 
 int putAppAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 		const AppAllocateFlowRequestMessage& object) {
@@ -4058,26 +4216,18 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateRequestMessage& object) {
-        struct nlattr *connectionPolicies;
+        struct nlattr *connection;
 
-        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_PORT_ID, object.getPortId());
-        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_SRC_ADDRESS,
-                        object.getSourceAddress());
-        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDRESS,
-                                object.getDestAddress());
-        NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID, object.getQosId());
-
-        if (!(connectionPolicies = nla_nest_start(
-                        netlinkMessage, ICCRM_ATTR_POLICIES))){
+        if (!(connection = nla_nest_start(
+                        netlinkMessage, ICCRM_ATTR_CONNECTION))){
                 goto nla_put_failure;
         }
 
-        if (putConnectionPoliciesObject(netlinkMessage,
-                        object.getConnPolicies()) < 0) {
+        if (putConnectionObject(netlinkMessage, object.getConnection()) < 0) {
                 goto nla_put_failure;
         }
 
-        nla_nest_end(netlinkMessage, connectionPolicies);
+        nla_nest_end(netlinkMessage, connection);
 
         return 0;
 
@@ -4128,30 +4278,18 @@ int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateArrivedMessage& object) {
-        struct nlattr *connectionPolicies;
+        struct nlattr *connection;
 
-        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_PORT_ID, object.getPortId());
-        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_SRC_ADDRESS,
-                        object.getSourceAddress());
-        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_DEST_ADDRESS,
-                                object.getDestAddress());
-        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_QOS_ID, object.getQosId());
-        NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_DEST_CEP_ID,
-                        object.getDestCepId());
-        NLA_PUT_U16(netlinkMessage, ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
-                        object.getFlowUserIpcProcessId());
-
-        if (!(connectionPolicies = nla_nest_start(
-                        netlinkMessage, ICCAM_ATTR_POLICIES))){
+        if (!(connection = nla_nest_start(
+                        netlinkMessage, ICCAM_ATTR_CONNECTION))){
                 goto nla_put_failure;
         }
 
-        if (putConnectionPoliciesObject(netlinkMessage,
-                        object.getConnPolicies()) < 0) {
+        if (putConnectionObject(netlinkMessage, object.getConnection()) < 0) {
                 goto nla_put_failure;
         }
 
-        nla_nest_end(netlinkMessage, connectionPolicies);
+        nla_nest_end(netlinkMessage, connection);
 
         return 0;
 
@@ -6675,21 +6813,9 @@ IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
 IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 nlmsghdr *hdr) {
         struct nla_policy attr_policy[ICCRM_ATTR_MAX + 1];
-        attr_policy[ICCRM_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICCRM_ATTR_PORT_ID].minlen = 4;
-        attr_policy[ICCRM_ATTR_PORT_ID].maxlen = 4;
-        attr_policy[ICCRM_ATTR_SRC_ADDRESS].type = NLA_U32;
-        attr_policy[ICCRM_ATTR_SRC_ADDRESS].minlen = 4;
-        attr_policy[ICCRM_ATTR_SRC_ADDRESS].maxlen = 4;
-        attr_policy[ICCRM_ATTR_DEST_ADDRESS].type = NLA_U32;
-        attr_policy[ICCRM_ATTR_DEST_ADDRESS].minlen = 4;
-        attr_policy[ICCRM_ATTR_DEST_ADDRESS].maxlen = 4;
-        attr_policy[ICCRM_ATTR_QOS_ID].type = NLA_U32;
-        attr_policy[ICCRM_ATTR_QOS_ID].minlen = 4;
-        attr_policy[ICCRM_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[ICCRM_ATTR_POLICIES].type = NLA_NESTED;
-        attr_policy[ICCRM_ATTR_POLICIES].minlen = 0;
-        attr_policy[ICCRM_ATTR_POLICIES].maxlen = 0;
+        attr_policy[ICCRM_ATTR_CONNECTION].type = NLA_NESTED;
+        attr_policy[ICCRM_ATTR_CONNECTION].minlen = 0;
+        attr_policy[ICCRM_ATTR_CONNECTION].maxlen = 0;
         struct nlattr *attrs[ICCRM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -6703,35 +6829,17 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         IpcpConnectionCreateRequestMessage * result =
                         new IpcpConnectionCreateRequestMessage();
 
-        ConnectionPolicies * connPolicies;
+        Connection * connection;
 
-        if (attrs[ICCRM_ATTR_PORT_ID]){
-                result->setPortId(nla_get_u32(attrs[ICCRM_ATTR_PORT_ID]));
-        }
-
-        if (attrs[ICCRM_ATTR_SRC_ADDRESS]){
-                result->setSourceAddress(
-                                nla_get_u32(attrs[ICCRM_ATTR_SRC_ADDRESS]));
-        }
-
-        if (attrs[ICCRM_ATTR_DEST_ADDRESS]){
-                result->setDestAddress(
-                                nla_get_u32(attrs[ICCRM_ATTR_DEST_ADDRESS]));
-        }
-
-        if (attrs[ICCRM_ATTR_QOS_ID]){
-                result->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
-        }
-
-	if (attrs[ICCRM_ATTR_POLICIES]) {
-	        connPolicies = parseConnectionPoliciesObject(
-				attrs[ICCRM_ATTR_POLICIES]);
-		if (connPolicies == 0) {
+	if (attrs[ICCRM_ATTR_CONNECTION]) {
+	        connection = parseConnectionObject(
+	                        attrs[ICCRM_ATTR_CONNECTION]);
+		if (connection == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->setConnPolicies(*connPolicies);
-			delete connPolicies;
+			result->setConnection(*connection);
+			delete connection;
 		}
 	}
 
@@ -6858,27 +6966,9 @@ IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
 IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
                 nlmsghdr *hdr) {
         struct nla_policy attr_policy[ICCAM_ATTR_MAX + 1];
-        attr_policy[ICCAM_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICCAM_ATTR_PORT_ID].minlen = 4;
-        attr_policy[ICCAM_ATTR_PORT_ID].maxlen = 4;
-        attr_policy[ICCAM_ATTR_SRC_ADDRESS].type = NLA_U32;
-        attr_policy[ICCAM_ATTR_SRC_ADDRESS].minlen = 4;
-        attr_policy[ICCAM_ATTR_SRC_ADDRESS].maxlen = 4;
-        attr_policy[ICCAM_ATTR_DEST_ADDRESS].type = NLA_U32;
-        attr_policy[ICCAM_ATTR_DEST_ADDRESS].minlen = 4;
-        attr_policy[ICCAM_ATTR_DEST_ADDRESS].maxlen = 4;
-        attr_policy[ICCAM_ATTR_QOS_ID].type = NLA_U32;
-        attr_policy[ICCAM_ATTR_QOS_ID].minlen = 4;
-        attr_policy[ICCAM_ATTR_QOS_ID].maxlen = 4;
-        attr_policy[ICCAM_ATTR_DEST_CEP_ID].type = NLA_U32;
-        attr_policy[ICCAM_ATTR_DEST_CEP_ID].minlen = 4;
-        attr_policy[ICCAM_ATTR_DEST_CEP_ID].maxlen = 4;
-        attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
-        attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].minlen = 2;
-        attr_policy[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID].maxlen = 2;
-        attr_policy[ICCAM_ATTR_POLICIES].type = NLA_NESTED;
-        attr_policy[ICCAM_ATTR_POLICIES].minlen = 0;
-        attr_policy[ICCAM_ATTR_POLICIES].maxlen = 0;
+        attr_policy[ICCAM_ATTR_CONNECTION].type = NLA_NESTED;
+        attr_policy[ICCAM_ATTR_CONNECTION].minlen = 0;
+        attr_policy[ICCAM_ATTR_CONNECTION].maxlen = 0;
         struct nlattr *attrs[ICCAM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -6892,43 +6982,17 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         IpcpConnectionCreateArrivedMessage * result =
                         new IpcpConnectionCreateArrivedMessage();
 
-	ConnectionPolicies * connPolicies;
+	Connection * connection;
 
-        if (attrs[ICCAM_ATTR_PORT_ID]){
-                result->setPortId(nla_get_u32(attrs[ICCAM_ATTR_PORT_ID]));
-        }
-
-        if (attrs[ICCAM_ATTR_SRC_ADDRESS]){
-                result->setSourceAddress(
-                                nla_get_u32(attrs[ICCAM_ATTR_SRC_ADDRESS]));
-        }
-
-        if (attrs[ICCAM_ATTR_DEST_ADDRESS]){
-                result->setDestAddress(
-                                nla_get_u32(attrs[ICCAM_ATTR_DEST_ADDRESS]));
-        }
-
-        if (attrs[ICCAM_ATTR_QOS_ID]){
-                result->setQosId(nla_get_u32(attrs[ICCAM_ATTR_QOS_ID]));
-        }
-
-        if (attrs[ICCAM_ATTR_DEST_CEP_ID]){
-                result->setDestCepId(nla_get_u32(attrs[ICCAM_ATTR_DEST_CEP_ID]));
-        }
-
-        if (attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]){
-                result->setFlowUserIpcProcessId(nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
-        }
-
-	if (attrs[ICCAM_ATTR_POLICIES]) {
-	        connPolicies = parseConnectionPoliciesObject(
-				attrs[ICCAM_ATTR_POLICIES]);
-		if (connPolicies == 0) {
+	if (attrs[ICCAM_ATTR_CONNECTION]) {
+	        connection = parseConnectionObject(
+	                        attrs[ICCAM_ATTR_CONNECTION]);
+		if (connection == 0) {
 			delete result;
 			return 0;
 		} else {
-			result->setConnPolicies(*connPolicies);
-			delete connPolicies;
+			result->setConnection(*connection);
+			delete connection;
 		}
 	}
 

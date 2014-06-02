@@ -1443,54 +1443,15 @@ IPCEvent* IpcmIPCProcessInitializedMessage::toIPCEvent(){
 /* CLASS IPCM CONNECTION CREATE REQUEST MESSAGE */
 IpcpConnectionCreateRequestMessage::IpcpConnectionCreateRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_REQUEST) {
-        portId = 0;
-        sourceAddress = 0;
-        destAddress = 0;
-        qosId = 0;
 }
 
-unsigned int IpcpConnectionCreateRequestMessage::getDestAddress() const {
-        return destAddress;
+const Connection& IpcpConnectionCreateRequestMessage::getConnection() const {
+        return connection;
 }
 
-void IpcpConnectionCreateRequestMessage::setDestAddress(
-                unsigned int destAddress) {
-        this->destAddress = destAddress;
-}
-
-int IpcpConnectionCreateRequestMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionCreateRequestMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-unsigned int IpcpConnectionCreateRequestMessage::getQosId() const {
-                return qosId;
-}
-
-void IpcpConnectionCreateRequestMessage::setQosId(unsigned int qosId){
-        this->qosId = qosId;
-}
-
-unsigned int IpcpConnectionCreateRequestMessage::getSourceAddress() const {
-        return sourceAddress;
-}
-
-void IpcpConnectionCreateRequestMessage::setSourceAddress(
-                unsigned int sourceAddress) {
-        this->sourceAddress = sourceAddress;
-}
-
-const ConnectionPolicies&
-IpcpConnectionCreateRequestMessage::getConnPolicies() const {
-        return connPolicies;
-}
-
-void IpcpConnectionCreateRequestMessage::setConnPolicies(
-                const ConnectionPolicies& connPParams) {
-        this->connPolicies = connPParams;
+void IpcpConnectionCreateRequestMessage::setConnection(
+                const Connection& connection) {
+        this->connection = connection;
 }
 
 IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
@@ -1599,74 +1560,15 @@ IPCEvent* IpcpConnectionUpdateResultMessage::toIPCEvent() {
 /* CLASS IPCM CONNECTION CREATE ARRIVED MESSAGE */
 IpcpConnectionCreateArrivedMessage::IpcpConnectionCreateArrivedMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_ARRIVED) {
-        portId = 0;
-        sourceAddress = 0;
-        destAddress = 0;
-        qosId = 0;
-        destCepId = 0;
-        flowUserIpcProcessId = 0;
 }
 
-unsigned int IpcpConnectionCreateArrivedMessage::getDestAddress() const {
-        return destAddress;
+const Connection& IpcpConnectionCreateArrivedMessage::getConnection() const {
+        return connection;
 }
 
-void IpcpConnectionCreateArrivedMessage::setDestAddress(
-                unsigned int destAddress) {
-        this->destAddress = destAddress;
-}
-
-int IpcpConnectionCreateArrivedMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionCreateArrivedMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-unsigned int IpcpConnectionCreateArrivedMessage::getQosId() const {
-                return qosId;
-}
-
-void IpcpConnectionCreateArrivedMessage::setQosId(unsigned int qosId){
-        this->qosId = qosId;
-}
-
-unsigned int IpcpConnectionCreateArrivedMessage::getSourceAddress() const {
-        return sourceAddress;
-}
-
-void IpcpConnectionCreateArrivedMessage::setSourceAddress(
-                unsigned int sourceAddress) {
-        this->sourceAddress = sourceAddress;
-}
-
-unsigned short IpcpConnectionCreateArrivedMessage::
-getFlowUserIpcProcessId() const {
-        return flowUserIpcProcessId;
-}
-
-void IpcpConnectionCreateArrivedMessage::
-setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
-        this->flowUserIpcProcessId = flowUserIpcProcessId;
-}
-
-int IpcpConnectionCreateArrivedMessage::getDestCepId() const {
-        return destCepId;
-}
-
-void IpcpConnectionCreateArrivedMessage::setDestCepId(int destCepId) {
-        this->destCepId = destCepId;
-}
-
-const ConnectionPolicies& IpcpConnectionCreateArrivedMessage::
-getConnPolicies() const {
-        return connPolicies;
-}
-
-void IpcpConnectionCreateArrivedMessage::setConnPolicies(
-                const ConnectionPolicies& connPParams) {
-        this->connPolicies = connPParams;
+void IpcpConnectionCreateArrivedMessage::setConnection(
+                const Connection& connection) {
+        this->connection = connection;
 }
 
 IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {

@@ -1875,6 +1875,57 @@ void EFCPConfiguration::setUnknownFlowPolicy(
         this->unknownFlowPolicy = unknownFlowPolicy;
 }
 
+/* CLASS FlowAllocatorConfiguration */
+FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
+        maxCreateFlowRetries = 0;
+}
+
+const PolicyConfig&
+FlowAllocatorConfiguration::getAllocateNotifyPolicy() const {
+        return allocateNotifyPolicy;
+}
+
+void FlowAllocatorConfiguration::setAllocateNotifyPolicy(
+                const PolicyConfig& allocateNotifyPolicy){
+        this->allocateNotifyPolicy = allocateNotifyPolicy;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getAllocateRetryPolicy() const{
+        return allocateRetryPolicy;
+}
+
+void FlowAllocatorConfiguration::setAllocateRetryPolicy(
+                const PolicyConfig& allocateRetryPolicy) {
+        this->allocateRetryPolicy = allocateRetryPolicy;
+}
+
+int FlowAllocatorConfiguration::getMaxCreateFlowRetries() const {
+        return maxCreateFlowRetries;
+}
+
+void FlowAllocatorConfiguration::setMaxCreateFlowRetries(
+                int maxCreateFlowRetries) {
+        this->maxCreateFlowRetries = maxCreateFlowRetries;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getNewFlowRequestPolicy() const {
+        return newFlowRequestPolicy;
+}
+
+void FlowAllocatorConfiguration::setNewFlowRequestPolicy(
+                const PolicyConfig& newFlowRequestPolicy) {
+        this->newFlowRequestPolicy = newFlowRequestPolicy;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getSeqRollOverPolicy() const {
+        return seqRollOverPolicy;
+}
+
+void FlowAllocatorConfiguration::setSeqRollOverPolicy(
+                const PolicyConfig& seqRollOverPolicy) {
+        this->seqRollOverPolicy = seqRollOverPolicy;
+}
+
 /* CLASS RMTConfiguration */
 RMTConfiguration::RMTConfiguration(){
 }
@@ -2111,6 +2162,15 @@ const RMTConfiguration& DIFConfiguration::getRmtConfiguration() const {
 void DIFConfiguration::setRmtConfiguration(
                 const RMTConfiguration& rmtConfiguration) {
         this->rmtConfiguration = rmtConfiguration;
+}
+
+const FlowAllocatorConfiguration& DIFConfiguration::getFaConfiguration() const {
+        return faConfiguration;
+}
+
+void DIFConfiguration::setFaConfiguration(
+                const FlowAllocatorConfiguration& faConfiguration) {
+        this->faConfiguration = faConfiguration;
 }
 
 /* CLASS NEIGHBOR */
