@@ -1614,6 +1614,12 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].len     = 4;
         attr_policy[CPP_ATTR_INIT_A_TIMER].type        = NLA_U32;
         attr_policy[CPP_ATTR_INIT_A_TIMER].len         = 4;
+        attr_policy[CPP_ATTR_PARTIAL_DELIVERY].type    = NLA_FLAG;
+        attr_policy[CPP_ATTR_PARTIAL_DELIVERY].len     = 0;
+        attr_policy[CPP_ATTR_IN_ORDER_DELIVERY].type   = NLA_FLAG;
+        attr_policy[CPP_ATTR_IN_ORDER_DELIVERY].len    = 0;
+        attr_policy[CPP_ATTR_MAX_SDU_GAP].type         = NLA_U32;
+        attr_policy[CPP_ATTR_MAX_SDU_GAP].len          = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
@@ -1652,8 +1658,21 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->initial_a_timer =
                                    nla_get_u32(attrs[CPP_ATTR_INIT_A_TIMER]);
 
+        if (attrs[CPP_ATTR_PARTIAL_DELIVERY])
+                cpp_struct->partial_delivery =
+                        nla_get_flag(attrs[CPP_ATTR_PARTIAL_DELIVERY]);
+
+        if (attrs[CPP_ATTR_IN_ORDER_DELIVERY])
+                cpp_struct->in_order_delivery =
+                        nla_get_flag(attrs[CPP_ATTR_IN_ORDER_DELIVERY]);
+
+        if (attrs[CPP_ATTR_MAX_SDU_GAP])
+                cpp_struct->max_sdu_gap =
+                        nla_get_u32(attrs[CPP_ATTR_MAX_SDU_GAP]);
+
         return 0;
 }
+
 static int
 rnl_parse_ipcm_assign_to_dif_req_msg(struct genl_info * info,
                                      struct rnl_ipcm_assign_to_dif_req_msg_attrs * msg_attrs)
