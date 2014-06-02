@@ -1116,6 +1116,10 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                         goto parse_fail;
         }
 
+        if (attrs[EFCPC_ATTR_QOS_CUBES]) {
+               LOG_MISSING; 
+        }
+
         if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
                                  efcp_config->unknown_flow)) 
@@ -1168,6 +1172,11 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                                   dif_config->efcp_config)) 
                         goto parse_fail;
                 
+        }
+
+        
+        if (attrs[DCONF_ATTR_RMTC]) {
+               LOG_MISSING; 
         }
 
         return 0;
@@ -1283,7 +1292,7 @@ static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
 
         if (attrs[DWFCC_ATTR_TX_CTRL_POLICY])
                 if (parse_policy(attrs[DWFCC_ATTR_TX_CTRL_POLICY],
-                                 dtcp_receiving_flow_control(cfg)))
+                                 dtcp_tx_control(cfg)))
                         return -1;
 
         return 0;
@@ -1430,6 +1439,11 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY])
                 if (parse_policy(attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY],
                                  dtcp_reconcile_flow_conflict(cfg)))
+                        return -1;
+
+        if (attrs[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY],
+                                 dtcp_receiving_flow_control(cfg)))
                         return -1;
 
         return 0;
