@@ -1107,8 +1107,9 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                 goto parse_fail;
 
         if (attrs[EFCPC_ATTR_DATA_TRANS_CONS]) {
-                if (!efcp_config->dt_cons)
+                if (!efcp_config->dt_cons) 
                         goto parse_fail;
+                
 
                 if (parse_dt_cons(attrs[EFCPC_ATTR_DATA_TRANS_CONS],
                                   efcp_config->dt_cons)) 
@@ -1117,8 +1118,9 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
 
         if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
-                                 efcp_config->unknown_flow))
-                        return -1;
+                                 efcp_config->unknown_flow)) 
+                        goto parse_fail;
+                
         }
 
         return 0;
@@ -1163,9 +1165,9 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                         goto parse_fail;
 
                 if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
-                                  dif_config->efcp_config)) {
+                                  dif_config->efcp_config)) 
                         goto parse_fail;
-                }
+                
         }
 
         return 0;

@@ -432,8 +432,15 @@ struct efcp_config * efcp_config_create(void)
         if (!tmp) 
                 return NULL;
         
+        tmp->dt_cons = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp->dt_cons) {
+                rkfree(tmp);
+                return NULL;
+        }
+
         tmp->unknown_flow = policy_create();
         if (!tmp->unknown_flow) {
+                rkfree(tmp->dt_cons);
                 rkfree(tmp);
                 return NULL;
         }
@@ -449,6 +456,8 @@ int efcp_config_destroy(struct efcp_config * efcp_config)
 
         if (efcp_config->unknown_flow)
                 policy_destroy(efcp_config->unknown_flow);
+
+        rkfree(efcp_config);
 
         return 0;
 }

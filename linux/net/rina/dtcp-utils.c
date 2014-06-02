@@ -259,7 +259,7 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
         tmp->sending_ack                 = policy_create_gfp(flags);
         tmp->rcvr_control_ack            = policy_create_gfp(flags);
 
-        if (tmp->retransmission_timer_expiry ||
+        if (!tmp->retransmission_timer_expiry ||
            !tmp->sender_ack                  ||
            !tmp->receiving_ack_list          ||
            !tmp->rcvr_ack                    ||
@@ -337,7 +337,7 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
                 goto clean;
         }
 
-        tmp->rtt_estimator= policy_create_gfp(flags);
+        tmp->rtt_estimator = policy_create_gfp(flags);
         if (!tmp->rtt_estimator) {
                 LOG_ERR("Could not create rtt_estimator"
                         "in dtcp_config_create");
