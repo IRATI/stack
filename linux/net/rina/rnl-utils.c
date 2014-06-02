@@ -1258,8 +1258,8 @@ static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
         attr_policy[DWFCC_ATTR_INITIAL_CREDIT].len              = 4;
         attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].type      = NLA_NESTED;
         attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].len       = 0;
-        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type    = NLA_NESTED;
-        attr_policy[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY].len     = 0;
+        attr_policy[DWFCC_ATTR_TX_CTRL_POLICY].type             = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_TX_CTRL_POLICY].len              = 0;
 
         if (nla_parse_nested(attrs,
                              DWFCC_ATTR_MAX,
@@ -1279,8 +1279,8 @@ static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
                                  dtcp_rcvr_flow_control(cfg)))
                         return -1;
 
-        if (attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY])
-                if (parse_policy(attrs[DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY],
+        if (attrs[DWFCC_ATTR_TX_CTRL_POLICY])
+                if (parse_policy(attrs[DWFCC_ATTR_TX_CTRL_POLICY],
                                  dtcp_receiving_flow_control(cfg)))
                         return -1;
 
@@ -1367,6 +1367,8 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
         attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].len  = 0;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type   = NLA_NESTED;
         attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].len    = 0;
+        attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type  = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].len   = 0;
 
         if (nla_parse_nested(attrs,
                              DFCC_ATTR_MAX,
