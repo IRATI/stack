@@ -1,6 +1,5 @@
 /*
  * EFCP (Error and Flow Control Protocol)
-        spin_lock(&instance->lock);
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
