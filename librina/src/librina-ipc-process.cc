@@ -1001,7 +1001,6 @@ throw (CreateConnectionException) {
 #if STUB_API
         // Do nothing
         (void) connection;
-        (void) connectionPolicies;
 #else
         IpcpConnectionCreateRequestMessage message;
         message.setConnection(connection);
@@ -1062,7 +1061,6 @@ throw (CreateConnectionException) {
         // Do nothing
 
         (void) connection;
-        (void) connectionPolicies;
 #else
         IpcpConnectionCreateArrivedMessage message;
         message.setConnection(connection);
