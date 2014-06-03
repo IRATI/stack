@@ -1617,6 +1617,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
         attr_policy[CPP_ATTR_INIT_A_TIMER].len         = 4;
         attr_policy[CPP_ATTR_PARTIAL_DELIVERY].type    = NLA_FLAG;
         attr_policy[CPP_ATTR_PARTIAL_DELIVERY].len     = 0;
+        attr_policy[CPP_ATTR_INCOMPLETE_DELIVERY].type = NLA_FLAG;
+        attr_policy[CPP_ATTR_INCOMPLETE_DELIVERY].len  = 0;
         attr_policy[CPP_ATTR_IN_ORDER_DELIVERY].type   = NLA_FLAG;
         attr_policy[CPP_ATTR_IN_ORDER_DELIVERY].len    = 0;
         attr_policy[CPP_ATTR_MAX_SDU_GAP].type         = NLA_U32;
@@ -1659,12 +1661,11 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 cpp_struct->initial_a_timer =
                                    nla_get_u32(attrs[CPP_ATTR_INIT_A_TIMER]);
 
-        if (attrs[CPP_ATTR_PARTIAL_DELIVERY])
-                cpp_struct->partial_delivery =
+        cpp_struct->partial_delivery    = 
                         nla_get_flag(attrs[CPP_ATTR_PARTIAL_DELIVERY]);
-
-        if (attrs[CPP_ATTR_IN_ORDER_DELIVERY])
-                cpp_struct->in_order_delivery =
+        cpp_struct->incomplete_delivery =
+                        nla_get_flag(attrs[CPP_ATTR_INCOMPLETE_DELIVERY]);
+        cpp_struct->in_order_delivery   =
                         nla_get_flag(attrs[CPP_ATTR_IN_ORDER_DELIVERY]);
 
         if (attrs[CPP_ATTR_MAX_SDU_GAP])

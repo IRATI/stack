@@ -41,6 +41,7 @@ struct conn_policies {
         int                   seq_num_ro_th;
         timeout_t             initial_a_timer;
         bool                  partial_delivery;
+        bool                  incomplete_delivery;
         bool                  in_order_delivery;
         seq_num_t             max_sdu_gap;
 };

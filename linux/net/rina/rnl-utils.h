@@ -158,6 +158,7 @@ enum conn_policies_params_attrs_list {
         CPP_ATTR_SEQ_NUM_ROLLOVER,
         CPP_ATTR_INIT_A_TIMER,
         CPP_ATTR_PARTIAL_DELIVERY,
+        CPP_ATTR_INCOMPLETE_DELIVERY,
         CPP_ATTR_IN_ORDER_DELIVERY,
         CPP_ATTR_MAX_SDU_GAP,
         __CPP_ATTR_MAX,
