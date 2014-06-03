@@ -38,7 +38,7 @@ public class PDUFTGeneratorImpl implements PDUFTableGenerator {
 	}
 	
 	public void setDIFConfiguration(DIFConfiguration difConfiguration) {
-		PDUFTableGeneratorConfiguration pduftgConfig = difConfiguration.getPDUFTableGeneratorConfiguration();
+		PDUFTableGeneratorConfiguration pduftgConfig = difConfiguration.getPduFTableGeneratorConfiguration();
 		
 		if (!pduftgConfig.getPduFtGeneratorPolicy().getName().equals("LinkState")) {
 			log.warn("Unsupported PDU Forwarding Table Generation policy: "+pduftgConfig.getPduFtGeneratorPolicy().getName() 

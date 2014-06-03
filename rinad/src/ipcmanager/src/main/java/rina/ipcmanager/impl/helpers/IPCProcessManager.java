@@ -213,39 +213,41 @@ public class IPCProcessManager {
 						result = result + "        Address: " + difConfiguration.getAddress() + "\n";
 					}
 					
-					if (difConfiguration.getDataTransferConstants() != null && 
-							difConfiguration.getDataTransferConstants().isInitialized()) {
-						DataTransferConstants dtc = difConfiguration.getDataTransferConstants();
-						result = result + "        Data Transfer Constants: \n";
-						result = result + "            Address length: " + dtc.getAddressLength() + "\n";
-						result = result + "            CEP-id length: " + dtc.getCepIdLength() + "\n";
-						result = result + "            Length length: " + dtc.getLengthLength() + "\n";
-						result = result + "            QoS-id length: " + dtc.getQosIdLenght() + "\n";
-						result = result + "            Sequence number length: " + dtc.getSequenceNumberLength()+ "\n";
-						result = result + "            Max PDU lifetime: " + dtc.getMaxPduLifetime()+ "\n";
-						result = result + "            Max PDU size: " + dtc.getMaxPduSize() + "\n";
+					result = result + "            EFCP Configuration: \n";
+					
+					if (difConfiguration.getEfcpConfiguration().getDataTransferConstants() != null && 
+							difConfiguration.getEfcpConfiguration().getDataTransferConstants().isInitialized()) {
+						DataTransferConstants dtc = difConfiguration.getEfcpConfiguration().getDataTransferConstants();
+						result = result + "            Data Transfer Constants: \n";
+						result = result + "                Address length: " + dtc.getAddressLength() + "\n";
+						result = result + "                CEP-id length: " + dtc.getCepIdLength() + "\n";
+						result = result + "                Length length: " + dtc.getLengthLength() + "\n";
+						result = result + "                QoS-id length: " + dtc.getQosIdLenght() + "\n";
+						result = result + "                Sequence number length: " + dtc.getSequenceNumberLength()+ "\n";
+						result = result + "                Max PDU lifetime: " + dtc.getMaxPduLifetime()+ "\n";
+						result = result + "                Max PDU size: " + dtc.getMaxPduSize() + "\n";
 					}
 					
-					Iterator<QoSCube> qosCubeIterator = difConfiguration.getQosCubes().iterator();
+					Iterator<QoSCube> qosCubeIterator = difConfiguration.getEfcpConfiguration().getQosCubes().iterator();
 					if (qosCubeIterator.hasNext()) {
-						result = result + "        QoS Cubes: \n";
+						result = result + "            QoS Cubes: \n";
 					}
 					QoSCube qosCube = null;
 					while (qosCubeIterator.hasNext()){
 						qosCube = qosCubeIterator.next();
-						result = result + "            Name: " + qosCube.getName() + "\n";
-						result = result + "            Id: " + qosCube.getId() + "\n";
-						result = result + "            Ordered delivery: " + qosCube.isOrderedDelivery() + "\n";
-						result = result + "            Partial delivery: " + qosCube.isOrderedDelivery() + "\n";
-						result = result + "            EFCP policies: " + qosCube.getEfcpPolicies();
+						result = result + "                Name: " + qosCube.getName() + "\n";
+						result = result + "                Id: " + qosCube.getId() + "\n";
+						result = result + "                Ordered delivery: " + qosCube.isOrderedDelivery() + "\n";
+						result = result + "                Partial delivery: " + qosCube.isOrderedDelivery() + "\n";
+						result = result + "                EFCP policies: " + qosCube.getEfcpPolicies();
 						result = result + "            --------------------: \n";
 					}
 					
-					if (difConfiguration.getDataTransferConstants() != null && 
-							difConfiguration.getPDUFTableGeneratorConfiguration() != null) 
+					if (difConfiguration.getEfcpConfiguration().getDataTransferConstants() != null && 
+							difConfiguration.getPduFTableGeneratorConfiguration() != null) 
 					{
 						result = result + "        PDUFTableGeneratofConfiguration: \n";
-						PDUFTableGeneratorConfiguration pduftTableGeneratorConfiguration = difConfiguration.getPDUFTableGeneratorConfiguration();
+						PDUFTableGeneratorConfiguration pduftTableGeneratorConfiguration = difConfiguration.getPduFTableGeneratorConfiguration();
 						result = result + "            PDUFTG policy: " + pduftTableGeneratorConfiguration.getPduFtGeneratorPolicy().getName()+"/" 
 									+ pduftTableGeneratorConfiguration.getPduFtGeneratorPolicy().getVersion() + "\n";
 						if (pduftTableGeneratorConfiguration.getLinkStateRoutingConfiguration() != null) {
@@ -340,13 +342,13 @@ public class IPCProcessManager {
 			difInformation.getDifConfiguration().setAddress(address.getAddress());
 			
 			if (difProperties.getDataTransferConstants() != null) {
-				difInformation.getDifConfiguration().setDataTransferConstants(
+				difInformation.getDifConfiguration().getEfcpConfiguration().setDataTransferConstants(
 						difProperties.getDataTransferConstants());
 			}
 			
 			if (difProperties.getQosCubes() != null) {
 				for(int i=0; i<difProperties.getQosCubes().size(); i++) {
-					difInformation.getDifConfiguration().addQoSCube(
+					difInformation.getDifConfiguration().getEfcpConfiguration().addQoSCube(
 							difProperties.getQosCubes().get(i));
 				}
 			}

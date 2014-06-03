@@ -25,9 +25,9 @@
 #include "vmpi.h"
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
-#include "vmpi-host-test.h"
 #include "vmpi-ops.h"
 #include "shim-hv.h"
+#include "vmpi-test.h"
 
 
 struct vmpi_info {
@@ -73,7 +73,7 @@ vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
 }
 
 struct vmpi_info *
-vmpi_init(struct vmpi_impl_info *vi, int *err)
+vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
         int i;
@@ -106,8 +106,20 @@ vmpi_init(struct vmpi_impl_info *vi, int *err)
                 goto init_read;
         }
 
+#ifdef VMPI_TEST
+        *err = vmpi_test_init(mpi, deferred_test_init);
+        if (*err) {
+                printk("vmpi_test_init() failed\n");
+                goto test_ini;
+        }
+#endif  /* VMPI_TEST */
+
         return mpi;
 
+#ifdef VMPI_TEST
+ test_ini:
+        shim_hv_fini();
+#endif  /* VMPI_TEST */
  init_read:
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
@@ -120,11 +132,16 @@ vmpi_init(struct vmpi_impl_info *vi, int *err)
 }
 
 void
-vmpi_fini(struct vmpi_info *mpi)
+vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
 
+#ifdef VMPI_TEST
+        vmpi_test_fini(deferred_test_fini);
+#endif  /* VMPI_TEST */
+
         shim_hv_fini();
+
         mpi->vi = NULL;
         vmpi_ring_fini(&mpi->write);
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {

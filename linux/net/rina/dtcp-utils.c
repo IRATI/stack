@@ -259,12 +259,12 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
         tmp->rcvr_control_ack            = policy_create_gfp(flags);
 
         if (!tmp->rtt_estimator               ||
-           !tmp->retransmission_timer_expiry ||
-           !tmp->sender_ack                  ||
-           !tmp->receiving_ack_list          ||
-           !tmp->rcvr_ack                    ||
-           !tmp->sending_ack                 ||
-           !tmp->rcvr_control_ack) {
+            !tmp->retransmission_timer_expiry ||
+            !tmp->sender_ack                  ||
+            !tmp->receiving_ack_list          ||
+            !tmp->rcvr_ack                    ||
+            !tmp->sending_ack                 ||
+            !tmp->rcvr_control_ack) {
                 LOG_ERR("Could not create policy");
                 dtcp_rxctrl_config_destroy(tmp);
                 return NULL;
