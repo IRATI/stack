@@ -703,6 +703,14 @@ void Connection::setSourceCepId(int sourceCepId) {
         this->sourceCepId = sourceCepId;
 }
 
+const ConnectionPolicies& Connection::getPolicies() const {
+        return policies;
+}
+
+void Connection::setPolicies(const ConnectionPolicies& policies) {
+        this->policies = policies;
+}
+
 const std::string Connection::toString() {
         std::stringstream ss;
         ss<<"Source address: "<<sourceAddress;
@@ -711,6 +719,7 @@ const std::string Connection::toString() {
         ss<<"; Dest cep-id: "<<destCepId<<std::endl;
         ss<<"Por-id: "<<portId<<"; QoS-id: "<<qosId;
         ss<<"; Flow user IPC Process id: "<<flowUserIpcProcessId<<std::endl;
+        ss<<"Policies: "<<policies.toString();
         return ss.str();
 }
 
@@ -864,8 +873,7 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(const Connection& connection,
-                const ConnectionPolicies& connectionPolicies)
+unsigned int KernelIPCProcess::createConnection(const Connection& connection)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -873,11 +881,7 @@ throw (CreateConnectionException) {
         //Do nothing
 #else
         IpcpConnectionCreateRequestMessage message;
-        message.setPortId(connection.getPortId());
-        message.setSourceAddress(connection.getSourceAddress());
-        message.setDestAddress(connection.getDestAddress());
-        message.setQosId(connection.getQosId());
-        message.setConnPolicies(connectionPolicies);
+        message.setConnection(connection);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -925,8 +929,7 @@ throw (UpdateConnectionException) {
 }
 
 unsigned int KernelIPCProcess::
-createConnectionArrived(const Connection& connection,
-                const ConnectionPolicies& connectionPolicies)
+createConnectionArrived(const Connection& connection)
 throw (CreateConnectionException) {
         unsigned int seqNum=0;
 
@@ -934,13 +937,7 @@ throw (CreateConnectionException) {
         //Do nothing
 #else
         IpcpConnectionCreateArrivedMessage message;
-        message.setPortId(connection.getPortId());
-        message.setSourceAddress(connection.getSourceAddress());
-        message.setDestAddress(connection.getDestAddress());
-        message.setQosId(connection.getQosId());
-        message.setDestCepId(connection.getDestCepId());
-        message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
-        message.setConnPolicies(connectionPolicies);
+        message.setConnection(connection);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);

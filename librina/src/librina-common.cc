@@ -947,6 +947,9 @@ ConnectionPolicies::ConnectionPolicies(){
         DTCPpresent = false;
         seqnumrolloverthreshold = 0;
         initialATimer = 0;
+        partialDelivery = false;
+        inOrderDelivery = false;
+        maxSDUGap = 0;
 }
 
 const DTCPConfig& ConnectionPolicies::getDtcpConfiguration() const {
@@ -992,6 +995,30 @@ void ConnectionPolicies::setInitialATimer(int initialATimer) {
         this->initialATimer = initialATimer;
 }
 
+bool ConnectionPolicies::isInOrderDelivery() const {
+        return inOrderDelivery;
+}
+
+void ConnectionPolicies::setInOrderDelivery(bool inOrderDelivery) {
+        this->inOrderDelivery = inOrderDelivery;
+}
+
+unsigned int ConnectionPolicies::getMaxSduGap() const {
+        return maxSDUGap;
+}
+
+void ConnectionPolicies::setMaxSduGap(unsigned int maxSduGap) {
+        maxSDUGap = maxSduGap;
+}
+
+bool ConnectionPolicies::isPartialDelivery() const {
+        return partialDelivery;
+}
+
+void ConnectionPolicies::setPartialDelivery(bool partialDelivery) {
+        this->partialDelivery = partialDelivery;
+}
+
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
         ss<<"DTCP present: "<<DTCPpresent;
@@ -999,6 +1026,9 @@ const std::string ConnectionPolicies::toString() {
         ss<<"; Seq. num roll. threshold: "<<seqnumrolloverthreshold;
         ss<<"; Initial seq. num policy (name/version): ";
         ss<<initialseqnumpolicy.getName()<<"/"<<initialseqnumpolicy.getVersion()<<std::endl;
+        ss<<"; Partial delivery: "<<partialDelivery;
+        ss<<"; In order delivery: "<<inOrderDelivery;
+        ss<<"; Max allowed SDU gap: "<<maxSDUGap<<std::endl;
         if (DTCPpresent) {
                 ss<<"DTCP Configuration: "<<dtcpConfiguration.toString();
         }
@@ -1875,6 +1905,57 @@ void EFCPConfiguration::setUnknownFlowPolicy(
         this->unknownFlowPolicy = unknownFlowPolicy;
 }
 
+/* CLASS FlowAllocatorConfiguration */
+FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
+        maxCreateFlowRetries = 0;
+}
+
+const PolicyConfig&
+FlowAllocatorConfiguration::getAllocateNotifyPolicy() const {
+        return allocateNotifyPolicy;
+}
+
+void FlowAllocatorConfiguration::setAllocateNotifyPolicy(
+                const PolicyConfig& allocateNotifyPolicy){
+        this->allocateNotifyPolicy = allocateNotifyPolicy;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getAllocateRetryPolicy() const{
+        return allocateRetryPolicy;
+}
+
+void FlowAllocatorConfiguration::setAllocateRetryPolicy(
+                const PolicyConfig& allocateRetryPolicy) {
+        this->allocateRetryPolicy = allocateRetryPolicy;
+}
+
+int FlowAllocatorConfiguration::getMaxCreateFlowRetries() const {
+        return maxCreateFlowRetries;
+}
+
+void FlowAllocatorConfiguration::setMaxCreateFlowRetries(
+                int maxCreateFlowRetries) {
+        this->maxCreateFlowRetries = maxCreateFlowRetries;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getNewFlowRequestPolicy() const {
+        return newFlowRequestPolicy;
+}
+
+void FlowAllocatorConfiguration::setNewFlowRequestPolicy(
+                const PolicyConfig& newFlowRequestPolicy) {
+        this->newFlowRequestPolicy = newFlowRequestPolicy;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getSeqRollOverPolicy() const {
+        return seqRollOverPolicy;
+}
+
+void FlowAllocatorConfiguration::setSeqRollOverPolicy(
+                const PolicyConfig& seqRollOverPolicy) {
+        this->seqRollOverPolicy = seqRollOverPolicy;
+}
+
 /* CLASS RMTConfiguration */
 RMTConfiguration::RMTConfiguration(){
 }
@@ -2111,6 +2192,15 @@ const RMTConfiguration& DIFConfiguration::getRmtConfiguration() const {
 void DIFConfiguration::setRmtConfiguration(
                 const RMTConfiguration& rmtConfiguration) {
         this->rmtConfiguration = rmtConfiguration;
+}
+
+const FlowAllocatorConfiguration& DIFConfiguration::getFaConfiguration() const {
+        return faConfiguration;
+}
+
+void DIFConfiguration::setFaConfiguration(
+                const FlowAllocatorConfiguration& faConfiguration) {
+        this->faConfiguration = faConfiguration;
 }
 
 /* CLASS NEIGHBOR */
