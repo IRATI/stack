@@ -467,12 +467,42 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
 
 DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
 
+/* EFCPConfiguration CLASS */
+enum EFCPConfigurationAttributes {
+        EFCPC_ATTR_DTCONST = 1,
+        EFCPC_ATTR_QOS_CUBES,
+        EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
+        __EFCPC_ATTR_MAX,
+};
+
+#define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
+
+int putEFCPConfigurationObject(nl_msg* netlinkMessage,
+                const EFCPConfiguration& object);
+
+EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
+
+/* RMTConfiguration CLASS */
+enum RMTConfigurationAttributes {
+        RMTC_ATTR_QUEUE_MONITOR_POLICY = 1,
+        RMTC_ATTR_SCHEDULING_POLICY,
+        RMTC_ATTR_MAX_QUEUE_POLICY,
+        __RMTC_ATTR_MAX,
+};
+
+#define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+
+int putRMTConfigurationObject(nl_msg* netlinkMessage,
+                const RMTConfiguration& object);
+
+RMTConfiguration * parseRMTConfigurationObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
-	DCONF_ATTR_DATA_TRANS_CONST,
 	DCONF_ATTR_ADDRESS,
-	DCONF_ATTR_QOS_CUBES,
+	DCONF_ATTR_EFCP_CONF,
+	DCONF_ATTR_RMT_CONF,
 	__DCONF_ATTR_MAX,
 };
 
@@ -840,7 +870,7 @@ enum DTCPWindowBasedFlowControlConfigAttributes {
         DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH = 1,
         DWFCC_ATTR_INITIAL_CREDIT,
         DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY,
-        DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
+        DWFCC_ATTR_TX_CTRL_POLICY,
         __DWFCC_ATTR_MAX,
 };
 
@@ -885,6 +915,7 @@ enum DTCPFlowControlConfigAttributes {
         DFCC_ATTR_CLOSED_WINDOW_POLICY,
         DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY,
         DFCC_ATTR_RECON_FLOW_CTRL_POLICY,
+        DFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
         __DFCC_ATTR_MAX,
 };
 
@@ -899,8 +930,6 @@ parseDTCPFlowControlConfigObject(nlattr *nested);
 /* DTCPRtxControlConfig class */
 enum DTCPRtxControlConfigAttributes {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
-        DRCC_ATTR_INIT_A_TIMER,
-        DRCC_ATTR_RTT_EST_POLICY,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,
@@ -929,6 +958,7 @@ enum DTCPConfigAttributes {
         DCA_ATTR_RCVR_TIMER_INAC_POLICY,
         DCA_ATTR_SNDR_TIMER_INAC_POLICY,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
 };
 
@@ -946,6 +976,7 @@ enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_CONFIG,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,
 	CPA_ATTR_SEQ_NUM_ROLLOVER,
+	CPA_ATTR_INIT_A_TIMER,
 	__CPA_ATTR_MAX,
 };
 
@@ -957,13 +988,31 @@ int putConnectionPoliciesObject(nl_msg * netlinkMessage,
 ConnectionPolicies *
 parseConnectionPoliciesObject(nlattr *nested);
 
+/* Connection class */
+enum ConnectionAttributes {
+        CONN_ATTR_PORT_ID = 1,
+        CONN_ATTR_SOURCE_ADDRESS,
+        CONN_ATTR_DEST_ADDRESS,
+        CONN_ATTR_QOS_ID,
+        CONN_ATTR_SOURCE_CEP_ID,
+        CONN_ATTR_DEST_CEP_ID,
+        CONN_ATTR_PARTIAL_DELIVERY,
+        CONN_ATTR_IN_ORDER_DELIVERY,
+        CONN_ATTR_MAX_SDU_GAP,
+        CONN_ATTR_POLICIES,
+        CONN_ATTR_FLOW_USER_IPCP_ID,
+        __CONN_ATTR_MAX,
+};
+
+#define CONN_ATTR_MAX (__CONN_ATTR_MAX -1)
+
+int putConnectionObject(nl_msg * netlinkMessage, const Connection& object);
+
+Connection * parseConnectionObject(nlattr *nested);
+
 /* IpcpConnectionCreateRequestMessage CLASS*/
 enum IpcpConnectionCreateRequestMessageAttributes {
-        ICCRM_ATTR_PORT_ID = 1,
-        ICCRM_ATTR_SRC_ADDRESS,
-        ICCRM_ATTR_DEST_ADDRESS,
-        ICCRM_ATTR_QOS_ID,
-        ICCRM_ATTR_POLICIES,
+        ICCRM_ATTR_CONNECTION = 1,
         __ICCRM_ATTR_MAX,
 };
 
@@ -1024,13 +1073,7 @@ IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
 
 /* IpcpConnectionCreateArrivedMessage CLASS*/
 enum IpcpConnectionCreateArrivedMessageAttributes {
-        ICCAM_ATTR_PORT_ID = 1,
-        ICCAM_ATTR_SRC_ADDRESS,
-        ICCAM_ATTR_DEST_ADDRESS,
-        ICCAM_ATTR_DEST_CEP_ID,
-        ICCAM_ATTR_QOS_ID,
-        ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
-        ICCAM_ATTR_POLICIES,
+        ICCAM_ATTR_CONNECTION = 1,
         __ICCAM_ATTR_MAX,
 };
 

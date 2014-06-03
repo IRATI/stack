@@ -102,7 +102,7 @@
     	 "addressPrefix" : 16,
     	 "organization" : "IRATI"
       } ], 
-     "pdufTableGeneratorConfiguration" : {
+     "pduFTableGeneratorConfiguration" : {
         "pduFtGeneratorPolicy" : {
           "name" : "LinkState",
           "version" : 0
