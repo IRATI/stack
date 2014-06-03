@@ -168,6 +168,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 		pr_warn("Could not allocate mpi for %s\n", name);
 		return ERR_PTR(-ENOMEM);
 	}
+        memset(vif, 0, sizeof(*vif));
 
         vif->parent = parent;
 
