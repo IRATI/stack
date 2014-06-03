@@ -380,8 +380,9 @@ SYSCALL_DEFINE4(management_sdu_read,
         return retsize;
 }
 
-SYSCALL_DEFINE4(management_sdu_write,
+SYSCALL_DEFINE5(management_sdu_write,
                 ipc_process_id_t,           id,
+                address_t,                  dst_addr,
                 port_id_t,                  port_id,
                 const void __user *,        buffer,
                 size_t,                     size)
@@ -424,7 +425,8 @@ SYSCALL_DEFINE4(management_sdu_write,
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
-        sdu_wpi->port_id = port_id;
+        sdu_wpi->dst_addr = dst_addr;
+        sdu_wpi->port_id  = port_id;
         ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
         /* Passing ownership to the internal layers */
