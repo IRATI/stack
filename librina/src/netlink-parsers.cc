@@ -2778,6 +2778,10 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
                 NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_PARTIAL_DELIVERY);
         }
 
+        if (object.isIncompleteDelivery()){
+                NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_INCOMPLETE_DELIVERY);
+        }
+
         NLA_PUT_U32(netlinkMessage, CPA_ATTR_MAX_SDU_GAP,
                                 object.getMaxSduGap());
 
@@ -2809,6 +2813,9 @@ parseConnectionPoliciesObject(nlattr *nested) {
         attr_policy[CPA_ATTR_PARTIAL_DELIVERY].type = NLA_FLAG;
         attr_policy[CPA_ATTR_PARTIAL_DELIVERY].minlen = 0;
         attr_policy[CPA_ATTR_PARTIAL_DELIVERY].maxlen = 0;
+        attr_policy[CPA_ATTR_INCOMPLETE_DELIVERY].type = NLA_FLAG;
+        attr_policy[CPA_ATTR_INCOMPLETE_DELIVERY].minlen = 0;
+        attr_policy[CPA_ATTR_INCOMPLETE_DELIVERY].maxlen = 0;
         attr_policy[CPA_ATTR_IN_ORDER_DELIVERY].type = NLA_FLAG;
         attr_policy[CPA_ATTR_IN_ORDER_DELIVERY].minlen = 0;
         attr_policy[CPA_ATTR_IN_ORDER_DELIVERY].maxlen = 0;
@@ -2876,6 +2883,12 @@ parseConnectionPoliciesObject(nlattr *nested) {
                 result->setPartialDelivery(true);
         } else {
                 result->setPartialDelivery(false);
+        }
+
+        if (attrs[CPA_ATTR_INCOMPLETE_DELIVERY]) {
+                result->setIncompleteDelivery(true);
+        } else {
+                result->setIncompleteDelivery(false);
         }
 
         if (attrs[CPA_ATTR_IN_ORDER_DELIVERY]) {
@@ -3669,7 +3682,8 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
 }
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
-		const DIFConfiguration& object){
+                const DIFConfiguration& object,
+                bool normalIPCProcess){
 	struct nlattr *parameters, *efcpConfig, *rmtConfig;
 
 	if  (object.getParameters().size() > 0) {
@@ -3684,25 +3698,27 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	        nla_nest_end(netlinkMessage, parameters);
 	}
 
-	if (!(efcpConfig = nla_nest_start(
-	                netlinkMessage, DCONF_ATTR_EFCP_CONF))) {
-	        goto nla_put_failure;
-	}
-	if (putEFCPConfigurationObject(netlinkMessage,
-	                object.getEfcpConfiguration()) < 0) {
-	        goto nla_put_failure;
-	}
-	nla_nest_end(netlinkMessage, efcpConfig);
+	if (normalIPCProcess) {
+	        if (!(efcpConfig = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_EFCP_CONF))) {
+	                goto nla_put_failure;
+	        }
+	        if (putEFCPConfigurationObject(netlinkMessage,
+	                        object.getEfcpConfiguration()) < 0) {
+	                goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, efcpConfig);
 
-        if (!(rmtConfig = nla_nest_start(
-                        netlinkMessage, DCONF_ATTR_RMT_CONF))) {
-                goto nla_put_failure;
-        }
-        if (putRMTConfigurationObject(netlinkMessage,
-                        object.getRmtConfiguration()) < 0) {
-                goto nla_put_failure;
-        }
-        nla_nest_end(netlinkMessage, rmtConfig);
+	        if (!(rmtConfig = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_RMT_CONF))) {
+	                goto nla_put_failure;
+	        }
+	        if (putRMTConfigurationObject(netlinkMessage,
+	                        object.getRmtConfiguration()) < 0) {
+	                goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, rmtConfig);
+	}
 
 	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
 	                object.getAddress());
@@ -3717,6 +3733,7 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 int putDIFInformationObject(nl_msg* netlinkMessage,
 		const DIFInformation& object){
 	struct nlattr *difName, *configuration;
+	bool normalIPCProcess = false;
 
 	NLA_PUT_STRING(netlinkMessage, DINFO_ATTR_DIF_TYPE,
 			object.getDifType().c_str());
@@ -3733,8 +3750,14 @@ int putDIFInformationObject(nl_msg* netlinkMessage,
 	if (!(configuration = nla_nest_start(netlinkMessage, DINFO_ATTR_DIF_CONFIG))) {
 		goto nla_put_failure;
 	}
+
+	if (object.getDifType().compare(NORMAL_IPC_PROCESS) == 0) {
+	        normalIPCProcess = true;
+	}
+
 	if (putDIFConfigurationObject(netlinkMessage,
-			object.getDifConfiguration()) < 0) {
+			object.getDifConfiguration(),
+			normalIPCProcess) < 0) {
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, configuration);
@@ -3791,7 +3814,8 @@ int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
         }
 
         if (putDIFConfigurationObject(
-                        netlinkMessage, object.getDIFConfiguration()) < 0) {
+                        netlinkMessage, object.getDIFConfiguration(),
+                        true) < 0) {
                 goto nla_put_failure;
         }
 
