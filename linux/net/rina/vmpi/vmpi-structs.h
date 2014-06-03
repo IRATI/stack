@@ -125,6 +125,11 @@ static inline unsigned int vmpi_queue_len(struct vmpi_queue *queue)
         return queue->len;
 }
 
+static inline unsigned int vmpi_queue_empty(struct vmpi_queue *queue)
+{
+        return queue->len == 0;
+}
+
 int vmpi_queue_init(struct vmpi_queue *queue, unsigned int initial_length,
                     unsigned int buf_size);
 void vmpi_queue_fini(struct vmpi_queue *queue);

@@ -25,3 +25,21 @@ config VMPI_VIRTIO_HOST
         select RINA_SHIM_HV
 	help
 	  No help for the time being
+
+config VMPI_XEN_GUEST
+        tristate "VMPI for Xen - guest support"
+        default m
+        depends on VMPI
+        select XEN
+        select RINA_SHIM_HV
+        help
+	  No help for the time being
+
+config VMPI_XEN_HOST
+        tristate "VMPI for Xen - host support"
+        default m
+        depends on VMPI
+        select XEN
+        select RINA_SHIM_HV
+        help
+          No help for the time being

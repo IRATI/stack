@@ -1,4 +1,4 @@
-/* Test interface for the VMPI on the guest
+/* Test interface for VMPI
  *
  * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
  *
@@ -59,20 +59,19 @@ vmpi_test_aio_read(struct kiocb *iocb, const struct iovec *iv,
         return ret;
 }
 
-/* Defined in vmpi.c, must NOT be part of vmpi.h. */
-vmpi_info_t *vmpi_get_instance(void);
+static vmpi_info_t *instance = NULL;
 
 static int
 vmpi_test_open(struct inode *inode, struct file *f)
 {
-        if (vmpi_get_instance() == NULL) {
+        if (instance == NULL) {
                 /* Not yet ready.. this should not happen! */
                 printk("vmpi_test_open: not ready\n");
                 BUG_ON(1);
                 return -ENXIO;
         }
 
-        f->private_data = vmpi_get_instance();
+        f->private_data = instance;
 
         printk("vmpi_test_open completed\n");
 
@@ -100,38 +99,70 @@ static const struct file_operations vmpi_test_fops = {
         .llseek         = noop_llseek,
 };
 
-#define VIRTIO_MPI_MINOR     246
+#define VMPI_TEST_MINOR     246
 
 static struct miscdevice vmpi_test_misc = {
-        .minor = VIRTIO_MPI_MINOR,
+        .minor = VMPI_TEST_MINOR,
         .name = "vmpi-test",
         .fops = &vmpi_test_fops,
 };
 
-int
-vmpi_test_init(void)
+static int
+__vmpi_test_init(void)
 {
         int ret;
 
         ret = misc_register(&vmpi_test_misc);
         if (ret) {
-                printk("Failed to register virtio-mpi-test misc device\n");
-                goto misc_reg;
+                printk("Failed to register vmpi-test misc device\n");
+                return ret;
         }
 
         printk("vmpi_test_init completed\n");
 
         return 0;
+}
 
- misc_reg:
+static void
+vmpi_test_init_work(struct work_struct *unused)
+{
+        __vmpi_test_init();
+}
 
-        return ret;
+static void
+vmpi_test_fini_work(struct work_struct *unused)
+{
+        misc_deregister(&vmpi_test_misc);
+        instance = NULL;
+
+        printk("vmpi_test_fini completed\n");
+}
+
+static DECLARE_WORK(init_work, vmpi_test_init_work);
+static DECLARE_WORK(fini_work, vmpi_test_fini_work);
+
+int
+vmpi_test_init(void *opaque, bool deferred)
+{
+        instance = opaque;
+
+        if (!deferred) {
+                return __vmpi_test_init();
+        }
+
+        /* Call __vmpi_test_init() in another process context (kworker). */
+        schedule_work(&init_work);
+
+        return 0;
 }
 
 void
-vmpi_test_fini(void)
+vmpi_test_fini(bool deferred)
 {
-        misc_deregister(&vmpi_test_misc);
+        if (deferred) {
+                return vmpi_test_fini_work(&fini_work);
+        }
 
-        printk("vmpi_test_fini completed\n");
+        /* Call vmpi_test_fini_work() in another process context (kworker). */
+        schedule_work(&fini_work);
 }
