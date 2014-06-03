@@ -419,6 +419,10 @@ int rtxq_push(struct rtxq * q,
                 return -1;
 
         spin_lock(&q->lock);
+        /* is the first transmitted PDU */
+        if (!rtimer_is_pending(q->r_timer))
+                rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+
         rtxqueue_push(q->queue, pdu);
         spin_unlock(&q->lock);
 
@@ -474,3 +478,153 @@ int rtxq_set_pop(struct rtxq *      q,
         return -1;
 }
 
+struct seq_q_entry {
+        unsigned long    time_stamp;
+        struct pdu *     pdu;
+        struct list_head next;
+};
+
+static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
+                                                   gfp_t        flags)
+{
+        struct seq_q_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        tmp->pdu = pdu;
+        tmp->time_stamp = jiffies;
+
+        return tmp;
+}
+
+static void seq_q_entry_destroy(struct seq_q_entry * seq_entry)
+{
+        ASSERT(seq_entry);
+
+        pdu_destroy(seq_entry->pdu);
+        rkfree(seq_entry);
+
+        return;
+}
+
+struct seq_queue {
+        struct list_head head;
+};
+
+static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
+{
+        static struct seq_q_entry * tmp;
+
+        ASSERT(pdu);
+        ASSERT(q);
+
+        tmp = seq_q_entry_create_gfp(pdu, GFP_ATOMIC);
+        if (!tmp) {
+                LOG_ERR("Could not create sequencing queue entry");
+                return -1;
+        }
+
+        list_add(&q->head, &tmp->next);
+
+        return 0;
+}
+
+static struct seq_queue * seq_queue_create(void)
+{
+        struct seq_queue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
+
+static int seq_queue_destroy(struct seq_queue * seq_queue)
+{
+        struct seq_q_entry * cur, * n;
+
+        ASSERT(seq_queue);
+
+        list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
+                list_del(&cur->next);
+                seq_q_entry_destroy(cur);
+        }
+
+        rkfree(seq_queue);
+
+        return 0;
+}
+
+struct sequencingQ {
+        struct seq_queue * queue;
+        spinlock_t         lock;
+};
+
+int seqQ_destroy(struct sequencingQ * seqQ)
+{
+        if (!seqQ)
+                return -1;
+
+        if (seqQ->queue) seq_queue_destroy(seqQ->queue);
+
+        rkfree(seqQ);
+
+        return 0;
+}
+
+struct sequencingQ * seqQ_create(void)
+{
+        struct sequencingQ * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->queue = seq_queue_create();
+        if (!tmp->queue) {
+                seqQ_destroy(tmp);
+                return NULL;
+        }
+
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+int seqQ_push(struct sequencingQ * seqQ, struct pdu * pdu)
+{
+        if (!pdu) {
+                LOG_ERR("No PDU to be pushed");
+                return -1;
+        }
+
+        if (!seqQ) {
+                LOG_ERR("No sequencing queue to work with");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        spin_lock(&seqQ->lock);
+        if (seq_queue_push_ni(seqQ->queue, pdu)) {
+                spin_unlock(&seqQ->lock);
+                LOG_ERR("Unable to push PDU into sequencing queue %pK", seqQ);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        spin_unlock(&seqQ->lock);
+
+        return 0;
+}
+
+struct pdu * seqQ_pop(struct sequencingQ * seqQ)
+{
+        LOG_MISSING;
+        return NULL;
+}
