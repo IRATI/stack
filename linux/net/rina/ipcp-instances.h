@@ -89,7 +89,7 @@ struct dt_cons {
 struct efcp_config {
         /* The data transfer constants */
         struct dt_cons * dt_cons;
-        
+
         struct policy * unknown_flow;
 };
 
@@ -97,7 +97,7 @@ struct efcp_config {
 struct dif_config {
         /* List of configuration entries */
         struct list_head    ipcp_config_entries;
-        
+
         /* the config of the efcp */
         struct efcp_config * efcp_config;
 

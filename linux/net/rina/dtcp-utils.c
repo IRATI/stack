@@ -40,7 +40,9 @@ struct window_fctrl_config {
 };
 
 struct rate_fctrl_config {
-        uint_t          sending_rate; /* FIXME: to initialize sv? does not seem so*/
+        /* FIXME: to initialize sv? does not seem so*/
+        uint_t          sending_rate;
+
         uint_t          time_period;
         struct policy * no_rate_slow_down;
         struct policy * no_override_default_peak;
@@ -260,11 +262,11 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
         tmp->rcvr_control_ack            = policy_create_gfp(flags);
 
         if (!tmp->retransmission_timer_expiry ||
-           !tmp->sender_ack                  ||
-           !tmp->receiving_ack_list          ||
-           !tmp->rcvr_ack                    ||
-           !tmp->sending_ack                 ||
-           !tmp->rcvr_control_ack) {
+            !tmp->sender_ack                  ||
+            !tmp->receiving_ack_list          ||
+            !tmp->rcvr_ack                    ||
+            !tmp->sending_ack                 ||
+            !tmp->rcvr_control_ack) {
                 LOG_ERR("Could not create policy");
                 dtcp_rxctrl_config_destroy(tmp);
                 return NULL;

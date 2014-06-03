@@ -424,15 +424,15 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 }
 EXPORT_SYMBOL(flow_spec_dup);
 
-struct efcp_config * efcp_config_create(void) 
+struct efcp_config * efcp_config_create(void)
 {
         struct efcp_config * tmp;
         struct dt_cons *     tmp_dt;
-        
+
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp) 
+        if (!tmp)
                 return NULL;
-        
+
         tmp_dt = rkzalloc(sizeof(*tmp_dt), GFP_KERNEL);
         if (!tmp_dt) {
                 rkfree(tmp);

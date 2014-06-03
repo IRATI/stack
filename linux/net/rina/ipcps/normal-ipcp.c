@@ -435,7 +435,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if(!efcp_config->dt_cons) { 
+        if(!efcp_config->dt_cons) {
                 LOG_ERR("Configuration constants for the DIF are bogus...");
                 efcp_config_destroy(efcp_config);
                 return -1;

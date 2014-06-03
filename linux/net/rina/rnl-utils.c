@@ -634,10 +634,10 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
                         nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);
 
         fspec_struct->partial_delivery =
-                        nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);
+                nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);
 
         fspec_struct->ordered_delivery =
-                        nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);
+                nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);
 
         if (attrs[FSPEC_ATTR_MAX_GAP])
                 fspec_struct->max_allowable_gap =
@@ -1104,28 +1104,28 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                 goto parse_fail;
 
         if (attrs[EFCPC_ATTR_DATA_TRANS_CONS]) {
-                if (!efcp_config->dt_cons) 
+                if (!efcp_config->dt_cons)
                         goto parse_fail;
-                
+
 
                 if (parse_dt_cons(attrs[EFCPC_ATTR_DATA_TRANS_CONS],
-                                  efcp_config->dt_cons)) 
+                                  efcp_config->dt_cons))
                         goto parse_fail;
         }
 
         if (attrs[EFCPC_ATTR_QOS_CUBES]) {
-               LOG_MISSING; 
+                LOG_MISSING;
         }
 
         if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
                 if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
-                                 efcp_config->unknown_flow)) 
+                                 efcp_config->unknown_flow))
                         goto parse_fail;
-                
+
         }
 
         return 0;
- 
+
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("efcp config attributes"));
         return -1;
@@ -1165,21 +1165,21 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                 dif_config->efcp_config = efcp_config_create();
                 if (!dif_config->efcp_config)
                         goto parse_fail;
-        
+
                 if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
-                                  dif_config->efcp_config)) 
+                                      dif_config->efcp_config))
                         goto parse_fail;
         }
-        
+
         if (attrs[DCONF_ATTR_RMTC]) {
-               LOG_MISSING; 
+                LOG_MISSING;
         }
 
         return 0;
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attributes"));
-        if (dif_config->efcp_config) 
+        if (dif_config->efcp_config)
                 efcp_config_destroy(dif_config->efcp_config);
         return -1;
 }
@@ -1651,14 +1651,14 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
 
         if (attrs[CPP_ATTR_INIT_A_TIMER])
                 cpp_struct->initial_a_timer =
-                                   nla_get_u32(attrs[CPP_ATTR_INIT_A_TIMER]);
+                        nla_get_u32(attrs[CPP_ATTR_INIT_A_TIMER]);
 
-        cpp_struct->partial_delivery    = 
-                        nla_get_flag(attrs[CPP_ATTR_PARTIAL_DELIVERY]);
+        cpp_struct->partial_delivery    =
+                nla_get_flag(attrs[CPP_ATTR_PARTIAL_DELIVERY]);
         cpp_struct->incomplete_delivery =
-                        nla_get_flag(attrs[CPP_ATTR_INCOMPLETE_DELIVERY]);
+                nla_get_flag(attrs[CPP_ATTR_INCOMPLETE_DELIVERY]);
         cpp_struct->in_order_delivery   =
-                        nla_get_flag(attrs[CPP_ATTR_IN_ORDER_DELIVERY]);
+                nla_get_flag(attrs[CPP_ATTR_IN_ORDER_DELIVERY]);
 
         if (attrs[CPP_ATTR_MAX_SDU_GAP])
                 cpp_struct->max_sdu_gap =
