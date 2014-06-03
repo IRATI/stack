@@ -32,12 +32,12 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		Connection connection = new Connection();
 		connection.setQosId(qosCube.getId());
 		connection.setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
-		connection.setInOrderDelivery(qosCube.isOrderedDelivery());
-		connection.setPartialDelivery(qosCube.isPartialDelivery());
-		connection.setMaxSduGap(qosCube.getMaxAllowableGap());
 		
 		//TODO generate connection policies properly
 		ConnectionPolicies connectionPolicies = qosCube.getEfcpPolicies();
+		connectionPolicies.setInOrderDelivery(qosCube.isOrderedDelivery());
+		connectionPolicies.setPartialDelivery(qosCube.isPartialDelivery());
+		connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
 		
 		connection.setPolicies(connectionPolicies);
 		connections.add(connection);

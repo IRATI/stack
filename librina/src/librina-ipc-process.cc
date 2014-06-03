@@ -733,9 +733,6 @@ Connection::Connection() {
         sourceCepId = 0;
         destCepId = 0;
         flowUserIpcProcessId = 0;
-        partialDelivery = false;
-        inOrderDelivery = false;
-        maxSDUGap = 0;
 }
 
 unsigned int Connection::getDestAddress() const {
@@ -794,30 +791,6 @@ void Connection::setSourceCepId(int sourceCepId) {
         this->sourceCepId = sourceCepId;
 }
 
-bool Connection::isInOrderDelivery() const {
-        return inOrderDelivery;
-}
-
-void Connection::setInOrderDelivery(bool inOrderDelivery) {
-        this->inOrderDelivery = inOrderDelivery;
-}
-
-unsigned int Connection::getMaxSduGap() const {
-        return maxSDUGap;
-}
-
-void Connection::setMaxSduGap(unsigned int maxSduGap) {
-        maxSDUGap = maxSduGap;
-}
-
-bool Connection::isPartialDelivery() const {
-        return partialDelivery;
-}
-
-void Connection::setPartialDelivery(bool partialDelivery) {
-        this->partialDelivery = partialDelivery;
-}
-
 const ConnectionPolicies& Connection::getPolicies() const {
         return policies;
 }
@@ -833,9 +806,6 @@ const std::string Connection::toString() {
         ss<<"; Dest address: "<<destAddress;
         ss<<"; Dest cep-id: "<<destCepId<<std::endl;
         ss<<"Por-id: "<<portId<<"; QoS-id: "<<qosId;
-        ss<<"; Partial delivery: "<<partialDelivery;
-        ss<<"; In order delivery: "<<inOrderDelivery;
-        ss<<"; Max allowed SDU gap: "<<maxSDUGap;
         ss<<"; Flow user IPC Process id: "<<flowUserIpcProcessId<<std::endl;
         ss<<"Policies: "<<policies.toString();
         return ss.str();
