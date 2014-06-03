@@ -473,12 +473,6 @@ struct dif_config * dif_config_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->efcp_config = efcp_config_create();
-        if (!tmp->efcp_config) {
-                rkfree(tmp);
-                return NULL;
-        }
-
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;
@@ -499,8 +493,6 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
-        /* ownership was passed to normal-ipc */
-        dif_config->efcp_config = NULL;
         rkfree(dif_config);
 
         return 0;

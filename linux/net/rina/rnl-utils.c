@@ -1106,6 +1106,10 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                              attr_policy) < 0)
                 goto parse_fail;
 
+        efcp_config = efcp_config_create();
+        if (!efcp_config)
+                goto parse_fail;
+
         if (attrs[EFCPC_ATTR_DATA_TRANS_CONS]) {
                 if (!efcp_config->dt_cons) 
                         goto parse_fail;
@@ -1131,6 +1135,7 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
  
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("efcp config attributes"));
+        if (efcp_config) efcp_config_destroy(efcp_config);
         return -1;
 }
 
@@ -1165,9 +1170,6 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                 dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
 
         if (attrs[DCONF_ATTR_EFCPC]) {
-                if (!dif_config->efcp_config)
-                        goto parse_fail;
-
                 if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
                                   dif_config->efcp_config)) 
                         goto parse_fail;
