@@ -633,12 +633,10 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
                 fspec_struct->undetected_bit_error_rate =
                         nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);
 
-        if (attrs[FSPEC_ATTR_PART_DELIVERY])
-                fspec_struct->partial_delivery =
+        fspec_struct->partial_delivery =
                         nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);
 
-        if (attrs[FSPEC_ATTR_IN_ORD_DELIVERY])
-                fspec_struct->ordered_delivery =
+        fspec_struct->ordered_delivery =
                         nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);
 
         if (attrs[FSPEC_ATTR_MAX_GAP])
@@ -1081,8 +1079,7 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
 
-        if (attrs[DTC_ATTR_DIF_INTEGRITY])
-                dt_cons->dif_integrity = true;
+        dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 
         return 0;
 }
@@ -1104,10 +1101,6 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
                              EFCPC_ATTR_MAX,
                              efcp_config_attr,
                              attr_policy) < 0)
-                goto parse_fail;
-
-        efcp_config = efcp_config_create();
-        if (!efcp_config)
                 goto parse_fail;
 
         if (attrs[EFCPC_ATTR_DATA_TRANS_CONS]) {
@@ -1135,7 +1128,6 @@ static int parse_efcp_config(struct nlattr *      efcp_config_attr,
  
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("efcp config attributes"));
-        if (efcp_config) efcp_config_destroy(efcp_config);
         return -1;
 }
 
@@ -1170,10 +1162,13 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                 dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
 
         if (attrs[DCONF_ATTR_EFCPC]) {
+                dif_config->efcp_config = efcp_config_create();
+                if (!dif_config->efcp_config)
+                        goto parse_fail;
+        
                 if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
                                   dif_config->efcp_config)) 
                         goto parse_fail;
-                
         }
         
         if (attrs[DCONF_ATTR_RMTC]) {
@@ -1184,6 +1179,8 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attributes"));
+        if (dif_config->efcp_config) 
+                efcp_config_destroy(dif_config->efcp_config);
         return -1;
 }
 
@@ -1629,13 +1626,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                              cpp_attr, attr_policy) < 0)
                 return -1;
 
-        if (attrs[CPP_ATTR_DTCP_PRESENT])
-                cpp_struct->dtcp_present =
-                        nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
-
-        if (attrs[CPP_ATTR_DTCP_PRESENT])
-                cpp_struct->dtcp_present =
-                        nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
+        cpp_struct->dtcp_present = nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
+        cpp_struct->dtcp_present = nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
         if (attrs[CPP_ATTR_DTCP_CONFIG])
                 if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG],
