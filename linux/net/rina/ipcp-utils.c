@@ -499,6 +499,8 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
+        /* ownership was passed to normal-ipc */
+        dif_config->efcp_config = NULL;
         rkfree(dif_config);
 
         return 0;

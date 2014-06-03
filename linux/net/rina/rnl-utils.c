@@ -1173,7 +1173,6 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                         goto parse_fail;
                 
         }
-
         
         if (attrs[DCONF_ATTR_RMTC]) {
                LOG_MISSING; 
