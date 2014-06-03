@@ -47,16 +47,14 @@ public class FlowEncoder implements Encoder{
 			flow.setFlowSpec(new FlowSpecification());
 		}
 		
-		ConnectionPolicies connectionPolicies = GPBUtils.getConnectionPolicies(gpbFlow.getConnectionPolicies());
-		flow.setConnectionPolicies(connectionPolicies);
-		Connection connection = null;
 		FlowSpecification flowSpec = flow.getFlowSpec();
+		ConnectionPolicies connectionPolicies = GPBUtils.getConnectionPolicies(gpbFlow.getConnectionPolicies());
+		connectionPolicies.setInOrderDelivery(flowSpec.isOrderedDelivery());
+		connectionPolicies.setPartialDelivery(flowSpec.isPartialDelivery());
+		connectionPolicies.setMaxSduGap(flowSpec.getMaxAllowableGap());
+		flow.setConnectionPolicies(connectionPolicies);
 		for(int i=0; i<flow.getConnections().size(); i++){
-			connection = flow.getConnections().get(i);
-			connection.setPolicies(connectionPolicies);
-			connection.setInOrderDelivery(flowSpec.isOrderedDelivery());
-			connection.setPartialDelivery(flowSpec.isPartialDelivery());
-			connection.setMaxSduGap(flowSpec.getMaxAllowableGap());
+			flow.getConnections().get(i).setPolicies(connectionPolicies);
 		}
 		
 		flow.setSourceAddress(gpbFlow.getSourceAddress());

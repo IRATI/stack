@@ -947,6 +947,9 @@ ConnectionPolicies::ConnectionPolicies(){
         DTCPpresent = false;
         seqnumrolloverthreshold = 0;
         initialATimer = 0;
+        partialDelivery = false;
+        inOrderDelivery = false;
+        maxSDUGap = 0;
 }
 
 const DTCPConfig& ConnectionPolicies::getDtcpConfiguration() const {
@@ -992,6 +995,30 @@ void ConnectionPolicies::setInitialATimer(int initialATimer) {
         this->initialATimer = initialATimer;
 }
 
+bool ConnectionPolicies::isInOrderDelivery() const {
+        return inOrderDelivery;
+}
+
+void ConnectionPolicies::setInOrderDelivery(bool inOrderDelivery) {
+        this->inOrderDelivery = inOrderDelivery;
+}
+
+unsigned int ConnectionPolicies::getMaxSduGap() const {
+        return maxSDUGap;
+}
+
+void ConnectionPolicies::setMaxSduGap(unsigned int maxSduGap) {
+        maxSDUGap = maxSduGap;
+}
+
+bool ConnectionPolicies::isPartialDelivery() const {
+        return partialDelivery;
+}
+
+void ConnectionPolicies::setPartialDelivery(bool partialDelivery) {
+        this->partialDelivery = partialDelivery;
+}
+
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
         ss<<"DTCP present: "<<DTCPpresent;
@@ -999,6 +1026,9 @@ const std::string ConnectionPolicies::toString() {
         ss<<"; Seq. num roll. threshold: "<<seqnumrolloverthreshold;
         ss<<"; Initial seq. num policy (name/version): ";
         ss<<initialseqnumpolicy.getName()<<"/"<<initialseqnumpolicy.getVersion()<<std::endl;
+        ss<<"; Partial delivery: "<<partialDelivery;
+        ss<<"; In order delivery: "<<inOrderDelivery;
+        ss<<"; Max allowed SDU gap: "<<maxSDUGap<<std::endl;
         if (DTCPpresent) {
                 ss<<"DTCP Configuration: "<<dtcpConfiguration.toString();
         }

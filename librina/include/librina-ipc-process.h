@@ -700,22 +700,6 @@ class Connection {
          * The destination CEP-id
          */
         int destCepId;
-        
-        /**
-         * True if partial delivery of an SDU is allowed,
-         * false otherwise
-         */
-        bool partialDelivery;
-        
-        /**
-         * True if in order delivery of SDUs is allowed, false otherwise
-         */
-        bool inOrderDelivery;
-        
-        /**
-         * The maximum gap of SDUs allowed
-         */
-        unsigned int maxSDUGap;
 
         /**
          * The EFCP connection policies
@@ -746,12 +730,6 @@ public:
         void setSourceCepId(int sourceCepId);
         const ConnectionPolicies& getPolicies() const;
         void setPolicies(const ConnectionPolicies& policies);
-        bool isInOrderDelivery() const;
-        void setInOrderDelivery(bool inOrderDelivery);
-        unsigned int getMaxSduGap() const;
-        void setMaxSduGap(unsigned int maxSduGap);
-        bool isPartialDelivery() const;
-        void setPartialDelivery(bool partialDelivery);
         const std::string toString();
 };
 

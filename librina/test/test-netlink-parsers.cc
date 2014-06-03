@@ -2450,6 +2450,9 @@ int testIpcpCreateConnectionRequest() {
         connectionPolicies.setDtcpConfiguration(dtcpConfig);
         connectionPolicies.setSeqnumrolloverthreshold(123456);
         connectionPolicies.setInitialATimer(34562);
+        connectionPolicies.setPartialDelivery(true);
+        connectionPolicies.setMaxSduGap(34);
+        connectionPolicies.setInOrderDelivery(true);
 
         IpcpConnectionCreateRequestMessage message;
         Connection connection;
@@ -2457,11 +2460,7 @@ int testIpcpCreateConnectionRequest() {
         connection.setSourceAddress(1);
         connection.setDestAddress(2);
         connection.setQosId(3);
-        connection.setPartialDelivery(true);
-        connection.setMaxSduGap(34);
-        connection.setInOrderDelivery(true);
         connection.setPolicies(connectionPolicies);
-        connection.setFlowUserIpcProcessId(12);
         message.setConnection(connection);
 
         struct nl_msg* netlinkMessage;
@@ -2520,24 +2519,19 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "Dest CEP id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().isPartialDelivery()!=
-                        recoveredMessage->getConnection().isPartialDelivery()) {
+        } else if (message.getConnection().getPolicies().isPartialDelivery()!=
+                        recoveredMessage->getConnection().getPolicies().isPartialDelivery()) {
                 std::cout << "Partial delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().isInOrderDelivery()!=
-                        recoveredMessage->getConnection().isInOrderDelivery()) {
+        } else if (message.getConnection().getPolicies().isInOrderDelivery()!=
+                        recoveredMessage->getConnection().getPolicies().isInOrderDelivery()) {
                 std::cout << "In order delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getMaxSduGap()!=
-                        recoveredMessage->getConnection().getMaxSduGap()) {
+        } else if (message.getConnection().getPolicies().getMaxSduGap()!=
+                        recoveredMessage->getConnection().getPolicies().getMaxSduGap()) {
                 std::cout << "Max SDU gap on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getFlowUserIpcProcessId()!=
-                        recoveredMessage->getConnection().getFlowUserIpcProcessId()) {
-                std::cout << "Flow user IPC Process id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getConnection().getPolicies().isDtcpPresent() !=

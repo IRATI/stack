@@ -673,6 +673,22 @@ class ConnectionPolicies {
          */
         int initialATimer;
 
+        /**
+         * True if partial delivery of an SDU is allowed,
+         * false otherwise
+         */
+        bool partialDelivery;
+
+        /**
+         * True if in order delivery of SDUs is allowed, false otherwise
+         */
+        bool inOrderDelivery;
+
+        /**
+         * The maximum gap of SDUs allowed
+         */
+        unsigned int maxSDUGap;
+
 public:
         ConnectionPolicies();
         const DTCPConfig& getDtcpConfiguration() const;
@@ -685,6 +701,12 @@ public:
         void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
         int getInitialATimer() const;
         void setInitialATimer(int initialATimer);
+        bool isInOrderDelivery() const;
+        void setInOrderDelivery(bool inOrderDelivery);
+        unsigned int getMaxSduGap() const;
+        void setMaxSduGap(unsigned int maxSduGap);
+        bool isPartialDelivery() const;
+        void setPartialDelivery(bool partialDelivery);
         const std::string toString();
 };
 
