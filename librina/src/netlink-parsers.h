@@ -509,7 +509,8 @@ enum DIFConfigurationAttributes {
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
-		const DIFConfiguration& object);
+		const DIFConfiguration& object,
+		bool normalIPCProcess);
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested);
 
@@ -978,6 +979,7 @@ enum ConnectionPoliciesAttributes {
 	CPA_ATTR_SEQ_NUM_ROLLOVER,
 	CPA_ATTR_INIT_A_TIMER,
         CPA_ATTR_PARTIAL_DELIVERY,
+        CPA_ATTR_INCOMPLETE_DELIVERY,
         CPA_ATTR_IN_ORDER_DELIVERY,
         CPA_ATTR_MAX_SDU_GAP,
 	__CPA_ATTR_MAX,
