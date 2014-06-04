@@ -21,7 +21,7 @@
 
 #include <map>
 
-#include "librina-common.h"
+#include "common.h"
 #include "patterns.h"
 #include "concurrency.h"
 

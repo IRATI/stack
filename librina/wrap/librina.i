@@ -346,8 +346,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 #include "exceptions.h"
 #include "patterns.h"
 #include "concurrency.h"
-#include "librina-common.h"
-#include "librina-application.h"
+#include "common.h"
+#include "application.h"
 %}
 
 %rename(differs) rina::ApplicationProcessNamingInformation::operator!=(const ApplicationProcessNamingInformation &other) const;
@@ -383,8 +383,8 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %include "exceptions.h"
 %include "patterns.h"
 %include "concurrency.h"
-%include "librina-common.h"
-%include "librina-application.h"
+%include "common.h"
+%include "application.h"
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )

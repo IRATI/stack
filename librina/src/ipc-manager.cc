@@ -31,7 +31,7 @@
 #include <unistd.h>
 
 #include "logs.h"
-#include "librina-ipc-manager.h"
+#include "ipc-manager.h"
 #include "core.h"
 #include "concurrency.h"
 #include "rina-syscalls.h"

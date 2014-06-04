@@ -27,9 +27,9 @@
 
 #include "logs.h"
 #include "netlink-messages.h"
-#include "librina-application.h"
-#include "librina-ipc-process.h"
-#include "librina-ipc-manager.h"
+#include "application.h"
+#include "ipc-process.h"
+#include "ipc-manager.h"
 
 namespace rina {
 
