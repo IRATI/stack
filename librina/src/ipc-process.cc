@@ -27,7 +27,7 @@
 #define PAGE_SIZE 4096
 
 #include "logs.h"
-#include "librina-ipc-process.h"
+#include "ipc-process.h"
 #include "core.h"
 #include "rina-syscalls.h"
 

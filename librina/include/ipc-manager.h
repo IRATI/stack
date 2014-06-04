@@ -21,7 +21,7 @@
 
 #include <map>
 
-#include "librina-common.h"
+#include "common.h"
 #include "concurrency.h"
 
 namespace rina {

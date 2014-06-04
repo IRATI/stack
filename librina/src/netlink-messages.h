@@ -19,8 +19,8 @@
 
 #ifdef __cplusplus
 
-#include "librina-common.h"
-#include "librina-ipc-process.h"
+#include "common.h"
+#include "ipc-process.h"
 
 namespace rina {
 
