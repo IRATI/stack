@@ -22,7 +22,10 @@
 #ifndef LIBRINA_CORE_H
 #define LIBRINA_CORE_H
 
+#ifdef __cplusplus
+
 #include <map>
+
 #include "concurrency.h"
 #include "patterns.h"
 #include "netlink-manager.h"
@@ -166,5 +169,7 @@ void setNetlinkPortId(unsigned int netlinkPortId);
 unsigned int getNelinkPortId();
 
 }
+
+#endif
 
 #endif

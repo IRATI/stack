@@ -1,6 +1,8 @@
 //
-// librina (placeholder)
+// SDU Protection
 //
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
 // This program is free software; you can redistribute it and/or modify
@@ -18,6 +20,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include <iostream>
+#include "librina-sdu-protection.h"
 
-#include "librina.h"
+namespace rina {
+}
