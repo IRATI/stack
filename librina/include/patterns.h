@@ -1,4 +1,9 @@
 //
+// Patterns
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
@@ -31,7 +36,7 @@ private:
         const NonCopyable & operator =(const NonCopyable &);
 };
 
-template<typename TYPE> class Singleton : public NonCopyable{
+template<typename TYPE> class Singleton : public NonCopyable {
 
 public:
         Singleton()  { }
@@ -46,7 +51,7 @@ private:
         static TYPE * instance_;
 
         void init() {
-        	if (!instance_){
+        	if (!instance_) {
         		instance_ = new TYPE();
         	}
         }
