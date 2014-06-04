@@ -1,5 +1,5 @@
 //
-// Core librina logic
+// Utilities
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
