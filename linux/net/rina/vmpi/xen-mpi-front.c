@@ -211,8 +211,8 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 	 */
 	batch_target = np->rx_target - (req_prod - np->rx.rsp_cons);
 	for (i = vmpi_queue_len(&np->rx_batch); i < batch_target; i++) {
-                /* TODO allocate data as a page */
-                buf = vmpi_buffer_create(2000);
+                /* Allocate the buffer as a page. */
+                buf = vmpi_buffer_create(0);
 		if (unlikely(!buf)) {
 			/* Could not allocate any skbuffs. Try again later. */
 			mod_timer(&np->rx_refill_timer,
@@ -473,8 +473,8 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
 	unsigned long mfn;
 	struct xen_mpi_rx_request *req;
 
-        /* TODO allocate data as a page. */
-        buf = vmpi_buffer_create(VMPI_BUFFER_SIZE_XEN);
+        /* Allocate the buffer as a page. */
+        buf = vmpi_buffer_create(0);
         if (unlikely(!buf)) {
                 printk("%s: failed to refill\n", __func__);
                 return;
