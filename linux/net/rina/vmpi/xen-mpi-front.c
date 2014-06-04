@@ -43,6 +43,13 @@
 #include "vmpi-guest-impl.h"
 
 
+//#define VERBOSE
+#ifdef VERBOSE
+#define IFV(x) x
+#else   /* !VERBOSE */
+#define IFV(x)
+#endif  /* !VERBOSE */
+
 #define VMPI_BUFFER_SIZE_XEN    2000
 
 #define GRANT_INVALID_REF	0
@@ -301,7 +308,7 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                 np->grant_tx_page[id] = NULL;
                 add_id_to_freelist(&np->tx_skb_freelist, np->tx_skbs, id);
 
-                printk("%s: buf %p, freed id %d, cons %d\n", __func__, buf, id, cons);
+                IFV(printk("%s: buf %p, freed id %d, cons %d\n", __func__, buf, id, cons));
 
                 np->tx.rsp_cons = ++cons;
         }
@@ -431,8 +438,8 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
                 tx->flags = 1;  /* set the MORE_DATA flag */
 	        np->grant_tx_page[id] = virt_to_page(data);
 
-                printk("%s: buf %p id %d, gref %d, off %d, sz %d\n", __func__,
-                        buf, tx->id, tx->gref, tx->offset, tx->size);
+                IFV(printk("%s: buf %p id %d, gref %d, off %d, sz %d\n", __func__,
+                        buf, tx->id, tx->gref, tx->offset, tx->size));
 
                 data += slice;
                 len -= slice;
@@ -446,7 +453,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 	RING_PUSH_REQUESTS_AND_CHECK_NOTIFY(&np->tx, notify);
 	if (notify)
 		notify_remote_via_irq(np->tx_irq);
-        printk("%s: pushed [%d], notify [%d]\n", __func__, i, notify);
+        IFV(printk("%s: pushed [%d], notify [%d]\n", __func__, i, notify));
 
 	spin_unlock_irqrestore(&np->tx_lock, flags);
 
@@ -502,8 +509,8 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
 	if (notify)
 		notify_remote_via_irq(np->rx_irq);
 
-        printk("%s refilled [prod=%u] [id=%d] [gref=%d] [off=%d] [len=%d]\n",
-                __func__, req_prod, req->id, req->gref, req->offset, req->len);
+        IFV(printk("%s refilled [prod=%u] [id=%d] [gref=%d] [off=%d] [len=%d]\n",
+                __func__, req_prod, req->id, req->gref, req->offset, req->len));
 }
 
 struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
@@ -526,8 +533,8 @@ struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
                 buf = xenmpi_get_rx_skb(np, cons);
                 ref = xenmpi_get_rx_ref(np, cons);
 
-                printk("%s: rx rsp [cons=%d] [id=%d] [size=%d]\n", __func__,
-                                cons, rx->id, rx->status);
+                IFV(printk("%s: rx rsp [cons=%d] [id=%d] [size=%d]\n", __func__,
+                                cons, rx->id, rx->status));
 
                 buf->len = rx->status;
 
@@ -548,8 +555,8 @@ struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
                 BUG_ON(!ret);
                 gnttab_release_grant_reference(&np->gref_rx_head, ref);
 
-                printk("%s: buffer received [cons=%d, len=%d]\n",
-                        __func__, cons, (int)buf->len);
+                IFV(printk("%s: buffer received [cons=%d, len=%d]\n",
+                        __func__, cons, (int)buf->len));
 out:
                 np->rx.rsp_cons = ++cons;
 
@@ -603,7 +610,7 @@ static void recv_worker_function(struct work_struct *work)
             BUG_ON(!ret);
             gnttab_release_grant_reference(&np->gref_rx_head, ref);
 
-            printk("%s: buffer received\n", __func__);
+            IFV(printk("%s: buffer received\n", __func__));
             /* TODO pass the buffer up */
             vmpi_buffer_destroy(buf);
 
@@ -760,7 +767,7 @@ static irqreturn_t xenmpi_tx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *np = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
         if (likely(np->xmit_cb))
                 np->xmit_cb(np);
 
@@ -771,7 +778,7 @@ static irqreturn_t xenmpi_rx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *np = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
         if (likely(np->recv_cb))
                 np->recv_cb(np);
 
@@ -1270,7 +1277,8 @@ static void mpiback_changed(struct xenbus_device *dev,
 	struct vmpi_impl_info *np = dev_get_drvdata(&dev->dev);
 
 	dev_dbg(&dev->dev, "%s\n", xenbus_strstate(backend_state));
-        printk("%s: xen-mpi backend state --> %s\n", __func__, xenbus_strstate(backend_state));
+        printk("%s: xen-mpi backend state --> %s\n", __func__,
+                   xenbus_strstate(backend_state));
 
 	switch (backend_state) {
 	case XenbusStateInitialising:
