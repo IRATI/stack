@@ -24,7 +24,7 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 
-#define SHIM_NAME   "shim-hv-virtio"
+#define SHIM_NAME   "shim-hv"
 #define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
