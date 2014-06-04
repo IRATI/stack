@@ -759,7 +759,6 @@ static void xenmpi_disconnect_backend(struct vmpi_impl_info *info)
 	/* Stop old i/f to prevent errors whilst we rebuild the state. */
 	spin_lock_bh(&info->rx_lock);
 	spin_lock_irq(&info->tx_lock);
-	// XXX mpi_carrier_off(info->netdev);
         /* Uninstall the instance */
         instance = NULL;
 	spin_unlock_irq(&info->tx_lock);

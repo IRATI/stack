@@ -67,13 +67,6 @@ static inline unsigned long idx_to_kaddr(struct vmpi_impl_info *vif,
 	return (unsigned long)pfn_to_kaddr(idx_to_pfn(vif, idx));
 }
 
-/* This is a miniumum size for the linear area to avoid lots of
- * calls to __pskb_pull_tail() as we set up checksum offsets. The
- * value 128 was chosen as it covers all IPv4 and most likely
- * IPv6 headers.
- */
-#define PKT_PROT_LEN 128
-
 static inline pending_ring_idx_t pending_index(unsigned i)
 {
 	return i & (MAX_PENDING_REQS-1);
