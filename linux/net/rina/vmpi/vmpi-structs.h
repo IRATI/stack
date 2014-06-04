@@ -33,8 +33,10 @@ struct vmpi_buffer {
         void *p;
         size_t len;
         struct vmpi_buffer *next;
+        struct page *page;
 };
 
+/* If size == 0 this allocates a page. */
 struct vmpi_buffer *vmpi_buffer_create(size_t size);
 void vmpi_buffer_destroy(struct vmpi_buffer *buf);
 

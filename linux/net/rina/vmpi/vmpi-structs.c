@@ -18,6 +18,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/mm.h>
 
 #include "vmpi-structs.h"
 
@@ -28,10 +29,17 @@ vmpi_buffer_init(struct vmpi_buffer *buf, size_t size)
         buf->len = 0;
         buf->next = NULL;
 
-        buf->p = kmalloc(size, GFP_ATOMIC);
-
-        if (buf->p == NULL)
-                return -ENOMEM;
+        if (size) {
+                buf->page = NULL;
+                buf->p = kmalloc(size, GFP_ATOMIC);
+                if (unlikely(buf->p == NULL))
+                        return -ENOMEM;
+        } else {
+                buf->page = alloc_page(GFP_ATOMIC);
+                if (unlikely(buf->page == NULL))
+                        return -ENOMEM;
+                buf->p = page_address(buf->page);
+        }
 
         return 0;
 }
@@ -40,7 +48,11 @@ static inline void
 vmpi_buffer_fini(struct vmpi_buffer *buf)
 {
         buf->len = 0;
-        kfree(buf->p);
+        if (buf->page) {
+                put_page(buf->page);
+        } else {
+                kfree(buf->p);
+        }
 }
 
 struct vmpi_buffer *
