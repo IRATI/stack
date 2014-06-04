@@ -1,5 +1,5 @@
 //
-// Core librina implementation
+// Core
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -608,4 +608,3 @@ unsigned int getNelinkPortId(){
 }
 
 }
-
