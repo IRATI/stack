@@ -10,15 +10,15 @@ menuconfig VMPI
 
 if VMPI
 
-config VMPI_VIRTIO_GUEST
-	tristate "VMPI for Virtio - guest support"
+config VMPI_KVM_GUEST
+	tristate "VMPI for KVM and Virtio - guest support"
 	default m
         depends on VIRTIO
 	help
 	  No help for the time being
 
-config VMPI_VIRTIO_HOST
-	tristate "VMPI for Virtio - host support"
+config VMPI_KVM_HOST
+	tristate "VMPI for KVM and Virtio - host support"
 	default m
         depends on VHOST
 	help
