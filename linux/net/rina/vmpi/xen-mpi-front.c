@@ -96,7 +96,6 @@ struct vmpi_impl_info {
 	spinlock_t   rx_lock ____cacheline_aligned_in_smp;
 	struct xen_mpi_rx_front_ring rx;
 	int rx_ring_ref;
-        struct work_struct recv_worker;
 
 	/* Receive-ring batched refills. */
 #define RX_MIN_TARGET 8
@@ -173,23 +172,13 @@ static grant_ref_t xenmpi_get_rx_ref(struct vmpi_impl_info *np,
 
 static void rx_refill_timeout(unsigned long data)
 {
-	/*struct vmpi_impl_info *np = (struct vmpi_impl_info *)data;
+	struct vmpi_impl_info *np = (struct vmpi_impl_info *)data;
 
-        schedule_work(&np->recv_worker); *//* HZ/20 */
+        if (likely(np->recv_cb))
+                np->recv_cb(np);
 }
 
-static int mpifront_tx_slot_available(struct vmpi_impl_info *np)
-{
-	return (np->tx.req_prod_pvt - np->tx.rsp_cons) <
-		(TX_MAX_TARGET - MAX_SKB_FRAGS - 2);
-}
-
-static void xenmpi_maybe_wake_tx(struct vmpi_impl_info *np)
-{
-	if (mpifront_tx_slot_available(np)) {
-        }
-}
-
+#if 0
 static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 {
 	unsigned short id;
@@ -273,6 +262,7 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 	if (notify)
 		notify_remote_via_irq(np->rx_irq);
 }
+#endif
 
 struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
 {
@@ -313,60 +303,6 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
         }
 
         return buf;
-}
-
-static void xenmpi_tx_buf_gc(struct vmpi_impl_info *np)
-{
-	RING_IDX cons, prod;
-	unsigned short id;
-        struct vmpi_buffer *buf;
-
-        printk("%s: I should not be called\n", __func__);
-
-	do {
-		prod = np->tx.sring->rsp_prod;
-		rmb(); /* Ensure we see responses up to 'rp'. */
-
-		for (cons = np->tx.rsp_cons; cons != prod; cons++) {
-			struct xen_mpi_tx_response *txrsp;
-
-			txrsp = RING_GET_RESPONSE(&np->tx, cons);
-			if (txrsp->status == XEN_NETIF_RSP_NULL)
-				continue;
-
-			id  = txrsp->id;
-			buf = np->tx_skbs[id].buf;
-			if (unlikely(gnttab_query_foreign_access(
-				np->grant_tx_ref[id]) != 0)) {
-				pr_alert("%s: warning -- grant still in use by backend domain\n",
-					 __func__);
-				BUG();
-			}
-			gnttab_end_foreign_access_ref(
-				np->grant_tx_ref[id], GNTMAP_readonly);
-			gnttab_release_grant_reference(
-				&np->gref_tx_head, np->grant_tx_ref[id]);
-			np->grant_tx_ref[id] = GRANT_INVALID_REF;
-			np->grant_tx_page[id] = NULL;
-			add_id_to_freelist(&np->tx_skb_freelist, np->tx_skbs, id);
-		}
-
-		np->tx.rsp_cons = prod;
-
-		/*
-		 * Set a new event, then check for race with update of tx_cons.
-		 * Note that it is essential to schedule a callback, no matter
-		 * how few buffers are pending. Even if there is space in the
-		 * transmit ring, higher layers may be blocked because too much
-		 * data is outstanding: in such cases notification from Xen is
-		 * likely to be the only kick that we'll get.
-		 */
-		np->tx.sring->rsp_event =
-			prod + ((np->tx.sring->req_prod - prod) >> 1) + 1;
-		mb();		/* update shared area */
-	} while ((cons == prod) && (prod != np->tx.sring->rsp_prod));
-
-	xenmpi_maybe_wake_tx(np);
 }
 
 int
@@ -566,86 +502,6 @@ out:
         return buf;
 }
 
-static void recv_worker_function(struct work_struct *work)
-{
-        struct vmpi_impl_info *np =
-            container_of(work, struct vmpi_impl_info, recv_worker);
-	struct xen_mpi_rx_response *rx = NULL;
-	RING_IDX i, rp;
-	int work_done;
-	unsigned long flags;
-        int budget = 64;
-        grant_ref_t ref;
-
-        printk("%s: I should NOT be called\n", __func__);
-
-	spin_lock(&np->rx_lock);
-
-	rp = np->rx.sring->rsp_prod;
-	rmb(); /* Ensure we see queued responses up to 'rp'. */
-
-	i = np->rx.rsp_cons;
-	work_done = 0;
-        while ((i != rp) && (work_done < budget)) {
-            unsigned long ret;
-            struct vmpi_buffer *buf;
-
-            rx = RING_GET_RESPONSE(&np->rx, i);
-            buf = xenmpi_get_rx_skb(np, i);
-            ref = xenmpi_get_rx_ref(np, i);
-            /*
-             * This definitely indicates a bug, either in this driver or in
-             * the backend driver. In future this should flag the bad
-             * situation to the system controller to reboot the backend.
-             */
-            if (ref == GRANT_INVALID_REF) {
-                if (net_ratelimit())
-                    pr_warn("Bad rx response id %d.\n",
-                            rx->id);
-                goto next;
-            }
-
-            ret = gnttab_end_foreign_access_ref(ref, 0);
-            BUG_ON(!ret);
-            gnttab_release_grant_reference(&np->gref_rx_head, ref);
-
-            IFV(printk("%s: buffer received\n", __func__));
-            /* TODO pass the buffer up */
-            vmpi_buffer_destroy(buf);
-
-            work_done++;
-next:
-            i++;
-        }
-        np->rx.rsp_cons = i;
-
-	/* If we get a callback with very few responses, reduce fill target. */
-	/* NB. Note exponential increase, linear decrease. */
-	if (((np->rx.req_prod_pvt - np->rx.sring->rsp_prod) >
-	     ((3*np->rx_target) / 4)) &&
-	    (--np->rx_target < np->rx_min_target))
-		np->rx_target = np->rx_min_target;
-
-	xenmpi_alloc_rx_buffers(np);
-
-        if (work_done == budget) {
-                schedule_work(&np->recv_worker); /* HZ/20 */
-        } else {
-		int more_to_do = 0;
-
-		local_irq_save(flags);
-
-		RING_FINAL_CHECK_FOR_RESPONSES(&np->rx, more_to_do);
-		if (more_to_do) {
-                        schedule_work(&np->recv_worker);
-                }
-
-		local_irq_restore(flags);
-	}
-
-	spin_unlock(&np->rx_lock);
-}
-
 static void xenmpi_release_tx_bufs(struct vmpi_impl_info *np)
 {
 	struct vmpi_buffer *buf;
@@ -806,7 +662,6 @@ static struct vmpi_impl_info *xenmpi_create_dev(struct xenbus_device *dev)
 	spin_lock_init(&np->tx_lock);
 	spin_lock_init(&np->rx_lock);
 
-        INIT_WORK(&np->recv_worker, recv_worker_function);
         vmpi_queue_init(&np->rx_batch, 0, VMPI_BUF_SIZE);
 	np->rx_target     = RX_DFL_MIN_TARGET;
 	np->rx_min_target = RX_DFL_MIN_TARGET;
@@ -1243,20 +1098,18 @@ static int xenmpi_connect(struct vmpi_impl_info *np)
 	 * packets.
 	 */
         /* Install the instance. */
-	// XXX mpi_carrier_on(np->netdev);
         instance = np;
 	notify_remote_via_irq(np->tx_irq);
 	if (np->tx_irq != np->rx_irq)
 		notify_remote_via_irq(np->rx_irq);
-	xenmpi_tx_buf_gc(np);
         for (i = 0; i < 64; i++) {
                 xenmpi_refill_one(np);
         }
-	// XXX xenmpi_alloc_rx_buffers(np);
 
         np->rx.sring->rsp_event = np->rx.rsp_cons + 1;
         if (RING_HAS_UNCONSUMED_RESPONSES(&np->rx)) {
-            //schedule_work(&np->recv_worker); /* HZ/20 */
+                if (likely(np->recv_cb))
+                        np->recv_cb(np);
         }
 
 	spin_unlock_irq(&np->tx_lock);
