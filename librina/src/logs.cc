@@ -32,12 +32,13 @@
 
 #include "logs.h"
 
-LOG_LEVEL logLevel = DBG;
-FILE * logOutputStream = stdout;
+LOG_LEVEL        logLevel         = DBG;
+FILE *           logOutputStream  = stdout;
 pthread_rwlock_t outputStreamLock = PTHREAD_RWLOCK_INITIALIZER;
-pthread_rwlock_t logLevelLock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t logLevelLock     = PTHREAD_RWLOCK_INITIALIZER;
 
-void setLogLevel(const std::string& newLogLevel) {
+void setLogLevel(const std::string& newLogLevel)
+{
         LOG_DBG("New log level: %s", newLogLevel.c_str());
 
 	pthread_rwlock_wrlock(&logLevelLock);
@@ -63,7 +64,8 @@ void setLogLevel(const std::string& newLogLevel) {
 	pthread_rwlock_unlock(&logLevelLock);
 }
 
-int setLogFile(const std::string& pathToFile) {
+int setLogFile(const std::string& pathToFile)
+{
 	int result = 0;
 
 	pthread_rwlock_wrlock(&outputStreamLock);
@@ -83,7 +85,8 @@ int setLogFile(const std::string& pathToFile) {
 
 int processId = -1;
 
-int getProcessId(){
+int getProcessId()
+{
 	if (processId == -1){
 		processId = getpid();
 	}
@@ -91,7 +94,8 @@ int getProcessId(){
 	return processId;
 }
 
-static bool shouldLog(LOG_LEVEL level) {
+static bool shouldLog(LOG_LEVEL level)
+{
 	switch (level) {
 	case EMERG:
 		return true;
@@ -108,14 +112,18 @@ static bool shouldLog(LOG_LEVEL level) {
 			return true;
 		}
 	case ERR:
-		if (logLevel == EMERG || logLevel == ALERT || logLevel == CRIT) {
+		if (logLevel == EMERG ||
+                    logLevel == ALERT ||
+                    logLevel == CRIT) {
 			return false;
 		} else {
 			return true;
 		}
 	case WARN:
-		if (logLevel == EMERG || logLevel == ALERT || logLevel == CRIT
-				|| logLevel == ERR) {
+		if (logLevel == EMERG ||
+                    logLevel == ALERT ||
+                    logLevel == CRIT
+                    || logLevel == ERR) {
 			return false;
 		} else {
 			return true;
@@ -143,19 +151,21 @@ static bool shouldLog(LOG_LEVEL level) {
 	}
 }
 
-void log(LOG_LEVEL level, const char * fmt, ...) {
+void log(LOG_LEVEL level, const char * fmt, ...)
+{
 	bool goon;
 
 	pthread_rwlock_rdlock(&logLevelLock);
 	goon = shouldLog(level);
 	pthread_rwlock_unlock(&logLevelLock);
 
-	if (!goon) {
+	if (!goon)
 		return;
-	}
 
 	va_list args;
+
 	va_start(args, fmt);
+
 	pthread_rwlock_rdlock(&outputStreamLock);
 	fprintf(logOutputStream, "%d(%ld)", getProcessId(), time(0));
 	vfprintf(logOutputStream,fmt, args);
