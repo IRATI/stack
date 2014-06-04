@@ -21,8 +21,8 @@
 
 #include "logs.h"
 #include "config.h"
-#include "librina-common.h"
 #include "core.h"
+#include "common.h"
 
 namespace rina {
 

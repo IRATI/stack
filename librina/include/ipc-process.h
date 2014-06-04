@@ -19,8 +19,8 @@
 
 #ifdef __cplusplus
 
-#include "librina-common.h"
-#include "librina-application.h"
+#include "common.h"
+#include "application.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
 #define RINA_DEFAULT_POLICY_VERSION "0"
