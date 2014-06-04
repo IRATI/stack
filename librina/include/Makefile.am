@@ -14,5 +14,5 @@ nobase_pkginclude_HEADERS =			\
 	librina-cdap.h				\
 	librina-sdu-protection.h		\
 	patterns.h				\
-	exceptions.h			\
+	exceptions.h				\
 	concurrency.h

@@ -14,7 +14,7 @@ import rina.ipcprocess.api.IPCProcessComponent;
  * Specifies the interface of the RIB Daemon
  * @author eduardgrasa
  */
-public interface RIBDaemon extends EventManager, IPCProcessComponent, ADataUnitHandler {
+public interface RIBDaemon extends EventManager, IPCProcessComponent {
 	
 	/**
 	 * Add a RIB object to the RIB
@@ -54,6 +54,17 @@ public interface RIBDaemon extends EventManager, IPCProcessComponent, ADataUnitH
 	 * @throws RIBDaemonException
 	 */
 	public void sendMessage(CDAPMessage cdapMessage, int sessionId,
+			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException;
+	
+	/**
+	 * Causes a CDAP message to be sent
+	 * @param cdapMessage the message to be sent
+	 * @param sessionId the CDAP session id
+	 * @param address the address of the IPC Process to send the Message To
+	 * @param cdapMessageHandler the class to be called when the response message is received (if required)
+	 * @throws RIBDaemonException
+	 */
+	public void sendMessageToAddress(CDAPMessage cdapMessage, int sessionId, long address,
 			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException;
 	
 	/**

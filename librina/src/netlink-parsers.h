@@ -1,7 +1,9 @@
 //
-// Core librina logic
+// Netlink parsers
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +22,8 @@
 
 #ifndef LIBRINA_NETLINK_PARSERS_H
 #define LIBRINA_NETLINK_PARSERS_H
+
+#ifdef __cplusplus
 
 #include <netlink/msg.h>
 #include <netlink/attr.h>
@@ -1190,5 +1194,6 @@ RmtDumpPDUFTEntriesResponseMessage * parseRmtDumpPDUFTEntriesResponseMessage(
 
 }
 
+#endif
 
-#endif /* LIBRINA_NETLINK_PARSERS_H_ */
+#endif

@@ -897,14 +897,27 @@ public:
 
         /**
          * Requests the kernel to write a management SDU to the
-         * portId specified
+         * N-1 portId specified
          *
          * @param sdu A buffer that contains the SDU data
          * @param size The size of the SDU data, in bytes
          * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
-        void writeManagementSDU(void * sdu, int size, int portId)
+        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId)
+                throw (WriteSDUException);
+
+        /**
+         * Requests the kernel to send a management SDU to the IPC Process
+         * of the address specified
+         *
+         * @param sdu A buffer that contains the SDU data
+         * @param size The size of the SDU data, in bytes
+         * @param address The address of the IPC Process that is the
+         * destination of the SDU
+         * @throws WriteSDUException
+         */
+        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address)
                 throw (WriteSDUException);
 
         /**

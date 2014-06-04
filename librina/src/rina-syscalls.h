@@ -22,6 +22,8 @@
 #ifndef LIBRINA_SYSCALLS_H
 #define	LIBRINA_SYSCALLS_H
 
+#ifdef __cplusplus
+
 #include "librina-common.h"
 
 namespace rina {
@@ -50,14 +52,18 @@ namespace rina {
         /**
          * Wrapper of the managementSDUWrite system call
          * @param ipcProcessId the ipcProcess that has to write the SDU
-         * @param portId the N-1 portId where the data has to be written
+         * @param address the address of the IPC Process where this SDU
+         * has to be sent. 0 if the N-1 portid is used instead of the
+         * address
+         * @param portId the N-1 portId where the data has to be written.
+         * 0 is the address is used instead of portId
          * @param sdu the data to be written (SDU)
          * @param size the size of the data to be written
          * @return 0 if everything was ok, negative number indicating error
          *         otherwise
          */
         int syscallWriteManagementSDU(unsigned short ipcProcessId, void * sdu,
-                        int portId, int size);
+                        unsigned int address, unsigned int portId, int size);
 
         /**
          * Wrapper of the managementSDURead system call
@@ -112,5 +118,7 @@ namespace rina {
         int syscallDeallocatePortId(int portId);
 
 }
+
+#endif
 
 #endif

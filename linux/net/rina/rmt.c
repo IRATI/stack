@@ -708,6 +708,8 @@ int rmt_n1port_unbind(struct rmt * instance,
 }
 EXPORT_SYMBOL(rmt_n1port_unbind);
 
+/* FIXME: This function is only used in testig and they are disabled */
+#if 0
 static struct pci * sdu_pci_copy(const struct sdu * sdu)
 {
         if (!sdu_is_ok(sdu))
@@ -715,6 +717,7 @@ static struct pci * sdu_pci_copy(const struct sdu * sdu)
 
         return pci_create_from(buffer_data_ro(sdu_buffer_ro(sdu)));
 }
+#endif
 
 static int process_mgmt_pdu(struct rmt * rmt,
                             port_id_t    port_id,
@@ -863,6 +866,7 @@ static int receive_worker(void * o)
                 struct pdu * pdu;
                 port_id_t    port_id;
                 pdu_type_t   pdu_type;
+                address_t    dst_addr;
 
                 ASSERT(entry);
 
@@ -898,7 +902,8 @@ static int receive_worker(void * o)
                 ASSERT(pdu_is_ok(pdu));
 
                 pdu_type = pci_type(pdu_pci_get_ro(pdu));
-                if (!pdu_type_is_ok(pdu_type)) {
+                dst_addr = pci_destination(pdu_pci_get_ro(pdu));
+                if (!pdu_type_is_ok(pdu_type) || !is_address_ok(dst_addr)) {
                         LOG_ERR("Wrong PDU type, dropping SDU!");
                         sdu_destroy(sdu);
                         pdu_destroy(pdu);
@@ -910,7 +915,7 @@ static int receive_worker(void * o)
 
                 switch (pdu_type) {
                 case PDU_TYPE_MGMT:
-                        if (!pci_destination(pdu_pci_get_ro(pdu))) { 
+                        if (!dst_addr) { 
                                 process_mgmt_pdu(tmp, port_id, pdu);
                                 sdu_destroy(sdu);
                         } else 

@@ -1,5 +1,5 @@
 //
-// Core librina logic
+// Utilities
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -22,7 +22,11 @@
 #ifndef LIBRINA_UTILS_H
 #define LIBRINA_UTILS_H
 
+#ifdef __cplusplus
+
 #define __stringify(X) #X
 #define stringify(X)   __stringify(X)
+
+#endif
 
 #endif

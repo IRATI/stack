@@ -32,17 +32,6 @@ public class StartStopTest extends BaseCDAPTest{
 		
 		receivingCDAPSession.messageReceived(message);
 		
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getStartObjectResponseMessage(32769, null, 0, null, 98723);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
-		
 		cdapMessage = cdapSessionManager.getStartObjectResponseMessage(32769, null, 0, null, invokeId);
 		message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
 		receivingCDAPSession.messageSent(cdapMessage);
@@ -60,17 +49,6 @@ public class StartStopTest extends BaseCDAPTest{
 		sendingCDAPSession.messageSent(cdapMessage);
 
 		receivingCDAPSession.messageReceived(message);
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getStartObjectResponseMessage(32769, null, 0, null, 25);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 	
 	@Test
@@ -137,17 +115,6 @@ public class StartStopTest extends BaseCDAPTest{
 		
 		receivingCDAPSession.messageReceived(message);
 		
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getStopObjectResponseMessage(32769, null, 0, null, 3432);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
-		
 		cdapMessage = cdapSessionManager.getStopObjectResponseMessage(32769, null, 0, null, invokeId);
 		message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
 		receivingCDAPSession.messageSent(cdapMessage);
@@ -165,17 +132,6 @@ public class StartStopTest extends BaseCDAPTest{
 		sendingCDAPSession.messageSent(cdapMessage);
 
 		receivingCDAPSession.messageReceived(message);
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getStopObjectResponseMessage(32768, null, 0, null, 25);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 	
 	@Test

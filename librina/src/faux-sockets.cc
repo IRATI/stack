@@ -1,5 +1,5 @@
 //
-// librina (placeholder)
+// Faux sockets
 //
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
@@ -18,6 +18,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include <iostream>
+#include "librina-faux-sockets.h"
 
-#include "librina.h"
+namespace rina {
+}
+

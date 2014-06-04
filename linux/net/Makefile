@@ -73,4 +73,4 @@ obj-$(CONFIG_VSOCKETS)	+= vmw_vsock/
 obj-$(CONFIG_NET_MPLS_GSO)	+= mpls/
 obj-$(CONFIG_HSR)		+= hsr/
 
-obj-$(CONFIG_RINA)		+= rina/
+obj-y                           += rina/
