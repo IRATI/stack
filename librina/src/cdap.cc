@@ -972,4 +972,5 @@ RIBDaemonException::RIBDaemonException(ErrorCode arg0, const char* arg1) :
 		Exception(arg1) {
 	error_code_ = arg0;
 }
+
 }

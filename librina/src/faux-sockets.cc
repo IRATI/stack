@@ -20,4 +20,6 @@
 
 #include "librina-faux-sockets.h"
 
-using namespace rina;
+namespace rina {
+}
+
