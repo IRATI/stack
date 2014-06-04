@@ -63,5 +63,5 @@ public interface CDAPSession {
 	 */
 	public CDAPSessionDescriptor getSessionDescriptor();
 	
-	public CDAPSessionInvokeIdManager getInvokeIdManager();
+	public CDAPInvokeIdManager getInvokeIdManager();
 }

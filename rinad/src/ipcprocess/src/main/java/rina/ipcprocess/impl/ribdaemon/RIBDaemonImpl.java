@@ -9,13 +9,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import eu.irati.librina.IPCException;
 import eu.irati.librina.KernelIPCProcessSingleton;
 import eu.irati.librina.QueryRIBRequestEvent;
 import eu.irati.librina.RIBObjectList;
 import eu.irati.librina.rina;
 
-import rina.adataunit.api.ADataUnitPDU;
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPMessageHandler;
 import rina.cdap.api.CDAPSessionDescriptor;
@@ -58,7 +56,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	private RIB rib = null;
 	
 	/** CDAP Message handlers that have sent a CDAP message and are waiting for a reply **/
-	private Map<String, CDAPMessageHandler> messageHandlersWaitingForReply = null;
+	private Map<Integer, CDAPMessageHandler> messageHandlersWaitingForReply = null;
 	
 	/** 
 	 * Lock to control that when sending a message requiring a reply the 
@@ -77,7 +75,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	
 	public RIBDaemonImpl(){
 		rib = new RIB();
-		messageHandlersWaitingForReply = new ConcurrentHashMap<String, CDAPMessageHandler>();
+		messageHandlersWaitingForReply = new ConcurrentHashMap<Integer, CDAPMessageHandler>();
 		atomicSendLock = new Object();
 	}
 	
@@ -128,50 +126,6 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 			return;
 		}
 		
-		if (cdapMessage.getObjName() != null && cdapMessage.getObjName().equals(ADataUnitPDU.ADataUnitPDUObjectName)) {
-			log.debug("Received A-Data Unit CDAP Message");
-
-			if (cdapMessage.getObjValue() == null || cdapMessage.getObjValue().getByteval() == null) {
-				log.error("Received A-Data Unit CDAP Message with no object value");
-				return;
-			}
-
-			ADataUnitPDU aDataUnit = null;
-			try{
-				aDataUnit = (ADataUnitPDU) ipcProcess.getEncoder().decode(cdapMessage.getObjValue().getByteval(), 
-						ADataUnitPDU.class);
-			} catch(Exception ex){
-				log.error("Problems decoding A-DataUnit PDU: "+ex.getMessage());
-				return;
-			}
-
-			if (aDataUnit.getPayload() == null) {
-				log.error("Receive an A-Data Unit PDU with a null payload");
-				return;
-			}
-
-			if (aDataUnit.getDestinationAddress() == ipcProcess.getAddress().longValue()) {
-				log.debug("This is the destination of the A-Data Unit PDU, decoding CDAP message");
-				try{
-					cdapMessage = cdapSessionManager.messageReceived(aDataUnit.getPayload(), portId);
-				}catch(Exception ex) {
-					log.error("Error decoding CDAP message: " + ex.getMessage());
-					return;
-				}
-			} else {
-				try{
-					log.debug("Relaying A-Data PDU closer to destination");
-					int nextHop = (int) getNextHop(aDataUnit.getDestinationAddress());
-					kernelIPCProcess.writeManagementSDU(encodedCDAPMessage, encodedCDAPMessage.length, nextHop);
-					log.debug("Wrote A-Data PDU to port-id " + nextHop);
-					return;
-				}catch (Exception ex){
-					log.error("Problems relaying A-Data PDU: "+ex.getMessage() + ". Dropping it");
-					return;
-				}
-			}
-		}
-		
 		Opcode opcode = cdapMessage.getOpCode();
 
 		//2 Find the destination of the message and call it
@@ -209,9 +163,9 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 			//All the response messages must be handled by the entities that are waiting for the reply
 			else{
 				if (cdapMessage.getFlags() != null && cdapMessage.getFlags().equals(Flags.F_RD_INCOMPLETE)){
-					cdapMessageHandler = messageHandlersWaitingForReply.get(cdapSessionDescriptor.getPortId()+"-"+cdapMessage.getInvokeID());
+					cdapMessageHandler = messageHandlersWaitingForReply.get(cdapMessage.getInvokeID());
 				}else{
-					cdapMessageHandler = messageHandlersWaitingForReply.remove(cdapSessionDescriptor.getPortId()+"-"+cdapMessage.getInvokeID());
+					cdapMessageHandler = messageHandlersWaitingForReply.remove(cdapMessage.getInvokeID());
 				}
 
 				if (cdapMessageHandler == null){
@@ -366,42 +320,10 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	 */
 	private void nMinusOneFlowDeallocated(int portId) {
 		cdapSessionManager.removeCDAPSession(portId);
-		cleanMessageHandlersWaitingForReply(portId);
 	}
 	
 	private void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent event) {
 		//Do nothing
-	}
-	
-	/**
-	 * Remove the CDAP Message handlers that were waiting for a reply message coming 
-	 * from a certain portId (because the underlying flow has been deallocated)
-	 * @param portId
-	 */
-	private void cleanMessageHandlersWaitingForReply(int portId){
-		Iterator<String> iterator = messageHandlersWaitingForReply.keySet().iterator();
-		String key = null;
-		List<String> toBeRemoved = new ArrayList<String>();
-		while(iterator.hasNext()){
-			key = iterator.next();
-			if (key.startsWith(""+portId)){
-				toBeRemoved.add(key);
-			}
-		}
-		
-		for(int i=0; i<toBeRemoved.size(); i++){
-			messageHandlersWaitingForReply.remove(toBeRemoved.get(i));
-		}
-	}
-	
-	/** Send a message encapsulated in an A-Data-Unit PDU */
-	public void sendADataUnit(long destinationAddress, CDAPMessage cdapMessage,
-			CDAPMessageHandler cdapMessageHandler) throws IPCException {
-		try{
-			sendMessage(true, cdapMessage, 0, destinationAddress, cdapMessageHandler);
-		} catch(Exception ex){
-			throw new IPCException(ex.getMessage());
-		}
 	}
 	
 	/**
@@ -416,7 +338,12 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 		sendMessage(false, cdapMessage, sessionId, 0, cdapMessageHandler);
 	}
 	
-	private void sendMessage(boolean aData, CDAPMessage cdapMessage, int sessionId, long address,
+	public void sendMessageToAddress(CDAPMessage cdapMessage, int sessionId, long address,
+			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException {
+		sendMessage(true, cdapMessage, sessionId, address, cdapMessageHandler);
+	}
+	
+	private void sendMessage(boolean useAddress, CDAPMessage cdapMessage, int sessionId, long address,
 			CDAPMessageHandler cdapMessageHandler) throws RIBDaemonException{
 		if (cdapMessage.getInvokeID() != 0 && !cdapMessage.getOpCode().equals(Opcode.M_CONNECT) 
 				&& !cdapMessage.getOpCode().equals(Opcode.M_RELEASE) 
@@ -436,28 +363,21 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 		int portId = 0;
 		byte[] sdu = null;
 		synchronized(atomicSendLock){
-			try{		
-				if (aData) {
-					portId = (int) this.getNextHop(address);
-					byte[] payload = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
-					ADataUnitPDU aDataUnit = new ADataUnitPDU(ipcProcess.getAddress().longValue(), 
-							address, payload);
-					ObjectValue objectValue = new ObjectValue();
-					objectValue.setByteval(ipcProcess.getEncoder().encode(aDataUnit));
-					CDAPMessage aDataUnitMessage = CDAPMessage.getWriteObjectRequestMessage(
-							null, null, ADataUnitPDU.ADataUnitPDUObjectName, 0, objectValue,  
-							ADataUnitPDU.ADataUnitPDUObjectName, 0);
-					sdu = cdapSessionManager.encodeCDAPMessage(aDataUnitMessage);
+			try{
+				sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, sessionId);
+				
+				if (useAddress) {
+					kernelIPCProcess.sendMgmgtSDUToAddress(sdu, sdu.length, address);
+					log.debug("Sent CDAP Message to "+address+": "+cdapMessage.toString());
 				} else {
 					portId = sessionId;
-					sdu = cdapSessionManager.encodeNextMessageToBeSent(cdapMessage, portId);
+					kernelIPCProcess.writeMgmgtSDUToPortId(sdu, sdu.length, portId);
+					String destination = cdapSessionManager.getCDAPSession(portId).getSessionDescriptor().getDestApName();
+					log.debug("Sent CDAP Message to "+destination+" through underlying portId "
+							+portId+": "+ cdapMessage.toString());
 				}
 				
-				kernelIPCProcess.writeManagementSDU(sdu, sdu.length, portId);
 				cdapSessionManager.messageSent(cdapMessage, portId);
-				String destination = cdapSessionManager.getCDAPSession(portId).getSessionDescriptor().getDestApName();
-				log.debug("Sent CDAP Message to "+destination+" through underlying portId "
-						+portId+": "+ cdapMessage.toString());
 			}catch(Exception ex){
 				if (ex.getMessage() != null && ex.getMessage().equals("Flow closed")){
 					cdapSessionManager.removeCDAPSession(portId);
@@ -476,7 +396,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 					&& !cdapMessage.getOpCode().equals(Opcode.M_START_R)
 					&& !cdapMessage.getOpCode().equals(Opcode.M_STOP_R)
 					&& !cdapMessage.getOpCode().equals(Opcode.M_WRITE_R)){
-				messageHandlersWaitingForReply.put(portId+"-"+cdapMessage.getInvokeID(), cdapMessageHandler);
+				messageHandlersWaitingForReply.put(cdapMessage.getInvokeID(), cdapMessageHandler);
 			}
 		}
 	}
