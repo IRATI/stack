@@ -46,10 +46,11 @@ cep_id_t cep_id_bad(void)
 { return CEP_ID_WRONG; }
 EXPORT_SYMBOL(cep_id_bad);
 
-#define ADDRESS_WRONG 0
+/* FIXME: address 0 i used, changed to 0xffff */
+#define ADDRESS_WRONG 0xffff
 
 bool is_address_ok(address_t address)
-{ return address > 0 ? true : false; }
+{ return address != ADDRESS_WRONG ? true : false; }
 EXPORT_SYMBOL(is_address_ok);
 
 address_t address_bad(void)

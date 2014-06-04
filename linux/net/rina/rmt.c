@@ -813,6 +813,10 @@ static int process_dt_spdu(struct rmt *       rmt,
                                                sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
                                         rmt->ingress.cache.pids[0]);
+                } else {
+                        /* FIXME: return error? */
+                        LOG_DBG("Could not route PDU");
+                        sdu_destroy(sdu);
                 }
 
                 /*
