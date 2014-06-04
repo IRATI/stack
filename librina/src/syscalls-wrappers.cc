@@ -79,7 +79,7 @@
 #define DUMP_SYSCALL(X, Y) do { } while (0);
 #endif
 
-using namespace rina;
+namespace rina {
 
 int syscallWriteSDU(int portId, void * sdu, int size)
 {
@@ -220,4 +220,6 @@ int syscallDeallocatePortId(int portId)
         }
 
         return result;
+}
+
 }

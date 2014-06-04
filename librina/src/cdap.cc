@@ -20,4 +20,5 @@
 
 #include "librina-cdap.h"
 
-using namespace rina;
+namespace rina {
+}

@@ -22,4 +22,6 @@
 
 #include "librina-sdu-protection.h"
 
-using namespace rina;
+namespace rina {
+}
+
