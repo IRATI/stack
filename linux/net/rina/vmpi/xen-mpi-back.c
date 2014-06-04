@@ -800,4 +800,3 @@ static void __exit mpiback_fini(void)
 module_exit(mpiback_fini);
 
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_ALIAS("xen-backend:mpi");

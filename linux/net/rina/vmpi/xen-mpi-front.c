@@ -1378,5 +1378,3 @@ module_exit(mpi_exit);
 
 MODULE_DESCRIPTION("Xen virtual MPI frontend");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("xen:mpi");
-MODULE_ALIAS("xenmpi");
