@@ -135,7 +135,7 @@ vmpi_impl_read_buffer(struct vmpi_impl_info *vi)
                         printk("Error: vmpi_buffer_create(%u) failed\n",
                                VMPI_BUF_SIZE);
                 } else {
-                        sg_set_buf(q->sg, newbuf->p, VMPI_BUF_SIZE);
+                        sg_set_buf(q->sg, newbuf->p, newbuf->size);
                         err = virtqueue_add_inbuf(q->vq, q->sg, 1, newbuf,
                                                   GFP_ATOMIC);
                         if (unlikely(err)) {
@@ -417,7 +417,7 @@ virtio_mpi_probe(struct virtio_device *vdev)
                 if (buf == NULL) {
                         goto setup_rxbufs;
                 }
-                sg_set_buf(q->sg, buf->p, VMPI_BUF_SIZE);
+                sg_set_buf(q->sg, buf->p, buf->size);
                 err = virtqueue_add_inbuf(q->vq, q->sg, 1, buf, GFP_ATOMIC);
                 if (err) {
                         vmpi_buffer_destroy(buf);

@@ -34,11 +34,13 @@ vmpi_buffer_init(struct vmpi_buffer *buf, size_t size)
                 buf->p = kmalloc(size, GFP_ATOMIC);
                 if (unlikely(buf->p == NULL))
                         return -ENOMEM;
+                buf->size = size;
         } else {
                 buf->page = alloc_page(GFP_ATOMIC);
                 if (unlikely(buf->page == NULL))
                         return -ENOMEM;
                 buf->p = page_address(buf->page);
+                buf->size = PAGE_SIZE;
         }
 
         return 0;

@@ -39,6 +39,7 @@
 #include <xen/interface/memory.h>
 #include <xen/interface/grant_table.h>
 
+#include "vmpi-limits.h"
 #include "vmpi-structs.h"
 #include "vmpi-guest-impl.h"
 

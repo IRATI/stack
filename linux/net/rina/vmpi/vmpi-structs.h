@@ -31,7 +31,8 @@ struct vmpi_hdr {
 
 struct vmpi_buffer {
         void *p;
-        size_t len;
+        size_t len;     /* Includes the vmpi header. */
+        size_t size;    /* Includes the vmpi header. */
         struct vmpi_buffer *next;
         struct page *page;
 };
@@ -53,7 +54,6 @@ void vmpi_buffer_destroy(struct vmpi_buffer *buf);
 /* ######################## VMPI-RING ############################## */
 
 #define VMPI_RING_SIZE   256
-#define VMPI_BUF_SIZE    2048  /* Includes the vmpi header. */
 
 struct vmpi_ring {
         unsigned int nu;    /* Next unused. */
