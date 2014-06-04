@@ -473,6 +473,7 @@ struct dif_config * dif_config_create(void)
         if (!tmp)
                 return NULL;
 
+        tmp->efcp_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;
