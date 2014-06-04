@@ -50,8 +50,6 @@
 #define IFV(x)
 #endif  /* !VERBOSE */
 
-#define VMPI_BUFFER_SIZE_XEN    2000
-
 #define GRANT_INVALID_REF	0
 
 #define NET_TX_RING_SIZE __CONST_RING_SIZE(xen_mpi_tx, PAGE_SIZE)
@@ -496,7 +494,7 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
         req->id = id;
         req->gref = np->grant_rx_ref[id] = ref;
         req->offset = offset_in_page(buf->p);
-        req->len = VMPI_BUFFER_SIZE_XEN;
+        req->len = PAGE_SIZE;
 
         req_prod++;
 
@@ -1230,7 +1228,7 @@ static int xenmpi_connect(struct vmpi_impl_info *np)
 		req->gref = ref;
 		req->id   = requeue_idx;
                 req->offset = offset_in_page(buf->p);
-                req->len = VMPI_BUFFER_SIZE_XEN;
+                req->len = PAGE_SIZE;
 
 		requeue_idx++;
 	}
