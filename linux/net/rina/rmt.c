@@ -716,23 +716,16 @@ static struct pci * sdu_pci_copy(const struct sdu * sdu)
         return pci_create_from(buffer_data_ro(sdu_buffer_ro(sdu)));
 }
 
-static int process_mgmt_sdu(struct rmt * rmt,
+static int process_mgmt_pdu(struct rmt * rmt,
                             port_id_t    port_id,
-                            struct sdu * sdu)
+                            struct pdu * pdu)
 {
         struct buffer * buffer;
-        struct pdu *    pdu;
+        struct sdu *    sdu;
 
         ASSERT(rmt);
         ASSERT(is_port_id_ok(port_id));
-        ASSERT(sdu);
-
-        pdu = pdu_create_with(sdu);
-        if (!pdu) {
-                LOG_ERR("Cannot get PDU from SDU");
-                sdu_destroy(sdu);
-                return -1;
-        }
+        ASSERT(pdu);
 
         buffer = pdu_buffer_get_rw(pdu);
         if (!buffer_is_ok(buffer)) {
@@ -765,37 +758,20 @@ static int process_mgmt_sdu(struct rmt * rmt,
 }
 
 /* FIXME: This function is a mess, we have to rearrange ASAP */
-static int process_dt_sdu(struct rmt *       rmt,
+static int process_dt_spdu(struct rmt *       rmt,
                           port_id_t          port_id,
-                          struct sdu *       sdu)
+                          struct sdu *       sdu,
+                          struct pdu *       pdu)
 {
-        struct pdu * pdu;
         address_t    dest_addr;
 
-        /* (FUTURE) Address and qos-id are the same, do a single match only */
-        pdu = pdu_create_from(sdu);
-        if (!pdu) {
-                LOG_ERR("Cannot get PDU from SDU");
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Bad PDU from SDU, cannot process");
-                pdu_destroy(pdu);
-                sdu_destroy(sdu);
-                return -1;
-        }
-
         ASSERT(pdu_is_ok(pdu));
-        ASSERT(sdu_is_ok(sdu));
 
         /* NOTE: We have good sdu and pdu (we have to get rid of */
         dest_addr = pci_destination(pdu_pci_get_ro(pdu));
         if (!is_address_ok(dest_addr)) {
                 LOG_ERR("PDU has Wrong destination address");
                 pdu_destroy(pdu);
-                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -811,22 +787,29 @@ static int process_dt_sdu(struct rmt *       rmt,
                              &(rmt->ingress.cache.count))) {
                         LOG_ERR("Cannot get NHOP");
                         pdu_destroy(pdu);
-                        sdu_destroy(sdu);
                         return -1;
                 }
 
-                for (i = 0; i < rmt->ingress.cache.count; i++) {
-                        struct sdu * tmp;
+                if (rmt->ingress.cache.count > 0) {
+                        for (i = 1; i < rmt->ingress.cache.count; i++) {
+                                struct sdu * tmp;
+                                
+                                tmp = sdu_dup(sdu);
+                                if (!tmp)
+                                        continue;
 
-                        tmp = sdu_dup(sdu);
-                        if (!tmp)
-                                continue;
+                                if (kfa_flow_sdu_write(rmt->kfa,
+                                                       rmt->ingress.cache.pids[i],
+                                                       tmp))
+                                        LOG_ERR("Cannot write SDU to KFA port-id %d",
+                                                rmt->ingress.cache.pids[i]);
+                        }
 
                         if (kfa_flow_sdu_write(rmt->kfa,
-                                               rmt->ingress.cache.pids[i],
-                                               tmp))
+                                               rmt->ingress.cache.pids[0],
+                                               sdu))
                                 LOG_ERR("Cannot write SDU to KFA port-id %d",
-                                        rmt->ingress.cache.pids[i]);
+                                        rmt->ingress.cache.pids[0]);
                 }
 
                 /*
@@ -836,12 +819,13 @@ static int process_dt_sdu(struct rmt *       rmt,
                 pdu_destroy(pdu);
         } else {
                 cep_id_t c;
+                /* we do not use the sdu in this case */
+                sdu_destroy(sdu);
 
                 c = pci_cep_destination(pdu_pci_get_ro(pdu));
                 if (!is_cep_id_ok(c)) {
                         LOG_ERR("Wrong CEP-id in PDU");
                         pdu_destroy(pdu);
-                        sdu_destroy(sdu);
                         return -1;
                 }
 
@@ -850,8 +834,6 @@ static int process_dt_sdu(struct rmt *       rmt,
                         return -1;
                 }
         }
-
-        sdu_destroy(sdu);
 
         return 0;
 }
@@ -878,9 +860,9 @@ static int receive_worker(void * o)
                            entry,
                            hlist) {
                 struct sdu * sdu;
+                struct pdu * pdu;
                 port_id_t    port_id;
                 pdu_type_t   pdu_type;
-                struct pci * pci;
 
                 ASSERT(entry);
 
@@ -892,32 +874,47 @@ static int receive_worker(void * o)
                         continue;
                 }
 
+                ASSERT(sdu_is_ok(sdu));
+
                 port_id = entry->port_id;
                 spin_unlock(&tmp->ingress.queues->lock);
 
-                pci = sdu_pci_copy(sdu);
-                if (!pci) {
-                        LOG_ERR("No PCI to work with, dropping SDU!");
+                pdu = pdu_create_from(sdu);
+                if (!pdu) {
+                        LOG_ERR("Cannot get PDU from SDU");
                         sdu_destroy(sdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
-                pdu_type = pci_type(pci);
-                if (!pdu_type_is_ok(pdu_type)) {
-                        LOG_ERR("Wrong PDU type, dropping SDU!");
-                        pci_destroy(pci);
+                if (!pdu_is_ok(pdu)) {
+                        LOG_ERR("Bad PDU from SDU, cannot process");
                         sdu_destroy(sdu);
+                        pdu_destroy(pdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
-                LOG_DBG("PDU type: %d", pdu_type);
+
+                ASSERT(pdu_is_ok(pdu));
+
+                pdu_type = pci_type(pdu_pci_get_ro(pdu));
+                if (!pdu_type_is_ok(pdu_type)) {
+                        LOG_ERR("Wrong PDU type, dropping SDU!");
+                        sdu_destroy(sdu);
+                        pdu_destroy(pdu);
+                        spin_lock(&tmp->ingress.queues->lock);
+                        continue;
+                }
 
                 /* (FUTURE) PDU ownership is going to be passed on */
 
                 switch (pdu_type) {
                 case PDU_TYPE_MGMT:
-                        process_mgmt_sdu(tmp, port_id, sdu);
+                        if (!pci_destination(pdu_pci_get_ro(pdu))) { 
+                                process_mgmt_pdu(tmp, port_id, pdu);
+                                sdu_destroy(sdu);
+                        } else 
+                                process_dt_spdu(tmp, port_id, sdu, pdu);
                         break;
 
                 case PDU_TYPE_EFCP:
@@ -934,16 +931,16 @@ static int receive_worker(void * o)
                          * enqueue PDU in pdus_dt[dest-addr, qos-id]
                          * don't process it now ...
                          */
-                        process_dt_sdu(tmp, port_id, sdu);
-                        LOG_DBG("Finishing process_dt_sdu");
+                        process_dt_spdu(tmp, port_id, sdu, pdu);
+                        LOG_DBG("Finishing process_dt_spdu");
                         break;
 
                 default:
                         LOG_ERR("Unknown PDU type %d", pdu_type);
                         sdu_destroy(sdu);
+                        pdu_destroy(pdu);
                         break;
                 }
-                pci_destroy(pci);
 
                 /* (FUTURE) foreach_end() */
 
@@ -951,7 +948,7 @@ static int receive_worker(void * o)
         }
         spin_unlock(&tmp->ingress.queues->lock);
 
-        /* (FUTURE) for-each list in pdus_dt call process_dt_pdus(pdus_dt) */
+        /* (FUTURE) for-each list in pdus_dt call process_dt_spdus(pdus_dt) */
 
         return 0;
 }
@@ -1274,7 +1271,7 @@ static bool regression_tests_egress_queue(void)
         return true;
 }
 
-static bool regression_tests_process_mgmt_sdu(struct rmt * rmt,
+static bool regression_tests_process_mgmt_pdu(struct rmt * rmt,
                                               port_id_t    port_id,
                                               struct sdu * sdu)
 {
@@ -1449,7 +1446,7 @@ static bool regression_tests_ingress_queue(void)
                         LOG_DBG("PDU type: %X", pdu_type);
                         switch (pdu_type) {
                         case PDU_TYPE_MGMT:
-                                regression_tests_process_mgmt_sdu(rmt,
+                                regression_tests_process_mgmt_pdu(rmt,
                                                                   pid,
                                                                   sdu);
                                 break;
@@ -1460,7 +1457,7 @@ static bool regression_tests_ingress_queue(void)
                                  * enqueue PDU in pdus_dt[dest-addr, qos-id]
                                  * don't process it now ...
                                  *
-                                 * process_dt_sdu(rmt, port_id, sdu);
+                                 * process_dt_spdu(rmt, port_id, sdu);
                                  */
                                 break;
                         default:
