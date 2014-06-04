@@ -9,11 +9,14 @@ ccflags-y += -Wtype-limits
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o				\
 	rds/					\
-	core.o personality.o syscalls.o		\
+	core.o personality.o			\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
 	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
-	ipcp-utils.o connection.o	\
+	ipcp-utils.o connection.o		\
 	common.o policies.o dtcp-utils.o 
+
+obj-y +=					\
+	syscalls.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina_personality_default.o
