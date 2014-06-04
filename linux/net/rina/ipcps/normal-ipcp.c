@@ -418,30 +418,30 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_check_dt_cons(struct dt_cons * dt_cons)
-{
-        /* FIXME: What should we check here? */
-        return 0;
-}
-
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
-        struct dt_cons * dt_cons;
+        struct efcp_config * efcp_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
         if (rmt_address_set(data->rmt, data->address))
                 return -1;
 
-        dt_cons = dif_information->configuration->dt_cons;
+        efcp_config = dif_information->configuration->efcp_config;
 
-        if (normal_check_dt_cons(dt_cons)) {
-                LOG_ERR("Configuration constants for the DIF are bogus...");
+        if (!efcp_config) {
+                LOG_ERR("No EFCP configuration in the dif_info");
                 return -1;
         }
 
-        efcp_container_set_dt_cons(dt_cons, data->efcpc);
+        if(!efcp_config->dt_cons) {
+                LOG_ERR("Configuration constants for the DIF are bogus...");
+                efcp_config_destroy(efcp_config);
+                return -1;
+        }
+
+        efcp_container_set_config(efcp_config, data->efcpc);
 
         return 0;
 }
