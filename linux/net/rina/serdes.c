@@ -38,8 +38,8 @@ struct buffer * buffer_create_from_gfp(gfp_t        flags,
 
 struct pdu * pdu_create_gfp(gfp_t flags);
 
-struct pci *    pci_create_from_gfp(gfp_t        flags,
-                                    const void * data);
+struct pci * pci_create_from_gfp(gfp_t        flags,
+                                 const void * data);
 
 
 struct pdu_ser {
@@ -60,35 +60,55 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
         ssize_t               buffer_size;
         ssize_t               pci_size;
         char *                data;
+        pdu_type_t            pdu_type;
         
         if (!pdu_is_ok(pdu))
                 return NULL;
 
         buffer = pdu_buffer_get_ro(pdu);
         if (!buffer) {
-                pdu_destroy(pdu); 
                 return NULL;
         }
 
         buffer_data = buffer_data_ro(buffer);
         if (!buffer_data) {
-                pdu_destroy(pdu);
                 return NULL;
         }
 
         pci = pdu_pci_get_ro(pdu);
         if (!pci) {
-                pdu_destroy(pdu);
                 return NULL;
         }
 
         buffer_size = buffer_length(buffer);
         if (buffer_size <= 0) {
-                pdu_destroy(pdu);
                 return NULL;
         }
 
-        /* TODO: Serialize the PCI here */
+        /* Serialize the PCI here */
+        pdu_type = pci_type(pci);
+        if (!pdu_type_is_ok(pdu_type)) {
+                LOG_ERR("Wrong PDU type");
+                return NULL;
+        }
+
+        switch (pdu_type) {
+        case PDU_TYPE_MGMT:
+                break;
+
+        case PDU_TYPE_EFCP:
+        case PDU_TYPE_DT:
+        case PDU_TYPE_CC:
+        case PDU_TYPE_SACK:
+        case PDU_TYPE_NACK:
+        case PDU_TYPE_FC:
+        case PDU_TYPE_ACK:
+        case PDU_TYPE_ACK_AND_FC:
+                break;
+        default:
+                LOG_ERR("Unknown PDU type %d", pdu_type);
+                return NULL;
+        }
 
         pci_size = pci_length(pci);
         if (pci_size <= 0) {
@@ -105,6 +125,9 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
 
         memcpy(data, pci, pci_size);
         memcpy(data + pci_size, buffer_data, buffer_size);
+
+
+
 
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp) {
