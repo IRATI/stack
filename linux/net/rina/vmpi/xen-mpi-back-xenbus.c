@@ -429,7 +429,7 @@ static int connect_rings(struct backend_info *be)
 
 
 static const struct xenbus_device_id mpiback_ids[] = {
-	{ "mpi" },
+	{ "vmpi" },
 	{ "" }
 };
 

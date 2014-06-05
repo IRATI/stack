@@ -21,7 +21,7 @@
 #define __VMPI_TEST_H__
 
 /* Enable guest-side test interface. */
-//#define VMPI_GUEST_TEST
+#define VMPI_TEST
 
 #ifdef VMPI_TEST
 int vmpi_test_init(void *, bool deferred);

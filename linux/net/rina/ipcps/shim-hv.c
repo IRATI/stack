@@ -24,7 +24,7 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 
-#define SHIM_NAME   "shim-hv-virtio"
+#define SHIM_NAME   "shim-hv"
 #define RINA_PREFIX SHIM_NAME
 
 #include "logs.h"
@@ -38,12 +38,12 @@
 #include "vmpi-ops.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
-#if defined(CONFIG_VMPI_VIRTIO_GUEST) && !defined(CONFIG_VMPI_VIRTIO_GUEST_MODULE)
+#if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
 #error VMPI guest must be a module
 #endif
 
 /* FIXME: Pigsty workaround, to be removed immediately */
-#if defined(CONFIG_VMPI_VIRTIO_HOST) && !defined(CONFIG_VMPI_VIRTIO_HOST_MODULE)
+#if defined(CONFIG_VMPI_KVM_HOST) && !defined(CONFIG_VMPI_KVM_HOST_MODULE)
 #error VMPI host must be a module
 #endif
 
