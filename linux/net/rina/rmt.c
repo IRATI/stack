@@ -773,7 +773,7 @@ static int process_dt_pdu(struct rmt * rmt,
         }
 
         pdu_type = pci_type(pdu_pci_get_ro(pdu));
-        if (pdu_type) {
+        if (pdu_type == PDU_TYPE_MGMT) {
                 LOG_ERR("MGMT should not be here");
                 pdu_destroy(pdu);
                 return -1;

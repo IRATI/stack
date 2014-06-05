@@ -40,7 +40,7 @@
 #include "dt-utils.h"
 
 #ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 1
+#define DTCP_TEST_ENABLE 0
 #endif
 
 struct efcp {
