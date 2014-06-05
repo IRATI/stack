@@ -30,7 +30,8 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		QoSCube qosCube = qosCubes.getFirst();
 		
 		Connection connection = new Connection();
-		connection.setQosId(qosCube.getId());
+		//TODO hardcoded value, we don't deal with QoS yet
+		connection.setQosId(1);
 		connection.setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
 		
 		//TODO generate connection policies properly
