@@ -1,6 +1,7 @@
-/* A VMPI implemented using the vmpi-impl interface
+/*
+ * A guest-side VMPI implemented using the vmpi-impl guest interface
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/module.h>
@@ -39,6 +40,13 @@
 #endif /* !VERBOSE */
 
 #define VMPI_GUEST_BUDGET  64
+
+unsigned int stat_txreq = 0;
+module_param(stat_txreq, uint, 0444);
+unsigned int stat_txres = 0;
+module_param(stat_txres, uint, 0444);
+unsigned int stat_rxres = 0;
+module_param(stat_rxres, uint, 0444);
 
 struct vmpi_info {
         vmpi_impl_info_t *vi;
@@ -82,6 +90,7 @@ vmpi_impl_clean_tx(struct vmpi_info *mpi)
                 buf->len = 0;
                 VMPI_RING_INC(mpi->write.np);
                 VMPI_RING_INC(mpi->write.nr);
+                stat_txres++;
         }
 }
 
@@ -144,13 +153,14 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(mpi->write.nu);
-                mutex_unlock(&mpi->write.lock);
 
                 ret = vmpi_impl_write_buf(vi, buf);
                 if (ret == 0) {
                         ret = copylen;
                 }
+                stat_txreq++;
                 vmpi_impl_txkick(vi);
+                mutex_unlock(&mpi->write.lock);
                 break;
         }
 
@@ -274,6 +284,7 @@ recv_worker_function(struct work_struct *work)
                         mutex_lock(&mpi->recv_worker_lock);
                         vmpi_buffer_destroy(buf);
                 }
+                stat_rxres++;
                 budget--;
         }
 

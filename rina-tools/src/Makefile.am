@@ -5,10 +5,9 @@
 #
 
 EXTRA_DIST                         =
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 bin_PROGRAMS                       =
 bin_SCRIPTS                        =
-
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rina_wrap_SOURCES  = rina-wrap.c
 rina_wrap_LDFLAGS  =
