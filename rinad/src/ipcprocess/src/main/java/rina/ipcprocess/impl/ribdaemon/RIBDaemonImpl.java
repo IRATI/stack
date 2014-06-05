@@ -360,7 +360,6 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 			throw new RIBDaemonException(RIBDaemonException.RESPONSE_REQUIRED_BUT_MESSAGE_HANDLER_IS_NULL);
 		}
 		
-		int portId = 0;
 		byte[] sdu = null;
 		synchronized(atomicSendLock){
 			try{
@@ -370,17 +369,16 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 					kernelIPCProcess.sendMgmgtSDUToAddress(sdu, sdu.length, address);
 					log.debug("Sent CDAP Message to "+address+": "+cdapMessage.toString());
 				} else {
-					portId = sessionId;
-					kernelIPCProcess.writeMgmgtSDUToPortId(sdu, sdu.length, portId);
-					String destination = cdapSessionManager.getCDAPSession(portId).getSessionDescriptor().getDestApName();
+					kernelIPCProcess.writeMgmgtSDUToPortId(sdu, sdu.length, sessionId);
+					String destination = cdapSessionManager.getCDAPSession(sessionId).getSessionDescriptor().getDestApName();
 					log.debug("Sent CDAP Message to "+destination+" through underlying portId "
-							+portId+": "+ cdapMessage.toString());
+							+sessionId+": "+ cdapMessage.toString());
 				}
 				
-				cdapSessionManager.messageSent(cdapMessage, portId);
+				cdapSessionManager.messageSent(cdapMessage, sessionId);
 			}catch(Exception ex){
 				if (ex.getMessage() != null && ex.getMessage().equals("Flow closed")){
-					cdapSessionManager.removeCDAPSession(portId);
+					cdapSessionManager.removeCDAPSession(sessionId);
 				}
 				throw new RIBDaemonException(RIBDaemonException.PROBLEMS_SENDING_CDAP_MESSAGE, ex);
 			}
