@@ -8,7 +8,7 @@ namespace rina {
 
 // CLASS ConnectionStateMachine
 ConnectionStateMachine::ConnectionStateMachine(
-		CDAPSessionInterface *cdap_session, long timeout) {
+		CDAPSessionImpl *cdap_session, long timeout) {
 	cdap_session_ = cdap_session;
 	timeout_ = timeout;
 }
@@ -22,15 +22,29 @@ void ConnectionStateMachine::checkConnect(){
 		throw CDAPException(ss.str());
 	}
 }
-void ConnectionStateMachine::connectSentOrReceived(const CDAPMessage &cdap_Message, bool sent){
+void ConnectionStateMachine::connectSentOrReceived(bool sent){
 	if (sent){
 		connect();
 	}else{
-		connectReceived(cdapMessage);
+		connectReceived();
+	}
+}
+void ConnectionStateMachine::checkConnectResponse() {
+	if (connection_state_ != AWAITCON){
+		std::stringstream ss;
+		ss << "Cannot send a connection response because this CDAP session is currently in " << connection_state_ << " state";
+		throw CDAPException( ss.str() );
+	}
+}
+void ConnectionStateMachine::connectResponseSentOrReceived(bool sent) {
+	if (sent){
+		connectResponse();
+	}else{
+		connectResponseReceived();
 	}
 }
 void ConnectionStateMachine::checkRelease() {
-	if (connection_state_ != ConnectionState::CONNECTED){
+	if (connection_state_ != CONNECTED){
 		std::stringstream ss;
 		ss << "Cannot close a connection because " << "this CDAP session is " << "currently in " << connection_state_ << " state";
 		throw CDAPException(ss.str());
@@ -44,10 +58,85 @@ void ConnectionStateMachine::releaseSentOrReceived(const CDAPMessage &cdap_messa
 	}
 }
 void ConnectionStateMachine::checkReleaseResponse() {
-
+	if (connection_state_ != AWAITCLOSE){
+		std::stringstream ss;
+		ss << "Cannot send a release connection response message because this CDAP session is currently in " <<
+				connection_state_ << " state";
+		throw CDAPException( ss.str() );
+	}
 }
-void ConnectionStateMachine::releaseResponseSentOrReceived(const CDAPMessage &cdapMessage, bool sent) {
-
+void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent) {
+	if (sent){
+		releaseResponse();
+	}else{
+		releaseResponseReceived();
+	}
+}
+void ConnectionStateMachine::connect() {
+	checkConnect();
+	connection_state_ = AWAITCON;
+	// TODO: TIMER
+}
+void ConnectionStateMachine::connectReceived() {
+	if (connection_state_ != NONE){
+		std::stringstream ss;
+		ss <<  "Cannot open a new connection because this CDAP session is currently in" << connection_state_ << " state";
+		throw CDAPException(ss.str());
+	}
+	connection_state_ = AWAITCON;
+}
+void ConnectionStateMachine::connectResponse() {
+	checkConnectResponse();
+	connection_state_ = CONNECTED;
+}
+void ConnectionStateMachine::connectResponseReceived() {
+	if (connection_state_ != AWAITCON){
+		std::stringstream ss;
+		ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "+ connection_state_ << " state";
+		throw CDAPException( ss.str() );
+	}
+	/*
+	openTimer.cancel();
+	openTimer = null;
+	*/
+	connection_state_ = CONNECTED;
+}
+void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {
+	checkRelease();
+	connection_state_ = AWAITCLOSE;
+	if (cdap_message.get_invoke_id() != 0){
+		// TODO: TIMER
+	}
+}
+void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
+	if (connection_state_  != CONNECTED && connection_state_ != AWAITCLOSE){
+		std::stringstream ss;
+		ss << "Cannot close the connection because this CDAP session is currently in " << connection_state_ <<" state";
+		throw CDAPException( ss.str() );
+	}
+	if (message.get_invoke_id() != 0 && connection_state_ != AWAITCLOSE){
+		connection_state_ = AWAITCLOSE;
+	}else{
+		connection_state_ = NONE;
+		// TODO: cdap_session_.stopConnection();
+	}
+}
+void ConnectionStateMachine::releaseResponse() {
+	checkReleaseResponse();
+	connection_state_ = NONE;
+}
+void ConnectionStateMachine::releaseResponseReceived() {
+	if (connection_state_ != AWAITCLOSE){
+		std::stringstream ss;
+		ss <<"Received an M_RELEASE_R message, but this CDAP session is currently in " << connection_state_ << " state";
+		throw CDAPException( ss.str() );
+	}
+	/* TODO
+	closeTimer.cancel();
+	closeTimer = null;
+	*/
+	connection_state_ = NONE;
+	// TODO: cdap_session_.stopConnection();
 }
 
 // CLASS CDAPOperationState
@@ -207,19 +296,17 @@ void CDAPSessionImpl::messageSentOrReceived(const CDAPMessage &cdap_message,
 		bool sent) {
 	switch (cdap_message.get_op_code()) {
 	case CDAPMessage::M_CONNECT:
-		connection_state_machine_->connectSentOrReceived(cdap_message, sent);
+		connection_state_machine_->connectSentOrReceived(sent);
 		populateSessionDescriptor(cdap_message, sent);
 		break;
 	case CDAPMessage::M_CONNECT_R:
-		connection_state_machine_->connectResponseSentOrReceived(cdap_message,
-				sent);
+		connection_state_machine_->connectResponseSentOrReceived(sent);
 		break;
 	case CDAPMessage::M_RELEASE:
 		connection_state_machine_->releaseSentOrReceived(cdap_message, sent);
 		break;
 	case CDAPMessage::M_RELEASE_R:
-		connection_state_machine_->releaseResponseSentOrReceived(cdap_message,
-				sent);
+		connection_state_machine_->releaseResponseSentOrReceived(sent);
 		emptySessionDescriptor();
 		break;
 	case CDAPMessage::M_CREATE:

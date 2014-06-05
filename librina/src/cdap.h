@@ -22,21 +22,20 @@ namespace rina {
 class CDAPSessionImpl;
 class ConnectionStateMachine {
 public:
-	ConnectionStateMachine(CDAPSessionInterface *cdap_session, long timeout);
+	ConnectionStateMachine(CDAPSessionImpl*cdap_session, long timeout);
 	// FIXME: synchronized
 	bool is_connected() const;
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
 	/// @throws CDAPException
 	// FIXME: synchronized
 	void checkConnect();
-	void connectSentOrReceived(const CDAPMessage &cdap_message, bool sent);
+	void connectSentOrReceived(bool sent);
 	/// Checks if the CDAP M_CONNECT_R message can be sent
 	/// @throws CDAPException
 	// FIXME: synchronized
 	void checkConnectResponse();
 	// FIXME: synchronized
-	void connectResponseSentOrReceived(const CDAPMessage &cdap_message,
-			bool sent);
+	void connectResponseSentOrReceived(bool sent);
 	/// Checks if the CDAP M_RELEASE message can be sent
 	/// @throws CDAPException
 	// FIXME: synchronized
@@ -48,8 +47,7 @@ public:
 	// FIXME: synchronized
 	void checkReleaseResponse();
 	// FIXME: synchronized
-	void releaseResponseSentOrReceived(const CDAPMessage &cdap_message,
-			bool sent);
+	void releaseResponseSentOrReceived(bool sent);
 private:
 	enum ConnectionState {
 		NONE, AWAITCON, CONNECTED, AWAITCLOSE
@@ -61,21 +59,21 @@ private:
 	/// An M_CONNECT message has been received, update the state
 	/// @param message
 	// FIXME: synchronized
-	void connectReceived(CDAPMessage message);
+	void connectReceived();
 	/// The AE has sent an M_CONNECT_R  message
 	/// @param openConnectionResponseMessage
 	/// @throws CDAPException
 	void connectResponse();
 	/// An M_CONNECT_R message has been received
 	/// @param message
-	void connectResponseReceived(CDAPMessage message);
+	void connectResponseReceived();
 	/// The AE has sent an M_RELEASE message
 	/// @param releaseConnectionRequestMessage
 	/// @throws CDAPException
-	void release(CDAPMessage cdapMessage);
+	void release(const CDAPMessage &cdapMessage);
 	/// An M_RELEASE message has been received
 	/// @param message
-	void releaseReceived(CDAPMessage message);
+	void releaseReceived(const CDAPMessage &message);
 	/// The AE has called the close response operation
 	/// @param releaseConnectionRequestMessage
 	/// @throws CDAPException
@@ -86,7 +84,7 @@ private:
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
 	long timeout_;
 	/// The flow that this CDAP connection operates over
-	CDAPSessionInterface *cdap_session_;
+	CDAPSessionImpl *cdap_session_;
 	/// The state of the CDAP connection, drives the CDAP connection
 	/// state machine
 	ConnectionState connection_state_;
