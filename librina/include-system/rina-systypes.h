@@ -1,4 +1,9 @@
 /*
+ * RINA sys-types
+ *
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,9 +22,11 @@
 #ifndef RINA_SYS_TYPES_H
 #define	RINA_SYS_TYPES_H
 
+#ifdef __cplusplus
+
 //#include <linux/types.h>
 
-namespace rina{
+namespace rina {
 
 typedef int	ipc_process_id_t;
 typedef char string_t;
@@ -117,4 +124,6 @@ struct ipc_process_conf {
 };
 }
 
-#endif /* !_SYS_RINA_TYPES_H_ */
+#endif
+
+#endif
