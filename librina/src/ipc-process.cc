@@ -1037,12 +1037,27 @@ unsigned int KernelIPCProcess::dumptPDUFT()
         return seqNum;
 }
 
-void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
+void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
+                unsigned int portId)
                 throw (WriteSDUException) {
 #if STUB_API
         //Do nothing
 #else
-        int result = syscallWriteManagementSDU(ipcProcessId, sdu, portId,
+        int result = syscallWriteManagementSDU(ipcProcessId, sdu, 0, portId,
+                        size);
+        if (result < 0){
+                throw WriteSDUException();
+        }
+#endif
+}
+
+void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
+                unsigned int address)
+                throw (WriteSDUException) {
+#if STUB_API
+        //Do nothing
+#else
+        int result = syscallWriteManagementSDU(ipcProcessId, sdu, address, 0,
                         size);
         if (result < 0){
                 throw WriteSDUException();

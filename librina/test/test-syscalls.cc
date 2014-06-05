@@ -68,7 +68,7 @@ int main(int argc, char * argv[]) {
 			<<result<<std::endl;
 
 	//Write management sdu
-	result = syscallWriteManagementSDU(1, sdu, 12, 50);
+	result = syscallWriteManagementSDU(1, sdu, 0, 12, 50);
 	std::cout<<"Called write management SDU system call with result "
 	                <<result<<std::endl;
 
@@ -88,7 +88,7 @@ int main(int argc, char * argv[]) {
 			<<result<<std::endl;
 
 	//Write management sdu (will fail)
-	result = syscallWriteManagementSDU(1, sdu, 12, 50);
+	result = syscallWriteManagementSDU(1, sdu, 12, 0, 50);
 	std::cout<<"Called write management SDU system call with result "
 	                <<result<<std::endl;
 
