@@ -30,6 +30,13 @@
 #include "vmpi-test.h"
 
 
+unsigned int stat_txreq = 0;
+module_param(stat_txreq, uint, 0444);
+unsigned int stat_txres = 0;
+module_param(stat_txres, uint, 0444);
+unsigned int stat_rxres = 0;
+module_param(stat_rxres, uint, 0444);
+
 struct vmpi_info {
         struct vmpi_impl_info *vi;
 
@@ -204,6 +211,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(ring->nu);
+                stat_txreq++;
                 mutex_unlock(&ring->lock);
 
                 vmpi_impl_write_buf(mpi->vi, buf);

@@ -59,6 +59,9 @@ enum {
         VHOST_NET_VQ_MAX = 2,
 };
 
+extern unsigned int stat_txres;
+extern unsigned int stat_rxres;
+
 struct vmpi_impl_queue {
         struct vhost_virtqueue vq;
 };
@@ -178,6 +181,7 @@ handle_tx(struct vmpi_impl_info *vi)
                                 mutex_lock(&vq->mutex);
                                 vmpi_buffer_destroy(buf);
                         }
+                        stat_rxres++;
                 }
 
                 vhost_add_used_and_signal(&vi->dev, vq, head, 0);
@@ -322,6 +326,7 @@ handle_rx(struct vmpi_impl_info *vi)
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
                 IFV(printk("pushed %d bytes in the RX ring\n", (int)len));
+                stat_txres++;
 
                 vhost_add_used_and_signal_n(&vi->dev, vq, vq->heads,
                                             headcount);
