@@ -200,7 +200,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		this.flowRequestEvent = event;
 		flow = newFlowRequestPolicy.generateFlowObject(event, 
 				ipcProcess.getDIFInformation().getDifName().getProcessName(), 
-				ipcProcess.getDIFInformation().getDifConfiguration().getQosCubes());
+				ipcProcess.getDIFInformation().getDifConfiguration().getEfcpConfiguration().getQosCubes());
 		log.debug("Generated flow object: "+flow.toString());
 		
 		//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
@@ -227,8 +227,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//3 Request the creation of the connection(s) in the Kernel
 		try{
 			this.state = FAIState.CONNECTION_CREATE_REQUESTED;
-			kernelIPCProcess.createConnection(flow.getConnections().get(0), 
-					flow.getConnectionPolicies());
+			kernelIPCProcess.createConnection(flow.getConnections().get(0));
 		} catch(Exception ex) {
 			throw new IPCException("Problems requesting the kernel to create a connection: " 
 					+ ex.getMessage());
@@ -343,8 +342,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//4 Request creation of connection
 		try {
 			state = FAIState.CONNECTION_CREATE_REQUESTED;
-			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0), 
-					flow.getConnectionPolicies());
+			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0));
 			log.debug("Requested the creation of a connection to the kernel to support flow with port-id "+portId);
 		} catch (Exception ex) {
 			log.error("Problems requesting a connection to the kernel "+ex.getMessage());
@@ -369,7 +367,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		try {
 			state = FAIState.APP_NOTIFIED_OF_INCOMING_FLOW;
 			long handle = ipcManager.allocateFlowRequestArrived(flow.getDestinationNamingInfo(), 
-					flow.getSourceNamingInfo(), flow.getFlowSpecification(), portId);
+					flow.getSourceNamingInfo(), flow.getFlowSpec(), portId);
 			setAllocateResponseMessageHandle(handle);
 			log.debug("Informed IPC Manager about incoming flow allocation request, got handle: " 
 					+ getAllocateResponseMessageHandle());

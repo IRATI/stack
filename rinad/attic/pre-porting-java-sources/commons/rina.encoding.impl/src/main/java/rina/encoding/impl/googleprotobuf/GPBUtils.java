@@ -213,6 +213,7 @@ public class GPBUtils {
 		PolicyConfig policyConfig = null;
 		
 		result.setDtcpPresent(connectionPolicies.getDtcpPresent());
+		result.setInitialATimer(connectionPolicies.getInitialATimer());
 		policyConfig = GPBUtils.getPolicyConfig(connectionPolicies.getInitialseqnumpolicy());
 		if (policyConfig != null) {
 			result.setInitialseqnumpolicy(policyConfig);
@@ -256,6 +257,11 @@ public class GPBUtils {
 			result.setSendertimerinactiviypolicy(policyConfig);
 		}
 		
+		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getRttestimatorpolicy());
+		if (policyConfig != null) {
+			result.setRttestimatorpolicy(policyConfig);
+		}
+		
 		return result;
 	}
 	
@@ -268,7 +274,7 @@ public class GPBUtils {
 		}
 		
 		result.setDatarxmsnmax(rtxControlConfig.getDatarxmsnmax());
-		result.setInitialATimer(rtxControlConfig.getInitialATimer());
+		
 		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRcvrackpolicy());
 		if (policyConfig != null) {
 			result.setRcvrackpolicy(policyConfig);
@@ -280,10 +286,6 @@ public class GPBUtils {
 		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRecvingacklistpolicy());
 		if (policyConfig != null) {
 			result.setRecvingacklistpolicy(policyConfig);
-		}
-		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRttestimatorpolicy());
-		if (policyConfig != null) {
-			result.setRttestimatorpolicy(policyConfig);
 		}
 		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRtxtimerexpirypolicy());
 		if (policyConfig != null) {
@@ -336,6 +338,11 @@ public class GPBUtils {
 			result.setReconcileflowcontrolpolicy(policyConfig);
 		}
 		
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getReceivingflowcontrolpolicy());
+		if (policyConfig != null) {
+			result.setReceivingflowcontrolpolicy(policyConfig);
+		}
+		
 		return result;
 	}
 	
@@ -381,9 +388,9 @@ public class GPBUtils {
 		if (policyConfig != null) {
 			result.setRcvrflowcontrolpolicy(policyConfig);
 		}
-		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getReceivingflowcontrolpolicy());
+		policyConfig = GPBUtils.getPolicyConfig(flowControlConfig.getTxcontrolpolicy());
 		if (policyConfig != null) {
-			result.setReceivingflowcontrolpolicy(policyConfig);
+			result.setTxControlPolicy(policyConfig);
 		}
 		
 		return result;
@@ -448,6 +455,7 @@ public class GPBUtils {
 		result = ConnectionPoliciesMessage.connectionPolicies_t.newBuilder().
 				setDtcpPresent(connectionPolicies.isDtcpPresent()).
 				setDtcpConfiguration(dtcpConfig).
+				setInitialATimer(connectionPolicies.getInitialATimer()).
 				setInitialseqnumpolicy(GPBUtils.getPolicyDescriptorType(connectionPolicies.getInitialseqnumpolicy())).
 				setSeqnumrolloverthreshold(connectionPolicies.getSeqnumrolloverthreshold()).
 				build();
@@ -484,6 +492,7 @@ public class GPBUtils {
 				setLostcontrolpdupolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getLostcontrolpdupolicy())).
 				setSendertimerinactiviypolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getSendertimerinactiviypolicy())).
 				setRcvrtimerinactivitypolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getRcvrtimerinactivitypolicy())).
+				setRttestimatorpolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getRttestimatorpolicy())).
 				build();
 	}
 	
@@ -494,11 +503,9 @@ public class GPBUtils {
 		
 		return ConnectionPoliciesMessage.dtcpRtxControlConfig_t.newBuilder().
 				setDatarxmsnmax(rtxControl.getDatarxmsnmax()).
-				setInitialATimer(rtxControl.getInitialATimer()).
 				setRcvrackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrackpolicy())).
 				setRcvrcontrolackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrcontrolackpolicy())).
 				setRecvingacklistpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRecvingacklistpolicy())).
-				setRttestimatorpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRttestimatorpolicy())).
 				setRtxtimerexpirypolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRtxtimerexpirypolicy())).
 				setSenderackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getSenderackpolicy())).
 				setSendingackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getSendingackpolicy())).build();
@@ -536,6 +543,7 @@ public class GPBUtils {
 				setClosedwindowpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getClosedwindowpolicy())).
 				setFlowcontroloverrunpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getFlowcontroloverrunpolicy())).
 				setReconcileflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getReconcileflowcontrolpolicy())).
+				setReceivingflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(flowControl.getReceivingflowcontrolpolicy())).
 				build();
 	}
 	
@@ -564,7 +572,7 @@ public class GPBUtils {
 				setInitialcredit(window.getInitialcredit()).
 				setMaxclosedwindowqueuelength(window.getMaxclosedwindowqueuelength()).
 				setRcvrflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(window.getRcvrflowcontrolpolicy())).
-				setReceivingflowcontrolpolicy(GPBUtils.getPolicyDescriptorType(window.getReceivingflowcontrolpolicy())).
+				setTxcontrolpolicy(GPBUtils.getPolicyDescriptorType(window.getTxControlPolicy())).
 				build();
 	}
 	

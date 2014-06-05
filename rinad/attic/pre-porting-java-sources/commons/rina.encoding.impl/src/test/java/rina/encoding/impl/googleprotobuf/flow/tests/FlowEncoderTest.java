@@ -37,13 +37,13 @@ public class FlowEncoderTest {
 		ConnectionPolicies connectionPolicies = new ConnectionPolicies();
 		connectionPolicies.setDtcpPresent(true);
 		connectionPolicies.setSeqnumrolloverthreshold(1234);
+		connectionPolicies.setInitialATimer(14561);
 		connectionPolicies.setInitialseqnumpolicy(
 				new PolicyConfig("policy1", "23"));
 		DTCPConfig dtcpConfig = new DTCPConfig();
 		dtcpConfig.setRtxcontrol(true);
 		DTCPRtxControlConfig rtxConfig = new DTCPRtxControlConfig();
 		rtxConfig.setDatarxmsnmax(25423);
-		rtxConfig.setInitialATimer(14561);
 		dtcpConfig.setRtxcontrolconfig(rtxConfig);
 		dtcpConfig.setFlowcontrol(true);
 		DTCPFlowControlConfig flowConfig = new DTCPFlowControlConfig();
@@ -84,6 +84,8 @@ public class FlowEncoderTest {
 		Assert.assertEquals(flow.getSourceAddress(), recoveredFlow.getDestinationAddress());
 		Assert.assertEquals(flow.getConnectionPolicies().isDtcpPresent(), 
 				recoveredFlow.getConnectionPolicies().isDtcpPresent());
+		Assert.assertEquals(flow.getConnectionPolicies().getInitialATimer(), 
+				recoveredFlow.getConnectionPolicies().getInitialATimer());
 		Assert.assertEquals(flow.getConnectionPolicies().getSeqnumrolloverthreshold(), 
 				recoveredFlow.getConnectionPolicies().getSeqnumrolloverthreshold());
 		Assert.assertEquals(flow.getConnectionPolicies().getInitialseqnumpolicy().getName(), 
@@ -100,8 +102,6 @@ public class FlowEncoderTest {
 				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getInitialsenderinactivitytime());
 		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getDatarxmsnmax(), 
 				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getDatarxmsnmax());
-		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getInitialATimer(), 
-				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getInitialATimer());
 		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbuffersthreshold(), 
 				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbuffersthreshold());
 		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbytespercentthreshold(), 

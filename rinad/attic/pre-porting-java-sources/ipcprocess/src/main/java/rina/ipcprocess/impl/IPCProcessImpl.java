@@ -55,8 +55,6 @@ import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.pduftg.PDUFTGeneratorImpl;
-import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.DijkstraAlgorithm;
-import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.registrationmanager.RegistrationManagerImpl;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
@@ -525,9 +523,11 @@ public class IPCProcessImpl implements IPCProcess {
 			setOperationalState(State.ASSIGNED_TO_DIF);
 			difInformation = arEvent.getDIFInformation();
 			
-			if (difInformation.getDifConfiguration().getQosCubes().size() > 0) {
-				QoSCube[] qosCubes = new QoSCube[(int)difInformation.getDifConfiguration().getQosCubes().size()];
-				Iterator<QoSCube> iterator = difInformation.getDifConfiguration().getQosCubes().iterator();
+			if (difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().size() > 0) {
+				QoSCube[] qosCubes = 
+						new QoSCube[(int)difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().size()];
+				Iterator<QoSCube> iterator = 
+						difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().iterator();
 				int i = 0;
 				while(iterator.hasNext()) {
 					qosCubes[i] = iterator.next();

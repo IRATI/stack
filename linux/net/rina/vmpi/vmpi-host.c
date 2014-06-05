@@ -280,13 +280,3 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
         return ret;
 }
 
-#ifdef VMPI_HOST_TEST
-/* To use only in vmpi-host-test. */
-struct vmpi_info *
-vmpi_info_from_file_private_data(void *opaque)
-{
-        vmpi_impl_info_t *vi = opaque;
-
-        return vmpi_info_from_vmpi_impl_info(vi);
-}
-#endif  /* VMPI_HOST_TEST */

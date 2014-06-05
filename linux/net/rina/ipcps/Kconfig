@@ -78,6 +78,8 @@ config RINA_SHIM_TCP_UDP
 config RINA_SHIM_HV
 	tristate "Shim IPC for Hypervisors"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT && (VMPI_VIRTIO_GUEST || VMPI_VIRTIO_HOST || VMPI_XEN_GUEST || VMPI_XEN_HOST)
+        depends on RINA_PERSONALITY_DEFAULT && \
+                   (VMPI_KVM_GUEST || VMPI_KVM_HOST || \
+                    VMPI_XEN_GUEST || VMPI_XEN_HOST)
 	help
 	  No help for the time being

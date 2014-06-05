@@ -36,6 +36,8 @@
 
 namespace rina {
 
+static std::string NORMAL_IPC_PROCESS= "normal-ipc";
+
 /**
  * Returns the version number of librina
  */
@@ -286,10 +288,11 @@ class DTCPWindowBasedFlowControlConfig {
         PolicyConfig rcvrflowcontrolpolicy;
 
         /**
-         * Allows some discretion in when to send a Flow Control PDU when there
-         * is no Retransmission Control.
+         * This policy is used when there are conditions that warrant sending
+         * fewer PDUs than allowed by the sliding window flow control, e.g.
+         * the ECN bit is set.
          */
-        PolicyConfig receivingflowcontrolpolicy;
+        PolicyConfig txControlPolicy;
 
 public:
         DTCPWindowBasedFlowControlConfig();
@@ -300,9 +303,8 @@ public:
         const PolicyConfig& getRcvrflowcontrolpolicy() const;
         void setRcvrflowcontrolpolicy(
                         const PolicyConfig& rcvrflowcontrolpolicy);
-        const PolicyConfig& getReceivingflowcontrolpolicy() const;
-        void setReceivingflowcontrolpolicy(
-                        const PolicyConfig& receivingflowcontrolpolicy);
+        const PolicyConfig& getTxControlPolicy() const;
+        void setTxControlPolicy(const PolicyConfig& txControlPolicy);
         const std::string toString();
 };
 
@@ -430,6 +432,12 @@ class DTCPFlowControlConfig {
          */
         PolicyConfig reconcileflowcontrolpolicy;
 
+        /**
+         * Allows some discretion in when to send a Flow Control PDU when there
+         * is no Retransmission Control.
+         */
+        PolicyConfig receivingflowcontrolpolicy;
+
 public:
         DTCPFlowControlConfig();
         const PolicyConfig& getClosedwindowpolicy() const;
@@ -463,6 +471,9 @@ public:
         void setWindowbasedconfig(
                         const DTCPWindowBasedFlowControlConfig&
                         windowbasedconfig);
+        const PolicyConfig& getReceivingflowcontrolpolicy() const;
+        void setReceivingflowcontrolpolicy(
+                        const PolicyConfig& receivingflowcontrolpolicy);
         const std::string toString();
 };
 
@@ -477,19 +488,6 @@ class DTCPRtxControlConfig{
          * before some other action must be taken.
          */
         int datarxmsnmax;
-
-        /**
-         * indicates the maximum time that a receiver will wait before sending
-         * an Ack. Some DIFs may wish to set a maximum value for the DIF.
-         */
-        int initialATimer;
-
-        /**
-         * Executed by the sender to estimate the duration of the retx timer.
-         * This policy will be based on an estimate of round-trip time and the
-         * Ack or Ack List policy in use
-         */
-        PolicyConfig rttestimatorpolicy;
 
         /**
          * Executed by the sender when a Retransmission Timer Expires. If this
@@ -539,8 +537,6 @@ public:
         DTCPRtxControlConfig();
         int getDatarxmsnmax() const;
         void setDatarxmsnmax(int datarxmsnmax);
-        int getInitialATimer() const;
-        void setInitialATimer(int initialATimer);
         const PolicyConfig& getRcvrackpolicy() const;
         void setRcvrackpolicy(const PolicyConfig& rcvrackpolicy);
         const PolicyConfig& getRcvrcontrolackpolicy() const;
@@ -549,11 +545,9 @@ public:
         const PolicyConfig& getRecvingacklistpolicy() const;
         void setRecvingacklistpolicy(
                         const PolicyConfig& recvingacklistpolicy);
-        const PolicyConfig& getRttestimatorpolicy() const;
-        void setRttestimatorpolicy(const PolicyConfig& rttestimatorpolicy);
-        const PolicyConfig& getRtxtimerexpirypolicy() const;
         void setRtxtimerexpirypolicy(
                         const PolicyConfig& rtxtimerexpirypolicy);
+        const PolicyConfig& getRtxtimerexpirypolicy() const;
         const PolicyConfig& getSenderackpolicy() const;
         void setSenderackpolicy(const PolicyConfig& senderackpolicy);
         const PolicyConfig& getSendingackpolicy() const;
@@ -615,6 +609,13 @@ class DTCPConfig {
          */
         PolicyConfig lostcontrolpdupolicy;
 
+        /**
+         * Executed by the sender to estimate the duration of the retx timer.
+         * This policy will be based on an estimate of round-trip time and the
+         * Ack or Ack List policy in use
+         */
+        PolicyConfig rttestimatorpolicy;
+
 public:
         DTCPConfig();
         bool isFlowcontrol() const;
@@ -639,6 +640,8 @@ public:
         const PolicyConfig& getSendertimerinactiviypolicy() const;
         void setSendertimerinactiviypolicy(
                         const PolicyConfig& sendertimerinactiviypolicy);
+        const PolicyConfig& getRttestimatorpolicy() const;
+        void setRttestimatorpolicy(const PolicyConfig& rttestimatorpolicy);
         const std::string toString();
 };
 
@@ -666,6 +669,33 @@ class ConnectionPolicies {
          */
         int seqnumrolloverthreshold;
 
+        /**
+         * indicates the maximum time that a receiver will wait before sending
+         * an Ack. Some DIFs may wish to set a maximum value for the DIF.
+         */
+        int initialATimer;
+
+        /**
+         * True if partial delivery of an SDU is allowed, false otherwise
+         */
+        bool partialDelivery;
+
+        /**
+         * True if incomplete delivery is allowed (one fragment of SDU
+         * delivered is the same as all the SDU delivered), false otherwise
+         */
+        bool incompleteDelivery;
+
+        /**
+         * True if in order delivery of SDUs is mandatory, false otherwise
+         */
+        bool inOrderDelivery;
+
+        /**
+         * The maximum gap of SDUs allowed
+         */
+        unsigned int maxSDUGap;
+
 public:
         ConnectionPolicies();
         const DTCPConfig& getDtcpConfiguration() const;
@@ -676,6 +706,16 @@ public:
         void setInitialseqnumpolicy(const PolicyConfig& initialseqnumpolicy);
         int getSeqnumrolloverthreshold() const;
         void setSeqnumrolloverthreshold(int seqnumrolloverthreshold);
+        int getInitialATimer() const;
+        void setInitialATimer(int initialATimer);
+        bool isInOrderDelivery() const;
+        void setInOrderDelivery(bool inOrderDelivery);
+        unsigned int getMaxSduGap() const;
+        void setMaxSduGap(unsigned int maxSduGap);
+        bool isPartialDelivery() const;
+        void setPartialDelivery(bool partialDelivery);
+        bool isIncompleteDelivery() const;
+        void setIncompleteDelivery(bool incompleteDelivery);
         const std::string toString();
 };
 
@@ -1311,6 +1351,133 @@ public:
 };
 
 /**
+ * Contains the configuration of the Error and Flow Control Protocol for a
+ * particular DIF
+ */
+class EFCPConfiguration {
+public:
+        EFCPConfiguration();
+        const DataTransferConstants& getDataTransferConstants() const;
+        void setDataTransferConstants(
+                        const DataTransferConstants& dataTransferConstants);
+        const std::list<QoSCube>& getQosCubes() const;
+        void setQosCubes(const std::list<QoSCube>& qosCubes);
+        void addQoSCube(const QoSCube& qosCube);
+        const PolicyConfig& getUnknownFlowPolicy() const;
+        void setUnknownFlowPolicy(const PolicyConfig& unknownFlowPolicy);
+
+private:
+        /**
+         * DIF-wide parameters that define the concrete syntax of EFCP for this
+         *  DIF and other DIF-wide values
+         */
+        DataTransferConstants dataTransferConstants;
+
+        /**
+         * When a PDU arrives for a Data Transfer Flow terminating in this
+         * IPC-Process and there is no active DTSV, this policy consults the
+         * ResourceAllocator to determine what to do.
+         */
+        PolicyConfig unknownFlowPolicy;
+
+        /**
+         * The QoS cubes supported by the DIF, and its associated EFCP policies
+         */
+        std::list<QoSCube> qosCubes;
+};
+
+class FlowAllocatorConfiguration {
+public:
+        FlowAllocatorConfiguration();
+        const PolicyConfig& getAllocateNotifyPolicy() const;
+        void setAllocateNotifyPolicy(const PolicyConfig& allocateNotifyPolicy);
+        const PolicyConfig& getAllocateRetryPolicy() const;
+        void setAllocateRetryPolicy(const PolicyConfig& allocateRetryPolicy);
+        int getMaxCreateFlowRetries() const;
+        void setMaxCreateFlowRetries(int maxCreateFlowRetries);
+        const PolicyConfig& getNewFlowRequestPolicy() const;
+        void setNewFlowRequestPolicy(const PolicyConfig& newFlowRequestPolicy);
+        const PolicyConfig& getSeqRollOverPolicy() const;
+        void setSeqRollOverPolicy(const PolicyConfig& seqRollOverPolicy);
+
+private:
+        /** Maximum number of attempts to retry the flow allocation */
+        int maxCreateFlowRetries;
+
+        /**
+         * This policy determines when the requesting application is given
+         * an Allocate_Response primitive. In general, the choices are once
+         * the request is determined to be well-formed and a create_flow
+         * request has been sent, or withheld until a create_flow response has
+         * been received and MaxCreateRetires has been exhausted.
+         */
+        PolicyConfig allocateNotifyPolicy;
+
+        /**
+         * This policy is used when the destination has refused the create_flow
+         * request, and the FAI can overcome the cause for refusal and try
+         * again. This policy should re-formulate the request. This policy
+         * should formulate the contents of the reply.
+         */
+        PolicyConfig allocateRetryPolicy;
+
+        /**
+         * This policy is used to convert an allocate request to a create flow
+         * request. Its primary task is to translate the request into the
+         * proper QoS-class set, flow set and access control capabilities.
+         */
+        PolicyConfig newFlowRequestPolicy;
+
+        /**
+         * This policy is used when the SeqRollOverThres event occurs and
+         * action may be required by the Flow Allocator to modify the bindings
+         * between connection-endpoint-ids and port-ids.
+         */
+        PolicyConfig seqRollOverPolicy;
+};
+
+/**
+ * Contains the configuration data of the Relaying and Multiplexing Task for a
+ * particular DIF
+ */
+class RMTConfiguration {
+public:
+        RMTConfiguration();
+        const PolicyConfig& getMaxQueuePolicy() const;
+        void setMaxQueuePolicy(const PolicyConfig& maxQueuePolicy);
+        const PolicyConfig& getRmtQueueMonitorPolicy() const;
+        void setRmtQueueMonitorPolicy(const PolicyConfig& rmtQueueMonitorPolicy);
+        const PolicyConfig& getRmtSchedulingPolicy() const;
+        void setRmtSchedulingPolicy(const PolicyConfig& rmtSchedulingPolicy);
+
+private:
+        /**
+         * Three parameters are provided to monitor the queues. This policy
+         * can be invoked whenever a PDU is placed in a queue and may keep
+         * additional variables that may be of use to the decision process of
+         * the RMT-Scheduling Policy and the MaxQPolicy.
+         */
+        PolicyConfig rmtQueueMonitorPolicy;
+
+        /**
+         * This is the meat of the RMT. This is the scheduling algorithm that
+         * determines the order input and output queues are serviced. We have
+         * not distinguished inbound from outbound. That is left to the policy.
+         * To do otherwise, would impose a policy. This policy may implement
+         * any of the standard scheduling algorithms, FCFS, LIFO,
+         * longestQfirst, priorities, etc.
+         */
+        PolicyConfig rmtSchedulingPolicy;
+
+        /**
+         * This policy is invoked when a queue reaches or crosses the threshold
+         *  or maximum queue lengths allowed for this queue. Note that maximum
+         *  length may be exceeded.
+         */
+        PolicyConfig maxQueuePolicy;
+};
+
+/**
  * Link State routing configuration
  */
 class LinkStateRoutingConfiguration {
@@ -1377,42 +1544,47 @@ public:
  */
 class DIFConfiguration {
 
-	/** The DIF Data Transfer constants */
-	DataTransferConstants dataTransferConstants;
+        /** The address of the IPC Process in the DIF */
+        unsigned int address;
 
-	/** The address of the IPC Process in the DIF */
-	unsigned int address;
+        /** Configuration of the Error and Flow Control Protocol */
+        EFCPConfiguration efcpConfiguration;
 
-	/** The QoS cubes supported by the DIF */
-	std::list<QoSCube> qosCubes;
-
-	/** The policies of the DIF */
-	std::list<PolicyConfig> policies;
-
-	/** Configuration parameters */
-	std::list<Parameter> parameters;
+	/** Configuration of the Relaying and Multiplexing Task */
+	RMTConfiguration rmtConfiguration;
 
 	/** PDUFT Configuration parameters of the DIF	*/
 	PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
 
+	/** Flow Allocator configuration parameters of the DIF */
+	FlowAllocatorConfiguration faConfiguration;
+
+	/** Other configuration parameters of the DIF */
+	std::list<Parameter> parameters;
+
+        /** Other policies of the DIF */
+        std::list<PolicyConfig> policies;
+
 public:
+        unsigned int getAddress() const;
+        void setAddress(unsigned int address);
+        const EFCPConfiguration& getEfcpConfiguration() const;
+        void setEfcpConfiguration(const EFCPConfiguration& efcpConfiguration);
+        const PDUFTableGeneratorConfiguration&
+                getPduFTableGeneratorConfiguration() const;
+        void setPduFTableGeneratorConfiguration(
+                        const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
+        const RMTConfiguration& getRmtConfiguration() const;
+        void setRmtConfiguration(const RMTConfiguration& rmtConfiguration);
 	const std::list<PolicyConfig>& getPolicies();
 	void setPolicies(const std::list<PolicyConfig>& policies);
 	void addPolicy(const PolicyConfig& policy);
-	const std::list<QoSCube>& getQosCubes() const;
-	void setQosCubes(const std::list<QoSCube>& qosCubes);
-	void addQoSCube(const QoSCube& qosCube);
 	const std::list<Parameter>& getParameters() const;
 	void setParameters(const std::list<Parameter>& parameters);
 	void addParameter(const Parameter& parameter);
-	const DataTransferConstants& getDataTransferConstants() const;
-	void setDataTransferConstants(
-	                const DataTransferConstants& dataTransferConstants);
-	unsigned int getAddress() const;
-	void setAddress(unsigned int address);
-	void setPDUFTableGeneratorConfiguration(
-	                const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration);
-	const PDUFTableGeneratorConfiguration& getPDUFTableGeneratorConfiguration() const;
+        const FlowAllocatorConfiguration& getFaConfiguration() const;
+        void setFaConfiguration(
+                        const FlowAllocatorConfiguration& faConfiguration);
 };
 
 /**

@@ -83,11 +83,6 @@ public class Flow {
 	private FlowSpecification flowSpec = null;
 	
 	/**
-	 * The policies for this EFCP connection and its parameters
-	 */
-	private ConnectionPolicies connectionPolicies = null;
-	
-	/**
 	 * TODO this is just a placeHolder for this piece of data
 	 */
 	private byte[] accessControl = null;
@@ -112,6 +107,8 @@ public class Flow {
 	 * True if this IPC process is the source of the flow, false otherwise
 	 */
 	private boolean source = false;
+	
+	private ConnectionPolicies connectionPolicies = null;
 	
 	public Flow(){
 		this.connections = new ArrayList<Connection>();
@@ -213,22 +210,6 @@ public class Flow {
 		this.state = state;
 	}
 
-	public FlowSpecification getFlowSpecification() {
-		return flowSpec;
-	}
-
-	public void setFlowSpecification(FlowSpecification flowSpec) {
-		this.flowSpec = flowSpec;
-	}
-
-	public ConnectionPolicies getConnectionPolicies() {
-		return connectionPolicies;
-	}
-
-	public void setConnectionPolicies(ConnectionPolicies connectionPolicies) {
-		this.connectionPolicies = connectionPolicies;
-	}
-
 	public byte[] getAccessControl() {
 		return accessControl;
 	}
@@ -260,6 +241,22 @@ public class Flow {
 	public void setHopCount(int hopCount) {
 		this.hopCount = hopCount;
 	}
+	
+	public FlowSpecification getFlowSpec() {
+		return flowSpec;
+	}
+
+	public void setFlowSpec(FlowSpecification flowSpec) {
+		this.flowSpec = flowSpec;
+	}
+
+	public ConnectionPolicies getConnectionPolicies() {
+		return connectionPolicies;
+	}
+
+	public void setConnectionPolicies(ConnectionPolicies connectionPolicies) {
+		this.connectionPolicies = connectionPolicies;
+	}
 
 	public String toString(){
 		String result = "";
@@ -282,10 +279,6 @@ public class Flow {
 			}
 		}
 		result = result + "* Index of the current active connection for this flow: "+this.currentConnectionIndex +"\n";
-		if (connectionPolicies != null) {
-			result = result + "* Connection policies:\n";
-			result = result + this.getConnectionPolicies().toString();
-		}
 		return result;
 	}
 }

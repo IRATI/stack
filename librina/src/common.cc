@@ -21,8 +21,8 @@
 
 #include "logs.h"
 #include "config.h"
-#include "librina-common.h"
 #include "core.h"
+#include "common.h"
 
 namespace rina {
 
@@ -492,13 +492,13 @@ void DTCPWindowBasedFlowControlConfig::setRcvrflowcontrolpolicy(
 }
 
 const PolicyConfig&
-DTCPWindowBasedFlowControlConfig::getReceivingflowcontrolpolicy() const {
-        return receivingflowcontrolpolicy;
+DTCPWindowBasedFlowControlConfig::getTxControlPolicy() const {
+        return txControlPolicy;
 }
 
-void DTCPWindowBasedFlowControlConfig::setReceivingflowcontrolpolicy(
-                const PolicyConfig& receivingflowcontrolpolicy) {
-        this->receivingflowcontrolpolicy = receivingflowcontrolpolicy;
+void DTCPWindowBasedFlowControlConfig::setTxControlPolicy(
+                const PolicyConfig& txControlPolicy) {
+        this->txControlPolicy = txControlPolicy;
 }
 
 const std::string DTCPWindowBasedFlowControlConfig::toString() {
@@ -507,8 +507,8 @@ const std::string DTCPWindowBasedFlowControlConfig::toString() {
         ss<<"; Initial credit (PDUs): "<<initialcredit<<std::endl;
         ss<<"Receiver flow control policy (name/version): "<<rcvrflowcontrolpolicy.getName();
         ss<<"/"<<rcvrflowcontrolpolicy.getVersion();
-        ss<<"; Receiving flow control policy (name/version): "<<receivingflowcontrolpolicy.getName();
-        ss<<"/"<<receivingflowcontrolpolicy.getVersion()<<std::endl;
+        ss<<"; Transmission control policy (name/version): "<<txControlPolicy.getName();
+        ss<<"/"<<txControlPolicy.getVersion();
         return ss.str();
 }
 
@@ -704,6 +704,16 @@ void DTCPFlowControlConfig::setWindowbasedconfig(
         this->windowbasedconfig = windowbasedconfig;
 }
 
+const PolicyConfig&
+DTCPFlowControlConfig::getReceivingflowcontrolpolicy() const {
+        return receivingflowcontrolpolicy;
+}
+
+void DTCPFlowControlConfig::setReceivingflowcontrolpolicy(
+                const PolicyConfig& receivingflowcontrolpolicy) {
+        this->receivingflowcontrolpolicy = receivingflowcontrolpolicy;
+}
+
 const std::string DTCPFlowControlConfig::toString() {
         std::stringstream ss;
         ss<<"Sent bytes theshold: "<<sentbytesthreshold;
@@ -719,6 +729,8 @@ const std::string DTCPFlowControlConfig::toString() {
         ss<<"Reconcile flow control policy (name/version): "<<reconcileflowcontrolpolicy.getName();
         ss<<"/"<<reconcileflowcontrolpolicy.getVersion();
         ss<<"; Window based? "<<windowbased<<"; Rate based? "<<ratebased<<std::endl;
+        ss<<"Receiving flow control policy (name/version): "<<receivingflowcontrolpolicy.getName();
+        ss<<"/"<<receivingflowcontrolpolicy.getVersion()<<std::endl;
         if (windowbased) {
                 ss<<"Window based flow control config: "<<windowbasedconfig.toString();
         }
@@ -731,7 +743,6 @@ const std::string DTCPFlowControlConfig::toString() {
 /* CLASS DTCP RX CONTROL CONFIG */
 DTCPRtxControlConfig::DTCPRtxControlConfig() {
         datarxmsnmax = 0;
-        initialATimer = 0;
 }
 
 int DTCPRtxControlConfig::getDatarxmsnmax() const {
@@ -740,14 +751,6 @@ int DTCPRtxControlConfig::getDatarxmsnmax() const {
 
 void DTCPRtxControlConfig::setDatarxmsnmax(int datarxmsnmax) {
         this->datarxmsnmax = datarxmsnmax;
-}
-
-int DTCPRtxControlConfig::getInitialATimer() const {
-        return initialATimer;
-}
-
-void DTCPRtxControlConfig::setInitialATimer(int initialATimer) {
-        this->initialATimer = initialATimer;
 }
 
 const PolicyConfig& DTCPRtxControlConfig::getRcvrackpolicy() const {
@@ -776,22 +779,13 @@ void DTCPRtxControlConfig::setRecvingacklistpolicy(
         this->recvingacklistpolicy = recvingacklistpolicy;
 }
 
-const PolicyConfig& DTCPRtxControlConfig::getRttestimatorpolicy() const {
-        return rttestimatorpolicy;
-}
-
-void DTCPRtxControlConfig::setRttestimatorpolicy(
-                const PolicyConfig& rttestimatorpolicy) {
-        this->rttestimatorpolicy = rttestimatorpolicy;
+void DTCPRtxControlConfig::setRtxtimerexpirypolicy(
+                const PolicyConfig& rtxtimerexpirypolicy) {
+        this->rtxtimerexpirypolicy = rtxtimerexpirypolicy;
 }
 
 const PolicyConfig& DTCPRtxControlConfig::getRtxtimerexpirypolicy() const {
         return rtxtimerexpirypolicy;
-}
-
-void DTCPRtxControlConfig::setRtxtimerexpirypolicy(
-                const PolicyConfig& rtxtimerexpirypolicy) {
-        this->rtxtimerexpirypolicy = rtxtimerexpirypolicy;
 }
 
 const PolicyConfig& DTCPRtxControlConfig::getSenderackpolicy() const {
@@ -814,10 +808,7 @@ void DTCPRtxControlConfig::setSendingackpolicy(
 
 const std::string DTCPRtxControlConfig::toString() {
         std::stringstream ss;
-        ss<<"Initial A timer: "<<initialATimer;
-        ss<<"; Max number of retx attempts: "<<datarxmsnmax<<std::endl;
-        ss<<"RTT estimator policy (name/version): "<<rttestimatorpolicy.getName();
-        ss<<"/"<<rttestimatorpolicy.getVersion();
+        ss<<"Max number of retx attempts: "<<datarxmsnmax<<std::endl;
         ss<<"; Rtx timer expiry policy (name/version): "<<rtxtimerexpirypolicy.getName();
         ss<<"/"<<rtxtimerexpirypolicy.getVersion()<<std::endl;
         ss<<"Sender ACK policy (name/version): "<<senderackpolicy.getName();
@@ -920,6 +911,15 @@ void DTCPConfig::setSendertimerinactiviypolicy(
         this->sendertimerinactiviypolicy = sendertimerinactiviypolicy;
 }
 
+const PolicyConfig& DTCPConfig::getRttestimatorpolicy() const {
+        return rttestimatorpolicy;
+}
+
+void DTCPConfig::setRttestimatorpolicy(
+                const PolicyConfig& rttestimatorpolicy) {
+        this->rttestimatorpolicy = rttestimatorpolicy;
+}
+
 const std::string DTCPConfig::toString() {
         std::stringstream ss;
         ss<<"Initial rcvr inactivity time: "<<initialrecvrinactivitytime;
@@ -931,6 +931,8 @@ const std::string DTCPConfig::toString() {
         ss<<"Flow control? "<<flowcontrol<<"; Retx control? "<<rtxcontrol;
         ss<<"; Lost control PDU policy (name/version): "<<lostcontrolpdupolicy.getName();
         ss<<"/"<<lostcontrolpdupolicy.getVersion()<<std::endl;
+        ss<<"RTT estimator policy (name/version): "<<rttestimatorpolicy.getName();
+        ss<<"/"<<rttestimatorpolicy.getVersion()<<std::endl;
         if (rtxcontrol) {
                 ss<<"Retx control config: "<<rtxcontrolconfig.toString();
         }
@@ -944,6 +946,11 @@ const std::string DTCPConfig::toString() {
 ConnectionPolicies::ConnectionPolicies(){
         DTCPpresent = false;
         seqnumrolloverthreshold = 0;
+        initialATimer = 0;
+        partialDelivery = false;
+        inOrderDelivery = false;
+        incompleteDelivery = false;
+        maxSDUGap = 0;
 }
 
 const DTCPConfig& ConnectionPolicies::getDtcpConfiguration() const {
@@ -981,12 +988,56 @@ void ConnectionPolicies::setSeqnumrolloverthreshold(
         this->seqnumrolloverthreshold = seqnumrolloverthreshold;
 }
 
+int ConnectionPolicies::getInitialATimer() const {
+        return initialATimer;
+}
+
+void ConnectionPolicies::setInitialATimer(int initialATimer) {
+        this->initialATimer = initialATimer;
+}
+
+bool ConnectionPolicies::isInOrderDelivery() const {
+        return inOrderDelivery;
+}
+
+void ConnectionPolicies::setInOrderDelivery(bool inOrderDelivery) {
+        this->inOrderDelivery = inOrderDelivery;
+}
+
+unsigned int ConnectionPolicies::getMaxSduGap() const {
+        return maxSDUGap;
+}
+
+void ConnectionPolicies::setMaxSduGap(unsigned int maxSduGap) {
+        maxSDUGap = maxSduGap;
+}
+
+bool ConnectionPolicies::isPartialDelivery() const {
+        return partialDelivery;
+}
+
+void ConnectionPolicies::setPartialDelivery(bool partialDelivery) {
+        this->partialDelivery = partialDelivery;
+}
+
+bool ConnectionPolicies::isIncompleteDelivery() const {
+        return incompleteDelivery;
+}
+
+void ConnectionPolicies::setIncompleteDelivery(bool incompleteDelivery) {
+        this->incompleteDelivery = incompleteDelivery;
+}
+
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
         ss<<"DTCP present: "<<DTCPpresent;
+        ss<<"; Initial A-timer: "<<initialATimer;
         ss<<"; Seq. num roll. threshold: "<<seqnumrolloverthreshold;
         ss<<"; Initial seq. num policy (name/version): ";
         ss<<initialseqnumpolicy.getName()<<"/"<<initialseqnumpolicy.getVersion()<<std::endl;
+        ss<<"; Partial delivery: "<<partialDelivery;
+        ss<<"; In order delivery: "<<inOrderDelivery;
+        ss<<"; Max allowed SDU gap: "<<maxSDUGap<<std::endl;
         if (DTCPpresent) {
                 ss<<"DTCP Configuration: "<<dtcpConfiguration.toString();
         }
@@ -1828,6 +1879,129 @@ void PolicyConfig::setVersion(const std::string& version) {
         this->version = version;
 }
 
+/* CLASS EFCPConfiguration */
+EFCPConfiguration::EFCPConfiguration(){
+}
+
+const std::list<QoSCube>& EFCPConfiguration::getQosCubes() const {
+        return qosCubes;
+}
+
+void EFCPConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
+        this->qosCubes = qosCubes;
+}
+
+void EFCPConfiguration::addQoSCube(const QoSCube& qosCube) {
+        std::list<QoSCube>::const_iterator iterator;
+        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+            if (iterator->getId() == qosCube.getId()) {
+                    return;
+            }
+        }
+
+        qosCubes.push_back(qosCube);
+}
+
+const DataTransferConstants&
+EFCPConfiguration::getDataTransferConstants() const {
+        return dataTransferConstants;
+}
+
+void EFCPConfiguration::setDataTransferConstants(
+                const DataTransferConstants& dataTransferConstants) {
+        this->dataTransferConstants = dataTransferConstants;
+}
+
+const PolicyConfig& EFCPConfiguration::getUnknownFlowPolicy() const {
+        return unknownFlowPolicy;
+}
+
+void EFCPConfiguration::setUnknownFlowPolicy(
+                const PolicyConfig& unknownFlowPolicy) {
+        this->unknownFlowPolicy = unknownFlowPolicy;
+}
+
+/* CLASS FlowAllocatorConfiguration */
+FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
+        maxCreateFlowRetries = 0;
+}
+
+const PolicyConfig&
+FlowAllocatorConfiguration::getAllocateNotifyPolicy() const {
+        return allocateNotifyPolicy;
+}
+
+void FlowAllocatorConfiguration::setAllocateNotifyPolicy(
+                const PolicyConfig& allocateNotifyPolicy){
+        this->allocateNotifyPolicy = allocateNotifyPolicy;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getAllocateRetryPolicy() const{
+        return allocateRetryPolicy;
+}
+
+void FlowAllocatorConfiguration::setAllocateRetryPolicy(
+                const PolicyConfig& allocateRetryPolicy) {
+        this->allocateRetryPolicy = allocateRetryPolicy;
+}
+
+int FlowAllocatorConfiguration::getMaxCreateFlowRetries() const {
+        return maxCreateFlowRetries;
+}
+
+void FlowAllocatorConfiguration::setMaxCreateFlowRetries(
+                int maxCreateFlowRetries) {
+        this->maxCreateFlowRetries = maxCreateFlowRetries;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getNewFlowRequestPolicy() const {
+        return newFlowRequestPolicy;
+}
+
+void FlowAllocatorConfiguration::setNewFlowRequestPolicy(
+                const PolicyConfig& newFlowRequestPolicy) {
+        this->newFlowRequestPolicy = newFlowRequestPolicy;
+}
+
+const PolicyConfig& FlowAllocatorConfiguration::getSeqRollOverPolicy() const {
+        return seqRollOverPolicy;
+}
+
+void FlowAllocatorConfiguration::setSeqRollOverPolicy(
+                const PolicyConfig& seqRollOverPolicy) {
+        this->seqRollOverPolicy = seqRollOverPolicy;
+}
+
+/* CLASS RMTConfiguration */
+RMTConfiguration::RMTConfiguration(){
+}
+
+const PolicyConfig& RMTConfiguration::getMaxQueuePolicy() const {
+        return maxQueuePolicy;
+}
+
+void RMTConfiguration::setMaxQueuePolicy(const PolicyConfig& maxQueuePolicy) {
+        this->maxQueuePolicy = maxQueuePolicy;
+}
+
+const PolicyConfig& RMTConfiguration::getRmtQueueMonitorPolicy() const {
+        return rmtQueueMonitorPolicy;
+}
+
+void RMTConfiguration::setRmtQueueMonitorPolicy(
+                const PolicyConfig& rmtQueueMonitorPolicy) {
+        this->rmtQueueMonitorPolicy = rmtQueueMonitorPolicy;
+}
+
+const PolicyConfig& RMTConfiguration::getRmtSchedulingPolicy() const {
+        return rmtSchedulingPolicy;
+}
+
+void RMTConfiguration::setRmtSchedulingPolicy(
+                const PolicyConfig& rmtSchedulingPolicy){
+        this->rmtSchedulingPolicy = rmtSchedulingPolicy;
+}
+
 /* CLASS LinkStateRouting Configuraiton */
 LinkStateRoutingConfiguration::LinkStateRoutingConfiguration()
 {
@@ -1996,25 +2170,6 @@ void DIFConfiguration::addPolicy(const PolicyConfig& policy) {
         policies.push_back(policy);
 }
 
-const std::list<QoSCube>& DIFConfiguration::getQosCubes() const {
-	return qosCubes;
-}
-
-void DIFConfiguration::setQosCubes(const std::list<QoSCube>& qosCubes) {
-	this->qosCubes = qosCubes;
-}
-
-void DIFConfiguration::addQoSCube(const QoSCube& qosCube) {
-        std::list<QoSCube>::const_iterator iterator;
-        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
-            if (iterator->getId() == qosCube.getId()) {
-                    return;
-            }
-        }
-
-        qosCubes.push_back(qosCube);
-}
-
 const std::list<Parameter>& DIFConfiguration::getParameters() const {
 	return parameters;
 }
@@ -2027,24 +2182,41 @@ void DIFConfiguration::addParameter(const Parameter& parameter){
 	parameters.push_back(parameter);
 }
 
-const DataTransferConstants&
-DIFConfiguration::getDataTransferConstants() const {
-        return dataTransferConstants;
+const EFCPConfiguration& DIFConfiguration::getEfcpConfiguration() const {
+        return efcpConfiguration;
 }
 
-void DIFConfiguration::setDataTransferConstants(
-                const DataTransferConstants& dataTransferConstants) {
-        this->dataTransferConstants = dataTransferConstants;
+void DIFConfiguration::setEfcpConfiguration(
+                const EFCPConfiguration& efcpConfiguration) {
+        this->efcpConfiguration = efcpConfiguration;
 }
 
-void DIFConfiguration::setPDUFTableGeneratorConfiguration(const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration)
-{
+void DIFConfiguration::setPduFTableGeneratorConfiguration(
+                const PDUFTableGeneratorConfiguration& pdufTableGeneratorConfiguration){
 	this->pdufTableGeneratorConfiguration = pdufTableGeneratorConfiguration;
 }
 
-const PDUFTableGeneratorConfiguration& DIFConfiguration::getPDUFTableGeneratorConfiguration() const
-{
+const PDUFTableGeneratorConfiguration&
+DIFConfiguration::getPduFTableGeneratorConfiguration() const {
 	return pdufTableGeneratorConfiguration;
+}
+
+const RMTConfiguration& DIFConfiguration::getRmtConfiguration() const {
+        return rmtConfiguration;
+}
+
+void DIFConfiguration::setRmtConfiguration(
+                const RMTConfiguration& rmtConfiguration) {
+        this->rmtConfiguration = rmtConfiguration;
+}
+
+const FlowAllocatorConfiguration& DIFConfiguration::getFaConfiguration() const {
+        return faConfiguration;
+}
+
+void DIFConfiguration::setFaConfiguration(
+                const FlowAllocatorConfiguration& faConfiguration) {
+        this->faConfiguration = faConfiguration;
 }
 
 /* CLASS NEIGHBOR */

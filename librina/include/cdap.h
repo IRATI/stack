@@ -21,7 +21,7 @@
 
 #include <sstream>
 #include "exceptions.h"
-#include "librina-common.h"
+#include "common.h"
 
 namespace rina {
 

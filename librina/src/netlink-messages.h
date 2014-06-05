@@ -17,10 +17,12 @@
 #ifndef LIBRINA_NETLINK_MESSAGES_H
 #define LIBRINA_NETLINK_MESSAGES_H
 
-#include "librina-common.h"
-#include "librina-ipc-process.h"
+#ifdef __cplusplus
 
-namespace rina{
+#include "common.h"
+#include "ipc-process.h"
+
+namespace rina {
 
 enum RINANetlinkOperationCode{
 	RINA_C_UNSPEC, /* 0 Unespecified operation */
@@ -1056,33 +1058,13 @@ public:
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
         
-        /** The port-id where the connection will be bound to */
-        int portId;
-        
-        /** The source address of the connection (the IPC Process address) */
-        unsigned int sourceAddress;
-        
-        /** The connection's destination IPC Process address */
-        unsigned int destAddress;
-        
-        /** The qos-id of the connection */
-        unsigned int qosId;
-
-        /** The policies parameters */
-        ConnectionPolicies connPolicies;
+        /** Contains the data of the connection to be created */
+        Connection connection;
 
 public:
         IpcpConnectionCreateRequestMessage();
-        unsigned int getDestAddress() const;
-        void setDestAddress(unsigned int destAddress);
-        int getPortId() const;
-        void setPortId(int portId);
-        unsigned int getQosId() const;
-        void setQosId(unsigned int qosId);
-        unsigned int getSourceAddress() const;
-        void setSourceAddress(unsigned int sourceAddress);
-        const ConnectionPolicies& getConnPolicies() const;
-        void setConnPolicies(const ConnectionPolicies& connPolicies);
+        const Connection& getConnection() const;
+        void setConnection(const Connection& connection);
         IPCEvent* toIPCEvent();
 };
 
@@ -1170,46 +1152,13 @@ public:
  */
 class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
 
-        /** The port-id where the connection will be bound to */
-        int portId;
-
-        /** The source address of the connection (the IPC Process address) */
-        unsigned int sourceAddress;
-
-        /** The connection's destination IPC Process address */
-        unsigned int destAddress;
-
-        /** The qos-id of the connection */
-        unsigned int qosId;
-
-        /** The connection's source CEP-id */
-        int destCepId;
-
-        /** The policies parameters */
-        ConnectionPolicies connPolicies;
-
-        /**
-         * The id of the IPC Process that will be using the flow
-         * (0 if it is an application)
-         */
-        unsigned short flowUserIpcProcessId;
+        /** Contains the data of the connection to be created */
+        Connection connection;
 
 public:
         IpcpConnectionCreateArrivedMessage();
-        unsigned int getDestAddress() const;
-        void setDestAddress(unsigned int destAddress);
-        int getPortId() const;
-        void setPortId(int portId);
-        unsigned int getQosId() const;
-        void setQosId(unsigned int qosId);
-        unsigned int getSourceAddress() const;
-        void setSourceAddress(unsigned int sourceAddress);
-        unsigned short getFlowUserIpcProcessId() const;
-        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
-        int getDestCepId() const;
-        void setDestCepId(int sourceCepId);
-        const ConnectionPolicies& getConnPolicies() const;
-        void setConnPolicies(const ConnectionPolicies& connPParams);
+        const Connection& getConnection() const;
+        void setConnection(const Connection& connection);
         IPCEvent* toIPCEvent();
 };
 
@@ -1339,4 +1288,6 @@ public:
 
 }
 
-#endif /* NETLINK_MESSAGES_H_ */
+#endif
+
+#endif

@@ -8,38 +8,34 @@ menuconfig VMPI
 	bool "VMPI support"
         default n
 
-config VMPI_VIRTIO_GUEST
-	tristate "VMPI for Virtio - guest support"
+if VMPI
+
+config VMPI_KVM_GUEST
+	tristate "VMPI for KVM and Virtio - guest support"
 	default m
-        depends on VMPI
-        select VIRTIO
-        select RINA_SHIM_HV
+        depends on VIRTIO
 	help
 	  No help for the time being
 
-config VMPI_VIRTIO_HOST
-	tristate "VMPI for Virtio - host support"
+config VMPI_KVM_HOST
+	tristate "VMPI for KVM and Virtio - host support"
 	default m
-        depends on VMPI
-        select VHOST
-        select RINA_SHIM_HV
+        depends on VHOST
 	help
 	  No help for the time being
 
 config VMPI_XEN_GUEST
         tristate "VMPI for Xen - guest support"
         default m
-        depends on VMPI
-        select XEN
-        select RINA_SHIM_HV
+        depends on XEN
         help
 	  No help for the time being
 
 config VMPI_XEN_HOST
         tristate "VMPI for Xen - host support"
         default m
-        depends on VMPI
-        select XEN
-        select RINA_SHIM_HV
+        depends on XEN
         help
           No help for the time being
+
+endif

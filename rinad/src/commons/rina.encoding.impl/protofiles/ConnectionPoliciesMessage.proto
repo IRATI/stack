@@ -6,7 +6,7 @@ message dtcpWindowBasedFlowControlConfig_t {  //the window-based flow control co
 	optional uint64 maxclosedwindowqueuelength = 1;                 //Integer that the number PDUs that can be put on the ClosedWindowQueue before something must be done
 	optional uint64 initialcredit = 2; 								//initial sequence number to get right window edge
 	optional policyDescriptor_t rcvrflowcontrolpolicy = 3;          //Invoked when a Transfer PDU is received to give the receiving PM an opportunity to update the flow control allocations
-	optional policyDescriptor_t receivingflowcontrolpolicy = 4;     //Allows some discretion in when to send a Flow Control PDU when there is no Retransmission Control
+	optional policyDescriptor_t txcontrolpolicy = 4;                //This policy is used when there are conditions that warrant sending fewer PDUs than allowed by the sliding window flow control, e.g. the ECN bit is set.
 }
 
 message dtcpRateBasedFlowControlConfig_t {  //the rate-based flow control configuration of a connection
@@ -31,18 +31,17 @@ message dtcpFlowControlConfig_t {  //the flow control configuration of a connect
 	optional policyDescriptor_t closedwindowpolicy = 11;                 //Determine the action to be taken when the receiver has not extended more credit to allow the sender to send more PDUs
 	optional policyDescriptor_t flowcontroloverrunpolicy = 12;           //Determines what action to take if the receiver receives PDUs but the credit or rate has been exceeded
 	optional policyDescriptor_t reconcileflowcontrolpolicy = 13;         //Invoked when both Credit and Rate based flow control are in use and they disagree on whether the PM can send or receive data
+    optional policyDescriptor_t receivingflowcontrolpolicy = 14;         //Allows some discretion in when to send a Flow Control PDU when there is no Retransmission Control
 }
 
 message dtcpRtxControlConfig_t {  //the rtx control configuration of a connection
 	optional uint32 datarxmsnmax = 1;                              //the number of times the retransmission of a PDU will be attempted before some other action must be taken
-	optional uint32 initialATimer = 2;                             //maximum time that a receiver will wait before sending an Ack
-    optional policyDescriptor_t rttestimatorpolicy = 3;            //Executed by the sender to estimate the duration of the retx timer
-    optional policyDescriptor_t rtxtimerexpirypolicy = 4;          //Executed by the sender when a Retransmission Timer Expires
-    optional policyDescriptor_t senderackpolicy = 5;               //Executed by the sender and provides the Sender with some discretion on when PDUs may be deleted from the ReTransmissionQ
-    optional policyDescriptor_t recvingacklistpolicy = 6;          //
-    optional policyDescriptor_t rcvrackpolicy = 7;                 //Executed by the receiver of the PDU and provides some discretion in the action taken
-    optional policyDescriptor_t sendingackpolicy = 8;              //allows an alternate action when the A-Timer expires when DTCP is present.
-    optional policyDescriptor_t rcvrcontrolackpolicy = 9;          //Allows an alternate action when a Control Ack PDU is received
+    optional policyDescriptor_t rtxtimerexpirypolicy = 2;          //Executed by the sender when a Retransmission Timer Expires
+    optional policyDescriptor_t senderackpolicy = 3;               //Executed by the sender and provides the Sender with some discretion on when PDUs may be deleted from the ReTransmissionQ
+    optional policyDescriptor_t recvingacklistpolicy = 4;          //
+    optional policyDescriptor_t rcvrackpolicy = 5;                 //Executed by the receiver of the PDU and provides some discretion in the action taken
+    optional policyDescriptor_t sendingackpolicy = 6;              //allows an alternate action when the A-Timer expires when DTCP is present.
+    optional policyDescriptor_t rcvrcontrolackpolicy = 7;          //Allows an alternate action when a Control Ack PDU is received
 }
 
 message dtcpConfig_t {  //configuration of DTCP for a connection
@@ -55,6 +54,7 @@ message dtcpConfig_t {  //configuration of DTCP for a connection
     optional policyDescriptor_t rcvrtimerinactivitypolicy = 7;     //If no PDUs arrive in this time period, the receiver should expect a DRF in the next Transfer PDU
     optional policyDescriptor_t sendertimerinactiviypolicy = 8;    //This timer is used to detect long periods of no traffic, indicating that a DRF should be sent
     optional policyDescriptor_t lostcontrolpdupolicy = 9;          //Determines what action to take when the PM detects that a control PDU (Ack or Flow Control) may have been lost
+    optional policyDescriptor_t rttestimatorpolicy = 10;            //Executed by the sender to estimate the duration of the retx timer
 }
 
 message connectionPolicies_t { //configuration of the policies and parameters of an EFCP connection
@@ -62,4 +62,5 @@ message connectionPolicies_t { //configuration of the policies and parameters of
 	optional dtcpConfig_t dtcpConfiguration = 2;            //the DTCP Configuration for this connection
 	optional policyDescriptor_t initialseqnumpolicy = 3;    //allows some discretion in selecting the initial sequence number, when DRF is going to be sent
 	optional uint64 seqnumrolloverthreshold = 4;            //the sequence number rollover threshold
+	optional uint32 initialATimer = 5;                      //maximum time that a receiver will wait before sending an Ack
 }

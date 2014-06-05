@@ -17,8 +17,8 @@
 #ifndef LIBRINA_NETLINK_MESSAGES_H
 #define LIBRINA_NETLINK_MESSAGES_H
 
-#include "librina-common.h"
-#include "librina-ipc-process.h"
+#include "common.h"
+#include "ipc-process.h"
 
 namespace rina{
 

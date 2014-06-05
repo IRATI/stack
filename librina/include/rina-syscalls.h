@@ -22,7 +22,7 @@
 #ifndef LIBRINA_SYSCALLS_H
 #define	LIBRINA_SYSCALLS_H
 
-#include "librina-common.h"
+#include "common.h"
 
 namespace rina {
 

@@ -20,7 +20,7 @@
 
 #include <cstdlib>
 
-#include <librina/librina-common.h>
+#include <librina/common.h>
 
 #include "common/empty.h"
 

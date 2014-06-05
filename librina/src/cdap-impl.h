@@ -12,7 +12,7 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
-#include "librina-cdap.h"
+#include "cdap.h"
 #define RINA_PREFIX "cdap-manager"
 #include "logs.h"
 

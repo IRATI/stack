@@ -67,13 +67,6 @@ static inline unsigned long idx_to_kaddr(struct vmpi_impl_info *vif,
 	return (unsigned long)pfn_to_kaddr(idx_to_pfn(vif, idx));
 }
 
-/* This is a miniumum size for the linear area to avoid lots of
- * calls to __pskb_pull_tail() as we set up checksum offsets. The
- * value 128 was chosen as it covers all IPv4 and most likely
- * IPv6 headers.
- */
-#define PKT_PROT_LEN 128
-
 static inline pending_ring_idx_t pending_index(unsigned i)
 {
 	return i & (MAX_PENDING_REQS-1);
@@ -143,8 +136,8 @@ static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
 	req = RING_GET_REQUEST(&vif->rx, vif->rx.req_cons++);
 	meta = npo->meta + npo->meta_prod++;
 
-        printk("%s: get rx req: [id=%d] [off=%d] [gref=%d] [len=%d]\n",
-                __func__, req->id, req->offset, req->gref, req->len);
+        IFV(printk("%s: get rx req: [id=%d] [off=%d] [gref=%d] [len=%d]\n",
+                __func__, req->id, req->offset, req->gref, req->len));
 
 	src_data = vmpi_buffer_hdr(buf);
         src_offset = offset_in_page(src_data);
@@ -221,7 +214,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 		.meta  = vif->meta,
 	};
 
-        printk("%s called\n", __func__);
+        IFV(printk("%s called\n", __func__));
 
         vmpi_queue_init(&rxq, 0, VMPI_BUF_SIZE);
 
@@ -242,8 +235,8 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 
                 buf = &ring->bufs[ring->np];
                 VMPI_RING_INC(ring->np);
-                printk("%s: received buf, len=%d, off=%lu\n",
-                        __func__, (int)buf->len, offset_in_page(buf->p));
+                IFV(printk("%s: received buf, len=%d, off=%lu\n",
+                        __func__, (int)buf->len, offset_in_page(buf->p)));
 
 		meta_slots_used = xenmpi_gop_skb(vif, buf, &npo);
                 BUG_ON(meta_slots_used != 1);
@@ -269,7 +262,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                 VMPI_RING_INC(ring->nr);
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
-                printk("%s: pushed %d bytes in the RX ring\n", __func__, len);
+                IFV(printk("%s: pushed %d bytes in the RX ring\n", __func__, len));
 
 		resp = make_rx_response(vif, vif->meta[npo.meta_cons].id,
 					status,
@@ -508,7 +501,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 
 		vif->pending_cons++;
 
-                printk("%s: built a buffer [len=%d]\n", __func__, (int)buf->len);
+                IFV(printk("%s: built a buffer [len=%d]\n", __func__, (int)buf->len));
                 vmpi_queue_push(&vif->tx_queue, buf);
 
 		if ((gop-vif->tx_copy_ops) >= ARRAY_SIZE(vif->tx_copy_ops))
@@ -556,8 +549,8 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                         channel = 0;
                 }
 
-                printk("%s: submitting len=%d channel=%d\n", __func__,
-                                (int)buf->len, channel);
+                IFV(printk("%s: submitting len=%d channel=%d\n", __func__,
+                                (int)buf->len, channel));
 
                 if (!vif->read_cb) {
                         read = &vif->read[channel];
@@ -593,14 +586,14 @@ int xenmpi_tx_action(struct vmpi_impl_info *vif, int budget)
 	unsigned nr_gops;
 	int work_done;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 
 	if (unlikely(!tx_work_todo(vif)))
 		return 0;
 
 	nr_gops = xenmpi_tx_build_gops(vif, budget);
 
-        printk("%s: %d gops built\n", __func__, nr_gops);
+        IFV(printk("%s: %d gops built\n", __func__, nr_gops));
 
 	if (nr_gops == 0)
 		return 0;
@@ -609,7 +602,7 @@ int xenmpi_tx_action(struct vmpi_impl_info *vif, int budget)
 
 	work_done = xenmpi_tx_submit(vif);
 
-        printk("%s: work_done %d\n", __func__, work_done);
+        IFV(printk("%s: work_done %d\n", __func__, work_done));
 
 	return work_done;
 }
@@ -645,7 +638,7 @@ static void xenmpi_idx_release(struct vmpi_impl_info *vif, u16 pending_idx,
 	put_page(vif->mmap_pages[pending_idx]);
 	vif->mmap_pages[pending_idx] = NULL;
 
-        printk("%s: relased pidx %d\n", __func__, pending_idx);
+        IFV(printk("%s: relased pidx %d\n", __func__, pending_idx));
 }
 
 
@@ -665,8 +658,8 @@ static void make_tx_response(struct vmpi_impl_info *vif,
 	RING_PUSH_RESPONSES_AND_CHECK_NOTIFY(&vif->tx, notify);
 	if (notify)
 		notify_remote_via_irq(vif->tx_irq);
-        printk("%s: push_response [rsp_prod=%d], [id=%d], [ntfy=%d]\n",
-                __func__, i, resp->id, notify);
+        IFV(printk("%s: push_response [rsp_prod=%d], [id=%d], [ntfy=%d]\n",
+                __func__, i, resp->id, notify));
 }
 
 static struct xen_mpi_rx_response *make_rx_response(struct vmpi_impl_info *vif,
@@ -763,11 +756,11 @@ int xenmpi_kthread(void *data)
 	struct vmpi_impl_info *vif = data;
 
 	while (!kthread_should_stop()) {
-                printk("%s: sleeping\n", __func__);
+                IFV(printk("%s: sleeping\n", __func__));
 		wait_event_interruptible(vif->wq,
 					 rx_work_todo(vif) ||
 					 kthread_should_stop());
-                printk("%s: woken up\n", __func__);
+                IFV(printk("%s: woken up\n", __func__));
 		if (kthread_should_stop())
 			break;
 
@@ -800,4 +793,3 @@ static void __exit mpiback_fini(void)
 module_exit(mpiback_fini);
 
 MODULE_LICENSE("Dual BSD/GPL");
-MODULE_ALIAS("xen-backend:mpi");

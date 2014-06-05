@@ -19,10 +19,10 @@
 
 #ifdef __cplusplus
 
-#include "librina-common.h"
-#include "librina-application.h"
-#include "librina-ipc-manager.h"
-#include "librina-cdap.h"
+#include "common.h"
+#include "application.h"
+#include "ipc-manager.h"
+#include "cdap.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
 #define RINA_DEFAULT_POLICY_VERSION "0"
@@ -706,7 +706,7 @@ class Connection {
         /**
          * The EFCP connection policies
          */
-        ConnectionPolicies connPoliciesParams;
+        ConnectionPolicies policies;
 
         /**
          * The id of the IPC Process using the flow supported by this
@@ -730,8 +730,8 @@ public:
         void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
         int getSourceCepId() const;
         void setSourceCepId(int sourceCepId);
-        const ConnectionPolicies& getConnPolicies() const;
-        void setConnPolicies(const ConnectionPolicies& connPParams);
+        const ConnectionPolicies& getPolicies() const;
+        void setPolicies(const ConnectionPolicies& policies);
         const std::string toString();
 };
 
@@ -841,12 +841,10 @@ public:
          * EFCP connection to the kernel components of the IPC Process
          *
          * @param connection
-         * @param connectionPolicies the policies for this EFCP connection
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnection(const Connection& connection,
-                        const ConnectionPolicies& connectionPolicies)
+        unsigned int createConnection(const Connection& connection)
         throw (CreateConnectionException);
 
         /**
@@ -866,12 +864,10 @@ public:
          * (receiving side of the Flow allocation procedure)
          *
          * @param connection
-         * @param connectionPolicies the policies for this EFCP connection
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnectionArrived(const Connection& connection,
-                        const ConnectionPolicies& connectionPolicies)
+        unsigned int createConnectionArrived(const Connection& connection)
         throw (CreateConnectionException);
 
         /**

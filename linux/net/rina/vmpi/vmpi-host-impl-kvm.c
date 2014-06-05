@@ -144,8 +144,7 @@ handle_tx(struct vmpi_impl_info *vi)
                                VMPI_BUF_SIZE);
                 } else {
                         IFV(printk("transmit (%u, %d)\n", out, (int)len));
-                        len = iovec_to_buf(vq->iov, out, buf->p,
-                                           VMPI_BUF_SIZE);
+                        len = iovec_to_buf(vq->iov, out, buf->p, buf->size);
                         buf->len = len;
                         IFV(printk("popped %d bytes from the TX ring\n",
                                    (int)len));

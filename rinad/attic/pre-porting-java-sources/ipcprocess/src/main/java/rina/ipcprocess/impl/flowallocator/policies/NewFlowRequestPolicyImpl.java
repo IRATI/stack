@@ -7,6 +7,7 @@ import eu.irati.librina.Connection;
 import eu.irati.librina.ConnectionPolicies;
 import eu.irati.librina.FlowRequestEvent;
 import eu.irati.librina.IPCException;
+import eu.irati.librina.QoSCube;
 import eu.irati.librina.QoSCubeList;
 
 import rina.flowallocator.api.Flow;
@@ -26,15 +27,24 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		List<Connection> connections = new ArrayList<Connection>();
 		
 		//TODO select qos cube properly
+		QoSCube qosCube = qosCubes.getFirst();
+		
 		Connection connection = new Connection();
-		connection.setQosId(qosCubes.getFirst().getId());
+		connection.setQosId(qosCube.getId());
 		connection.setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
-		connections.add(connection);
-		flow.setConnections(connections);
 		
 		//TODO generate connection policies properly
-		ConnectionPolicies connectionPolicies = qosCubes.getFirst().getEfcpPolicies();
+		ConnectionPolicies connectionPolicies = qosCube.getEfcpPolicies();
+		connectionPolicies.setInOrderDelivery(qosCube.isOrderedDelivery());
+		connectionPolicies.setPartialDelivery(qosCube.isPartialDelivery());
+		connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+		
+		connection.setPolicies(connectionPolicies);
+		connections.add(connection);
+		
+		flow.setConnections(connections);
 		flow.setConnectionPolicies(connectionPolicies);
+		flow.setFlowSpec(event.getFlowSpecification());
 		
 		return flow;
 	}

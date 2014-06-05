@@ -33,7 +33,7 @@ static irqreturn_t xenmpi_tx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *vif = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 	if (RING_HAS_UNCONSUMED_REQUESTS(&vif->tx))
 		schedule_work(&vif->tx_worker);
 
@@ -46,7 +46,7 @@ void xenmpi_poll(struct work_struct *work)
         int budget = 64;
 	int work_done;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 
 	work_done = xenmpi_tx_action(vif, budget);
 
@@ -86,7 +86,7 @@ static irqreturn_t xenmpi_rx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *vif = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 	xenmpi_kick_thread(vif);
 
 	return IRQ_HANDLED;
@@ -122,7 +122,7 @@ int vmpi_impl_write_buf(struct vmpi_impl_info *vif, struct vmpi_buffer *buf)
 	if (vif->task == NULL)
 		goto drop;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 
 	/* If the skb can't possibly fit in the remaining slots
 	 * then turn off the queue to give the ring a chance to
@@ -168,6 +168,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 		pr_warn("Could not allocate mpi for %s\n", name);
 		return ERR_PTR(-ENOMEM);
 	}
+        memset(vif, 0, sizeof(*vif));
 
         vif->parent = parent;
 

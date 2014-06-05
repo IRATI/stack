@@ -353,11 +353,11 @@ public class EnrolleeStateMachine extends BaseEnrollmentStateMachine{
 	private CDAPMessage nextObjectRequired() throws Exception{
 		CDAPMessage cdapMessage = null;
 		
-		if (!difInformation.getDifConfiguration().getDataTransferConstants().isInitialized()) {
+		if (!difInformation.getDifConfiguration().getEfcpConfiguration().getDataTransferConstants().isInitialized()) {
 			cdapMessage = cdapSessionManager.getReadObjectRequestMessage(portId, null, null, 
 					DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 0, 
 					DataTransferConstantsRIBObject.DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, 0, true);
-		} else if (difInformation.getDifConfiguration().getQosCubes().size() == 0){
+		} else if (difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().size() == 0){
 			cdapMessage = cdapSessionManager.getReadObjectRequestMessage(portId, null, null, 
 					QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_CLASS, 0, 
 					QoSCubeSetRIBObject.QOSCUBE_SET_RIB_OBJECT_NAME, 0, true);
