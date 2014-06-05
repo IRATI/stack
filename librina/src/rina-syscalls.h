@@ -22,7 +22,9 @@
 #ifndef LIBRINA_SYSCALLS_H
 #define	LIBRINA_SYSCALLS_H
 
-#include "librina-common.h"
+#ifdef __cplusplus
+
+#include "common.h"
 
 namespace rina {
 
@@ -112,5 +114,7 @@ namespace rina {
         int syscallDeallocatePortId(int portId);
 
 }
+
+#endif
 
 #endif

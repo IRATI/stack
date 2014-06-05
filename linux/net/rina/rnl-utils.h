@@ -90,7 +90,7 @@ enum dtcp_wb_fctrl_config_attrs_list {
         DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH = 1,
         DWFCC_ATTR_INITIAL_CREDIT,
         DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY,
-        DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
+        DWFCC_ATTR_TX_CTRL_POLICY,
         __DWFCC_ATTR_MAX,
 };
 #define DWFCC_ATTR_MAX (__DWFCC_ATTR_MAX -1)
@@ -119,14 +119,13 @@ enum dtcp_fctrl_config_attrs_lists {
         DFCC_ATTR_CLOSED_WINDOW_POLICY,
         DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY,
         DFCC_ATTR_RECON_FLOW_CTRL_POLICY,
+        DFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
         __DFCC_ATTR_MAX,
 };
 #define DFCC_ATTR_MAX (__DFCC_ATTR_MAX -1)
 
 enum dtcp_rctrl_config_attrs_list {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
-        DRCC_ATTR_INIT_A_TIMER,
-        DRCC_ATTR_RTT_EST_POLICY,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,
@@ -147,6 +146,7 @@ enum dtcp_config_params_attrs_list {
         DCA_ATTR_RCVR_TIMER_INAC_POLICY,
         DCA_ATTR_SNDR_TIMER_INAC_POLICY,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
 };
 #define DCA_ATTR_MAX (__DCA_ATTR_MAX - 1)
@@ -156,6 +156,11 @@ enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_CONFIG,
         CPP_ATTR_INIT_SEQ_NUM_POLICY,
         CPP_ATTR_SEQ_NUM_ROLLOVER,
+        CPP_ATTR_INIT_A_TIMER,
+        CPP_ATTR_PARTIAL_DELIVERY,
+        CPP_ATTR_INCOMPLETE_DELIVERY,
+        CPP_ATTR_IN_ORDER_DELIVERY,
+        CPP_ATTR_MAX_SDU_GAP,
         __CPP_ATTR_MAX,
 };
 #define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)
@@ -394,11 +399,19 @@ enum data_transfer_cons_attrs_list {
 };
 #define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
 
+enum efcp_config_attrs_list {
+        EFCPC_ATTR_DATA_TRANS_CONS = 1,
+        EFCPC_ATTR_QOS_CUBES,
+        EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
+        __EFCPC_ATTR_MAX,
+};
+#define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
-        DCONF_ATTR_DATA_TRANS_CONS,
         DCONF_ATTR_ADDRESS,
-        DCONF_ATTR_QOS_CUBES,
+        DCONF_ATTR_EFCPC,
+        DCONF_ATTR_RMTC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)

@@ -1266,7 +1266,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	IpcmAssignToDIFRequestMessage message;
 	DIFInformation difInformation;
 	DIFConfiguration difConfiguration;
-	difInformation.setDifType("shim-ethernet");
+	difInformation.setDifType(NORMAL_IPC_PROCESS);
 	difInformation.setDifName(difName);
 	Parameter * parameter = new Parameter("interface", "eth0");
 	difConfiguration.addParameter(*parameter);
@@ -2453,6 +2453,7 @@ int testIpcpCreateConnectionRequest() {
         connectionPolicies.setPartialDelivery(true);
         connectionPolicies.setMaxSduGap(34);
         connectionPolicies.setInOrderDelivery(true);
+        connectionPolicies.setIncompleteDelivery(true);
 
         IpcpConnectionCreateRequestMessage message;
         Connection connection;
@@ -2527,6 +2528,11 @@ int testIpcpCreateConnectionRequest() {
         } else if (message.getConnection().getPolicies().isInOrderDelivery()!=
                         recoveredMessage->getConnection().getPolicies().isInOrderDelivery()) {
                 std::cout << "In order delivery on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getConnection().getPolicies().isIncompleteDelivery()!=
+                        recoveredMessage->getConnection().getPolicies().isIncompleteDelivery()) {
+                std::cout << "Incomplete delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getConnection().getPolicies().getMaxSduGap()!=

@@ -1,4 +1,10 @@
 //
+// SDU Protection
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
@@ -14,6 +20,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include "librina-sdu-protection.h"
+#include "sdu-protection.h"
 
-using namespace rina;
+namespace rina {
+}
+

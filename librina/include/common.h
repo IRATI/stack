@@ -36,6 +36,8 @@
 
 namespace rina {
 
+static std::string NORMAL_IPC_PROCESS= "normal-ipc";
+
 /**
  * Returns the version number of librina
  */
@@ -674,13 +676,18 @@ class ConnectionPolicies {
         int initialATimer;
 
         /**
-         * True if partial delivery of an SDU is allowed,
-         * false otherwise
+         * True if partial delivery of an SDU is allowed, false otherwise
          */
         bool partialDelivery;
 
         /**
-         * True if in order delivery of SDUs is allowed, false otherwise
+         * True if incomplete delivery is allowed (one fragment of SDU
+         * delivered is the same as all the SDU delivered), false otherwise
+         */
+        bool incompleteDelivery;
+
+        /**
+         * True if in order delivery of SDUs is mandatory, false otherwise
          */
         bool inOrderDelivery;
 
@@ -707,6 +714,8 @@ public:
         void setMaxSduGap(unsigned int maxSduGap);
         bool isPartialDelivery() const;
         void setPartialDelivery(bool partialDelivery);
+        bool isIncompleteDelivery() const;
+        void setIncompleteDelivery(bool incompleteDelivery);
         const std::string toString();
 };
 

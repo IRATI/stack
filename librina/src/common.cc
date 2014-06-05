@@ -21,8 +21,8 @@
 
 #include "logs.h"
 #include "config.h"
-#include "librina-common.h"
 #include "core.h"
+#include "common.h"
 
 namespace rina {
 
@@ -949,6 +949,7 @@ ConnectionPolicies::ConnectionPolicies(){
         initialATimer = 0;
         partialDelivery = false;
         inOrderDelivery = false;
+        incompleteDelivery = false;
         maxSDUGap = 0;
 }
 
@@ -1017,6 +1018,14 @@ bool ConnectionPolicies::isPartialDelivery() const {
 
 void ConnectionPolicies::setPartialDelivery(bool partialDelivery) {
         this->partialDelivery = partialDelivery;
+}
+
+bool ConnectionPolicies::isIncompleteDelivery() const {
+        return incompleteDelivery;
+}
+
+void ConnectionPolicies::setIncompleteDelivery(bool incompleteDelivery) {
+        this->incompleteDelivery = incompleteDelivery;
 }
 
 const std::string ConnectionPolicies::toString() {

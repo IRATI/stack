@@ -17,10 +17,12 @@
 #ifndef LIBRINA_NETLINK_MESSAGES_H
 #define LIBRINA_NETLINK_MESSAGES_H
 
-#include "librina-common.h"
-#include "librina-ipc-process.h"
+#ifdef __cplusplus
 
-namespace rina{
+#include "common.h"
+#include "ipc-process.h"
+
+namespace rina {
 
 enum RINANetlinkOperationCode{
 	RINA_C_UNSPEC, /* 0 Unespecified operation */
@@ -1286,4 +1288,6 @@ public:
 
 }
 
-#endif /* NETLINK_MESSAGES_H_ */
+#endif
+
+#endif

@@ -1,7 +1,9 @@
 //
-// Core librina logic
+// Netlink parsers
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,6 +22,8 @@
 
 #ifndef LIBRINA_NETLINK_PARSERS_H
 #define LIBRINA_NETLINK_PARSERS_H
+
+#ifdef __cplusplus
 
 #include <netlink/msg.h>
 #include <netlink/attr.h>
@@ -509,7 +513,8 @@ enum DIFConfigurationAttributes {
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
-		const DIFConfiguration& object);
+		const DIFConfiguration& object,
+		bool normalIPCProcess);
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested);
 
@@ -978,6 +983,7 @@ enum ConnectionPoliciesAttributes {
 	CPA_ATTR_SEQ_NUM_ROLLOVER,
 	CPA_ATTR_INIT_A_TIMER,
         CPA_ATTR_PARTIAL_DELIVERY,
+        CPA_ATTR_INCOMPLETE_DELIVERY,
         CPA_ATTR_IN_ORDER_DELIVERY,
         CPA_ATTR_MAX_SDU_GAP,
 	__CPA_ATTR_MAX,
@@ -1188,5 +1194,6 @@ RmtDumpPDUFTEntriesResponseMessage * parseRmtDumpPDUFTEntriesResponseMessage(
 
 }
 
+#endif
 
-#endif /* LIBRINA_NETLINK_PARSERS_H_ */
+#endif

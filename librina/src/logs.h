@@ -22,6 +22,8 @@
 #ifndef LIBRINA_LOGS_H
 #define LIBRINA_LOGS_H
 
+#ifdef __cplusplus
+
 #include <stdio.h>
 #include <string>
 
@@ -104,5 +106,7 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, NOTE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, DBG,   FMT, ##ARGS)
+
+#endif
 
 #endif
