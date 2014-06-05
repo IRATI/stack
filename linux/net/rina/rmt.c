@@ -754,7 +754,8 @@ static int process_mgmt_pdu(struct rmt * rmt,
         ASSERT(rmt->parent);
         ASSERT(rmt->parent->ops);
         ASSERT(rmt->parent->ops->mgmt_sdu_post);
-
+        
+        LOG_DBG("\nLEODEBUG posting to kfa");
         return (rmt->parent->ops->mgmt_sdu_post(rmt->parent->data,
                                                 port_id,
                                                 sdu) ? -1 : 0);
@@ -826,20 +827,42 @@ static int process_dt_spdu(struct rmt *       rmt,
                 pdu_destroy(pdu);
         } else {
                 cep_id_t c;
-                /* we do not use the sdu in this case */
-                sdu_destroy(sdu);
+                pdu_type_t pdu_type;
 
-                c = pci_cep_destination(pdu_pci_get_ro(pdu));
-                if (!is_cep_id_ok(c)) {
-                        LOG_ERR("Wrong CEP-id in PDU");
+                pdu_type = pci_type(pdu_pci_get_ro(pdu));
+                switch (pdu_type) {
+                case PDU_TYPE_MGMT:
+                        return process_mgmt_pdu(rmt, port_id, pdu);
+                case PDU_TYPE_EFCP:
+                case PDU_TYPE_CC:
+                case PDU_TYPE_SACK:
+                case PDU_TYPE_NACK:
+                case PDU_TYPE_FC:
+                case PDU_TYPE_ACK:
+                case PDU_TYPE_ACK_AND_FC:
+                case PDU_TYPE_DT:
+                        /* we do not use the sdu in this case */
+                        sdu_destroy(sdu);
+                        c = pci_cep_destination(pdu_pci_get_ro(pdu));
+                        if (!is_cep_id_ok(c)) {
+                                LOG_ERR("Wrong CEP-id in PDU");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
+
+                        if (efcp_container_receive(rmt->efcpc, c, pdu)) {
+                                LOG_ERR("EFCP container problems");
+                                return -1;
+                        }
+                        break;
+
+                default:
+                        LOG_ERR("Unknown PDU type %d", pdu_type);
+                        sdu_destroy(sdu);
                         pdu_destroy(pdu);
-                        return -1;
+                        break;
                 }
 
-                if (efcp_container_receive(rmt->efcpc, c, pdu)) {
-                        LOG_ERR("EFCP container problems");
-                        return -1;
-                }
         }
 
         return 0;
@@ -920,6 +943,7 @@ static int receive_worker(void * o)
                 switch (pdu_type) {
                 case PDU_TYPE_MGMT:
                         if (!dst_addr) { 
+                                LOG_DBG("\nLEODEBUG MGMT with ADDR 0");
                                 process_mgmt_pdu(tmp, port_id, pdu);
                                 sdu_destroy(sdu);
                         } else 
