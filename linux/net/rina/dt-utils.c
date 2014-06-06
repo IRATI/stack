@@ -322,7 +322,6 @@ static int rtxqueue_drop(struct rtxqueue * q,
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 tsq = pci_sequence_number_get((struct pci *) pdu_pci_get_ro(cur->pdu));
-                ASSERT(is_seq_num_ok(tsq)); 
                 
                 if (tsq < from && from !=0)
                         continue;
@@ -460,7 +459,7 @@ int rtxq_drop(struct rtxq * q,
               seq_num_t     from,
               seq_num_t     to)
 {
-        if (!q || !is_seq_num_ok(from) || !is_seq_num_ok(to))
+        if (!q)
                 return -1;
 
         spin_lock(&q->lock);

@@ -735,7 +735,7 @@ conn_create_resp_free_and_reply(struct rnl_msg * msg,
                                 ipc_process_id_t ipc_id,
                                 port_id_t        pid,
                                 cep_id_t         src_cep,
-                                seq_num_t        seq_num,
+                                rnl_sn_t         seq_num,
                                 u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
@@ -839,7 +839,7 @@ conn_create_result_free_and_reply(struct rnl_msg * msg,
                                   port_id_t        pid,
                                   cep_id_t         src_cep,
                                   cep_id_t         dst_cep,
-                                  seq_num_t        seq_num,
+                                  rnl_sn_t         seq_num,
                                   u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
@@ -956,7 +956,7 @@ conn_update_result_free_and_reply(struct rnl_msg * msg,
                                   ipc_process_id_t ipc_id,
                                   uint_t           result,
                                   port_id_t        pid,
-                                  seq_num_t        seq_num,
+                                  rnl_sn_t         seq_num,
                                   u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
@@ -1061,7 +1061,7 @@ conn_destroy_result_free_and_reply(struct rnl_msg * msg,
                                    ipc_process_id_t ipc_id,
                                    uint_t           result,
                                    port_id_t        pid,
-                                   seq_num_t        seq_num,
+                                   rnl_sn_t         seq_num,
                                    u32              nl_port_id)
 {
         rnl_msg_destroy(msg);
@@ -1248,7 +1248,7 @@ static int ipcp_dump_pft_free_and_reply(struct rnl_msg *   msg,
                                         ipc_process_id_t   ipc_id,
                                         uint_t             result,
                                         struct list_head * entries,
-                                        seq_num_t          seq_num,
+                                        rnl_sn_t           seq_num,
                                         u32                nl_port_id)
 {
         rnl_msg_destroy(msg);
@@ -1774,8 +1774,8 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                        struct name *      dest,
                        struct flow_spec * fspec)
 {
-        uint_t                 nl_port_id;
-        seq_num_t              seq_num;
+        uint_t             nl_port_id;
+        rnl_sn_t           seq_num;
         struct ipcp_instance * ipc_process;
 
         IRQ_BARRIER;
@@ -2064,7 +2064,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                        port_id_t        pid,
                                        uint_t           res)
 {
-        seq_num_t seq_num;
+        rnl_sn_t seq_num;
 
         IRQ_BARRIER;
 
@@ -2074,7 +2074,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
         }
 
         seq_num = kipcm_pmap_find(kipcm->messages->ingress, pid);
-        if (!is_seq_num_ok(seq_num)) {
+        if (!is_rnl_seq_num_ok(seq_num)) {
                 LOG_ERR("Could not find request message id (seq num)");
                 return -1;
         }

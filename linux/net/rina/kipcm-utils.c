@@ -243,6 +243,16 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define FMAP_HASH_BITS 7
+#define SNVALUE_WRONG  -1
+
+rnl_sn_t seq_num_bad(void)
+{ return SNVALUE_WRONG; }
+EXPORT_SYMBOL(seq_num_bad);
+
+/* FIXME: We need to change this */
+bool is_rnl_seq_num_ok(rnl_sn_t sn)
+{ return (sn < SNVALUE_WRONG) ? true : false; }
+EXPORT_SYMBOL(is_rnl_seq_num_ok);
 
 struct kipcm_pmap {
         DECLARE_HASHTABLE(table, FMAP_HASH_BITS);
@@ -250,7 +260,7 @@ struct kipcm_pmap {
 
 struct kipcm_pmap_entry {
         port_id_t         key;
-        seq_num_t         value;
+        rnl_sn_t          value;
         struct hlist_node hlist;
 };
 
@@ -310,8 +320,8 @@ static struct kipcm_pmap_entry * pmap_entry_find(struct kipcm_pmap * map,
         return NULL;
 }
 
-seq_num_t kipcm_pmap_find(struct kipcm_pmap * map,
-                          port_id_t           key)
+rnl_sn_t kipcm_pmap_find(struct kipcm_pmap * map,
+                         port_id_t           key)
 {
         struct kipcm_pmap_entry * entry;
 
@@ -326,7 +336,7 @@ seq_num_t kipcm_pmap_find(struct kipcm_pmap * map,
 
 int kipcm_pmap_update(struct kipcm_pmap * map,
                       port_id_t           key,
-                      seq_num_t           value)
+                      rnl_sn_t            value)
 {
         struct kipcm_pmap_entry * cur;
 
@@ -343,7 +353,7 @@ int kipcm_pmap_update(struct kipcm_pmap * map,
 
 int kipcm_pmap_add(struct kipcm_pmap * map,
                    port_id_t           key,
-                   seq_num_t           value)
+                   rnl_sn_t            value)
 {
         struct kipcm_pmap_entry * tmp;
 
@@ -390,7 +400,7 @@ struct kipcm_smap {
 };
 
 struct kipcm_smap_entry {
-        seq_num_t         key;
+        rnl_sn_t          key;
         port_id_t         value;
         struct hlist_node hlist;
 };
@@ -435,7 +445,7 @@ int kipcm_smap_empty(struct kipcm_smap * map)
 #define smap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 static struct kipcm_smap_entry * smap_entry_find(struct kipcm_smap * map,
-                                                 seq_num_t           key)
+                                                 rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
         struct hlist_head *       head;
@@ -452,7 +462,7 @@ static struct kipcm_smap_entry * smap_entry_find(struct kipcm_smap * map,
 }
 
 port_id_t kipcm_smap_find(struct kipcm_smap * map,
-                          seq_num_t           key)
+                          rnl_sn_t            key)
 {
         struct kipcm_smap_entry * entry;
 
@@ -466,7 +476,7 @@ port_id_t kipcm_smap_find(struct kipcm_smap * map,
 }
 
 int kipcm_smap_update(struct kipcm_smap * map,
-                      seq_num_t           key,
+                      rnl_sn_t            key,
                       port_id_t           value)
 {
         struct kipcm_smap_entry * cur;
@@ -484,7 +494,7 @@ int kipcm_smap_update(struct kipcm_smap * map,
 
 static int kipcm_smap_add_gfp(gfp_t               flags,
                               struct kipcm_smap * map,
-                              seq_num_t           key,
+                              rnl_sn_t            key,
                               port_id_t           value)
 {
         struct kipcm_smap_entry * tmp;
@@ -505,17 +515,17 @@ static int kipcm_smap_add_gfp(gfp_t               flags,
 }
 
 int kipcm_smap_add(struct kipcm_smap * map,
-                   seq_num_t           key,
+                   rnl_sn_t             key,
                    port_id_t            value)
 { return kipcm_smap_add_gfp(GFP_KERNEL, map, key, value); }
 
 int kipcm_smap_add_ni(struct kipcm_smap * map,
-                      seq_num_t           key,
+                      rnl_sn_t             key,
                       port_id_t            value)
 { return kipcm_smap_add_gfp(GFP_ATOMIC, map, key, value); }
 
 int kipcm_smap_remove(struct kipcm_smap * map,
-                      seq_num_t           key)
+                      rnl_sn_t            key)
 {
         struct kipcm_smap_entry * cur;
 

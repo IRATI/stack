@@ -519,7 +519,7 @@ struct rnl_msg {
         unsigned int           dst_port;
 
         /* The message sequence number */
-        seq_num_t              seq_num;
+        rnl_sn_t               seq_num;
 
         /* The operation code */
         msg_type_t             op_code;
@@ -722,12 +722,12 @@ int rnl_parse_msg(struct genl_info * info,
 
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
-                            seq_num_t        seq_num,
+                            rnl_sn_t         seq_num,
                             u32              nl_port_id);
 
 int rnl_update_dif_config_response(ipc_process_id_t id,
                                    uint_t           res,
-                                   seq_num_t        seq_num,
+                                   rnl_sn_t         seq_num,
                                    u32              nl_port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
@@ -735,27 +735,27 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      source,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
-                                       seq_num_t                seq_num,
+                                       rnl_sn_t                 seq_num,
                                        u32                      nl_port_id,
                                        port_id_t                pid);
 
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
                                   port_id_t        pid,
-                                  seq_num_t        seq_num,
+                                  rnl_sn_t         seq_num,
                                   u32              nl_port_id);
 
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
-                                             seq_num_t        seq_num,
+                                             rnl_sn_t         seq_num,
                                              u32              nl_port_id,
                                              bool             isRegister);
 
 
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  seq_num_t        seq_num,
+                                  rnl_sn_t         seq_num,
                                   u32              nl_port_id);
 
 
@@ -767,26 +767,26 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
 int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   port_id_t        pid,
                                   cep_id_t         src_cep,
-                                  seq_num_t        seq_num,
+                                  rnl_sn_t         seq_num,
                                   u32              nl_port_id);
 
 int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     cep_id_t         src_cep,
                                     cep_id_t         dst_cep,
-                                    seq_num_t        seq_num,
+                                    rnl_sn_t         seq_num,
                                     u32              nl_port_id);
 
 int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     uint_t           result,
-                                    seq_num_t        seq_num,
+                                    rnl_sn_t         seq_num,
                                     u32              nl_port_id);
 
 int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                                      port_id_t        pid,
                                      uint_t           result,
-                                     seq_num_t        seq_num,
+                                     rnl_sn_t         seq_num,
                                      u32              nl_port_id);
 
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
@@ -794,7 +794,7 @@ int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
                                int                result,
                                struct list_head * entries,
-                               seq_num_t          seq_num,
+                               rnl_sn_t           seq_num,
                                u32                nl_port_id);
 
 #endif

@@ -48,7 +48,7 @@ struct message_handler {
 struct rnl_set {
         spinlock_t             lock;
         struct message_handler handlers[NETLINK_RINA_C_MAX];
-        seq_num_t              sn_counter;
+        rnl_sn_t               sn_counter;
 };
 
 static struct rnl_set * default_set = NULL;
@@ -466,9 +466,9 @@ int rnl_set_destroy(struct rnl_set * set)
 }
 EXPORT_SYMBOL(rnl_set_destroy);
 
-seq_num_t rnl_get_next_seqn(struct rnl_set * set)
+rnl_sn_t rnl_get_next_seqn(struct rnl_set * set)
 {
-        seq_num_t tmp;
+        rnl_sn_t tmp;
 
         spin_lock(&set->lock);
 

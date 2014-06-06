@@ -154,6 +154,7 @@ typedef enum {
         RINA_C_MAX,
 } msg_type_t;
 
+typedef uint32_t rnl_sn_t;
 typedef uint32_t rnl_port_t;
 
 int              rnl_init(void);
@@ -176,7 +177,7 @@ int              rnl_handler_unregister(struct rnl_set * set,
 
 int              rnl_set_register(struct rnl_set * set);
 int              rnl_set_unregister(struct rnl_set * set);
-seq_num_t        rnl_get_next_seqn(struct rnl_set * set);
+rnl_sn_t         rnl_get_next_seqn(struct rnl_set * set);
 rnl_port_t       rnl_get_ipc_manager_port(void);
 void             rnl_set_ipc_manager_port(rnl_port_t port);
 
