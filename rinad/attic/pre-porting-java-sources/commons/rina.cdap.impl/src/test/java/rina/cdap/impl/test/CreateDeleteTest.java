@@ -1,7 +1,5 @@
 package rina.cdap.impl.test;
 
-import junit.framework.Assert;
-
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,17 +32,6 @@ public class CreateDeleteTest extends BaseCDAPTest{
 		
 		receivingCDAPSession.messageReceived(message);
 		
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(32769, null, "org.pouzinsociety.flow.Flow", 0, "123", new ObjectValue(), 0, null, invokeId + 1);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
-		
 		cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(32769, null, "org.pouzinsociety.flow.Flow", 0, "123", new ObjectValue(), 0, null, invokeId);
 		message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
 		receivingCDAPSession.messageSent(cdapMessage);
@@ -62,17 +49,6 @@ public class CreateDeleteTest extends BaseCDAPTest{
 		sendingCDAPSession.messageSent(cdapMessage);
 
 		receivingCDAPSession.messageReceived(message);
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(32769, null, "org.pouzinsociety.flow.Flow", 0, "123", new ObjectValue(), 0, null, 25);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 	
 	@Test
@@ -112,18 +88,6 @@ public class CreateDeleteTest extends BaseCDAPTest{
 	@Test
 	public void testCreateDisconnected() throws CDAPException{
 		this.disconnectWithoutResponse();
-		CDAPMessage cdapMessage = null;
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getCreateObjectRequestMessage(32768, null, null, "org.pouzinsociety.flow.Flow", 0, "123", null, 0, true);
-		try{
-			sendingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 	
 	@Test
@@ -136,17 +100,6 @@ public class CreateDeleteTest extends BaseCDAPTest{
 		sendingCDAPSession.messageSent(cdapMessage);
 		
 		receivingCDAPSession.messageReceived(message);
-		
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(32769, null, "org.pouzinsociety.flow.Flow", 0, "123", new ObjectValue(), 0, null, cdapMessage.getInvokeID());
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 		
 		cdapMessage = cdapSessionManager.getDeleteObjectResponseMessage(32769, null, "org.pouzinsociety.flow.Flow", 0, "123", 0, null, cdapMessage.getInvokeID());
 		message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
@@ -165,17 +118,6 @@ public class CreateDeleteTest extends BaseCDAPTest{
 		sendingCDAPSession.messageSent(cdapMessage);
 
 		receivingCDAPSession.messageReceived(message);
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getDeleteObjectResponseMessage(32769, null, "org.pouzinsociety.flow.Flow", 0, "123", 0, null, 25);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 	
 	@Test
@@ -215,17 +157,5 @@ public class CreateDeleteTest extends BaseCDAPTest{
 	@Test
 	public void testDeleteDisconnected() throws CDAPException{
 		this.disconnectWithoutResponse();
-		CDAPMessage cdapMessage = null;
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getDeleteObjectRequestMessage(32768, null, null, "org.pouzinsociety.flow.Flow", 0, "123", null, 0, true);
-		try{
-			sendingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 }

@@ -42,14 +42,17 @@ public class CDAPSessionManagerImpl implements CDAPSessionManager{
 	 */
 	private long timeout = 0;
 	
+	private CDAPInvokeIdManagerImpl invokeIdManager = null;
+	
 	public CDAPSessionManagerImpl(WireMessageProviderFactory wireMessageProviderFactory){
 		this.cdapSessions = new ConcurrentHashMap<Integer, CDAPSession>();
 		this.wireMessageProviderFactory = wireMessageProviderFactory;
+		this.invokeIdManager = new CDAPInvokeIdManagerImpl();
 		timeout = DEFAULT_TIMEOUT_IN_MS;
 	}
 
 	public CDAPSession createCDAPSession(int portId) {
-		CDAPSessionImpl cdapSession = new CDAPSessionImpl(this, timeout);
+		CDAPSessionImpl cdapSession = new CDAPSessionImpl(this, timeout, invokeIdManager);
 		cdapSession.setWireMessageProvider(wireMessageProviderFactory.createWireMessageProvider());
 		CDAPSessionDescriptor descriptor = new CDAPSessionDescriptor();
 		descriptor.setPortId(portId);

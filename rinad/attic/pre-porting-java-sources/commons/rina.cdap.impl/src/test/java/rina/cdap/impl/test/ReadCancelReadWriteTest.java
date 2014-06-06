@@ -34,17 +34,6 @@ public class ReadCancelReadWriteTest extends BaseCDAPTest{
 		
 		receivingCDAPSession.messageReceived(message);
 		
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getWriteObjectResponseMessage(32769, null, 0, null, 234);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
-		
 		cdapMessage = cdapSessionManager.getWriteObjectResponseMessage(32769, null, 0, null, invokeId);
 		message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
 		receivingCDAPSession.messageSent(cdapMessage);
@@ -62,17 +51,6 @@ public class ReadCancelReadWriteTest extends BaseCDAPTest{
 		sendingCDAPSession.messageSent(cdapMessage);
 
 		receivingCDAPSession.messageReceived(message);
-
-		boolean failed = false;
-		cdapMessage = cdapSessionManager.getWriteObjectResponseMessage(32769, null, 0, null, 25);
-		try{
-			message = receivingCDAPSession.encodeNextMessageToBeSent(cdapMessage);
-		}catch(CDAPException ex){
-			System.out.println(ex.getMessage());
-			failed = true;
-		}
-
-		Assert.assertTrue(failed);
 	}
 	
 	@Test

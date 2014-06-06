@@ -112,15 +112,16 @@ int syscallReadSDU(int portId, void * sdu, int maxBytes)
 
 int syscallWriteManagementSDU(unsigned short ipcProcessId,
                               void *         sdu,
-                              int            portId,
+                              unsigned int   address,
+                              unsigned int   portId,
                               int            size)
 {
         int result;
 
         DUMP_SYSCALL("SYS_writeManagementSDU", SYS_writeManagementSDU);
 
-        result = syscall(SYS_writeManagementSDU, ipcProcessId, portId,
-                         sdu, size);
+        result = syscall(SYS_writeManagementSDU, ipcProcessId, address,
+                         portId,sdu, size);
         if (result < 0) {
                 LOG_ERR("Syscall write SDU failed: %d", result);
         }

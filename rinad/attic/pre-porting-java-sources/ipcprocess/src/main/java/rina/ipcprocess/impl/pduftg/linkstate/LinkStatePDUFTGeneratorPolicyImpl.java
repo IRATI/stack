@@ -399,7 +399,6 @@ public class LinkStatePDUFTGeneratorPolicyImpl implements PDUFTGeneratorPolicy, 
 			PDUForwardingTableEntryList entryList = routingAlgorithm.getPDUTForwardingTable(fsoList, (Vertex)sourceVertex);
 			try {
 				rina.getKernelIPCProcess().modifyPDUForwardingTableEntries(entryList, 2);
-				ribDaemon.setPDUForwardingTable(entryList);
 				for (PDUForwardingTableEntry e : entryList)
 				{
 					log.debug("Entry set in kernel. Address: " + e.getAddress() + " Port: " + e.getPortIds().getFirst());
