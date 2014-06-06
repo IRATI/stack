@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <map>
+#include <ctime>
 
 #include "exceptions.h"
 #include "patterns.h"
@@ -1757,6 +1759,25 @@ public:
         EnrollException(const std::string& description):
                 IPCException(description){
         }
+};
+
+/// Interface for tasks to be scheduled in a timer
+class TimerTask {
+public:
+	virtual ~TimerTask(){};
+	virtual void run() = 0;
+};
+
+/// Class that implements a timer which contains a thread
+class Timer {
+public:
+	Timer();
+	~Timer();
+	void scheduleTask(TimerTask* task, double delay_ms);
+	void cancelTask(TimerTask *task);
+private:
+	void* doWork(void *arg);
+	std::map<double, TimerTask> tasks_;
 };
 
 /**

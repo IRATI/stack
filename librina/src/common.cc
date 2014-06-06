@@ -2408,7 +2408,6 @@ void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
 
-
 const std::string& RIBObject::getDisplayableValue() const {
         return displayableValue;
 }
@@ -2417,6 +2416,44 @@ void RIBObject::setDisplayableValue(const std::string& displayableValue) {
         this->displayableValue = displayableValue;
 }
 
+// CLASS Timer
+Timer::Timer() {
+	ThreadAttributes threadAttributes;
+	int fakeint;
+	Thread th(threadAttributes, &doWork, (void *) fakeint);
+}
+Timer::~Timer() {
+	tasks_.clear();
+}
+void Timer::scheduleTask(TimerTask* task, double delay_ms) {
+	std::clock_t now = std::clock();
+	double executeTime = now + delay_ms;
+	tasks_.insert(std::pair<double, TimerTask>(executeTime, task));
+}
+void Timer::cancelTask(TimerTask* task) {
+	for (std::map<double, *TimerTask>::iterator iter = tasks_.begin(); iter != tasks_.end(); ++iter)
+	{
+		if (iter->second == task)
+			tasks_.erase(iter);
+	}
+}
+void* Timer::doWork(void * arg) {
+	intptr_t number = (intptr_t) arg;
+	std::clock_t now;
+
+
+	while(true)
+	{
+		now = std::clock();
+		for (std::map<double, TimerTask>::iterator iter = tasks_.lower_bound(now); iter != tasks_.end(); ++iter)
+		{
+			ThreadAttributes threadAttributes;
+			int fakeint;
+			Thread th(threadAttributes, &TimerTask, (void *) fakeint);
+		}
+	}
+	return (void *) number;
+}
 
 /* INITIALIZATION OPERATIONS */
 

@@ -72,10 +72,21 @@ void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent) {
 		releaseResponseReceived();
 	}
 }
+void ConnectionStateMachine::noConnectionResponse(){
+	/* TODO: TIMER
+	ConditionVariable cond;
+	cond.timedwait(timeout_/1000, (timeout_%1000) * 1000 );
+	LOG_ERR("M_CONNECT_R message not received within %d ms.\n Reseting the connection", timeout_);
+	connection_state_ = NONE;
+	cdap_session_->stopConnection();
+	*/
+}
 void ConnectionStateMachine::connect() {
+	/* TODO: TIMER
 	checkConnect();
 	connection_state_ = AWAITCON;
-	// TODO: TIMER
+	Thread waitResponse(noConnectionResponse());
+	*/
 }
 void ConnectionStateMachine::connectReceived() {
 	if (connection_state_ != NONE){

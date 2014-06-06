@@ -13,6 +13,7 @@
 #include <sstream>
 #include <algorithm>
 #include "cdap.h"
+#include "concurrency.h"
 #define RINA_PREFIX "cdap-manager"
 #include "logs.h"
 
@@ -22,7 +23,7 @@ namespace rina {
 class CDAPSessionImpl;
 class ConnectionStateMachine {
 public:
-	ConnectionStateMachine(CDAPSessionImpl*cdap_session, long timeout);
+	ConnectionStateMachine(CDAPSessionImpl* cdap_session, long timeout);
 	// FIXME: synchronized
 	bool is_connected() const;
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
@@ -52,6 +53,7 @@ private:
 	enum ConnectionState {
 		NONE, AWAITCON, CONNECTED, AWAITCLOSE
 	};
+	void noConnectionResponse();
 	/// The AE has sent an M_CONNECT message
 	/// @throws CDAPException
 	// FIXME: synchronized
@@ -174,6 +176,7 @@ private:
 	CDAPSessionDescriptor *session_descriptor_;
 	CDAPSessionManager *cdap_session_manager_;
 	CDAPSessionInvokeIdManagerImpl *invoke_id_manager_;
+	friend class ConnectionStateMachine;
 };
 
 /// Implements a CDAP session manager.
