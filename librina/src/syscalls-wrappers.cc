@@ -4,19 +4,20 @@
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 /* FIXME: PIGSTY HACK TO USE OUR SYSCALLS, PLEASE FIX ASAP !!! */
@@ -111,15 +112,16 @@ int syscallReadSDU(int portId, void * sdu, int maxBytes)
 
 int syscallWriteManagementSDU(unsigned short ipcProcessId,
                               void *         sdu,
-                              int            portId,
+                              unsigned int   address,
+                              unsigned int   portId,
                               int            size)
 {
         int result;
 
         DUMP_SYSCALL("SYS_writeManagementSDU", SYS_writeManagementSDU);
 
-        result = syscall(SYS_writeManagementSDU, ipcProcessId, portId,
-                         sdu, size);
+        result = syscall(SYS_writeManagementSDU, ipcProcessId, address,
+                         portId,sdu, size);
         if (result < 0) {
                 LOG_ERR("Syscall write SDU failed: %d", result);
         }

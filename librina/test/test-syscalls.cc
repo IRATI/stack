@@ -1,19 +1,24 @@
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// Test syscalls
 //
-// This program is distributed in the hope that it will be useful,
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
-
 
 #include <iostream>
 #include <dirent.h>
@@ -63,7 +68,7 @@ int main(int argc, char * argv[]) {
 			<<result<<std::endl;
 
 	//Write management sdu
-	result = syscallWriteManagementSDU(1, sdu, 12, 50);
+	result = syscallWriteManagementSDU(1, sdu, 0, 12, 50);
 	std::cout<<"Called write management SDU system call with result "
 	                <<result<<std::endl;
 
@@ -83,7 +88,7 @@ int main(int argc, char * argv[]) {
 			<<result<<std::endl;
 
 	//Write management sdu (will fail)
-	result = syscallWriteManagementSDU(1, sdu, 12, 50);
+	result = syscallWriteManagementSDU(1, sdu, 12, 0, 50);
 	std::cout<<"Called write management SDU system call with result "
 	                <<result<<std::endl;
 

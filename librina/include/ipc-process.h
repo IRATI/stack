@@ -1,17 +1,24 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * IPC Process
  *
- * This program is distributed in the hope that it will be useful,
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef LIBRINA_IPC_PROCESS_H
@@ -897,14 +904,27 @@ public:
 
         /**
          * Requests the kernel to write a management SDU to the
-         * portId specified
+         * N-1 portId specified
          *
          * @param sdu A buffer that contains the SDU data
          * @param size The size of the SDU data, in bytes
          * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
-        void writeManagementSDU(void * sdu, int size, int portId)
+        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId)
+                throw (WriteSDUException);
+
+        /**
+         * Requests the kernel to send a management SDU to the IPC Process
+         * of the address specified
+         *
+         * @param sdu A buffer that contains the SDU data
+         * @param size The size of the SDU data, in bytes
+         * @param address The address of the IPC Process that is the
+         * destination of the SDU
+         * @throws WriteSDUException
+         */
+        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address)
                 throw (WriteSDUException);
 
         /**

@@ -80,8 +80,6 @@ static struct sdu * sdu_create_pdu_with_gfp(gfp_t        flags,
         if (!pdu)
                 return NULL;
 
-        /* FIXME: Add pdu_destroy() on each return */
-
         buffer = pdu_buffer_get_ro(pdu);
         if (!buffer) {
                 pdu_destroy(pdu);

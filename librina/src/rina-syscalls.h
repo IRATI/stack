@@ -1,23 +1,25 @@
-//
-// Syscalls wrapper
-//
-//    Eduard Grasa          <eduard.grasa@i2cat.net>
-//    Francesco Salvestrini <f.salvestrini@nextworks.it>
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
+/*
+ * Syscalls wrapper
+ *
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
+ */
 
 #ifndef LIBRINA_SYSCALLS_H
 #define	LIBRINA_SYSCALLS_H
@@ -52,14 +54,18 @@ namespace rina {
         /**
          * Wrapper of the managementSDUWrite system call
          * @param ipcProcessId the ipcProcess that has to write the SDU
-         * @param portId the N-1 portId where the data has to be written
+         * @param address the address of the IPC Process where this SDU
+         * has to be sent. 0 if the N-1 portid is used instead of the
+         * address
+         * @param portId the N-1 portId where the data has to be written.
+         * 0 is the address is used instead of portId
          * @param sdu the data to be written (SDU)
          * @param size the size of the data to be written
          * @return 0 if everything was ok, negative number indicating error
          *         otherwise
          */
         int syscallWriteManagementSDU(unsigned short ipcProcessId, void * sdu,
-                        int portId, int size);
+                        unsigned int address, unsigned int portId, int size);
 
         /**
          * Wrapper of the managementSDURead system call
