@@ -1,6 +1,7 @@
-/* A vmpi-impl hypervisor implementation for Xen (host side)
+/*
+ * An hypervisor-side vmpi-impl implementation for Xen
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "xen-mpi-back-common.h"
@@ -31,6 +32,10 @@
 
 #include <asm/xen/hypercall.h>
 #include <asm/xen/page.h>
+
+
+extern unsigned int stat_txres;
+extern unsigned int stat_rxres;
 
 /* Provide an option to disable split event channels at load time as
  * event channels are limited resource. Split event channels are
@@ -274,6 +279,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 		need_to_notify |= !!ret;
 
 		npo.meta_cons++;
+                stat_txres++;
 	}
 
 done:
@@ -573,6 +579,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                         buf->len - sizeof(struct vmpi_hdr));
                         vmpi_buffer_destroy(buf);
                 }
+                stat_rxres++;
 
 		work_done++;
 	}

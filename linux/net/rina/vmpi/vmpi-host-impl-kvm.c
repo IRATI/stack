@@ -1,6 +1,7 @@
-/* A vmpi-impl hypervisor implementation for virtio
+/*
+ * An hypervisor-side vmpi-impl implementation for KVM and virtio
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/compat.h>
@@ -59,6 +60,9 @@ enum {
         VHOST_NET_VQ_MAX = 2,
 };
 
+extern unsigned int stat_txres;
+extern unsigned int stat_rxres;
+
 struct vmpi_impl_queue {
         struct vhost_virtqueue vq;
 };
@@ -76,6 +80,8 @@ struct vmpi_impl_info {
         struct vmpi_queue *read;
         vmpi_read_cb_t read_cb;
         void *read_cb_data;
+        struct vmpi_queue read_cb_queue;
+        struct work_struct read_cb_worker;
 };
 
 int
@@ -91,6 +97,34 @@ vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t cb,
 static void
 vhost_mpi_vq_reset(struct vmpi_impl_info *vi)
 {
+}
+
+static void
+read_cb_worker_function(struct work_struct *work)
+{
+        struct vmpi_impl_info *vi =
+                container_of(work, struct vmpi_impl_info, read_cb_worker);
+
+        for (;;) {
+                struct vmpi_buffer *buf;
+                unsigned int channel;
+
+                mutex_lock(&vi->read_cb_queue.lock);
+                buf = vmpi_queue_pop(&vi->read_cb_queue);
+                mutex_unlock(&vi->read_cb_queue.lock);
+                if (buf == NULL) {
+                        break;
+                }
+                channel = vmpi_buffer_hdr(buf)->channel;
+                if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
+                        printk("bogus channel request: %u\n", channel);
+                        channel = 0;
+                }
+                vi->read_cb(vi->read_cb_data, channel,
+                                vmpi_buffer_data(buf),
+                                buf->len - sizeof(struct vmpi_hdr));
+                vmpi_buffer_destroy(buf);
+        }
 }
 
 /* Expects to be always run from workqueue - which acts as
@@ -149,13 +183,13 @@ handle_tx(struct vmpi_impl_info *vi)
                         IFV(printk("popped %d bytes from the TX ring\n",
                                    (int)len));
 
-                        channel = vmpi_buffer_hdr(buf)->channel;
-                        if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
-                                printk("bogus channel request: %u\n", channel);
-                                channel = 0;
-                        }
-
                         if (!vi->read_cb) {
+                                channel = vmpi_buffer_hdr(buf)->channel;
+                                if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
+                                        printk("bogus channel request: %u\n", channel);
+                                        channel = 0;
+                                }
+
                                 read = &vi->read[channel];
                                 mutex_lock(&read->lock);
                                 if (unlikely(vmpi_queue_len(read) >=
@@ -171,13 +205,12 @@ handle_tx(struct vmpi_impl_info *vi)
                                                            POLLRDNORM |
                                                            POLLRDBAND);
                         } else {
-                                mutex_unlock(&vq->mutex);
-                                vi->read_cb(vi->read_cb_data, channel,
-                                            vmpi_buffer_data(buf),
-                                            buf->len - sizeof(struct vmpi_hdr));
-                                mutex_lock(&vq->mutex);
-                                vmpi_buffer_destroy(buf);
+                                mutex_lock(&vi->read_cb_queue.lock);
+                                vmpi_queue_push(&vi->read_cb_queue, buf);
+                                mutex_unlock(&vi->read_cb_queue.lock);
+                                schedule_work(&vi->read_cb_worker);
                         }
+                        stat_rxres++;
                 }
 
                 vhost_add_used_and_signal(&vi->dev, vq, head, 0);
@@ -322,6 +355,7 @@ handle_rx(struct vmpi_impl_info *vi)
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
                 IFV(printk("pushed %d bytes in the RX ring\n", (int)len));
+                stat_txres++;
 
                 vhost_add_used_and_signal_n(&vi->dev, vq, vq->heads,
                                             headcount);
@@ -423,6 +457,8 @@ vhost_mpi_open(struct inode *inode, struct file *f)
         vi->write = vmpi_get_write_ring(vi->mpi);
         vi->read = vmpi_get_read_queue(vi->mpi);
         vi->read_cb = NULL;
+        INIT_WORK(&vi->read_cb_worker, read_cb_worker_function);
+        vmpi_queue_init(&vi->read_cb_queue, 0, VMPI_BUF_SIZE);
 
         printk("vhost_mpi_open completed\n");
 

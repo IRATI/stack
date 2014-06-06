@@ -5,7 +5,7 @@ package rina.cdap.api;
  * @author eduardgrasa
  *
  */
-public interface CDAPSessionInvokeIdManager {
+public interface CDAPInvokeIdManager {
 	
 	/**
 	 * Obtains a valid invoke id for this session
