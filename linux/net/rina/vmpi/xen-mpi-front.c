@@ -279,6 +279,10 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                 struct xen_mpi_tx_response *txrsp;
 
                 txrsp = RING_GET_RESPONSE(&np->tx, cons);
+                if (txrsp->status != XEN_NETIF_RSP_OKAY) {
+                        printk("%s: Warning: error in response [%d]",
+                                __func__, txrsp->status);
+                }
                 /*if (txrsp->status == XEN_NETIF_RSP_NULL)
                         continue; */
 
@@ -466,6 +470,10 @@ struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
                 grant_ref_t ref;
 
                 rx = RING_GET_RESPONSE(&np->rx, cons);
+                if (rx->status < 0) {
+                        printk("%s: Warning: error in response [%d]",
+                                __func__, rx->status);
+                }
                 buf = xenmpi_get_rx_skb(np, cons);
                 ref = xenmpi_get_rx_ref(np, cons);
 
