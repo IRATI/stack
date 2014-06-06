@@ -1161,7 +1161,10 @@ void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
                 unsigned int address)
                 throw (WriteSDUException) {
 #if STUB_API
-        //Do nothing
+        // Do nothing
+        (void) sdu;
+        (void) size;
+        (void) address;
 #else
         int result = syscallWriteManagementSDU(ipcProcessId, sdu, address, 0,
                         size);
