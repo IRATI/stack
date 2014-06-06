@@ -2551,7 +2551,7 @@ static int send_nl_unicast_msg(struct net *     net,
                                struct sk_buff * skb,
                                u32              portid,
                                msg_type_t       type,
-                               rnl_sn_t         seq_num)
+                               seq_num_t        seq_num)
 {
         int result;
 
@@ -2680,7 +2680,7 @@ static int rnl_format_ipcm_pft_dump_resp_msg(int                result,
 
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
-                            rnl_sn_t         seq_num,
+                            seq_num_t        seq_num,
                             u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
@@ -2731,7 +2731,7 @@ EXPORT_SYMBOL(rnl_assign_dif_response);
 
 int rnl_update_dif_config_response(ipc_process_id_t id,
                                    uint_t           res,
-                                   rnl_sn_t         seq_num,
+                                   seq_num_t        seq_num,
                                    u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
@@ -2781,7 +2781,7 @@ EXPORT_SYMBOL(rnl_update_dif_config_response);
 
 int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
                                              uint_t           res,
-                                             rnl_sn_t         seq_num,
+                                             seq_num_t        seq_num,
                                              u32              nl_port_id,
                                              bool             isRegister)
 {
@@ -2839,7 +2839,7 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      source,
                                        const struct name *      dest,
                                        const struct flow_spec * fspec,
-                                       rnl_sn_t                 seq_num,
+                                       seq_num_t                seq_num,
                                        u32                      nl_port_id,
                                        port_id_t                pid)
 {
@@ -2894,7 +2894,7 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
 int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
                                   port_id_t        pid,
-                                  rnl_sn_t         seq_num,
+                                  seq_num_t        seq_num,
                                   u32              nl_port_id)
 {
         struct sk_buff * out_msg;
@@ -2943,7 +2943,7 @@ EXPORT_SYMBOL(rnl_app_alloc_flow_result_msg);
 
 int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
                                   uint_t           res,
-                                  rnl_sn_t         seq_num,
+                                  seq_num_t        seq_num,
                                   u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
@@ -3042,7 +3042,7 @@ EXPORT_SYMBOL(rnl_flow_dealloc_not_msg);
 int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
                                   port_id_t        pid,
                                   cep_id_t         src_cep,
-                                  rnl_sn_t         seq_num,
+                                  seq_num_t        seq_num,
                                   u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
@@ -3097,7 +3097,7 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     cep_id_t         src_cep,
                                     cep_id_t         dst_cep,
-                                    rnl_sn_t         seq_num,
+                                    seq_num_t        seq_num,
                                     u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
@@ -3149,7 +3149,7 @@ EXPORT_SYMBOL(rnl_ipcp_conn_create_result_msg);
 int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     uint_t           res,
-                                    rnl_sn_t         seq_num,
+                                    seq_num_t        seq_num,
                                     u32              nl_port_id)
 {
         struct sk_buff * out_msg;
@@ -3199,7 +3199,7 @@ EXPORT_SYMBOL(rnl_ipcp_conn_update_result_msg);
 int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
                                      port_id_t        pid,
                                      uint_t           res,
-                                     rnl_sn_t         seq_num,
+                                     seq_num_t        seq_num,
                                      u32              nl_port_id)
 {
         struct sk_buff * out_msg;
@@ -3297,7 +3297,7 @@ EXPORT_SYMBOL(rnl_ipcm_sock_closed_notif_msg);
 int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
                                int                result,
                                struct list_head * entries,
-                               rnl_sn_t           seq_num,
+                               seq_num_t          seq_num,
                                u32                nl_port_id)
 {
         struct sk_buff * out_msg;

@@ -309,6 +309,33 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
         return 0;
 }
 
+
+static int rtxqueue_drop(struct rtxqueue * q,
+                        seq_num_t          from,
+                        seq_num_t          to)
+{
+        struct rtxq_entry * cur, * n;
+        seq_num_t    tsq;
+
+        if (!q)
+                return -1;
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                tsq = pci_sequence_number_get((struct pci *) pdu_pci_get_ro(cur->pdu));
+                ASSERT(is_seq_num_ok(tsq)); 
+                
+                if (tsq < from && from !=0)
+                        continue;
+                if (tsq > to && to !=0)
+                        break;
+                list_del(&cur->next);
+                rtxq_entry_destroy(cur);
+        }
+
+        return 0;
+}
+
+
 static int rtxqueue_rtx(struct rtxqueue * q, unsigned int tr)
 {
         LOG_MISSING;
@@ -428,6 +455,22 @@ int rtxq_push(struct rtxq * q,
 
         return 0;
 }
+
+int rtxq_drop(struct rtxq * q,
+              seq_num_t     from,
+              seq_num_t     to)
+{
+        if (!q || !is_seq_num_ok(from) || !is_seq_num_ok(to))
+                return -1;
+
+        spin_lock(&q->lock);
+        rtimer_stop(q->r_timer);
+        rtxqueue_drop(q->queue, from, to);
+        spin_unlock(&q->lock);
+        return 0;
+
+}
+
 
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,

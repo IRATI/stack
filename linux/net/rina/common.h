@@ -59,6 +59,9 @@ address_t address_bad(void);
 typedef uint          timeout_t;
 typedef uint          seq_num_t;
 
+seq_num_t             seq_num_bad(void);
+bool                  is_seq_num_ok(seq_num_t sn);
+
 /* FIXME: The qos_id_t should be defined correctly in the near future */
 typedef uint          qos_id_t;
 

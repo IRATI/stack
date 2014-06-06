@@ -55,3 +55,14 @@ EXPORT_SYMBOL(is_address_ok);
 address_t address_bad(void)
 { return ADDRESS_WRONG; }
 EXPORT_SYMBOL(address_bad);
+
+#define SNVALUE_WRONG  0xFFFFFFFF
+
+seq_num_t seq_num_bad(void)
+{ return SNVALUE_WRONG; }
+EXPORT_SYMBOL(seq_num_bad);
+
+/* FIXME: We need to change this */
+bool is_seq_num_ok(seq_num_t sn)
+{ return (sn < SNVALUE_WRONG) ? true : false; }
+EXPORT_SYMBOL(is_seq_num_ok);
