@@ -99,13 +99,6 @@ struct xenmpi_rx_meta {
 
 #define MAX_PENDING_REQS 256
 
-/* It's possible for an skb to have a maximal number of frags
- * but still be less than MAX_BUFFER_OFFSET in size. Thus the
- * worst-case number of copy operations is MAX_SKB_FRAGS per
- * ring slot.
- */
-#define MAX_GRANT_COPY_OPS (MAX_SKB_FRAGS * XEN_MPI_RX_RING_SIZE)
-
 struct vmpi_impl_info {
 	/* Unique identifier for this interface. */
 	domid_t          domid;

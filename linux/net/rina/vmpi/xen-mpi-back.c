@@ -254,7 +254,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 	if (!npo.copy_prod)
 		goto done;
 
-	BUG_ON(npo.copy_prod > MAX_GRANT_COPY_OPS);
+	BUG_ON(npo.copy_prod > XEN_MPI_RX_RING_SIZE);
 	gnttab_batch_copy(vif->grant_copy_op, npo.copy_prod);
 
 	while ((buf = vmpi_queue_pop(&rxq)) != NULL) {

@@ -174,7 +174,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
         vif->parent = parent;
 
 	vif->grant_copy_op = vmalloc(sizeof(struct gnttab_copy) *
-				     MAX_GRANT_COPY_OPS);
+				     XEN_MPI_RX_RING_SIZE);
 	if (vif->grant_copy_op == NULL) {
 		pr_warn("Could not allocate grant copy space for %s\n", name);
                 goto grant_copy;
