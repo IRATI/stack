@@ -44,7 +44,7 @@
  * node as before.
  */
 
-#define XEN_NETIF_MAX_TX_SIZE 0xFFFF
+#define XEN_MPI_MAX_TX_SIZE 0xFFFF
 struct xen_mpi_tx_request {
     grant_ref_t gref;      /* Reference to buffer page */
     uint16_t offset;       /* Offset within buffer page */
@@ -55,7 +55,7 @@ struct xen_mpi_tx_request {
 
 struct xen_mpi_tx_response {
 	uint16_t id;
-	int16_t  status;       /* XEN_NETIF_RSP_* */
+	int16_t  status;       /* XEN_MPI_RSP_* */
 };
 
 struct xen_mpi_rx_request {
@@ -82,8 +82,8 @@ DEFINE_RING_TYPES(xen_mpi_rx,
 		  struct xen_mpi_rx_request,
 		  struct xen_mpi_rx_response);
 
-#define XEN_NETIF_RSP_DROPPED	-2
-#define XEN_NETIF_RSP_ERROR	-1
-#define XEN_NETIF_RSP_OKAY	 0
+#define XEN_MPI_RSP_DROPPED	-2
+#define XEN_MPI_RSP_ERROR	-1
+#define XEN_MPI_RSP_OKAY	 0
 
 #endif

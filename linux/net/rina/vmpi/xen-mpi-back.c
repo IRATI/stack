@@ -181,7 +181,7 @@ static int xenmpi_check_gop(struct vmpi_impl_info *vif, int nr_meta_slots,
 			    struct netrx_pending_operations *npo)
 {
 	struct gnttab_copy     *copy_op;
-	int status = XEN_NETIF_RSP_OKAY;
+	int status = XEN_MPI_RSP_OKAY;
 	int i;
 
 	for (i = 0; i < nr_meta_slots; i++) {
@@ -190,7 +190,7 @@ static int xenmpi_check_gop(struct vmpi_impl_info *vif, int nr_meta_slots,
 			printk(
 				   "Bad status %d from copy to DOM%d.\n",
 				   copy_op->status, vif->domid);
-			status = XEN_NETIF_RSP_ERROR;
+			status = XEN_MPI_RSP_ERROR;
 		}
 	}
 
@@ -330,7 +330,7 @@ static void xenmpi_tx_err(struct vmpi_impl_info *vif,
 	RING_IDX cons = vif->tx.req_cons;
 
 	do {
-		make_tx_response(vif, txp, XEN_NETIF_RSP_ERROR);
+		make_tx_response(vif, txp, XEN_MPI_RSP_ERROR);
 		if (cons == end)
 			break;
 		txp = RING_GET_REQUEST(&vif->tx, cons++);
@@ -367,7 +367,7 @@ static int xenmpi_tx_check_gop(struct vmpi_impl_info *vif,
 	/* Check status of header. */
 	err = gop->status;
 	if (unlikely(err))
-		xenmpi_idx_release(vif, pending_idx, XEN_NETIF_RSP_ERROR);
+		xenmpi_idx_release(vif, pending_idx, XEN_MPI_RSP_ERROR);
 
 	*gopp = gop + 1;
 	return err;
@@ -420,12 +420,12 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		pending_ring_idx_t pending_cons_idx;
 
 		if (vif->tx.sring->req_prod - vif->tx.req_cons >
-		    XEN_NETIF_TX_RING_SIZE) {
+		    XEN_MPI_TX_RING_SIZE) {
 			printk(
 				   "Impossible number of requests. "
 				   "req_prod %d, req_cons %d, size %ld\n",
 				   vif->tx.sring->req_prod, vif->tx.req_cons,
-				   XEN_NETIF_TX_RING_SIZE);
+				   XEN_MPI_TX_RING_SIZE);
 			xenmpi_fatal_tx_err(vif);
 			continue;
 		}
@@ -546,7 +546,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
 
                 /* Schedule a response immediately. */
                 xenmpi_idx_release(vif, pending_idx,
-                                XEN_NETIF_RSP_OKAY);
+                                XEN_MPI_RSP_OKAY);
 
                 channel = vmpi_buffer_hdr(buf)->channel;
                 if (unlikely(channel >= VMPI_MAX_CHANNELS)) {

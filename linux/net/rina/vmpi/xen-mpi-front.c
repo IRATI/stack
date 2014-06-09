@@ -18,8 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
@@ -279,11 +277,11 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                 struct xen_mpi_tx_response *txrsp;
 
                 txrsp = RING_GET_RESPONSE(&np->tx, cons);
-                if (txrsp->status != XEN_NETIF_RSP_OKAY) {
+                if (txrsp->status != XEN_MPI_RSP_OKAY) {
                         printk("%s: Warning: error in response [%d]",
                                 __func__, txrsp->status);
                 }
-                /*if (txrsp->status == XEN_NETIF_RSP_NULL)
+                /*if (txrsp->status == XEN_MPI_RSP_NULL)
                         continue; */
 
                 id  = txrsp->id;
@@ -332,7 +330,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 	/* If skb->len is too big for wire format, drop skb and alert
 	 * user about misconfiguration.
 	 */
-	if (unlikely(len > XEN_NETIF_MAX_TX_SIZE)) {
+	if (unlikely(len > XEN_MPI_MAX_TX_SIZE)) {
 		net_alert_ratelimited(
 			"xenmpi: skb->len = %u, too big for wire format\n",
 			len);

@@ -18,10 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __XEN_NETBACK__COMMON_H__
-#define __XEN_NETBACK__COMMON_H__
-
-#define pr_fmt(fmt) KBUILD_MODNAME ":%s: " fmt, __func__
+#ifndef __XEN_MPIBACK__COMMON_H__
+#define __XEN_MPIBACK__COMMON_H__
 
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -86,16 +84,13 @@ struct pending_tx_info {
 				  */
 };
 
-#define XEN_NETIF_TX_RING_SIZE __CONST_RING_SIZE(xen_mpi_tx, PAGE_SIZE)
-#define XEN_NETIF_RX_RING_SIZE __CONST_RING_SIZE(xen_mpi_rx, PAGE_SIZE)
+#define XEN_MPI_TX_RING_SIZE __CONST_RING_SIZE(xen_mpi_tx, PAGE_SIZE)
+#define XEN_MPI_RX_RING_SIZE __CONST_RING_SIZE(xen_mpi_rx, PAGE_SIZE)
 
 struct xenmpi_rx_meta {
 	int id;
 	int size;
 };
-
-#define GSO_BIT(type) \
-	(1 << XEN_NETIF_GSO_TYPE_ ## type)
 
 /* Discriminate from any valid pending_idx value. */
 #define INVALID_PENDING_IDX 0xFFFF
@@ -109,7 +104,7 @@ struct xenmpi_rx_meta {
  * worst-case number of copy operations is MAX_SKB_FRAGS per
  * ring slot.
  */
-#define MAX_GRANT_COPY_OPS (MAX_SKB_FRAGS * XEN_NETIF_RX_RING_SIZE)
+#define MAX_GRANT_COPY_OPS (MAX_SKB_FRAGS * XEN_MPI_RX_RING_SIZE)
 
 struct vmpi_impl_info {
 	/* Unique identifier for this interface. */
@@ -153,7 +148,7 @@ struct vmpi_impl_info {
 	/* We create one meta structure per ring request we consume, so
 	 * the maximum number is the same as the ring size.
 	 */
-	struct xenmpi_rx_meta meta[XEN_NETIF_RX_RING_SIZE];
+	struct xenmpi_rx_meta meta[XEN_MPI_RX_RING_SIZE];
 
 	/* Transmit shaping: allow 'credit_bytes' every 'credit_usec'. */
 	unsigned long   credit_bytes;
@@ -216,4 +211,4 @@ void xenmpi_stop_queue(struct vmpi_impl_info *vif);
 
 extern bool separate_tx_rx_irq;
 
-#endif /* __XEN_NETBACK__COMMON_H__ */
+#endif /* __XEN_MPIBACK__COMMON_H__ */
