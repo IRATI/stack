@@ -37,12 +37,19 @@ config RINA_KIPCM_LOCKS_DEBUG
 	help
 	  No help for the time being
 
+menuconfig RINA_LOGS
+        bool "RINA logs"
+        default y
+
+if RINA_LOGS
+
 config RINA_UNFILTERED_LOGS
 	bool "Unfiltered logging"
 	default y
 	depends on RINA_DEBUG
 	help
 	  No help for the time being
+endif
 
 config RINA_DEBUG_HEARTBEATS
 	bool "Dump heartbeat messages"
