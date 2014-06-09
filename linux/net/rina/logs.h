@@ -39,7 +39,8 @@
         do { printk(LVL __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
 #endif
 #else   /* !RINA_LOGS */
-#define __LOG(PFX, LVL, FMT, ARGS...)
+#define __LOG(PFX, LVL, FMT, ARGS...)           \
+	do { } while (0)
 #endif  /* !RINA_LOGS */
 
 /* Sorted by "urgency" (high to low) */
@@ -59,7 +60,7 @@
 #define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
                           __FUNCTION__, __FILE__, __LINE__)
 #else
-#define LOG_HBEAT
+#define LOG_HBEAT do { } while (0)
 #endif
 
 #define LOG_OBSOLETE_FUNC LOG_ERR("Function %s is obsolete and it will be " \
