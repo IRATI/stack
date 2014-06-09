@@ -432,13 +432,6 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		work_to_do--;
 		vif->tx.req_cons = ++cons;
 
-		if (unlikely(txreq.size < ETH_HLEN)) {
-			printk(
-				   "Bad packet size: %d\n", txreq.size);
-			xenmpi_tx_err(vif, &txreq, cons);
-			break;
-		}
-
 		/* No crossing a page as the payload mustn't fragment. */
 		if (unlikely((txreq.offset + txreq.size) > PAGE_SIZE)) {
 			printk(
