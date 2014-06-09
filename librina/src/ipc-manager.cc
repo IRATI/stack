@@ -34,10 +34,9 @@
 #include "logs.h"
 #include "ipc-manager.h"
 #include "core.h"
+#include "utils.h"
 #include "concurrency.h"
 #include "rina-syscalls.h"
-
-#define PAGE_SIZE 4096
 
 namespace rina{
 
@@ -211,11 +210,11 @@ throw (AssignToDIFException) {
         message.setDestPortId(portId);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 //FIXME, compute maximum message size dynamically
                 rinaManager->sendMessageOfMaxSize(&message,
-                                5*PAGE_SIZE);
-        }catch(NetlinkException &e){
+                                                  5 * get_page_size());
+        } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
 
