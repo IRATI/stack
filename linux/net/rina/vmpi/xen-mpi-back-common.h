@@ -133,7 +133,7 @@ struct vmpi_impl_info {
 	/* Only used when feature-split-event-channels = 1 */
 	char rx_irq_name[IFNAMSIZ+4]; /* DEVNAME-rx */
 	struct xen_mpi_rx_back_ring rx;
-	RING_IDX rx_last_skb_slots;
+	RING_IDX rx_last_buf_slots;
 
 	/* This array is allocated seperately as it is large */
 	struct gnttab_copy *grant_copy_op;

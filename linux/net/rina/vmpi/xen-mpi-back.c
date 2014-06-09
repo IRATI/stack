@@ -117,7 +117,7 @@ bool xenmpi_rx_ring_slots_available(struct vmpi_impl_info *vif, int needed)
  * zero GSO descriptors (for non-GSO packets) or one descriptor (for
  * frontend-side LRO).
  */
-static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
+static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
                           struct vmpi_buffer *buf)
 {
 	struct xen_mpi_rx_request *req;
@@ -164,7 +164,7 @@ static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
 }
 
 /*
- * This is a twin to xenmpi_gop_skb.  Assume that xenmpi_gop_skb was
+ * This is a twin to xenmpi_gop_buf.  Assume that xenmpi_gop_buf was
  * used to set up the operations on the top of
  * netrx_pending_operations, which have since been done.  Check that
  * they didn't give any errors and advance over them.
@@ -210,14 +210,14 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
         for (;;) {
 		RING_IDX max_slots_needed = 1;
 
-		/* If the skb may not fit then bail out now */
+		/* If the buffer may not fit then bail out now */
 		if (!xenmpi_rx_ring_slots_available(vif, max_slots_needed)) {
 			need_to_notify = true;
-			vif->rx_last_skb_slots = max_slots_needed;
+			vif->rx_last_buf_slots = max_slots_needed;
 			break;
 		}
 
-		vif->rx_last_skb_slots = 0;
+		vif->rx_last_buf_slots = 0;
 
                 if (!vmpi_ring_pending(ring))
                         break;
@@ -227,7 +227,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                 IFV(printk("%s: received buf, len=%d, off=%lu\n",
                         __func__, (int)buf->len, offset_in_page(buf->p)));
 
-		meta_slots_used = xenmpi_gop_skb(vif, buf);
+		meta_slots_used = xenmpi_gop_buf(vif, buf);
                 BUG_ON(meta_slots_used != 1);
 
                 vmpi_queue_push(&rxq, buf);
@@ -677,7 +677,7 @@ static struct xen_mpi_rx_response *make_rx_response(struct vmpi_impl_info *vif,
 static inline int rx_work_todo(struct vmpi_impl_info *vif)
 {
 	return vmpi_ring_pending(vif->write) &&
-	       xenmpi_rx_ring_slots_available(vif, vif->rx_last_skb_slots);
+	       xenmpi_rx_ring_slots_available(vif, vif->rx_last_buf_slots);
 }
 
 static inline int tx_work_todo(struct vmpi_impl_info *vif)
