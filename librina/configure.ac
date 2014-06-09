@@ -148,6 +148,8 @@ AC_CONFIG_FILES([
     Makefile
 
     include/Makefile
+    include/librina/Makefile
+
     src/Makefile
 
     wrap/Makefile

@@ -1,5 +1,5 @@
 //
-// librina (placeholder)
+// IPC Process
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
@@ -25,12 +25,16 @@
 #include <sstream>
 
 #define RINA_PREFIX "ipc-process"
-#define PAGE_SIZE 4096
 
-#include "logs.h"
-#include "ipc-process.h"
 #include "core.h"
 #include "rina-syscalls.h"
+
+#include "logs.h"
+#include "librina/ipc-process.h"
+
+// FIXME: DO NOT DEFINE PAGE_SIZE, USE SYSTEM PROVIDED DEFINITION !!!
+
+#define PAGE_SIZE 4096
 
 namespace rina{
 

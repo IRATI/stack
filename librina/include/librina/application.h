@@ -26,10 +26,13 @@
 #ifdef __cplusplus
 
 #include <map>
+#include <list>
+#include <vector>
+#include <string>
 
-#include "common.h"
-#include "patterns.h"
-#include "concurrency.h"
+#include "librina/common.h"
+#include "librina/patterns.h"
+#include "librina/concurrency.h"
 
 /**
  * The librina-application library provides the native RINA API,

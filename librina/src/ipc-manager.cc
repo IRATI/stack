@@ -20,22 +20,25 @@
 // MA  02110-1301  USA
 //
 
-#define RINA_PREFIX "ipc-manager"
-
 #include <algorithm>
 #include <dirent.h>
 #include <errno.h>
 #include <iostream>
 #include <signal.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cstdlib>
+
+#define RINA_PREFIX "ipc-manager"
+
 #include "logs.h"
-#include "ipc-manager.h"
-#include "core.h"
-#include "concurrency.h"
+
+#include "librina/ipc-manager.h"
+#include "librina/concurrency.h"
 #include "rina-syscalls.h"
+
+#include "core.h"
 
 #define PAGE_SIZE 4096
 
