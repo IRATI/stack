@@ -1,5 +1,5 @@
 //
-// Core
+// Exceptions
 //
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
@@ -19,7 +19,7 @@
 // MA  02110-1301  USA
 //
 
-#include "exceptions.h"
+#include "librina/exceptions.h"
 
 const char * Exception::what() const throw()
 { return description_.c_str(); }

@@ -21,7 +21,7 @@
 
 #include <cstdlib>
 
-#include "common.h"
+#include "librina/common.h"
 
 int main(int argc, char * argv[])
 {
