@@ -27,6 +27,8 @@
 #define __stringify(X) #X
 #define stringify(X)   __stringify(X)
 
+size_t get_page_size();
+
 #endif
 
 #endif
