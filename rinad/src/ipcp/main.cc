@@ -22,7 +22,7 @@
 
 #include <librina/common.h>
 
-#include "common/empty.h"
+#include "common/options.h"
 
 int main(int argc, char * argv[])
 {
@@ -30,7 +30,6 @@ int main(int argc, char * argv[])
         (void) argv;
 
         rina::initialize("test", "/tmp/test");
-        (void) empty();
 
         return EXIT_SUCCESS;
 }
