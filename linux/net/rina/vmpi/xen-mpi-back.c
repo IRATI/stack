@@ -74,12 +74,12 @@ static inline unsigned long idx_to_kaddr(struct vmpi_impl_info *vif,
 
 static inline pending_ring_idx_t pending_index(unsigned i)
 {
-	return i & (MAX_PENDING_REQS-1);
+	return i & (XEN_MPI_TX_RING_SIZE-1);
 }
 
 static inline pending_ring_idx_t nr_pending_reqs(struct vmpi_impl_info *vif)
 {
-	return MAX_PENDING_REQS -
+	return XEN_MPI_TX_RING_SIZE -
 		vif->pending_prod + vif->pending_cons;
 }
 
@@ -394,7 +394,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 	struct gnttab_copy *gop = vif->tx_copy_ops;
         struct vmpi_buffer *buf;
 
-	while ((nr_pending_reqs(vif) + 2 < MAX_PENDING_REQS) &&
+	while ((nr_pending_reqs(vif) + 2 < XEN_MPI_TX_RING_SIZE) &&
 	       (vmpi_queue_len(&vif->tx_queue) < budget)) {
 		struct xen_mpi_tx_request txreq;
 		struct page *page;
@@ -685,7 +685,7 @@ static inline int tx_work_todo(struct vmpi_impl_info *vif)
 
 	if (likely(RING_HAS_UNCONSUMED_REQUESTS(&vif->tx)) &&
 	    (nr_pending_reqs(vif) + 2
-	     < MAX_PENDING_REQS))
+	     < XEN_MPI_TX_RING_SIZE))
 		return 1;
 
 	return 0;

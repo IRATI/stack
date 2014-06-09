@@ -190,10 +190,10 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
         vmpi_queue_init(&vif->tx_queue, 0, VMPI_BUF_SIZE);
 
 	vif->pending_cons = 0;
-	vif->pending_prod = MAX_PENDING_REQS;
-	for (i = 0; i < MAX_PENDING_REQS; i++)
+	vif->pending_prod = XEN_MPI_TX_RING_SIZE;
+	for (i = 0; i < XEN_MPI_TX_RING_SIZE; i++)
 		vif->pending_ring[i] = i;
-	for (i = 0; i < MAX_PENDING_REQS; i++)
+	for (i = 0; i < XEN_MPI_TX_RING_SIZE; i++)
 		vif->mmap_pages[i] = NULL;
 
         INIT_WORK(&vif->tx_worker, xenmpi_poll);

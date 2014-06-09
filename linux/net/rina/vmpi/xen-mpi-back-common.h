@@ -97,8 +97,6 @@ struct xenmpi_rx_meta {
 
 #define MAX_BUFFER_OFFSET PAGE_SIZE
 
-#define MAX_PENDING_REQS 256
-
 struct vmpi_impl_info {
 	/* Unique identifier for this interface. */
 	domid_t          domid;
@@ -112,18 +110,13 @@ struct vmpi_impl_info {
 	char tx_irq_name[IFNAMSIZ+4]; /* DEVNAME-tx */
 	struct xen_mpi_tx_back_ring tx;
         struct vmpi_queue tx_queue;
-	struct page *mmap_pages[MAX_PENDING_REQS];
+	struct page *mmap_pages[XEN_MPI_TX_RING_SIZE];
 	pending_ring_idx_t pending_prod;
 	pending_ring_idx_t pending_cons;
-	u16 pending_ring[MAX_PENDING_REQS];
-	struct pending_tx_info pending_tx_info[MAX_PENDING_REQS];
+	u16 pending_ring[XEN_MPI_TX_RING_SIZE];
+	struct pending_tx_info pending_tx_info[XEN_MPI_TX_RING_SIZE];
 
-	/* Coalescing tx requests before copying makes number of grant
-	 * copy ops greater or equal to number of slots required. In
-	 * worst case a tx request consumes 2 gnttab_copy.
-	 */
-	struct gnttab_copy tx_copy_ops[2*MAX_PENDING_REQS];
-
+	struct gnttab_copy tx_copy_ops[XEN_MPI_TX_RING_SIZE];
 
 	/* Use kthread for guest RX */
 	struct task_struct *task;
