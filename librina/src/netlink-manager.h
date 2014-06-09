@@ -27,8 +27,9 @@
 
 #include <netlink/netlink.h>
 
-#include "exceptions.h"
-#include "patterns.h"
+#include "librina/exceptions.h"
+#include "librina/patterns.h"
+
 #include "netlink-messages.h"
 
 #define RINA_GENERIC_NETLINK_FAMILY_NAME "rina"

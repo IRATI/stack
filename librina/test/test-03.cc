@@ -20,7 +20,7 @@
 // MA  02110-1301  USA
 //
 
-#include "librina.h"
+#include "librina/librina.h"
 
 int main()
 {

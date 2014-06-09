@@ -14,7 +14,7 @@ SWIG_JAVA_FLAGS = -java -package eu.irati.librina
 CLEANFILES =
 
 # XXX FIXME: Prerequisites for this rule are broken ...
-wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/include/*.h
+wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/include/librina/*.h
 	rm -f wrap.tmp
 	touch wrap.tmp
 	rm -r -f eu/irati/librina   &&			\

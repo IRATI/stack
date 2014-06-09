@@ -26,10 +26,13 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
-#include "application.h"
-#include "ipc-manager.h"
-#include "cdap.h"
+#include <string>
+#include <list>
+
+#include "librina/common.h"
+#include "librina/application.h"
+#include "librina/cdap.h"
+#include "librina/ipc-manager.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
 #define RINA_DEFAULT_POLICY_VERSION "0"

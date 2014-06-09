@@ -1,5 +1,5 @@
 //
-// librina (placeholder)
+// IPC Process
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
@@ -26,8 +26,6 @@
 
 #define RINA_PREFIX "ipc-process"
 
-#include "logs.h"
-#include "ipc-process.h"
 #include "core.h"
 #include "utils.h"
 #include "rina-syscalls.h"

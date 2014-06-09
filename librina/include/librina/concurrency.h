@@ -25,10 +25,13 @@
 
 #ifdef __cplusplus
 
-#include <list>
 #include <pthread.h>
 
-#include "patterns.h"
+#include <list>
+#include <string>
+#include <stdexcept>
+
+#include "librina/patterns.h"
 
 namespace rina {
 
@@ -282,13 +285,13 @@ BlockingFIFOQueue():ConditionVariable() { };
          * Get the element at the begining of the queue. If the queue is
          * empty it will return a NULL pointer.
          */
-        T* poll() {
-                T* result;
+        T * poll() {
+                T * result;
 
                 lock();
                 if (queue.size() == 0) {
-                        result = NULL;
-                }else{
+                        result = 0;
+                } else {
                         result = queue.front();
                         queue.pop_front();
                 }
