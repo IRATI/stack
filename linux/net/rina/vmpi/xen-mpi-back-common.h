@@ -142,6 +142,8 @@ struct vmpi_impl_info {
 	 * the maximum number is the same as the ring size.
 	 */
 	struct xenmpi_rx_meta meta[XEN_MPI_RX_RING_SIZE];
+        unsigned int rx_pending_prod;
+        unsigned int rx_pending_cons;
 
 	/* Transmit shaping: allow 'credit_bytes' every 'credit_usec'. */
 	unsigned long   credit_bytes;

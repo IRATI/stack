@@ -105,13 +105,6 @@ bool xenmpi_rx_ring_slots_available(struct vmpi_impl_info *vif, int needed)
 	return false;
 }
 
-struct netrx_pending_operations {
-	unsigned copy_prod, copy_cons;
-	unsigned meta_prod, meta_cons;
-	struct gnttab_copy *copy;
-	struct xenmpi_rx_meta *meta;
-};
-
 /*
  * Prepare an SKB to be transmitted to the frontend.
  *
@@ -125,21 +118,20 @@ struct netrx_pending_operations {
  * frontend-side LRO).
  */
 static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
-                          struct vmpi_buffer *buf,
-			  struct netrx_pending_operations *npo)
+                          struct vmpi_buffer *buf)
 {
 	struct xen_mpi_rx_request *req;
 	struct xenmpi_rx_meta *meta;
 	void *src_data;
         unsigned int src_offset;
-	int old_meta_prod;
+	int old_prod;
         unsigned long copy_len;
 	struct gnttab_copy *copy_gop;
 
-	old_meta_prod = npo->meta_prod;
+	old_prod = vif->rx_pending_prod;
 
 	req = RING_GET_REQUEST(&vif->rx, vif->rx.req_cons++);
-	meta = npo->meta + npo->meta_prod++;
+        meta = vif->meta + vif->rx_pending_prod;
 
         IFV(printk("%s: get rx req: [id=%d] [off=%d] [gref=%d] [len=%d]\n",
                 __func__, req->id, req->offset, req->gref, req->len));
@@ -153,7 +145,7 @@ static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
         if (copy_len > req->len)
                 copy_len = req->len;
 
-        copy_gop = npo->copy + npo->copy_prod++;
+        copy_gop = vif->grant_copy_op + vif->rx_pending_prod++;
         copy_gop->flags = GNTCOPY_dest_gref;
         copy_gop->len = copy_len;
 
@@ -168,7 +160,7 @@ static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
 	meta->id = req->id;
         meta->size = copy_len;
 
-	return npo->meta_prod - old_meta_prod;
+	return vif->rx_pending_prod - old_prod;
 }
 
 /*
@@ -177,24 +169,19 @@ static int xenmpi_gop_skb(struct vmpi_impl_info *vif,
  * netrx_pending_operations, which have since been done.  Check that
  * they didn't give any errors and advance over them.
  */
-static int xenmpi_check_gop(struct vmpi_impl_info *vif, int nr_meta_slots,
-			    struct netrx_pending_operations *npo)
+static int xenmpi_check_gop(struct vmpi_impl_info *vif)
 {
-	struct gnttab_copy     *copy_op;
-	int status = XEN_MPI_RSP_OKAY;
-	int i;
+        struct gnttab_copy     *copy_op;
+        int status = XEN_MPI_RSP_OKAY;
 
-	for (i = 0; i < nr_meta_slots; i++) {
-		copy_op = npo->copy + npo->copy_cons++;
-		if (copy_op->status != GNTST_okay) {
-			printk(
-				   "Bad status %d from copy to DOM%d.\n",
-				   copy_op->status, vif->domid);
-			status = XEN_MPI_RSP_ERROR;
-		}
-	}
+        copy_op = vif->grant_copy_op + vif->rx_pending_cons;
+        if (copy_op->status != GNTST_okay) {
+                printk("Bad status %d from copy to DOM%d.\n",
+                        copy_op->status, vif->domid);
+                status = XEN_MPI_RSP_ERROR;
+        }
 
-	return status;
+        return status;
 }
 
 void xenmpi_kick_thread(struct vmpi_impl_info *vif)
@@ -214,10 +201,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
         int meta_slots_used;
         struct vmpi_ring *ring = vif->write;
 
-	struct netrx_pending_operations npo = {
-		.copy  = vif->grant_copy_op,
-		.meta  = vif->meta,
-	};
+        vif->rx_pending_prod = vif->rx_pending_cons = 0;
 
         IFV(printk("%s called\n", __func__));
 
@@ -243,24 +227,24 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                 IFV(printk("%s: received buf, len=%d, off=%lu\n",
                         __func__, (int)buf->len, offset_in_page(buf->p)));
 
-		meta_slots_used = xenmpi_gop_skb(vif, buf, &npo);
+		meta_slots_used = xenmpi_gop_skb(vif, buf);
                 BUG_ON(meta_slots_used != 1);
 
                 vmpi_queue_push(&rxq, buf);
         }
 
-	BUG_ON(npo.meta_prod > ARRAY_SIZE(vif->meta));
+	BUG_ON(vif->rx_pending_prod > ARRAY_SIZE(vif->meta));
 
-	if (!npo.copy_prod)
+	if (!vif->rx_pending_prod)
 		goto done;
 
-	BUG_ON(npo.copy_prod > XEN_MPI_RX_RING_SIZE);
-	gnttab_batch_copy(vif->grant_copy_op, npo.copy_prod);
+	BUG_ON(vif->rx_pending_prod > XEN_MPI_RX_RING_SIZE);
+	gnttab_batch_copy(vif->grant_copy_op, vif->rx_pending_prod);
 
 	while ((buf = vmpi_queue_pop(&rxq)) != NULL) {
                 int len;
 
-		status = xenmpi_check_gop(vif, 1, &npo);
+		status = xenmpi_check_gop(vif);
 
                 len = buf->len;
                 buf->len = 0;
@@ -269,16 +253,16 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                                            POLLWRNORM | POLLWRBAND);
                 IFV(printk("%s: pushed %d bytes in the RX ring\n", __func__, len));
 
-		resp = make_rx_response(vif, vif->meta[npo.meta_cons].id,
+		resp = make_rx_response(vif, vif->meta[vif->rx_pending_cons].id,
 					status,
-					vif->meta[npo.meta_cons].size,
+					vif->meta[vif->rx_pending_cons].size,
 					0);
 
 		RING_PUSH_RESPONSES_AND_CHECK_NOTIFY(&vif->rx, ret);
 
 		need_to_notify |= !!ret;
 
-		npo.meta_cons++;
+                vif->rx_pending_cons++;
                 stat_txres++;
 	}
 
