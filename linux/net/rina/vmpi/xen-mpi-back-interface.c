@@ -173,9 +173,9 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 
         vif->parent = parent;
 
-	vif->grant_copy_op = vmalloc(sizeof(struct gnttab_copy) *
+	vif->rx_copy_ops = vmalloc(sizeof(struct gnttab_copy) *
 				     XEN_MPI_RX_RING_SIZE);
-	if (vif->grant_copy_op == NULL) {
+	if (vif->rx_copy_ops == NULL) {
 		pr_warn("Could not allocate grant copy space for %s\n", name);
                 goto grant_copy;
 	}
@@ -214,7 +214,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 
 vmpi_ini:
         vmpi_queue_fini(&vif->tx_queue);
-        vfree(vif->grant_copy_op);
+        vfree(vif->rx_copy_ops);
 grant_copy:
         kfree(vif);
 
@@ -336,7 +336,7 @@ void xenmpi_free(struct vmpi_impl_info *vif)
 
         cancel_work_sync(&vif->tx_worker);
 
-	vfree(vif->grant_copy_op);
+	vfree(vif->rx_copy_ops);
         kfree(vif);
 
 	module_put(THIS_MODULE);

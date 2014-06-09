@@ -128,13 +128,15 @@ struct vmpi_impl_info {
 	struct xen_mpi_rx_back_ring rx;
 	RING_IDX rx_last_buf_slots;
 
-	/* This array is allocated seperately as it is large */
-	struct gnttab_copy *grant_copy_op;
+	/* This array is allocated seperately because it was large
+           in netback. That's not true anymore, so it could be
+           allocated here. */
+	struct gnttab_copy *rx_copy_ops;
 
-	/* We create one meta structure per ring request we consume, so
+	/* We create one rx_meta structure per ring request we consume, so
 	 * the maximum number is the same as the ring size.
 	 */
-	struct xenmpi_rx_meta meta[XEN_MPI_RX_RING_SIZE];
+	struct xenmpi_rx_meta rx_meta[XEN_MPI_RX_RING_SIZE];
         unsigned int rx_pending_prod;
         unsigned int rx_pending_cons;
 

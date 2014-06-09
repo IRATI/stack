@@ -108,11 +108,11 @@ bool xenmpi_rx_ring_slots_available(struct vmpi_impl_info *vif, int needed)
 /*
  * Prepare an SKB to be transmitted to the frontend.
  *
- * This function is responsible for allocating grant operations, meta
+ * This function is responsible for allocating grant operations, rx_meta
  * structures, etc.
  *
- * It returns the number of meta structures consumed. The number of
- * ring slots used is always equal to the number of meta slots used
+ * It returns the number of rx_meta structures consumed. The number of
+ * ring slots used is always equal to the number of rx_meta slots used
  * plus the number of GSO descriptors used. Currently, we use either
  * zero GSO descriptors (for non-GSO packets) or one descriptor (for
  * frontend-side LRO).
@@ -121,7 +121,7 @@ static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
                           struct vmpi_buffer *buf)
 {
 	struct xen_mpi_rx_request *req;
-	struct xenmpi_rx_meta *meta;
+	struct xenmpi_rx_meta *rx_meta;
 	void *src_data;
         unsigned int src_offset;
 	int old_prod;
@@ -131,7 +131,7 @@ static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
 	old_prod = vif->rx_pending_prod;
 
 	req = RING_GET_REQUEST(&vif->rx, vif->rx.req_cons++);
-        meta = vif->meta + vif->rx_pending_prod;
+        rx_meta = vif->rx_meta + vif->rx_pending_prod;
 
         IFV(printk("%s: get rx req: [id=%d] [off=%d] [gref=%d] [len=%d]\n",
                 __func__, req->id, req->offset, req->gref, req->len));
@@ -145,7 +145,7 @@ static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
         if (copy_len > req->len)
                 copy_len = req->len;
 
-        copy_gop = vif->grant_copy_op + vif->rx_pending_prod++;
+        copy_gop = vif->rx_copy_ops + vif->rx_pending_prod++;
         copy_gop->flags = GNTCOPY_dest_gref;
         copy_gop->len = copy_len;
 
@@ -157,8 +157,8 @@ static int xenmpi_gop_buf(struct vmpi_impl_info *vif,
         copy_gop->dest.offset = req->offset;
         copy_gop->dest.u.ref = req->gref;
 
-	meta->id = req->id;
-        meta->size = copy_len;
+	rx_meta->id = req->id;
+        rx_meta->size = copy_len;
 
 	return vif->rx_pending_prod - old_prod;
 }
@@ -174,7 +174,7 @@ static int xenmpi_check_gop(struct vmpi_impl_info *vif)
         struct gnttab_copy     *copy_op;
         int status = XEN_MPI_RSP_OKAY;
 
-        copy_op = vif->grant_copy_op + vif->rx_pending_cons;
+        copy_op = vif->rx_copy_ops + vif->rx_pending_cons;
         if (copy_op->status != GNTST_okay) {
                 printk("Bad status %d from copy to DOM%d.\n",
                         copy_op->status, vif->domid);
@@ -233,13 +233,13 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                 vmpi_queue_push(&rxq, buf);
         }
 
-	BUG_ON(vif->rx_pending_prod > ARRAY_SIZE(vif->meta));
+	BUG_ON(vif->rx_pending_prod > ARRAY_SIZE(vif->rx_meta));
 
 	if (!vif->rx_pending_prod)
 		goto done;
 
 	BUG_ON(vif->rx_pending_prod > XEN_MPI_RX_RING_SIZE);
-	gnttab_batch_copy(vif->grant_copy_op, vif->rx_pending_prod);
+	gnttab_batch_copy(vif->rx_copy_ops, vif->rx_pending_prod);
 
 	while ((buf = vmpi_queue_pop(&rxq)) != NULL) {
                 int len;
@@ -253,9 +253,9 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
                                            POLLWRNORM | POLLWRBAND);
                 IFV(printk("%s: pushed %d bytes in the RX ring\n", __func__, len));
 
-		resp = make_rx_response(vif, vif->meta[vif->rx_pending_cons].id,
+		resp = make_rx_response(vif, vif->rx_meta[vif->rx_pending_cons].id,
 					status,
-					vif->meta[vif->rx_pending_cons].size,
+					vif->rx_meta[vif->rx_pending_cons].size,
 					0);
 
 		RING_PUSH_RESPONSES_AND_CHECK_NOTIFY(&vif->rx, ret);
