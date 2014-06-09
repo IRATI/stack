@@ -27,14 +27,11 @@
 #define RINA_PREFIX "ipc-process"
 
 #include "core.h"
+#include "utils.h"
 #include "rina-syscalls.h"
 
 #include "logs.h"
 #include "librina/ipc-process.h"
-
-// FIXME: DO NOT DEFINE PAGE_SIZE, USE SYSTEM PROVIDED DEFINITION !!!
-
-#define PAGE_SIZE 4096
 
 namespace rina{
 
@@ -610,7 +607,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	try{
 	        //FIXME, compute maximum message size dynamically
 		rinaManager->sendMessageOfMaxSize(&responseMessage,
-		                5*PAGE_SIZE);
+                                                  5 * get_page_size());
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}
