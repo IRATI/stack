@@ -30,13 +30,18 @@
 /* The global logs prefix */
 #define __GPFX "rina-"
 
+#ifdef CONFIG_RINA_LOGS
 #ifdef CONFIG_RINA_UNFILTERED_LOGS
 #define __LOG(PFX, LVL, FMT, ARGS...)                                   \
         do { printk(KERN_NOTICE __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
-#else
+#else   /* !RINA_UNFILTERED_LOGS */
 #define __LOG(PFX, LVL, FMT, ARGS...)                                   \
         do { printk(LVL __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
 #endif
+#else   /* !RINA_LOGS */
+#define __LOG(PFX, LVL, FMT, ARGS...)           \
+	do { } while (0)
+#endif  /* !RINA_LOGS */
 
 /* Sorted by "urgency" (high to low) */
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,   FMT, ##ARGS)
@@ -55,7 +60,7 @@
 #define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
                           __FUNCTION__, __FILE__, __LINE__)
 #else
-#define LOG_HBEAT
+#define LOG_HBEAT do { } while (0)
 #endif
 
 #define LOG_OBSOLETE_FUNC LOG_ERR("Function %s is obsolete and it will be " \

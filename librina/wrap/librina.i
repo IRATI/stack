@@ -672,13 +672,13 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventPoll);
 DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 
 %{
-#include "exceptions.h"
-#include "patterns.h"
-#include "concurrency.h"
-#include "common.h"
-#include "application.h"
-#include "ipc-manager.h"
-#include "ipc-process.h"
+#include "librina/exceptions.h"
+#include "librina/patterns.h"
+#include "librina/concurrency.h"
+#include "librina/common.h"
+#include "librina/application.h"
+#include "librina/ipc-manager.h"
+#include "librina/ipc-process.h"
 %}
 
 %rename(equals) rina::ConnectionPoliciesParameters::operator==(const ConnectionPoliciesParameters &other) const;
@@ -713,13 +713,13 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(equals) rina::PolicyConfig::operator==(const PolicyConfig &other) const;
 %rename(differs) rina::PolicyConfig::operator!=(const PolicyConfig &other) const;
 
-%include "exceptions.h"
-%include "patterns.h"
-%include "concurrency.h"
-%include "common.h"
-%include "application.h"
-%include "ipc-manager.h"
-%include "ipc-process.h"
+%include "librina/exceptions.h"
+%include "librina/patterns.h"
+%include "librina/concurrency.h"
+%include "librina/common.h"
+%include "librina/application.h"
+%include "librina/ipc-manager.h"
+%include "librina/ipc-process.h"
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )

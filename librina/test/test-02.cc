@@ -21,8 +21,10 @@
 //
 
 #include <iostream>
-#include "librina.h"
+
 #include "core.h"
+
+#include "librina/librina.h"
 
 using namespace rina;
 

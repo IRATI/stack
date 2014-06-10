@@ -3,6 +3,9 @@ The IRATI repository
 
 The IRATI repository is located at https://github.com/dana-i2cat/irati
 
+NOTE: In order to avoid problems with the repository, please clone it on a 
+      case sensitive file-system.
+
 Branches
 ========
 

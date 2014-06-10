@@ -24,10 +24,10 @@
 #include <math.h>
 #include <unistd.h>
 
-#include "concurrency.h"
+#include "librina/concurrency.h"
 
 #define NUM_THREADS 5
-#define TRIGGER 10
+#define TRIGGER     10
 
 using namespace rina;
 

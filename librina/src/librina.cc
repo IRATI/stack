@@ -21,4 +21,4 @@
 
 #include <iostream>
 
-#include "librina.h"
+#include "librina/librina.h"
