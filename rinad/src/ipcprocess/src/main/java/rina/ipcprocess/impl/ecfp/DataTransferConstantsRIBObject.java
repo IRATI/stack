@@ -93,9 +93,9 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 			DIFConfiguration difConfiguration = new DIFConfiguration();
 			difInformation.setDifConfiguration(difConfiguration);
 			objectValue = new DataTransferConstants();
-			difConfiguration.setDataTransferConstants(objectValue);
+			difConfiguration.getEfcpConfiguration().setDataTransferConstants(objectValue);
 		} else {
-			objectValue = difInformation.getDifConfiguration().getDataTransferConstants();
+			objectValue = difInformation.getDifConfiguration().getEfcpConfiguration().getDataTransferConstants();
 		}
 		
 		objectValue.setAddressLength(candidate.getAddressLength());
@@ -113,7 +113,7 @@ public class DataTransferConstantsRIBObject extends BaseRIBObject{
 	public Object getObjectValue() {
 		DIFInformation difInformation = getIPCProcess().getDIFInformation();
 		if (difInformation != null) {
-			return difInformation.getDifConfiguration().getDataTransferConstants();
+			return difInformation.getDifConfiguration().getEfcpConfiguration().getDataTransferConstants();
 		}
 		
 		return null;

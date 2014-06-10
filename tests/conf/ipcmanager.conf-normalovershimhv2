@@ -1,0 +1,72 @@
+{
+  "localConfiguration" : {
+    "installationPath" : "/usr/local/irati/share/rinad",
+    "libraryPath" : "/usr/local/irati/lib",
+    "consolePort" : 32766,
+    "cdapTimeoutInMs" : 10000,
+    "enrollmentTimeoutInMs" : 10000,
+    "flowAllocatorTimeoutInMs" : 15000,
+    "watchdogPeriodInMs" : 60000,
+    "declaredDeadIntervalInMs" : 120000,
+    "neighborsEnrollerPeriodInMs" : 10000,
+    "lengthOfFlowQueues" : 10
+  },
+  "applicationToDIFMappings" : [ {
+    "encodedAppName" : "rina.utils.apps.echo.server-1--",
+    "difName" : "test-normal.DIF"
+  }, {
+    "encodedAppName" : "rina.utils.apps.echo.client-1--",
+    "difName" : "test-normal.DIF"
+  } ],
+  "ipcProcessesToCreate" : [ {
+    "type" : "shim-hv",
+    "applicationProcessName" : "test-shim-hv.IPCP",
+    "applicationProcessInstance" : "1",
+    "difName" : "test-shim-hv.DIF"
+   }, {
+    "type" : "normal-ipc",
+    "applicationProcessName" : "test-normal-2.IPCP",
+    "applicationProcessInstance" : "1",
+    "difName" : "test-normal.DIF",
+    "difsToRegisterAt" : ["test-shim-hv.DIF"]
+   } ],
+  "difConfigurations" : [ {
+    "difName" : "test-shim-hv.DIF"
+  }, {
+    "difName" : "test-normal.DIF",
+    "dataTransferConstants" : {
+     "addressLength" : 2,
+     "cepIdLength" : 2,
+     "lengthLength" : 2,
+     "portIdLength" : 2,
+     "qosIdLenght" : 2,
+     "sequenceNumberLength" : 4,
+     "maxPduSize" : 10000,
+     "maxPduLifetime" : 30
+    },
+    "configParameters" : [ {
+     "name" : "bar",
+     "value" : "foo"
+      } ],
+     "qosCubes" : [ {
+         "name" : "reliable",
+         "id" : 1,
+         "partialDelivery" : false,
+         "orderedDelivery" : true
+      }, {
+         "name" : "unreliable",
+         "id" : 2,
+         "partialDelivery" : true,
+         "orderedDelivery" : false
+     } ],
+     "knownIPCProcessAddresses" : [ {
+      "apName" : "test-normal-1.IPCP",
+      "apInstance" : "1",
+      "address" : 16
+    }, {
+      "apName" : "test-normal-2.IPCP",
+      "apInstance" : "1",
+      "address" : 17
+   } ]
+  } ]
+}

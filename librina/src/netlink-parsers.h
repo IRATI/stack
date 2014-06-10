@@ -1,25 +1,30 @@
-//
-// Core librina logic
-//
-//    Eduard Grasa          <eduard.grasa@i2cat.net>
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
+/*
+ * Netlink parsers
+ *
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
+ */
 
 #ifndef LIBRINA_NETLINK_PARSERS_H
 #define LIBRINA_NETLINK_PARSERS_H
+
+#ifdef __cplusplus
 
 #include <netlink/msg.h>
 #include <netlink/attr.h>
@@ -467,19 +472,50 @@ int putDataTransferConstantsObject(nl_msg* netlinkMessage,
 
 DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested);
 
+/* EFCPConfiguration CLASS */
+enum EFCPConfigurationAttributes {
+        EFCPC_ATTR_DTCONST = 1,
+        EFCPC_ATTR_QOS_CUBES,
+        EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
+        __EFCPC_ATTR_MAX,
+};
+
+#define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
+
+int putEFCPConfigurationObject(nl_msg* netlinkMessage,
+                const EFCPConfiguration& object);
+
+EFCPConfiguration * parseEFCPConfigurationObject(nlattr *nested);
+
+/* RMTConfiguration CLASS */
+enum RMTConfigurationAttributes {
+        RMTC_ATTR_QUEUE_MONITOR_POLICY = 1,
+        RMTC_ATTR_SCHEDULING_POLICY,
+        RMTC_ATTR_MAX_QUEUE_POLICY,
+        __RMTC_ATTR_MAX,
+};
+
+#define RMTC_ATTR_MAX (__RMTC_ATTR_MAX -1)
+
+int putRMTConfigurationObject(nl_msg* netlinkMessage,
+                const RMTConfiguration& object);
+
+RMTConfiguration * parseRMTConfigurationObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
-	DCONF_ATTR_DATA_TRANS_CONST,
 	DCONF_ATTR_ADDRESS,
-	DCONF_ATTR_QOS_CUBES,
+	DCONF_ATTR_EFCP_CONF,
+	DCONF_ATTR_RMT_CONF,
 	__DCONF_ATTR_MAX,
 };
 
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
 
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
-		const DIFConfiguration& object);
+		const DIFConfiguration& object,
+		bool normalIPCProcess);
 
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested);
 
@@ -840,7 +876,7 @@ enum DTCPWindowBasedFlowControlConfigAttributes {
         DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH = 1,
         DWFCC_ATTR_INITIAL_CREDIT,
         DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY,
-        DWFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
+        DWFCC_ATTR_TX_CTRL_POLICY,
         __DWFCC_ATTR_MAX,
 };
 
@@ -885,6 +921,7 @@ enum DTCPFlowControlConfigAttributes {
         DFCC_ATTR_CLOSED_WINDOW_POLICY,
         DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY,
         DFCC_ATTR_RECON_FLOW_CTRL_POLICY,
+        DFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
         __DFCC_ATTR_MAX,
 };
 
@@ -899,8 +936,6 @@ parseDTCPFlowControlConfigObject(nlattr *nested);
 /* DTCPRtxControlConfig class */
 enum DTCPRtxControlConfigAttributes {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
-        DRCC_ATTR_INIT_A_TIMER,
-        DRCC_ATTR_RTT_EST_POLICY,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,
@@ -929,6 +964,7 @@ enum DTCPConfigAttributes {
         DCA_ATTR_RCVR_TIMER_INAC_POLICY,
         DCA_ATTR_SNDR_TIMER_INAC_POLICY,
         DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        DCA_ATTR_RTT_EST_POLICY,
         __DCA_ATTR_MAX,
 };
 
@@ -946,6 +982,11 @@ enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_CONFIG,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,
 	CPA_ATTR_SEQ_NUM_ROLLOVER,
+	CPA_ATTR_INIT_A_TIMER,
+        CPA_ATTR_PARTIAL_DELIVERY,
+        CPA_ATTR_INCOMPLETE_DELIVERY,
+        CPA_ATTR_IN_ORDER_DELIVERY,
+        CPA_ATTR_MAX_SDU_GAP,
 	__CPA_ATTR_MAX,
 };
 
@@ -957,11 +998,30 @@ int putConnectionPoliciesObject(nl_msg * netlinkMessage,
 ConnectionPolicies *
 parseConnectionPoliciesObject(nlattr *nested);
 
+/* Connection class */
+enum ConnectionAttributes {
+        CONN_ATTR_PORT_ID = 1,
+        CONN_ATTR_SOURCE_ADDRESS,
+        CONN_ATTR_DEST_ADDRESS,
+        CONN_ATTR_QOS_ID,
+        CONN_ATTR_SOURCE_CEP_ID,
+        CONN_ATTR_DEST_CEP_ID,
+        CONN_ATTR_POLICIES,
+        CONN_ATTR_FLOW_USER_IPCP_ID,
+        __CONN_ATTR_MAX,
+};
+
+#define CONN_ATTR_MAX (__CONN_ATTR_MAX -1)
+
+int putConnectionObject(nl_msg * netlinkMessage, const Connection& object);
+
+Connection * parseConnectionObject(nlattr *nested);
+
 /* IpcpConnectionCreateRequestMessage CLASS*/
 enum IpcpConnectionCreateRequestMessageAttributes {
         ICCRM_ATTR_PORT_ID = 1,
-        ICCRM_ATTR_SRC_ADDRESS,
-        ICCRM_ATTR_DEST_ADDRESS,
+        ICCRM_ATTR_SOURCE_ADDR,
+        ICCRM_ATTR_DEST_ADDR,
         ICCRM_ATTR_QOS_ID,
         ICCRM_ATTR_POLICIES,
         __ICCRM_ATTR_MAX,
@@ -1025,11 +1085,11 @@ IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
 /* IpcpConnectionCreateArrivedMessage CLASS*/
 enum IpcpConnectionCreateArrivedMessageAttributes {
         ICCAM_ATTR_PORT_ID = 1,
-        ICCAM_ATTR_SRC_ADDRESS,
-        ICCAM_ATTR_DEST_ADDRESS,
+        ICCAM_ATTR_SOURCE_ADDR,
+        ICCAM_ATTR_DEST_ADDR,
         ICCAM_ATTR_DEST_CEP_ID,
         ICCAM_ATTR_QOS_ID,
-        ICCAM_ATTR_FLOW_USER_IPC_PROCESS_ID,
+        ICCAM_ATTR_FLOW_USER_IPCP_ID,
         ICCAM_ATTR_POLICIES,
         __ICCAM_ATTR_MAX,
 };
@@ -1135,5 +1195,6 @@ RmtDumpPDUFTEntriesResponseMessage * parseRmtDumpPDUFTEntriesResponseMessage(
 
 }
 
+#endif
 
-#endif /* LIBRINA_NETLINK_PARSERS_H_ */
+#endif

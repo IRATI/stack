@@ -5,12 +5,6 @@ import java.util.List;
 
 import eu.irati.librina.Connection;
 import eu.irati.librina.ConnectionPolicies;
-import eu.irati.librina.DTCPConfig;
-import eu.irati.librina.DTCPFlowControlConfig;
-import eu.irati.librina.DTCPRateBasedFlowControlConfig;
-import eu.irati.librina.DTCPRtxControlConfig;
-import eu.irati.librina.DTCPWindowBasedFlowControlConfig;
-import eu.irati.librina.PolicyConfig;
 import eu.irati.librina.FlowSpecification;
 
 import rina.encoding.api.Encoder;
@@ -45,13 +39,24 @@ public class FlowEncoder implements Encoder{
 		flow.setHopCount(gpbFlow.getHopCount());
 		flow.setMaxCreateFlowRetries(gpbFlow.getMaxCreateFlowRetries());
 		flow.setCreateFlowRetries(gpbFlow.getCreateFlowRetries());
-		flow.setConnectionPolicies(GPBUtils.getConnectionPolicies(gpbFlow.getConnectionPolicies()));
+		
 		qosSpecification_t qosParams = gpbFlow.getQosParameters();
 		if (!qosParams.equals(qosSpecification_t.getDefaultInstance())){
-			flow.setFlowSpecification(GPBUtils.getFlowSpecification(qosParams));
+			flow.setFlowSpec(GPBUtils.getFlowSpecification(qosParams));
 		} else {
-			flow.setFlowSpecification(new FlowSpecification());
+			flow.setFlowSpec(new FlowSpecification());
 		}
+		
+		FlowSpecification flowSpec = flow.getFlowSpec();
+		ConnectionPolicies connectionPolicies = GPBUtils.getConnectionPolicies(gpbFlow.getConnectionPolicies());
+		connectionPolicies.setInOrderDelivery(flowSpec.isOrderedDelivery());
+		connectionPolicies.setPartialDelivery(flowSpec.isPartialDelivery());
+		connectionPolicies.setMaxSduGap(flowSpec.getMaxAllowableGap());
+		flow.setConnectionPolicies(connectionPolicies);
+		for(int i=0; i<flow.getConnections().size(); i++){
+			flow.getConnections().get(i).setPolicies(connectionPolicies);
+		}
+		
 		flow.setSourceAddress(gpbFlow.getSourceAddress());
 		flow.setSourceNamingInfo(GPBUtils.getApplicationProcessNamingInfo(gpbFlow.getSourceNamingInfo()));
 		flow.setSourcePortId((int)gpbFlow.getSourcePortId());
@@ -105,7 +110,7 @@ public class FlowEncoder implements Encoder{
 		}
 		
 		Flow flow = (Flow) object;
-		qosSpecification_t qosSpecificationT = GPBUtils.getQoSSpecificationT(flow.getFlowSpecification());
+		qosSpecification_t qosSpecificationT = GPBUtils.getQoSSpecificationT(flow.getFlowSpec());
 		if (qosSpecificationT == null){
 			qosSpecificationT = qosSpecification_t.getDefaultInstance();
 		}

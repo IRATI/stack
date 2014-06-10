@@ -1,6 +1,7 @@
-/* A VMPI implemented using the vmpi-impl interface
+/*
+ * A guest-side VMPI implemented using the vmpi-impl guest interface
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/module.h>
@@ -29,6 +30,7 @@
 #include "vmpi.h"
 #include "vmpi-ops.h"
 #include "shim-hv.h"
+#include "vmpi-test.h"
 
 
 #ifdef VERBOSE
@@ -38,6 +40,13 @@
 #endif /* !VERBOSE */
 
 #define VMPI_GUEST_BUDGET  64
+
+unsigned int stat_txreq = 0;
+module_param(stat_txreq, uint, 0444);
+unsigned int stat_txres = 0;
+module_param(stat_txres, uint, 0444);
+unsigned int stat_rxres = 0;
+module_param(stat_rxres, uint, 0444);
 
 struct vmpi_info {
         vmpi_impl_info_t *vi;
@@ -58,12 +67,6 @@ struct vmpi_info {
 };
 
 static struct vmpi_info *vmpi_info_instance = NULL;
-
-struct vmpi_info *
-vmpi_get_instance(void)
-{
-        return vmpi_info_instance;
-}
 
 int
 vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
@@ -87,6 +90,7 @@ vmpi_impl_clean_tx(struct vmpi_info *mpi)
                 buf->len = 0;
                 VMPI_RING_INC(mpi->write.np);
                 VMPI_RING_INC(mpi->write.nr);
+                stat_txres++;
         }
 }
 
@@ -149,13 +153,14 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(mpi->write.nu);
-                mutex_unlock(&mpi->write.lock);
 
                 ret = vmpi_impl_write_buf(vi, buf);
                 if (ret == 0) {
                         ret = copylen;
                 }
+                stat_txreq++;
                 vmpi_impl_txkick(vi);
+                mutex_unlock(&mpi->write.lock);
                 break;
         }
 
@@ -279,6 +284,7 @@ recv_worker_function(struct work_struct *work)
                         mutex_lock(&mpi->recv_worker_lock);
                         vmpi_buffer_destroy(buf);
                 }
+                stat_rxres++;
                 budget--;
         }
 
@@ -320,7 +326,7 @@ vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
 }
 
 struct vmpi_info *
-vmpi_init(vmpi_impl_info_t *vi, int *ret)
+vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
         int i;
@@ -372,12 +378,26 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret)
                 goto alloc_read_buf;
         }
 
+#ifdef VMPI_TEST
+        *ret = vmpi_test_init(mpi, deferred_test_init);
+        if (*ret) {
+                printk("vmpi_test_init() failed\n");
+                goto vmpi_test_ini;
+        }
+#endif  /* VMPI_TEST */
+
+
         printk("vmpi_init completed\n");
 
         *ret = 0;
 
         return mpi;
 
+#ifdef VMPI_TEST
+ vmpi_test_ini:
+        shim_hv_fini();
+        vmpi_impl_callbacks_unregister(mpi->vi);
+#endif  /* VMPI_TEST */
  alloc_read_buf:
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
@@ -392,10 +412,14 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret)
 }
 
 void
-vmpi_fini(void)
+vmpi_fini(bool deferred_test_fini)
 {
         struct vmpi_info *mpi = vmpi_info_instance;
         unsigned int i;
+
+#ifdef VMPI_TEST
+        vmpi_test_fini(deferred_test_fini);
+#endif  /* VMPI_TEST */
 
         if (mpi == NULL) {
                 printk("vmpi_info_fini: NULL pointer\n");

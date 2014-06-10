@@ -200,7 +200,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		this.flowRequestEvent = event;
 		flow = newFlowRequestPolicy.generateFlowObject(event, 
 				ipcProcess.getDIFInformation().getDifName().getProcessName(), 
-				ipcProcess.getDIFInformation().getDifConfiguration().getQosCubes());
+				ipcProcess.getDIFInformation().getDifConfiguration().getEfcpConfiguration().getQosCubes());
 		log.debug("Generated flow object: "+flow.toString());
 		
 		//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
@@ -227,8 +227,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//3 Request the creation of the connection(s) in the Kernel
 		try{
 			this.state = FAIState.CONNECTION_CREATE_REQUESTED;
-			kernelIPCProcess.createConnection(flow.getConnections().get(0), 
-					flow.getConnectionPolicies());
+			kernelIPCProcess.createConnection(flow.getConnections().get(0));
 		} catch(Exception ex) {
 			throw new IPCException("Problems requesting the kernel to create a connection: " 
 					+ ex.getMessage());
@@ -272,8 +271,8 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		flow.getConnections().get(0).setSourceCepId(event.getCepId());
 		
 		try{
-			//5 get the portId of the CDAP session to the destination application process name
-			int cdapSessionId = (int) ribDaemon.getNextHop(flow.getDestinationAddress());
+			//5 get the portId of any open CDAP session
+			int cdapSessionId = cdapSessionManager.getAllCDAPSessionIds()[0];
 
 			//6 Encode the flow object and send it to the destination IPC process
 			ObjectValue objectValue = new ObjectValue();
@@ -286,7 +285,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 			requestMessage = cdapMessage;
 			state = FAIState.MESSAGE_TO_PEER_FAI_SENT;
 			
-			ribDaemon.sendADataUnit(flow.getDestinationAddress(), cdapMessage, this);
+			ribDaemon.sendMessageToAddress(requestMessage, cdapSessionId, flow.getDestinationAddress(), this);
 		}catch(Exception ex){
 			log.error("Problems sending M_CREATE <Flow> CDAP message to neighbor: " + ex.getMessage());
 			flowAllocator.removeFlowAllocatorInstance(portId);
@@ -343,8 +342,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		//4 Request creation of connection
 		try {
 			state = FAIState.CONNECTION_CREATE_REQUESTED;
-			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0), 
-					flow.getConnectionPolicies());
+			kernelIPCProcess.createConnectionArrived(flow.getConnections().get(0));
 			log.debug("Requested the creation of a connection to the kernel to support flow with port-id "+portId);
 		} catch (Exception ex) {
 			log.error("Problems requesting a connection to the kernel "+ex.getMessage());
@@ -369,7 +367,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		try {
 			state = FAIState.APP_NOTIFIED_OF_INCOMING_FLOW;
 			long handle = ipcManager.allocateFlowRequestArrived(flow.getDestinationNamingInfo(), 
-					flow.getSourceNamingInfo(), flow.getFlowSpecification(), portId);
+					flow.getSourceNamingInfo(), flow.getFlowSpec(), portId);
 			setAllocateResponseMessageHandle(handle);
 			log.debug("Informed IPC Manager about incoming flow allocation request, got handle: " 
 					+ getAllocateResponseMessageHandle());
@@ -407,7 +405,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, requestMessage.getObjClass(), 
 						0, requestMessage.getObjName(), objectValue, 0, null, requestMessage.getInvokeID());
 				
-				ribDaemon.sendADataUnit(flow.getSourceAddress(), cdapMessage, null);
+				ribDaemon.sendMessageToAddress(cdapMessage, underlyingPortId, flow.getSourceAddress(), null);
 				ribDaemon.create(requestMessage.getObjClass(), requestMessage.getObjName(), this);
 			}catch(Exception ex){
 				log.error("Problems requesting RIB Daemon to send CDAP Message: "+ex.getMessage());
@@ -455,7 +453,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 				cdapMessage = cdapSessionManager.getCreateObjectResponseMessage(underlyingPortId, null, 
 						requestMessage.getObjClass(), 0, requestMessage.getObjName(), null, -1, 
 						"Application rejected the flow: "+event.getResult(), requestMessage.getInvokeID());
-				ribDaemon.sendADataUnit(flow.getSourceAddress(), cdapMessage, null);
+				ribDaemon.sendMessageToAddress(cdapMessage, underlyingPortId, flow.getSourceAddress(), null);
 			}catch(Exception ex){
 				log.error("Problems requesting the RIB Daemon to send a CDAP message: "+ex.getMessage());
 			}
@@ -601,7 +599,7 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 					address = flow.getSourceAddress();
 				}
 				
-				ribDaemon.sendADataUnit(address, requestMessage, null);
+				ribDaemon.sendMessageToAddress(requestMessage,  underlyingPortId, address, null);
 			}catch(Exception ex){
 				log.error("Problems sending M_DELETE flow request: "+ex.getMessage());
 			}

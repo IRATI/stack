@@ -19,7 +19,7 @@
     "difName" : "test-shim-dif-hv"
   } ],
   "ipcProcessesToCreate" : [ {
-    "type" : "shim-hv-virtio",
+    "type" : "shim-hv",
     "applicationProcessName" : "test-hv",
     "applicationProcessInstance" : "1",
     "difName" : "test-shim-dif-hv"

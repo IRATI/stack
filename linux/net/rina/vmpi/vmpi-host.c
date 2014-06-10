@@ -1,6 +1,7 @@
-/* A VMPI implemented using the vmpi-impl hypervisor interface
+/*
+ * An hypervisor-side VMPI implemented using the vmpi-impl hypervisor interface
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/compat.h>
@@ -25,10 +26,17 @@
 #include "vmpi.h"
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
-#include "vmpi-host-test.h"
 #include "vmpi-ops.h"
 #include "shim-hv.h"
+#include "vmpi-test.h"
 
+
+unsigned int stat_txreq = 0;
+module_param(stat_txreq, uint, 0444);
+unsigned int stat_txres = 0;
+module_param(stat_txres, uint, 0444);
+unsigned int stat_rxres = 0;
+module_param(stat_rxres, uint, 0444);
 
 struct vmpi_info {
         struct vmpi_impl_info *vi;
@@ -73,7 +81,7 @@ vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
 }
 
 struct vmpi_info *
-vmpi_init(struct vmpi_impl_info *vi, int *err)
+vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
         int i;
@@ -106,8 +114,20 @@ vmpi_init(struct vmpi_impl_info *vi, int *err)
                 goto init_read;
         }
 
+#ifdef VMPI_TEST
+        *err = vmpi_test_init(mpi, deferred_test_init);
+        if (*err) {
+                printk("vmpi_test_init() failed\n");
+                goto test_ini;
+        }
+#endif  /* VMPI_TEST */
+
         return mpi;
 
+#ifdef VMPI_TEST
+ test_ini:
+        shim_hv_fini();
+#endif  /* VMPI_TEST */
  init_read:
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
@@ -120,11 +140,16 @@ vmpi_init(struct vmpi_impl_info *vi, int *err)
 }
 
 void
-vmpi_fini(struct vmpi_info *mpi)
+vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
 
+#ifdef VMPI_TEST
+        vmpi_test_fini(deferred_test_fini);
+#endif  /* VMPI_TEST */
+
         shim_hv_fini();
+
         mpi->vi = NULL;
         vmpi_ring_fini(&mpi->write);
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
@@ -187,6 +212,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(ring->nu);
+                stat_txreq++;
                 mutex_unlock(&ring->lock);
 
                 vmpi_impl_write_buf(mpi->vi, buf);
@@ -263,13 +289,3 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
         return ret;
 }
 
-#ifdef VMPI_HOST_TEST
-/* To use only in vmpi-host-test. */
-struct vmpi_info *
-vmpi_info_from_file_private_data(void *opaque)
-{
-        vmpi_impl_info_t *vi = opaque;
-
-        return vmpi_info_from_vmpi_impl_info(vi);
-}
-#endif  /* VMPI_HOST_TEST */

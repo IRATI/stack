@@ -9,14 +9,27 @@ ccflags-y += -I$(srctree)/net/rina
 ccflags-y += -I$(srctree)/net/rina/ipcps
 ccflags-y += -Wtype-limits
 
-obj-$(CONFIG_VMPI_VIRTIO_GUEST) += vmpi-virtio-guest.o
+obj-$(CONFIG_VMPI_KVM_GUEST) += vmpi-kvm-guest.o
 
-vmpi-virtio-guest-y :=						\
-	vmpi-guest-impl-virtio.o vmpi-guest-test.o vmpi-guest.o	\
+vmpi-kvm-guest-y :=						\
+	vmpi-guest-impl-kvm.o vmpi-test.o vmpi-guest.o	\
 	vmpi-structs.o vmpi-iovec.o
 
-obj-$(CONFIG_VMPI_VIRTIO_HOST) += vmpi-virtio-host.o
+obj-$(CONFIG_VMPI_KVM_HOST) += vmpi-kvm-host.o
 
-vmpi-virtio-host-y :=						\
-	vmpi-host-impl-virtio.o  vmpi-host-test.o  vmpi-host.o	\
+vmpi-kvm-host-y :=						\
+	vmpi-host-impl-kvm.o  vmpi-test.o  vmpi-host.o	\
 	vmpi-structs.o vmpi-iovec.o
+
+obj-$(CONFIG_VMPI_XEN_GUEST) += vmpi-xen-guest.o
+
+vmpi-xen-guest-y :=						\
+	xen-mpi-front.o vmpi-structs.o vmpi-guest.o		\
+	vmpi-iovec.o vmpi-test.o
+
+obj-$(CONFIG_VMPI_XEN_HOST) += vmpi-xen-host.o
+
+vmpi-xen-host-y :=						\
+	xen-mpi-back.o  xen-mpi-back-interface.o		\
+	xen-mpi-back-xenbus.o vmpi-structs.o vmpi-host.o	\
+	vmpi-iovec.o vmpi-test.o

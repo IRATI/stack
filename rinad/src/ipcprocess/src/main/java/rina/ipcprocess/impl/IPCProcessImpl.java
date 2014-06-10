@@ -17,7 +17,6 @@ import org.apache.commons.logging.LogFactory;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import rina.adataunit.api.ADataUnitPDU;
 import rina.applicationprocess.api.WhatevercastName;
 import rina.utils.LogHelper;
 import rina.cdap.api.CDAPSessionManager;
@@ -28,7 +27,6 @@ import rina.delimiting.api.Delimiter;
 import rina.delimiting.impl.DIFDelimiter;
 import rina.encoding.api.Encoder;
 import rina.encoding.impl.EncoderImpl;
-import rina.encoding.impl.googleprotobuf.adataunit.ADataUnitPDUEncoder;
 import rina.encoding.impl.googleprotobuf.applicationregistration.ApplicationRegistrationEncoder;
 import rina.encoding.impl.googleprotobuf.datatransferconstants.DataTransferConstantsEncoder;
 import rina.encoding.impl.googleprotobuf.directoryforwardingtable.DirectoryForwardingTableEntryArrayEncoder;
@@ -55,8 +53,6 @@ import rina.ipcprocess.impl.enrollment.EnrollmentTaskImpl;
 import rina.ipcprocess.impl.flowallocator.FlowAllocatorImpl;
 import rina.ipcprocess.impl.flowallocator.ribobjects.QoSCubeSetRIBObject;
 import rina.ipcprocess.impl.pduftg.PDUFTGeneratorImpl;
-import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.DijkstraAlgorithm;
-import rina.ipcprocess.impl.pduftg.linkstate.routingalgorithms.dijkstra.Vertex;
 import rina.ipcprocess.impl.registrationmanager.RegistrationManagerImpl;
 import rina.ipcprocess.impl.resourceallocator.ResourceAllocatorImpl;
 import rina.ipcprocess.impl.ribdaemon.RIBDaemonImpl;
@@ -335,7 +331,6 @@ public class IPCProcessImpl implements IPCProcess {
           encoder.addEncoder(Neighbor[].class.getName(), new NeighborArrayEncoder());
           encoder.addEncoder(FlowStateObject.class.getName(), new FlowStateEncoder());
           encoder.addEncoder(FlowStateObjectGroup.class.getName(), new FlowStateGroupEncoder());
-          encoder.addEncoder(ADataUnitPDU.class.getName(), new ADataUnitPDUEncoder());
           
           return encoder;
 	}
@@ -525,9 +520,11 @@ public class IPCProcessImpl implements IPCProcess {
 			setOperationalState(State.ASSIGNED_TO_DIF);
 			difInformation = arEvent.getDIFInformation();
 			
-			if (difInformation.getDifConfiguration().getQosCubes().size() > 0) {
-				QoSCube[] qosCubes = new QoSCube[(int)difInformation.getDifConfiguration().getQosCubes().size()];
-				Iterator<QoSCube> iterator = difInformation.getDifConfiguration().getQosCubes().iterator();
+			if (difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().size() > 0) {
+				QoSCube[] qosCubes = 
+						new QoSCube[(int)difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().size()];
+				Iterator<QoSCube> iterator = 
+						difInformation.getDifConfiguration().getEfcpConfiguration().getQosCubes().iterator();
 				int i = 0;
 				while(iterator.hasNext()) {
 					qosCubes[i] = iterator.next();

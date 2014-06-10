@@ -30,6 +30,7 @@
 #include "debug.h"
 #include "efcp.h"
 #include "efcp-utils.h"
+#include "ipcp-utils.h"
 #include "cidm.h"
 #include "dt.h"
 #include "dtp.h"
@@ -39,7 +40,7 @@
 #include "dt-utils.h"
 
 #ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 1
+#define DTCP_TEST_ENABLE 0
 #endif
 
 struct efcp {
@@ -49,11 +50,11 @@ struct efcp {
 };
 
 struct efcp_container {
-        struct efcp_imap * instances;
-        struct cidm *      cidm;
-        struct dt_cons     dt_cons;
-        struct rmt *       rmt;
-        struct kfa *       kfa;
+        struct efcp_imap *   instances;
+        struct cidm *        cidm;
+        struct efcp_config * config;
+        struct rmt *         rmt;
+        struct kfa *         kfa;
 };
 
 static struct efcp * efcp_create(void)
@@ -150,6 +151,7 @@ int efcp_container_destroy(struct efcp_container * container)
                                                      efcp_destroy);
         if (container->cidm)       cidm_destroy(container->cidm);
 
+        if (container->config)     efcp_config_destroy(container->config);
         rkfree(container);
 
         return 0;
@@ -172,21 +174,21 @@ struct efcp * efcp_container_find(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_find);
 
-int efcp_container_set_dt_cons(struct dt_cons *        dt_cons,
-                               struct efcp_container * container)
+int efcp_container_set_config(struct efcp_config *    efcp_config,
+                              struct efcp_container * container)
 {
-        if (!dt_cons || !container) {
+        if (!efcp_config || !container) {
                 LOG_ERR("Bogus input parameters, bailing out");
                 return -1;
         }
 
-        container->dt_cons = *dt_cons;
+        container->config = efcp_config;
 
-        LOG_DBG("Succesfully set data transfer constants to EFCP container");
+        LOG_DBG("Succesfully set EFCP config to EFCP container");
 
         return 0;
 }
-EXPORT_SYMBOL(efcp_container_set_dt_cons);
+EXPORT_SYMBOL(efcp_container_set_config);
 
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
@@ -327,7 +329,7 @@ int efcp_container_receive(struct efcp_container * container,
 
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
-                LOG_ERR("Cannot find the requested instance");
+                LOG_ERR("Cannot find the requested instance cep-id: %d", cep_id);
                 /* FIXME: It should call unknown_flow policy of EFCP */
                 pdu_destroy(pdu);
                 return -1;

@@ -663,18 +663,23 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
         struct pdu * pdu_ctrl;
         seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl)
-                return -1;
+        if (!dt_sv_a(dtcp->parent)) {
+                last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+                snd_lft       = snd_lft_win(dtcp);
+                snd_rt        = snd_rt_wind_edge(dtcp);
+                pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                                    last_rcv_ctrl,
+                                                    snd_lft,
+                                                    snd_rt);
+                if (!pdu_ctrl)
+                        return -1;
 
-        if (pdu_send(dtcp, pdu_ctrl))
-                return -1;
+                if (pdu_send(dtcp, pdu_ctrl))
+                        return -1;
+        } else {
+                /* Set A timer for PDU */
+                LOG_MISSING;
+        }
 
         return 0;
 }

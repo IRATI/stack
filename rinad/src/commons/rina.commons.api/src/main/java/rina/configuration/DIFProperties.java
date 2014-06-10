@@ -6,6 +6,7 @@ import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.PDUFTableGeneratorConfiguration;
 import eu.irati.librina.Parameter;
 import eu.irati.librina.QoSCube;
+import eu.irati.librina.RMTConfiguration;
 
 /**
  * The configuration required to create a DIF
@@ -28,11 +29,13 @@ public class DIFProperties {
 	 * The DIF Data Transfer constants
 	 */
 	private DataTransferConstants dataTransferConstants = null;
-	
+
 	/**
 	 * The QoS cubes available in the DIF
 	 */
 	private List<QoSCube> qosCubes = null;
+	
+	private RMTConfiguration rmtConfiguration = null;
 	
 	/**
 	 * The possible policies of the DIF
@@ -131,7 +134,12 @@ public class DIFProperties {
 	public void setQosCubes(List<QoSCube> qosCubes) {
 		this.qosCubes = qosCubes;
 	}
-	
+	public RMTConfiguration getRmtConfiguration() {
+		return rmtConfiguration;
+	}
+	public void setRmtConfiguration(RMTConfiguration rmtConfiguration) {
+		this.rmtConfiguration = rmtConfiguration;
+	}
 	public List<Property> getPolicies() {
 		return policies;
 	}

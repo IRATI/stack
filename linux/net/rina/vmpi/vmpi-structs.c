@@ -1,6 +1,7 @@
-/* Data structures for VMPI
+/*
+ * Data structures for VMPI
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,10 +15,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <linux/slab.h>
+#include <linux/mm.h>
 
 #include "vmpi-structs.h"
 
@@ -28,10 +30,19 @@ vmpi_buffer_init(struct vmpi_buffer *buf, size_t size)
         buf->len = 0;
         buf->next = NULL;
 
-        buf->p = kmalloc(size, GFP_ATOMIC);
-
-        if (buf->p == NULL)
-                return -ENOMEM;
+        if (size) {
+                buf->page = NULL;
+                buf->p = kmalloc(size, GFP_ATOMIC);
+                if (unlikely(buf->p == NULL))
+                        return -ENOMEM;
+                buf->size = size;
+        } else {
+                buf->page = alloc_page(GFP_ATOMIC);
+                if (unlikely(buf->page == NULL))
+                        return -ENOMEM;
+                buf->p = page_address(buf->page);
+                buf->size = PAGE_SIZE;
+        }
 
         return 0;
 }
@@ -40,7 +51,11 @@ static inline void
 vmpi_buffer_fini(struct vmpi_buffer *buf)
 {
         buf->len = 0;
-        kfree(buf->p);
+        if (buf->page) {
+                put_page(buf->page);
+        } else {
+                kfree(buf->p);
+        }
 }
 
 struct vmpi_buffer *

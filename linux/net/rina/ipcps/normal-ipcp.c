@@ -418,30 +418,30 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_check_dt_cons(struct dt_cons * dt_cons)
-{
-        /* FIXME: What should we check here? */
-        return 0;
-}
-
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
-        struct dt_cons * dt_cons;
+        struct efcp_config * efcp_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
         if (rmt_address_set(data->rmt, data->address))
                 return -1;
 
-        dt_cons = dif_information->configuration->dt_cons;
+        efcp_config = dif_information->configuration->efcp_config;
 
-        if (normal_check_dt_cons(dt_cons)) {
-                LOG_ERR("Configuration constants for the DIF are bogus...");
+        if (!efcp_config) {
+                LOG_ERR("No EFCP configuration in the dif_info");
                 return -1;
         }
 
-        efcp_container_set_dt_cons(dt_cons, data->efcpc);
+        if(!efcp_config->dt_cons) {
+                LOG_ERR("Configuration constants for the DIF are bogus...");
+                efcp_config_destroy(efcp_config);
+                return -1;
+        }
+
+        efcp_container_set_config(efcp_config, data->efcpc);
 
         return 0;
 }
@@ -552,6 +552,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
 }
 
 static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
+                                 address_t                   dst_addr,
                                  port_id_t                   port_id,
                                  struct sdu *                sdu)
 {
@@ -570,13 +571,14 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
         if (!pci)
                 return -1;
 
+        /* FIXME: qos_id is set to 1 since 0 is QOS_ID_WRONG */
         if (pci_format(pci,
                        0,
                        0,
                        data->address,
+                       dst_addr,
                        0,
-                       0,
-                       0,
+                       1,
                        PDU_TYPE_MGMT)) {
                 pci_destroy(pci);
                 return -1;
@@ -603,11 +605,28 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
         LOG_DBG("dst_address: %d", pci_destination(pci));
         LOG_DBG("port: %d", port_id);
 
-        /* Give the data to RMT now ! */
-        if (rmt_send_port_id(data->rmt,
-                             port_id,
+
+        /* Decide on how to deliver to the RMT depending on
+         * port_id or dst_addr
+         */
+        if (dst_addr) {
+                if (rmt_send(data->rmt,
+                             pci_destination(pdu_pci_get_ro(pdu)),
+                             pci_qos_id(pdu_pci_get_ro(pdu)),
                              pdu)) {
-                LOG_ERR("Could not send to RMT");
+                        LOG_ERR("Could not send to RMT (using dst_addr");
+                        return -1;
+                }
+        } else if (port_id) {
+                if (rmt_send_port_id(data->rmt,
+                                     port_id,
+                                     pdu)) {
+                        LOG_ERR("Could not send to RMT (using port_id)");
+                        return -1;
+                }
+        } else {
+                LOG_ERR("Could not send to RMT: no port_id nor dst_addr");
+                pdu_destroy(pdu);
                 return -1;
         }
 

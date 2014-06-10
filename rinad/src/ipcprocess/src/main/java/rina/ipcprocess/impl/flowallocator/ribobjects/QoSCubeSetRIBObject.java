@@ -63,7 +63,7 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 			ribObject.setRIBDaemon(getRIBDaemon());
 			this.addChild(ribObject);
 			getRIBDaemon().addRIBObject(ribObject);
-			getIPCProcess().getDIFInformation().getDifConfiguration().addQoSCube((QoSCube) object);
+			getIPCProcess().getDIFInformation().getDifConfiguration().getEfcpConfiguration().addQoSCube((QoSCube) object);
 		}else if (object instanceof QoSCube[]){
 			QoSCube[] cubes = (QoSCube[]) object;
 			String candidateObjectName = null;
@@ -76,7 +76,7 @@ public class QoSCubeSetRIBObject extends BaseRIBObject{
 					ribObject.setRIBDaemon(getRIBDaemon());
 					this.addChild(ribObject);
 					getRIBDaemon().addRIBObject(ribObject);
-					getIPCProcess().getDIFInformation().getDifConfiguration().addQoSCube(cubes[i]);
+					getIPCProcess().getDIFInformation().getDifConfiguration().getEfcpConfiguration().addQoSCube(cubes[i]);
 				}
 			}
 			
