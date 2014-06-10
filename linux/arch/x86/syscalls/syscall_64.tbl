@@ -322,15 +322,15 @@
 313	common	finit_module		sys_finit_module
 314	common	sched_setattr		sys_sched_setattr
 315	common	sched_getattr		sys_sched_getattr
-
-316	common	ipc_create		sys_ipc_create
-317	common	ipc_destroy		sys_ipc_destroy
-318	common	sdu_read		sys_sdu_read
-319	common	sdu_write		sys_sdu_write
-320	common	allocate_port	        sys_allocate_port
-321	common	deallocate_port	        sys_deallocate_port
-322     common  management_sdu_read     sys_management_sdu_read
-323     common  management_sdu_write    sys_management_sdu_write
+316	common	renameat2		sys_renameat2
+317	common	ipc_create		sys_ipc_create
+318	common	ipc_destroy		sys_ipc_destroy
+319	common	sdu_read		sys_sdu_read
+320	common	sdu_write		sys_sdu_write
+321	common	allocate_port	        sys_allocate_port
+322	common	deallocate_port	        sys_deallocate_port
+323     common  management_sdu_read     sys_management_sdu_read
+324     common  management_sdu_write    sys_management_sdu_write
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact
