@@ -129,7 +129,7 @@ int main() {
 	}
 
 	ipcManager->requestFlowDeallocation(flow2->getPortId());
-	if (flow->getState() != FLOW_DEALLOCATION_REQUESTED) {
+	if (flow2->getState() != FLOW_DEALLOCATION_REQUESTED) {
 	        std::cout<<"Requested flow deallocation, but flow is in wrong state";
 	        return -1;
 	}

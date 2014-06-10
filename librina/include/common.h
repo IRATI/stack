@@ -43,6 +43,7 @@
 
 #include "exceptions.h"
 #include "patterns.h"
+#include "concurrency.h"
 
 namespace rina {
 
@@ -1776,6 +1777,19 @@ public:
 	virtual void run() = 0;
 };
 
+class LockableMap : public Lockable {
+public:
+	LockableMap();
+	~LockableMap() throw();
+	void insert(std::pair<double, TimerTask*> pair);
+	void clear();
+	void runTasks();
+	void cancelTask(TimerTask *task);
+private:
+	std::map<double, TimerTask*> tasks_;
+};
+
+void* doWork(void * arg);
 /// Class that implements a timer which contains a thread
 class Timer {
 public:
@@ -1784,8 +1798,8 @@ public:
 	void scheduleTask(TimerTask* task, double delay_ms);
 	void cancelTask(TimerTask *task);
 private:
-	void* doWork(void *arg);
-	std::map<double, TimerTask> tasks_;
+	Thread *thread_;
+	LockableMap lockableMap_;
 };
 
 /**
