@@ -2074,7 +2074,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
         }
 
         seq_num = kipcm_pmap_find(kipcm->messages->ingress, pid);
-        if (!is_seq_num_ok(seq_num)) {
+        if (!is_rnl_seq_num_ok(seq_num)) {
                 LOG_ERR("Could not find request message id (seq num)");
                 return -1;
         }
