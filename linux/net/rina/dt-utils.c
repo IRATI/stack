@@ -27,6 +27,9 @@
 #include "utils.h"
 #include "debug.h"
 #include "dt-utils.h"
+/* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this*/
+#include "dtcp.h"
+#include "dtcp-utils.h"
 #include "dt.h"
 
 struct cwq {
@@ -253,7 +256,8 @@ static int entries_ack(struct rtxqueue * q,
 
 static int entries_nack(struct rtxqueue * q,
                         struct rmt *      rmt,
-                        seq_num_t         seq_num)
+                        seq_num_t         seq_num,
+                        uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur;
         struct pdu *        tmp; 
@@ -265,6 +269,12 @@ static int entries_nack(struct rtxqueue * q,
         list_for_each_entry_reverse(cur, &q->head, next) {
                 if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
                     seq_num) {
+                        cur->retries++;
+                        if (cur->retries >= data_rtx_max) {
+                                LOG_ERR("Maximum number of rtx has been "
+                                        "achieved. Can't maintain QoS");
+                                continue;
+                        }
                         tmp = pdu_dup_ni(cur->pdu);
                         if (rmt_send(rmt,
                                      pci_destination(pdu_pci_get_ro(tmp)),
@@ -384,9 +394,30 @@ static int rtxqueue_drop(struct rtxqueue * q,
 }
 
 
-static int rtxqueue_rtx(struct rtxqueue * q, unsigned int tr)
+static int rtxqueue_rtx(struct rtxqueue * q,
+                        unsigned int tr,
+                        struct rmt * rmt,
+                        uint_t data_rtx_max)
 {
-        LOG_MISSING;
+        struct rtxq_entry * cur, * n;
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (cur->time_stamp < tr) {
+                        cur->retries++;
+                        if (cur->retries >= data_rtx_max) {
+                                LOG_ERR("Maximum number of rtx has been "
+                                        "achieved. Can't maintain QoS");
+                                continue;
+                        }
+                        if (rmt_send(rmt,
+                                     pci_destination(pdu_pci_get_ro(cur->pdu)),
+                                     pci_qos_id(pdu_pci_get_ro(cur->pdu)),
+                                     cur->pdu)) {
+                                LOG_ERR("Could not retransmit PDU");
+                                continue;
+                        }
+                } 
+        }
 
         return 0;
 }
@@ -401,7 +432,8 @@ struct rtxq {
 
 static void Rtimer_handler(void * data)
 {
-        struct rtxq * q;
+        struct rtxq *        q;
+        struct dtcp_config * dtcp_cfg;
 
         q = (struct rtxq *) data;
         if (!q) {
@@ -409,7 +441,16 @@ static void Rtimer_handler(void * data)
                 return;
         }
 
-        rtxqueue_rtx(q->queue, dt_sv_tr(q->parent));
+        dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
+        if (!dtcp_cfg)
+                LOG_ERR("RTX failed");
+
+        if (rtxqueue_rtx(q->queue,
+                         dt_sv_tr(q->parent),
+                         q->rmt,
+                         dtcp_data_retransmit_max(dtcp_cfg)))
+                LOG_ERR("RTX failed");
+
         rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 }
 
@@ -553,12 +594,21 @@ int rtxq_nack(struct rtxq * q,
               seq_num_t     seq_num,
               unsigned int  tr)
 {
+        struct dtcp_config * dtcp_cfg;
+
         if (!q)
+                return -1;
+
+        dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
+        if (!dtcp_cfg)
                 return -1;
 
         spin_lock(&q->lock);
 
-        entries_nack(q->queue, q->rmt, seq_num);
+        entries_nack(q->queue,
+                     q->rmt,
+                     seq_num,
+                     dtcp_data_retransmit_max(dtcp_cfg));
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
