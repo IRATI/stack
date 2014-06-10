@@ -41,9 +41,9 @@
 #include <map>
 #include <ctime>
 
-#include "exceptions.h"
-#include "patterns.h"
-#include "concurrency.h"
+#include "librina/concurrency.h"
+#include "librina/exceptions.h"
+#include "librina/patterns.h"
 
 namespace rina {
 

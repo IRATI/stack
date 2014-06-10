@@ -12,8 +12,8 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
-#include "cdap.h"
-#include "concurrency.h"
+#include "librina/cdap.h"
+#include "librina/concurrency.h"
 #define RINA_PREFIX "cdap-manager"
 #include "logs.h"
 

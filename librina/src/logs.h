@@ -25,7 +25,7 @@
 
 #ifdef __cplusplus
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 #ifndef RINA_PREFIX

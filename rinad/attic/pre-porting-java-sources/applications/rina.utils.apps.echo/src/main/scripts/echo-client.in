@@ -14,6 +14,7 @@ SDUSIZE="100"
 COUNT="30"
 TIMEOUT="2000"
 RATE="1000"
+GAP="-1"
 
 function dump_help() {
     echo "$ME [OPTIONS...]"
@@ -24,6 +25,7 @@ function dump_help() {
     echo "  -c, --sdu-count [NUMBER]    set SDU count (default $COUNT)"
     echo "  -t, --timeout [NUMBER]      set test timeout in ms (default $TIMEOUT)"
     echo "  -a, --rate [NUMBER]         set test maximum rate in mbps (default $RATE)"
+    echo "  -g, --gap [NUMBER]          set maximum allowable SDU gap (default $GAP)"
     echo "  -h, --help                  print this help, then exit"
 }
 
@@ -93,6 +95,17 @@ while test $# -gt 0; do
             fi
             shift
             ;;
+            
+        --gap|-g)
+            shift
+            if test $# -gt 0; then
+                export GAP=$1
+            else
+                dump_hint "No max allowable SDU gap specified"
+                exit 1
+            fi
+            shift
+            ;;
 
         *)
             dump_hint "Unknown option"
@@ -101,4 +114,4 @@ while test $# -gt 0; do
     esac
 done
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/echo/rina.utils.apps.echo-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -count $COUNT -timeout $TIMEOUT -rate $RATE
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/echo/rina.utils.apps.echo-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -count $COUNT -timeout $TIMEOUT -rate $RATE -gap $GAP

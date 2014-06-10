@@ -20,12 +20,13 @@
 // MA  02110-1301  USA
 //
 
-#include <errno.h>
+#include <cerrno>
 
 #define RINA_PREFIX "concurrency"
 
 #include "logs.h"
-#include "concurrency.h"
+
+#include "librina/concurrency.h"
 
 namespace rina {
 

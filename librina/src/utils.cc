@@ -1,5 +1,5 @@
 //
-// librina (placeholder)
+// Utilities
 //
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
@@ -19,6 +19,7 @@
 // MA  02110-1301  USA
 //
 
-#include <iostream>
+#include <unistd.h>
 
-#include "librina/librina.h"
+size_t get_page_size()
+{ return sysconf(_SC_PAGE_SIZE); }

@@ -1,5 +1,5 @@
 /*
- * IPC Process
+ * Options parsing
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,18 +18,29 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <cstdlib>
+#ifndef RINAD_OPTIONS_H
+#define RINAD_OPTIONS_H
 
-#include <librina/common.h>
+#ifdef __cplusplus
 
-#include "common/options.h"
+#include <string>
 
-int main(int argc, char * argv[])
-{
-        (void) argc;
-        (void) argv;
+namespace rinad {
 
-        rina::initialize("test", "/tmp/test");
+// FIXME: Just started
 
-        return EXIT_SUCCESS;
+class option {
+ public:
+        option(const std::string & lng,
+               const std::string & shrt);
+
+ private:
+        std::string long_;
+        std::string short_;
+};
+
 }
+
+#endif
+
+#endif

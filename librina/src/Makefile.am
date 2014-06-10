@@ -6,6 +6,7 @@
 
 allsources =					\
 	logs.cc					\
+	utils.cc				\
 	concurrency.cc				\
 	core.cc					\
 	exceptions.cc				\

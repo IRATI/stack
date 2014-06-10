@@ -26,7 +26,7 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
+#include "librina/common.h"
 
 namespace rina {
 
