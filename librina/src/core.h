@@ -27,8 +27,9 @@
 
 #include <map>
 
-#include "concurrency.h"
-#include "patterns.h"
+#include "librina/concurrency.h"
+#include "librina/patterns.h"
+
 #include "netlink-manager.h"
 
 #define WAIT_RESPONSE_TIMEOUT 10

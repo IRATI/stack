@@ -39,8 +39,8 @@
 #include <vector>
 #include <list>
 
-#include "exceptions.h"
-#include "patterns.h"
+#include "librina/exceptions.h"
+#include "librina/patterns.h"
 
 namespace rina {
 

@@ -1,5 +1,5 @@
 //
-// CDAP
+// Utilities
 //
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
@@ -19,7 +19,7 @@
 // MA  02110-1301  USA
 //
 
-#include "librina/cdap.h"
+#include <unistd.h>
 
-namespace rina {
-}
+size_t get_page_size()
+{ return sysconf(_SC_PAGE_SIZE); }

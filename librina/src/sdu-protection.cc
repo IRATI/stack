@@ -21,7 +21,7 @@
 // MA  02110-1301  USA
 //
 
-#include "sdu-protection.h"
+#include "librina/sdu-protection.h"
 
 namespace rina {
 }

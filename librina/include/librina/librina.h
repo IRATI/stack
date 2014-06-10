@@ -24,13 +24,13 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
-#include "application.h"
-#include "ipc-manager.h"
-//#include "ipc-process.h"
-//#include "faux-sockets.h"
-//#include "cdap.h"
-//#include "sdu-protection.h"
+#include "librina/common.h"
+#include "librina/application.h"
+#include "librina/ipc-manager.h"
+//#include "librina/ipc-process.h"
+//#include "librina/faux-sockets.h"
+//#include "librina/cdap.h"
+//#include "librina/sdu-protection.h"
 
 #endif
 #endif

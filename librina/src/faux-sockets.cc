@@ -19,7 +19,7 @@
 // MA  02110-1301  USA
 //
 
-#include "faux-sockets.h"
+#include "librina/faux-sockets.h"
 
 namespace rina {
 }

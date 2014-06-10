@@ -1,5 +1,5 @@
 //
-// librina (placeholder)
+// IPC Process
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
@@ -25,12 +25,13 @@
 #include <sstream>
 
 #define RINA_PREFIX "ipc-process"
-#define PAGE_SIZE 4096
+
+#include "core.h"
+#include "utils.h"
+#include "rina-syscalls.h"
 
 #include "logs.h"
-#include "ipc-process.h"
-#include "core.h"
-#include "rina-syscalls.h"
+#include "librina/ipc-process.h"
 
 namespace rina{
 
@@ -606,7 +607,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	try{
 	        //FIXME, compute maximum message size dynamically
 		rinaManager->sendMessageOfMaxSize(&responseMessage,
-		                5*PAGE_SIZE);
+                                                  5 * get_page_size());
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}

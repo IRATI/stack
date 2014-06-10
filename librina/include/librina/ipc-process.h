@@ -26,8 +26,11 @@
 
 #ifdef __cplusplus
 
-#include "common.h"
-#include "application.h"
+#include <string>
+#include <list>
+
+#include "librina/common.h"
+#include "librina/application.h"
 
 #define RINA_DEFAULT_POLICY_NAME "default"
 #define RINA_DEFAULT_POLICY_VERSION "0"
