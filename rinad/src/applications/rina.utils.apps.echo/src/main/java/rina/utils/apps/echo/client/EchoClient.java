@@ -73,6 +73,8 @@ FlowAllocationListener, FlowDeallocationListener {
 	
 	private FlowReader flowReader = null;
 	
+	private int maxAllowableGapInSDUs = -1;
+	
 	private Timer timer = null;
 	
 	private int timeout = 0;
@@ -80,7 +82,7 @@ FlowAllocationListener, FlowDeallocationListener {
 	public EchoClient(int numberOfSdus, int sduSize, 
 			ApplicationProcessNamingInformation echoApNamingInfo, 
 			ApplicationProcessNamingInformation clientApNamingInfo, 
-                          int timeout, int rate){
+                          int timeout, int rate, int gap){
 		try {
 			rina.initialize(LogHelper.getLibrinaLogLevel(), 
 					LogHelper.getLibrinaLogFile());
@@ -100,8 +102,9 @@ FlowAllocationListener, FlowDeallocationListener {
 		this.echoApNamingInfo = echoApNamingInfo;
 		this.clientApNamingInfo = clientApNamingInfo;
 		this.timeout = timeout;
-                testInformation.setTimeout(timeout);
-                testInformation.setRate(rate);
+		this.maxAllowableGapInSDUs = gap;
+		testInformation.setTimeout(timeout);
+		testInformation.setRate(rate);
 
 		cdapSessionManager = new CDAPSessionManagerImpl(
 				new GoogleProtocolBufWireMessageProviderFactory());
@@ -148,6 +151,7 @@ FlowAllocationListener, FlowDeallocationListener {
 				
 				//1 Allocate a flow to the Echo Server AE
 				FlowSpecification qosSpec = new FlowSpecification();
+				qosSpec.setMaxAllowableGap(maxAllowableGapInSDUs);
 				handle = rina.getIpcManager().requestFlowAllocation(
 						this.clientApNamingInfo, this.echoApNamingInfo, qosSpec);
 				ipcEventConsumer.addFlowAllocationListener(this, handle);

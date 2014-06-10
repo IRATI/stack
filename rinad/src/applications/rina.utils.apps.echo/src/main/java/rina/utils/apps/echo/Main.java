@@ -33,6 +33,10 @@ Rate at which to send (in Mbps)
 
 -rate R
 
+Max allowable SDU gap (in SDUs, a value of -1 is a 'don't care')
+
+-gap G
+
 All of the above can have implementation-dependant defaults. For example, the default for -appname might be "RINAband" 
 and the default for -instance might be the DIF address of the IPC Process.
  * @author eduardgrasa
@@ -55,7 +59,8 @@ public class Main {
 	public static final String CAPINSTANCE = "cinstance";
 	public static final String CAPNAME = "capname";
 	public static final String TIMEOUT = "timeout";
-        public static final String RATE = "rate";
+    public static final String RATE = "rate";
+    public static final String GAP = "gap";
 	
 	public static final int DEFAULT_SDU_SIZE_IN_BYTES = 1500;
 	public static final int DEFAULT_SDU_COUNT = 5000;
@@ -64,14 +69,16 @@ public class Main {
 	public static final String DEFAULT_CLIENT_AP_NAME = "rina.utils.apps.echo.client";
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	public static final int DEFAULT_TIMEOUT_IN_MS = 2000;
-        public static final int DEFAULT_RATE_IN_MBPS = 1000;
+    public static final int DEFAULT_RATE_IN_MBPS = 1000;
+    public static final int DEFAULT_MAX_ALLOWABLE_GAP_IN_SDUS = -1;
 	
 	public static final String USAGE = "java -jar rina.utils.apps.echo [-role] (client|server)" +
 			"[-sapname] serverApName [-sinstance] serverApInstance [-capname] clientApName " + 
 			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-count] num_sdus " +
-                        "[-timeout] timeout_in_milliseconds [-rate] rate_in_mbps";
+                        "[-timeout] timeout_in_milliseconds [-rate] rate_in_mbps " + 
+			            "[-gap] max_allowable_gap_in_sdus";
 	public static final String DEFAULTS = "The defaults are: role=server;  sapname=rina.utils.apps.echo.server; " + 
-			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; count=5000; timeout=2000";
+			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; count=5000; timeout=2000; rate=1000; gap=-1";
 	
 	public static void main(String[] args){
 		System.out.println(Arrays.toString(args));
@@ -84,7 +91,8 @@ public class Main {
 		String serverApInstance = DEFAULT_AP_INSTANCE;
 		String clientApInstance = DEFAULT_AP_INSTANCE;
 		int timeout = DEFAULT_TIMEOUT_IN_MS;
-                int rate = DEFAULT_RATE_IN_MBPS;
+        int rate = DEFAULT_RATE_IN_MBPS;
+        int gap = DEFAULT_MAX_ALLOWABLE_GAP_IN_SDUS;
 		
 		int i=0;
 		while(i<args.length){
@@ -131,21 +139,30 @@ public class Main {
 				}catch(Exception ex){
 					showErrorAndExit(TIMEOUT);
 				}
-                        }else if (args[i].equals(ARGUMENT_SEPARATOR + RATE)){
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + RATE)){
 				try{
 					rate = Integer.parseInt(args[i+1]);
 					if (rate <= 0){
 						showErrorAndExit(RATE);
 					}
 				}catch(Exception ex){
-					showErrorAndExit(TIMEOUT);
+					showErrorAndExit(RATE);
+				}
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + GAP)){
+				try{
+					gap = Integer.parseInt(args[i+1]);
+					if (rate <= -1){
+						showErrorAndExit(GAP);
+					}
+				}catch(Exception ex){
+					showErrorAndExit(GAP);
 				}
 			}else{
 				System.out.println("Wrong argument.\nUsage: "
 						+USAGE+"\n"+DEFAULTS);
 				System.exit(-1);
 			}
-			
+
 			i = i+2;
 		}
 		
@@ -155,7 +172,7 @@ public class Main {
 				new ApplicationProcessNamingInformation(clientApName, clientApInstance);
 		
 		Echo echo = new Echo(server, serverAPNamingInfo, clientApNamingInfo, sduCount, 
-                                     sduSizeInBytes, timeout, rate);
+                                     sduSizeInBytes, timeout, rate, gap);
 		echo.execute();
 	}
 	

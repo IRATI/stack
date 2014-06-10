@@ -14,11 +14,11 @@ public class Echo{
 	
 	public Echo(boolean server, ApplicationProcessNamingInformation serverNamingInfo, 
 			ApplicationProcessNamingInformation clientNamingInfo, int numberOfSDUs, int sduSize, 
-                    int timeout, int rate){
+                    int timeout, int rate, int gap){
 		if (server){
 			echoServer = new EchoServer(serverNamingInfo);
 		}else{
-			echoClient = new EchoClient(numberOfSDUs, sduSize, serverNamingInfo, clientNamingInfo, timeout, rate);
+			echoClient = new EchoClient(numberOfSDUs, sduSize, serverNamingInfo, clientNamingInfo, timeout, rate, gap);
 		}
 	}
 	
