@@ -271,7 +271,6 @@ static int entries_nack(struct rtxqueue * q,
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
                                         "achieved. Can't maintain QoS");
-                                rtxq_entry_destroy(cur);
                                 continue;
                         }
                         tmp = pdu_dup_ni(cur->pdu);
@@ -279,8 +278,9 @@ static int entries_nack(struct rtxqueue * q,
                                      pci_destination(pdu_pci_get_ro(tmp)),
                                      pci_qos_id(pdu_pci_get_ro(tmp)),
                                      tmp)) {
-                                LOG_ERR("Could not send NACKed PDU to RMT");
+                                LOG_ERR("Could not send NACKed PDU");
                                 pdu_destroy(tmp);
+                                rtxq_entry_destroy(cur);
                                 continue;
                         }
                 } else
@@ -407,14 +407,15 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
                                         "achieved. Can't maintain QoS");
-                                rtxq_entry_destroy(cur);
                                 continue;
                         }
                         if (rmt_send(rmt,
                                      pci_destination(pdu_pci_get_ro(cur->pdu)),
                                      pci_qos_id(pdu_pci_get_ro(cur->pdu)),
                                      cur->pdu)) {
-                                LOG_ERR("Could not send rtxed PDU to RMT");
+                                LOG_ERR("Could not retransmit PDU");
+                                pdu_destroy(tmp);
+                                rtxq_entry_destroy(cur);
                                 continue;
                         }
                 } 
