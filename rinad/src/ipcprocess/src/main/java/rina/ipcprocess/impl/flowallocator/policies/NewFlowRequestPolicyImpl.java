@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import eu.irati.librina.Connection;
 import eu.irati.librina.ConnectionPolicies;
 import eu.irati.librina.FlowRequestEvent;
@@ -16,6 +19,8 @@ import rina.flowallocator.api.Flow;
 import rina.flowallocator.api.Flow.State;
 
 public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
+	
+	private static final Log log = LogFactory.getLog(NewFlowRequestPolicyImpl.class);
 
 	public Flow generateFlowObject(FlowRequestEvent event, String difName, 
 			QoSCubeList qosCubes) throws IPCException {
@@ -29,6 +34,9 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		List<Connection> connections = new ArrayList<Connection>();
 
 		QoSCube qosCube = selectQoSCube(event.getFlowSpecification(), qosCubes);
+		log.debug("Selected qosCube with name "+qosCube.getName()+ " and policies: + " +
+				"\n"+ qosCube.getEfcpPolicies().toString());
+		qosCube.getEfcpPolicies().setDtcpPresent(false);
 		
 		Connection connection = new Connection();
 		//TODO hardcoded value, we don't deal with QoS yet
