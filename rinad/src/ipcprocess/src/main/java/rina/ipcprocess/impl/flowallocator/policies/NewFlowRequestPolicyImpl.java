@@ -1,11 +1,13 @@
 package rina.ipcprocess.impl.flowallocator.policies;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import eu.irati.librina.Connection;
 import eu.irati.librina.ConnectionPolicies;
 import eu.irati.librina.FlowRequestEvent;
+import eu.irati.librina.FlowSpecification;
 import eu.irati.librina.IPCException;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.QoSCubeList;
@@ -25,9 +27,8 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		flow.setSource(true);
 		flow.setState(State.ALLOCATION_IN_PROGRESS);
 		List<Connection> connections = new ArrayList<Connection>();
-		
-		//TODO select qos cube properly
-		QoSCube qosCube = qosCubes.getFirst();
+
+		QoSCube qosCube = selectQoSCube(event.getFlowSpecification(), qosCubes);
 		
 		Connection connection = new Connection();
 		//TODO hardcoded value, we don't deal with QoS yet
@@ -48,6 +49,40 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		flow.setFlowSpec(event.getFlowSpecification());
 		
 		return flow;
+	}
+	
+	private QoSCube selectQoSCube(FlowSpecification flowSpec, QoSCubeList qosCubes) throws IPCException { 
+		QoSCube result = null;
+		
+		if (flowSpec.getMaxAllowableGap() == 0) {
+			Iterator<QoSCube> cubesIterator = qosCubes.iterator();
+			while(cubesIterator.hasNext()) {
+				result = cubesIterator.next();
+				if (result.getEfcpPolicies().isDtcpPresent()) {
+					if (result.getEfcpPolicies().getDtcpConfiguration().isRtxcontrol()) {
+						return result;
+					}
+				}
+			}
+			
+			throw new IPCException("Could not find a QoS Cube with Rtx control enabled!");
+		}
+
+		if (flowSpec.getMaxAllowableGap() > 0) {
+			Iterator<QoSCube> cubesIterator = qosCubes.iterator();
+			while(cubesIterator.hasNext()) {
+				result = cubesIterator.next();
+				if (result.getEfcpPolicies().isDtcpPresent()) {
+					if (!result.getEfcpPolicies().getDtcpConfiguration().isRtxcontrol()) {
+						return result;
+					}
+				}
+			}
+
+			throw new IPCException("Could not find a QoS Cube with Rtx control disabled!");
+		}
+
+		return qosCubes.getFirst();
 	}
 
 }
