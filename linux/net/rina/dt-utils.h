@@ -26,6 +26,7 @@
 
 #include "common.h"
 #include "pdu.h"
+#include "rmt.h"
 
 struct cwq;
 
@@ -42,8 +43,10 @@ ssize_t         cwq_size(struct cwq * q);
 struct rtxq;
 struct dt;
 
-struct rtxq *   rtxq_create(struct dt * dt);
-struct rtxq *   rtxq_create_ni(struct dt * dt);
+struct rtxq *   rtxq_create(struct dt *  dt,
+                            struct rmt * rmt);
+struct rtxq *   rtxq_create_ni(struct dt *  dt, 
+                               struct rmt * rmt);
 int             rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */

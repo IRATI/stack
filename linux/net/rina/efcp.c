@@ -468,7 +468,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
-                rtxq = rtxq_create(tmp->dt);
+                rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
                         efcp_destroy(tmp);
