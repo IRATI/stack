@@ -19,6 +19,24 @@
 
 namespace rina {
 
+class ConnectionStateMachine;
+// TODO: make these two classes one
+class ResetStablishmentTimerTask : public TimerTask {
+public:
+	ResetStablishmentTimerTask(ConnectionStateMachine *con_state_machine);
+	void run();
+private:
+	ConnectionStateMachine *con_state_machine_;
+};
+
+class ReleaseConnectionTimerTask : public TimerTask {
+public:
+	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine);
+	void run();
+private:
+	ConnectionStateMachine *con_state_machine_;
+};
+
 /// Implements the CDAP connection state machine
 class CDAPSessionImpl;
 class ConnectionStateMachine {
@@ -90,7 +108,12 @@ private:
 	/// The state of the CDAP connection, drives the CDAP connection
 	/// state machine
 	ConnectionState connection_state_;
+	Timer open_timer_;
+	Timer close_timer_;
+	friend class ResetStablishmentTimerTask;
+	friend class ReleaseConnectionTimerTask;
 };
+
 
 /// Encapsulates an operation state
 class CDAPOperationState {
@@ -137,7 +160,6 @@ public:
 	int get_port_id() const;
 	CDAPSessionDescriptor* get_session_descriptor() const;
 	CDAPSessionInvokeIdManagerImpl* get_invoke_id_manager() const;
-protected:
 	void stopConnection();
 private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);
@@ -176,7 +198,6 @@ private:
 	CDAPSessionDescriptor *session_descriptor_;
 	CDAPSessionManager *cdap_session_manager_;
 	CDAPSessionInvokeIdManagerImpl *invoke_id_manager_;
-	friend class ConnectionStateMachine;
 };
 
 /// Implements a CDAP session manager.

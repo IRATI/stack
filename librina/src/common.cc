@@ -2487,6 +2487,9 @@ void Timer::scheduleTask(TimerTask* task, double delay_ms) {
 void Timer::cancelTask(TimerTask* task) {
 	lockableMap_.cancelTask(task);
 }
+void Timer::clear() {
+	lockableMap_.clear();
+}
 
 /* INITIALIZATION OPERATIONS */
 

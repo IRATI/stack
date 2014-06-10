@@ -1797,6 +1797,7 @@ public:
 	~Timer();
 	void scheduleTask(TimerTask* task, double delay_ms);
 	void cancelTask(TimerTask *task);
+	void clear();
 private:
 	Thread *thread_;
 	LockableMap lockableMap_;

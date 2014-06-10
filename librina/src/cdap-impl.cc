@@ -6,6 +6,26 @@
 
 namespace rina {
 
+// CLASS ResetStablishmentTimerTask
+ResetStablishmentTimerTask::ResetStablishmentTimerTask(ConnectionStateMachine *con_state_machine) {
+	con_state_machine_ = con_state_machine;
+}
+void ResetStablishmentTimerTask::run() {
+	LOG_ERR("M_CONNECT_R message not received within %d ms. Reseting the connection", con_state_machine_->timeout_);
+	con_state_machine_->connection_state_ = con_state_machine_->NONE;
+	con_state_machine_->cdap_session_->stopConnection();
+}
+
+// CLASS ReleaseConnectionTimerTask
+ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine) {
+	con_state_machine_ = con_state_machine;
+}
+void ReleaseConnectionTimerTask::run() {
+	LOG_ERR("M_RELEASE_R message not received within ms. Seting the connection to NULL", con_state_machine_->timeout_);
+	con_state_machine_->connection_state_ = con_state_machine_->NONE;
+	con_state_machine_->cdap_session_->stopConnection();
+}
+
 // CLASS ConnectionStateMachine
 ConnectionStateMachine::ConnectionStateMachine(
 		CDAPSessionImpl *cdap_session, long timeout) {
@@ -72,21 +92,11 @@ void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent) {
 		releaseResponseReceived();
 	}
 }
-void ConnectionStateMachine::noConnectionResponse(){
-	/* TODO: TIMER
-	ConditionVariable cond;
-	cond.timedwait(timeout_/1000, (timeout_%1000) * 1000 );
-	LOG_ERR("M_CONNECT_R message not received within %d ms.\n Reseting the connection", timeout_);
-	connection_state_ = NONE;
-	cdap_session_->stopConnection();
-	*/
-}
 void ConnectionStateMachine::connect() {
-	/* TODO: TIMER
 	checkConnect();
 	connection_state_ = AWAITCON;
-	Thread waitResponse(noConnectionResponse());
-	*/
+	ResetStablishmentTimerTask *reset = new ResetStablishmentTimerTask(this);
+	open_timer_.scheduleTask(reset, timeout_);
 }
 void ConnectionStateMachine::connectReceived() {
 	if (connection_state_ != NONE){
@@ -106,17 +116,15 @@ void ConnectionStateMachine::connectResponseReceived() {
 		ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "+ connection_state_ << " state";
 		throw CDAPException( ss.str() );
 	}
-	/*
-	openTimer.cancel();
-	openTimer = null;
-	*/
+	open_timer_.clear();
 	connection_state_ = CONNECTED;
 }
 void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {
 	checkRelease();
 	connection_state_ = AWAITCLOSE;
 	if (cdap_message.get_invoke_id() != 0){
-		// TODO: TIMER
+		ReleaseConnectionTimerTask *reset = new ReleaseConnectionTimerTask(this);
+		close_timer_.scheduleTask(reset, timeout_);
 	}
 }
 void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
@@ -129,7 +137,7 @@ void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
 		connection_state_ = AWAITCLOSE;
 	}else{
 		connection_state_ = NONE;
-		// TODO: cdap_session_.stopConnection();
+		cdap_session_->stopConnection();
 	}
 }
 void ConnectionStateMachine::releaseResponse() {
@@ -142,12 +150,9 @@ void ConnectionStateMachine::releaseResponseReceived() {
 		ss <<"Received an M_RELEASE_R message, but this CDAP session is currently in " << connection_state_ << " state";
 		throw CDAPException( ss.str() );
 	}
-	/* TODO
-	closeTimer.cancel();
-	closeTimer = null;
-	*/
+	close_timer_.clear();
 	connection_state_ = NONE;
-	// TODO: cdap_session_.stopConnection();
+	cdap_session_->stopConnection();
 }
 
 // CLASS CDAPOperationState
@@ -155,6 +160,7 @@ CDAPOperationState::CDAPOperationState(CDAPMessage::Opcode op_code, bool sender)
 	op_code_ = op_code;
 	sender_ = sender;
 }
+
 CDAPMessage::Opcode CDAPOperationState::get_op_code() const{
 	return op_code_;
 }
@@ -302,6 +308,9 @@ CDAPSessionDescriptor* CDAPSessionImpl::get_session_descriptor() const {
 }
 CDAPSessionInvokeIdManagerImpl* CDAPSessionImpl::get_invoke_id_manager() const {
 	return invoke_id_manager_;
+}
+void CDAPSessionImpl::stopConnection() {
+	cdap_session_manager_->removeCDAPSession(get_port_id());
 }
 void CDAPSessionImpl::messageSentOrReceived(const CDAPMessage &cdap_message,
 		bool sent) {
