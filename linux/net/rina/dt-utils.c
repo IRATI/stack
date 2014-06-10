@@ -3,6 +3,8 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -617,19 +619,6 @@ int rtxq_nack(struct rtxq * q,
         spin_unlock(&q->lock);
 
         return 0;
-}
-
-int rtxq_set_pop(struct rtxq *      q,
-                 seq_num_t          from,
-                 seq_num_t          to,
-                 struct list_head * p)
-{
-        if (!q)
-                return -1;
-
-        LOG_MISSING;
-
-        return -1;
 }
 
 struct seq_q_entry {

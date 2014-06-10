@@ -61,9 +61,5 @@ int             rtxq_nack(struct rtxq * q,
 int             rtxq_drop(struct rtxq * q,
                           seq_num_t     from,
                           seq_num_t     to);
-int             rtxq_set_pop(struct rtxq *      q,
-                             seq_num_t          from,
-                             seq_num_t          to,
-                             struct list_head * p);
 
 #endif
