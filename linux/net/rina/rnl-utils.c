@@ -1384,17 +1384,13 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
                              attr, attr_policy))
                 return -1;
 
-        if (attrs[DFCC_ATTR_WINDOW_BASED])
-                dtcp_window_based_fctrl_set(cfg,
-                                            nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
+        dtcp_window_based_fctrl_set(cfg, nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
 
         if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG])
                 parse_dtcp_wb_fctrl_config(attrs[DFCC_ATTR_WINDOW_BASED_CONFIG],
                                            cfg);
 
-        if (attrs[DFCC_ATTR_RATE_BASED])
-                dtcp_rate_based_fctrl_set(cfg,
-                                          nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
+        dtcp_rate_based_fctrl_set(cfg, nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
 
         if (attrs[DFCC_ATTR_RATE_BASED_CONFIG])
                 parse_dtcp_rb_fctrl_config(attrs[DFCC_ATTR_RATE_BASED_CONFIG],
@@ -1548,17 +1544,13 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
                 return -1;
         }
 
-        if (attrs[DCA_ATTR_FLOW_CONTROL])
-                dtcp_flow_ctrl_set(cfg,
-                                   nla_get_flag(attrs[DCA_ATTR_FLOW_CONTROL]));
+        dtcp_flow_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_FLOW_CONTROL]));
 
         if (attrs[DCA_ATTR_FLOW_CONTROL_CONFIG])
                 parse_dtcp_fctrl_config(attrs[DCA_ATTR_FLOW_CONTROL_CONFIG],
                                         cfg);
 
-        if (attrs[DCA_ATTR_RETX_CONTROL])
-                dtcp_rtx_ctrl_set(cfg,
-                                  nla_get_flag(attrs[DCA_ATTR_RETX_CONTROL]));
+        dtcp_rtx_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_RETX_CONTROL]));
 
         if (attrs[DCA_ATTR_RETX_CONTROL_CONFIG])
                 if (parse_dtcp_rctrl_config(attrs[DCA_ATTR_RETX_CONTROL_CONFIG],
@@ -1708,8 +1700,8 @@ rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
                 if (parse_app_name_info(info->attrs[IDRN_ATTR_DIF_NAME],
                                         msg_attrs->dif_name))
                         goto parse_fail;
-        if (info->attrs[IDRN_ATTR_REGISTRATION])
-                msg_attrs->is_registered =
+
+        msg_attrs->is_registered =
                         nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
 
         return 0;
@@ -1780,8 +1772,8 @@ rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
         if (info->attrs[IAFRE_ATTR_RESULT])
                 msg_attrs->result =
                         nla_get_u32(info->attrs[IAFRE_ATTR_RESULT]);
-        if (info->attrs[IAFRE_ATTR_NOTIFY_SOURCE])
-                msg_attrs->notify_src =
+
+        msg_attrs->notify_src =
                         nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
 
         return 0;
