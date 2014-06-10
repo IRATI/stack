@@ -48,6 +48,7 @@ public class EnrollmentRIBObject extends BaseRIBObject{
 		}catch(Exception ex){
 			log.error(ex);
 			sendErrorMessage(cdapSessionDescriptor);
+			return;
 		}	
 		
 		if (enrollmentStateMachine == null){

@@ -16,6 +16,7 @@ import eu.irati.librina.rina;
 
 import rina.cdap.api.CDAPException;
 import rina.cdap.api.CDAPMessageHandler;
+import rina.cdap.api.CDAPSession;
 import rina.cdap.api.CDAPSessionDescriptor;
 import rina.cdap.api.CDAPSessionManager;
 import rina.cdap.api.message.CDAPMessage;
@@ -106,6 +107,7 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 	 */
 	protected void cdapMessageDelivered(byte[] encodedCDAPMessage, int portId){
 		CDAPMessage cdapMessage = null;
+		CDAPSession cdapSession = null;
 		CDAPSessionDescriptor cdapSessionDescriptor = null;
 
 		//1 Decode the message and obtain the CDAP session descriptor
@@ -113,7 +115,13 @@ public class RIBDaemonImpl extends BaseRIBDaemon implements EventListener{
 			//If another thread was sending a message, let him finish
 			synchronized(atomicSendLock){
 				cdapMessage = cdapSessionManager.messageReceived(encodedCDAPMessage, portId);
-				cdapSessionDescriptor = cdapSessionManager.getCDAPSession(portId).getSessionDescriptor();
+				cdapSession = cdapSessionManager.getCDAPSession(portId);
+				if (cdapSession == null) {
+					log.error("Could not find CDAP open session related to portId "+portId);
+					return;
+				}
+				
+				cdapSessionDescriptor = cdapSession.getSessionDescriptor();
 				log.debug("Received CDAP Message through N-1 flow identified by portId "
 						+portId+":"+cdapMessage.toString());
 			}

@@ -27,6 +27,14 @@ The size of a single SDU
 
 Duration of the test
 
+Rate at which to send (in Mbps)
+
+-rate R
+
+Max allowable SDU gap (in SDUs, a value of -1 is a 'don't care')
+
+-gap G
+
 All of the above can have implementation-dependant defaults. For example, the default for -appname might be "RINAperf" 
 and the default for -instance might be the DIF address of the IPC Process.
  * @author eduardgrasa
@@ -49,6 +57,7 @@ public class Main {
 	public static final String CAPNAME = "capname";
 	public static final String TIME = "time";
 	public static final String RATE = "rate";
+    public static final String GAP = "gap";
 	
 	public static final int DEFAULT_SDU_SIZE_IN_BYTES = 1500;
 	public static final String DEFAULT_ROLE = SERVER;
@@ -57,13 +66,14 @@ public class Main {
 	public static final String DEFAULT_AP_INSTANCE = "1";
 	public static final int DEFAULT_TIME_IN_SECONDS = 10;
 	public static final int DEFAULT_RATE_IN_KBPS = 1000;
+    public static final int DEFAULT_MAX_ALLOWABLE_GAP_IN_SDUS = -1;
 	
 	public static final String USAGE = "java -jar rina.utils.apps.rinaperf [-role] (client|server)" +
 			"[-sapname] serverApName [-sinstance] serverApInstance [-capname] clientApName " + 
 			"[-cinstance] clientApInstance [-sdusize] sduSizeInBytes [-time] testDurationInSeconds " +
-			"[-rate] rate_in_kbps";
+			"[-rate] rate_in_kbps [-gap] max_allowable_gap_in_sdus";
 	public static final String DEFAULTS = "The defaults are: role=server;  sapname=rina.utils.apps.rinaperf.server; " + 
-			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; time=10; rate=1000";
+			"sinstance=1; capname=rina.utils.apps.echo.client; cinstance=1; sdusize=1500; time=10; rate=1000; gap=-1";
 	
 	public static void main(String[] args){
 		System.out.println(Arrays.toString(args));
@@ -76,6 +86,7 @@ public class Main {
 		String clientApInstance = DEFAULT_AP_INSTANCE;
 		int time = DEFAULT_TIME_IN_SECONDS;
 		int rate = DEFAULT_RATE_IN_KBPS;
+		int gap = DEFAULT_MAX_ALLOWABLE_GAP_IN_SDUS;
 		
 		int i=0;
 		while(i<args.length){
@@ -122,6 +133,15 @@ public class Main {
 				}catch(Exception ex){
 					showErrorAndExit(RATE);
 				}
+			}else if (args[i].equals(ARGUMENT_SEPARATOR + GAP)){
+				try{
+					gap = Integer.parseInt(args[i+1]);
+					if (rate <= -1){
+						showErrorAndExit(GAP);
+					}
+				}catch(Exception ex){
+					showErrorAndExit(GAP);
+				}
 			}else{
 				System.out.println("Wrong argument.\nUsage: "
 						+USAGE+"\n"+DEFAULTS);
@@ -137,7 +157,7 @@ public class Main {
 				new ApplicationProcessNamingInformation(clientApName, clientApInstance);
 		
 		RINAPerf rinaPerf = new RINAPerf(server, serverAPNamingInfo, clientApNamingInfo,
-				sduSizeInBytes, time, rate);
+				sduSizeInBytes, time, rate, gap);
 		rinaPerf.execute();
 	}
 	
