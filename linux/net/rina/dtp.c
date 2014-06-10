@@ -1049,10 +1049,6 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-
-
-
-
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
                            3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
