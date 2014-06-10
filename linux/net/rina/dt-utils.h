@@ -28,6 +28,7 @@
 #include "pdu.h"
 
 struct cwq;
+struct dtp;
 
 struct cwq *    cwq_create(void);
 struct cwq *    cwq_create_ni(void);

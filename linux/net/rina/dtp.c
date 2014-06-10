@@ -34,6 +34,96 @@
 #include "dtcp.h"
 #include "dtcp-utils.h"
 
+/* Sequencing/reassembly queue */
+
+struct seq_queue {
+        struct list_head head;
+};
+
+struct seq_q_entry {
+        unsigned long    time_stamp;
+        struct pdu *     pdu;
+        struct list_head next;
+};
+
+struct sequencingQ {
+        struct dtp *       dtp;
+        struct seq_queue * queue;
+        spinlock_t         lock;
+};
+
+static struct seq_queue * seq_queue_create(void)
+{
+        struct seq_queue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
+
+static void seq_q_entry_destroy(struct seq_q_entry * seq_entry)
+{
+        ASSERT(seq_entry);
+
+        pdu_destroy(seq_entry->pdu);
+        rkfree(seq_entry);
+
+        return;
+}
+
+static int seq_queue_destroy(struct seq_queue * seq_queue)
+{
+        struct seq_q_entry * cur, * n;
+
+        ASSERT(seq_queue);
+
+        list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
+                list_del(&cur->next);
+                seq_q_entry_destroy(cur);
+        }
+
+        rkfree(seq_queue);
+
+        return 0;
+}
+
+int seqQ_destroy(struct sequencingQ * seqQ)
+{
+        if (!seqQ)
+                return -1;
+
+        if (seqQ->queue) seq_queue_destroy(seqQ->queue);
+
+        rkfree(seqQ);
+
+        return 0;
+}
+
+struct sequencingQ * seqQ_create(struct dtp * dtp)
+{
+        struct sequencingQ * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->queue = seq_queue_create();
+        if (!tmp->queue) {
+                seqQ_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->dtp = dtp;
+
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t lock;
@@ -75,6 +165,7 @@ struct dtp {
         struct dtp_policies * policies;
         struct rmt *          rmt;
         struct kfa *          kfa;
+        struct sequencingQ *  seqQ;
 
         struct {
                 struct rtimer * sender_inactivity;
@@ -171,11 +262,16 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                         pdu);
 }
 
+static int default_initial_seq_number(struct dtp * dtp)
+{
+        return 0;
+}
+
 static struct dtp_policies default_policies = {
         .transmission_control      = default_transmission,
         .closed_window             = default_closed_window,
         .flow_control_overrun      = default_flow_control_overrun,
-        .initial_sequence_number   = NULL,
+        .initial_sequence_number   = default_initial_seq_number,
 };
 
 bool dtp_drf_flag(struct dtp * instance)
@@ -192,7 +288,6 @@ bool dtp_drf_flag(struct dtp * instance)
         return flag;
 }
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 static void drf_flag_set(struct dtp_sv * sv, bool value)
 {
         ASSERT(sv);
@@ -201,7 +296,6 @@ static void drf_flag_set(struct dtp_sv * sv, bool value)
         sv->drf_flag = value;
         spin_unlock(&sv->lock);
 }
-#endif
 
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
@@ -284,8 +378,9 @@ static void tf_a(void * data)
         }
 
         dtcp = dt_dtcp(dtp->parent);
-        if (dtcp){
+        if (dtcp) {
                 LOG_MISSING;
+                /* Invoke delimiting */
                 return;
         }
 
@@ -351,6 +446,12 @@ struct dtp * dtp_create(struct dt *         dt,
 
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
+        tmp->seqQ           = seqQ_create(tmp);
+        if (!tmp->seqQ) {
+                LOG_ERR("Could not create Sequencing queue");
+                dtp_destroy(tmp);
+                return NULL;
+        }
 
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
@@ -376,6 +477,7 @@ int dtp_destroy(struct dtp * instance)
                 return -1;
         }
 
+        if (instance->seqQ) seqQ_destroy(instance->seqQ);
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
         if (instance->timers.receiver_inactivity)
@@ -643,19 +745,163 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
-int dtp_receive(struct dtp * instance,
-                struct pdu * pdu)
+static int received_sdu_send(struct dtp * instance,
+                             struct pdu * pdu)
 {
         struct sdu *          sdu;
         struct buffer *       buffer;
+
+        ASSERT(instance->sv);
+
+        buffer = pdu_buffer_get_rw(pdu);
+        sdu    = sdu_create_buffer_with(buffer);
+        if (!sdu) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (kfa_sdu_post(instance->kfa,
+                         instance->sv->connection->port_id,
+                         sdu)) {
+                LOG_ERR("Could not post SDU to KFA");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
+
+        return 0;
+}
+
+static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
+                                                   gfp_t        flags)
+{
+        struct seq_q_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        tmp->pdu = pdu;
+        tmp->time_stamp = jiffies;
+
+        return tmp;
+}
+
+static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
+{
+        static struct seq_q_entry * tmp;
+
+        ASSERT(pdu);
+        ASSERT(q);
+
+        tmp = seq_q_entry_create_gfp(pdu, GFP_ATOMIC);
+        if (!tmp) {
+                LOG_ERR("Could not create sequencing queue entry");
+                return -1;
+        }
+
+        list_add(&q->head, &tmp->next);
+
+        return 0;
+}
+
+static void update_left_win_edge(struct dtp * dtp, seq_num_t seq_num)
+{
+        struct dt *     dt;
+        struct dtp_sv * sv;
+
+        if (!dtp) {
+                LOG_ERR("Bogus DTP passed");
+                return;
+        }
+
+        sv = dtp->sv;
+        if (!sv) {
+                LOG_ERR("Bogus DTP SV passed");
+                return;
+        }
+
+        dt = dtp->parent;
+        if (!dt) {
+                LOG_ERR("Bogus DTP SV passed");
+                return;
+        }
+
+        LOG_MISSING;
+        if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
+                LOG_ERR("Failed to set new "
+                        "left window edge");
+                return;
+        }
+
+        return;
+}
+
+static int seqQ_push(struct dtp * dtp, struct pdu * pdu)
+{
+        struct sequencingQ * seqQ;
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        if (!pdu) {
+                LOG_ERR("No PDU to be pushed");
+                return -1;
+        }
+
+        if (!seqQ) {
+                LOG_ERR("No sequencing queue to work with");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        spin_lock(&seqQ->lock);
+        if (seq_queue_push_ni(seqQ->queue, pdu)) {
+                spin_unlock(&seqQ->lock);
+                LOG_ERR("Unable to push PDU into sequencing queue %pK", seqQ);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        spin_unlock(&seqQ->lock);
+
+        /* Invoke delimiting */
+        LOG_MISSING;
+        update_left_win_edge(dtp,
+                             pci_sequence_number_get(pdu_pci_get_rw(pdu)));
+
+        return 0;
+}
+
+int seqQ_deliver(struct sequencingQ * seqQ)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+struct pdu * seqQ_pop(struct sequencingQ * seqQ)
+{
+        LOG_MISSING;
+        return NULL;
+}
+
+bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
+{
+        return false;
+}
+
+int dtp_receive(struct dtp * instance,
+                struct pdu * pdu)
+{
         struct dtp_policies * policies;
         struct pci *          pci;
         struct dtp_sv *       sv;
         struct dtcp *         dtcp;
         struct dt *           dt;
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         seq_num_t             seq_num;
-#endif
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -689,7 +935,6 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -727,27 +972,45 @@ int dtp_receive(struct dtp * instance,
                 }
                 return 0;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
-                   seq_num < max_seq_nr_rcv(sv)) {
-                /* Check if it is a duplicate in the gaps */
-                /* if / else for this */
-                LOG_MISSING;
-
+                   seq_num <= max_seq_nr_rcv(sv)) {
+                if (seqQ_pdu_is_duplicate(instance->seqQ, seq_num)) {
+                        pdu_destroy(pdu);
+                        dropped_pdus_inc(sv);
+                        return 0;
+                }
+                /* This op puts the PDU in seq number order */
+                if (seqQ_push(instance, pdu)) {
+                        LOG_ERR("Could not push PDU into sequencing queue");
+                        return -1;
+                }
+                if (dt_sv_a(dt)==0) {
+                        /*
+                         * FIXME: Invoke delimiting and put all SDUs thus
+                         * created into the KFA or EFCP instance above*/
+                        received_sdu_send(instance, pdu);
+                }
+                update_left_win_edge(instance, seq_num);
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
-                                pdu_destroy(pdu);
-                                return -1;
-                        }
-                } else {
-                        if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
-                                LOG_ERR("Failed to set new "
-                                        "left window edge");
-                                pdu_destroy(pdu);
                                 return -1;
                         }
                 }
         } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
                 max_seq_nr_rcv_set(sv, seq_num);
+                /* This op puts the PDU in seq number order */
+                if (seqQ_push(instance, pdu)) {
+                        LOG_ERR("Could not push PDU into sequencing queue");
+                        return -1;
+                }
+                if (dt_sv_a(dt)==0) {
+                        /*
+                         * FIXME: Invoke delimiting and put all SDUs thus
+                         * created into the KFA or EFCP instance above*/
+                        received_sdu_send(instance, pdu);
+                }
+                update_left_win_edge(instance, seq_num);
+
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
@@ -774,35 +1037,17 @@ int dtp_receive(struct dtp * instance,
                 LOG_ERR("Max seq num received: %d", max_seq_nr_rcv(sv));
                 return -1;
         }
-#endif
-        buffer = pdu_buffer_get_rw(pdu);
-        sdu    = sdu_create_buffer_with(buffer);
-        if (!sdu) {
-                pdu_destroy(pdu);
-                return -1;
-        }
 
-        ASSERT(instance->sv);
 
-        if (kfa_sdu_post(instance->kfa,
-                         instance->sv->connection->port_id,
-                         sdu)) {
-                LOG_ERR("Could not post SDU to KFA");
-                pdu_destroy(pdu);
-                return -1;
-        }
 
-        pdu_buffer_disown(pdu);
-        pdu_destroy(pdu);
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
+
         /* Start ReceiverInactivityTimer */
-        if (rtimer_restart(instance->timers.receiver_inactivity,
+        if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
                            3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start timer");
+                LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
-#endif
 
         return 0;
 }
