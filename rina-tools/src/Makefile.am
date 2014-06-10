@@ -6,6 +6,7 @@
 
 EXTRA_DIST                         =
 bin_PROGRAMS                       =
+bin_SCRIPTS                        =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rina_wrap_SOURCES  = rina-wrap.c
@@ -33,7 +34,7 @@ rina-mem-stats: rina-mem-stats.py Makefile
 	chmod a+x $@.tmp
 	mv $@.tmp $@
 
-bin_PROGRAMS += rina-mem-stats
+bin_SCRIPTS += rina-mem-stats
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-mem-stats
 
 if HAVE_PYTHON_MATPLOT_LIB
@@ -46,7 +47,7 @@ rina-show-plots: rina-show-plots.py Makefile
 	chmod a+x $@.tmp
 	mv $@.tmp $@
 
-bin_PROGRAMS += rina-show-plots
+bin_SCRIPTS += rina-show-plots
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-show-plots
 endif
 endif
@@ -60,5 +61,5 @@ rina-bug-report: rina-bug-report.in Makefile
 	chmod a+x $@.tmp
 	mv $@.tmp $@
 
-bin_PROGRAMS += rina-bug-report
+bin_SCRIPTS += rina-bug-report
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-bug-report

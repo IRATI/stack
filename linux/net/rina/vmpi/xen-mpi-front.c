@@ -1,6 +1,7 @@
-/* A vmpi-impl hypervisor implementation for Xen (guest-side)
+/*
+ * A guest-side vmpi-impl implementation for Xen
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,10 +15,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -39,11 +38,17 @@
 #include <xen/interface/memory.h>
 #include <xen/interface/grant_table.h>
 
+#include "vmpi-limits.h"
 #include "vmpi-structs.h"
 #include "vmpi-guest-impl.h"
 
 
-#define VMPI_BUFFER_SIZE_XEN    2000
+//#define VERBOSE
+#ifdef VERBOSE
+#define IFV(x) x
+#else   /* !VERBOSE */
+#define IFV(x)
+#endif  /* !VERBOSE */
 
 #define GRANT_INVALID_REF	0
 
@@ -90,7 +95,6 @@ struct vmpi_impl_info {
 	spinlock_t   rx_lock ____cacheline_aligned_in_smp;
 	struct xen_mpi_rx_front_ring rx;
 	int rx_ring_ref;
-        struct work_struct recv_worker;
 
 	/* Receive-ring batched refills. */
 #define RX_MIN_TARGET 8
@@ -167,23 +171,13 @@ static grant_ref_t xenmpi_get_rx_ref(struct vmpi_impl_info *np,
 
 static void rx_refill_timeout(unsigned long data)
 {
-	/*struct vmpi_impl_info *np = (struct vmpi_impl_info *)data;
+	struct vmpi_impl_info *np = (struct vmpi_impl_info *)data;
 
-        schedule_work(&np->recv_worker); *//* HZ/20 */
+        if (likely(np->recv_cb))
+                np->recv_cb(np);
 }
 
-static int mpifront_tx_slot_available(struct vmpi_impl_info *np)
-{
-	return (np->tx.req_prod_pvt - np->tx.rsp_cons) <
-		(TX_MAX_TARGET - MAX_SKB_FRAGS - 2);
-}
-
-static void xenmpi_maybe_wake_tx(struct vmpi_impl_info *np)
-{
-	if (mpifront_tx_slot_available(np)) {
-        }
-}
-
+#if 0
 static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 {
 	unsigned short id;
@@ -204,8 +198,8 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 	 */
 	batch_target = np->rx_target - (req_prod - np->rx.rsp_cons);
 	for (i = vmpi_queue_len(&np->rx_batch); i < batch_target; i++) {
-                /* TODO allocate data as a page */
-                buf = vmpi_buffer_create(2000);
+                /* Allocate the buffer as a page. */
+                buf = vmpi_buffer_create(0);
 		if (unlikely(!buf)) {
 			/* Could not allocate any skbuffs. Try again later. */
 			mod_timer(&np->rx_refill_timer,
@@ -267,6 +261,7 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 	if (notify)
 		notify_remote_via_irq(np->rx_irq);
 }
+#endif
 
 struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
 {
@@ -282,7 +277,11 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                 struct xen_mpi_tx_response *txrsp;
 
                 txrsp = RING_GET_RESPONSE(&np->tx, cons);
-                /*if (txrsp->status == XEN_NETIF_RSP_NULL)
+                if (txrsp->status != XEN_MPI_RSP_OKAY) {
+                        printk("%s: Warning: error in response [%d]",
+                                __func__, txrsp->status);
+                }
+                /*if (txrsp->status == XEN_MPI_RSP_NULL)
                         continue; */
 
                 id  = txrsp->id;
@@ -301,66 +300,12 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                 np->grant_tx_page[id] = NULL;
                 add_id_to_freelist(&np->tx_skb_freelist, np->tx_skbs, id);
 
-                printk("%s: buf %p, freed id %d, cons %d\n", __func__, buf, id, cons);
+                IFV(printk("%s: buf %p, freed id %d, cons %d\n", __func__, buf, id, cons));
 
                 np->tx.rsp_cons = ++cons;
         }
 
         return buf;
-}
-
-static void xenmpi_tx_buf_gc(struct vmpi_impl_info *np)
-{
-	RING_IDX cons, prod;
-	unsigned short id;
-        struct vmpi_buffer *buf;
-
-        printk("%s: I should not be called\n", __func__);
-
-	do {
-		prod = np->tx.sring->rsp_prod;
-		rmb(); /* Ensure we see responses up to 'rp'. */
-
-		for (cons = np->tx.rsp_cons; cons != prod; cons++) {
-			struct xen_mpi_tx_response *txrsp;
-
-			txrsp = RING_GET_RESPONSE(&np->tx, cons);
-			if (txrsp->status == XEN_NETIF_RSP_NULL)
-				continue;
-
-			id  = txrsp->id;
-			buf = np->tx_skbs[id].buf;
-			if (unlikely(gnttab_query_foreign_access(
-				np->grant_tx_ref[id]) != 0)) {
-				pr_alert("%s: warning -- grant still in use by backend domain\n",
-					 __func__);
-				BUG();
-			}
-			gnttab_end_foreign_access_ref(
-				np->grant_tx_ref[id], GNTMAP_readonly);
-			gnttab_release_grant_reference(
-				&np->gref_tx_head, np->grant_tx_ref[id]);
-			np->grant_tx_ref[id] = GRANT_INVALID_REF;
-			np->grant_tx_page[id] = NULL;
-			add_id_to_freelist(&np->tx_skb_freelist, np->tx_skbs, id);
-		}
-
-		np->tx.rsp_cons = prod;
-
-		/*
-		 * Set a new event, then check for race with update of tx_cons.
-		 * Note that it is essential to schedule a callback, no matter
-		 * how few buffers are pending. Even if there is space in the
-		 * transmit ring, higher layers may be blocked because too much
-		 * data is outstanding: in such cases notification from Xen is
-		 * likely to be the only kick that we'll get.
-		 */
-		np->tx.sring->rsp_event =
-			prod + ((np->tx.sring->req_prod - prod) >> 1) + 1;
-		mb();		/* update shared area */
-	} while ((cons == prod) && (prod != np->tx.sring->rsp_prod));
-
-	xenmpi_maybe_wake_tx(np);
 }
 
 int
@@ -385,7 +330,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 	/* If skb->len is too big for wire format, drop skb and alert
 	 * user about misconfiguration.
 	 */
-	if (unlikely(len > XEN_NETIF_MAX_TX_SIZE)) {
+	if (unlikely(len > XEN_MPI_MAX_TX_SIZE)) {
 		net_alert_ratelimited(
 			"xenmpi: skb->len = %u, too big for wire format\n",
 			len);
@@ -431,8 +376,8 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
                 tx->flags = 1;  /* set the MORE_DATA flag */
 	        np->grant_tx_page[id] = virt_to_page(data);
 
-                printk("%s: buf %p id %d, gref %d, off %d, sz %d\n", __func__,
-                        buf, tx->id, tx->gref, tx->offset, tx->size);
+                IFV(printk("%s: buf %p id %d, gref %d, off %d, sz %d\n", __func__,
+                        buf, tx->id, tx->gref, tx->offset, tx->size));
 
                 data += slice;
                 len -= slice;
@@ -446,7 +391,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 	RING_PUSH_REQUESTS_AND_CHECK_NOTIFY(&np->tx, notify);
 	if (notify)
 		notify_remote_via_irq(np->tx_irq);
-        printk("%s: pushed [%d], notify [%d]\n", __func__, i, notify);
+        IFV(printk("%s: pushed [%d], notify [%d]\n", __func__, i, notify));
 
 	spin_unlock_irqrestore(&np->tx_lock, flags);
 
@@ -466,8 +411,8 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
 	unsigned long mfn;
 	struct xen_mpi_rx_request *req;
 
-        /* TODO allocate data as a page. */
-        buf = vmpi_buffer_create(VMPI_BUFFER_SIZE_XEN);
+        /* Allocate the buffer as a page. */
+        buf = vmpi_buffer_create(0);
         if (unlikely(!buf)) {
                 printk("%s: failed to refill\n", __func__);
                 return;
@@ -489,7 +434,7 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
         req->id = id;
         req->gref = np->grant_rx_ref[id] = ref;
         req->offset = offset_in_page(buf->p);
-        req->len = VMPI_BUFFER_SIZE_XEN;
+        req->len = PAGE_SIZE;
 
         req_prod++;
 
@@ -502,8 +447,8 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
 	if (notify)
 		notify_remote_via_irq(np->rx_irq);
 
-        printk("%s refilled [prod=%u] [id=%d] [gref=%d] [off=%d] [len=%d]\n",
-                __func__, req_prod, req->id, req->gref, req->offset, req->len);
+        IFV(printk("%s refilled [prod=%u] [id=%d] [gref=%d] [off=%d] [len=%d]\n",
+                __func__, req_prod, req->id, req->gref, req->offset, req->len));
 }
 
 struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
@@ -523,11 +468,15 @@ struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
                 grant_ref_t ref;
 
                 rx = RING_GET_RESPONSE(&np->rx, cons);
+                if (rx->status < 0) {
+                        printk("%s: Warning: error in response [%d]",
+                                __func__, rx->status);
+                }
                 buf = xenmpi_get_rx_skb(np, cons);
                 ref = xenmpi_get_rx_ref(np, cons);
 
-                printk("%s: rx rsp [cons=%d] [id=%d] [size=%d]\n", __func__,
-                                cons, rx->id, rx->status);
+                IFV(printk("%s: rx rsp [cons=%d] [id=%d] [size=%d]\n", __func__,
+                                cons, rx->id, rx->status));
 
                 buf->len = rx->status;
 
@@ -548,8 +497,8 @@ struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
                 BUG_ON(!ret);
                 gnttab_release_grant_reference(&np->gref_rx_head, ref);
 
-                printk("%s: buffer received [cons=%d, len=%d]\n",
-                        __func__, cons, (int)buf->len);
+                IFV(printk("%s: buffer received [cons=%d, len=%d]\n",
+                        __func__, cons, (int)buf->len));
 out:
                 np->rx.rsp_cons = ++cons;
 
@@ -558,86 +507,6 @@ out:
 	spin_unlock(&np->rx_lock);
 
         return buf;
-}
-
-static void recv_worker_function(struct work_struct *work)
-{
-        struct vmpi_impl_info *np =
-            container_of(work, struct vmpi_impl_info, recv_worker);
-	struct xen_mpi_rx_response *rx = NULL;
-	RING_IDX i, rp;
-	int work_done;
-	unsigned long flags;
-        int budget = 64;
-        grant_ref_t ref;
-
-        printk("%s: I should NOT be called\n", __func__);
-
-	spin_lock(&np->rx_lock);
-
-	rp = np->rx.sring->rsp_prod;
-	rmb(); /* Ensure we see queued responses up to 'rp'. */
-
-	i = np->rx.rsp_cons;
-	work_done = 0;
-        while ((i != rp) && (work_done < budget)) {
-            unsigned long ret;
-            struct vmpi_buffer *buf;
-
-            rx = RING_GET_RESPONSE(&np->rx, i);
-            buf = xenmpi_get_rx_skb(np, i);
-            ref = xenmpi_get_rx_ref(np, i);
-            /*
-             * This definitely indicates a bug, either in this driver or in
-             * the backend driver. In future this should flag the bad
-             * situation to the system controller to reboot the backend.
-             */
-            if (ref == GRANT_INVALID_REF) {
-                if (net_ratelimit())
-                    pr_warn("Bad rx response id %d.\n",
-                            rx->id);
-                goto next;
-            }
-
-            ret = gnttab_end_foreign_access_ref(ref, 0);
-            BUG_ON(!ret);
-            gnttab_release_grant_reference(&np->gref_rx_head, ref);
-
-            printk("%s: buffer received\n", __func__);
-            /* TODO pass the buffer up */
-            vmpi_buffer_destroy(buf);
-
-            work_done++;
-next:
-            i++;
-        }
-        np->rx.rsp_cons = i;
-
-	/* If we get a callback with very few responses, reduce fill target. */
-	/* NB. Note exponential increase, linear decrease. */
-	if (((np->rx.req_prod_pvt - np->rx.sring->rsp_prod) >
-	     ((3*np->rx_target) / 4)) &&
-	    (--np->rx_target < np->rx_min_target))
-		np->rx_target = np->rx_min_target;
-
-	xenmpi_alloc_rx_buffers(np);
-
-        if (work_done == budget) {
-                schedule_work(&np->recv_worker); /* HZ/20 */
-        } else {
-		int more_to_do = 0;
-
-		local_irq_save(flags);
-
-		RING_FINAL_CHECK_FOR_RESPONSES(&np->rx, more_to_do);
-		if (more_to_do) {
-                        schedule_work(&np->recv_worker);
-                }
-
-		local_irq_restore(flags);
-	}
-
-	spin_unlock(&np->rx_lock);
 }
 
 static void xenmpi_release_tx_bufs(struct vmpi_impl_info *np)
@@ -760,7 +629,7 @@ static irqreturn_t xenmpi_tx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *np = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
         if (likely(np->xmit_cb))
                 np->xmit_cb(np);
 
@@ -771,7 +640,7 @@ static irqreturn_t xenmpi_rx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *np = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
         if (likely(np->recv_cb))
                 np->recv_cb(np);
 
@@ -800,7 +669,6 @@ static struct vmpi_impl_info *xenmpi_create_dev(struct xenbus_device *dev)
 	spin_lock_init(&np->tx_lock);
 	spin_lock_init(&np->rx_lock);
 
-        INIT_WORK(&np->recv_worker, recv_worker_function);
         vmpi_queue_init(&np->rx_batch, 0, VMPI_BUF_SIZE);
 	np->rx_target     = RX_DFL_MIN_TARGET;
 	np->rx_min_target = RX_DFL_MIN_TARGET;
@@ -898,7 +766,6 @@ static void xenmpi_disconnect_backend(struct vmpi_impl_info *info)
 	/* Stop old i/f to prevent errors whilst we rebuild the state. */
 	spin_lock_bh(&info->rx_lock);
 	spin_lock_irq(&info->tx_lock);
-	// XXX mpi_carrier_off(info->netdev);
         /* Uninstall the instance */
         instance = NULL;
 	spin_unlock_irq(&info->tx_lock);
@@ -1223,7 +1090,7 @@ static int xenmpi_connect(struct vmpi_impl_info *np)
 		req->gref = ref;
 		req->id   = requeue_idx;
                 req->offset = offset_in_page(buf->p);
-                req->len = VMPI_BUFFER_SIZE_XEN;
+                req->len = PAGE_SIZE;
 
 		requeue_idx++;
 	}
@@ -1237,20 +1104,18 @@ static int xenmpi_connect(struct vmpi_impl_info *np)
 	 * packets.
 	 */
         /* Install the instance. */
-	// XXX mpi_carrier_on(np->netdev);
         instance = np;
 	notify_remote_via_irq(np->tx_irq);
 	if (np->tx_irq != np->rx_irq)
 		notify_remote_via_irq(np->rx_irq);
-	xenmpi_tx_buf_gc(np);
         for (i = 0; i < 64; i++) {
                 xenmpi_refill_one(np);
         }
-	// XXX xenmpi_alloc_rx_buffers(np);
 
         np->rx.sring->rsp_event = np->rx.rsp_cons + 1;
         if (RING_HAS_UNCONSUMED_RESPONSES(&np->rx)) {
-            //schedule_work(&np->recv_worker); /* HZ/20 */
+                if (likely(np->recv_cb))
+                        np->recv_cb(np);
         }
 
 	spin_unlock_irq(&np->tx_lock);
@@ -1270,7 +1135,8 @@ static void mpiback_changed(struct xenbus_device *dev,
 	struct vmpi_impl_info *np = dev_get_drvdata(&dev->dev);
 
 	dev_dbg(&dev->dev, "%s\n", xenbus_strstate(backend_state));
-        printk("%s: xen-mpi backend state --> %s\n", __func__, xenbus_strstate(backend_state));
+        printk("%s: xen-mpi backend state --> %s\n", __func__,
+                   xenbus_strstate(backend_state));
 
 	switch (backend_state) {
 	case XenbusStateInitialising:
@@ -1303,7 +1169,7 @@ static void mpiback_changed(struct xenbus_device *dev,
 }
 
 static const struct xenbus_device_id mpifront_ids[] = {
-	{ "mpi" },
+	{ "vmpi" },
 	{ "" }
 };
 
@@ -1370,5 +1236,3 @@ module_exit(mpi_exit);
 
 MODULE_DESCRIPTION("Xen virtual MPI frontend");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("xen:mpi");
-MODULE_ALIAS("xenmpi");

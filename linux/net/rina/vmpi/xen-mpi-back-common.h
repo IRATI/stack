@@ -1,6 +1,7 @@
-/* A vmpi-impl hypervisor implementation for Xen
+/*
+ * An hypervisor-side vmpi-impl implementation for Xen
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,13 +15,11 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __XEN_NETBACK__COMMON_H__
-#define __XEN_NETBACK__COMMON_H__
-
-#define pr_fmt(fmt) KBUILD_MODNAME ":%s: " fmt, __func__
+#ifndef __XEN_MPIBACK__COMMON_H__
+#define __XEN_MPIBACK__COMMON_H__
 
 #include <linux/module.h>
 #include <linux/interrupt.h>
@@ -41,6 +40,13 @@
 #include "vmpi-structs.h"
 #include "vmpi-host-impl.h"
 
+
+//#define VERBOSE
+#ifdef VERBOSE
+#define IFV(x) x
+#else   /* !VERBOSE */
+#define IFV(x)
+#endif  /* !VERBOSE */
 
 typedef unsigned int pending_ring_idx_t;
 #define INVALID_PENDING_RING_IDX (~0U)
@@ -78,30 +84,18 @@ struct pending_tx_info {
 				  */
 };
 
-#define XEN_NETIF_TX_RING_SIZE __CONST_RING_SIZE(xen_mpi_tx, PAGE_SIZE)
-#define XEN_NETIF_RX_RING_SIZE __CONST_RING_SIZE(xen_mpi_rx, PAGE_SIZE)
+#define XEN_MPI_TX_RING_SIZE __CONST_RING_SIZE(xen_mpi_tx, PAGE_SIZE)
+#define XEN_MPI_RX_RING_SIZE __CONST_RING_SIZE(xen_mpi_rx, PAGE_SIZE)
 
 struct xenmpi_rx_meta {
 	int id;
 	int size;
 };
 
-#define GSO_BIT(type) \
-	(1 << XEN_NETIF_GSO_TYPE_ ## type)
-
 /* Discriminate from any valid pending_idx value. */
 #define INVALID_PENDING_IDX 0xFFFF
 
 #define MAX_BUFFER_OFFSET PAGE_SIZE
-
-#define MAX_PENDING_REQS 256
-
-/* It's possible for an skb to have a maximal number of frags
- * but still be less than MAX_BUFFER_OFFSET in size. Thus the
- * worst-case number of copy operations is MAX_SKB_FRAGS per
- * ring slot.
- */
-#define MAX_GRANT_COPY_OPS (MAX_SKB_FRAGS * XEN_NETIF_RX_RING_SIZE)
 
 struct vmpi_impl_info {
 	/* Unique identifier for this interface. */
@@ -116,18 +110,13 @@ struct vmpi_impl_info {
 	char tx_irq_name[IFNAMSIZ+4]; /* DEVNAME-tx */
 	struct xen_mpi_tx_back_ring tx;
         struct vmpi_queue tx_queue;
-	struct page *mmap_pages[MAX_PENDING_REQS];
+	struct page *mmap_pages[XEN_MPI_TX_RING_SIZE];
 	pending_ring_idx_t pending_prod;
 	pending_ring_idx_t pending_cons;
-	u16 pending_ring[MAX_PENDING_REQS];
-	struct pending_tx_info pending_tx_info[MAX_PENDING_REQS];
+	u16 pending_ring[XEN_MPI_TX_RING_SIZE];
+	struct pending_tx_info pending_tx_info[XEN_MPI_TX_RING_SIZE];
 
-	/* Coalescing tx requests before copying makes number of grant
-	 * copy ops greater or equal to number of slots required. In
-	 * worst case a tx request consumes 2 gnttab_copy.
-	 */
-	struct gnttab_copy tx_copy_ops[2*MAX_PENDING_REQS];
-
+	struct gnttab_copy tx_copy_ops[XEN_MPI_TX_RING_SIZE];
 
 	/* Use kthread for guest RX */
 	struct task_struct *task;
@@ -137,15 +126,19 @@ struct vmpi_impl_info {
 	/* Only used when feature-split-event-channels = 1 */
 	char rx_irq_name[IFNAMSIZ+4]; /* DEVNAME-rx */
 	struct xen_mpi_rx_back_ring rx;
-	RING_IDX rx_last_skb_slots;
+	RING_IDX rx_last_buf_slots;
 
-	/* This array is allocated seperately as it is large */
-	struct gnttab_copy *grant_copy_op;
+	/* This array is allocated seperately because it was large
+           in netback. That's not true anymore, so it could be
+           allocated here. */
+	struct gnttab_copy *rx_copy_ops;
 
-	/* We create one meta structure per ring request we consume, so
+	/* We create one rx_meta structure per ring request we consume, so
 	 * the maximum number is the same as the ring size.
 	 */
-	struct xenmpi_rx_meta meta[XEN_NETIF_RX_RING_SIZE];
+	struct xenmpi_rx_meta rx_meta[XEN_MPI_RX_RING_SIZE];
+        unsigned int rx_pending_prod;
+        unsigned int rx_pending_cons;
 
 	/* Transmit shaping: allow 'credit_bytes' every 'credit_usec'. */
 	unsigned long   credit_bytes;
@@ -208,4 +201,4 @@ void xenmpi_stop_queue(struct vmpi_impl_info *vif);
 
 extern bool separate_tx_rx_irq;
 
-#endif /* __XEN_NETBACK__COMMON_H__ */
+#endif /* __XEN_MPIBACK__COMMON_H__ */

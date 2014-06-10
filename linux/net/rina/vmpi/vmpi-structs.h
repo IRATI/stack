@@ -1,6 +1,7 @@
-/* Data structures for VMPI
+/*
+ * Data structures for VMPI
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef __VMPI_STRUCTS_H__
@@ -31,10 +32,13 @@ struct vmpi_hdr {
 
 struct vmpi_buffer {
         void *p;
-        size_t len;
+        size_t len;     /* Includes the vmpi header. */
+        size_t size;    /* Includes the vmpi header. */
         struct vmpi_buffer *next;
+        struct page *page;
 };
 
+/* If size == 0 this allocates a page. */
 struct vmpi_buffer *vmpi_buffer_create(size_t size);
 void vmpi_buffer_destroy(struct vmpi_buffer *buf);
 
@@ -51,7 +55,6 @@ void vmpi_buffer_destroy(struct vmpi_buffer *buf);
 /* ######################## VMPI-RING ############################## */
 
 #define VMPI_RING_SIZE   256
-#define VMPI_BUF_SIZE    2048  /* Includes the vmpi header. */
 
 struct vmpi_ring {
         unsigned int nu;    /* Next unused. */

@@ -1,17 +1,18 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 %module rina
@@ -671,13 +672,13 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventPoll);
 DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 
 %{
-#include "exceptions.h"
-#include "patterns.h"
-#include "concurrency.h"
-#include "librina-common.h"
-#include "librina-application.h"
-#include "librina-ipc-manager.h"
-#include "librina-ipc-process.h"
+#include "librina/exceptions.h"
+#include "librina/patterns.h"
+#include "librina/concurrency.h"
+#include "librina/common.h"
+#include "librina/application.h"
+#include "librina/ipc-manager.h"
+#include "librina/ipc-process.h"
 %}
 
 %rename(equals) rina::ConnectionPoliciesParameters::operator==(const ConnectionPoliciesParameters &other) const;
@@ -712,13 +713,13 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(equals) rina::PolicyConfig::operator==(const PolicyConfig &other) const;
 %rename(differs) rina::PolicyConfig::operator!=(const PolicyConfig &other) const;
 
-%include "exceptions.h"
-%include "patterns.h"
-%include "concurrency.h"
-%include "librina-common.h"
-%include "librina-application.h"
-%include "librina-ipc-manager.h"
-%include "librina-ipc-process.h"
+%include "librina/exceptions.h"
+%include "librina/patterns.h"
+%include "librina/concurrency.h"
+%include "librina/common.h"
+%include "librina/application.h"
+%include "librina/ipc-manager.h"
+%include "librina/ipc-process.h"
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )
@@ -808,4 +809,3 @@ MAKE_COLLECTION_ITERABLE(ParameterListIterator, Parameter, std::list, rina::Para
 %template(PDUForwardingTableEntryList) std::list<rina::PDUForwardingTableEntry>;
 %template(UnsignedIntList) std::list<unsigned int>;
 %template(PolicyParameterList) std::list<rina::PolicyParameter>;
-

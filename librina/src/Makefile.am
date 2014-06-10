@@ -6,20 +6,21 @@
 
 allsources =					\
 	logs.cc					\
+	utils.cc				\
 	concurrency.cc				\
 	core.cc					\
 	librina.cc				\
-	librina-common.cc			\
-	librina-application.cc			\
-	librina-ipc-manager.cc			\
-	librina-ipc-process.cc			\
-	librina-faux-sockets.cc			\
-	librina-cdap.cc				\
-	librina-sdu-protection.cc		\
+	common.cc				\
+	application.cc				\
+	ipc-manager.cc				\
+	ipc-process.cc				\
+	faux-sockets.cc				\
+	cdap.cc					\
+	sdu-protection.cc			\
 	netlink-messages.cc			\
 	netlink-parsers.cc			\
 	netlink-manager.cc			\
-	rina-syscalls.cc
+	syscalls-wrappers.cc
 
 EXTRA_DIST =					\
 	logs.h					\

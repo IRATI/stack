@@ -1,6 +1,7 @@
-/* A vmpi-impl hypervisor implementation for Xen
+/*
+ * An hypervisor-side vmpi-impl implementation for Xen
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "xen-mpi-back-common.h"
@@ -33,7 +34,7 @@ static irqreturn_t xenmpi_tx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *vif = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 	if (RING_HAS_UNCONSUMED_REQUESTS(&vif->tx))
 		schedule_work(&vif->tx_worker);
 
@@ -46,7 +47,7 @@ void xenmpi_poll(struct work_struct *work)
         int budget = 64;
 	int work_done;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 
 	work_done = xenmpi_tx_action(vif, budget);
 
@@ -86,7 +87,7 @@ static irqreturn_t xenmpi_rx_interrupt(int irq, void *dev_id)
 {
 	struct vmpi_impl_info *vif = dev_id;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 	xenmpi_kick_thread(vif);
 
 	return IRQ_HANDLED;
@@ -122,7 +123,7 @@ int vmpi_impl_write_buf(struct vmpi_impl_info *vif, struct vmpi_buffer *buf)
 	if (vif->task == NULL)
 		goto drop;
 
-        printk("%s\n", __func__);
+        IFV(printk("%s\n", __func__));
 
 	/* If the skb can't possibly fit in the remaining slots
 	 * then turn off the queue to give the ring a chance to
@@ -172,9 +173,9 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 
         vif->parent = parent;
 
-	vif->grant_copy_op = vmalloc(sizeof(struct gnttab_copy) *
-				     MAX_GRANT_COPY_OPS);
-	if (vif->grant_copy_op == NULL) {
+	vif->rx_copy_ops = vmalloc(sizeof(struct gnttab_copy) *
+				     XEN_MPI_RX_RING_SIZE);
+	if (vif->rx_copy_ops == NULL) {
 		pr_warn("Could not allocate grant copy space for %s\n", name);
                 goto grant_copy;
 	}
@@ -189,10 +190,10 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
         vmpi_queue_init(&vif->tx_queue, 0, VMPI_BUF_SIZE);
 
 	vif->pending_cons = 0;
-	vif->pending_prod = MAX_PENDING_REQS;
-	for (i = 0; i < MAX_PENDING_REQS; i++)
+	vif->pending_prod = XEN_MPI_TX_RING_SIZE;
+	for (i = 0; i < XEN_MPI_TX_RING_SIZE; i++)
 		vif->pending_ring[i] = i;
-	for (i = 0; i < MAX_PENDING_REQS; i++)
+	for (i = 0; i < XEN_MPI_TX_RING_SIZE; i++)
 		vif->mmap_pages[i] = NULL;
 
         INIT_WORK(&vif->tx_worker, xenmpi_poll);
@@ -213,7 +214,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 
 vmpi_ini:
         vmpi_queue_fini(&vif->tx_queue);
-        vfree(vif->grant_copy_op);
+        vfree(vif->rx_copy_ops);
 grant_copy:
         kfree(vif);
 
@@ -335,7 +336,7 @@ void xenmpi_free(struct vmpi_impl_info *vif)
 
         cancel_work_sync(&vif->tx_worker);
 
-	vfree(vif->grant_copy_op);
+	vfree(vif->rx_copy_ops);
         kfree(vif);
 
 	module_put(THIS_MODULE);

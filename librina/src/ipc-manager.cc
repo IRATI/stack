@@ -1,37 +1,45 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
-#define RINA_PREFIX "ipc-manager"
+//
+// IPC Manager
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
+//
 
 #include <algorithm>
 #include <dirent.h>
 #include <errno.h>
 #include <iostream>
 #include <signal.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <cstdlib>
+
+#define RINA_PREFIX "ipc-manager"
+
 #include "logs.h"
-#include "librina-ipc-manager.h"
-#include "core.h"
-#include "concurrency.h"
+
+#include "librina/ipc-manager.h"
+#include "librina/concurrency.h"
 #include "rina-syscalls.h"
 
-#define PAGE_SIZE 4096
+#include "utils.h"
+#include "core.h"
 
 namespace rina{
 
@@ -205,11 +213,11 @@ throw (AssignToDIFException) {
         message.setDestPortId(portId);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 //FIXME, compute maximum message size dynamically
                 rinaManager->sendMessageOfMaxSize(&message,
-                                5*PAGE_SIZE);
-        }catch(NetlinkException &e){
+                                                  5 * get_page_size());
+        } catch (NetlinkException &e) {
                 throw AssignToDIFException(e.what());
         }
 

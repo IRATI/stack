@@ -1,6 +1,7 @@
-/* A vmpi-impl implementation for virtio.
+/*
+ * A guest-side vmpi-impl implementation for KVM and virtio
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 //#define DEBUG
@@ -135,7 +136,7 @@ vmpi_impl_read_buffer(struct vmpi_impl_info *vi)
                         printk("Error: vmpi_buffer_create(%u) failed\n",
                                VMPI_BUF_SIZE);
                 } else {
-                        sg_set_buf(q->sg, newbuf->p, VMPI_BUF_SIZE);
+                        sg_set_buf(q->sg, newbuf->p, newbuf->size);
                         err = virtqueue_add_inbuf(q->vq, q->sg, 1, newbuf,
                                                   GFP_ATOMIC);
                         if (unlikely(err)) {
@@ -417,7 +418,7 @@ virtio_mpi_probe(struct virtio_device *vdev)
                 if (buf == NULL) {
                         goto setup_rxbufs;
                 }
-                sg_set_buf(q->sg, buf->p, VMPI_BUF_SIZE);
+                sg_set_buf(q->sg, buf->p, buf->size);
                 err = virtqueue_add_inbuf(q->vq, q->sg, 1, buf, GFP_ATOMIC);
                 if (err) {
                         vmpi_buffer_destroy(buf);

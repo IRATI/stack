@@ -1,5 +1,6 @@
 /* This adds only basic support for std::list to Java. Ideally there would be a
- * way to get a Java iterator for the list. */
+ * way to get a Java iterator for the list.
+ */
 
 %{
 #include <list>

@@ -1,29 +1,37 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
+//
+// IPC Process
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
+//
 
 #include <ostream>
 #include <sstream>
 
 #define RINA_PREFIX "ipc-process"
-#define PAGE_SIZE 4096
+
+#include "core.h"
+#include "utils.h"
+#include "rina-syscalls.h"
 
 #include "logs.h"
-#include "librina-ipc-process.h"
-#include "core.h"
-#include "rina-syscalls.h"
+#include "librina/ipc-process.h"
 
 namespace rina{
 
@@ -599,7 +607,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	try{
 	        //FIXME, compute maximum message size dynamically
 		rinaManager->sendMessageOfMaxSize(&responseMessage,
-		                5*PAGE_SIZE);
+                                                  5 * get_page_size());
 	}catch(NetlinkException &e){
 		throw QueryRIBResponseException(e.what());
 	}
@@ -1030,12 +1038,27 @@ unsigned int KernelIPCProcess::dumptPDUFT()
         return seqNum;
 }
 
-void KernelIPCProcess::writeManagementSDU(void * sdu, int size, int portId)
+void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
+                unsigned int portId)
                 throw (WriteSDUException) {
 #if STUB_API
         //Do nothing
 #else
-        int result = syscallWriteManagementSDU(ipcProcessId, sdu, portId,
+        int result = syscallWriteManagementSDU(ipcProcessId, sdu, 0, portId,
+                        size);
+        if (result < 0){
+                throw WriteSDUException();
+        }
+#endif
+}
+
+void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
+                unsigned int address)
+                throw (WriteSDUException) {
+#if STUB_API
+        //Do nothing
+#else
+        int result = syscallWriteManagementSDU(ipcProcessId, sdu, address, 0,
                         size);
         if (result < 0){
                 throw WriteSDUException();

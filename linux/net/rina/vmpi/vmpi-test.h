@@ -1,6 +1,7 @@
-/* Test interface for VMPI.
+/*
+ * Test interface for VMPI.
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,14 +15,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef __VMPI_TEST_H__
 #define __VMPI_TEST_H__
 
 /* Enable guest-side test interface. */
-//#define VMPI_GUEST_TEST
+#define VMPI_TEST
 
 #ifdef VMPI_TEST
 int vmpi_test_init(void *, bool deferred);
