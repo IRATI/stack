@@ -182,9 +182,9 @@ static struct dtp_sv default_sv = {
         .max_seq_nr_rcv                = 0,
         .drf_flag                      = false,
         .a                             = 0,
-        .window_based                  = false,
         .rexmsn_ctrl                   = false,
         .rate_based                    = false,
+        .window_based                  = false,
 };
 
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
@@ -382,6 +382,9 @@ static void tf_a(void * data)
                 return;
         }
 
+        /* Invoke delimiting and update left window edge */
+        update_left_win_edge(dtp);
+
         dtcp = dt_dtcp(dtp->parent);
         if (dtcp) {
                 LOG_MISSING;
@@ -389,21 +392,13 @@ static void tf_a(void * data)
                 return;
         }
 
+        return;
 }
 
 static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
 {
         ASSERT(sv);
         ASSERT(conn);
-
-        if (dtcp_rtx_ctrl(conn->policies_params->dtcp_cfg))
-                sv->rexmsn_ctrl = true;
-
-        if (dtcp_window_based_fctrl(conn->policies_params->dtcp_cfg))
-                sv->window_based = true;
-
-        if (dtcp_rate_based_fctrl(conn->policies_params->dtcp_cfg))
-                sv->rate_based = true;
 }
 
 struct dtp * dtp_create(struct dt *         dt,
@@ -752,8 +747,8 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
-static int received_sdu_send(struct dtp * instance,
-                             struct pdu * pdu)
+static int sdu_post(struct dtp * instance,
+                    struct pdu * pdu)
 {
         struct sdu *          sdu;
         struct buffer *       buffer;
@@ -816,71 +811,49 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         return 0;
 }
 
-static void update_left_win_edge(struct dtp * dtp, seq_num_t seq_num)
+static void update_left_win_edge(struct dtp * dtp)
 {
-        struct dt *     dt;
-        struct dtp_sv * sv;
+        struct dt *          dt;
+        struct dtp_sv *      sv;
+        struct sequencingQ * seqQ;
+        seq_num_t            LWE;
+        seq_num_t            seq_num;
+        struct pdu *         pdu;
 
-        if (!dtp) {
-                LOG_ERR("Bogus DTP passed");
-                return;
-        }
+        ASSERT(dtp);
 
         sv = dtp->sv;
-        if (!sv) {
-                LOG_ERR("Bogus DTP SV passed");
-                return;
-        }
+        ASSERT(sv);
 
         dt = dtp->parent;
-        if (!dt) {
-                LOG_ERR("Bogus DTP SV passed");
-                return;
+        ASSERT(sv);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        /* FIXME: Invoke delimiting */
+
+        LWE     = dt_sv_rcv_lft_win(dt);
+        pdu     = seqQ_pop(seqQ);
+        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+
+        while ((LWE < seq_num) && (seq_num > 0)) {
+                if (seq_num == (LWE + 1)) {
+                        sdu_post(dtp, pdu);
+                        pdu     = seqQ_pop(seqQ);
+                        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                        continue;
+                }
+                break;
         }
 
-        LOG_MISSING;
-        if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
+        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                 LOG_ERR("Failed to set new "
                         "left window edge");
                 return;
         }
 
         return;
-}
-
-static int seqQ_push(struct dtp * dtp, struct pdu * pdu)
-{
-        struct sequencingQ * seqQ;
-
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
-
-        if (!pdu) {
-                LOG_ERR("No PDU to be pushed");
-                return -1;
-        }
-
-        if (!seqQ) {
-                LOG_ERR("No sequencing queue to work with");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        spin_lock(&seqQ->lock);
-        if (seq_queue_push_ni(seqQ->queue, pdu)) {
-                spin_unlock(&seqQ->lock);
-                LOG_ERR("Unable to push PDU into sequencing queue %pK", seqQ);
-                pdu_destroy(pdu);
-                return -1;
-        }
-        spin_unlock(&seqQ->lock);
-
-        /* Invoke delimiting */
-        LOG_MISSING;
-        update_left_win_edge(dtp,
-                             pci_sequence_number_get(pdu_pci_get_rw(pdu)));
-
-        return 0;
 }
 
 int seqQ_deliver(struct sequencingQ * seqQ)
@@ -898,6 +871,50 @@ struct pdu * seqQ_pop(struct sequencingQ * seqQ)
 bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
 {
         return false;
+}
+
+static int seqQ_push(struct dtp * dtp, struct pdu * pdu)
+{
+        struct sequencingQ * seqQ;
+        struct dt *          dt;
+
+        ASSERT(dtp);
+        ASSERT(pdu);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        if (seqQ_pdu_is_duplicate(dtp->seqQ,
+                          pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
+                pdu_destroy(pdu);
+                dropped_pdus_inc(dtp->sv);
+                return 0;
+        }
+
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("No PDU to be pushed");
+                return -1;
+        }
+
+        if (!seqQ) {
+                LOG_ERR("No sequencing queue to work with");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        spin_lock(&seqQ->lock);
+        if (seq_queue_push_ni(seqQ->queue, pdu)) {
+                spin_unlock(&seqQ->lock);
+                LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        spin_unlock(&seqQ->lock);
+
+        return 0;
 }
 
 int dtp_receive(struct dtp * instance,
@@ -984,23 +1001,24 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
                    seq_num <= max_seq_nr_rcv(sv)) {
-                if (seqQ_pdu_is_duplicate(instance->seqQ, seq_num)) {
-                        pdu_destroy(pdu);
-                        dropped_pdus_inc(sv);
-                        return 0;
-                }
                 /* This op puts the PDU in seq number order */
                 if (seqQ_push(instance, pdu)) {
                         LOG_ERR("Could not push PDU into sequencing queue");
                         return -1;
                 }
+
                 if (dt_sv_a(dt)==0) {
                         /*
                          * FIXME: Invoke delimiting and put all SDUs thus
-                         * created into the KFA or EFCP instance above*/
-                        received_sdu_send(instance, pdu);
+                         * created into the KFA or EFCP instance above. Update
+                         * the receiver left window edge
+                         */
+                        pdu = seqQ_pop(instance->seqQ);
+                        update_left_win_edge(instance, seq_num);
+                        if (sdu_post(instance, pdu))
+                                return -1;
                 }
-                update_left_win_edge(instance, seq_num);
+
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
@@ -1018,7 +1036,7 @@ int dtp_receive(struct dtp * instance,
                         /*
                          * FIXME: Invoke delimiting and put all SDUs thus
                          * created into the KFA or EFCP instance above*/
-                        received_sdu_send(instance, pdu);
+                        sdu_post(instance, pdu);
                 }
                 update_left_win_edge(instance, seq_num);
 
@@ -1038,6 +1056,10 @@ int dtp_receive(struct dtp * instance,
                 }
         } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
                 max_seq_nr_rcv_set(sv, seq_num);
+                if (seqQ_push(instance, pdu)) {
+                        LOG_ERR("Could not push PDU into sequencing queue");
+                        return -1;
+                }
                 LOG_MISSING;
 
         } else {
