@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -361,10 +362,13 @@ static int send_worker(void * o)
                            ntmp,
                            entry,
                            hlist) {
-                struct sdu *     sdu;
-                struct pdu *     pdu;
-                struct pdu_ser * pdu_ser;
-                port_id_t        port_id;
+                struct sdu *            sdu;
+                struct pdu *            pdu;
+                struct pdu_ser *        pdu_ser;
+                port_id_t               port_id;
+                struct efcp_container * efcpc;
+                struct efcp_config *    conf;
+                struct dt_cons *        dt_cons;
 
                 ASSERT(entry);
 
@@ -381,7 +385,31 @@ static int send_worker(void * o)
 
                 ASSERT(pdu);
 
-                pdu_ser = serdes_pdu_ser(pdu);
+                efcpc = tmp->efcpc;
+                if (!efcpc) {
+                        LOG_ERR("Not bound to an EFCP container");
+                        spin_lock(&tmp->egress.queues->lock);
+                        pdu_destroy(pdu);
+                        continue;
+                }
+
+                conf = efcp_container_config(efcpc);
+                if (!conf) {
+                        LOG_ERR("No config found for EFCP");
+                        spin_lock(&tmp->egress.queues->lock);
+                        pdu_destroy(pdu);
+                        continue;
+                }
+
+                dt_cons = conf->dt_cons;
+                if (!dt_cons) {
+                        LOG_ERR("No constants in the config");
+                        spin_lock(&tmp->egress.queues->lock);
+                        pdu_destroy(pdu);
+                        continue;
+                }
+
+                pdu_ser = serdes_pdu_ser(dt_cons, pdu);
                 if (!pdu_ser) {
                         LOG_ERR("Error creating serialized PDU");
                         spin_lock(&tmp->egress.queues->lock);
@@ -814,9 +842,12 @@ static int forward_pdu(struct rmt * rmt,
                        qos_id_t     qos_id,
                        struct pdu * pdu)
 {
-        int              i;
-        struct sdu *     sdu;
-        struct pdu_ser * pdu_ser;
+        int                     i;
+        struct sdu *            sdu;
+        struct pdu_ser *        pdu_ser;
+        struct efcp_container * efcpc;
+        struct efcp_config *    conf;
+        struct dt_cons *        dt_cons;
 
         if (!is_address_ok(dst_addr)) {
                 LOG_ERR("PDU has Wrong destination address");
@@ -830,7 +861,28 @@ static int forward_pdu(struct rmt * rmt,
                 return -1;
         }
 
-        pdu_ser = serdes_pdu_ser(pdu);
+        efcpc = rmt->efcpc;
+        if (!efcpc) {
+                LOG_ERR("Not bound to an EFCP container");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        conf = efcp_container_config(efcpc);
+        if (!conf) {
+                LOG_ERR("No config found for EFCP");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        dt_cons = conf->dt_cons;
+        if (!dt_cons) {
+                LOG_ERR("No constants in the config");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        pdu_ser = serdes_pdu_ser(dt_cons, pdu);
         if (!pdu_ser) {
                 LOG_ERR("Error creating serialized PDU");
                 pdu_destroy(pdu);
@@ -907,13 +959,16 @@ static int receive_worker(void * o)
                            entry,
                            hlist) {
 
-                port_id_t          port_id;
-                pdu_type_t         pdu_type;
-                const struct pci * pci;
-                struct pdu_ser *   pdu_ser;
-                struct pdu *       pdu;
-                address_t          dst_addr;
-                qos_id_t           qos_id;
+                port_id_t               port_id;
+                pdu_type_t              pdu_type;
+                const struct pci *      pci;
+                struct pdu_ser *        pdu_ser;
+                struct pdu *            pdu;
+                address_t               dst_addr;
+                qos_id_t                qos_id;
+                struct efcp_container * efcpc;
+                struct efcp_config *    conf;
+                struct dt_cons *        dt_cons;
 
                 ASSERT(entry);
 
@@ -923,7 +978,28 @@ static int receive_worker(void * o)
                 port_id = entry->port_id;
                 spin_unlock(&tmp->ingress.queues->lock);
 
-                pdu = serdes_pdu_deser(pdu_ser);
+                efcpc = tmp->efcpc;
+                if (!efcpc) {
+                        LOG_ERR("Not bound to an EFCP container");
+                        spin_lock(&tmp->ingress.queues->lock);
+                        continue;
+                }
+
+                conf = efcp_container_config(efcpc);
+                if (!conf) {
+                        LOG_ERR("No config found for EFCP");
+                        spin_lock(&tmp->ingress.queues->lock);
+                        continue;
+                }
+
+                dt_cons = conf->dt_cons;
+                if (!dt_cons) {
+                        LOG_ERR("No constants in the config");
+                        spin_lock(&tmp->ingress.queues->lock);
+                        continue;
+                }
+
+                pdu = serdes_pdu_deser(dt_cons, pdu_ser);
                 if (!pdu) {
                         LOG_ERR("Failed to deserialize PDU!");
                         spin_lock(&tmp->ingress.queues->lock);
@@ -971,7 +1047,6 @@ static int receive_worker(void * o)
                                 process_mgmt_pdu(tmp, port_id, pdu);
                                 break;
 
-                        case PDU_TYPE_EFCP:
                         case PDU_TYPE_CC:
                         case PDU_TYPE_SACK:
                         case PDU_TYPE_NACK:

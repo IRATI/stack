@@ -26,6 +26,13 @@
 #include "utils.h"
 #include "debug.h"
 #include "du.h"
+#include "ipcp-instances.h"
+
+#define VERSION_SIZE 1
+/* Cannot be a literal for memcpy */
+const uint8_t version = 1;
+#define PDU_TYPE_SIZE 1
+#define FLAGS_SIZE 1
 
 /* FIXME: These externs have to disappear from here */
 struct buffer * buffer_create_with_gfp(gfp_t  flags,
@@ -41,6 +48,82 @@ struct pdu * pdu_create_gfp(gfp_t flags);
 struct pci * pci_create_from_gfp(gfp_t        flags,
                                  const void * data);
 
+                
+static int construct_base_pci(char *                 data, 
+                              const struct dt_cons * dt_cons,
+                              const struct pci *     pci) 
+{         
+        int         offset;
+        int         pdu_len;
+        address_t   addr;
+        cep_id_t    cep;
+        qos_id_t    qos;
+        pdu_type_t  type;
+        pdu_flags_t flags;
+        seq_num_t   seq;
+
+        ASSERT(data);
+        ASSERT(dt_cons);
+        ASSERT(pci_is_ok(pci));
+
+        /* 
+         * Putting 1 as version number for now 
+         * If another version is needed, this will have to change
+         * Always 8 bit long
+         */
+        offset = 0;
+        memcpy(data + offset, 
+               &version, 
+               VERSION_SIZE);
+        offset += VERSION_SIZE;
+        addr = pci_destination(pci);
+        memcpy(data + offset, 
+               &addr, 
+               dt_cons->address_length);
+        offset += dt_cons->address_length;
+        addr = pci_source(pci);
+        memcpy(data + offset, 
+               &addr, 
+               dt_cons->address_length);
+        offset += dt_cons->address_length;
+        qos = pci_qos_id(pci);
+        memcpy(data + offset, 
+               &qos, 
+               dt_cons->qos_id_length);
+        offset += dt_cons->qos_id_length;
+        cep = pci_cep_source(pci);
+        memcpy(data + offset, 
+               &cep, 
+               dt_cons->cep_id_length);
+        offset += dt_cons->cep_id_length;
+        cep = pci_cep_destination(pci);
+        memcpy(data + offset, 
+               &cep, 
+               dt_cons->cep_id_length);
+        offset += dt_cons->cep_id_length;
+        type = pci_type(pci);
+        memcpy(data + offset, 
+               &type,
+               PDU_TYPE_SIZE);
+        offset += PDU_TYPE_SIZE;
+        flags = pci_flags_get(pci);
+        memcpy(data + offset, 
+               &flags,
+               FLAGS_SIZE);
+        offset += FLAGS_SIZE;
+        pdu_len = sizeof(data);
+        memcpy(data + offset, 
+               &pdu_len,
+               dt_cons->length_length);
+        offset += dt_cons->length_length;
+        seq = pci_sequence_number_get(pci);
+        memcpy(data + offset, 
+               &seq,
+               dt_cons->seq_num_length);
+
+        return 0;
+}
+
 
 struct pdu_ser {
         struct buffer * buf;
@@ -49,8 +132,9 @@ struct pdu_ser {
 static bool serdes_pdu_is_ok(const struct pdu_ser * s)
 { return (s && buffer_is_ok(s->buf)) ? true : false; }
 
-static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
-                                           struct pdu * pdu)
+static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
+                                           const struct dt_cons * dt_cons,
+                                           struct pdu *           pdu)
 {
         struct pdu_ser *      tmp;
         const void *          buffer_data;
@@ -63,6 +147,9 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
         pdu_type_t            pdu_type;
         
         if (!pdu_is_ok(pdu))
+                return NULL;
+
+        if (!dt_cons)
                 return NULL;
 
         buffer = pdu_buffer_get_ro(pdu);
@@ -80,11 +167,6 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
                 return NULL;
         }
 
-        buffer_size = buffer_length(buffer);
-        if (buffer_size <= 0) {
-                return NULL;
-        }
-
         /* Serialize the PCI here */
         pdu_type = pci_type(pci);
         if (!pdu_type_is_ok(pdu_type)) {
@@ -92,42 +174,78 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
                 return NULL;
         }
 
+        /* Base PCI size, fields present in all PDUs */
+        pci_size = VERSION_SIZE + 
+                2 * dt_cons->address_length +
+                dt_cons->qos_id_length +
+                2 * dt_cons->cep_id_length + 
+                PDU_TYPE_SIZE +
+                FLAGS_SIZE +
+                dt_cons->length_length +
+                dt_cons->seq_num_length;
+
+        /* 
+         * These are available in the stack at this point in time 
+         * Extend if necessary (e.g.) NACKs, SACKs, ...
+         */
         switch (pdu_type) {
         case PDU_TYPE_MGMT:
-                break;
-
-        case PDU_TYPE_EFCP:
         case PDU_TYPE_DT:
-        case PDU_TYPE_CC:
-        case PDU_TYPE_SACK:
-        case PDU_TYPE_NACK:
+                buffer_size = buffer_length(buffer);
+                if (buffer_size <= 0) {
+                        return NULL;
+                }
+                
+                size = pci_size + buffer_size;
+                if (pci_size <= 0) {
+                        pdu_destroy(pdu);
+                        return NULL;
+                }
+                
+                data = rkmalloc(size, flags);
+                if (!data) {
+                        pdu_destroy(pdu);
+                        return NULL;
+                }
+
+                if (construct_base_pci(data, dt_cons, pci)) {
+                        LOG_ERR("Failed to construct base PCI");
+                        rkfree(data);
+                        pdu_destroy(pdu);
+                        return NULL;
+                }
+
+                memcpy(data + pci_size, buffer_data, buffer_size);
+
+                break;
         case PDU_TYPE_FC:
+                /* Serialize other fields here (not needed for unreliable) */
+                data = rkmalloc(pci_size, flags);
+                if (!data) {
+                        pdu_destroy(pdu);
+                        return NULL;
+                }
+                break;
         case PDU_TYPE_ACK:
+                /* Serialize other fields here */
+                data = rkmalloc(pci_size, flags);
+                if (!data) {
+                        pdu_destroy(pdu);
+                        return NULL;
+                }
+                break;
         case PDU_TYPE_ACK_AND_FC:
+                /* Serialize other fields here */
+                data = rkmalloc(pci_size, flags);
+                if (!data) {
+                        pdu_destroy(pdu);
+                        return NULL;
+                }
                 break;
         default:
                 LOG_ERR("Unknown PDU type %d", pdu_type);
                 return NULL;
         }
-
-        pci_size = pci_length(pci);
-        if (pci_size <= 0) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        size = pci_size + buffer_size;
-        data = rkmalloc(size, flags);
-        if (!data) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        memcpy(data, pci, pci_size);
-        memcpy(data + pci_size, buffer_data, buffer_size);
-
-
-
 
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp) {
@@ -135,6 +253,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
                 return NULL;
         }
 
+        size = sizeof(data);
         tmp->buf = buffer_create_with_gfp(flags, data, size);
         if (!tmp->buf) {
                 rkfree(data);
@@ -147,8 +266,9 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t flags,
         return tmp;
 }
 
-struct pdu_ser * serdes_pdu_ser(struct pdu * pdu)
-{ return serdes_pdu_ser_gfp(GFP_KERNEL, pdu); }
+struct pdu_ser * serdes_pdu_ser(const struct dt_cons * dt_cons, 
+                                struct pdu *           pdu)
+{ return serdes_pdu_ser_gfp(GFP_KERNEL, dt_cons, pdu); }
 EXPORT_SYMBOL(serdes_pdu_ser);
 
 struct buffer * serdes_pdu_buffer(struct pdu_ser * pdu)
@@ -175,8 +295,9 @@ EXPORT_SYMBOL(serdes_pdu_destroy);
 
 
 
-struct pdu * serdes_pdu_deser_gfp(gfp_t flags,
-                                  struct pdu_ser * pdu) 
+struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
+                                  const struct dt_cons * dt_cons,
+                                  struct pdu_ser *       pdu) 
 {
         struct pdu *          tmp_pdu;
         const struct buffer * tmp_buff;
@@ -229,6 +350,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t flags,
 }
 
 
-struct pdu * serdes_pdu_deser(struct pdu_ser * pdu)
-{ return serdes_pdu_deser_gfp(GFP_KERNEL, pdu); }
+struct pdu * serdes_pdu_deser(const struct dt_cons * dt_cons,
+                              struct pdu_ser *       pdu)
+{ return serdes_pdu_deser_gfp(GFP_KERNEL, dt_cons, pdu); }
 EXPORT_SYMBOL(serdes_pdu_deser);
