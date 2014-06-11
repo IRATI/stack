@@ -13,6 +13,7 @@ ROLE="client"
 SDUSIZE="100"
 TIME="10"
 RATE="1000"
+GAP="-1"
 
 function dump_help() {
     echo "$ME [OPTIONS...]"
@@ -22,6 +23,7 @@ function dump_help() {
     echo "  -s, --sdu-size [NUMBER]     set SDU size (default $SDUSIZE)"
     echo "  -t, --time [NUMBER]         set test time in ms (default $TIME)"
     echo "  -a, --rate [NUMBER]         set test maximum rate in kbps (default $RATE)"
+    echo "  -g, --gap [NUMBER]          set maximum allowable SDU gap (default $GAP)"
     echo "  -h, --help                  print this help, then exit"
 }
 
@@ -81,6 +83,17 @@ while test $# -gt 0; do
             shift
             ;; 
 
+        --gap|-g)
+            shift
+            if test $# -gt 0; then
+                export GAP=$1
+            else
+                dump_hint "No max allowable SDU gap specified"
+                exit 1
+            fi
+            shift
+            ;;
+
         *)
             dump_hint "Unknown option"
             exit 1
@@ -88,4 +101,4 @@ while test $# -gt 0; do
     esac
 done
 
-LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/rinaperf/rina.utils.apps.rinaperf-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -time $TIME -rate $RATE
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@libdir@ @JAVA@ -jar @pkgdatadir@/apps/rinaperf/rina.utils.apps.rinaperf-1.0.0-irati-SNAPSHOT.jar -role $ROLE -sdusize $SDUSIZE -time $TIME -rate $RATE -gap $GAP

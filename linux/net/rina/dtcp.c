@@ -780,20 +780,23 @@ static int default_rate_reduction(struct dtcp * instance)
 static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 {
         int retval = 0;
+        struct dtcp_config * dtcp_cfg;
 
         if (!dtcp || !dtcp->conn)
                 return -1;
 
-        if (dtcp_flow_ctrl(dtcp->conn->policies_params->dtcp_cfg)) {
-                if (dtcp_window_based_fctrl(
-                                            dtcp->conn->policies_params->dtcp_cfg))
+        dtcp_cfg = dtcp_config_get(dtcp);
+        if (!dtcp_cfg)
+                return -1;
+
+        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                if (dtcp_window_based_fctrl(dtcp_cfg))
                         if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
                         }
 
-                if (dtcp_rate_based_fctrl(
-                                          dtcp->conn->policies_params->dtcp_cfg)){
+                if (dtcp_rate_based_fctrl(dtcp_cfg)){
                         LOG_DBG("Rate based fctrl invoked");
                         if (dtcp->policies->rate_reduction(dtcp)) {
                                 LOG_ERR("Failed Rate Reduction policy");
@@ -802,7 +805,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp_rtx_ctrl(dtcp->conn->policies_params->dtcp_cfg)) {
+        if (dtcp_rtx_ctrl(dtcp_cfg)) {
                 LOG_DBG("Retransmission ctrl invoked");
                 if (dtcp->policies->rcvr_ack(dtcp, seq)) {
                         LOG_ERR("Failed Rcvr Ack policy");
@@ -810,8 +813,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp_flow_ctrl(dtcp->conn->policies_params->dtcp_cfg) &&
-            !dtcp_rtx_ctrl(dtcp->conn->policies_params->dtcp_cfg)){
+        if (dtcp_flow_ctrl(dtcp_cfg) && !dtcp_rtx_ctrl(dtcp_cfg)){
                 LOG_DBG("Receiving flow ctrl invoked");
                 if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
                         LOG_ERR("Failed Receiving Flow Control policy");
@@ -823,7 +825,8 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 }
 
 static struct dtcp_sv default_sv = {
-        .trd                    = 0,
+        /*FIXME: this should be calculated somehow */
+        .trd                    = HZ / 1000,
         .pdus_per_time_unit     = 0,
         .next_snd_ctl_seq       = 0,
         .last_rcv_ctl_seq       = 0,
@@ -869,6 +872,48 @@ static struct dtcp_policies default_policies = {
         .sender_inactivity_timer     = NULL,
 };
 
+/*FIXME: this should be completed with other parameters from the config */
+static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
+{
+        struct dtcp_config * cfg;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!instance->sv) {
+                LOG_ERR("Bogus sv passed");
+                return -1;
+        }
+
+        cfg = dtcp_config_get(instance);
+        if (!cfg)
+                return -1;
+
+        *instance->sv = sv;
+        spin_lock_init(&instance->sv->lock);
+
+        instance->sv->data_retransmit_max = dtcp_data_retransmit_max(cfg);
+        instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
+        instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg); 
+        instance->sv->rcvr_credit         = dtcp_initial_credit(cfg);
+        instance->sv->rcvr_rt_wind_edge   = dtcp_initial_credit(cfg);
+
+        LOG_DBG("DTCP SV initilize with dtcp_conf:\n"
+                "\tdata_retransmit_max: %d\n"
+                "\tsndr_credit: %d\n"
+                "\tsnd_rt_wind_edge: %d\n"
+                "\trcvr_credit: %d\n"
+                "\trcvr_rt_wind_edge: %d",
+                instance->sv->data_retransmit_max, instance->sv->sndr_credit,
+                instance->sv->snd_rt_wind_edge, instance->sv->rcvr_credit,
+                instance->sv->rcvr_rt_wind_edge);
+
+
+        return 0;
+}
+
 struct dtcp * dtcp_create(struct dt *         dt,
                           struct connection * conn,
                           struct rmt *        rmt)
@@ -909,15 +954,18 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 return NULL;
         }
 
-        *tmp->sv       = default_sv;
-        spin_lock_init(&tmp->sv->lock);
+        tmp->conn = conn;
+        tmp->rmt  = rmt;
+
+        if (dtcp_sv_init(tmp, default_sv)) {
+                LOG_ERR("Could not load DTCP config in the SV");
+                dtcp_destroy(tmp);
+                return NULL;
+        }
         /* FIXME: fixups to the state-vector should be placed here */
 
         *tmp->policies = default_policies;
         /* FIXME: fixups to the policies should be placed here */
-
-        tmp->conn      = conn;
-        tmp->rmt       = rmt;
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
