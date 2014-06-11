@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>   
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,8 +42,6 @@ struct buffer * buffer_dup_gfp(gfp_t                 flags,
                                const struct buffer * b);
 
 struct pci {
-        pdu_type_t  type;
-
         /* If type == PDU_TYPE_MGMT, all the following fields are useless */
         address_t   destination;
         address_t   source;
@@ -52,21 +51,22 @@ struct pci {
          *        (See spec)
          */
         struct {
+                qos_id_t qos_id;
                 cep_id_t source;
                 cep_id_t destination;
-        }           ceps;
+        } connection_id;
 
-        qos_id_t    qos_id;
+        pdu_type_t  type;
         pdu_flags_t flags;
         seq_num_t   sequence_number;
 
         struct {
+                seq_num_t last_ctrl_seq_num_rcvd;
                 seq_num_t ack_nack_seq_num;
                 seq_num_t snd_rt_wind_edge;
                 seq_num_t snd_lf_wind_edge;
                 seq_num_t rcv_lf_wind_edge;
                 seq_num_t rcv_rt_wind_edge;
-                seq_num_t last_ctrl_seq_num_rcvd;
         } control;
 };
 
@@ -110,7 +110,7 @@ int pci_cep_source_set(struct pci * pci,
         if (!is_cep_id_ok(src_cep_id))
                 return -1;
 
-        pci->ceps.destination = src_cep_id;
+        pci->connection_id.destination = src_cep_id;
         return 0;
 }
 EXPORT_SYMBOL(pci_cep_source_set);
@@ -124,7 +124,7 @@ int pci_cep_destination_set(struct pci * pci,
         if (!is_cep_id_ok(dst_cep_id))
                 return -1;
 
-        pci->ceps.source = dst_cep_id;
+        pci->connection_id.source = dst_cep_id;
 
         return 0;
 }
@@ -166,7 +166,7 @@ int pci_sequence_number_set(struct pci * pci,
 }
 EXPORT_SYMBOL(pci_sequence_number_set);
 
-seq_num_t pci_sequence_number_get(struct pci * pci)
+seq_num_t pci_sequence_number_get(const struct pci * pci)
 {
         if (!pci)
                 return -1;
@@ -181,7 +181,7 @@ int pci_qos_id_set(struct pci * pci,
         if (!pci)
                 return -1;
 
-        pci->qos_id = qos_id;
+        pci->connection_id.qos_id = qos_id;
 
         return 0;
 }
@@ -324,7 +324,7 @@ cep_id_t pci_cep_destination(const struct pci * pci)
         if (!pci)
                 return cep_id_bad();
 
-        return pci->ceps.destination;
+        return pci->connection_id.destination;
 }
 EXPORT_SYMBOL(pci_cep_destination);
 
@@ -333,12 +333,12 @@ cep_id_t pci_cep_source(const struct pci * pci)
         if (!pci)
                 return cep_id_bad();
 
-        return pci->ceps.source;
+        return pci->connection_id.source;
 }
 EXPORT_SYMBOL(pci_cep_source);
 
 qos_id_t pci_qos_id(const struct pci * pci)
-{ return pci ? pci->qos_id : qos_id_bad();  }
+{ return pci ? pci->connection_id.qos_id : qos_id_bad();  }
 EXPORT_SYMBOL(pci_qos_id);
 
 pdu_flags_t pci_flags_get(const struct pci * pci)
