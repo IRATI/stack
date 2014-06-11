@@ -365,6 +365,86 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
 }
 #endif
 
+static int sdu_post(struct dtp * instance,
+                    struct pdu * pdu)
+{
+        struct sdu *          sdu;
+        struct buffer *       buffer;
+
+        ASSERT(instance->sv);
+
+        buffer = pdu_buffer_get_rw(pdu);
+        sdu    = sdu_create_buffer_with(buffer);
+        if (!sdu) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (kfa_sdu_post(instance->kfa,
+                         instance->sv->connection->port_id,
+                         sdu)) {
+                LOG_ERR("Could not post SDU to KFA");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        pdu_buffer_disown(pdu);
+        pdu_destroy(pdu);
+
+        return 0;
+}
+
+struct pdu * seqQ_pop(struct sequencingQ * seqQ)
+{
+        LOG_MISSING;
+        return NULL;
+}
+
+static void update_left_win_edge(struct dtp * dtp)
+{
+        struct dt *          dt;
+        struct dtp_sv *      sv;
+        struct sequencingQ * seqQ;
+        seq_num_t            LWE;
+        seq_num_t            seq_num;
+        struct pdu *         pdu;
+
+        ASSERT(dtp);
+
+        sv = dtp->sv;
+        ASSERT(sv);
+
+        dt = dtp->parent;
+        ASSERT(sv);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        /* FIXME: Invoke delimiting */
+
+        LWE     = dt_sv_rcv_lft_win(dt);
+        pdu     = seqQ_pop(seqQ);
+        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+
+        while ((LWE < seq_num) && (seq_num > 0)) {
+                if (seq_num == (LWE + 1)) {
+                        sdu_post(dtp, pdu);
+                        pdu     = seqQ_pop(seqQ);
+                        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                        continue;
+                }
+                break;
+        }
+
+        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                LOG_ERR("Failed to set new "
+                        "left window edge");
+                return;
+        }
+
+        return;
+}
+
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
 
@@ -747,35 +827,6 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
-static int sdu_post(struct dtp * instance,
-                    struct pdu * pdu)
-{
-        struct sdu *          sdu;
-        struct buffer *       buffer;
-
-        ASSERT(instance->sv);
-
-        buffer = pdu_buffer_get_rw(pdu);
-        sdu    = sdu_create_buffer_with(buffer);
-        if (!sdu) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (kfa_sdu_post(instance->kfa,
-                         instance->sv->connection->port_id,
-                         sdu)) {
-                LOG_ERR("Could not post SDU to KFA");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        pdu_buffer_disown(pdu);
-        pdu_destroy(pdu);
-
-        return 0;
-}
-
 static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
                                                    gfp_t        flags)
 {
@@ -811,61 +862,10 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         return 0;
 }
 
-static void update_left_win_edge(struct dtp * dtp)
-{
-        struct dt *          dt;
-        struct dtp_sv *      sv;
-        struct sequencingQ * seqQ;
-        seq_num_t            LWE;
-        seq_num_t            seq_num;
-        struct pdu *         pdu;
-
-        ASSERT(dtp);
-
-        sv = dtp->sv;
-        ASSERT(sv);
-
-        dt = dtp->parent;
-        ASSERT(sv);
-
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
-
-        /* FIXME: Invoke delimiting */
-
-        LWE     = dt_sv_rcv_lft_win(dt);
-        pdu     = seqQ_pop(seqQ);
-        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-
-        while ((LWE < seq_num) && (seq_num > 0)) {
-                if (seq_num == (LWE + 1)) {
-                        sdu_post(dtp, pdu);
-                        pdu     = seqQ_pop(seqQ);
-                        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-                        continue;
-                }
-                break;
-        }
-
-        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                LOG_ERR("Failed to set new "
-                        "left window edge");
-                return;
-        }
-
-        return;
-}
-
 int seqQ_deliver(struct sequencingQ * seqQ)
 {
         LOG_MISSING;
         return 0;
-}
-
-struct pdu * seqQ_pop(struct sequencingQ * seqQ)
-{
-        LOG_MISSING;
-        return NULL;
 }
 
 bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
@@ -1014,7 +1014,7 @@ int dtp_receive(struct dtp * instance,
                          * the receiver left window edge
                          */
                         pdu = seqQ_pop(instance->seqQ);
-                        update_left_win_edge(instance, seq_num);
+                        update_left_win_edge(instance);
                         if (sdu_post(instance, pdu))
                                 return -1;
                 }
@@ -1038,7 +1038,7 @@ int dtp_receive(struct dtp * instance,
                          * created into the KFA or EFCP instance above*/
                         sdu_post(instance, pdu);
                 }
-                update_left_win_edge(instance, seq_num);
+                update_left_win_edge(instance);
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
