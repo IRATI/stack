@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -173,6 +174,22 @@ struct efcp * efcp_container_find(struct efcp_container * container,
         return efcp_imap_find(container->instances, id);
 }
 EXPORT_SYMBOL(efcp_container_find);
+
+struct efcp_config * efcp_container_config(struct efcp_container * container) 
+{
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return NULL;
+        }
+
+        if (!container->config) {
+                LOG_ERR("No container config set!");
+                return NULL;
+        }
+                
+        return container->config;
+}
+EXPORT_SYMBOL(efcp_container_config);
 
 int efcp_container_set_config(struct efcp_config *    efcp_config,
                               struct efcp_container * container)
