@@ -89,6 +89,8 @@ int dtcp_receiving_flow_control_set(struct dtcp_config * cfg,
 /* dtcp_rxctrl_config */
 int dtcp_data_retransmit_max_set(struct dtcp_config * cfg,
                                  uint_t data_retransmit_max);
+int dtcp_initial_tr_set(struct dtcp_config * cfg,
+                        uint_t               tr);
 int dtcp_retransmission_timer_expiry_set(struct dtcp_config * cfg,
                                          struct policy * rtx_timer_expiry);
 int dtcp_sender_ack_set(struct dtcp_config * cfg,
@@ -150,6 +152,7 @@ struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg);
 
 /* dtcp_rxctrl_config */
 uint_t          dtcp_data_retransmit_max(struct dtcp_config * cfg);
+uint_t          dtcp_initial_tr(struct dtcp_config * cfg);
 struct policy * dtcp_retransmission_timer_expiry(struct dtcp_config * cfg);
 struct policy * dtcp_sender_ack(struct dtcp_config * cfg);
 struct policy * dtcp_receiving_ack_list(struct dtcp_config * cfg);

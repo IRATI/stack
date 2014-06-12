@@ -39,6 +39,14 @@ int           dt_destroy(struct dt * dt);
 int           dt_dtp_bind(struct dt *  dt, struct dtp *  dtp);
 struct dtp *  dt_dtp_unbind(struct dt *  dt);
 
+int           dt_sv_init(struct dt * instance,
+                         uint_t      mfps,
+                         uint_t      mfss,
+                         u_int32_t   mpl,
+                         timeout_t   a,
+                         timeout_t   r,
+                         timeout_t   tr);
+
 int           dt_dtcp_bind(struct dt * dt, struct dtcp * dtp);
 struct dtcp * dt_dtcp_unbind(struct dt * dt);
 
@@ -66,6 +74,6 @@ timeout_t     dt_sv_a(struct dt * dt);
 bool          dt_sv_window_closed(struct dt * dt);
 int           dt_sv_window_closed_set(struct dt * dt, bool closed);
 seq_num_t     dt_sv_last_seq_num_sent(struct dt * dt);
-unsigned int  dt_sv_tr(struct dt * dt);
+timeout_t     dt_sv_tr(struct dt * dt);
 
 #endif

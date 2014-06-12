@@ -364,6 +364,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         struct dtcp * dtcp;
         struct cwq *  cwq;
         struct rtxq * rtxq;
+        uint_t        mfps, mfss;
+        timeout_t     mpl, r, a, tr;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -480,6 +482,32 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         return cep_id_bad();
                 }
         }
+
+        /* FIXME: This is crap and have to be rethinked */
+
+        /* FIXME: max pdu and sdu sizes are not stored anywhere. Maybe add them
+         * in connection... For the time being are equal to max_pdu_size in
+         * dif configuration
+         */
+        mfps = container->config->dt_cons->max_pdu_size;
+        mfss = container->config->dt_cons->max_pdu_size;
+        mpl  = container->config->dt_cons->max_pdu_life; 
+        a    = connection->policies_params->initial_a_timer;
+        tr   = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
+        r    = dtcp_data_retransmit_max(connection->policies_params->dtcp_cfg)*tr;
+
+        LOG_DBG("DT SV initialized with:\n"
+                "MFPS: %d, MFSS: %d\n"
+                "A: %d, R: %d, TR: %d",
+                mfps, mfss, a, r, tr);
+
+        if (dt_sv_init(tmp->dt, mfps, mfss, mpl, r, a, tr)) {
+                LOG_ERR("Could not init dt_sv");
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+
+        /***/
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,

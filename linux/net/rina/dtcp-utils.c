@@ -68,6 +68,7 @@ struct dtcp_fctrl_config {
 
 struct dtcp_rxctrl_config {
         uint_t          data_retransmit_max;
+        uint_t          initial_tr;
         struct policy * retransmission_timer_expiry;
         struct policy * sender_ack;
         struct policy * receiving_ack_list;
@@ -650,6 +651,18 @@ int dtcp_data_retransmit_max_set(struct dtcp_config * cfg,
 }
 EXPORT_SYMBOL(dtcp_data_retransmit_max_set);
 
+int dtcp_initial_tr_set(struct dtcp_config * cfg,
+                        uint_t               tr)
+{
+        if (!cfg)
+                return -1;
+
+        cfg->rxctrl_cfg->initial_tr = tr;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_initial_tr_set);
+
 int dtcp_retransmission_timer_expiry_set(struct dtcp_config * cfg,
                                          struct policy * rtx_timer_expiry)
 {
@@ -1011,6 +1024,13 @@ uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg)
         return cfg->rxctrl_cfg->data_retransmit_max;
 }
 EXPORT_SYMBOL(dtcp_data_retransmit_max);
+
+uint_t dtcp_initial_tr(struct dtcp_config * cfg)
+{
+        ASSERT(cfg);
+        return cfg->rxctrl_cfg->initial_tr;
+}
+EXPORT_SYMBOL(dtcp_initial_tr);
 
 struct policy * dtcp_retransmission_timer_expiry(struct dtcp_config * cfg)
 {

@@ -36,13 +36,6 @@ struct dtcp_sv {
         spinlock_t   lock;
 
         /* TimeOuts */
-
-        /*
-         * Time interval sender waits for a positive ack before
-         * retransmitting
-         */
-        timeout_t    trd;
-
         /*
          * When flow control is rate based this timeout may be
          * used to pace number of PDUs sent in TimeUnit
@@ -825,8 +818,6 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 }
 
 static struct dtcp_sv default_sv = {
-        /*FIXME: this should be calculated somehow */
-        .trd                    = HZ / 1000,
         .pdus_per_time_unit     = 0,
         .next_snd_ctl_seq       = 0,
         .last_rcv_ctl_seq       = 0,

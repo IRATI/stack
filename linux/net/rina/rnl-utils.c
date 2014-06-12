@@ -1451,6 +1451,8 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
 
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type      = NLA_U32;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].len       = 4;
+        attr_policy[DRCC_ATTR_INIT_TR].type             = NLA_U32;
+        attr_policy[DRCC_ATTR_INIT_TR].len              = 4;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].len  = 0;
         attr_policy[DRCC_ATTR_SACK_POLICY].type         = NLA_NESTED;
@@ -1472,6 +1474,10 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
         if (attrs[DRCC_ATTR_DATA_RXMSN_MAX])
                 dtcp_data_retransmit_max_set(cfg,
                                              nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+
+        if (attrs[DRCC_ATTR_INIT_TR])
+                dtcp_initial_tr_set(cfg, 
+                                    nla_get_u32(attrs[DRCC_ATTR_INIT_TR]));
 
         if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY])
                 if (parse_policy(attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY],

@@ -136,7 +136,6 @@ struct dtp_sv {
         seq_num_t           max_seq_nr_rcv;
         seq_num_t           nxt_seq;
         bool                drf_flag;
-        timeout_t           a;
 
         bool                window_based;
         bool                rexmsn_ctrl;
@@ -181,7 +180,6 @@ static struct dtp_sv default_sv = {
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
         .drf_flag                      = false,
-        .a                             = 0,
         .rexmsn_ctrl                   = false,
         .rate_based                    = false,
         .window_based                  = false,
@@ -261,6 +259,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
         }
 
         /* Post SDU to RMT */
+        LOG_DBG("defaultTxPolicy - sending to rmt");
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
                         pci_qos_id(pdu_pci_get_ro(pdu)),
