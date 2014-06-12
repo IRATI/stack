@@ -885,7 +885,9 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         *instance->sv = sv;
         spin_lock_init(&instance->sv->lock);
 
-        instance->sv->data_retransmit_max = dtcp_data_retransmit_max(cfg);
+        if (dtcp_rtx_ctrl(cfg))
+                instance->sv->data_retransmit_max = 
+                                       dtcp_data_retransmit_max(cfg);
         instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
         instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg); 
         instance->sv->rcvr_credit         = dtcp_initial_credit(cfg);
