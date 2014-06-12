@@ -38,7 +38,10 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <map>
+#include <ctime>
 
+#include "librina/concurrency.h"
 #include "librina/exceptions.h"
 #include "librina/patterns.h"
 
@@ -1765,6 +1768,39 @@ public:
         EnrollException(const std::string& description):
                 IPCException(description){
         }
+};
+
+/// Interface for tasks to be scheduled in a timer
+class TimerTask {
+public:
+	virtual ~TimerTask(){};
+	virtual void run() = 0;
+};
+
+class LockableMap : public Lockable {
+public:
+	LockableMap();
+	~LockableMap() throw();
+	void insert(std::pair<double, TimerTask*> pair);
+	void clear();
+	void runTasks();
+	void cancelTask(TimerTask *task);
+private:
+	std::map<double, TimerTask*> tasks_;
+};
+
+void* doWork(void * arg);
+/// Class that implements a timer which contains a thread
+class Timer {
+public:
+	Timer();
+	~Timer();
+	void scheduleTask(TimerTask* task, double delay_ms);
+	void cancelTask(TimerTask *task);
+	void clear();
+private:
+	Thread *thread_;
+	LockableMap lockableMap_;
 };
 
 /**

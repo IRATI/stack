@@ -21,8 +21,9 @@ allsources =					\
 	netlink-messages.cc			\
 	netlink-parsers.cc			\
 	netlink-manager.cc			\
-	syscalls-wrappers.cc
-
+	syscalls-wrappers.cc		\
+	cdap-impl.cc
+	
 EXTRA_DIST =					\
 	logs.h					\
 	utils.h					\

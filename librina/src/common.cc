@@ -2415,7 +2415,6 @@ void RIBObject::setValue(RIBObjectValue value) {
 	this->value = value;
 }
 
-
 const std::string& RIBObject::getDisplayableValue() const {
         return displayableValue;
 }
@@ -2424,6 +2423,73 @@ void RIBObject::setDisplayableValue(const std::string& displayableValue) {
         this->displayableValue = displayableValue;
 }
 
+// CLASS LockableMap
+LockableMap::LockableMap() : Lockable() {
+}
+LockableMap::~LockableMap() throw() {
+}
+void LockableMap::insert(std::pair<double, TimerTask*> pair) {
+	lock();
+	tasks_.insert( pair );
+	unlock();
+}
+void LockableMap::clear() {
+	lock();
+	tasks_.clear();
+	unlock();
+}
+void LockableMap::runTasks() {
+	std::clock_t now;
+	lock();
+	now = std::clock();
+	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin();
+			iter != tasks_.upper_bound(now); ++iter)
+	{
+		iter->second->run();
+	}
+	tasks_.erase(tasks_.begin(), tasks_.upper_bound(now));
+	unlock();
+}
+void LockableMap::cancelTask(TimerTask *task) {
+	lock();
+	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin();
+			iter != tasks_.end(); ++iter)
+	{
+		if (iter->second == task)
+			tasks_.erase(iter);
+	}
+	unlock();
+}
+
+// CLASS Timer
+void* doWorkTimers(void *arg) {
+	LockableMap *lockableMap = (LockableMap*) arg;
+	while(true)
+	{
+		lockableMap->runTasks();
+	}
+	return (void *) lockableMap;
+}
+
+Timer::Timer() {
+	ThreadAttributes threadAttributes;
+	thread_ = new Thread(&threadAttributes, &doWorkTimers, (void *) &lockableMap_);
+}
+Timer::~Timer() {
+	lockableMap_.clear();
+	delete thread_;
+}
+void Timer::scheduleTask(TimerTask* task, double delay_ms) {
+	std::clock_t now = std::clock();
+	double executeTime = now + delay_ms;
+	lockableMap_.insert(std::pair<double, TimerTask*>(executeTime, task));
+}
+void Timer::cancelTask(TimerTask* task) {
+	lockableMap_.cancelTask(task);
+}
+void Timer::clear() {
+	lockableMap_.clear();
+}
 
 /* INITIALIZATION OPERATIONS */
 
