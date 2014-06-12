@@ -43,10 +43,12 @@ struct buffer * buffer_create_from_gfp(gfp_t        flags,
                                        const void * data,
                                        size_t       size);
 
+struct buffer * buffer_create_gfp(gfp_t  flags,
+                                  size_t size)
+
 struct pdu * pdu_create_gfp(gfp_t flags);
 
-struct pci * pci_create_from_gfp(gfp_t        flags,
-                                 const void * data);
+struct pci * pci_create_gfp(gfp_t flags);
 
                 
 static int construct_base_pci(char *                 data, 
@@ -132,6 +134,18 @@ struct pdu_ser {
 static bool serdes_pdu_is_ok(const struct pdu_ser * s)
 { return (s && buffer_is_ok(s->buf)) ? true : false; }
 
+static int base_pci_size(const struct dt_cons * dt_cons)
+{ 
+        return VERSION_SIZE + 
+                2 * dt_cons->address_length +
+                dt_cons->qos_id_length +
+                2 * dt_cons->cep_id_length + 
+                PDU_TYPE_SIZE +
+                FLAGS_SIZE +
+                dt_cons->length_length +
+                dt_cons->seq_num_length;
+}
+
 static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                                            const struct dt_cons * dt_cons,
                                            struct pdu *           pdu)
@@ -175,14 +189,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
         }
 
         /* Base PCI size, fields present in all PDUs */
-        pci_size = VERSION_SIZE + 
-                2 * dt_cons->address_length +
-                dt_cons->qos_id_length +
-                2 * dt_cons->cep_id_length + 
-                PDU_TYPE_SIZE +
-                FLAGS_SIZE +
-                dt_cons->length_length +
-                dt_cons->seq_num_length;
+        pci_size = base_pci_size(dt_cons);
 
         /* 
          * These are available in the stack at this point in time 
@@ -304,7 +311,16 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         struct buffer *       new_buff;
         struct pci *          new_pci;
         const uint8_t *       ptr;
-        size_t                pci_size;
+
+        int         offset;
+        int         vers;
+        address_t   addr;
+        cep_id_t    cep;
+        int         pdu_len;
+        qos_id_t    qos;
+        pdu_type_t  type;
+        pdu_flags_t flags;
+        seq_num_t   seq;
 
         if (!serdes_pdu_is_ok(pdu))
                 return NULL;
@@ -312,34 +328,75 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         tmp_buff = serdes_pdu_buffer(pdu);
         ASSERT(tmp_buff);
 
-        if (buffer_length(tmp_buff) < pci_length_min())
-                return NULL;
-
-        /* FIXME: We should compute the real PCI length */
-        pci_size = pci_length_min();
-
-        tmp_pdu = pdu_create_gfp(flags);
-        if (!tmp_pdu)
+        if (buffer_length(tmp_buff) < base_pci_size(dt_cons))
                 return NULL;
 
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
 
-        new_pci = pci_create_from_gfp(flags, ptr);
+
+        tmp_pdu = pdu_create_gfp(flags);
+        if (!tmp_pdu)
+                return NULL;
+
+        new_pci = pci_create_gfp(flags);
         if (!new_pci) {
                 pdu_destroy(tmp_pdu);
                 return NULL;
         }
         pdu_pci_set(tmp_pdu, new_pci);
 
-        new_buff = buffer_create_from_gfp(flags,
-                                          ptr + pci_size,
-                                          (buffer_length(pdu->buf) -
-                                           pci_size));
-        if (!new_buff) {
+        /* Now to parse all fields */
+        offset = 0;
+        memcpy(&vers, 
+               ptr + offset, 
+               VERSION_SIZE);
+        offset += VERSION_SIZE;
+
+        if (vers != version) {
+                LOG_ERR("Received an unknown version of the EFCP PDU");
                 pdu_destroy(tmp_pdu);
                 return NULL;
         }
+
+        memcpy(&addr, 
+               ptr + offset, 
+               dt_cons->address_length);
+        offset += dt_cons->address_length;
+        if (pci_destination_set(new_pci, addr)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
+        switch (pdu_type) {
+        case PDU_TYPE_MGMT:
+        case PDU_TYPE_DT:
+       
+                /* Create buffer with rest of PDU if it is a DT or MGMT PDU*/
+                new_buff = buffer_create_from_gfp(flags,
+                                                  ptr + offset,
+                                                  (buffer_length(pdu->buf) -
+                                                   offset));
+                if (!new_buff) {
+                        pdu_destroy(tmp_pdu);
+                        return NULL;
+                }
+
+        case PDU_TYPE_FC:
+        case PDU_TYPE_ACK:
+        case PDU_TYPE_ACK_AND_FC:
+                /* Buffer size as small as possible */
+                new_buff = buffer_create_gfp(flags, 1);
+                if (!new_buff) {
+                        pdu_destroy(tmp_pdu);
+                        return NULL;
+                }
+        default:
+                LOG_ERR("Unknown PDU type %d", pdu_type);
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
         pdu_buffer_set(tmp_pdu, new_buff);
 
         ASSERT(pdu_is_ok(tmp_pdu));

@@ -91,9 +91,11 @@ struct pci *          pci_dup_ni(const struct pci * pci);
 bool                  pci_is_ok(const struct pci * pci);
 
 /* FIXME: To be removed */
+#if 0
 size_t                pci_length_min(void);
 
 ssize_t               pci_length(const struct pci * pci);
+#endif
 int                   pci_cep_source_set(struct pci * pci,
                                          cep_id_t     src_cep_id);
 int                   pci_cep_destination_set(struct pci * pci,
