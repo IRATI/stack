@@ -230,27 +230,6 @@ public:
 };
 
 /**
- * A parameter of the policy
- */
-class PolicyParameter {
-        /** the name of the parameter */
-        std::string name;
-
-        /** the value of the parameter */
-        std::string value;
-
-public:
-        PolicyParameter();
-        PolicyParameter(const std::string& name, const std::string& value);
-        bool operator==(const PolicyParameter &other) const;
-        bool operator!=(const PolicyParameter &other) const;
-        const std::string& getName() const;
-        void setName(const std::string& name);
-        const std::string& getValue() const;
-        void setValue(const std::string& value);
-};
-
-/**
  * Configuration of a policy (name/version/parameters)
  */
 class PolicyConfig {
@@ -276,97 +255,6 @@ public:
         void addParameter(const PolicyParameter& paremeter);
         const std::string& getVersion() const;
         void setVersion(const std::string& version);
-};
-
-/**
- * The DTCP window based flow control configuration
- */
-class DTCPWindowBasedFlowControlConfig {
-
-        /**
-         * Integer that the number PDUs that can be put on the
-         * ClosedWindowQueue before something must be done.
-         */
-        int maxclosedwindowqueuelength;
-
-        /** initial sequence number to get right window edge. */
-        int initialcredit;
-
-        /**
-         * Invoked when a Transfer PDU is received to give the receiving PM an
-         * opportunity to update the flow control allocations.
-         */
-        PolicyConfig rcvrflowcontrolpolicy;
-
-        /**
-         * This policy is used when there are conditions that warrant sending
-         * fewer PDUs than allowed by the sliding window flow control, e.g.
-         * the ECN bit is set.
-         */
-        PolicyConfig txControlPolicy;
-
-public:
-        DTCPWindowBasedFlowControlConfig();
-        int getInitialcredit() const;
-        void setInitialcredit(int initialcredit);
-        int getMaxclosedwindowqueuelength() const;
-        void setMaxclosedwindowqueuelength(int maxclosedwindowqueuelength);
-        const PolicyConfig& getRcvrflowcontrolpolicy() const;
-        void setRcvrflowcontrolpolicy(
-                        const PolicyConfig& rcvrflowcontrolpolicy);
-        const PolicyConfig& getTxControlPolicy() const;
-        void setTxControlPolicy(const PolicyConfig& txControlPolicy);
-        const std::string toString();
-};
-
-/**
- * The DTCP rate-basd flow control configuration
- */
-class DTCPRateBasedFlowControlConfig {
-
-        /**
-         * the number of PDUs that may be sent in a TimePeriod. Used with
-         * rate-based flow control.
-         */
-        int sendingrate;
-
-        /**
-         * length of time in microseconds for pacing rate-based flow control.
-         */
-        int timeperiod;
-
-        /** used to momentarily lower the send rate below the rate allowed */
-        PolicyConfig norateslowdownpolicy;
-
-        /**
-         * Allows rate-based flow control to exceed its nominal rate.
-         * Presumably this would be for short periods and policies should
-         * enforce this.  Like all policies, if this returns True it creates
-         * the default action which is no override.
-         */
-        PolicyConfig nooverridedefaultpeakpolicy;
-
-        /**
-         * Allows an alternate action when using rate-based flow control and
-         * the number of free buffers is getting low.
-         */
-        PolicyConfig ratereductionpolicy;
-
-public:
-        DTCPRateBasedFlowControlConfig();
-        const PolicyConfig& getNooverridedefaultpeakpolicy() const;
-        void setNooverridedefaultpeakpolicy(
-                        const PolicyConfig& nooverridedefaultpeakpolicy);
-        const PolicyConfig& getNorateslowdownpolicy() const;
-        void setNorateslowdownpolicy(
-                        const PolicyConfig& norateslowdownpolicy);
-        const PolicyConfig& getRatereductionpolicy() const;
-        void setRatereductionpolicy(const PolicyConfig& ratereductionpolicy);
-        int getSendingrate() const;
-        void setSendingrate(int sendingrate);
-        int getTimeperiod() const;
-        void setTimeperiod(int timeperiod);
-        const std::string toString();
 };
 
 /**
