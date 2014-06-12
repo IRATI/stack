@@ -493,8 +493,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         mfss = container->config->dt_cons->max_pdu_size;
         mpl  = container->config->dt_cons->max_pdu_life; 
         a    = connection->policies_params->initial_a_timer;
-        if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
+        if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
+                /* FIXME: r should be passed and must be a bound */
                 r  = dtcp_data_retransmit_max(connection->policies_params->dtcp_cfg)*tr;
         }
 

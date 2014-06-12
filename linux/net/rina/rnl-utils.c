@@ -1386,15 +1386,21 @@ static int parse_dtcp_fctrl_config(struct nlattr * attr,
 
         dtcp_window_based_fctrl_set(cfg, nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
 
-        if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG])
+        if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG]) {
+                if (dtcp_wfctrl_cfg_set(cfg, dtcp_window_fctrl_config_create()))
+                        return -1;
                 parse_dtcp_wb_fctrl_config(attrs[DFCC_ATTR_WINDOW_BASED_CONFIG],
                                            cfg);
+        }
 
         dtcp_rate_based_fctrl_set(cfg, nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
 
-        if (attrs[DFCC_ATTR_RATE_BASED_CONFIG])
+        if (attrs[DFCC_ATTR_RATE_BASED_CONFIG]) {
+                if (dtcp_rfctrl_cfg_set(cfg, dtcp_rate_fctrl_config_create()))
+                        return -1;
                 parse_dtcp_rb_fctrl_config(attrs[DFCC_ATTR_RATE_BASED_CONFIG],
                                            cfg);
+        }
 
         if (attrs[DFCC_ATTR_SBYTES_THRES])
                 dtcp_sent_bytes_th_set(cfg,
@@ -1552,11 +1558,18 @@ static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
 
         dtcp_flow_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_FLOW_CONTROL]));
 
-        if (attrs[DCA_ATTR_FLOW_CONTROL_CONFIG])
+        if (attrs[DCA_ATTR_FLOW_CONTROL_CONFIG]) {
+                if (dtcp_fctrl_cfg_set(cfg, dtcp_fctrl_config_create()))
+                        return -1;
                 parse_dtcp_fctrl_config(attrs[DCA_ATTR_FLOW_CONTROL_CONFIG],
                                         cfg);
+        }
 
-        dtcp_rtx_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_RETX_CONTROL]));
+        if (attrs[DCA_ATTR_RETX_CONTROL]) {
+                if (dtcp_rxctrl_cfg_set(cfg, dtcp_rxctrl_config_create()))
+                        return -1;
+                dtcp_rtx_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_RETX_CONTROL]));
+        }
 
         if (attrs[DCA_ATTR_RETX_CONTROL_CONFIG])
                 if (parse_dtcp_rctrl_config(attrs[DCA_ATTR_RETX_CONTROL_CONFIG],
@@ -1625,9 +1638,8 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
                 return -1;
 
         cpp_struct->dtcp_present = nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
-        cpp_struct->dtcp_present = nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        if (attrs[CPP_ATTR_DTCP_CONFIG])
+        if (attrs[CPP_ATTR_DTCP_CONFIG] )
                 if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG],
                                       cpp_struct->dtcp_cfg)) {
                         LOG_ERR("Could not parse dtcp config");
