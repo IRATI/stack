@@ -936,6 +936,7 @@ parseDTCPFlowControlConfigObject(nlattr *nested);
 /* DTCPRtxControlConfig class */
 enum DTCPRtxControlConfigAttributes {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
+        DRCC_ATTR_INIT_RTX_TIME,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,

@@ -750,14 +750,23 @@ const std::string DTCPFlowControlConfig::toString() {
 /* CLASS DTCP RX CONTROL CONFIG */
 DTCPRtxControlConfig::DTCPRtxControlConfig() {
         datarxmsnmax = 0;
+        initialRtxTime = 0;
 }
 
-int DTCPRtxControlConfig::getDatarxmsnmax() const {
+unsigned int DTCPRtxControlConfig::getDatarxmsnmax() const {
         return datarxmsnmax;
 }
 
-void DTCPRtxControlConfig::setDatarxmsnmax(int datarxmsnmax) {
+void DTCPRtxControlConfig::setDatarxmsnmax(unsigned int datarxmsnmax) {
         this->datarxmsnmax = datarxmsnmax;
+}
+
+unsigned int DTCPRtxControlConfig::getInitialRtxTime() const {
+        return initialRtxTime;
+}
+
+void DTCPRtxControlConfig::setInitialRtxTime(unsigned int initialRtxTime) {
+        this->initialRtxTime = initialRtxTime;
 }
 
 const PolicyConfig& DTCPRtxControlConfig::getRcvrackpolicy() const {
@@ -815,7 +824,8 @@ void DTCPRtxControlConfig::setSendingackpolicy(
 
 const std::string DTCPRtxControlConfig::toString() {
         std::stringstream ss;
-        ss<<"Max number of retx attempts: "<<datarxmsnmax<<std::endl;
+        ss<<"Max number of retx attempts: "<<datarxmsnmax;
+        ss<<"; Initial rtx. time (in ms): "<<initialRtxTime<<std::endl;
         ss<<"; Rtx timer expiry policy (name/version): "<<rtxtimerexpirypolicy.getName();
         ss<<"/"<<rtxtimerexpirypolicy.getVersion()<<std::endl;
         ss<<"Sender ACK policy (name/version): "<<senderackpolicy.getName();
