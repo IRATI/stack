@@ -22,6 +22,7 @@ Packages required to install the stack into Debian/Linux 7.0 (wheezy):
      * libtool
      * pkg-config
      * git
+     * g++
      * libnl-genl-3-dev 
      * libnl-3-dev 
      * maven 
