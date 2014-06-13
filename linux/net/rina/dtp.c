@@ -68,8 +68,8 @@ static struct seq_queue * seq_queue_create(void)
 static void seq_q_entry_destroy(struct seq_q_entry * seq_entry)
 {
         ASSERT(seq_entry);
-
-        pdu_destroy(seq_entry->pdu);
+        
+        if (seq_entry->pdu) pdu_destroy(seq_entry->pdu);
         rkfree(seq_entry);
 
         return;
@@ -393,10 +393,45 @@ static int sdu_post(struct dtp * instance,
         return 0;
 }
 
+static struct pdu * seq_queue_pop(struct seq_queue * q)
+{
+        struct seq_q_entry * p;
+        struct pdu * pdu;
+
+        if (list_empty(&q->head)) {
+                LOG_WARN("Seq Queue is empty!");
+                return NULL;
+        }
+
+        p = list_first_entry(&q->head, struct seq_q_entry, next);
+        if (!p)
+                return NULL;
+
+        pdu = p->pdu;
+        p->pdu = NULL;
+
+        list_del(&p->next);
+        seq_q_entry_destroy(p);
+
+        return p->pdu;        
+}
+
 struct pdu * seqQ_pop(struct sequencingQ * seqQ)
 {
-        LOG_MISSING;
-        return NULL;
+        struct pdu * pdu;
+
+        ASSERT(seqQ);
+
+        spin_lock(&seqQ->lock);
+        pdu = seq_queue_pop(seqQ->queue);
+        if (!pdu) {
+                spin_unlock(&seqQ->lock);
+                LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
+                return NULL;
+        }
+        spin_unlock(&seqQ->lock);
+
+        return 0;
 }
 
 static void update_left_win_edge(struct dtp * dtp)
@@ -845,7 +880,9 @@ static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
 
 static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 {
-        static struct seq_q_entry * tmp;
+        static struct seq_q_entry * tmp, * cur, * last = NULL;
+        seq_num_t                   csn, psn;
+        const struct pci *          pci;
 
         ASSERT(pdu);
         ASSERT(q);
@@ -856,7 +893,44 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 return -1;
         }
 
-        list_add(&q->head, &tmp->next);
+        pci  = pdu_pci_get_ro(pdu);
+        csn  = pci_sequence_number_get((struct pci *) pci);
+
+        if (list_empty(&q->head)) {
+                list_add(&tmp->next, &q->head);
+                LOG_DBG("First PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                return 0;
+        }
+
+        last = list_last_entry(&q->head, struct seq_q_entry, next);
+        if (!last)
+                return -1;
+
+        pci  = pdu_pci_get_ro(last->pdu);
+        psn  = pci_sequence_number_get((struct pci *) pci);
+        if (csn == psn) {
+                LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                return -1;
+        }
+        if (csn > psn) {
+                list_add_tail(&tmp->next, &q->head);
+                LOG_DBG("Last PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                return 0;
+        }
+
+        list_for_each_entry(cur, &q->head, next) {
+                pci = pdu_pci_get_ro(cur->pdu);
+                psn = pci_sequence_number_get((struct pci *) pci);
+                if (csn == psn) {
+                        LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                        return -1;
+                }
+                if (csn > psn) {
+                        list_add(&tmp->next, &cur->next);
+                        LOG_DBG("Middle PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                        return 0;
+                }
+        }
 
         return 0;
 }
@@ -1006,14 +1080,14 @@ int dtp_receive(struct dtp * instance,
                         return -1;
                 }
 
-                if (dt_sv_a(dt)==0) {
+                if (dt_sv_a(dt) == 0) {
                         /*
                          * FIXME: Invoke delimiting and put all SDUs thus
                          * created into the KFA or EFCP instance above. Update
                          * the receiver left window edge
                          */
                         pdu = seqQ_pop(instance->seqQ);
-                        update_left_win_edge(instance);
+                        /* update_left_win_edge(instance);*/
                         if (sdu_post(instance, pdu))
                                 return -1;
                 }
@@ -1031,13 +1105,15 @@ int dtp_receive(struct dtp * instance,
                         LOG_ERR("Could not push PDU into sequencing queue");
                         return -1;
                 }
-                if (dt_sv_a(dt)==0) {
+                if (dt_sv_a(dt) == 0) {
                         /*
                          * FIXME: Invoke delimiting and put all SDUs thus
                          * created into the KFA or EFCP instance above*/
-                        sdu_post(instance, pdu);
+                        pdu = seqQ_pop(instance->seqQ);
+                        if (sdu_post(instance, pdu))
+                                return -1;
                 }
-                update_left_win_edge(instance);
+                /*update_left_win_edge(instance);*/
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
