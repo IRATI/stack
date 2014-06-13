@@ -29,13 +29,10 @@
 #include <string>
 #include <list>
 
-#include "librina/common.h"
+#include "librina/rinaconf.h"
 #include "librina/application.h"
 #include "librina/cdap.h"
 #include "librina/ipc-manager.h"
-
-#define RINA_DEFAULT_POLICY_NAME "default"
-#define RINA_DEFAULT_POLICY_VERSION "0"
 
 namespace rina {
 

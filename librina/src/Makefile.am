@@ -13,6 +13,7 @@ allsources =					\
 	librina.cc				\
 	common.cc				\
 	application.cc				\
+	rinaconf.cc                 \
 	ipc-manager.cc				\
 	ipc-process.cc				\
 	faux-sockets.cc				\

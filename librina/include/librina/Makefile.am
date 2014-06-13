@@ -8,6 +8,7 @@ nobase_pkginclude_HEADERS =			\
 	librina.h				\
 	common.h				\
 	application.h				\
+	rinaconf.h                  \
 	ipc-manager.h				\
 	ipc-process.h				\
 	faux-sockets.h				\

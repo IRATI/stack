@@ -572,7 +572,7 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 	message.setSourceAppName(remoteAppName);
 	message.setDestAppName(localAppName);
 	message.setFlowSpecification(flowSpecification);
-	message.setDifName(currentDIFInformation.getDifName());
+	message.setDifName(currentDIFInformation.get_dif_name());
 	message.setPortId(portId);
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setDestPortId(ipcManagerPort);

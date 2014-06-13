@@ -26,10 +26,8 @@
 #ifdef __cplusplus
 
 #include <map>
-#include <list>
-#include <string>
 
-#include "librina/common.h"
+#include "librina/rinaconf.h"
 #include "librina/concurrency.h"
 
 namespace rina {

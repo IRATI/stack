@@ -351,7 +351,6 @@ QoSCube * parseQoSCubeObject(nlmsghdr *hdr);
 enum DIFPropertiesAttributes {
 	DIF_PROP_ATTR_DIF_NAME = 1,
 	DIF_PROP_ATTR_MAX_SDU_SIZE,
-	DIF_PROP_ATTR_QOS_CUBES,
 	__DIF_PROP_ATTR_MAX,
 };
 
@@ -936,6 +935,7 @@ parseDTCPFlowControlConfigObject(nlattr *nested);
 /* DTCPRtxControlConfig class */
 enum DTCPRtxControlConfigAttributes {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
+        DRCC_ATTR_INITITAL_RTX_TIME,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,
