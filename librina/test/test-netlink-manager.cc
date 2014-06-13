@@ -51,8 +51,8 @@ int main() {
 	difName.setProcessName("/difs/test.DIF");
 
 	DIFInformation difInformation;
-	difInformation.setDifType("shim-dummy");
-	difInformation.setDifName(difName);
+	difInformation.set_dif_type("shim-dummy");
+	difInformation.set_dif_name(difName);
 
 	AppAllocateFlowRequestMessage message;
 	message.setDestPortId(31);
