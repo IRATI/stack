@@ -997,15 +997,13 @@ public:
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException
-	virtual const char* serializeMessage(const CDAPMessage cdapMessage) = 0;
+	virtual const char* serializeMessage(const CDAPMessage &cdapMessage) = 0;
 };
 
 /// Factory to return a WireMessageProvider
 class WireMessageProviderFactoryInterface {
 public:
-	virtual ~WireMessageProviderFactoryInterface() throw () {
-	}
-	;
+	virtual ~WireMessageProviderFactoryInterface() throw () {};
 	virtual WireMessageProviderInterface* createWireMessageProvider() = 0;
 };
 }
