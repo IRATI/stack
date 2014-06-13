@@ -34,9 +34,6 @@
 #include <asm/xen/page.h>
 
 
-extern unsigned int stat_txres;
-extern unsigned int stat_rxres;
-
 /* Provide an option to disable split event channels at load time as
  * event channels are limited resource. Split event channels are
  * enabled by default.
@@ -263,7 +260,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 		need_to_notify |= !!ret;
 
                 vif->rx_pending_cons++;
-                stat_txres++;
+                vif->stats->txres++;
 	}
 
 done:
@@ -556,7 +553,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                         buf->len - sizeof(struct vmpi_hdr));
                         vmpi_buffer_destroy(buf);
                 }
-                stat_rxres++;
+                vif->stats->rxres++;
 
 		work_done++;
 	}

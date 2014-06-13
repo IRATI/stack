@@ -24,19 +24,13 @@
 #include <linux/socket.h>
 
 #include "vmpi.h"
+#include "vmpi-stats.h"
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-ops.h"
 #include "shim-hv.h"
 #include "vmpi-test.h"
 
-
-unsigned int stat_txreq = 0;
-module_param(stat_txreq, uint, 0444);
-unsigned int stat_txres = 0;
-module_param(stat_txres, uint, 0444);
-unsigned int stat_rxres = 0;
-module_param(stat_rxres, uint, 0444);
 
 struct vmpi_info {
         struct vmpi_impl_info *vi;
@@ -45,6 +39,7 @@ struct vmpi_info {
         struct vmpi_queue read[VMPI_MAX_CHANNELS];
 
         struct vmpi_ops ops;
+        struct vmpi_stats stats;
 };
 
 int
@@ -80,6 +75,12 @@ vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
         return vmpi_register_read_callback(ops->priv, cb, opaque);
 }
 
+struct vmpi_stats *
+vmpi_get_stats(struct vmpi_info *mpi)
+{
+        return &mpi->stats;
+}
+
 struct vmpi_info *
 vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
 {
@@ -91,6 +92,8 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
                 *err = -ENOMEM;
                 return NULL;
         }
+        memset(mpi, 0, sizeof(*mpi));
+        vmpi_stats_init(&mpi->stats);
 
         mpi->vi = vi;
 
@@ -134,6 +137,7 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
         }
         vmpi_ring_fini(&mpi->write);
  init_write:
+        vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
 
         return NULL;
@@ -145,7 +149,7 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
         unsigned int i;
 
 #ifdef VMPI_TEST
-        vmpi_test_fini(deferred_test_fini);
+        vmpi_test_fini(mpi, deferred_test_fini);
 #endif  /* VMPI_TEST */
 
         shim_hv_fini();
@@ -155,6 +159,7 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
         for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
+        vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
 }
 
@@ -212,7 +217,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(ring->nu);
-                stat_txreq++;
+                mpi->stats.txreq++;
                 mutex_unlock(&ring->lock);
 
                 vmpi_impl_write_buf(mpi->vi, buf);

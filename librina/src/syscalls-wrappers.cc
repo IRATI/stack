@@ -23,7 +23,7 @@
 /* FIXME: PIGSTY HACK TO USE OUR SYSCALLS, PLEASE FIX ASAP !!! */
 #if defined(__x86_64__)
 #undef _ASM_X86_UNISTD_64_H
-#include "/usr/include/linux/include/asm-x86/unistd_64.h"
+#include "unistd_64.h"
 #else
 #undef _ASM_X86_UNISTD_32_H
 #include "/usr/include/linux/include/asm-x86/unistd_32.h"

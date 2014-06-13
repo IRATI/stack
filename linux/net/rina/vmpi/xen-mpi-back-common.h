@@ -152,6 +152,7 @@ struct vmpi_impl_info {
         struct vmpi_info *mpi;
         struct vmpi_ring *write;
         struct vmpi_queue *read;
+        struct vmpi_stats *stats;
         vmpi_read_cb_t read_cb;
         void *read_cb_data;
 };

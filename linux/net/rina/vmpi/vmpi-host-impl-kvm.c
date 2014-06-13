@@ -60,9 +60,6 @@ enum {
         VHOST_NET_VQ_MAX = 2,
 };
 
-extern unsigned int stat_txres;
-extern unsigned int stat_rxres;
-
 struct vmpi_impl_queue {
         struct vhost_virtqueue vq;
 };
@@ -78,6 +75,7 @@ struct vmpi_impl_info {
         struct vmpi_info *mpi;
         struct vmpi_ring *write;
         struct vmpi_queue *read;
+        struct vmpi_stats *stats;
         vmpi_read_cb_t read_cb;
         void *read_cb_data;
         struct vmpi_queue read_cb_queue;
@@ -210,7 +208,7 @@ handle_tx(struct vmpi_impl_info *vi)
                                 mutex_unlock(&vi->read_cb_queue.lock);
                                 schedule_work(&vi->read_cb_worker);
                         }
-                        stat_rxres++;
+                        vi->stats->rxres++;
                 }
 
                 vhost_add_used_and_signal(&vi->dev, vq, head, 0);
@@ -355,7 +353,7 @@ handle_rx(struct vmpi_impl_info *vi)
                 wake_up_interruptible_poll(&ring->wqh, POLLOUT |
                                            POLLWRNORM | POLLWRBAND);
                 IFV(printk("pushed %d bytes in the RX ring\n", (int)len));
-                stat_txres++;
+                vi->stats->txres++;
 
                 vhost_add_used_and_signal_n(&vi->dev, vq, vq->heads,
                                             headcount);
@@ -456,6 +454,7 @@ vhost_mpi_open(struct inode *inode, struct file *f)
         }
         vi->write = vmpi_get_write_ring(vi->mpi);
         vi->read = vmpi_get_read_queue(vi->mpi);
+        vi->stats = vmpi_get_stats(vi->mpi);
         vi->read_cb = NULL;
         INIT_WORK(&vi->read_cb_worker, read_cb_worker_function);
         vmpi_queue_init(&vi->read_cb_queue, 0, VMPI_BUF_SIZE);
