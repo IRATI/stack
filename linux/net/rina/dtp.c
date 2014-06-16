@@ -426,7 +426,7 @@ struct pdu * seqQ_pop(struct sequencingQ * seqQ)
         pdu = seq_queue_pop(seqQ->queue);
         if (!pdu) {
                 spin_unlock(&seqQ->lock);
-                LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
+                LOG_ERR("Cannot pop PDU from sequencing queue %pK", seqQ);
                 return NULL;
         }
         spin_unlock(&seqQ->lock);
@@ -509,10 +509,27 @@ static void tf_a(void * data)
         return;
 }
 
-static void sv_policies_apply(struct dtp_sv * sv, struct connection * conn)
+/* AF is the factor to which A is devided in order to obtain the
+ * period of the A-timer:
+ *      Ta = A / AF
+ */
+#define AF 10
+
+int dtp_sv_init(struct dtp * dtp,
+                bool         rexmsn_ctrl,
+                bool         window_based,
+                bool         rate_based,
+                timeout_t    a)
 {
-        ASSERT(sv);
-        ASSERT(conn);
+        ASSERT(dtp);
+
+        dtp->sv->rexmsn_ctrl  = rexmsn_ctrl;
+        dtp->sv->window_based = window_based;
+        dtp->sv->rate_based   = rate_based;
+        
+        rtimer_start(dtp->timers.a, a/AF);
+
+        return 0;
 }
 
 struct dtp * dtp_create(struct dt *         dt,
@@ -556,7 +573,6 @@ struct dtp * dtp_create(struct dt *         dt,
 
         tmp->policies       = &default_policies;
         /* FIXME: fixups to the policies should be placed here */
-        sv_policies_apply(tmp->sv, connection);
 
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
@@ -578,7 +594,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 dtp_destroy(tmp);
                 return NULL;
         }
-
+        
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;

@@ -712,12 +712,8 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
         ASSERT(dtcp);
 
-        if (!dt_sv_a(dtcp->parent)) {
+        if (!dt_sv_a(dtcp->parent)) 
                 return dtcp->policies->sending_ack(dtcp, seq);
-        } else {
-                /* Set A timer for PDU */
-                LOG_MISSING;
-        }
 
         return 0;
 }

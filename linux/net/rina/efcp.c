@@ -509,6 +509,18 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
+        
+        if (dtp_sv_init(dtp,
+                        dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg),
+                        dtcp_window_based_fctrl(connection->policies_params
+                                                ->dtcp_cfg),
+                        dtcp_rate_based_fctrl(connection->policies_params
+                                                ->dtcp_cfg),
+                        a)) {
+                LOG_ERR("Could not init dtp_sv");
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
 
         /***/
 
