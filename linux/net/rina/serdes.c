@@ -141,6 +141,15 @@ static bool serdes_pdu_is_ok(const struct pdu_ser * s)
 
 static int base_pci_size(const struct dt_cons * dt_cons)
 { 
+        LOG_DBG("Version: %d", VERSION_SIZE);
+        LOG_DBG("Address Length: %d", dt_cons->address_length);
+        LOG_DBG("QoS ID Length: %d", dt_cons->qos_id_length);
+        LOG_DBG("CEP ID Length: %d", dt_cons->cep_id_length);
+        LOG_DBG("PDU Type Size: %d", PDU_TYPE_SIZE);
+        LOG_DBG("Flags Size: %d", FLAGS_SIZE);
+        LOG_DBG("Length Length: %d", dt_cons->length_length);
+        LOG_DBG("Sequence Number Length: %d", dt_cons->seq_num_length);
+
         return VERSION_SIZE + 
                 2 * dt_cons->address_length +
                 dt_cons->qos_id_length +
@@ -192,9 +201,11 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 LOG_ERR("Wrong PDU type");
                 return NULL;
         }
+        LOG_DBG("PDU Type: %04X", pdu_type);
 
         /* Base PCI size, fields present in all PDUs */
         pci_size = base_pci_size(dt_cons);
+        LOG_DBG("PCI Size is %zd", pci_size);
 
         /* 
          * These are available in the stack at this point in time 
@@ -213,6 +224,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                         pdu_destroy(pdu);
                         return NULL;
                 }
+                LOG_DBG("Total size is %zd", size);
                 
                 data = rkmalloc(size, flags);
                 if (!data) {
