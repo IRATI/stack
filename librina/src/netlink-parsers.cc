@@ -1278,7 +1278,7 @@ int putNeighborObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
         if (putApplicationProcessNamingInformationObject(netlinkMessage,
-                        object.getName()) < 0) {
+                        object.get_name()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -1289,7 +1289,7 @@ int putNeighborObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
         if (putApplicationProcessNamingInformationObject(netlinkMessage,
-                        object.getSupportingDifName()) < 0) {
+                        object.get_supporting_dif_name()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -1356,7 +1356,7 @@ Neighbor * parseNeighborObject(nlattr *nested) {
                         delete result;
                         return 0;
                 } else {
-                        result->setName(*name);
+                        result->set_name(*name);
                         delete name;
                 }
         }
@@ -1368,7 +1368,7 @@ Neighbor * parseNeighborObject(nlattr *nested) {
                         delete result;
                         return 0;
                 } else {
-                        result->setSupportingDifName(*supportingDIF);
+                        result->set_supporting_dif_name(*supportingDIF);
                         delete supportingDIF;
                 }
         }
@@ -4133,19 +4133,19 @@ int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
 
 int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
-                        object.getClazz().c_str());
+                        object.get_class().c_str());
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
-                        object.getName().c_str());
+                        object.get_name().c_str());
         NLA_PUT_U64(netlinkMessage, RIBO_ATTR_OBJECT_INSTANCE,
-                        object.getInstance());
+                        object.get_instance());
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_DISPLAY_VALUE,
-                                object.getDisplayableValue().c_str());
+                                object.get_displayable_value().c_str());
 
 	return 0;
 
 	nla_put_failure: LOG_ERR(
 			"Error building RIBObject Netlink message attribute: %s %s",
-			object.getClazz().c_str(), object.getName().c_str());
+			object.get_class().c_str(), object.get_name().c_str());
 	return -1;
 }
 
@@ -6668,22 +6668,22 @@ RIBObject * parseRIBObject(nlattr *nested){
 	RIBObject * result = new RIBObject();
 
 	if (attrs[RIBO_ATTR_OBJECT_CLASS]){
-		result->setClazz(
+		result->set_class(
 				nla_get_string(attrs[RIBO_ATTR_OBJECT_CLASS]));
 	}
 
 	if (attrs[RIBO_ATTR_OBJECT_NAME]){
-		result->setName(
+		result->set_name(
 				nla_get_string(attrs[RIBO_ATTR_OBJECT_NAME]));
 	}
 
 	if (attrs[RIBO_ATTR_OBJECT_INSTANCE]){
-		result->setInstance(
+		result->set_instance(
 				nla_get_u64(attrs[RIBO_ATTR_OBJECT_INSTANCE]));
 	}
 
 	if (attrs[RIBO_ATTR_OBJECT_DISPLAY_VALUE]){
-	        result->setDisplayableValue(
+	        result->set_displayable_value(
 	                        nla_get_string(attrs[RIBO_ATTR_OBJECT_DISPLAY_VALUE]));
 	}
 

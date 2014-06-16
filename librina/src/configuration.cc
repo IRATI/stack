@@ -20,9 +20,9 @@
 
 #include <sstream>
 
-#define RINA_PREFIX "rinaconf"
+#define RINA_PREFIX "configuration"
 
-#include "librina/rinaconf.h"
+#include "librina/configuration.h"
 
 namespace rina {
 

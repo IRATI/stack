@@ -8,12 +8,14 @@ allsources =					\
 	logs.cc					\
 	utils.cc				\
 	concurrency.cc				\
+	timer.cc                \
 	core.cc					\
 	exceptions.cc				\
 	librina.cc				\
 	common.cc				\
 	application.cc				\
-	rinaconf.cc                 \
+	configuration.cc                 \
+	ipc-daemons.cc             \
 	ipc-manager.cc				\
 	ipc-process.cc				\
 	faux-sockets.cc				\

@@ -38,7 +38,6 @@
 #include <string>
 #include <vector>
 #include <list>
-#include <map>
 #include <ctime>
 
 #include "librina/concurrency.h"
@@ -654,32 +653,6 @@ public:
 };
 
 /**
- * Thrown when there are problems assigning an IPC Process to a DIF
- */
-class AssignToDIFException: public IPCException {
-public:
-        AssignToDIFException():
-                IPCException("Problems assigning IPC Process to DIF"){
-        }
-        AssignToDIFException(const std::string& description):
-                IPCException(description){
-        }
-};
-
-/**
- * Thrown when there are problems updating a DIF configuration
- */
-class UpdateDIFConfigurationException: public IPCException {
-public:
-        UpdateDIFConfigurationException():
-                IPCException("Problems updating DIF configuration"){
-        }
-        UpdateDIFConfigurationException(const std::string& description):
-                IPCException(description){
-        }
-};
-
-/**
  * Represents a parameter that has a name and value
  */
 class Parameter {
@@ -698,130 +671,6 @@ public:
 };
 
 /**
- * Represents an IPC Process with whom we're enrolled
- */
-class Neighbor {
-
-        /** The IPC Process name of the neighbor */
-        ApplicationProcessNamingInformation name;
-
-        /**
-         * The name of the supporting DIF used to exchange data
-         * with the neighbor
-         */
-        ApplicationProcessNamingInformation supportingDifName;
-
-        /**
-         * The names of all the supporting DIFs of this neighbor
-         */
-        std::list<ApplicationProcessNamingInformation> supportingDifs;
-
-        /** The address */
-        unsigned int address;
-
-        /** Tells if it is enrolled or not */
-        bool enrolled;
-
-        /** The average RTT in ms */
-        unsigned int averageRTTInMs;
-
-        /** The underlying portId used to communicate with this neighbor */
-        int underlyingPortId;
-
-        /**
-         * The last time a KeepAlive message was received from
-         * that neighbor, in ms
-         */
-        long long lastHeardFromTimeInMs;
-
-        /**
-         * The number of times we have tried to re-enroll with the
-         * neighbor after the connectivity has been lost
-         */
-        unsigned int numberOfEnrollmentAttempts;
-
-public:
-        Neighbor();
-        bool operator==(const Neighbor &other) const;
-        bool operator!=(const Neighbor &other) const;
-        const ApplicationProcessNamingInformation& getName() const;
-        void setName(const ApplicationProcessNamingInformation& name);
-        const ApplicationProcessNamingInformation&
-                getSupportingDifName() const;
-        void setSupportingDifName(
-                const ApplicationProcessNamingInformation& supportingDifName);
-        const std::list<ApplicationProcessNamingInformation>& getSupportingDifs();
-        void setSupportingDifs(
-                        const std::list<ApplicationProcessNamingInformation>& supportingDifs);
-        void addSupoprtingDif(const ApplicationProcessNamingInformation& supportingDif);
-        unsigned int getAddress() const;
-        void setAddress(unsigned int address);
-        unsigned int getAverageRttInMs() const;
-        void setAverageRttInMs(unsigned int averageRttInMs);
-        bool isEnrolled() const;
-        void setEnrolled(bool enrolled);
-        long long getLastHeardFromTimeInMs() const;
-        void setLastHeardFromTimeInMs(long long lastHeardFromTimeInMs);
-        int getUnderlyingPortId() const;
-        void setUnderlyingPortId(int underlyingPortId);
-        unsigned int getNumberOfEnrollmentAttempts() const;
-        void setNumberOfEnrollmentAttempts(
-                        unsigned int numberOfEnrollmentAttempts);
-        const std::string toString();
-};
-
-/**
- * Represents the value of an object stored in the RIB
- */
-class RIBObjectValue{
-	//TODO
-};
-
-/**
- * Represents an object in the RIB
- */
-class RIBObject{
-
-	/** The class (type) of object */
-	std::string clazz;
-
-	/** The name of the object (unique within a class)*/
-	std::string name;
-
-	/** A synonim for clazz+name (unique within the RIB) */
-	unsigned long instance;
-
-	/** The value of the object */
-	RIBObjectValue value;
-
-	/**
-	 * The value of the object, encoded in an string for
-	 * displayable purposes
-	 */
-	std::string displayableValue;
-
-	/** Geneartes a unique object instance */
-	unsigned long generateObjectInstance();
-
-public:
-	RIBObject();
-	RIBObject(std::string clazz, std::string name,
-	                long long instance, RIBObjectValue value);
-	bool operator==(const RIBObject &other) const;
-	bool operator!=(const RIBObject &other) const;
-	const std::string& getClazz() const;
-	void setClazz(const std::string& clazz);
-	unsigned long getInstance() const;
-	void setInstance(unsigned long  instance);
-	const std::string& getName() const;
-	void setName(const std::string& name);
-	RIBObjectValue getValue() const;
-	void setValue(RIBObjectValue value);
-        const std::string& getDisplayableValue() const;
-        void setDisplayableValue(const std::string& displayableValue);
-};
-
-/**
  * Thrown when there are problems initializing librina
  */
 class InitializationException: public IPCException {
@@ -832,52 +681,6 @@ public:
 	InitializationException(const std::string& description):
 		IPCException(description){
 	}
-};
-
-/**
- * Thrown when there are problems instructing an IPC Process to enroll to a DIF
- */
-class EnrollException: public IPCException {
-public:
-        EnrollException():
-                IPCException("Problems causing an IPC Process to enroll to a DIF"){
-        }
-        EnrollException(const std::string& description):
-                IPCException(description){
-        }
-};
-
-/// Interface for tasks to be scheduled in a timer
-class TimerTask {
-public:
-	virtual ~TimerTask(){};
-	virtual void run() = 0;
-};
-
-class LockableMap : public Lockable {
-public:
-	LockableMap();
-	~LockableMap() throw();
-	void insert(std::pair<double, TimerTask*> pair);
-	void clear();
-	void runTasks();
-	void cancelTask(TimerTask *task);
-private:
-	std::map<double, TimerTask*> tasks_;
-};
-
-void* doWork(void * arg);
-/// Class that implements a timer which contains a thread
-class Timer {
-public:
-	Timer();
-	~Timer();
-	void scheduleTask(TimerTask* task, double delay_ms);
-	void cancelTask(TimerTask *task);
-	void clear();
-private:
-	Thread *thread_;
-	LockableMap lockableMap_;
 };
 
 /**

@@ -897,18 +897,18 @@ int testIpcmQueryRIBResponseMessage() {
 	IpcmDIFQueryRIBResponseMessage message;
 	message.setResult(0);
 	RIBObject * ribObject = new RIBObject();
-	ribObject->setClazz("/test/clazz1");
-	ribObject->setName("/test/name1");
-	ribObject->setInstance(1234);
-	ribObject->setDisplayableValue("This is my value");
+	ribObject->set_class("/test/clazz1");
+	ribObject->set_name("/test/name1");
+	ribObject->set_instance(1234);
+	ribObject->set_displayable_value("This is my value");
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
 	ribObject = new RIBObject();
-	ribObject->setClazz("/test/clazz2");
-	ribObject->setName("/test/name2");
-	ribObject->setInstance(343241);
-	ribObject->setDisplayableValue("This is my value2");
+	ribObject->set_class("/test/clazz2");
+	ribObject->set_name("/test/name2");
+	ribObject->set_instance(343241);
+	ribObject->set_displayable_value("This is my value2");
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
@@ -954,22 +954,22 @@ int testIpcmQueryRIBResponseMessage() {
 				++iterator) {
 			const RIBObject& ribObject = *iterator;
 			if (i == 0){
-				if (ribObject.getClazz().compare("/test/clazz1") != 0){
+				if (ribObject.get_class().compare("/test/clazz1") != 0){
 					std::cout << "RIB Object clazz on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getName().compare("/test/name1") != 0){
+				}else if (ribObject.get_name().compare("/test/name1") != 0){
 					std::cout << "RIB Object name on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getInstance() != 1234){
+				}else if (ribObject.get_instance() != 1234){
 					std::cout << "RIB Object instance on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getDisplayableValue().compare("This is my value") != 0){
+				}else if (ribObject.get_displayable_value().compare("This is my value") != 0){
                                         std::cout << "RIB Object display value on original and recovered messages"
                                                         << " are different\n";
                                         returnValue = -1;
@@ -978,22 +978,22 @@ int testIpcmQueryRIBResponseMessage() {
 
 				i++;
 			}else if (i == 1){
-				if (ribObject.getClazz().compare("/test/clazz2") != 0){
+				if (ribObject.get_class().compare("/test/clazz2") != 0){
 					std::cout << "RIB Object clazz on original and recovered messages"
 							<< " are different " <<std::endl;
 					returnValue = -1;
 					break;
-				} else if (ribObject.getName().compare("/test/name2") != 0){
+				} else if (ribObject.get_name().compare("/test/name2") != 0){
 					std::cout << "RIB Object name on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				} else if (ribObject.getInstance() != 343241){
+				} else if (ribObject.get_instance() != 343241){
 					std::cout << "RIB Object instance on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				} else if (ribObject.getDisplayableValue().compare("This is my value2") != 0){
+				} else if (ribObject.get_displayable_value().compare("This is my value2") != 0){
                                         std::cout << "RIB Object display value on original and recovered messages"
                                                         << " are different\n";
                                         returnValue = -1;
@@ -1656,10 +1656,10 @@ int testIpcmEnrollToDIFResponseMessage() {
         ApplicationProcessNamingInformation name;
         name.setProcessName("test");
         name.setProcessInstance("1");
-        neighbor.setName(name);
+        neighbor.set_name(name);
         ApplicationProcessNamingInformation supportingDIF;
         supportingDIF.setProcessName("100");
-        neighbor.setSupportingDifName(supportingDIF);
+        neighbor.set_supporting_dif_name(supportingDIF);
         message.addNeighbor(neighbor);
 
         struct nl_msg* netlinkMessage;
@@ -1716,10 +1716,10 @@ int testIpcmNeighborsModifiedNotificaiton() {
         ApplicationProcessNamingInformation name;
         name.setProcessName("test");
         name.setProcessInstance("1");
-        neighbor.setName(name);
+        neighbor.set_name(name);
         ApplicationProcessNamingInformation supportingDIF;
         supportingDIF.setProcessName("100");
-        neighbor.setSupportingDifName(supportingDIF);
+        neighbor.set_supporting_dif_name(supportingDIF);
         message.addNeighbor(neighbor);
 
         struct nl_msg* netlinkMessage;

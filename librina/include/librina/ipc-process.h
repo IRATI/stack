@@ -29,7 +29,7 @@
 #include <string>
 #include <list>
 
-#include "librina/rinaconf.h"
+#include "librina/configuration.h"
 #include "librina/application.h"
 #include "librina/cdap.h"
 #include "librina/ipc-manager.h"

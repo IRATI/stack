@@ -18,8 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef LIBRINA_RINACONF_H
-#define LIBRINA_RINACONF_H
+#ifndef LIBRINA_CONFIGURATION_H
+#define LIBRINA_CONFIGURATION_H
 
 #ifdef __cplusplus
 

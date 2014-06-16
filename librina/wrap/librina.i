@@ -360,8 +360,6 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(isMoreThan) rina::ApplicationProcessNamingInformation::operator>(const ApplicationProcessNamingInformation &other) const;  
 %rename(equals) rina::FlowSpecification::operator==(const FlowSpecification &other) const;
 %rename(differs) rina::FlowSpecification::operator!=(const FlowSpecification &other) const;
-%rename(equals) rina::RIBObject::operator==(const RIBObject &other) const;
-%rename(differs) rina::RIBObject::operator!=(const RIBObject &other) const;
 %rename(equals) rina::Thread::operator==(const Thread &other) const;
 %rename(differs) rina::Thread::operator!=(const Thread &other) const;
 %rename(equals) rina::Parameter::operator==(const Parameter &other) const;
@@ -370,10 +368,6 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Policy::operator!=(const Policy &other) const;
 %rename(equals) rina::FlowInformation::operator==(const FlowInformation &other) const;
 %rename(differs) rina::FlowInformation::operator!=(const FlowInformation &other) const;
-%rename(equals) rina::Neighbor::operator==(const Neighbor &other) const;
-%rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
-%rename(equals) rina::PDUForwardingTableEntry::operator==(const PDUForwardingTableEntry &other) const;
-%rename(differs) rina::PDUForwardingTableEntry::operator!=(const PDUForwardingTableEntry &other) const;
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
@@ -426,14 +420,10 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 
 /* Define iterator for ApplicationProcessNamingInformation list */
 MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, ApplicationProcessNamingInformation, std::list, rina::ApplicationProcessNamingInformation);
-/* Define iterator for RIBObject list */
-MAKE_COLLECTION_ITERABLE(RIBObjectListIterator, RIBObject, std::list, rina::RIBObject);
 /* Define iterator for String list */
 MAKE_COLLECTION_ITERABLE(StringListIterator, String, std::list, std::string);
 /* Define iterator for Flow Information list */
 MAKE_COLLECTION_ITERABLE(FlowInformationListIterator, FlowInformation, std::list, rina::FlowInformation);
-/* Define iterator for Neighbors list */
-MAKE_COLLECTION_ITERABLE(NeighborListIterator, Neighbor, std::list, rina::Neighbor);
 /* Define iterator for Unsigned int list */
 MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int);
 
@@ -445,8 +435,6 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
 %template(IPCEventProducerSingleton) Singleton<rina::IPCEventProducer>;
-%template(RIBObjectList) std::list<rina::RIBObject>;
 %template(StringList) std::list<std::string>;
 %template(FlowInformationList) std::list<rina::FlowInformation>;
-%template(NeighborList) std::list<rina::Neighbor>;
 %template(UnsignedIntList) std::list<unsigned int>;
