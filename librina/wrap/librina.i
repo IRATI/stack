@@ -358,8 +358,6 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(isLessThan) rina::ApplicationProcessNamingInformation::operator<(const ApplicationProcessNamingInformation &other) const;
 %rename(isMoreThanOrEquals) rina::ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const;   
 %rename(isMoreThan) rina::ApplicationProcessNamingInformation::operator>(const ApplicationProcessNamingInformation &other) const;  
-%rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;  
-%rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const; 
 %rename(equals) rina::FlowSpecification::operator==(const FlowSpecification &other) const;
 %rename(differs) rina::FlowSpecification::operator!=(const FlowSpecification &other) const;
 %rename(equals) rina::RIBObject::operator==(const RIBObject &other) const;
@@ -376,10 +374,6 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::Neighbor::operator!=(const Neighbor &other) const;
 %rename(equals) rina::PDUForwardingTableEntry::operator==(const PDUForwardingTableEntry &other) const;
 %rename(differs) rina::PDUForwardingTableEntry::operator!=(const PDUForwardingTableEntry &other) const;
-%rename(equals) rina::PolicyParameter::operator==(const PolicyParameter &other) const;
-%rename(differs) rina::PolicyParameter::operator!=(const PolicyParameter &other) const;
-%rename(equals) rina::PolicyConfig::operator==(const PolicyConfig &other) const;
-%rename(differs) rina::PolicyConfig::operator!=(const PolicyConfig &other) const;
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
@@ -430,8 +424,6 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 }
 %enddef
 
-/* Define iterator for QoSCube list */
-MAKE_COLLECTION_ITERABLE(QoSCubeListIterator, QoSCube, std::list, rina::QoSCube);
 /* Define iterator for ApplicationProcessNamingInformation list */
 MAKE_COLLECTION_ITERABLE(ApplicationProcessNamingInformationListIterator, ApplicationProcessNamingInformation, std::list, rina::ApplicationProcessNamingInformation);
 /* Define iterator for RIBObject list */
@@ -449,9 +441,6 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(FlowVector) std::vector<rina::Flow>;
 %template(FlowPointerVector) std::vector<rina::Flow *>;
 %template(ApplicationRegistrationVector) std::vector<rina::ApplicationRegistration *>;
-%template(QoSCubeList) std::list<rina::QoSCube>;
-%template(QoSCubeVector) std::vector<rina::QoSCube>;
-%template(PolicyConfigList) std::list<rina::PolicyConfig>;
 %template(ParameterList) std::list<rina::Parameter>;
 %template(ApplicationProcessNamingInformationList) std::list<rina::ApplicationProcessNamingInformation>;
 %template(IPCManagerSingleton) Singleton<rina::IPCManager>;
@@ -461,4 +450,3 @@ MAKE_COLLECTION_ITERABLE(UnsignedIntListIterator, Long, std::list, unsigned int)
 %template(FlowInformationList) std::list<rina::FlowInformation>;
 %template(NeighborList) std::list<rina::Neighbor>;
 %template(UnsignedIntList) std::list<unsigned int>;
-%template(PolicyParameterList) std::list<rina::PolicyParameter>;

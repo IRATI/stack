@@ -193,7 +193,7 @@ throw (AssignToDIFException) {
                 throw AssignToDIFException("IPC Process not yet initialized");
 
         std::string currentDIFName =
-                        this->difInformation.getDifName().getProcessName();
+                        this->difInformation.get_dif_name().getProcessName();
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(difMember || assignInProcess) {
@@ -237,9 +237,9 @@ void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
 
         if (!success) {
                 ApplicationProcessNamingInformation noDIF;
-                difInformation.setDifName(noDIF);
+                difInformation.set_dif_name(noDIF);
                 DIFConfiguration noConfig;
-                difInformation.setDifConfiguration(noConfig);
+                difInformation.set_dif_configuration(noConfig);
         } else {
                 difMember = true;
         }
@@ -254,7 +254,7 @@ unsigned int IPCProcess::updateDIFConfiguration(
         unsigned int seqNum=0;
 
         std::string currentDIFName =
-                        this->difInformation.getDifName().getProcessName();
+                        this->difInformation.get_dif_name().getProcessName();
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(!difMember || configureInProcess) {
@@ -299,7 +299,7 @@ void IPCProcess::updateDIFConfigurationResult(bool success)
         }
 
         if (success){
-                difInformation.setDifConfiguration(newConfiguration);
+                difInformation.set_dif_configuration(newConfiguration);
         }
 
         newConfiguration = DIFConfiguration();
@@ -458,7 +458,7 @@ throw (IpcmRegisterApplicationException) {
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difInformation.getDifName());
+	message.setDifName(difInformation.get_dif_name());
 	message.setRegIpcProcessId(regIpcProcessId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
@@ -532,7 +532,7 @@ throw (IpcmUnregisterApplicationException) {
 #else
         IpcmUnregisterApplicationRequestMessage message;
         message.setApplicationName(applicationName);
-        message.setDifName(difInformation.getDifName());
+        message.setDifName(difInformation.get_dif_name());
         message.setDestIpcProcessId(id);
         message.setDestPortId(portId);
         message.setRequestMessage(true);
@@ -605,7 +605,7 @@ throw (AllocateFlowException) {
 	FlowInformation flowInformation;
 	flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
 	flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
-	flowInformation.setDifName(difInformation.getDifName());
+	flowInformation.setDifName(difInformation.get_dif_name());
 	flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
 	flowInformation.setPortId(flowRequest.getPortId());
 
@@ -644,7 +644,7 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		FlowInformation flowInformation;
 		flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
 		flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
-		flowInformation.setDifName(difInformation.getDifName());
+		flowInformation.setDifName(difInformation.get_dif_name());
 		flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
 		flowInformation.setPortId(flowRequest.getPortId());
 
