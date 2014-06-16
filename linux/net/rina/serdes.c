@@ -19,6 +19,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/export.h>
+#include <linux/types.h>
+
 #define RINA_PREFIX "serdes"
 
 #include "serdes.h"
@@ -27,6 +30,8 @@
 #include "debug.h"
 #include "du.h"
 #include "ipcp-instances.h"
+#include "buffer.h"
+#include "pci.h"
 
 #define VERSION_SIZE 1
 /* Cannot be a literal for memcpy */
@@ -44,7 +49,7 @@ struct buffer * buffer_create_from_gfp(gfp_t        flags,
                                        size_t       size);
 
 struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  size_t size)
+                                  size_t size);
 
 struct pdu * pdu_create_gfp(gfp_t flags);
 
@@ -311,16 +316,15 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         struct buffer *       new_buff;
         struct pci *          new_pci;
         const uint8_t *       ptr;
-
-        int         offset;
-        int         vers;
-        address_t   addr;
-        cep_id_t    cep;
-        int         pdu_len;
-        qos_id_t    qos;
-        pdu_type_t  type;
-        pdu_flags_t flags;
-        seq_num_t   seq;
+        int                   offset;
+        int                   vers;
+        address_t             addr;
+        cep_id_t              cep;
+        ssize_t               pdu_len;
+        qos_id_t              qos;
+        pdu_type_t            pdu_type;
+        pdu_flags_t           pdu_flags;
+        seq_num_t             seq;
 
         if (!serdes_pdu_is_ok(pdu))
                 return NULL;
@@ -368,6 +372,74 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 return NULL;
         }
 
+        memcpy(&addr, 
+               ptr + offset, 
+               dt_cons->address_length);
+        offset += dt_cons->address_length;
+        if (pci_source_set(new_pci, addr)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
+        memcpy(&qos, 
+               ptr + offset, 
+               dt_cons->qos_id_length);
+        offset += dt_cons->qos_id_length;
+        if (pci_qos_id_set(new_pci, qos)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
+        memcpy(&cep, 
+               ptr + offset, 
+               dt_cons->cep_id_length);
+        offset += dt_cons->cep_id_length;
+        if (pci_cep_source_set(new_pci, cep)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
+        memcpy(&cep, 
+               ptr + offset, 
+               dt_cons->cep_id_length);
+        offset += dt_cons->cep_id_length;
+        if (pci_cep_destination_set(new_pci, cep)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+        
+        memcpy(&pdu_type, 
+               ptr + offset, 
+               PDU_TYPE_SIZE);
+        offset += PDU_TYPE_SIZE;
+        if (pci_type_set(new_pci, pdu_type)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
+        memcpy(&pdu_flags, 
+               ptr + offset, 
+               FLAGS_SIZE);
+        offset += FLAGS_SIZE;
+        if (pci_flags_set(new_pci, pdu_flags)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
+        memcpy(&pdu_len, 
+               ptr + offset, 
+               dt_cons->length_length);
+        offset += dt_cons->length_length;
+
+        memcpy(&seq, 
+               ptr + offset, 
+               dt_cons->seq_num_length);
+        offset += dt_cons->seq_num_length;
+        if (pci_sequence_number_set(new_pci, seq)) {
+                pdu_destroy(tmp_pdu);
+                return NULL;
+        }
+
         switch (pdu_type) {
         case PDU_TYPE_MGMT:
         case PDU_TYPE_DT:
@@ -375,8 +447,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 /* Create buffer with rest of PDU if it is a DT or MGMT PDU*/
                 new_buff = buffer_create_from_gfp(flags,
                                                   ptr + offset,
-                                                  (buffer_length(pdu->buf) -
-                                                   offset));
+                                                  pdu_len);
                 if (!new_buff) {
                         pdu_destroy(tmp_pdu);
                         return NULL;

@@ -82,7 +82,7 @@ ssize_t pci_length(const struct pci * pci)
 { return pci ? sizeof(*pci) : -1; }
 EXPORT_SYMBOL(pci_length);
 
-static struct pci * pci_create_gfp(gfp_t flags)
+struct pci * pci_create_gfp(gfp_t flags)
 {
         struct pci * tmp;
 
@@ -197,6 +197,17 @@ int pci_type_set(struct pci * pci, pdu_type_t type)
         return 0;
 }
 EXPORT_SYMBOL(pci_type_set);
+
+int pci_flags_set(struct pci * pci, pdu_flags_t flags)
+{
+        if (!pci)
+                return -1;
+
+        pci->flags = flags;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_flags_set);
 
 int pci_format(struct pci * pci,
                cep_id_t     src_cep_id,
