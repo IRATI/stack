@@ -61,7 +61,7 @@ static int construct_base_pci(char *                 data,
                               const struct pci *     pci) 
 {         
         int         offset;
-        int         pdu_len;
+        size_t      pdu_len;
         address_t   addr;
         cep_id_t    cep;
         qos_id_t    qos;
@@ -79,50 +79,70 @@ static int construct_base_pci(char *                 data,
          * Always 8 bit long
          */
         offset = 0;
+        LOG_DBG("Offset is now %d", offset);
         memcpy(data + offset, 
                &version, 
                VERSION_SIZE);
         offset += VERSION_SIZE;
+        LOG_DBG("Offset is now %d", offset);
+
         addr = pci_destination(pci);
         memcpy(data + offset, 
                &addr, 
                dt_cons->address_length);
         offset += dt_cons->address_length;
+        LOG_DBG("Offset is now %d", offset);
+
         addr = pci_source(pci);
         memcpy(data + offset, 
                &addr, 
                dt_cons->address_length);
         offset += dt_cons->address_length;
+        LOG_DBG("Offset is now %d", offset);
+
         qos = pci_qos_id(pci);
         memcpy(data + offset, 
                &qos, 
                dt_cons->qos_id_length);
         offset += dt_cons->qos_id_length;
+        LOG_DBG("Offset is now %d", offset);
+
         cep = pci_cep_source(pci);
         memcpy(data + offset, 
                &cep, 
                dt_cons->cep_id_length);
         offset += dt_cons->cep_id_length;
+        LOG_DBG("Offset is now %d", offset);
+
         cep = pci_cep_destination(pci);
         memcpy(data + offset, 
                &cep, 
                dt_cons->cep_id_length);
         offset += dt_cons->cep_id_length;
+        LOG_DBG("Offset is now %d", offset);
+
         type = pci_type(pci);
         memcpy(data + offset, 
                &type,
                PDU_TYPE_SIZE);
         offset += PDU_TYPE_SIZE;
+        LOG_DBG("Offset is now %d", offset);
+
         flags = pci_flags_get(pci);
         memcpy(data + offset, 
                &flags,
                FLAGS_SIZE);
         offset += FLAGS_SIZE;
+        LOG_DBG("Offset is now %d", offset);
+
         pdu_len = sizeof(data);
+        LOG_DBG("PDU Len is %zd", pdu_len);
         memcpy(data + offset, 
                &pdu_len,
                dt_cons->length_length);
         offset += dt_cons->length_length;
+        LOG_DBG("Offset is now %d", offset);
+
         seq = pci_sequence_number_get(pci);
         memcpy(data + offset, 
                &seq,
@@ -201,11 +221,11 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 LOG_ERR("Wrong PDU type");
                 return NULL;
         }
-        LOG_DBG("PDU Type: %04X", pdu_type);
+        LOG_DBG("PDU Type: %02X", pdu_type);
 
         /* Base PCI size, fields present in all PDUs */
         pci_size = base_pci_size(dt_cons);
-        LOG_DBG("PCI Size is %zd", pci_size);
+        LOG_DBG("PCI size is %zd", pci_size);
 
         /* 
          * These are available in the stack at this point in time 
@@ -214,10 +234,13 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
         switch (pdu_type) {
         case PDU_TYPE_MGMT:
         case PDU_TYPE_DT:
+                LOG_DBG("OMGWTFBBQ, it is a DT PDU");
                 buffer_size = buffer_length(buffer);
                 if (buffer_size <= 0) {
                         return NULL;
                 }
+
+                LOG_DBG("Buffer size is %zd", buffer_size);
                 
                 size = pci_size + buffer_size;
                 if (pci_size <= 0) {
@@ -243,6 +266,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
 
                 break;
         case PDU_TYPE_FC:
+                LOG_DBG("OMGWTFBBQ, it is a FC PDU");
                 /* Serialize other fields here (not needed for unreliable) */
                 data = rkmalloc(pci_size, flags);
                 if (!data) {
@@ -251,6 +275,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 }
                 break;
         case PDU_TYPE_ACK:
+                LOG_DBG("OMGWTFBBQ, it is an ACK  PDU");
                 /* Serialize other fields here */
                 data = rkmalloc(pci_size, flags);
                 if (!data) {
@@ -259,6 +284,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 }
                 break;
         case PDU_TYPE_ACK_AND_FC:
+                LOG_DBG("OMGWTFBBQ, it is a ACK and FC PDU");
                 /* Serialize other fields here */
                 data = rkmalloc(pci_size, flags);
                 if (!data) {
@@ -278,6 +304,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
         }
 
         size = sizeof(data);
+        LOG_DBG("Creating the buffer with size %zd", size);
         tmp->buf = buffer_create_with_gfp(flags, data, size);
         if (!tmp->buf) {
                 rkfree(data);
