@@ -138,7 +138,7 @@ struct dtcp_policies {
         int (* received_retransmission)(struct dtcp * instance);
         int (* rcvr_ack)(struct dtcp * instance, seq_num_t seq);
         int (* sender_ack)(struct dtcp * instance, seq_num_t seq);
-        int (* sending_ack)(struct dtcp * instance);
+        int (* sending_ack)(struct dtcp * instance, seq_num_t seq);
         int (* receiving_ack_list)(struct dtcp * instance);
         int (* initial_rate)(struct dtcp * instance);
         int (* receiving_flow_control)(struct dtcp * instance, seq_num_t seq);
@@ -685,24 +685,35 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
 
 }
 
-static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
+static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
         seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
-        if (!dt_sv_a(dtcp->parent)) {
-                last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-                snd_lft       = snd_lft_win(dtcp);
-                snd_rt        = snd_rt_wind_edge(dtcp);
-                pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                                    last_rcv_ctrl,
-                                                    snd_lft,
-                                                    snd_rt);
-                if (!pdu_ctrl)
-                        return -1;
+        ASSERT(dtcp);
 
-                if (pdu_send(dtcp, pdu_ctrl))
-                        return -1;
+        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+        snd_lft       = snd_lft_win(dtcp);
+        snd_rt        = snd_rt_wind_edge(dtcp);
+        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                            last_rcv_ctrl,
+                                            snd_lft,
+                                            snd_rt);
+        if (!pdu_ctrl)
+                return -1;
+        
+        if (pdu_send(dtcp, pdu_ctrl))
+                return -1;
+
+        return 0;        
+}
+
+static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
+{
+        ASSERT(dtcp);
+
+        if (!dt_sv_a(dtcp->parent)) {
+                return dtcp->policies->sending_ack(dtcp, seq);
         } else {
                 /* Set A timer for PDU */
                 LOG_MISSING;
@@ -846,7 +857,7 @@ static struct dtcp_policies default_policies = {
         .retransmission_timer_expiry = NULL,
         .received_retransmission     = NULL,
         .sender_ack                  = default_sender_ack,
-        .sending_ack                 = NULL,
+        .sending_ack                 = default_sending_ack,
         .receiving_ack_list          = NULL,
         .initial_rate                = NULL,
         .receiving_flow_control      = default_receiving_flow_control,
