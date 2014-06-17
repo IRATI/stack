@@ -2,6 +2,7 @@
 /// Created on: May 22, 2014
 /// Author: bernat
 
+#define RINA_PREFIX "cdap-manager"
 #include "cdap-impl.h"
 
 namespace rina {

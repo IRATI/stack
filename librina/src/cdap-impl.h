@@ -12,9 +12,9 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
+#define RINA_PREFIX "cdap-manager"
 #include "librina/cdap.h"
 #include "librina/concurrency.h"
-#define RINA_PREFIX "cdap-manager"
 #include "logs.h"
 
 namespace rina {
@@ -301,6 +301,7 @@ private:
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
 	long timeout_;
 };
+
 }
 #endif
 #endif // CDAP_H_

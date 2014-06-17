@@ -85,6 +85,10 @@ test_syscalls_SOURCES  = test-syscalls.cc
 test_syscalls_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_syscalls_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
+test_cdap_SOURCES  = test-cdap.cc
+test_cdap_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -92,7 +96,8 @@ check_PROGRAMS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-syscalls				
+	test-syscalls				\
+	test-cdap
 
 XFAIL_TESTS =					\
 	test-03
@@ -107,7 +112,8 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-syscalls			
+	test-syscalls				\
+	test-cdap
 
 FUNCTIONAL_XFAIL_TESTS =
 

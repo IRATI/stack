@@ -34,15 +34,18 @@ namespace rina {
 class AuthValue {
 public:
 	AuthValue();
+	AuthValue(const std::string *auth_name, const std::string *auth_password,
+			const std::string *auth_other);
+	~AuthValue();
 	bool is_empty() const;
 	std::string to_string() const;
 private:
 	/// Authentication name
-	std::string auth_name_;
+	const std::string *auth_name_;
 	/// Authentication password
-	std::string auth_password_;
+	const std::string *auth_password_;
 	/// Additional authentication information
-	std::string auth_other_;
+	const std::string *auth_other_;
 };
 
 /// Encapsulates the data to set an object value
@@ -221,6 +224,12 @@ public:
 		NONE_FLAGS, F_SYNC, F_RD_INCOMPLETE
 	};
 	CDAPMessage();
+	/*CDAPMessage(int abs_syntax, AuthTypes auth_mech, const AuthValue *auth_value, const std::string *dest_ae_inst,
+	 const std::string *dest_ae_name, const std::string *dest_ap_inst, const std::string *dest_ap_name, const char* filter,
+	 Flags flags, const int invoke_id, const std::string *obj_class, const long obj_inst, const std::string *obj_name,
+	 const ObjectValueInterface *obj_value, const Opcode *op_code, int result, const std::string *result_reason,
+	 int scope, const std::string *src_ae_inst, const std::string *src_ae_name, const std::string *src_ap_inst,
+	 const std::string *src_ap_name, long version);*/
 	~CDAPMessage();
 	static const CDAPMessage* getOpenConnectionRequestMessage(
 			AuthTypes auth_mech, const AuthValue &auth_value,
@@ -256,10 +265,9 @@ public:
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getStartObjectRequestMessage(char filter[],
-			Flags flags, const std::string &obj_class,
-			const ObjectValueInterface &obj_value, long obj_inst,
-			const std::string &obj_name, int scope);
+	static CDAPMessage* getStartObjectRequestMessage(char filter[], Flags flags,
+			const std::string &obj_class, const ObjectValueInterface &obj_value,
+			long obj_inst, const std::string &obj_name, int scope);
 	static const CDAPMessage* getStartObjectResponseMessage(Flags flags,
 			int result, const std::string &result_reason, int invoke_id);
 	static const CDAPMessage* getStartObjectResponseMessage(Flags flags,
@@ -267,21 +275,20 @@ public:
 			const ObjectValueInterface &object_value, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getStopObjectRequestMessage(char filter[],
-			Flags flags, const std::string &obj_class,
-			const ObjectValueInterface &obj_value, long obj_inst,
-			const std::string &obj_name, int scope);
+	static CDAPMessage* getStopObjectRequestMessage(char filter[], Flags flags,
+			const std::string &obj_class, const ObjectValueInterface &obj_value,
+			long obj_inst, const std::string &obj_name, int scope);
 	static const CDAPMessage* getStopObjectResponseMessage(Flags flags,
 			int result, const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getReadObjectRequestMessage(char filter[],
-			Flags flags, const std::string &obj_class, long obj_inst,
+	static CDAPMessage* getReadObjectRequestMessage(char filter[], Flags flags,
+			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int scope);
 	static const CDAPMessage* getReadObjectResponseMessage(Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, const ObjectValueInterface &obj_value,
 			int result, const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getWriteObjectRequestMessage(char filter[],
-			Flags flags, const std::string &obj_class, long obj_inst,
+	static CDAPMessage* getWriteObjectRequestMessage(char filter[], Flags flags,
+			const std::string &obj_class, long obj_inst,
 			const ObjectValueInterface &obj_value, const std::string &obj_name,
 			int scope);
 	static const CDAPMessage* getWriteObjectResponseMessage(Flags flags,
@@ -612,6 +619,10 @@ public:
 	///  @throws CDAPException
 	virtual const char* encodeNextMessageToBeSent(
 			const CDAPMessage &cdap_message, int port_id) = 0;
+	/// Creates a CDAPSession
+	/// @param port_id the port associated to this CDAP session
+	/// @return the CDAPSessionInterface corresponding to the CDAPSession
+	virtual CDAPSessionInterface* createCDAPSession(int port_id) = 0;
 	/// Update the CDAP state machine because we've sent a message through the
 	/// flow identified by port_id
 	/// @param cdap_message The CDAP message to be serialized
@@ -805,7 +816,7 @@ public:
 			char filter[], CDAPMessage::Flags flags,
 			const std::string &obj_class, const ObjectValueInterface &obj_value,
 			long obj_inst, const std::string &obj_name, int scope,
-			bool invoke_id)	= 0;
+			bool invoke_id) = 0;
 	/// Create a M_START_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param flags
@@ -814,7 +825,9 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getStartObjectResponseMessage(CDAPMessage::Flags flags, int result, const std::string &result_reason, int invoke_id) = 0;
+	virtual const CDAPMessage* getStartObjectResponseMessage(
+			CDAPMessage::Flags flags, int result,
+			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_START_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param flags
@@ -823,7 +836,11 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getStartObjectResponseMessage(CDAPMessage::Flags flags, const std::string &obj_class, const ObjectValueInterface &obj_value, long obj_inst, const std::string &obj_name, int result, const std::string &result_reason, int invoke_id) = 0;
+	virtual const CDAPMessage* getStartObjectResponseMessage(
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			const ObjectValueInterface &obj_value, long obj_inst,
+			const std::string &obj_name, int result,
+			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_STOP CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param filter
@@ -849,7 +866,9 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getStopObjectResponseMessage(CDAPMessage::Flags flags, int result, const std::string &result_reason, int invoke_id) = 0;
+	virtual const CDAPMessage* getStopObjectResponseMessage(
+			CDAPMessage::Flags flags, int result,
+			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_READ CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param filter
@@ -878,7 +897,11 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getReadObjectResponseMessage(CDAPMessage::Flags flags, const std::string &obj_class, long obj_inst, const std::string &obj_name, const ObjectValueInterface &obj_value, int result, const std::string &result_reason, int invoke_id)	= 0;
+	virtual const CDAPMessage* getReadObjectResponseMessage(
+			CDAPMessage::Flags flags, const std::string &obj_class,
+			long obj_inst, const std::string &obj_name,
+			const ObjectValueInterface &obj_value, int result,
+			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_WRITE CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param filter
@@ -904,14 +927,17 @@ public:
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getWriteObjectResponseMessage(CDAPMessage::Flags flags, int result, const std::string &result_reason, int invoke_id) = 0;
+	virtual const CDAPMessage* getWriteObjectResponseMessage(
+			CDAPMessage::Flags flags, int result,
+			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_CANCELREAD CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param flags
 	/// @param invoke_id
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getCancelReadRequestMessage(CDAPMessage::Flags flags, int invoke_id) = 0;
+	virtual const CDAPMessage* getCancelReadRequestMessage(
+			CDAPMessage::Flags flags, int invoke_id) = 0;
 	/// Create a M_CANCELREAD_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
 	/// @param flags
@@ -920,7 +946,9 @@ public:
 	/// @param result_reason
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* getCancelReadResponseMessage(CDAPMessage::Flags flags, int invoke_id, int result, const std::string &result_reason) = 0;
+	virtual const CDAPMessage* getCancelReadResponseMessage(
+			CDAPMessage::Flags flags, int invoke_id, int result,
+			const std::string &result_reason) = 0;
 };
 
 /// Exceptions thrown by the RIB Daemon
@@ -1003,8 +1031,17 @@ public:
 /// Factory to return a WireMessageProvider
 class WireMessageProviderFactoryInterface {
 public:
-	virtual ~WireMessageProviderFactoryInterface() throw () {};
+	virtual ~WireMessageProviderFactoryInterface() throw () {
+	}
+	;
 	virtual WireMessageProviderInterface* createWireMessageProvider() = 0;
+};
+
+class CDAPSessionManagerFactory {
+public:
+	CDAPSessionManagerInterface* createCDAPSessionManager(
+			WireMessageProviderFactoryInterface *wire_message_provider_factory,
+			long timeout);
 };
 }
 

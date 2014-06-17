@@ -21,20 +21,35 @@
 //
 
 #include "librina/cdap.h"
+#include "cdap-impl.h"
 
 namespace rina {
 
 // CLASS AuthValue
 AuthValue::AuthValue() {
+	auth_name_= 0;
+	auth_password_ = 0;
+	auth_other_ = 0;
+}
+AuthValue::AuthValue(const std::string *auth_name, const std::string *auth_password,
+		const std::string *auth_other) {
+	auth_name_ = auth_name;
+	auth_password_ = auth_password;
+	auth_other_ = auth_other;
+}
+AuthValue::~AuthValue() {
+	delete auth_name_;
+	delete auth_other_;
+	delete auth_password_;
 }
 bool AuthValue::is_empty() const {
-	if (auth_name_.empty() && auth_password_.empty() && auth_other_.empty())
+	if (auth_name_->empty() && auth_password_->empty() && auth_other_->empty())
 		return true;
 	else
 		return false;
 }
 std::string AuthValue::to_string() const{
-	return "Auth name: " + auth_name_ + "; Auth password: " + auth_password_ + "; Auth other: " + auth_other_;
+	return "Auth name: " + *auth_name_ + "; Auth password: " + *auth_password_ + "; Auth other: " + *auth_other_;
 }
 
 // CLASS AbstractObjectValue
@@ -218,7 +233,7 @@ void CDAPMessageValidator::validateDestApInst(const CDAPMessage *message)
 
 void CDAPMessageValidator::validateDestApName(const CDAPMessage *message)
 		 {
-	if (!message->get_dest_ap_name().empty()) {
+	if (message->get_dest_ap_name().empty()) {
 		if (message->get_op_code() == CDAPMessage::M_CONNECT) {
 			throw CDAPException("DestApName must be set for the M_CONNECT message");
 		} else if (message->get_op_code() == CDAPMessage::M_CONNECT_R) {
@@ -1025,8 +1040,8 @@ std::string CDAPSessionDescriptor::get_dest_ap_name() const {
 ApplicationProcessNamingInformation* CDAPSessionDescriptor::get_ap_naming_info() const {
 	return ap_naming_info_;
 }
-/*	CLASS RIBDaemonException	*/
 
+//	CLASS RIBDaemonException
 RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
 		Exception("RIBDaemon caused an exception") {
 	error_code_ = arg0;
@@ -1035,6 +1050,13 @@ RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
 RIBDaemonException::RIBDaemonException(ErrorCode arg0, const char* arg1) :
 		Exception(arg1) {
 	error_code_ = arg0;
+}
+
+// CLASS CDAPSessionManagerFactory
+CDAPSessionManagerInterface* CDAPSessionManagerFactory::createCDAPSessionManager(
+		WireMessageProviderFactoryInterface *wire_message_provider_factory,
+		long timeout) {
+	return new CDAPSessionManager(wire_message_provider_factory, timeout);
 }
 
 }
