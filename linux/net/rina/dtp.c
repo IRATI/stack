@@ -434,7 +434,7 @@ struct pdu * seqQ_pop(struct sequencingQ * seqQ)
         return 0;
 }
 
-static void update_left_win_edge(struct dtp * dtp)
+static void update_left_win_edge_and_post(struct dtp * dtp)
 {
         struct dt *          dt;
         struct dtp_sv *      sv;
@@ -449,7 +449,7 @@ static void update_left_win_edge(struct dtp * dtp)
         ASSERT(sv);
 
         dt = dtp->parent;
-        ASSERT(sv);
+        ASSERT(dt);
 
         seqQ = dtp->seqQ;
         ASSERT(seqQ);
@@ -463,17 +463,17 @@ static void update_left_win_edge(struct dtp * dtp)
         while ((LWE < seq_num) && (seq_num > 0)) {
                 if (seq_num == (LWE + 1)) {
                         sdu_post(dtp, pdu);
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                return;
+                        }
+                        LWE     = dt_sv_rcv_lft_win(dt);
                         pdu     = seqQ_pop(seqQ);
                         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
                         continue;
                 }
                 break;
-        }
-
-        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                LOG_ERR("Failed to set new "
-                        "left window edge");
-                return;
         }
 
         return;
@@ -497,7 +497,7 @@ static void tf_a(void * data)
         }
 
         /* Invoke delimiting and update left window edge */
-        update_left_win_edge(dtp);
+        update_left_win_edge_and_post(dtp);
 
         dtcp = dt_dtcp(dtp->parent);
         if (dtcp) {
@@ -957,9 +957,32 @@ int seqQ_deliver(struct sequencingQ * seqQ)
         return 0;
 }
 
+static bool seq_queu_is_dup(struct seq_queue * q, seq_num_t seq_num) 
+{
+        struct seq_q_entry * cur;
+        const struct pci *   pci;
+        seq_num_t            csn;
+
+        ASSERT(q);
+
+        list_for_each_entry(cur, &q->head, next) {
+                pci = pdu_pci_get_ro(cur->pdu);
+                csn = pci_sequence_number_get((struct pci *) pci);
+                if (csn > seq_num) 
+                        return false;
+                if (csn == seq_num)
+                        return true;
+        }
+        return false;
+
+}
+
 bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
 {
-        return false;
+        ASSERT(seqQ);
+        ASSERT(seqQ->queue);
+
+        return seq_queu_is_dup(seqQ->queue, seq_num);
 }
 
 static int seqQ_push(struct dtp * dtp, struct pdu * pdu)
@@ -1074,9 +1097,11 @@ int dtp_receive(struct dtp * instance,
                 LOG_DBG("Dropped a PDU, total: %d", sv->dropped_pdus);
 
                 /* Send an ACK/Flow Control PDU with current window values */
-                if (dtcp_ack_flow_control_pdu_send(dtcp)) {
-                        LOG_ERR("Failed to send ack / flow control pdu");
-                        return -1;
+                if (dtcp) {
+                        if (dtcp_ack_flow_control_pdu_send(dtcp)) {
+                                LOG_ERR("Failed to send ack / flow control pdu");
+                                return -1;
+                        }
                 }
 
                 /* Start ReceiverInactivityTimer */
@@ -1089,8 +1114,9 @@ int dtp_receive(struct dtp * instance,
                 }
                 return 0;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
-                   seq_num <= max_seq_nr_rcv(sv)) {
-                /* This op puts the PDU in seq number order */
+                   seq_num <= max_seq_nr_rcv(sv) + 1) {
+                /* This op puts the PDU in seq number order  and duplicates
+                 * considered */
                 if (seqQ_push(instance, pdu)) {
                         LOG_ERR("Could not push PDU into sequencing queue");
                         return -1;
@@ -1102,46 +1128,12 @@ int dtp_receive(struct dtp * instance,
                          * created into the KFA or EFCP instance above. Update
                          * the receiver left window edge
                          */
-                        pdu = seqQ_pop(instance->seqQ);
-                        /* update_left_win_edge(instance);*/
-                        if (sdu_post(instance, pdu))
-                                return -1;
+                        update_left_win_edge_and_post(instance);
                 }
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
-                                return -1;
-                        }
-                }
-        } else if (seq_num == (max_seq_nr_rcv(sv) + 1)) {
-                max_seq_nr_rcv_set(sv, seq_num);
-                /* This op puts the PDU in seq number order */
-                if (seqQ_push(instance, pdu)) {
-                        LOG_ERR("Could not push PDU into sequencing queue");
-                        return -1;
-                }
-                if (dt_sv_a(dt) == 0) {
-                        /*
-                         * FIXME: Invoke delimiting and put all SDUs thus
-                         * created into the KFA or EFCP instance above*/
-                        pdu = seqQ_pop(instance->seqQ);
-                        if (sdu_post(instance, pdu))
-                                return -1;
-                }
-                /*update_left_win_edge(instance);*/
-
-                if (dtcp) {
-                        if (dtcp_sv_update(dtcp, seq_num)) {
-                                LOG_ERR("Failed to update dtcp sv");
-                                pdu_destroy(pdu);
-                                return -1;
-                        }
-                } else {
-                        if (dt_sv_rcv_lft_win_set(dt, max_seq_nr_rcv(sv))) {
-                                LOG_ERR("Failed to set new "
-                                        "left window edge");
-                                pdu_destroy(pdu);
                                 return -1;
                         }
                 }
