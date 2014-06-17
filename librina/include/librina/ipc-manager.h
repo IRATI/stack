@@ -27,8 +27,9 @@
 
 #include <map>
 
-#include "librina/rinaconf.h"
 #include "librina/concurrency.h"
+#include "librina/configuration.h"
+#include "librina/ipc-daemons.h"
 
 namespace rina {
 
