@@ -58,10 +58,10 @@ struct pci * pci_create_gfp(gfp_t flags);
                 
 static int construct_base_pci(char *                 data, 
                               const struct dt_cons * dt_cons,
-                              const struct pci *     pci) 
+                              const struct pci *     pci, 
+                              size_t                 pdu_len) 
 {         
         int         offset;
-        size_t      pdu_len;
         address_t   addr;
         cep_id_t    cep;
         qos_id_t    qos;
@@ -135,7 +135,6 @@ static int construct_base_pci(char *                 data,
         offset += FLAGS_SIZE;
         LOG_DBG("Offset is now %d", offset);
 
-        pdu_len = sizeof(*data);
         LOG_DBG("PDU Len is %zd", pdu_len);
         memcpy(data + offset, 
                &pdu_len,
@@ -255,7 +254,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                         return NULL;
                 }
 
-                if (construct_base_pci(data, dt_cons, pci)) {
+                if (construct_base_pci(data, dt_cons, pci, size)) {
                         LOG_ERR("Failed to construct base PCI");
                         rkfree(data);
                         pdu_destroy(pdu);
@@ -273,6 +272,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                         pdu_destroy(pdu);
                         return NULL;
                 }
+                size = pci_size;
                 break;
         case PDU_TYPE_ACK:
                 LOG_DBG("OMGWTFBBQ, it is an ACK  PDU");
@@ -282,6 +282,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                         pdu_destroy(pdu);
                         return NULL;
                 }
+                size = pci_size;
                 break;
         case PDU_TYPE_ACK_AND_FC:
                 LOG_DBG("OMGWTFBBQ, it is a ACK and FC PDU");
@@ -291,6 +292,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                         pdu_destroy(pdu);
                         return NULL;
                 }
+                size = pci_size;
                 break;
         default:
                 LOG_ERR("Unknown PDU type %d", pdu_type);
@@ -303,7 +305,6 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 return NULL;
         }
 
-        size = sizeof(*data);
         LOG_DBG("Creating the buffer with size %zd", size);
         tmp->buf = buffer_create_with_gfp(flags, data, size);
         if (!tmp->buf) {
