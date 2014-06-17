@@ -30,8 +30,9 @@ public:
 	const CDAPMessage* deserializeMessage(const char message[]) {
 		int i = (int) message[0];
 		i++;
-		CDAPMessage *mess = new CDAPMessage();
-		return mess;
+		AuthValue auth_value;
+		return CDAPMessage::getOpenConnectionRequestMessage(CDAPMessage::AUTH_NONE, auth_value, "1", "dest instance",
+				"1", "dest", "1", "src instance", "1", "src", 1);
 	}
 	const char* serializeMessage(const CDAPMessage &cdapMessage) {
 		return cdapMessage.to_string().c_str();
@@ -54,19 +55,23 @@ bool test1(CDAPSessionManagerInterface *session_manager,
 					"1", "dest", "1", "src instance", "1", "src");
 	const char *serialized_message = session->encodeNextMessageToBeSent(
 			*sent_message);
+	std::cout<< std::endl;
+	std::cout<< std::endl;
 	const CDAPMessage *recevied_message = session->messageReceived(
 			serialized_message);
 	if (sent_message->to_string() == recevied_message->to_string())
 		return true;
 	else
 		return false;
+	delete sent_message;
+	delete recevied_message;
 }
 
 int main() {
 	WireMessageProviderFactoryInterface *wire_factory =
 			new WireMessageFactoryProvider();
 	CDAPSessionManagerFactory cdap_manager_factory;
-	long timeout = 20000;
+	long timeout = 2000;
 	CDAPSessionManagerInterface *session_manager =
 			cdap_manager_factory.createCDAPSessionManager(wire_factory,
 					timeout);
@@ -74,7 +79,6 @@ int main() {
 
 	if (!test1(session_manager, session))
 		return -1;
-	std::cout << "CDAP test is ok" << std::endl;
 
 	delete session;
 	delete session_manager;

@@ -43,8 +43,10 @@ AuthValue::~AuthValue() {
 	delete auth_password_;
 }
 bool AuthValue::is_empty() const {
-	if (auth_name_->empty() && auth_password_->empty() && auth_other_->empty())
+	if (auth_name_ == 0 && auth_password_ == 0 && auth_other_ == 0)
+	{
 		return true;
+	}
 	else
 		return false;
 }

@@ -37,7 +37,7 @@ bool ConnectionStateMachine::is_connected() const {
 	return connection_state_ == CONNECTED;
 }
 void ConnectionStateMachine::checkConnect(){
-	if (connection_state_ == NONE){
+	if (connection_state_ != NONE){
 		std::stringstream ss;
 		ss << "Cannot open a new connection because " << "this CDAP session is currently in " << connection_state_ <<" state" ;
 		throw CDAPException(ss.str());
@@ -283,7 +283,6 @@ const char* CDAPSessionImpl::encodeNextMessageToBeSent(
 		ss << "Unrecognized operation code: " << cdap_message.get_op_code();
 		throw CDAPException(ss.str());
 	}
-
 	return serializeMessage(cdap_message);
 }
 void CDAPSessionImpl::messageSent(const CDAPMessage &cdap_message) {
