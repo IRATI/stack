@@ -295,7 +295,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 size = pci_size;
                 break;
         default:
-                LOG_ERR("Unknown PDU type %d", pdu_type);
+                LOG_ERR("Unknown PDU type %02X", pdu_type);
                 return NULL;
         }
 
@@ -492,7 +492,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                         pdu_destroy(tmp_pdu);
                         return NULL;
                 }
-
+                break;
         case PDU_TYPE_FC:
         case PDU_TYPE_ACK:
         case PDU_TYPE_ACK_AND_FC:
@@ -502,8 +502,9 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                         pdu_destroy(tmp_pdu);
                         return NULL;
                 }
+                break;
         default:
-                LOG_ERR("Unknown PDU type %d", pdu_type);
+                LOG_ERR("Unknown PDU type %02X", pdu_type);
                 pdu_destroy(tmp_pdu);
                 return NULL;
         }
