@@ -135,7 +135,7 @@ static int construct_base_pci(char *                 data,
         offset += FLAGS_SIZE;
         LOG_DBG("Offset is now %d", offset);
 
-        pdu_len = sizeof(data);
+        pdu_len = sizeof(*data);
         LOG_DBG("PDU Len is %zd", pdu_len);
         memcpy(data + offset, 
                &pdu_len,
@@ -303,7 +303,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                 return NULL;
         }
 
-        size = sizeof(data);
+        size = sizeof(*data);
         LOG_DBG("Creating the buffer with size %zd", size);
         tmp->buf = buffer_create_with_gfp(flags, data, size);
         if (!tmp->buf) {
