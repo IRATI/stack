@@ -28,38 +28,6 @@
 
 namespace rinad {
 
-/**
- * An entry of the directory forwarding table
- */
-class DirectoryForwardingTableEntry {
-public:
-	DirectoryForwardingTableEntry();
-	bool operator==(const DirectoryForwardingTableEntry &object);
-	rina::ApplicationProcessNamingInformation get_ap_naming_info() const;
-	void set_ap_naming_info(const rina::ApplicationProcessNamingInformation& ap_naming_info);
-	long get_address() const;
-	void set_address(long address);
-	long get_timestamp() const;
-	void set_timestamp(long timestamp);
-
-	/**
-	 * Returns a key identifying this entry
-	 * @return
-	 */
-	std::string getKey();
-	std::string toString();
-
-private:
-	/// The name of the application process
-	rina::ApplicationProcessNamingInformation ap_naming_info_;
-
-	/// The address of the IPC process it is currently attached to
-	long address_;
-
-	/// A timestamp for this entry
-	long timestamp_;
-};
-
 /// Defines a whatevercast name (or a name of a set of names).
 /// In traditional architectures, sets that returned all members were called multicast; while
 /// sets that returned one member were called anycast.  It is not clear what sets that returned

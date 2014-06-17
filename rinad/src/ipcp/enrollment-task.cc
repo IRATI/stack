@@ -49,28 +49,5 @@ void EnrollmentInformationRequest::set_supporting_difs(
 	supporting_difs_ = supporting_difs;
 }
 
-//	CLASS EnrollmentRequest
-EnrollmentRequest::EnrollmentRequest(
-		const rina::Neighbor& neighbor, const rina::EnrollToDIFRequestEvent& event) {
-	neighbor_ = neighbor;
-	event_ = event;
-}
-
-const rina::Neighbor& EnrollmentRequest::get_neighbor() const {
-	return neighbor_;
-}
-
-void EnrollmentRequest::set_neighbor(const rina::Neighbor &neighbor) {
-	neighbor_ = neighbor;
-}
-
-const rina::EnrollToDIFRequestEvent& EnrollmentRequest::get_event() const{
-	return event_;
-}
-
-void EnrollmentRequest::set_event(const rina::EnrollToDIFRequestEvent& event) {
-	event_ = event;
-}
-
 
 }
