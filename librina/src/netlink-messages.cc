@@ -1365,17 +1365,17 @@ IpcmDIFQueryRIBResponseMessage::IpcmDIFQueryRIBResponseMessage()
 	:BaseNetlinkResponseMessage(RINA_C_IPCM_QUERY_RIB_RESPONSE){
 }
 
-const std::list<RIBObject>&
+const std::list<RIBObjectData>&
 	IpcmDIFQueryRIBResponseMessage::getRIBObjects() const{
 	return ribObjects;
 }
 
 void IpcmDIFQueryRIBResponseMessage::setRIBObjects(
-		const std::list<RIBObject>& ribObjects){
+		const std::list<RIBObjectData>& ribObjects){
 	this->ribObjects = ribObjects;
 }
 
-void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObject& ribObject){
+void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObjectData& ribObject){
 	ribObjects.push_back(ribObject);
 }
 

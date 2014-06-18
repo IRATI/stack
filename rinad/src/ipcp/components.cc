@@ -83,4 +83,13 @@ void EnrollmentRequest::set_event(const rina::EnrollToDIFRequestEvent& event) {
 	event_ = event;
 }
 
+// CLASS NotificationPolicy
+NotificationPolicy::NotificationPolicy(const std::list<unsigned int>& cdap_session_ids) {
+	cdap_session_ids_ = cdap_session_ids;
+}
+
+const std::list<unsigned int>& NotificationPolicy::get_cdap_session_ids() const {
+	return cdap_session_ids_;
+}
+
 }

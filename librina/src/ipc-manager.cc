@@ -1223,7 +1223,7 @@ int IpcmAllocateFlowRequestResultEvent::getPortId() const {
 
 /* CLASS QUERY RIB RESPONSE EVENT */
 QueryRIBResponseEvent::QueryRIBResponseEvent(
-                const std::list<RIBObject>& ribObjects,
+                const std::list<RIBObjectData>& ribObjects,
                 int result,
                 unsigned int sequenceNumber) :
                 BaseResponseEvent(result,
@@ -1232,7 +1232,7 @@ QueryRIBResponseEvent::QueryRIBResponseEvent(
         this->ribObjects = ribObjects;
 }
 
-const std::list<RIBObject>& QueryRIBResponseEvent::getRIBObject() const {
+const std::list<RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const {
         return ribObjects;
 }
 

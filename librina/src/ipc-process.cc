@@ -630,7 +630,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
-		const std::list<RIBObject>& ribObjects)
+		const std::list<RIBObjectData>& ribObjects)
 	throw(QueryRIBResponseException) {
 #if STUB_API
 	//Do nothing

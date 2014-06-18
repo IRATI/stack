@@ -4131,7 +4131,7 @@ int putIpcmDIFQueryRIBRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
+int putRIBObject(nl_msg* netlinkMessage, const RIBObjectData& object){
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_CLASS,
                         object.get_class().c_str());
         NLA_PUT_STRING(netlinkMessage, RIBO_ATTR_OBJECT_NAME,
@@ -4150,8 +4150,8 @@ int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object){
 }
 
 int putListOfRIBObjects(
-		nl_msg* netlinkMessage, const std::list<RIBObject>& ribObjects){
-	std::list<RIBObject>::const_iterator iterator;
+		nl_msg* netlinkMessage, const std::list<RIBObjectData>& ribObjects){
+	std::list<RIBObjectData>::const_iterator iterator;
 	struct nlattr *ribObject;
 	int i = 0;
 
@@ -6641,7 +6641,7 @@ IpcmDIFQueryRIBRequestMessage *
 	return result;
 }
 
-RIBObject * parseRIBObject(nlattr *nested){
+RIBObjectData * parseRIBObject(nlattr *nested){
 	struct nla_policy attr_policy[RIBO_ATTR_MAX + 1];
 	attr_policy[RIBO_ATTR_OBJECT_CLASS].type = NLA_STRING;
 	attr_policy[RIBO_ATTR_OBJECT_CLASS].minlen = 0;
@@ -6665,7 +6665,7 @@ RIBObject * parseRIBObject(nlattr *nested){
 		return 0;
 	}
 
-	RIBObject * result = new RIBObject();
+	RIBObjectData * result = new RIBObjectData();
 
 	if (attrs[RIBO_ATTR_OBJECT_CLASS]){
 		result->set_class(
@@ -6694,7 +6694,7 @@ int parseListOfRIBObjects(nlattr *nested,
 		IpcmDIFQueryRIBResponseMessage * message){
 	nlattr * nla;
 	int rem;
-	RIBObject * ribObject;
+	RIBObjectData * ribObject;
 
 	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
 		     nla_ok(nla, rem);

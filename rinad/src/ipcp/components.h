@@ -28,6 +28,7 @@
 
 #include <librina/cdap.h>
 #include <librina/ipc-process.h>
+#include "events.h"
 
 namespace rinad {
 
@@ -363,7 +364,234 @@ public:
 	virtual const IPDUForwardingTableGenerator& get_pdu_forwarding_table_generator() const = 0;
 };
 
-///IPC Process interface
+/// RIB Object Interface. API for the create/delete/read/write/start/stop RIB
+/// functionality for certain objects (identified by objectNames)
+class IRIBObject {
+public:
+	virtual ~IRIBObject(){};
+	virtual const rina::RIBObjectData& get_data() const = 0;
+	virtual const std::string& get_name() const = 0;
+	virtual const std::string& get_class() const = 0;
+	virtual long get_instance() const = 0;
+	virtual void* get_value() const = 0;
+
+	/// Parent-child management operations
+	virtual const IRIBObject& get_parent() const = 0;
+	virtual void set_parent(const IRIBObject& parent) = 0;
+	virtual const std::list<IRIBObject>& get_children() const = 0;
+	virtual void set_children(const std::list<IRIBObject>& children) const = 0;
+	virtual unsigned int get_number_of_children() const = 0;
+	virtual void add_child(const IRIBObject& child) throw (Exception) = 0;
+	virtual void remove_child(const std::string& objectName) throw (Exception) = 0;
+
+	/// Remote invocations via CDAP messages
+	virtual void createObject(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void deleteObject(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void readObject(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void cancelReadObject(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void writeObject(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void startObject(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void stop(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+};
+
+/// Common interface for update strategies implementations. Can be on demand, scheduled, periodic
+class IUpdateStrategy {
+public:
+	virtual ~IUpdateStrategy(){};
+};
+
+/// Interface of classes that handle CDAP response message
+class ICDAPResponseMessageHandler {
+public:
+	virtual ~ICDAPResponseMessageHandler(){};
+	virtual void createResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void deleteResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void readResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void cancelReadResponse(const rina::CDAPMessage & cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void writeResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor & cdapSessionDescriptor) = 0;
+	virtual void startResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void stopResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+};
+
+/// Part of the RIB Daemon API to control if the changes have to be notified
+class NotificationPolicy {
+public:
+	NotificationPolicy(const std::list<unsigned int>& cdap_session_ids);
+	const std::list<unsigned int>& get_cdap_session_ids() const;
+
+private:
+	std::list<unsigned int> cdap_session_ids_;
+};
+
+/// Interface that provides de RIB Daemon API
+class IRIBDaemon : public IPCProcessComponent, public EventManager {
+public:
+	virtual ~IRIBDaemon(){};
+
+	/// Add an object to the RIB
+	/// @param ribHandler
+	/// @param objectName
+	/// @throws Exception
+	virtual void addRIBObject(const IRIBObject& ribObject) throw (Exception) = 0;
+
+	/// Remove an object from the RIB
+	/// @param ribObject
+	/// @throws Exception
+	virtual void removeRIBObject(const IRIBObject& ribObject) throw (Exception) = 0;
+
+	/// Remove an object from the RIB by objectname
+	/// @param objectName
+	/// @throws Exception
+	virtual void removeRIBObject(const std::string objectName) throw (Exception) = 0;
+
+	/// Send an information update, consisting on a set of CDAP messages, using the updateStrategy update strategy
+	/// (on demand, scheduled)
+	/// @param cdapMessages
+	/// @param updateStrategy
+	virtual void sendMessages(const std::list<rina::CDAPMessage>& cdapMessages,
+			const IUpdateStrategy& updateStrategy) = 0;
+
+	/// Causes a CDAP message to be sent
+	/// @param cdapMessage the message to be sent
+	/// @param sessionId the CDAP session id
+	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
+	/// @throws Exception
+	virtual void sendMessage(const rina::CDAPMessage& cdapMessage, int sessionId,
+			const ICDAPResponseMessageHandler& cdapMessageHandler) throw (Exception) = 0;
+
+	/// Causes a CDAP message to be sent
+	/// @param cdapMessage the message to be sent
+	/// @param sessionId the CDAP session id
+	/// @param address the address of the IPC Process to send the Message To
+	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
+	/// @throws Exception
+	virtual void sendMessageToAddress(const rina::CDAPMessage& cdapMessage, int sessionId, long address,
+			const ICDAPResponseMessageHandler& cdapMessageHandler) throw (Exception) = 0;
+
+	/// Reads/writes/created/deletes/starts/stops one or more objects at the RIB, matching the
+	/// information specified by objectId + objectClass or objectInstance.At least objectName or
+	/// objectInstance have to be not null. This operation is invoked because the RIB Daemon has
+	/// received a CDAP message from another IPC process
+	/// @param cdapMessage The CDAP message received
+	/// @param cdapSessionDescriptor Describes the CDAP session to where the CDAP message belongs
+	/// @throws Exception on a number of circumstances
+	virtual void processOperation(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+
+	/// Create or update an object in the RIB
+	/// @param objectClass the class of the object
+	/// @param objectName the name of the object
+	/// @param objectInstance the instance of the object
+	/// @param objectValue the value of the object
+	/// @param notify if not null notify some of the neighbors about the change
+	/// @throws Exception
+	virtual void createObject(const std::string& objectClass, long objectInstance,
+			const std::string& objectName, void* objectValue, NotificationPolicy notificationPolicy) throw (Exception) = 0;
+	virtual void createObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue, const NotificationPolicy& notificationPolicy) throw (Exception) = 0;
+	virtual void createObject(long objectInstance, void* objectValue,
+			const NotificationPolicy& notificationPolicy) throw (Exception) = 0;
+	virtual void createObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue) throw (Exception) = 0;
+	virtual void createObject(long objectInstance, void* objectValue) throw (Exception) = 0;
+
+	/// Delete an object from the RIB
+	/// @param objectClass the class of the object
+	/// @param objectName the name of the object
+	/// @param objectInstance the instance of the object
+	/// @param object the value of the object
+	/// @param notify if not null notify some of the neighbors about the change
+	/// @throws Exception
+	virtual void deleteObject(const std::string& objectClass, long objectInstance, const std::string& objectName,
+			void* objectValue, NotificationPolicy notify) throw (Exception) = 0;
+	virtual void deleteObject(const std::string& objectClass, const std::string&  objectName,
+			void* objectValue, NotificationPolicy notificationPolicy) throw (Exception) = 0;
+	virtual void deleteObject(long objectInstance, void* objectValue, NotificationPolicy notificationPolicy) throw (Exception) = 0;
+	virtual void deleteObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue) throw (Exception) = 0;;
+	virtual void deleteObject(long objectInstance, void* objectValue) throw (Exception) = 0;
+	virtual void deleteObject(const std::string& objectClass, long objectInstance,
+			const std::string&  objectName, NotificationPolicy notificationPolicy) throw (Exception) = 0;
+	virtual void deleteObject(const std::string& objectClass, long objectInstance,
+			const std::string&  objectName) throw (Exception) = 0;
+	virtual void deleteObject(const std::string& objectClass, const std::string& objectName) throw (Exception) = 0;
+	virtual void deleteObject(long objectInstance) throw (Exception) = 0;
+
+	/// Read an object from the RIB
+	/// @param objectClass the class of the object
+	/// @param objectName the name of the object
+	/// @param objectInstance the instance of the object
+	/// @return a RIB object
+	/// @throws Exception
+	virtual const IRIBObject& readObject(const std::string& objectClass, long objectInstance,
+			const std::string& objectName) const throw (Exception) = 0;
+	virtual const IRIBObject& readObject(const std::string& objectClass, const std::string& objectName) const throw (Exception) = 0;
+	virtual const IRIBObject& readObject(long objectInstance) const throw (Exception) = 0;
+
+	/// Update the value of an object in the RIB
+    /// @param objectClass the class of the object
+	/// @param objectName the name of the object
+	/// @param objectInstance the instance of the object
+	/// @param objectValue the new value of the object
+	/// @param notify if not null notify some of the neighbors about the change
+	/// @throws Exception
+	virtual void writeObject(const std::string& objectClass, long objectInstance,
+			const std::string& objectName, void* objectValue, NotificationPolicy notify) throw (Exception) = 0;
+	virtual void writeObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue, NotificationPolicy notificationPolicy) throw (Exception) = 0;
+	virtual void writeObject(long objectInstance, void* objectValue,
+			NotificationPolicy notificationPolicy) throw (Exception) = 0;
+	virtual void writeObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue) throw (Exception) = 0;
+	virtual void writeObject(long objectInstance, void* objectValue) throw (Exception) = 0;
+
+	/// Start an object at the RIB
+	/// @param objectClass the class of the object
+	/// @param objectName the name of the object
+	/// @param objectInstance the instance of the object
+	/// @param objectValue the new value of the object
+	/// @throws Exception
+	virtual void starObject(const std::string& objectClass, long objectInstance, const std::string& objectName,
+			void* objectValue) throw (Exception) = 0;
+	virtual void starObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue) throw (Exception) = 0;
+	virtual void starObject(long objectInstance, void* objectValue) throw (Exception) = 0;
+	virtual void starObject(const std::string& objectClass, const std::string& objectName) throw (Exception) = 0;
+	virtual void starObject(long objectInstance) throw (Exception) = 0;
+
+	/// Stop an object at the RIB
+	/// @param objectClass the class of the object
+	/// @param objectName the name of the object
+	/// @param objectInstance the instance of the object
+	/// @param objectValue the new value of the object
+	/// @throws Exception
+	virtual void stopObject(const std::string& objectClass, long objectInstance,
+			const std::string& objectName, void* objectValue) throw (Exception) = 0;
+	virtual void stopObject(const std::string& objectClass, const std::string& objectName, void* objectValue) throw (Exception) = 0;
+	virtual void stopObject(long objectInstance, void* objectValue) throw (Exception) = 0;
+
+	/// Process a Query RIB Request from the IPC Manager
+	/// @param event
+	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
+
+	virtual const std::list<IRIBObject>& getRIBObjects() const = 0;
+};
+
+/// IPC Process interface
 class IPCProcess {
 public:
 	virtual ~IPCProcess(){};
@@ -374,6 +602,7 @@ public:
 	virtual const IFlowAllocator& get_flow_allocator() const = 0;
 	virtual const INamespaceManager& get_namespace_manager() const = 0;
 	virtual const IResourceAllocator& get_resource_allocator() const = 0;
+	virtual const IRIBDaemon& get_rib_daemon() const = 0;
 	virtual unsigned int get_address() = 0;
 	virtual void set_address(unsigned int address) = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
