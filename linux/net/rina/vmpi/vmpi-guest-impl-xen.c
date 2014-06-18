@@ -34,7 +34,7 @@
 #include <xen/platform_pci.h>
 #include <xen/grant_table.h>
 
-#include "xen-mpi-front.h"
+#include "xen-mpi-ioring.h"
 #include <xen/interface/memory.h>
 #include <xen/interface/grant_table.h>
 
@@ -1169,7 +1169,7 @@ static void mpiback_changed(struct xenbus_device *dev,
 }
 
 static const struct xenbus_device_id mpifront_ids[] = {
-	{ "vmpi" },
+	{ "mpi" },
 	{ "" }
 };
 

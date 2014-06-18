@@ -32,7 +32,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 
-#include "xen-mpi-front.h"  //#include <xen/interface/io/mpi.h>
+#include "xen-mpi-ioring.h"  //#include <xen/interface/io/mpi.h>
 #include <xen/interface/grant_table.h>
 #include <xen/grant_table.h>
 #include <xen/xenbus.h>

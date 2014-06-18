@@ -24,12 +24,12 @@ vmpi-kvm-host-y :=						\
 obj-$(CONFIG_VMPI_XEN_GUEST) += vmpi-xen-guest.o
 
 vmpi-xen-guest-y :=						\
-	xen-mpi-front.o vmpi-structs.o vmpi-guest.o		\
+	vmpi-guest-impl-xen.o vmpi-structs.o vmpi-guest.o		\
 	vmpi-iovec.o vmpi-test.o vmpi-stats.o
 
 obj-$(CONFIG_VMPI_XEN_HOST) += vmpi-xen-host.o
 
 vmpi-xen-host-y :=						\
-	xen-mpi-back.o  xen-mpi-back-interface.o		\
+	vmpi-host-impl-xen.o  xen-mpi-back-interface.o		\
 	xen-mpi-back-xenbus.o vmpi-structs.o vmpi-host.o	\
 	vmpi-iovec.o vmpi-test.o vmpi-stats.o
