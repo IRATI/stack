@@ -38,6 +38,11 @@
 const uint8_t version = 1;
 #define PDU_TYPE_SIZE 1
 #define FLAGS_SIZE 1
+/* FIXME: To be also defined in dt_cons when rate based fc is added */
+#define RATE_LEN 0
+#define TIME_LEN 0
+/* FIXME: To be added in dt_cons ASAP */
+#define CTRL_SEQ_NR 4
 
 /* FIXME: These externs have to disappear from here */
 struct buffer * buffer_create_with_gfp(gfp_t  flags,
@@ -72,6 +77,7 @@ static int construct_base_pci(char *                 data,
         ASSERT(data);
         ASSERT(dt_cons);
         ASSERT(pci_is_ok(pci));
+        ASSERT(pdu_len);
 
         /* 
          * Putting 1 as version number for now 
@@ -151,6 +157,9 @@ static int construct_base_pci(char *                 data,
 }
 
 
+
+
+
 struct pdu_ser {
         struct buffer * buf;
 };
@@ -177,6 +186,14 @@ static int base_pci_size(const struct dt_cons * dt_cons)
                 FLAGS_SIZE +
                 dt_cons->length_length +
                 dt_cons->seq_num_length;
+}
+
+static int fc_pci_size(const struct dt_cons * dt_cons) 
+{
+        return 4 * dt_cons->seq_num_length +
+                2 * RATE_LEN +
+                TIME_LEN +
+                CTRL_SEQ_NR;
 }
 
 static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
@@ -272,7 +289,7 @@ static struct pdu_ser * serdes_pdu_ser_gfp(gfp_t                  flags,
                         pdu_destroy(pdu);
                         return NULL;
                 }
-                size = pci_size;
+                size = pci_size + fc_pci_size(dt_cons);
                 break;
         case PDU_TYPE_ACK:
                 LOG_DBG("OMGWTFBBQ, it is an ACK  PDU");
