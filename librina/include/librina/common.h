@@ -57,6 +57,30 @@ std::string getVersion();
  * Contains application naming information
  */
 class ApplicationProcessNamingInformation {
+public:
+	ApplicationProcessNamingInformation();
+	ApplicationProcessNamingInformation(const std::string& processName,
+			const std::string& processInstance);
+	ApplicationProcessNamingInformation & operator=(
+			const ApplicationProcessNamingInformation & other);
+	bool operator==(const ApplicationProcessNamingInformation &other) const;
+	bool operator!=(const ApplicationProcessNamingInformation &other) const;
+	bool operator>(const ApplicationProcessNamingInformation &other) const;
+	bool operator<=(const ApplicationProcessNamingInformation &other) const;
+	bool operator<(const ApplicationProcessNamingInformation &other) const;
+	bool operator>=(const ApplicationProcessNamingInformation &other) const;
+	const std::string& getEntityInstance() const;
+	void setEntityInstance(const std::string& entityInstance);
+	const std::string& getEntityName() const;
+	void setEntityName(const std::string& entityName);
+	const std::string& getProcessInstance() const;
+	void setProcessInstance(const std::string& processInstance);
+	const std::string& getProcessName() const;
+	void setProcessName(const std::string& processName);
+	std::string getProcessNamePlusInstance();
+	std::string getEncodedString();
+	const std::string toString() const;
+private:
 	/**
 	 * The process_name identifies an application process within the
 	 * application process namespace. This value is required, it
@@ -85,30 +109,6 @@ class ApplicationProcessNamingInformation {
 	 * may be NULL
 	 */
 	std::string entityInstance;
-
-public:
-	ApplicationProcessNamingInformation();
-	ApplicationProcessNamingInformation(const std::string& processName,
-			const std::string& processInstance);
-	ApplicationProcessNamingInformation & operator=(
-			const ApplicationProcessNamingInformation & other);
-	bool operator==(const ApplicationProcessNamingInformation &other) const;
-	bool operator!=(const ApplicationProcessNamingInformation &other) const;
-	bool operator>(const ApplicationProcessNamingInformation &other) const;
-	bool operator<=(const ApplicationProcessNamingInformation &other) const;
-	bool operator<(const ApplicationProcessNamingInformation &other) const;
-	bool operator>=(const ApplicationProcessNamingInformation &other) const;
-	const std::string& getEntityInstance() const;
-	void setEntityInstance(const std::string& entityInstance);
-	const std::string& getEntityName() const;
-	void setEntityName(const std::string& entityName);
-	const std::string& getProcessInstance() const;
-	void setProcessInstance(const std::string& processInstance);
-	const std::string& getProcessName() const;
-	void setProcessName(const std::string& processName);
-	std::string getProcessNamePlusInstance();
-	std::string getEncodedString();
-	const std::string toString();
 };
 
 /**

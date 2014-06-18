@@ -39,7 +39,7 @@ public:
 	}
 };
 
-class WireMessageFactoryProvider: public WireMessageProviderFactoryInterface {
+class WireMessageFactoryProvider: public WireMessageProviderFactory {
 public:
 	WireMessageProviderInterface* createWireMessageProvider() {
 		return new PlainWireMessageProvider();
@@ -68,7 +68,7 @@ bool test1(CDAPSessionManagerInterface *session_manager,
 }
 
 int main() {
-	WireMessageProviderFactoryInterface *wire_factory =
+	WireMessageProviderFactory *wire_factory =
 			new WireMessageFactoryProvider();
 	CDAPSessionManagerFactory cdap_manager_factory;
 	long timeout = 2000;

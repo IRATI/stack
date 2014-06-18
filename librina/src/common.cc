@@ -210,7 +210,7 @@ std::string ApplicationProcessNamingInformation::getEncodedString() {
                         "-" + entityName + "-" + entityInstance;
 }
 
-const std::string ApplicationProcessNamingInformation::toString(){
+const std::string ApplicationProcessNamingInformation::toString() const{
         std::stringstream ss;
 
         ss<<"Process name: "<<processName;
