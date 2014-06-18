@@ -501,7 +501,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 /* Create buffer with rest of PDU if it is a DT or MGMT PDU*/
                 new_buff = buffer_create_from_gfp(flags,
                                                   ptr + offset,
-                                                  pdu_len);
+                                                  pdu_len - offset);
                 if (!new_buff) {
                         pdu_destroy(new_pdu);
                         return NULL;
@@ -535,15 +535,15 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 pdu_destroy(new_pdu);
                 return NULL;
         }
-
-        if (!pdu_pci_present(new_pdu)) {
-                LOG_ERR("No PCI Present in PDU");
-        }
        
         if (pdu_buffer_set(new_pdu, new_buff)) {
                 LOG_ERR("Failed to set buffer in PDU");
                 pdu_destroy(new_pdu);
                 return NULL;
+        }
+
+        if (!pdu_is_ok(new_pdu)) {
+                LOG_ERR("PDU is not okay");
         }
 
         ASSERT(pdu_is_ok(new_pdu));
