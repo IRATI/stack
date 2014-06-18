@@ -14,6 +14,7 @@ ipcp_SOURCES  =					\
 	events.cc      \
 	components.cc   \
 	rib-daemon.cc   \
+	enrollment-task.cc \
 	namespace-manager.cc \
-	flow-allocator.cc   \
-	enrollment-task.cc
+	resource-allocator.cc \
+	flow-allocator.cc 
