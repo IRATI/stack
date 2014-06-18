@@ -388,7 +388,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 pdu_destroy(new_pdu);
                 return NULL;
         }
-        pdu_pci_set(new_pdu, new_pci);
+       
 
         /* Now to parse all fields */
         offset = 0;
@@ -489,9 +489,10 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         LOG_DBG("PCI QoS ID: %d", pci_qos_id(new_pci));
         LOG_DBG("PCI Flags: %d", pci_flags_get(new_pci));
 
-        if (pci_is_ok(new_pci)) {
+        if (!pci_is_ok(new_pci)) {
                 LOG_ERR("PCI is NOT okay");
         }
+
 
         switch (pdu_type) {
         case PDU_TYPE_MGMT:
@@ -522,10 +523,6 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                         return NULL;
                 }
 
-                if (!buffer_is_ok(new_buff)) {
-                        LOG_ERR("Buffer is NOT okay");
-                }
-
                 break;
         default:
                 LOG_ERR("Unknown PDU type %02X", pdu_type);
@@ -533,7 +530,21 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 return NULL;
         }
 
-        pdu_buffer_set(new_pdu, new_buff);
+        if (pdu_pci_set(new_pdu, new_pci)) {
+                LOG_ERR("Failed to set PCI in PDU");
+                pdu_destroy(new_pdu);
+                return NULL;
+        }
+
+        if (!pdu_pci_present(new_pdu)) {
+                LOG_ERR("No PCI Present in PDU");
+        }
+       
+        if (pdu_buffer_set(new_pdu, new_buff)) {
+                LOG_ERR("Failed to set buffer in PDU");
+                pdu_destroy(new_pdu);
+                return NULL;
+        }
 
         ASSERT(pdu_is_ok(new_pdu));
 
