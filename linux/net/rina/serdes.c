@@ -351,7 +351,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                                   const struct dt_cons * dt_cons,
                                   struct pdu_ser *       pdu) 
 {
-        struct pdu *          tmp_pdu;
+        struct pdu *          new_pdu;
         const struct buffer * tmp_buff;
         struct buffer *       new_buff;
         struct pci *          new_pci;
@@ -379,16 +379,16 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         ASSERT(ptr);
 
 
-        tmp_pdu = pdu_create_gfp(flags);
-        if (!tmp_pdu)
+        new_pdu = pdu_create_gfp(flags);
+        if (!new_pdu)
                 return NULL;
 
         new_pci = pci_create_gfp(flags);
         if (!new_pci) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
-        pdu_pci_set(tmp_pdu, new_pci);
+        pdu_pci_set(new_pdu, new_pci);
 
         /* Now to parse all fields */
         offset = 0;
@@ -399,7 +399,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
 
         if (vers != version) {
                 LOG_ERR("Received an unknown version of the EFCP PDU");
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -408,7 +408,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                dt_cons->address_length);
         offset += dt_cons->address_length;
         if (pci_destination_set(new_pci, addr)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -417,7 +417,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                dt_cons->address_length);
         offset += dt_cons->address_length;
         if (pci_source_set(new_pci, addr)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -426,7 +426,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                dt_cons->qos_id_length);
         offset += dt_cons->qos_id_length;
         if (pci_qos_id_set(new_pci, qos)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -435,7 +435,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                dt_cons->cep_id_length);
         offset += dt_cons->cep_id_length;
         if (pci_cep_source_set(new_pci, cep)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -444,7 +444,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                dt_cons->cep_id_length);
         offset += dt_cons->cep_id_length;
         if (pci_cep_destination_set(new_pci, cep)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
         
@@ -453,7 +453,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                PDU_TYPE_SIZE);
         offset += PDU_TYPE_SIZE;
         if (pci_type_set(new_pci, pdu_type)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -462,7 +462,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                FLAGS_SIZE);
         offset += FLAGS_SIZE;
         if (pci_flags_set(new_pci, pdu_flags)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
@@ -476,46 +476,70 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                dt_cons->seq_num_length);
         offset += dt_cons->seq_num_length;
         if (pci_sequence_number_set(new_pci, seq)) {
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
+        }
+
+
+        LOG_DBG("PCI Type: %02X", pci_type(new_pci));
+        LOG_DBG("PCI Source: %d", pci_source(new_pci));
+        LOG_DBG("PCI Destination: %d", pci_destination(new_pci));
+        LOG_DBG("PCI Source CEP: %d", pci_cep_source(new_pci));
+        LOG_DBG("PCI Destination CEP: %d", pci_cep_destination(new_pci));
+        LOG_DBG("PCI QoS ID: %d", pci_qos_id(new_pci));
+        LOG_DBG("PCI Flags: %d", pci_flags_get(new_pci));
+
+        if (pci_is_ok(new_pci)) {
+                LOG_ERR("PCI is NOT okay");
         }
 
         switch (pdu_type) {
         case PDU_TYPE_MGMT:
         case PDU_TYPE_DT:
-       
+                LOG_DBG("OMGWTFBBQ, it is a MGMT/DT PDU");
                 /* Create buffer with rest of PDU if it is a DT or MGMT PDU*/
                 new_buff = buffer_create_from_gfp(flags,
                                                   ptr + offset,
                                                   pdu_len);
                 if (!new_buff) {
-                        pdu_destroy(tmp_pdu);
+                        pdu_destroy(new_pdu);
                         return NULL;
                 }
+
+                if (!buffer_is_ok(new_buff)) {
+                        LOG_ERR("Buffer is NOT okay");
+                }
+
                 break;
         case PDU_TYPE_FC:
         case PDU_TYPE_ACK:
         case PDU_TYPE_ACK_AND_FC:
+                LOG_DBG("OMGWTFBBQ, it is a ACK/FC PDU");
                 /* Buffer size as small as possible */
                 new_buff = buffer_create_gfp(flags, 1);
                 if (!new_buff) {
-                        pdu_destroy(tmp_pdu);
+                        pdu_destroy(new_pdu);
                         return NULL;
                 }
+
+                if (!buffer_is_ok(new_buff)) {
+                        LOG_ERR("Buffer is NOT okay");
+                }
+
                 break;
         default:
                 LOG_ERR("Unknown PDU type %02X", pdu_type);
-                pdu_destroy(tmp_pdu);
+                pdu_destroy(new_pdu);
                 return NULL;
         }
 
-        pdu_buffer_set(tmp_pdu, new_buff);
+        pdu_buffer_set(new_pdu, new_buff);
 
-        ASSERT(pdu_is_ok(tmp_pdu));
+        ASSERT(pdu_is_ok(new_pdu));
 
         serdes_pdu_destroy(pdu);
 
-        return tmp_pdu;        
+        return new_pdu;        
 }
 
 
