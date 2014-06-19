@@ -523,16 +523,17 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                 XEN_MPI_RSP_OKAY);
 
                 channel = vmpi_buffer_hdr(buf)->channel;
-                if (unlikely(channel >= vmpi_max_channels)) {
-                        printk("%s: bogus channel request: %u\n",
-                                __func__, channel);
-                        channel = 0;
-                }
 
                 IFV(printk("%s: submitting len=%d channel=%d\n", __func__,
                                 (int)buf->len, channel));
 
                 if (!vif->read_cb) {
+                        if (unlikely(channel >= vmpi_max_channels)) {
+                                printk("%s: bogus channel request: %u\n",
+                                                __func__, channel);
+                                channel = 0;
+                        }
+
                         read = &vif->read[channel];
                         mutex_lock(&read->lock);
                         if (unlikely(vmpi_queue_len(read) >=
@@ -549,8 +550,8 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                         POLLRDBAND);
                 } else {
                         vif->read_cb(vif->read_cb_data, channel,
-                                        vmpi_buffer_data(buf),
-                                        buf->len - sizeof(struct vmpi_hdr));
+                                     vmpi_buffer_data(buf),
+                                     buf->len - sizeof(struct vmpi_hdr));
                         vmpi_buffer_destroy(buf);
                 }
                 vif->stats->rxres++;

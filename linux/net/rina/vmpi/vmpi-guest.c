@@ -258,12 +258,13 @@ recv_worker_function(struct work_struct *work)
         while (budget && (buf = vmpi_impl_read_buffer(vi)) != NULL) {
                 IFV(printk("received %d bytes\n", (int)buf->len));
                 channel = vmpi_buffer_hdr(buf)->channel;
-                if (unlikely(channel >= vmpi_max_channels)) {
-                        printk("WARNING: bogus channel index %u\n", channel);
-                        channel = 0;
-                }
 
                 if (!mpi->read_cb) {
+                        if (unlikely(channel >= vmpi_max_channels)) {
+                                printk("WARNING: bogus channel index %u\n", channel);
+                                channel = 0;
+                        }
+
                         queue = &mpi->read[channel];
                         mutex_lock(&queue->lock);
                         if (unlikely(vmpi_queue_len(queue) >= VMPI_RING_SIZE)) {

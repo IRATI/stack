@@ -105,7 +105,6 @@ read_cb_worker_function(struct work_struct *work)
 
         for (;;) {
                 struct vmpi_buffer *buf;
-                unsigned int channel;
 
                 mutex_lock(&vi->read_cb_queue.lock);
                 buf = vmpi_queue_pop(&vi->read_cb_queue);
@@ -113,14 +112,10 @@ read_cb_worker_function(struct work_struct *work)
                 if (buf == NULL) {
                         break;
                 }
-                channel = vmpi_buffer_hdr(buf)->channel;
-                if (unlikely(channel >= vmpi_max_channels)) {
-                        printk("bogus channel request: %u\n", channel);
-                        channel = 0;
-                }
-                vi->read_cb(vi->read_cb_data, channel,
-                                vmpi_buffer_data(buf),
-                                buf->len - sizeof(struct vmpi_hdr));
+                vi->read_cb(vi->read_cb_data,
+                            vmpi_buffer_hdr(buf)->channel,
+                            vmpi_buffer_data(buf),
+                            buf->len - sizeof(struct vmpi_hdr));
                 vmpi_buffer_destroy(buf);
         }
 }
