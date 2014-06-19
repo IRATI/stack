@@ -184,7 +184,7 @@ void BaseRIBObject::remove_child(const std::string& objectName) throw (Exception
 }
 
 void BaseRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		void* objectValue) throw (Exception) {
+		const void* objectValue) throw (Exception) {
 	operartion_not_supported(objectClass, objectName, objectValue);
 }
 
@@ -196,15 +196,15 @@ BaseRIBObject * BaseRIBObject::readObject() throw (Exception) {
 	return this;
 }
 
-void BaseRIBObject::writeObject(void* object_value) throw (Exception) {
+void BaseRIBObject::writeObject(const void* object_value) throw (Exception) {
 	operation_not_supported(object_value);
 }
 
-void BaseRIBObject::startObject(void* object) throw (Exception) {
+void BaseRIBObject::startObject(const void* object) throw (Exception) {
 	operation_not_supported(object);
 }
 
-void BaseRIBObject::stopObject(void* object) throw (Exception) {
+void BaseRIBObject::stopObject(const void* object) throw (Exception) {
 	operation_not_supported(object);
 }
 
@@ -247,7 +247,7 @@ void BaseRIBObject::operation_not_supported() throw (Exception) {
 	throw Exception("Operation not supported");
 }
 
-void BaseRIBObject::operation_not_supported(void* object) throw (Exception) {
+void BaseRIBObject::operation_not_supported(const void* object) throw (Exception) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
 	ss<<"Object value memory @: "<<object;
@@ -266,7 +266,7 @@ void BaseRIBObject::operation_not_supported(const rina::CDAPMessage& cdapMessage
 }
 
 void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
-		const std::string& objectName, void* objectValue) throw (Exception) {
+		const std::string& objectName, const void* objectValue) throw (Exception) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
 	ss<<"Class: "<<objectClass<<"; Name: "<<objectName;
@@ -295,30 +295,49 @@ Singleton<ObjectInstanceGenerator> objectInstanceGenerator;
 
 //Class SimpleRIBObject
 SimpleRIBObject::SimpleRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-			const std::string& object_name, void* object_value) :
+			const std::string& object_name, const void* object_value) :
 					BaseRIBObject(ipc_process, object_class,
 							objectInstanceGenerator->getObjectInstance(), object_name) {
 	object_value_ = object_value;
 }
 
-void* SimpleRIBObject::get_value() {
+const void* SimpleRIBObject::get_value() const {
 	return object_value_;
 }
 
-void SimpleRIBObject::writeObject(void* object_value) throw (Exception) {
+void SimpleRIBObject::writeObject(const void* object_value) throw (Exception) {
 	object_value_ = object_value;
 }
 
 void SimpleRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		void* objectValue) throw (Exception) {
+		const void* objectValue) throw (Exception) {
 	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
 		object_value_ = objectValue;
 	}
 }
 
+//Class SimpleSetRIBObject
+SimpleSetRIBObject::SimpleSetRIBObject(IPCProcess * ipc_process, const std::string& object_class,
+		const std::string& set_member_object_class, const std::string& object_name) :
+					SimpleRIBObject(ipc_process, object_class, object_name, 0){
+	set_member_object_class_ = set_member_object_class;
+}
+
+void SimpleSetRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+		const void* objectValue) throw (Exception) {
+	if (set_member_object_class_.compare(objectClass) != 0) {
+		throw Exception("Class of set member does not match the expected value");
+	}
+
+	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(), objectClass,
+			objectName, objectValue);
+	add_child(ribObject);
+	get_rib_daemon()->addRIBObject(ribObject);
+}
+
 //Class SimpleSetMemberRIBObject
 SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IPCProcess* ipc_process,
-		const std::string& object_class, const std::string& object_name, void* object_value) :
+		const std::string& object_class, const std::string& object_name, const void* object_value) :
 				SimpleRIBObject(ipc_process, object_class, object_name, object_value){
 }
 

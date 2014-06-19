@@ -44,13 +44,8 @@ class IPCProcess;
 /// IPC process component interface
 class IPCProcessComponent {
 public:
-	virtual void set_ipc_process(IPCProcess * ipc_process) {
-		ipc_process_ = ipc_process;
-	}
 	virtual ~IPCProcessComponent(){};
-
-protected:
-		IPCProcess *ipc_process_;
+	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 };
 
 /// Interface
@@ -268,6 +263,8 @@ class INMinusOneFlowManager {
 public:
 	virtual ~INMinusOneFlowManager(){};
 
+	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
+
 	/// Allocate an N-1 Flow with the requested QoS to the destination
 	/// IPC Process
 	/// @param flowInformation contains the destination IPC Process and requested
@@ -304,11 +301,6 @@ public:
     /// @throws IPCException if no N-1 Flow identified by portId exists
 	virtual const rina::FlowInformation& getNMinus1FlowInformation(int portId) const throw (Exception) = 0;
 
-	/// Return the information of all the N-1 flows
-	/// @return
-	/// @throws IPCException
-	virtual const std::list<rina::FlowInformation>& getAllNMinus1FlowsInformation() = 0;
-
 	/// The IPC Process has been unregistered from or registered to an N-1 DIF
 	/// @param evet
 	/// @throws IPCException
@@ -324,7 +316,7 @@ public:
 class IPDUFTGeneratorPolicy {
 public:
 	virtual ~IPDUFTGeneratorPolicy(){};
-	virtual void set_ipc_process(const IPCProcess& ipc_process) = 0;
+	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 	virtual void enrollmentToNeighbor(unsigned int address, bool newMember, unsigned int portId) = 0;
 	virtual void flowAllocated(unsigned int address, unsigned int portId,
@@ -336,7 +328,7 @@ public:
 class IPDUForwardingTableGenerator {
 public:
 	virtual ~IPDUForwardingTableGenerator(){};
-	virtual void set_ipc_process(const IPCProcess& ipc_process) = 0;
+	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 	virtual const IPDUFTGeneratorPolicy& get_pdu_ft_generator_policy() const = 0;
 };
@@ -360,8 +352,8 @@ public:
 class IResourceAllocator: public IPCProcessComponent {
 public:
 	virtual ~IResourceAllocator(){};
-	virtual const INMinusOneFlowManager& get_n_minus_one_flow_manager() const = 0;
-	virtual const IPDUForwardingTableGenerator& get_pdu_forwarding_table_generator() const = 0;
+	virtual INMinusOneFlowManager * get_n_minus_one_flow_manager() const = 0;
+	virtual IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const = 0;
 };
 
 class IRIBDaemon;
@@ -377,7 +369,7 @@ public:
 	const std::string& get_name() const;
 	const std::string& get_class() const;
 	long get_instance() const;
-	virtual void* get_value() = 0;
+	virtual const void* get_value() const = 0;
 	IPCProcess* get_ipc_process();
 	IRIBDaemon* get_rib_daemon();
 	IEncoder* get_encoder();
@@ -391,12 +383,12 @@ public:
 
 	/// Local invocations
 	virtual void createObject(const std::string& objectClass,
-			const std::string& objectName, void* objectValue) throw (Exception);
+			const std::string& objectName, const void* objectValue) throw (Exception);
 	virtual void deleteObject() throw (Exception);
 	virtual BaseRIBObject * readObject() throw (Exception);
-	virtual void writeObject(void* object_value) throw (Exception);
-	virtual void startObject(void* object) throw (Exception);
-	virtual void stopObject(void* object) throw (Exception);
+	virtual void writeObject(const void* object_value) throw (Exception);
+	virtual void startObject(const void* object) throw (Exception);
+	virtual void stopObject(const void* object) throw (Exception);
 
 	/// Remote invocations via CDAP messages
 	virtual void remoteCreateObject(const rina::CDAPMessage& cdapMessage,
@@ -424,11 +416,11 @@ private:
 	IRIBDaemon * rib_daemon_;
 	IEncoder * encoder_;
 	void operation_not_supported() throw (Exception);
-	void operation_not_supported(void* object) throw (Exception);
+	void operation_not_supported(const void* object) throw (Exception);
 	void operation_not_supported(const rina::CDAPMessage& cdapMessage,
 			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
 	void operartion_not_supported(const std::string& objectClass, const std::string& objectName,
-			void* objectValue) throw (Exception);
+			const void* objectValue) throw (Exception);
 };
 
 /// Common interface for update strategies implementations. Can be on demand, scheduled, periodic
@@ -530,7 +522,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			void* objectValue) throw (Exception) = 0;
+			const void* objectValue) throw (Exception) = 0;
 
 	/// Delete an object from the RIB
 	/// @param objectClass the class of the object
@@ -559,7 +551,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void writeObject(const std::string& objectClass, const std::string& objectName,
-			void* objectValue) throw (Exception) = 0;
+			const void* objectValue) throw (Exception) = 0;
 
 	/// Start an object at the RIB
 	/// @param objectClass the class of the object
@@ -598,6 +590,7 @@ public:
 	virtual IRIBDaemon* get_rib_daemon() = 0;
 	virtual unsigned int get_address() = 0;
 	virtual void set_address(unsigned int address) = 0;
+	virtual const rina::ApplicationProcessNamingInformation& get_name() const = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
 	virtual const rina::DIFInformation& get_dif_information() const = 0;
@@ -667,23 +660,35 @@ extern Singleton<ObjectInstanceGenerator> objectInstanceGenerator;
 class SimpleRIBObject: public BaseRIBObject {
 public:
 	SimpleRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-			const std::string& object_name, void* object_value);
-	virtual void* get_value();
-	virtual void writeObject(void* object) throw (Exception);
+			const std::string& object_name, const void* object_value);
+	virtual const void* get_value() const;
+	virtual void writeObject(const void* object) throw (Exception);
 
 	/// Create has the semantics of update
 	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			void* objectValue) throw (Exception);
+			const void* objectValue) throw (Exception);
 
 private:
-	void* object_value_;
+	const void* object_value_;
+};
+
+/// Class SimpleSetRIBObject. A RIB object that is a set and has no side effects
+class SimpleSetRIBObject: public SimpleRIBObject {
+public:
+	SimpleSetRIBObject(IPCProcess * ipc_process, const std::string& object_class,
+			const std::string& set_member_object_class, const std::string& object_name);
+	void createObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue) throw (Exception);
+
+private:
+	std::string set_member_object_class_;
 };
 
 /// Class SimpleSetMemberRIBObject. A RIB object that is member of a set
 class SimpleSetMemberRIBObject: public SimpleRIBObject {
 public:
 	SimpleSetMemberRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-				const std::string& object_name, void* object_value);
+				const std::string& object_name, const void* object_value);
 	virtual void deleteObject() throw (Exception);
 };
 

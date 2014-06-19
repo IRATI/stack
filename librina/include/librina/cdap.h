@@ -595,6 +595,9 @@ public:
 	virtual void messageReceived(const CDAPMessage &cdap_message)
 	= 0;
 
+	///Return the descriptor of this session
+	virtual CDAPSessionDescriptor* get_session_descriptor() const = 0;
+
 };
 
 /// Manages the creation/deletion of CDAP sessions within an IPC process
