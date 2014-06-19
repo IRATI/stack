@@ -24,9 +24,8 @@
 
 #define RINA_PREFIX "concurrency"
 
-#include "logs.h"
-
 #include "librina/concurrency.h"
+#include "librina/logs.h"
 
 namespace rina {
 

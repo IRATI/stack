@@ -25,7 +25,7 @@
 
 #define RINA_PREFIX "core"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "core.h"
 
 namespace rina {

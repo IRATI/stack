@@ -98,14 +98,14 @@ class RIBObjectValue{
 	//TODO
 };
 
-/// Represents an object in the RIB
-class RIBObject{
+/// Contains the data of an object in the RIB
+class RIBObjectData{
 public:
-	RIBObject();
-	RIBObject(std::string clazz, std::string name,
+	RIBObjectData();
+	RIBObjectData(std::string clazz, std::string name,
 			long long instance, RIBObjectValue value);
-	bool operator==(const RIBObject &other) const;
-	bool operator!=(const RIBObject &other) const;
+	bool operator==(const RIBObjectData &other) const;
+	bool operator!=(const RIBObjectData &other) const;
 	const std::string& get_class() const;
 	void set_class(const std::string& clazz);
 	unsigned long get_instance() const;
@@ -135,9 +135,6 @@ private:
 	 * displayable purposes
 	 */
 	std::string displayable_value_;
-
-	/** Geneartes a unique object instance */
-	unsigned long generateObjectInstance();
 };
 
 /**

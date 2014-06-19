@@ -23,7 +23,7 @@
 
 #define RINA_PREFIX "ipc-daemons"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "librina/ipc-daemons.h"
 
 namespace rina {
@@ -151,11 +151,11 @@ const std::string Neighbor::toString(){
 }
 
 /* CLAS RIBOBJECT */
-RIBObject::RIBObject(){
-	instance_ = generateObjectInstance();
+RIBObjectData::RIBObjectData(){
+	instance_ = 0;
 }
 
-RIBObject::RIBObject(
+RIBObjectData::RIBObjectData(
 		std::string clazz, std::string name,
 		long long instance, RIBObjectValue value){
 	this->class_ = clazz;
@@ -164,7 +164,7 @@ RIBObject::RIBObject(
 	this->instance_ = instance;
 }
 
-bool RIBObject::operator==(const RIBObject &other) const{
+bool RIBObjectData::operator==(const RIBObjectData &other) const{
 	if (class_.compare(other.get_class()) != 0) {
 		return false;
 	}
@@ -176,52 +176,47 @@ bool RIBObject::operator==(const RIBObject &other) const{
 	return instance_ == other.get_instance();
 }
 
-bool RIBObject::operator!=(const RIBObject &other) const{
+bool RIBObjectData::operator!=(const RIBObjectData &other) const{
 	return !(*this == other);
 }
 
-unsigned long RIBObject::generateObjectInstance(){
-	//TODO generate instance properly
-	return 0;
-}
-
-const std::string& RIBObject::get_class() const {
+const std::string& RIBObjectData::get_class() const {
 	return class_;
 }
 
-void RIBObject::set_class(const std::string& clazz) {
+void RIBObjectData::set_class(const std::string& clazz) {
 	class_ = clazz;
 }
 
-unsigned long RIBObject::get_instance() const {
+unsigned long RIBObjectData::get_instance() const {
 	return instance_;
 }
 
-void RIBObject::set_instance(unsigned long instance) {
+void RIBObjectData::set_instance(unsigned long instance) {
 	instance_ = instance;
 }
 
-const std::string& RIBObject::get_name() const {
+const std::string& RIBObjectData::get_name() const {
 	return name_;
 }
 
-void RIBObject::set_name(const std::string& name) {
+void RIBObjectData::set_name(const std::string& name) {
 	name_ = name;
 }
 
-RIBObjectValue RIBObject::get_value() const {
+RIBObjectValue RIBObjectData::get_value() const {
 	return value_;
 }
 
-void RIBObject::set_value(RIBObjectValue value) {
+void RIBObjectData::set_value(RIBObjectValue value) {
 	value_ = value;
 }
 
-const std::string& RIBObject::get_displayable_value() const {
+const std::string& RIBObjectData::get_displayable_value() const {
         return displayable_value_;
 }
 
-void RIBObject::set_displayable_value(const std::string& displayable_value) {
+void RIBObjectData::set_displayable_value(const std::string& displayable_value) {
 	displayable_value_ = displayable_value;
 }
 
