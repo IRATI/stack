@@ -42,6 +42,7 @@ librina_la_LIBADD   =				\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)
 librina_la_CPPFLAGS =				\
+	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
 	-I$(top_srcdir)/include-system		\
@@ -55,6 +56,7 @@ librina_stubbed_la_LIBADD   =			\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)
 librina_stubbed_la_CPPFLAGS =			\
+	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=1				\
 	-I$(top_srcdir)/include			\
 	-I$(top_srcdir)/include-system		\

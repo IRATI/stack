@@ -44,7 +44,7 @@ CPPFLAGS_EXTRA=""
 AX_CHECK_COMPILE_FLAG([ -Wall ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
 ])
-AX_CHECK_COMPILE_FLAG([ -Wformat ], [
+AX_CHECK_COMPILE_FLAG([ -Wformat ],[
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
@@ -64,22 +64,7 @@ AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
-#AX_HAVE_SYSCALL([ipc_create],,[
-#    AC_MSG_ERROR([Your system lacks of ipc_create syscall])])
-#AX_HAVE_SYSCALL([ipc_configure],,[
-#    AC_MSG_ERROR([Your system lacks of ipc_configure syscall])])
-#AX_HAVE_SYSCALL([ipc_destroy],,[
-#    AC_MSG_ERROR([Your system lacks of ipc_destroy syscall])])
-#AX_HAVE_SYSCALL([connection_create],,[
-#    AC_MSG_ERROR([Your system lacks of connection_create syscall])])
-#AX_HAVE_SYSCALL([connection_destroy],,[
-#    AC_MSG_ERROR([Your system lacks of connection_destroy syscall])])
-#AX_HAVE_SYSCALL([connection_update],,[
-#    AC_MSG_ERROR([Your system lacks of connection_update syscall])])
-#AX_HAVE_SYSCALL([sdu_read],,[
-#    AC_MSG_ERROR([Your system lacks of sdu_read syscall])])
-#AX_HAVE_SYSCALL([sdu_write],,[
-#    AC_MSG_ERROR([Your system lacks of sdu_write syscall])])
+LT_INIT
 
 PKG_PROG_PKG_CONFIG([0.26])
 
@@ -94,7 +79,7 @@ PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= $LIBNL_MIN_VERSION],, [
     AC_MSG_ERROR([Your system lacks of libnl-genl-3 support (>= $LIBNL_MIN_VERSION)])
 ])
 
-AC_CHECK_LIB([pthread], [pthread_create],,[
+AC_CHECK_LIB([pthread],[pthread_create],,[
     AC_MSG_ERROR([Your system lacks of libpthread support])
 ])
 
@@ -110,19 +95,19 @@ AS_IF([test "$build_bindings_java" = "yes"],[
 ])
 
 AS_IF([test "$build_bindings" = "yes"],[
-    AX_PKG_SWIG([2.0], [
+    AX_PKG_SWIG([2.0],[
         #
         # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct
         # bindings generation
         #
 
-        SWIG_VERSION=`$SWIG -version 2>&1 | grep 'SWIG Version' | sed 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
+        SWIG_VERSION=`$SWIG -version 2>&1 | $GREP 'SWIG Version' | $SED 's/.*\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*/\1/g'`
         AX_COMPARE_VERSION($SWIG_VERSION, le, [2.0.4],,[
             AX_COMPARE_VERSION($SWIG_VERSION, ge, [2.0.8],,[
                 AC_MSG_ERROR([SWIG versions in 2.0.4, ..., 2.0.8 range will not compile])
             ])
         ])
-    ], [
+    ],[
         AC_MSG_ERROR([Your system lacks of SWIG (>2.0) support, bindings generation is not possible])
     ])
 ])
@@ -135,7 +120,7 @@ AS_IF([test "$build_bindings_java" = "yes"],[
     JNI_CPPFLAGS=""
     for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
     do
-            JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR"
+        JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR"
     done
     AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
     AX_PROG_JAR
@@ -147,6 +132,70 @@ AM_CONDITIONAL(BUILD_BINDINGS_JAVA, [test $build_bindings_java = yes])
 AC_PATH_PROG([MVN],[mvn],[])
 AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
 
+AC_ARG_WITH([sysheaders],
+    AS_HELP_STRING([--with-sysheaders=PATH],
+                   [location of system headers to use
+                    (for example /usr/src/linux/include)
+                    @<:@default=compiler default@:>@]),[
+    sysheaders=$with_sysheaders
+    AC_MSG_NOTICE([Using system headers in $sysheaders])
+],[
+    sysheaders=""
+    AC_MSG_NOTICE([Using default system headers path (compiler provided)])
+])
+
+AS_IF([test -n "$sysheaders"],[
+  SYSINCLUDES=-nostdinc
+
+  for d in include ; do
+    i=`$CC -print-file-name="$d"` && test "x$i" != x && test "x$i" != "x$d" &&
+    SYSINCLUDES="$SYSINCLUDES -isystem $i"
+  done
+
+  SYSINCLUDES="$SYSINCLUDES \
+-isystem `echo $sysheaders | $SED 's/:/ -isystem /g'`"
+
+  AS_IF([test -n "$CXX"],[
+    CXX_SYSINCLUDES=
+
+    for cxxheaders in `$CXX -v -S -x c++ /dev/null -o /dev/null 2>&1 \
+    | $SED -n -e '1,/#include/d' -e 's/^ \(\/.*\/[cg]++\)/\1/p'`; do
+      test "x$cxxheaders" != x &&
+      CXX_SYSINCLUDES="$CXX_SYSINCLUDES -isystem $cxxheaders"
+    done
+  ])
+
+  SYSINCLUDES="$SYSINCLUDES -I$sysheaders"
+  CXX_SYSINCLUDES="$CXX_SYSINCLUDES -I$sysheaders"
+])
+
+AC_SUBST(SYSINCLUDES)
+AC_SUBST(CXX_SYSINCLUDES)
+
+AC_LANG_PUSH([C])
+oldflags="$CFLAGS"
+CFLAGS="$SYSINCLUDES $CFLAGS"
+
+AX_HAVE_SYSCALL([ipc_create],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([ipc_destroy],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([sdu_read],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([sdu_write],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([allocate_port],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([deallocate_port],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([management_sdu_read],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+AX_HAVE_SYSCALL([management_sdu_write],[],[
+    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
+
+CFLAGS="$oldcflags"
+AC_LANG_POP([C])
+
 DX_DOXYGEN_FEATURE(ON)
 DX_DOT_FEATURE(ON)
 DX_HTML_FEATURE(ON)
@@ -157,7 +206,7 @@ DX_RTF_FEATURE(OFF)
 DX_XML_FEATURE(OFF)
 DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
-DX_INIT_DOXYGEN($PACKAGE_NAME, [doxygen.cfg], [doxygen])
+DX_INIT_DOXYGEN($PACKAGE_NAME,[doxygen.cfg],[doxygen])
 
 AC_CONFIG_FILES([
     Makefile
