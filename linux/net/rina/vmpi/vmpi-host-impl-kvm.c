@@ -114,7 +114,7 @@ read_cb_worker_function(struct work_struct *work)
                         break;
                 }
                 channel = vmpi_buffer_hdr(buf)->channel;
-                if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
+                if (unlikely(channel >= vmpi_max_channels)) {
                         printk("bogus channel request: %u\n", channel);
                         channel = 0;
                 }
@@ -183,7 +183,7 @@ handle_tx(struct vmpi_impl_info *vi)
 
                         if (!vi->read_cb) {
                                 channel = vmpi_buffer_hdr(buf)->channel;
-                                if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
+                                if (unlikely(channel >= vmpi_max_channels)) {
                                         printk("bogus channel request: %u\n", channel);
                                         channel = 0;
                                 }

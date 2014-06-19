@@ -523,7 +523,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                 XEN_MPI_RSP_OKAY);
 
                 channel = vmpi_buffer_hdr(buf)->channel;
-                if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
+                if (unlikely(channel >= vmpi_max_channels)) {
                         printk("%s: bogus channel request: %u\n",
                                 __func__, channel);
                         channel = 0;

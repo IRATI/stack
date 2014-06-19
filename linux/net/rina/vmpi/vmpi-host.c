@@ -32,11 +32,14 @@
 #include "vmpi-test.h"
 
 
+unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
+module_param(vmpi_max_channels, uint, 0444);
+
 struct vmpi_info {
         struct vmpi_impl_info *vi;
 
         struct vmpi_ring write;
-        struct vmpi_queue read[VMPI_MAX_CHANNELS];
+        struct vmpi_queue *read;
 
         struct vmpi_ops ops;
         struct vmpi_stats stats;
@@ -102,7 +105,14 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
                 goto init_write;
         }
 
-        for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
+        mpi->read = kmalloc(sizeof(mpi->read[0]) * vmpi_max_channels,
+                            GFP_KERNEL);
+        if (mpi->read == NULL) {
+                *err = -ENOMEM;
+                goto alloc_read_queues;
+        }
+
+        for (i = 0; i < vmpi_max_channels; i++) {
                 *err = vmpi_queue_init(&mpi->read[i], 0, VMPI_BUF_SIZE);
                 if (*err) {
                         goto init_read;
@@ -135,6 +145,8 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
+        kfree(mpi->read);
+ alloc_read_queues:
         vmpi_ring_fini(&mpi->write);
  init_write:
         vmpi_stats_fini(&mpi->stats);
@@ -156,9 +168,10 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 
         mpi->vi = NULL;
         vmpi_ring_fini(&mpi->write);
-        for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
+        for (i = 0; i < vmpi_max_channels; i++) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
+        kfree(mpi->read);
         vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
 }
@@ -245,7 +258,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
                 return -EBADFD;
         }
 
-        if (unlikely(channel >= VMPI_MAX_CHANNELS || len < 0)) {
+        if (unlikely(channel >= vmpi_max_channels || len < 0)) {
                 return -EINVAL;
         }
 
