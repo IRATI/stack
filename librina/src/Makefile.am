@@ -25,6 +25,7 @@ allsources =					\
 	netlink-parsers.cc			\
 	netlink-manager.cc			\
 	syscalls-wrappers.cc		\
+	CDAP.pb.cc					\
 	cdap-impl.cc
 	
 EXTRA_DIST =					\

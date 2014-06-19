@@ -53,10 +53,23 @@ private:
 /// Encapsulates the data to set an object value
 class ObjectValueInterface {
 public:
+	enum types{
+		inttype,
+		sinttype,
+		longtype,
+		slongtype,
+		stringtype,
+		bytetype,
+		floattype,
+		doubletype,
+		booltype,
+	};
 	virtual ~ObjectValueInterface() {
 	}
 	;
 	virtual bool is_empty() const = 0;
+	virtual const void* get_value() const = 0;
+	virtual types isType() const = 0;
 };
 
 template<typename T>
@@ -65,9 +78,10 @@ public:
 	AbstractObjectValue();
 	AbstractObjectValue(T &value);
 	virtual ~AbstractObjectValue();
-	T get_value() const;
+	const void* get_value() const;
 	virtual bool operator==(const AbstractObjectValue<T> &other) = 0;
 	bool is_empty() const;
+	virtual types isType() const = 0;
 protected:
 	T value_;
 	bool empty_;
@@ -78,6 +92,7 @@ public:
 	IntObjectValue();
 	IntObjectValue(int value);
 	bool operator==(const AbstractObjectValue<int> &other);
+	types isType() const;
 };
 
 class SIntObjectValue: public AbstractObjectValue<short int> {
@@ -85,6 +100,7 @@ public:
 	SIntObjectValue();
 	SIntObjectValue(short int value);
 	bool operator==(const AbstractObjectValue<short int> &other);
+	types isType() const;
 };
 
 class LongObjectValue: public AbstractObjectValue<long long> {
@@ -92,6 +108,7 @@ public:
 	LongObjectValue();
 	LongObjectValue(long long value);
 	bool operator==(const AbstractObjectValue<long long> &other);
+	types isType() const;
 };
 
 class SLongObjectValue: public AbstractObjectValue<long> {
@@ -99,6 +116,7 @@ public:
 	SLongObjectValue();
 	SLongObjectValue(long value);
 	bool operator==(const AbstractObjectValue<long> &other);
+	types isType() const;
 };
 
 class StringObjectValue: public AbstractObjectValue<std::string> {
@@ -106,13 +124,16 @@ public:
 	StringObjectValue();
 	StringObjectValue(std::string value);
 	bool operator==(const AbstractObjectValue<std::string> &other);
+	types isType() const;
 };
 
 class ByteArrayObjectValue: public AbstractObjectValue<char*> {
 public:
 	ByteArrayObjectValue();
+	~ByteArrayObjectValue();
 	ByteArrayObjectValue(char* value);
 	bool operator==(const AbstractObjectValue<char*> &other);
+	types isType() const;
 };
 
 class FloatObjectValue: public AbstractObjectValue<float> {
@@ -120,6 +141,15 @@ public:
 	FloatObjectValue();
 	FloatObjectValue(float value);
 	bool operator==(const AbstractObjectValue<float> &other);
+	types isType() const;
+};
+
+class DoubleObjectValue: public AbstractObjectValue<double> {
+public:
+	DoubleObjectValue();
+	DoubleObjectValue(double value);
+	bool operator==(const AbstractObjectValue<double> &other);
+	types isType() const;
 };
 
 class BooleanObjectValue: public AbstractObjectValue<bool> {
@@ -127,6 +157,7 @@ public:
 	BooleanObjectValue();
 	BooleanObjectValue(bool value);
 	bool operator==(const AbstractObjectValue<bool> &other);
+	types isType() const;
 };
 
 /// Exception produced in the CDAP

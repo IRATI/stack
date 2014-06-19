@@ -18,7 +18,6 @@
 #include "librina/concurrency.h"
 #include "logs.h"
 #include "librina/timer.h"
-#include "CDAP.pb.h"
 
 namespace rina {
 

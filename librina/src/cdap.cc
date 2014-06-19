@@ -69,8 +69,8 @@ template<typename T>
 AbstractObjectValue<T>::~AbstractObjectValue() {
 }
 template<typename T>
-T AbstractObjectValue<T>::get_value() const {
-	return value_;
+const void* AbstractObjectValue<T>::get_value() const {
+	return &value_;
 }
 template<typename T>
 bool AbstractObjectValue<T>::is_empty() const {
@@ -85,7 +85,10 @@ IntObjectValue::IntObjectValue(int value) :
 		AbstractObjectValue(value) {
 }
 bool IntObjectValue::operator==(const AbstractObjectValue<int> &other) {
-	return value_ == other.get_value();
+	return value_ == *(int*)other.get_value();
+}
+ObjectValueInterface::types IntObjectValue::isType() const {
+	return ObjectValueInterface::inttype;
 }
 
 // CLASS SIntObjectValue
@@ -96,7 +99,10 @@ SIntObjectValue::SIntObjectValue(short int value) :
 		AbstractObjectValue(value) {
 }
 bool SIntObjectValue::operator==(const AbstractObjectValue<short int> &other) {
-	return value_ == other.get_value();
+	return value_ == *(short int*)other.get_value();
+}
+ObjectValueInterface::types SIntObjectValue::isType() const {
+	return ObjectValueInterface::sinttype;
 }
 
 // CLASS LongObjectValue
@@ -107,7 +113,10 @@ LongObjectValue::LongObjectValue(long long value) :
 		AbstractObjectValue(value) {
 }
 bool LongObjectValue::operator==(const AbstractObjectValue<long long> &other) {
-	return value_ == other.get_value();
+	return value_ == *(long long*)other.get_value();
+}
+ObjectValueInterface::types LongObjectValue::isType() const {
+	return ObjectValueInterface::longtype;
 }
 
 // CLASS SLongObjectValue
@@ -118,7 +127,10 @@ SLongObjectValue::SLongObjectValue(long value) :
 		AbstractObjectValue(value) {
 }
 bool SLongObjectValue::operator==(const AbstractObjectValue<long> &other) {
-	return value_ == other.get_value();
+	return value_ == *(long*)other.get_value();
+}
+ObjectValueInterface::types SLongObjectValue::isType() const {
+	return ObjectValueInterface::slongtype;
 }
 
 // CLASS StringObjectValue
@@ -130,18 +142,27 @@ StringObjectValue::StringObjectValue(std::string value) :
 }
 bool StringObjectValue::operator==(
 		const AbstractObjectValue<std::string> &other) {
-	return value_ == other.get_value();
+	return value_ == *(std::string*)other.get_value();
+}
+ObjectValueInterface::types StringObjectValue::isType() const {
+	return ObjectValueInterface::stringtype;
 }
 
 // CLASS ByteArrayObjectValue
 ByteArrayObjectValue::ByteArrayObjectValue() :
 		AbstractObjectValue() {
 }
+ByteArrayObjectValue::~ByteArrayObjectValue() {
+	delete value_;
+}
 ByteArrayObjectValue::ByteArrayObjectValue(char* value) :
 		AbstractObjectValue(value) {
 }
 bool ByteArrayObjectValue::operator==(const AbstractObjectValue<char*> &other) {
-	return value_ == other.get_value();
+	return value_ == (char*)other.get_value();
+}
+ObjectValueInterface::types ByteArrayObjectValue::isType() const {
+	return ObjectValueInterface::bytetype;
 }
 
 // CLASS FloatObjectValue
@@ -152,7 +173,24 @@ FloatObjectValue::FloatObjectValue(float value) :
 		AbstractObjectValue(value) {
 }
 bool FloatObjectValue::operator==(const AbstractObjectValue<float> &other) {
-	return value_ == other.get_value();
+	return value_ == *(float*)other.get_value();
+}
+ObjectValueInterface::types FloatObjectValue::isType() const {
+	return ObjectValueInterface::floattype;
+}
+
+// CLASS BooleanObjectValue
+DoubleObjectValue::DoubleObjectValue() :
+		AbstractObjectValue() {
+}
+DoubleObjectValue::DoubleObjectValue(double value) :
+		AbstractObjectValue(value) {
+}
+bool DoubleObjectValue::operator==(const AbstractObjectValue<double> &other) {
+	return value_ == *(double*)other.get_value();
+}
+ObjectValueInterface::types DoubleObjectValue::isType() const {
+	return ObjectValueInterface::doubletype;
 }
 
 // CLASS BooleanObjectValue
@@ -163,7 +201,10 @@ BooleanObjectValue::BooleanObjectValue(bool value) :
 		AbstractObjectValue(value) {
 }
 bool BooleanObjectValue::operator==(const AbstractObjectValue<bool> &other) {
-	return value_ == other.get_value();
+	return value_ == *(bool*)other.get_value();
+}
+ObjectValueInterface::types BooleanObjectValue::isType() const {
+	return ObjectValueInterface::booltype;
 }
 
 // CLASS CDAPException
@@ -527,7 +568,7 @@ CDAPMessage::CDAPMessage() {
 }
 CDAPMessage::~CDAPMessage() {
 	delete obj_value_;
-
+	delete filter_;
 }
 const CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 		AuthTypes auth_mech, const AuthValue &auth_value,

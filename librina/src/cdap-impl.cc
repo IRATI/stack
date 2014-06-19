@@ -4,6 +4,7 @@
 
 #define RINA_PREFIX "cdap-manager"
 #include "cdap-impl.h"
+#include "CDAP.pb.h"
 
 namespace rina {
 
@@ -971,9 +972,8 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 	gpfCDAPMessage.ParseFromArray(message, sizeof(message) / sizeof(*message));
 
 	cdapMessage->set_abs_syntax(gpfCDAPMessage.abssyntax());
-	CDAPMessage::AuthTypes auth_type =
-			static_cast<CDAPMessage::AuthTypes>(cdap::impl::googleprotobuf::authTypes_t_Name(
-					gpfCDAPMessage.authmech()));
+	int auth_type_val = gpfCDAPMessage.authmech();
+	CDAPMessage::AuthTypes auth_type = static_cast<CDAPMessage::AuthTypes>(auth_type_val);
 	cdapMessage->set_auth_mech(auth_type);
 	AuthValue auth_value(gpfCDAPMessage.authvalue().authname(),
 			gpfCDAPMessage.authvalue().authpassword(),
@@ -983,22 +983,51 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 	cdapMessage->set_dest_ae_name(gpfCDAPMessage.destaename());
 	cdapMessage->set_dest_ap_inst(gpfCDAPMessage.destapinst());
 	cdapMessage->set_dest_ap_name(gpfCDAPMessage.destapname());
-	char *filter = new char[gpfCDAPMessage.filter() + 1];
+	char *filter = new char[gpfCDAPMessage.filter().size() + 1];
 	strcpy(filter, gpfCDAPMessage.filter().c_str());
 	cdapMessage->set_filter(filter);
-	CDAPMessage::Flags flags =
-			static_cast<CDAPMessage::Flags>(cdap::impl::googleprotobuf::flagValues_t_Name(
-					gpfCDAPMessage.flags()));
+	int flag_value = gpfCDAPMessage.flags();
+	CDAPMessage::Flags flags = static_cast<CDAPMessage::Flags>(flag_value);
 	cdapMessage->set_flags(flags);
 	cdapMessage->set_invoke_id(gpfCDAPMessage.invokeid());
 	cdapMessage->set_obj_class(gpfCDAPMessage.objclass());
 	cdapMessage->set_obj_inst(gpfCDAPMessage.objinst());
 	cdapMessage->set_obj_name(gpfCDAPMessage.objname());
-	ObjectValueInterface *obj_val = gpfCDAPMessage.objvalue();
-	cdapMessage->set_obj_value(obj_val);
+
+	cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
+	if (obj_val_t.has_intval())	{
+		cdapMessage->set_obj_value(new IntObjectValue(obj_val_t.intval()));
+	}
+	if (obj_val_t.has_sintval())	{
+		cdapMessage->set_obj_value(new SIntObjectValue(obj_val_t.sintval()));
+	}
+	if (obj_val_t.has_int64val())	{
+		cdapMessage->set_obj_value(new LongObjectValue(obj_val_t.int64val()));
+	}
+	if (obj_val_t.has_sint64val())	{
+		cdapMessage->set_obj_value(new SLongObjectValue(obj_val_t.sint64val()));
+	}
+	if (obj_val_t.has_strval())	{
+		cdapMessage->set_obj_value(new StringObjectValue(obj_val_t.strval()));
+	}
+	if (obj_val_t.has_byteval())	{
+		char byte_val[obj_val_t.byteval().size() +1];
+		strcpy(byte_val, obj_val_t.byteval().c_str());
+		cdapMessage->set_obj_value(new ByteArrayObjectValue(byte_val));
+	}
+	if (obj_val_t.has_floatval())	{
+		cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
+	}
+	if (obj_val_t.has_doubleval())	{
+		cdapMessage->set_obj_value(new DoubleObjectValue(obj_val_t.doubleval()));
+	}
+	if (obj_val_t.has_boolval())	{
+		cdapMessage->set_obj_value(new BooleanObjectValue(obj_val_t.boolval()));
+	}
+
+	int opcode_val = gpfCDAPMessage.opcode();
 	CDAPMessage::Opcode opcode =
-			static_cast<CDAPMessage::Opcode>(cdap::impl::googleprotobuf::opCode_t_Name(
-					gpfCDAPMessage.opcode()));
+			static_cast<CDAPMessage::Opcode>(opcode_val);
 	cdapMessage->set_op_code(opcode);
 	cdapMessage->set_result(gpfCDAPMessage.result());
 	cdapMessage->set_result_reason(gpfCDAPMessage.resultreason());
@@ -1016,18 +1045,17 @@ const char* GPBWireMessageProvider::serializeMessage(
 	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
 
 	gpfCDAPMessage.set_abssyntax(cdapMessage.get_abs_syntax());
-	cdap::impl::googleprotobuf::authTypes_t auth_types;
 	if (!cdap::impl::googleprotobuf::authTypes_t_IsValid(cdapMessage.get_auth_mech()))	{
 		throw CDAPException("Serializing Message: Not a valid AuthType");
 	}
 	gpfCDAPMessage.set_authmech((cdap::impl::googleprotobuf::authTypes_t)cdapMessage.get_auth_mech());
 
-	cdap::impl::googleprotobuf::authValue_t gpb_auth_value;
+	cdap::impl::googleprotobuf::authValue_t *gpb_auth_value = new cdap::impl::googleprotobuf::authValue_t();
 	AuthValue auth_value = cdapMessage.get_auth_value();
-	gpb_auth_value.set_authname(auth_value.get_auth_name());
-	gpb_auth_value.set_authother(auth_value.get_auth_other());
-	gpb_auth_value.set_authpassword(auth_value.get_auth_password());
-	gpfCDAPMessage.set_allocated_authvalue(&gpb_auth_value);
+	gpb_auth_value->set_authname(auth_value.get_auth_name());
+	gpb_auth_value->set_authother(auth_value.get_auth_other());
+	gpb_auth_value->set_authpassword(auth_value.get_auth_password());
+	gpfCDAPMessage.set_allocated_authvalue(gpb_auth_value);
 
 	gpfCDAPMessage.set_destaeinst(cdapMessage.get_dest_ae_inst());
 	gpfCDAPMessage.set_destaename(cdapMessage.get_dest_ae_name());
@@ -1039,7 +1067,38 @@ const char* GPBWireMessageProvider::serializeMessage(
 	gpfCDAPMessage.set_objinst(cdapMessage.get_obj_inst());
 	gpfCDAPMessage.set_objname(cdapMessage.get_obj_name());
 
-	gpfCDAPMessage.set_objvalue(cdapMessage.get_obj_value());
+	cdap::impl::googleprotobuf::objVal_t *gpb_obj_val = new cdap::impl::googleprotobuf::objVal_t();
+	switch(cdapMessage.get_obj_value()->isType()) {
+	case ObjectValueInterface::inttype:
+		gpb_obj_val->set_intval(*(int*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::sinttype:
+		gpb_obj_val->set_sintval(*(short int*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::longtype:
+		gpb_obj_val->set_int64val(*(long long*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::slongtype:
+		gpb_obj_val->set_sint64val(*(long*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::stringtype:
+		gpb_obj_val->set_strval(*(std::string*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::bytetype:
+		gpb_obj_val->set_byteval((char*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::floattype:
+		gpb_obj_val->set_floatval(*(float*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::doubletype:
+		gpb_obj_val->set_doubleval(*(double*)cdapMessage.get_obj_value()->get_value());
+		break;
+	case ObjectValueInterface::booltype:
+		gpb_obj_val->set_boolval(*(bool*)cdapMessage.get_obj_value()->get_value());
+		break;
+	}
+	gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
+
 	if (!cdap::impl::googleprotobuf::opCode_t_IsValid(cdapMessage.get_op_code())) {
 		throw CDAPException("Serializing Message: Not a valid OpCode");
 	}
@@ -1052,5 +1111,13 @@ const char* GPBWireMessageProvider::serializeMessage(
 	gpfCDAPMessage.set_srcapname(cdapMessage.get_src_ap_name());
 	gpfCDAPMessage.set_srcapinst(cdapMessage.get_src_ap_inst());
 	gpfCDAPMessage.set_version(cdapMessage.get_version());
+
+	char *serialized_message = new char[gpfCDAPMessage.ByteSize()];
+	gpfCDAPMessage.SerializeToArray(serialized_message, gpfCDAPMessage.ByteSize());
+
+	delete gpb_auth_value;
+	delete gpb_obj_val;
+
+	return serialized_message;
 }
 }
