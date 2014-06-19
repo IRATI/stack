@@ -30,8 +30,24 @@ namespace rinad {
 
 class NMinusOneFlowManager: public INMinusOneFlowManager {
 public:
+	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_CLASS;
+	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
+	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS;
+	static const std::string N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS;
+	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+
 	NMinusOneFlowManager();
 	void set_ipc_process(IPCProcess * ipc_process);
+	unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) throw (Exception);
+	void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) throw (Exception);
+	void flowAllocationRequested(const rina::FlowRequestEvent& event) throw (Exception);
+	void deallocateNMinus1Flow(int portId) throw(Exception);
+	void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) throw (Exception);
+	void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) throw(Exception);
+	const rina::FlowInformation& getNMinus1FlowInformation(int portId) const throw (Exception);
+	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) throw (Exception);
+	bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName);
 
 private:
 	IPCProcess * ipc_process_;
@@ -40,25 +56,24 @@ private:
 
 	///Populate the IPC Process RIB with the objects related to N-1 Flow Management
 	void populateRIB();
+
+	///Remove the N-1 flow object from the RIB and send an internal notification
+	void cleanFlowAndNotify(int portId);
 };
 
-/// Registrations to N-1 DIFs
-class DIFRegistrationSetRIBObject : public BaseRIBObject {
+class ResourceAllocator: public IResourceAllocator {
 public:
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
-
-	DIFRegistrationSetRIBObject(IPCProcess * ipcProcess,
-			INMinusOneFlowManager * nMinus1FlowManager);
-    void createObject(const std::string& objectClass, const std::string& objectName,
-    		void* objectValue) throw (Exception);
-    void* get_value();
+	ResourceAllocator();
+	~ResourceAllocator();
+	void set_ipc_process(IPCProcess * ipc_process);
+	INMinusOneFlowManager * get_n_minus_one_flow_manager() const;
+	IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const;
 
 private:
-    INMinusOneFlowManager * n_minus_one_flow_manager_;
+	IPCProcess * ipc_process_;
+	INMinusOneFlowManager * n_minus_one_flow_manager_;
+	IPDUForwardingTableGenerator * pdu_forwarding_table_generator_;
 };
-
 
 }
 
