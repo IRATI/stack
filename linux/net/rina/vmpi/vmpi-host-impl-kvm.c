@@ -60,6 +60,8 @@ enum {
         VHOST_NET_VQ_MAX = 2,
 };
 
+extern unsigned int vmpi_max_channels;
+
 struct vmpi_impl_queue {
         struct vhost_virtqueue vq;
 };

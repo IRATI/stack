@@ -34,6 +34,8 @@
 #include <asm/xen/page.h>
 
 
+extern unsigned int vmpi_max_channels;
+
 /* Provide an option to disable split event channels at load time as
  * event channels are limited resource. Split event channels are
  * enabled by default.
