@@ -205,6 +205,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
         vif->write = vmpi_get_write_ring(vif->mpi);
         vif->read = vmpi_get_read_queue(vif->mpi);
         vif->read_cb = NULL;
+        vif->stats = vmpi_get_stats(vif->mpi);
 
 	__module_get(THIS_MODULE);
 
