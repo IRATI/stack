@@ -26,7 +26,7 @@
 
 #ifdef VMPI_TEST
 int vmpi_test_init(void *, bool deferred);
-void vmpi_test_fini(bool deferred);
+void vmpi_test_fini(void *, bool deferred);
 #endif  /* VMPI_TEST */
 
 #endif  /* __VMPI_TEST_H__ */
