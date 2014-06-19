@@ -47,17 +47,17 @@
 
 /* Max number of bytes transferred before requeueing the job.
  * Using this limit prevents one virtqueue from starving others. */
-#define VHOST_NET_WEIGHT_X  0x80000
-#define VHOST_NET_WEIGHT    150
+#define VHOST_MPI_WEIGHT_X  0x80000
+#define VHOST_MPI_WEIGHT    150
 
 enum {
         VHOST_MPI_FEATURES = VHOST_FEATURES,
 };
 
 enum {
-        VHOST_NET_VQ_RX = 0,
-        VHOST_NET_VQ_TX = 1,
-        VHOST_NET_VQ_MAX = 2,
+        VHOST_MPI_VQ_RX = 0,
+        VHOST_MPI_VQ_TX = 1,
+        VHOST_MPI_VQ_MAX = 2,
 };
 
 extern unsigned int vmpi_max_channels;
@@ -68,8 +68,8 @@ struct vmpi_impl_queue {
 
 struct vmpi_impl_info {
         struct vhost_dev dev;
-        struct vmpi_impl_queue vqs[VHOST_NET_VQ_MAX];
-        struct vhost_poll poll[VHOST_NET_VQ_MAX];
+        struct vmpi_impl_queue vqs[VHOST_MPI_VQ_MAX];
+        struct vhost_poll poll[VHOST_MPI_VQ_MAX];
 
         struct file *file;
         wait_queue_head_t wqh_poll;
@@ -127,7 +127,7 @@ read_cb_worker_function(struct work_struct *work)
 static void
 handle_tx(struct vmpi_impl_info *vi)
 {
-        struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_NET_VQ_TX];
+        struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_TX];
         struct vhost_virtqueue *vq = &nvq->vq;
         struct vmpi_queue *read;
         unsigned out, in;
@@ -210,7 +210,7 @@ handle_tx(struct vmpi_impl_info *vi)
 
                 vhost_add_used_and_signal(&vi->dev, vq, head, 0);
                 total_len += len;
-                if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+                if (unlikely(total_len >= VHOST_MPI_WEIGHT)) {
                         vhost_poll_queue(&vq->poll);
                         break;
                 }
@@ -299,7 +299,7 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
 static void
 handle_rx(struct vmpi_impl_info *vi)
 {
-        struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_NET_VQ_RX];
+        struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_RX];
         struct vhost_virtqueue *vq = &nvq->vq;
         struct vmpi_ring *ring = vi->write;
         unsigned uninitialized_var(in), log;
@@ -357,7 +357,7 @@ handle_rx(struct vmpi_impl_info *vi)
                 if (unlikely(vq_log))
                         vhost_log_write(vq, vq_log, log, len);
                 total_len += len;
-                if (unlikely(total_len >= VHOST_NET_WEIGHT)) {
+                if (unlikely(total_len >= VHOST_MPI_WEIGHT)) {
                         vhost_poll_queue(&vq->poll);
                         break;
                 }
@@ -392,7 +392,7 @@ static void
 handle_tx_mpi(struct vhost_work *work)
 {
         struct vmpi_impl_info *vi = container_of(work, struct vmpi_impl_info,
-                                                 poll[VHOST_NET_VQ_TX].work);
+                                                 poll[VHOST_MPI_VQ_TX].work);
         handle_tx(vi);
 }
 
@@ -400,7 +400,7 @@ static void
 handle_rx_mpi(struct vhost_work *work)
 {
         struct vmpi_impl_info *vi = container_of(work, struct vmpi_impl_info,
-                                                 poll[VHOST_NET_VQ_RX].work);
+                                                 poll[VHOST_MPI_VQ_RX].work);
         handle_rx(vi);
 }
 
@@ -414,23 +414,23 @@ vhost_mpi_open(struct inode *inode, struct file *f)
 
         if (!vi)
                 return -ENOMEM;
-        vqs = kmalloc(VHOST_NET_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
+        vqs = kmalloc(VHOST_MPI_VQ_MAX * sizeof(*vqs), GFP_KERNEL);
         if (!vqs) {
                 kfree(vi);
                 return -ENOMEM;
         }
 
         dev = &vi->dev;
-        vqs[VHOST_NET_VQ_TX] = &vi->vqs[VHOST_NET_VQ_TX].vq;
-        vqs[VHOST_NET_VQ_RX] = &vi->vqs[VHOST_NET_VQ_RX].vq;
-        vi->vqs[VHOST_NET_VQ_TX].vq.handle_kick = handle_tx_kick;
-        vi->vqs[VHOST_NET_VQ_RX].vq.handle_kick = handle_rx_kick;
+        vqs[VHOST_MPI_VQ_TX] = &vi->vqs[VHOST_MPI_VQ_TX].vq;
+        vqs[VHOST_MPI_VQ_RX] = &vi->vqs[VHOST_MPI_VQ_RX].vq;
+        vi->vqs[VHOST_MPI_VQ_TX].vq.handle_kick = handle_tx_kick;
+        vi->vqs[VHOST_MPI_VQ_RX].vq.handle_kick = handle_rx_kick;
 
-        vhost_dev_init(dev, vqs, VHOST_NET_VQ_MAX);
+        vhost_dev_init(dev, vqs, VHOST_MPI_VQ_MAX);
 
-        vhost_poll_init(vi->poll + VHOST_NET_VQ_TX,
+        vhost_poll_init(vi->poll + VHOST_MPI_VQ_TX,
                         handle_tx_mpi, POLLOUT, dev);
-        vhost_poll_init(vi->poll + VHOST_NET_VQ_RX,
+        vhost_poll_init(vi->poll + VHOST_MPI_VQ_RX,
                         handle_rx_mpi, POLLIN, dev);
 
         f->private_data = vi;
@@ -501,8 +501,8 @@ vhost_mpi_stop_vq(struct vmpi_impl_info *vi, struct vhost_virtqueue *vq)
 static void
 vhost_mpi_stop(struct vmpi_impl_info *vi)
 {
-        vhost_mpi_stop_vq(vi, &vi->vqs[VHOST_NET_VQ_TX].vq);
-        vhost_mpi_stop_vq(vi, &vi->vqs[VHOST_NET_VQ_RX].vq);
+        vhost_mpi_stop_vq(vi, &vi->vqs[VHOST_MPI_VQ_TX].vq);
+        vhost_mpi_stop_vq(vi, &vi->vqs[VHOST_MPI_VQ_RX].vq);
 }
 
 static void
@@ -515,8 +515,8 @@ vhost_mpi_flush_vq(struct vmpi_impl_info *vi, int index)
 static void
 vhost_mpi_flush(struct vmpi_impl_info *vi)
 {
-        vhost_mpi_flush_vq(vi, VHOST_NET_VQ_TX);
-        vhost_mpi_flush_vq(vi, VHOST_NET_VQ_RX);
+        vhost_mpi_flush_vq(vi, VHOST_MPI_VQ_TX);
+        vhost_mpi_flush_vq(vi, VHOST_MPI_VQ_RX);
 }
 
 static int
@@ -559,7 +559,7 @@ vhost_mpi_startstop(struct vmpi_impl_info *vi, unsigned index, unsigned enable)
         if (r)
                 goto err;
 
-        if (index >= VHOST_NET_VQ_MAX) {
+        if (index >= VHOST_MPI_VQ_MAX) {
                 r = -ENOBUFS;
                 goto err;
         }

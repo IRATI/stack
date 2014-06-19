@@ -180,7 +180,7 @@ ssize_t
 vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                   const struct iovec *iv, unsigned long iovcnt, bool user)
 {
-        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_RX];
+        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_MPI_VQ_RX];
         struct vmpi_ring *ring = &mpi->write;
         size_t len = iov_length(iv, iovcnt);
         DECLARE_WAITQUEUE(wait, current);
@@ -248,7 +248,7 @@ ssize_t
 vmpi_read(struct vmpi_info *mpi, unsigned int channel,
           const struct iovec *iv, unsigned long iovcnt)
 {
-        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_TX];
+        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_MPI_VQ_TX];
         struct vmpi_queue *queue;
         ssize_t len = iov_length(iv, iovcnt);
         DECLARE_WAITQUEUE(wait, current);
