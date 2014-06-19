@@ -1,5 +1,5 @@
 /*
- * A guest-side vmpi-impl implementation for Xen
+ * I/O ring definitions for vmpi-impl over Xen
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
@@ -23,15 +23,6 @@
 
 #include <xen/interface/io/ring.h>
 #include <xen/interface/grant_table.h>
-
-/*
- * Notifications after enqueuing any type of message should be conditional on
- * the appropriate req_event or rsp_event field in the shared ring.
- * If the client sends notification for rx requests then it should specify
- * feature 'feature-rx-notify' via xenbus. Otherwise the backend will assume
- * that it cannot safely queue packets (as it may not be kicked to send them).
- */
-
  /*
  * "feature-split-event-channels" is introduced to separate guest TX
  * and RX notificaion. Backend either doesn't support this feature or
@@ -48,7 +39,7 @@
 struct xen_mpi_tx_request {
     grant_ref_t gref;      /* Reference to buffer page */
     uint16_t offset;       /* Offset within buffer page */
-    uint16_t flags;        /* XEN_NETTXF_* */
+    uint16_t flags;        /* XXX UNUSED */
     uint16_t id;           /* Echoed in response message. */
     uint16_t size;         /* Packet size in bytes.       */
 };
