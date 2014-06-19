@@ -39,6 +39,52 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 }
 
 void NMinusOneFlowManager::populateRIB(){
+	try {
+		BaseRIBObject * object = new DIFRegistrationSetRIBObject(ipc_process_, this);
+		rib_daemon_->addRIBObject(object);
+	} catch (Exception &e) {
+		//TODO log error
+	}
+}
+
+//Class DIFRegistrationSetRIBObject
+const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS
+	= "DIF registration set";
+const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_RIB_OBJECT_CLASS
+	= "DIF registration";
+const std::string DIFRegistrationSetRIBObject::DIF_REGISTRATION_SET_RIB_OBJECT_NAME
+	= RIBObjectNames::SEPARATOR + RIBObjectNames::DIF + RIBObjectNames::SEPARATOR +
+	RIBObjectNames::RESOURCE_ALLOCATION + RIBObjectNames::SEPARATOR +
+	RIBObjectNames::NMINUSONEFLOWMANAGER + RIBObjectNames::SEPARATOR + RIBObjectNames::DIF_REGISTRATIONS;
+
+DIFRegistrationSetRIBObject::DIFRegistrationSetRIBObject(IPCProcess * ipcProcess,
+			INMinusOneFlowManager * nMinus1FlowManager) :
+					BaseRIBObject(ipcProcess, DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
+							objectInstanceGenerator->getObjectInstance(),
+							DIF_REGISTRATION_SET_RIB_OBJECT_NAME) {
+	n_minus_one_flow_manager_ = nMinus1FlowManager;
+}
+
+void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
+		const std::string& objectName, void* objectValue) throw (Exception) {
+	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(), objectClass,
+			objectName, objectValue);
+	add_child(ribObject);
+	get_rib_daemon()->addRIBObject(ribObject);
+}
+
+void* DIFRegistrationSetRIBObject::get_value() {
+	int i=0;
+	std::list<BaseRIBObject*> children = get_children();
+	void ** result = new void*[children.size()];
+
+	for (std::list<BaseRIBObject*>::iterator it = children.begin();
+				it != children.end(); it++) {
+		result[i] = (*it)->get_value();
+		i++;
+	}
+
+	return result;
 }
 
 }

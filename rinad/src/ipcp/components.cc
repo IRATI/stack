@@ -183,9 +183,9 @@ void BaseRIBObject::remove_child(const std::string& objectName) throw (Exception
 	throw Exception("Unknown child object");
 }
 
-void BaseRIBObject::createObject(const std::string& objectClass, long objectInstance,
-			const std::string& objectName, void* objectValue) throw (Exception) {
-	operartion_not_supported(objectClass, objectInstance, objectName, objectValue);
+void BaseRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+		void* objectValue) throw (Exception) {
+	operartion_not_supported(objectClass, objectName, objectValue);
 }
 
 void BaseRIBObject::deleteObject() throw (Exception) {
@@ -193,8 +193,7 @@ void BaseRIBObject::deleteObject() throw (Exception) {
 }
 
 BaseRIBObject * BaseRIBObject::readObject() throw (Exception) {
-	operation_not_supported();
-	return 0;
+	return this;
 }
 
 void BaseRIBObject::writeObject(void* object_value) throw (Exception) {
@@ -266,11 +265,11 @@ void BaseRIBObject::operation_not_supported(const rina::CDAPMessage& cdapMessage
 	throw Exception(ss.str().c_str());
 }
 
-void BaseRIBObject::operartion_not_supported(const std::string& objectClass, long objectInstance,
+void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
 		const std::string& objectName, void* objectValue) throw (Exception) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
-	ss<<"Class: "<<objectClass<<"; Name: "<<objectName<<"; Instance: "<<objectInstance;
+	ss<<"Class: "<<objectClass<<"; Name: "<<objectName;
 	ss<<"; Value memory @: "<<objectValue;
 
 	throw Exception(ss.str().c_str());
@@ -306,17 +305,13 @@ void* SimpleRIBObject::get_value() {
 	return object_value_;
 }
 
-BaseRIBObject * SimpleRIBObject::readObject() throw (Exception) {
-	return this;
-}
-
 void SimpleRIBObject::writeObject(void* object_value) throw (Exception) {
 	object_value_ = object_value;
 }
 
-void SimpleRIBObject::createObject(const std::string& objectClass, long objectInstance,
-		const std::string& objectName, void* objectValue) throw (Exception) {
-	if (objectName.compare("") != 0 && objectClass.compare("") != 0 && objectInstance >=0 ) {
+void SimpleRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+		void* objectValue) throw (Exception) {
+	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
 		object_value_ = objectValue;
 	}
 }
@@ -330,6 +325,7 @@ SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IPCProcess* ipc_process,
 void SimpleSetMemberRIBObject::deleteObject() throw (Exception) {
 	get_parent()->remove_child(get_name());
 	get_rib_daemon()->removeRIBObject(get_name());
+	delete this;
 }
 
 }

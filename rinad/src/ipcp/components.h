@@ -390,7 +390,7 @@ public:
 	void remove_child(const std::string& objectName) throw (Exception);
 
 	/// Local invocations
-	virtual void createObject(const std::string& objectClass, long objectInstance,
+	virtual void createObject(const std::string& objectClass,
 			const std::string& objectName, void* objectValue) throw (Exception);
 	virtual void deleteObject() throw (Exception);
 	virtual BaseRIBObject * readObject() throw (Exception);
@@ -427,8 +427,8 @@ private:
 	void operation_not_supported(void* object) throw (Exception);
 	void operation_not_supported(const rina::CDAPMessage& cdapMessage,
 			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	void operartion_not_supported(const std::string& objectClass, long objectInstance,
-			const std::string& objectName, void* objectValue) throw (Exception);
+	void operartion_not_supported(const std::string& objectClass, const std::string& objectName,
+			void* objectValue) throw (Exception);
 };
 
 /// Common interface for update strategies implementations. Can be on demand, scheduled, periodic
@@ -669,12 +669,11 @@ public:
 	SimpleRIBObject(IPCProcess* ipc_process, const std::string& object_class,
 			const std::string& object_name, void* object_value);
 	virtual void* get_value();
-	virtual BaseRIBObject * readObject() throw (Exception);
 	virtual void writeObject(void* object) throw (Exception);
 
 	/// Create has the semantics of update
-	virtual void createObject(const std::string& objectClass, long objectInstance,
-				const std::string& objectName, void* objectValue) throw (Exception);
+	virtual void createObject(const std::string& objectClass, const std::string& objectName,
+			void* objectValue) throw (Exception);
 
 private:
 	void* object_value_;

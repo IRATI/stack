@@ -42,12 +42,22 @@ private:
 	void populateRIB();
 };
 
-/*
-class DIFRegistrationRIBObject: public BaseRIBObject {
+/// Registrations to N-1 DIFs
+class DIFRegistrationSetRIBObject : public BaseRIBObject {
 public:
-	DIFRegistrationRIBObject(IPCProcess * ipc_process, const std::string& name,
-			const std::string& dif_name);
-};*/
+	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_CLASS;
+	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
+	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+
+	DIFRegistrationSetRIBObject(IPCProcess * ipcProcess,
+			INMinusOneFlowManager * nMinus1FlowManager);
+    void createObject(const std::string& objectClass, const std::string& objectName,
+    		void* objectValue) throw (Exception);
+    void* get_value();
+
+private:
+    INMinusOneFlowManager * n_minus_one_flow_manager_;
+};
 
 
 }
