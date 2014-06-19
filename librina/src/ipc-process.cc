@@ -1167,4 +1167,59 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 #endif
 }
 
+// CLASS DirectoryForwardingTableEntry
+DirectoryForwardingTableEntry::DirectoryForwardingTableEntry() {
+	address_ = 0;
+	timestamp_ = 0;
+}
+
+ApplicationProcessNamingInformation DirectoryForwardingTableEntry::get_ap_naming_info() const {
+	return ap_naming_info_;
+}
+
+void DirectoryForwardingTableEntry::set_ap_naming_info(
+		const ApplicationProcessNamingInformation &ap_naming_info) {
+	ap_naming_info_ = ap_naming_info;
+}
+
+long DirectoryForwardingTableEntry::get_address() const {
+	return address_;
+}
+
+void DirectoryForwardingTableEntry::set_address(long address) {
+	address_ = address;
+}
+
+long DirectoryForwardingTableEntry::get_timestamp() const {
+	return timestamp_;
+}
+
+void DirectoryForwardingTableEntry::set_timestamp(long timestamp) {
+	timestamp_ = timestamp;
+}
+
+std::string DirectoryForwardingTableEntry::getKey() {
+	return ap_naming_info_.getEncodedString();
+}
+
+bool DirectoryForwardingTableEntry::operator==(const DirectoryForwardingTableEntry &object) {
+	if (object.get_ap_naming_info() != ap_naming_info_) {
+		return false;
+	}
+
+	if (object.get_address() != address_) {
+		return false;
+	}
+	return true;
+}
+
+std::string DirectoryForwardingTableEntry::toString() {
+    std::stringstream ss;
+    ss << this->get_ap_naming_info().toString() << std::endl;
+	ss << "IPC Process address: " << address_ << std::endl;
+	ss << "Timestamp: " << timestamp_ << std::endl;
+
+	return ss.str();
+}
+
 }

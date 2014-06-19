@@ -93,12 +93,287 @@ class IEncoder {
 		virtual ~IEncoder(){};
 };
 
+/// Contains the objects needed to request the Enrollment
+class EnrollmentRequest
+{
+public:
+	EnrollmentRequest(const rina::Neighbor &neighbor, const rina::EnrollToDIFRequestEvent &event);
+	const rina::Neighbor& get_neighbor() const;
+	void set_neighbor(const rina::Neighbor &neighbor);
+	const rina::EnrollToDIFRequestEvent& get_event() const;
+	void set_event(const rina::EnrollToDIFRequestEvent &event);
+
+private:
+		rina::Neighbor neighbor_;
+		rina::EnrollToDIFRequestEvent event_;
+};
+
+/// Interface that must be implementing by classes that provide
+/// the behavior of an enrollment task
+class IEnrollmentTask : public IPCProcessComponent {
+public:
+	virtual ~IEnrollmentTask(){};
+	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
+	virtual const std::list<std::string>& get_enrolled_ipc_process_names() const = 0;
+
+	/// A remote IPC process Connect request has been received
+	/// @param cdapMessage
+	/// @param cdapSessionDescriptor
+	virtual void connect(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+
+	/// A remote IPC process Connect response has been received
+	/// @param cdapMessage
+	/// @param cdapSessionDescriptor
+	virtual void connectResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+
+	/// A remote IPC process Release request has been received
+	/// @param cdapMessage
+	/// @param cdapSessionDescripton
+	virtual void release(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+
+	/// A remote IPC process Release response has been received
+	/// @param cdapMessage
+	/// @param cdapSessionDescriptor
+	virtual void releaseResponse(const rina::CDAPMessage& cdapMessage,
+			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+
+	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
+	/// @param event
+	/// @param flowInformation
+	virtual void processEnrollmentRequestEvent(const rina::EnrollToDIFRequestEvent& event,
+			const rina::DIFInformation& difInformation) = 0;
+
+	/// Starts the enrollment program
+	/// @param cdapMessage
+	/// @param cdapSessionDescriptor
+	virtual void initiateEnrollment(EnrollmentRequest request) = 0;
+
+	/// Called by the enrollment state machine when the enrollment request has been completed,
+	/// either successfully or unsuccessfully
+	/// @param candidate the IPC process we were trying to enroll to
+	/// @param enrollee true if this IPC process is the one that initiated the
+	/// enrollment sequence (i.e. it is the application process that wants to
+	/// join the DIF)
+	virtual void enrollmentCompleted(const rina::Neighbor& candidate, bool enrollee) = 0;
+
+	/// Called by the enrollment state machine when the enrollment sequence fails
+	/// @param remotePeer
+	/// @param portId
+	/// @param enrollee
+	/// @param sendMessage
+	/// @param reason
+	virtual void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage) = 0;
+
+	/// Finds out if the ICP process is already enrolled to the IPC process identified by
+	/// the provided apNamingInfo
+	/// @param apNamingInfo
+	/// @return
+	virtual bool isEnrolledTo(const std::string& applicationProcessName) const = 0;
+};
+
+/// Interface that must be implementing by classes that provide
+/// the behavior of a Flow Allocator task
+class IFlowAllocator : public IPCProcessComponent {
+public:
+	virtual ~IFlowAllocator(){};
+
+	/// The Flow Allocator is invoked when an Allocate_Request.submit is received.  The source Flow
+	/// Allocator determines if the request is well formed.  If not well-formed, an Allocate_Response.deliver
+	/// is invoked with the appropriate error code.  If the request is well-formed, a new instance of an
+	/// FlowAllocator is created and passed the parameters of this Allocate_Request to handle the allocation.
+	/// It is a matter of DIF policy (AllocateNoificationPolicy) whether an Allocate_Request.deliver is invoked
+	/// with a status of pending, or whether a response is withheld until an Allocate_Response can be delivered
+	/// with a status of success or failure.
+	/// @param allocateRequest the characteristics of the flow to be allocated.
+	/// to honour the request
+	virtual void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent) = 0;
+
+	virtual void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) = 0;
+
+	/// Forward the allocate response to the Flow Allocator Instance.
+	/// @param portId the portId associated to the allocate response
+	/// @param AllocateFlowResponseEvent - the response from the application
+	virtual void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event) = 0;
+
+	virtual void processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event) = 0;
+
+	virtual void processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event) = 0;
+
+	/// Forward the deallocate request to the Flow Allocator Instance.
+	/// @param the flow deallocate request event
+	/// @throws IPCException
+	virtual void submitDeallocate(const rina::FlowDeallocateRequestEvent& event) = 0;
+
+	/// When an Flow Allocator receives a Create_Request PDU for a Flow object, it consults its local Directory to see if it has an entry.
+	/// If there is an entry and the address is this IPC Process, it creates an FAI and passes the Create_request to it.If there is an
+	/// entry and the address is not this IPC Process, it forwards the Create_Request to the IPC Process designated by the address.
+	/// @param cdapMessage
+	/// @param underlyingPortId
+	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage& cdapMessage, int underlyingPortId) = 0;
+
+	/// Called by the flow allocator instance when it finishes to cleanup the state.
+	/// @param portId
+	virtual void removeFlowAllocatorInstance(int portId) = 0;
+};
+
+/// Namespace Manager Interface
+class INamespaceManager : public IPCProcessComponent {
+public:
+	virtual ~INamespaceManager(){};
+
+	/// Returns the address of the IPC process where the application process is, or
+	/// null otherwise
+	/// @param apNamingInfo
+	/// @return
+	virtual unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+
+	/// Returns the IPC Process id (0 if not an IPC Process) of the registered
+	/// application, or -1 if the app is not registered
+	/// @param apNamingInfo
+	/// @return
+	virtual int getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+
+	/// Add an entry to the directory forwarding table
+	/// @param entry
+	virtual void addDFTEntry(const rina::DirectoryForwardingTableEntry& entry) = 0;
+
+	/// Get an entry from the application name
+	/// @param apNamingInfo
+	/// @return
+	virtual rina::DirectoryForwardingTableEntry getDFTEntry(
+			const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+
+	/// Remove an entry from the directory forwarding table
+	/// @param apNamingInfo
+	virtual void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+
+	/// Process an application registration request
+	/// @param event
+	virtual void processApplicationRegistrationRequestEvent(
+			const rina::ApplicationRegistrationRequestEvent& event) = 0;
+
+	/// Process an application unregistration request
+	/// @param event
+	virtual void processApplicationUnregistrationRequestEvent(
+			const rina::ApplicationUnregistrationRequestEvent& event) = 0;
+};
+
+///N-1 Flow Manager interface
+class INMinusOneFlowManager {
+public:
+	virtual ~INMinusOneFlowManager(){};
+
+	/// Allocate an N-1 Flow with the requested QoS to the destination
+	/// IPC Process
+	/// @param flowInformation contains the destination IPC Process and requested
+    /// QoS information
+	/// @return handle to the flow request
+	virtual unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) throw (Exception) = 0;
+
+	/// Process the result of an allocate request event
+	/// @param event
+	/// @throws IPCException
+	virtual void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) throw (Exception) = 0;
+
+	/// Process a flow allocation request
+	/// @param event
+	/// @throws IPCException if something goes wrong
+	virtual void flowAllocationRequested(const rina::FlowRequestEvent& event) throw (Exception) = 0;
+
+	/// Deallocate the N-1 Flow identified by portId
+	/// @param portId
+	/// @throws IPCException if no N-1 Flow identified by portId exists
+	virtual void deallocateNMinus1Flow(int portId) throw(Exception) = 0;
+
+	/// Process the response of a flow deallocation request
+	/// @throws IPCException
+	virtual void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) throw (Exception) = 0;
+
+	/// A flow has been deallocated remotely, process
+	/// @param portId
+	virtual void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) throw(Exception) = 0;
+
+	/// Return the N-1 Flow descriptor associated to the flow identified by portId
+	/// @param portId
+	/// @return the N-1 Flow information
+    /// @throws IPCException if no N-1 Flow identified by portId exists
+	virtual const rina::FlowInformation& getNMinus1FlowInformation(int portId) const throw (Exception) = 0;
+
+	/// Return the information of all the N-1 flows
+	/// @return
+	/// @throws IPCException
+	virtual const std::list<rina::FlowInformation>& getAllNMinus1FlowsInformation() = 0;
+
+	/// The IPC Process has been unregistered from or registered to an N-1 DIF
+	/// @param evet
+	/// @throws IPCException
+	virtual void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) throw (Exception) = 0;
+
+	/// True if the DIF name is a supoprting DIF, false otherwise
+	/// @param difName
+	/// @return
+	virtual bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName) = 0;
+};
+
+/// Interface PDU Forwarding Table Generator Policy
+class IPDUFTGeneratorPolicy {
+public:
+	virtual ~IPDUFTGeneratorPolicy(){};
+	virtual void set_ipc_process(const IPCProcess& ipc_process) = 0;
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+	virtual void enrollmentToNeighbor(unsigned int address, bool newMember, unsigned int portId) = 0;
+	virtual void flowAllocated(unsigned int address, unsigned int portId,
+			unsigned int neighborAddress, unsigned int neighborPortId) = 0;
+	virtual bool flowDeallocated(unsigned int portId) = 0;
+};
+
+/// Interface PDU Forwarding Table Generator
+class IPDUForwardingTableGenerator {
+public:
+	virtual ~IPDUForwardingTableGenerator(){};
+	virtual void set_ipc_process(const IPCProcess& ipc_process) = 0;
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+	virtual const IPDUFTGeneratorPolicy& get_pdu_ft_generator_policy() const = 0;
+};
+
+/// Resource Allocator Interface
+/// The Resource Allocator (RA) is the core of management in the IPC Process.
+/// The degree of decentralization depends on the policies and how it is used. The RA has a set of meters
+/// and dials that it can manipulate. The meters fall in 3 categories:
+/// 	Traffic characteristics from the user of the DIF
+/// 	Traffic characteristics of incoming and outgoing flows
+/// 	Information from other members of the DIF
+/// The Dials:
+///     Creation/Deletion of QoS Classes
+///     Data Transfer QoS Sets
+///     Modifying Data Transfer Policy Parameters
+///     Creation/Deletion of RMT Queues
+///     Modify RMT Queue Servicing
+///     Creation/Deletion of (N-1)-flows
+///     Assignment of RMT Queues to (N-1)-flows
+///     Forwarding Table Generator Output
+class IResourceAllocator: public IPCProcessComponent {
+public:
+	virtual ~IResourceAllocator(){};
+	virtual const INMinusOneFlowManager& get_n_minus_one_flow_manager() const = 0;
+	virtual const IPDUForwardingTableGenerator& get_pdu_forwarding_table_generator() const = 0;
+};
+
 ///IPC Process interface
 class IPCProcess {
 public:
+	virtual ~IPCProcess(){};
 	virtual const IDelimiter& get_delimiter() const = 0;
 	virtual const IEncoder& get_encoder() const = 0;
 	virtual const rina::CDAPSessionManagerInterface& get_cdap_session_manager() const = 0;
+	virtual const IEnrollmentTask& get_enrollment_task() const = 0;
+	virtual const IFlowAllocator& get_flow_allocator() const = 0;
+	virtual const INamespaceManager& get_namespace_manager() const = 0;
+	virtual const IResourceAllocator& get_resource_allocator() const = 0;
 	virtual unsigned int get_address() = 0;
 	virtual void set_address(unsigned int address) = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
@@ -106,8 +381,7 @@ public:
 	virtual const rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
-	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
-	virtual ~IPCProcess(){};
+	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
 };
 
 /// Contains the object names of the objects in the RIB

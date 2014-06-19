@@ -49,21 +49,6 @@ private:
 	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
 };
 
-/// Contains the objects needed to request the Enrollment
-class EnrollmentRequest
-{
-public:
-	EnrollmentRequest(const rina::Neighbor &neighbor, const rina::EnrollToDIFRequestEvent &event);
-	const rina::Neighbor& get_neighbor() const;
-	void set_neighbor(const rina::Neighbor &neighbor);
-	const rina::EnrollToDIFRequestEvent& get_event() const;
-	void set_event(const rina::EnrollToDIFRequestEvent &event);
-
-private:
-		rina::Neighbor neighbor_;
-		rina::EnrollToDIFRequestEvent event_;
-};
-
 }
 
 #endif

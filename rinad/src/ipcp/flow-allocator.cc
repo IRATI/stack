@@ -34,193 +34,160 @@ const std::string Flow::FLOW_SET_RIB_OBJECT_CLASS = "flow set";
 const std::string Flow::FLOW_RIB_OBJECT_CLASS = "flow";
 
 Flow::Flow() {
-	sourcePortId = 0;
-	destinationPortId = 0;
-	sourceAddress = 0;
-	destinationAddress = 0;
-	currentConnectionIndex = 0;
-	maxCreateFlowRetries = 0;
-	createFlowRetries = 0;
-	hopCount = 0;
-	source = false;
-	state = EMPTY;
-	accessControl = 0;
+	source_port_id_ = 0;
+	destination_port_id_ = 0;
+	source_address_ = 0;
+	destination_address_ = 0;
+	current_connection_index_ = 0;
+	max_create_flow_retries_ = 0;
+	create_flow_retries_ = 0;
+	hop_count_ = 0;
+	source_ = false;
+	state_ = EMPTY;
+	access_control_ = 0;
 }
 
-bool Flow::isSource() const {
-	return source;
+bool Flow::is_source() const {
+	return source_;
 }
 
-void Flow::setSource(bool source) {
-	this->source = source;
+void Flow::set_source(bool source) {
+	source_ = source;
 }
 
-const rina::ApplicationProcessNamingInformation& Flow::getSourceNamingInfo() const {
-	return sourceNamingInfo;
+const rina::ApplicationProcessNamingInformation& Flow::get_source_naming_info() const {
+	return source_naming_info_;
 }
 
-void Flow::setSourceNamingInfo(const rina::ApplicationProcessNamingInformation &sourceNamingInfo) {
-	this->sourceNamingInfo = sourceNamingInfo;
+void Flow::set_source_naming_info(const rina::ApplicationProcessNamingInformation& source_naming_info) {
+	source_naming_info_ = source_naming_info;
 }
 
-const rina::ApplicationProcessNamingInformation& Flow::getDestinationNamingInfo() const {
-	return destinationNamingInfo;
+const rina::ApplicationProcessNamingInformation& Flow::get_destination_naming_info() const {
+	return destination_naming_info_;
 }
 
-void Flow::setDestinationNamingInfo(const rina::ApplicationProcessNamingInformation &destinationNamingInfo) {
-	this->destinationNamingInfo = destinationNamingInfo;
+void Flow::set_destination_naming_info(const rina::ApplicationProcessNamingInformation& destination_naming_info) {
+	destination_naming_info_ = destination_naming_info;
 }
 
-int Flow::getSourcePortId() const {
-	return sourcePortId;
+unsigned int Flow::get_source_port_id() const {
+	return source_port_id_;
 }
 
-void Flow::setSourcePortId(int sourcePortId) {
-	this->sourcePortId = sourcePortId;
+void Flow::set_source_port_id(unsigned int source_port_id) {
+	source_port_id_ = source_port_id;
 }
 
-int Flow::getDestinationPortId() const {
-	return destinationPortId;
+unsigned int Flow::get_destination_port_id() const {
+	return destination_port_id_;
 }
 
-void Flow::setDestinationPortId(int destinationPortId) {
-	this->destinationPortId = destinationPortId;
+void Flow::set_destination_port_id(unsigned int destination_port_id) {
+	destination_port_id_ = destination_port_id;
 }
 
-long Flow::getSourceAddress() const {
-	return sourceAddress;
+unsigned int Flow::get_source_address() const {
+	return source_address_;
 }
 
-void Flow::setSourceAddress(long sourceAddress) {
-	this->sourceAddress = sourceAddress;
+void Flow::set_source_address(unsigned int source_address) {
+	source_address_ = source_address;
 }
 
-long Flow::getDestinationAddress() const {
-	return destinationAddress;
+unsigned int Flow::get_destination_address() const {
+	return destination_address_;
 }
 
-void Flow::setDestinationAddress(long destinationAddress) {
-	this->destinationAddress = destinationAddress;
+void Flow::set_destination_address(unsigned int destination_address) {
+	destination_address_ = destination_address;
 }
 
-const std::list<rina::Connection>& Flow::getConnections() const {
-	return connections;
+const std::list<rina::Connection>& Flow::get_connections() const {
+	return connections_;
 }
 
-void Flow::setConnections(const std::list<rina::Connection> &connections) {
-	this->connections = connections;
+void Flow::set_connections(const std::list<rina::Connection>& connections) {
+	connections_ = connections;
 }
 
-int Flow::getCurrentConnectionIndex() const {
-	return currentConnectionIndex;
+unsigned int Flow::get_current_connection_index() const {
+	return current_connection_index_;
 }
 
-void Flow::setCurrentConnectionIndex(int currentConnectionIndex) {
-	this->currentConnectionIndex = currentConnectionIndex;
+void Flow::set_current_connection_index(unsigned int current_connection_index) {
+	current_connection_index_ = current_connection_index;
 }
 
-Flow::IPCPFlowState Flow::getState() const{
-	return state;
+Flow::IPCPFlowState Flow::get_state() const{
+	return state_;
 }
 
-void Flow::setState(IPCPFlowState state) {
-	this->state = state;
+void Flow::set_state(IPCPFlowState state) {
+	state_ = state;
 }
 
-const rina::FlowSpecification& Flow::getFlowSpecification() const {
-	return flowSpec;
+const rina::FlowSpecification& Flow::get_flow_specification() const {
+	return flow_specification_;
 }
 
-void Flow::setFlowSpecification(const rina::FlowSpecification &flowSpec) {
-	this->flowSpec = flowSpec;
+void Flow::set_flow_specification(const rina::FlowSpecification& flow_specification) {
+	flow_specification_ = flow_specification;
 }
 
-const std::map<std::string, std::string>& Flow::getPolicies() const {
-	return policies;
+char* Flow::get_access_control() const {
+	return access_control_;
 }
 
-void Flow::setPolicies(const std::map<std::string, std::string> &policies) {
-	this->policies = policies;
+void Flow::set_access_control(char* access_control) {
+	access_control_ = access_control;
 }
 
-const std::map<std::string, std::string>& Flow::getPolicyParameters() const {
-	return policyParameters;
+unsigned int Flow::get_max_create_flow_retries() const {
+	return max_create_flow_retries_;
 }
 
-void Flow::setPolicyParameters(const std::map<std::string, std::string> &policyParameters) {
-	this->policyParameters = policyParameters;
+void Flow::set_max_create_flow_retries(unsigned int max_create_flow_retries) {
+	max_create_flow_retries_ = max_create_flow_retries;
 }
 
-char* Flow::getAccessControl() const {
-	return accessControl;
+unsigned int Flow::get_create_flow_retries() const {
+	return create_flow_retries_;
 }
 
-void Flow::setAccessControl(char* accessControl) {
-	this->accessControl = accessControl;
+void Flow::set_create_flow_retries(unsigned int create_flow_retries) {
+	create_flow_retries_ = create_flow_retries;
 }
 
-int Flow::getMaxCreateFlowRetries() const {
-	return maxCreateFlowRetries;
+unsigned int Flow::get_hop_count() const {
+	return hop_count_;
 }
 
-void Flow::setMaxCreateFlowRetries(int maxCreateFlowRetries) {
-	this->maxCreateFlowRetries = maxCreateFlowRetries;
-}
-
-int Flow::getCreateFlowRetries() const {
-	return createFlowRetries;
-}
-
-void Flow::setCreateFlowRetries(int createFlowRetries) {
-	this->createFlowRetries = createFlowRetries;
-}
-
-int Flow::getHopCount() const {
-	return hopCount;
-}
-
-void Flow::setHopCount(int hopCount) {
-	this->hopCount = hopCount;
+void Flow::set_hop_count(unsigned int hop_count) {
+	hop_count_ = hop_count;
 }
 
 std::string Flow::toString() {
     std::stringstream ss;
-    ss << "* State: " << this->state << std::endl;
-    ss << "* Is this IPC Process the requestor of the flow? " << this->source << std::endl;
-    ss << "* Max create flow retries: " << this->maxCreateFlowRetries << std::endl;
-    ss << "* Hop count: " << this->hopCount << std::endl;
-    ss << "* Source AP Naming Info: " << this->sourceNamingInfo.toString() << std::endl;;
-    ss << "* Source address: " << this->sourceAddress << std::endl;
-    ss << "* Source port id: " << this->sourcePortId << std::endl;
-    ss <<  "* Destination AP Naming Info: " << this->destinationNamingInfo.toString();
-    ss <<  "* Destination addres: " + this->destinationAddress << std::endl;
-    ss << "* Destination port id: "+ this->destinationPortId << std::endl;
-    if (connections.size() > 0) {
+    ss << "* State: " << state_ << std::endl;
+    ss << "* Is this IPC Process the requestor of the flow? " << source_ << std::endl;
+    ss << "* Max create flow retries: " << max_create_flow_retries_ << std::endl;
+    ss << "* Hop count: " << hop_count_ << std::endl;
+    ss << "* Source AP Naming Info: " << source_naming_info_.toString() << std::endl;;
+    ss << "* Source address: " << source_address_ << std::endl;
+    ss << "* Source port id: " << source_port_id_ << std::endl;
+    ss <<  "* Destination AP Naming Info: " << destination_naming_info_.toString();
+    ss <<  "* Destination addres: " + destination_address_ << std::endl;
+    ss << "* Destination port id: "+ destination_port_id_ << std::endl;
+    if (connections_.size() > 0) {
 		ss << "* Connection ids of the connection supporting this flow: +\n";
-		for(std::list<rina::Connection>::const_iterator iterator = connections.begin(), end = connections.end(); iterator != end; ++iterator) {
+		for(std::list<rina::Connection>::const_iterator iterator = connections_.begin(), end = connections_.end(); iterator != end; ++iterator) {
 			ss << "Src CEP-id " << iterator->getSourceCepId()
 					<< "; Dest CEP-id " << iterator->getDestCepId()
 					<< "; Qos-id " << iterator->getQosId() << std::endl;
 		}
 	}
-	ss << "* Index of the current active connection for this flow: " << this->currentConnectionIndex << std::endl;
-	if (!this->policies.empty()) {
-		ss << "* Policies: " << std::endl;
-		for (std::map<std::string, std::string>::const_iterator iterator = policies.begin(), end = policies.end();
-				iterator != end; ++iterator)
-		{
-			ss << "   * " << iterator->first << " = " << iterator->second << std::endl;
-		}
-
-	}
-	if (!this->policyParameters.empty()) {
-		ss << "* Policy parameters: " << std::endl;
-		for (std::map<std::string, std::string>::const_iterator iterator = policyParameters.begin(), end = policyParameters.end();
-				iterator != end; ++iterator)
-		{
-			ss << "   * " + iterator->first << " = " << iterator->second << std::endl;
-		}
-	}
+	ss << "* Index of the current active connection for this flow: " << current_connection_index_ << std::endl;
 	return ss.str();
 }
 
