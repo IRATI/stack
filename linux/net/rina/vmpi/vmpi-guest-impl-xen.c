@@ -1169,7 +1169,7 @@ static void mpiback_changed(struct xenbus_device *dev,
 }
 
 static const struct xenbus_device_id mpifront_ids[] = {
-	{ "mpi" },
+	{ "vmpi" },
 	{ "" }
 };
 
