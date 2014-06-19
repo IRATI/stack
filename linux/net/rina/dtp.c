@@ -442,6 +442,7 @@ static void update_left_win_edge_and_post(struct dtp * dtp)
         seq_num_t            LWE;
         seq_num_t            seq_num;
         struct pdu *         pdu;
+        timeout_t            time;
 
         ASSERT(dtp);
 
@@ -454,26 +455,73 @@ static void update_left_win_edge_and_post(struct dtp * dtp)
         seqQ = dtp->seqQ;
         ASSERT(seqQ);
 
+        time = jiffies;
+        in_order_del   = dt->connection->connection_params->in_order_delivery;
+        incomplete_del = dt->connection->connection_params->incomplete_delivery;
+
         /* FIXME: Invoke delimiting */
 
         LWE     = dt_sv_rcv_lft_win(dt);
+
         pdu     = seqQ_pop(seqQ);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-        while ((LWE < seq_num) && (seq_num > 0)) {
-                if (seq_num == (LWE + 1)) {
+        while (!seqQ_empty(seqQ)) {
+        /* while ((LWE <= max_seq_nr_rcv(sv)) && (seq_num > 0)) { */
+                /* if it is next pdu just post and update window edge */
+                if (seq_num == (LWE + 1) || !dt_sv_a(dt)) {
                         sdu_post(dtp, pdu);
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
                                 return;
                         }
+                        if (!in_order_del) {
+                                first_del = dt_seq_num_delivered_pop(dt);
+                                if (first_del == seq_num + 1) {
+                                        while (first_del == seq_num + 1) {
+                                                first_del = 
+                                                dt_seq_num_delivered_pop(dt);
+                                        }
+                                        if (dt_sv_rcv_lft_win_set(dt, first_del)) {
+                                                LOG_ERR("Failed to set new "
+                                                        "left window edge");
+                                                return;
+                                        }
+                                        dt_sv_seq_num_delivered_clean(first_del);
+                                } else {
+                                        dt_seq_delivered_push(dt, first_del);
+                                }
+                        }
                         LWE     = dt_sv_rcv_lft_win(dt);
                         pdu     = seqQ_pop(seqQ);
                         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                       
+                        continue;
+                } else if (!dt_sv_a(dt) && !incomplete_del) {
+                        LOG_WARN("Could not fulfill Flow QoS!");
+                        /* FIXME: Should we continue or break? */
+                        continue;
+                } else if (!in_order_del) { /*incomplete_del does not matter cause 1 PDU = 1 SDU */
+                        sdu_post(dtp, pdu);
+                        dt_sv_seq_num_delivered_add(dt, seq_num);
                         continue;
                 }
                 break;
+        }
+
+        /* Put back the last PDU pop that was not delivered */
+        if (pdu)
+                seqQ_push(seqQ, pdu);
+
+        /* Clean or nack expired PDUs */        
+        if (dt_sv_a(sv))
+                if (!dtcp) {
+                        seqQ_clean_expired(time - dt_sv_a(sv));
+                } else {
+                        /* SEND NACK OR SACK for expired PDUs*/
+                        LOG_MISSING;
+                }
         }
 
         return;
@@ -1122,14 +1170,12 @@ int dtp_receive(struct dtp * instance,
                         return -1;
                 }
 
-                if (dt_sv_a(dt) == 0) {
-                        /*
-                         * FIXME: Invoke delimiting and put all SDUs thus
-                         * created into the KFA or EFCP instance above. Update
-                         * the receiver left window edge
-                         */
-                        update_left_win_edge_and_post(instance);
-                }
+                /*
+                 * FIXME: Invoke delimiting and put all SDUs thus
+                 * created into the KFA or EFCP instance above. Update
+                 * the receiver left window edge
+                 */
+                update_left_win_edge_and_post(instance);
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
