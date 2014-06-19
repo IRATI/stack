@@ -68,7 +68,7 @@
 
 #define RINA_PREFIX "syscalls"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "utils.h"
 #include "rina-syscalls.h"
 #include "rina-systypes.h"

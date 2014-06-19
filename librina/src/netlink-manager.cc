@@ -27,7 +27,7 @@
 
 #define RINA_PREFIX "netlink-manager"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "netlink-manager.h"
 #include "netlink-parsers.h"
 

@@ -20,7 +20,6 @@
 // MA  02110-1301  USA
 //
 
-#include "librina/cdap.h"
 #include "cdap-impl.h"
 
 namespace rina {

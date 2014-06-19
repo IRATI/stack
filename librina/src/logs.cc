@@ -32,7 +32,7 @@
 
 #define RINA_PREFIX "logs"
 
-#include "logs.h"
+#include "librina/logs.h"
 
 LOG_LEVEL        logLevel         = DBG;
 FILE *           logOutputStream  = stdout;

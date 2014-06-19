@@ -26,6 +26,7 @@
 
 #define RINA_PREFIX "ipc-process"
 
+#include "librina/logs.h"
 #include "core.h"
 #include "utils.h"
 #include "rina-syscalls.h"

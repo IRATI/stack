@@ -26,7 +26,7 @@
 
 #define RINA_PREFIX "netlink-messages"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "netlink-messages.h"
 
 #include "librina/application.h"

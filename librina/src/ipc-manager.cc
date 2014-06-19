@@ -32,7 +32,7 @@
 
 #define RINA_PREFIX "ipc-manager"
 
-#include "logs.h"
+#include "librina/logs.h"
 
 #include "librina/ipc-manager.h"
 #include "librina/concurrency.h"

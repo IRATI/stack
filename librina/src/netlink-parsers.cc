@@ -23,7 +23,7 @@
 
 #define RINA_PREFIX "netlink-parsers"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "netlink-parsers.h"
 
 namespace rina {

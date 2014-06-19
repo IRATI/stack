@@ -26,7 +26,7 @@
 
 #define RINA_PREFIX "application"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "core.h"
 #include "rina-syscalls.h"
 #include "librina/application.h"

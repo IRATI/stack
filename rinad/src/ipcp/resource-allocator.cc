@@ -21,6 +21,10 @@
 
 #include <sstream>
 
+#define RINA_PREFIX "resource-allocator"
+
+#include <librina/logs.h>
+
 #include "resource-allocator.h"
 
 namespace rinad {
@@ -43,7 +47,7 @@ void NMinusOneFlowManager::populateRIB(){
 		BaseRIBObject * object = new DIFRegistrationSetRIBObject(ipc_process_, this);
 		rib_daemon_->addRIBObject(object);
 	} catch (Exception &e) {
-		//TODO log error
+		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 }
 
@@ -74,17 +78,7 @@ void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
 }
 
 void* DIFRegistrationSetRIBObject::get_value() {
-	int i=0;
-	std::list<BaseRIBObject*> children = get_children();
-	void ** result = new void*[children.size()];
-
-	for (std::list<BaseRIBObject*>::iterator it = children.begin();
-				it != children.end(); it++) {
-		result[i] = (*it)->get_value();
-		i++;
-	}
-
-	return result;
+	return 0;
 }
 
 }

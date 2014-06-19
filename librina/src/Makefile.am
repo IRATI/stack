@@ -28,7 +28,6 @@ allsources =					\
 	cdap-impl.cc
 	
 EXTRA_DIST =					\
-	logs.h					\
 	utils.h					\
 	core.h					\
 	netlink-messages.h			\

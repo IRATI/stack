@@ -23,7 +23,7 @@
 
 #define RINA_PREFIX "ipc-daemons"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "librina/ipc-daemons.h"
 
 namespace rina {
