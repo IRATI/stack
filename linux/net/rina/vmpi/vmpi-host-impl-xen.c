@@ -229,7 +229,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 		meta_slots_used = xenmpi_gop_buf(vif, buf);
                 BUG_ON(meta_slots_used != 1);
 
-                vmpi_queue_push(&rxq, buf);
+                vmpi_queue_push_back(&rxq, buf);
         }
 
 	BUG_ON(vif->rx_pending_prod > ARRAY_SIZE(vif->rx_meta));
@@ -240,7 +240,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 	BUG_ON(vif->rx_pending_prod > XEN_MPI_RX_RING_SIZE);
 	gnttab_batch_copy(vif->rx_copy_ops, vif->rx_pending_prod);
 
-	while ((buf = vmpi_queue_pop(&rxq)) != NULL) {
+	while ((buf = vmpi_queue_pop_front(&rxq)) != NULL) {
                 int len;
 
 		status = xenmpi_check_gop(vif);
@@ -484,7 +484,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		vif->pending_cons++;
 
                 IFV(printk("%s: built a buffer [len=%d]\n", __func__, (int)buf->len));
-                vmpi_queue_push(&vif->tx_queue, buf);
+                vmpi_queue_push_back(&vif->tx_queue, buf);
 
 		if ((gop-vif->tx_copy_ops) >= ARRAY_SIZE(vif->tx_copy_ops))
 			break;
@@ -502,7 +502,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
         struct vmpi_queue *read;
         unsigned int channel;
 
-	while ((buf = vmpi_queue_pop(&vif->tx_queue)) != NULL) {
+	while ((buf = vmpi_queue_pop_front(&vif->tx_queue)) != NULL) {
 		struct xen_mpi_tx_request *txp;
 		u16 pending_idx;
 
@@ -542,7 +542,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                                 VMPI_RING_SIZE)) {
                                 vmpi_buffer_destroy(buf);
                         } else {
-                                vmpi_queue_push(read, buf);
+                                vmpi_queue_push_back(read, buf);
                         }
                         mutex_unlock(&read->lock);
 

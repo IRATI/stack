@@ -207,7 +207,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
                         continue;
                 }
 
-                buf = vmpi_queue_pop(&mpi->read[channel]);
+                buf = vmpi_queue_pop_front(&mpi->read[channel]);
                 mutex_unlock(&mpi->read[channel].lock);
 
                 copylen = buf->len - sizeof(struct vmpi_hdr);
@@ -270,7 +270,7 @@ recv_worker_function(struct work_struct *work)
                         if (unlikely(vmpi_queue_len(queue) >= VMPI_RING_SIZE)) {
                                 vmpi_buffer_destroy(buf);
                         } else {
-                                vmpi_queue_push(queue, buf);
+                                vmpi_queue_push_back(queue, buf);
                         }
                         mutex_unlock(&queue->lock);
                 } else {

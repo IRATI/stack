@@ -109,7 +109,7 @@ read_cb_worker_function(struct work_struct *work)
                 struct vmpi_buffer *buf;
 
                 mutex_lock(&vi->read_cb_queue.lock);
-                buf = vmpi_queue_pop(&vi->read_cb_queue);
+                buf = vmpi_queue_pop_front(&vi->read_cb_queue);
                 mutex_unlock(&vi->read_cb_queue.lock);
                 if (buf == NULL) {
                         break;
@@ -191,7 +191,7 @@ handle_tx(struct vmpi_impl_info *vi)
                                              VMPI_RING_SIZE)) {
                                         vmpi_buffer_destroy(buf);
                                 } else {
-                                        vmpi_queue_push(read, buf);
+                                        vmpi_queue_push_back(read, buf);
                                 }
                                 mutex_unlock(&read->lock);
 
@@ -201,7 +201,7 @@ handle_tx(struct vmpi_impl_info *vi)
                                                            POLLRDBAND);
                         } else {
                                 mutex_lock(&vi->read_cb_queue.lock);
-                                vmpi_queue_push(&vi->read_cb_queue, buf);
+                                vmpi_queue_push_back(&vi->read_cb_queue, buf);
                                 mutex_unlock(&vi->read_cb_queue.lock);
                                 schedule_work(&vi->read_cb_worker);
                         }

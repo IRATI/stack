@@ -211,7 +211,7 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 			break;
                 }
 
-		vmpi_queue_push(&np->rx_batch, buf);
+		vmpi_queue_push_back(&np->rx_batch, buf);
 	}
 
 	/* Is the batch large enough to be worthwhile? */
@@ -228,7 +228,7 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 
  refill:
 	for (;;) {
-                buf = vmpi_queue_pop(&np->rx_batch);
+                buf = vmpi_queue_pop_front(&np->rx_batch);
 		if (buf == NULL)
 			break;
 

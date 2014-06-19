@@ -284,7 +284,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
                         continue;
                 }
 
-                buf = vmpi_queue_pop(queue);
+                buf = vmpi_queue_pop_front(queue);
                 mutex_unlock(&queue->lock);
 
                 copylen = buf->len - sizeof(struct vmpi_hdr);
