@@ -25,7 +25,7 @@
 
 #define RINA_PREFIX "common"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "config.h"
 #include "core.h"
 

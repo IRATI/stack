@@ -24,9 +24,10 @@
 
 #ifdef __cplusplus
 
-#include "components.h"
+#include "ipcp/components.h"
 
 namespace rinad {
+
 
 }
 

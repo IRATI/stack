@@ -25,6 +25,8 @@
 #ifdef __cplusplus
 
 #include <list>
+#include <librina/common.h>
+#include <librina/cdap.h>
 
 namespace rinad {
 
@@ -71,7 +73,7 @@ class EventListener {
 		virtual ~EventListener(){};
 
 		/// Called when a certain event has happened
-		virtual void eventHappened(const Event& event) = 0;
+		virtual void eventHappened(Event * event) = 0;
 };
 
 /// Interface
@@ -101,10 +103,71 @@ class EventManager
 	    /// @param eventListener The event listener
 		virtual void unsubscribeFromEvents(const std::list<IPCProcessEventType>& eventIds, const EventListener& eventListener) = 0;
 
-		/// Invoked when a certain event has happened
+		/// Invoked when a certain event has happened.
+		/// The Event Manager will inform about this to
+		/// all the subscribers and delete the event
+		/// afterwards. Ownership of event is passed to the
+		/// Event manager.
 		/// @param event
-		virtual void deliverEvent(const Event& event) = 0;
+		virtual void deliverEvent(Event * event) = 0;
 };
+
+/// Event that signals that an N-1 flow allocation failed
+class NMinusOneFlowAllocationFailedEvent: public BaseEvent {
+public:
+	NMinusOneFlowAllocationFailedEvent(unsigned int handle,
+			const rina::FlowInformation& flow_information,
+			const std::string& result_reason);
+	unsigned int get_handle() const;
+	const rina::FlowInformation& get_flow_information() const;
+	const std::string& get_result_reason() const;
+	const std::string toString();
+
+private:
+	/// The portId of the flow denied
+	unsigned int handle_;
+
+	/// The FlowService object describing the flow
+	rina::FlowInformation flow_information_;
+
+	/// The reason why the allocation failed
+	std::string result_reason_;
+};
+
+/// Event that signals the allocation of an N-1 flow
+class NMinusOneFlowAllocatedEvent: public BaseEvent {
+public:
+	NMinusOneFlowAllocatedEvent(unsigned int handle,
+			const rina::FlowInformation& flow_information);
+	unsigned int get_handle() const;
+	const rina::FlowInformation& get_flow_information() const;
+	const std::string toString();
+
+private:
+	/// The portId of the flow denied
+	unsigned int handle_;
+
+	/// The FlowService object describing the flow
+	rina::FlowInformation flow_information_;
+};
+
+/// Event that signals the deallocation of an N-1 flow
+class NMinusOneFlowDeallocatedEvent: public BaseEvent {
+public:
+	NMinusOneFlowDeallocatedEvent(unsigned int port_id,
+			rina::CDAPSessionDescriptor * cdap_session_descriptor);
+	unsigned int get_port_id() const;
+	rina::CDAPSessionDescriptor * get_cdap_session_descriptor() const;
+	const std::string toString();
+
+private:
+	/// The portId of the flow deallocated
+	unsigned int port_id_;
+
+	/// The descriptor of the CDAP session
+	rina::CDAPSessionDescriptor * cdap_session_descriptor_;
+};
+
 
 }
 

@@ -896,7 +896,7 @@ int testIpcmQueryRIBResponseMessage() {
 
 	IpcmDIFQueryRIBResponseMessage message;
 	message.setResult(0);
-	RIBObject * ribObject = new RIBObject();
+	RIBObjectData * ribObject = new RIBObjectData();
 	ribObject->set_class("/test/clazz1");
 	ribObject->set_name("/test/name1");
 	ribObject->set_instance(1234);
@@ -904,7 +904,7 @@ int testIpcmQueryRIBResponseMessage() {
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
-	ribObject = new RIBObject();
+	ribObject = new RIBObjectData();
 	ribObject->set_class("/test/clazz2");
 	ribObject->set_name("/test/name2");
 	ribObject->set_instance(343241);
@@ -947,12 +947,12 @@ int testIpcmQueryRIBResponseMessage() {
 				<< recoveredMessage->getRIBObjects().size() <<std::endl;
 		returnValue = -1;
 	} else {
-		std::list<RIBObject>::const_iterator iterator;
+		std::list<RIBObjectData>::const_iterator iterator;
 		int i = 0;
 		for (iterator = recoveredMessage->getRIBObjects().begin();
 				iterator != recoveredMessage->getRIBObjects().end();
 				++iterator) {
-			const RIBObject& ribObject = *iterator;
+			const RIBObjectData& ribObject = *iterator;
 			if (i == 0){
 				if (ribObject.get_class().compare("/test/clazz1") != 0){
 					std::cout << "RIB Object clazz on original and recovered messages"

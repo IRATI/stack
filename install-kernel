@@ -1,0 +1,42 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=install-kernel
+
+#PREFIX=`echo "$1"|sed -e "s,\/$,,"`
+#
+#echo "$ME: Prefix is \`$PREFIX'"
+#if test -n "$PREFIX" ; then
+#    mkdir -p $PREFIX || {
+#        echo "$ME: Cannot create directory \`$PREFIX'"
+#    }
+#fi
+
+#
+# FIXME: we should definitely do a VPATH build ...
+#
+
+echo "$ME: Installing kernel headers"
+#(cd linux && make INSTALL_HDR_PATH=/usr headers_install) || {
+(cd linux && make headers_install) || {
+    echo "$ME: Cannot install kernel headers"
+    exit 1
+}
+
+echo "$ME: Installing kernel modules"
+#(cd linux && make INSTALL_MOD_PATH=$PREFIX modules_install) || {
+(cd linux && make modules_install) || {
+    echo "$ME: Cannot install kernel modules"
+    exit 1
+}
+
+echo "$ME: Installing kernel"
+#(cd linux && make INSTALL_PATH=$PREFIX/boot install) || {
+(cd linux && make install) || {
+    echo "$ME: Cannot install kernel"
+    exit 1
+}

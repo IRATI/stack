@@ -23,7 +23,7 @@
 
 #define RINA_PREFIX "timer"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "librina/timer.h"
 
 namespace rina {

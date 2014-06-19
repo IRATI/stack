@@ -174,23 +174,11 @@ public:
  * the services that the flow provides.
  */
 class Flow {
-	/** The port-id that locally identifies the flow */
-	int portId;
-
-	/** The name of the DIF that is providing this flow */
-	ApplicationProcessNamingInformation DIFName;
-
-	/** The local application name */
-	ApplicationProcessNamingInformation localApplicationName;
-
-	/** The remote by the flow */
-	ApplicationProcessNamingInformation remoteApplicationName;
-
-	/** The characteristics of the flow */
-	FlowSpecification flowSpecification;
-
 	/** The state of the flow */
 	FlowState flowState;
+
+	/** A summary of the flow information */
+	FlowInformation flowInformation;
 
 	Flow(const ApplicationProcessNamingInformation& localApplicationName,
 	     const ApplicationProcessNamingInformation& remoteApplicationName,
@@ -214,7 +202,7 @@ public:
 	const ApplicationProcessNamingInformation& getRemoteApplcationName() const;
 	const FlowSpecification& getFlowSpecification() const;
 	bool isAllocated() const;
-	FlowInformation getFlowInformation() const;
+	const FlowInformation& getFlowInformation() const;
 
 	/**
 	 * Reads an SDU from the flow. This function will block until there is an
@@ -332,12 +320,12 @@ public:
 	static const std::string error_getting_dif_properties;
 	static const std::string wrong_flow_state;
 
-        /** Return the allocated flow at portId */
-        Flow * getAllocatedFlow(int portId);
+	/** Return the allocated flow at portId */
+	Flow * getAllocatedFlow(int portId);
 
-        /** Return a flow allocated to the remote application name */
-        Flow * getFlowToRemoteApp(
-                        ApplicationProcessNamingInformation remoteAppName);
+	/** Return a flow allocated to the remote application name */
+	Flow * getFlowToRemoteApp(
+			ApplicationProcessNamingInformation remoteAppName);
 
 	/**
 	 * Retrieves the names and characteristics of a single DIF or of all the

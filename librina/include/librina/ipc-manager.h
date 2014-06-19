@@ -916,12 +916,12 @@ public:
  * Event informing about the result of a query RIB operation
  */
 class QueryRIBResponseEvent: public BaseResponseEvent {
-        std::list<RIBObject> ribObjects;
+        std::list<RIBObjectData> ribObjects;
 public:
-        QueryRIBResponseEvent(const std::list<RIBObject>& ribObjects,
+        QueryRIBResponseEvent(const std::list<RIBObjectData>& ribObjects,
                         int result,
                         unsigned int sequenceNumber);
-        const std::list<RIBObject>& getRIBObject() const;
+        const std::list<RIBObjectData>& getRIBObject() const;
 };
 
 /**

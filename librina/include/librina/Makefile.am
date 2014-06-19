@@ -6,6 +6,7 @@
 
 nobase_pkginclude_HEADERS =			\
 	librina.h				\
+	logs.h                  \
 	common.h				\
 	application.h				\
 	configuration.h                  		\

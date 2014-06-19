@@ -26,7 +26,7 @@
 
 #define RINA_PREFIX "application"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "core.h"
 #include "rina-syscalls.h"
 #include "librina/application.h"
@@ -35,37 +35,37 @@ namespace rina {
 
 /* CLASS FLOW */
 Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
-     const ApplicationProcessNamingInformation& remoteApplicationName,
-     const FlowSpecification& flowSpecification, FlowState flowState){
-        this->localApplicationName = localApplicationName;
-        this->remoteApplicationName = remoteApplicationName;
-        this->flowSpecification = flowSpecification;
-        this->flowState = flowState;
-        this->portId = 0;
+		const ApplicationProcessNamingInformation& remoteApplicationName,
+		const FlowSpecification& flowSpecification, FlowState flowState){
+	flowInformation.setLocalAppName(localApplicationName);
+	flowInformation.setRemoteAppName(remoteApplicationName);
+	flowInformation.setFlowSpecification(flowSpecification);
+	flowInformation.setPortId(0);
+	this->flowState = flowState;
 }
 
 Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
-           const ApplicationProcessNamingInformation& remoteApplicationName,
-	   const FlowSpecification& flowSpecification, FlowState flowState,
-	   const ApplicationProcessNamingInformation& DIFName, int portId) {
-	this->localApplicationName = localApplicationName;
-	this->remoteApplicationName = remoteApplicationName;
-	this->flowSpecification = flowSpecification;
-	this->DIFName = DIFName;
+		const ApplicationProcessNamingInformation& remoteApplicationName,
+		const FlowSpecification& flowSpecification, FlowState flowState,
+		const ApplicationProcessNamingInformation& DIFName, int portId) {
+	flowInformation.setLocalAppName(localApplicationName);
+	flowInformation.setRemoteAppName(remoteApplicationName);
+	flowInformation.setFlowSpecification(flowSpecification);
+	flowInformation.setPortId(portId);
+	flowInformation.setDifName(DIFName);
 	this->flowState = flowState;
-	this->portId = portId;
 }
 
 void Flow::setPortId(int portId){
-        this->portId = portId;
+	flowInformation.setPortId(portId);
 }
 
 void Flow::setDIFName(const ApplicationProcessNamingInformation& DIFName) {
-        this->DIFName = DIFName;
+	flowInformation.setDifName(DIFName);
 }
 
 void Flow::setState(FlowState flowState) {
-        this->flowState = flowState;
+	this->flowState = flowState;
 }
 
 const FlowState& Flow::getState() const {
@@ -73,40 +73,33 @@ const FlowState& Flow::getState() const {
 }
 
 int Flow::getPortId() const {
-	return portId;
+	return flowInformation.getPortId();
 }
 
 const ApplicationProcessNamingInformation&
 Flow::getDIFName() const {
-	return DIFName;
+	return flowInformation.getDifName();
 }
 
 const ApplicationProcessNamingInformation&
 Flow::getLocalApplicationName() const {
-	return localApplicationName;
+	return flowInformation.getLocalAppName();
 }
 
 const ApplicationProcessNamingInformation&
 Flow::getRemoteApplcationName() const {
-	return remoteApplicationName;
+	return flowInformation.getRemoteAppName();
 }
 
 const FlowSpecification& Flow::getFlowSpecification() const {
-	return flowSpecification;
+	return flowInformation.getFlowSpecification();
 }
 
 bool Flow::isAllocated() const{
 	return flowState == FLOW_ALLOCATED;
 }
 
-FlowInformation Flow::getFlowInformation() const {
-   FlowInformation flowInformation;
-   flowInformation.setDifName(DIFName);
-   flowInformation.setFlowSpecification(flowSpecification);
-   flowInformation.setLocalAppName(localApplicationName);
-   flowInformation.setRemoteAppName(remoteApplicationName);
-   flowInformation.setPortId(portId);
-
+const FlowInformation& Flow::getFlowInformation() const {
    return flowInformation;
 }
 
@@ -121,7 +114,7 @@ int Flow::readSDU(void * sdu, int maxBytes)
 
 	return maxBytes;
 #else
-	int result = syscallReadSDU(portId, sdu, maxBytes);
+	int result = syscallReadSDU(flowInformation.getPortId(), sdu, maxBytes);
 	if (result < 0){
 		throw ReadSDUException();
 	}
@@ -141,7 +134,7 @@ void Flow::writeSDU(void * sdu, int size)
         (void)sdu;
         (void)size;
 #else
-	int result = syscallWriteSDU(portId, sdu, size);
+	int result = syscallWriteSDU(flowInformation.getPortId(), sdu, size);
 	if (result < 0){
 		throw WriteSDUException();
 	}
