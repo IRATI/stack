@@ -50,7 +50,7 @@
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm *default_kipcm;
 
-static unsigned int vmpi_max_channels = 64; //VMPI_MAX_CHANNELS_DEFAULT;
+static unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
 module_param(vmpi_max_channels, uint, 0444);
 
 /* Private data associated to shim IPC process factory. */
