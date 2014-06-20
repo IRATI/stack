@@ -667,6 +667,8 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
 
         /* FIXME: Invoke delimiting */
 
+        spin_lock(&sv->lock);
+
         LWE     = dt_sv_rcv_lft_win(dt);
         pdu     = seqQ_pop(seqQ);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
@@ -688,6 +690,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
+                                spin_unlock(&sv->lock);
                                 return 0;
                         }
                         LWE     = dt_sv_rcv_lft_win(dt);
@@ -707,6 +710,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
                 seqQ_push(dtp, pdu);
 
         LOG_DBG("LWEU: Final LWE = %d", LWE);
+        spin_unlock(&sv->lock);
         return LWE;
 }
 
@@ -812,6 +816,12 @@ static void tf_sender_inactivity(void * data)
 static void tf_receiver_inactivity(void * data)
 { /* Runs the ReceiverInactivityTimerPolicy */ }
 
+/* AF is the factor to which A is devided in order to obtain the
+ * period of the A-timer:
+ *      Ta = A / AF
+ */
+#define AF 10
+
 static void tf_a(void * data)
 {
         struct dtp *  dtp;
@@ -841,14 +851,9 @@ static void tf_a(void * data)
                 return;
         }
 
+        rtimer_restart(dtp->timers.a, dt_sv_a(dtp->parent)/AF);
         return;
 }
-
-/* AF is the factor to which A is devided in order to obtain the
- * period of the A-timer:
- *      Ta = A / AF
- */
-#define AF 10
 
 int dtp_sv_init(struct dtp * dtp,
                 bool         rexmsn_ctrl,
