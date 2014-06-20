@@ -34,8 +34,7 @@
 #include <asm/xen/page.h>
 
 
-extern unsigned int stat_txres;
-extern unsigned int stat_rxres;
+extern unsigned int vmpi_max_channels;
 
 /* Provide an option to disable split event channels at load time as
  * event channels are limited resource. Split event channels are
@@ -230,7 +229,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 		meta_slots_used = xenmpi_gop_buf(vif, buf);
                 BUG_ON(meta_slots_used != 1);
 
-                vmpi_queue_push(&rxq, buf);
+                vmpi_queue_push_back(&rxq, buf);
         }
 
 	BUG_ON(vif->rx_pending_prod > ARRAY_SIZE(vif->rx_meta));
@@ -241,7 +240,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 	BUG_ON(vif->rx_pending_prod > XEN_MPI_RX_RING_SIZE);
 	gnttab_batch_copy(vif->rx_copy_ops, vif->rx_pending_prod);
 
-	while ((buf = vmpi_queue_pop(&rxq)) != NULL) {
+	while ((buf = vmpi_queue_pop_front(&rxq)) != NULL) {
                 int len;
 
 		status = xenmpi_check_gop(vif);
@@ -263,7 +262,7 @@ static void xenmpi_rx_action(struct vmpi_impl_info *vif)
 		need_to_notify |= !!ret;
 
                 vif->rx_pending_cons++;
-                stat_txres++;
+                vif->stats->txres++;
 	}
 
 done:
@@ -485,7 +484,7 @@ static unsigned xenmpi_tx_build_gops(struct vmpi_impl_info *vif, int budget)
 		vif->pending_cons++;
 
                 IFV(printk("%s: built a buffer [len=%d]\n", __func__, (int)buf->len));
-                vmpi_queue_push(&vif->tx_queue, buf);
+                vmpi_queue_push_back(&vif->tx_queue, buf);
 
 		if ((gop-vif->tx_copy_ops) >= ARRAY_SIZE(vif->tx_copy_ops))
 			break;
@@ -503,7 +502,7 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
         struct vmpi_queue *read;
         unsigned int channel;
 
-	while ((buf = vmpi_queue_pop(&vif->tx_queue)) != NULL) {
+	while ((buf = vmpi_queue_pop_front(&vif->tx_queue)) != NULL) {
 		struct xen_mpi_tx_request *txp;
 		u16 pending_idx;
 
@@ -526,23 +525,24 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                 XEN_MPI_RSP_OKAY);
 
                 channel = vmpi_buffer_hdr(buf)->channel;
-                if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
-                        printk("%s: bogus channel request: %u\n",
-                                __func__, channel);
-                        channel = 0;
-                }
 
                 IFV(printk("%s: submitting len=%d channel=%d\n", __func__,
                                 (int)buf->len, channel));
 
                 if (!vif->read_cb) {
+                        if (unlikely(channel >= vmpi_max_channels)) {
+                                printk("%s: bogus channel request: %u\n",
+                                                __func__, channel);
+                                channel = 0;
+                        }
+
                         read = &vif->read[channel];
                         mutex_lock(&read->lock);
                         if (unlikely(vmpi_queue_len(read) >=
                                                 VMPI_RING_SIZE)) {
                                 vmpi_buffer_destroy(buf);
                         } else {
-                                vmpi_queue_push(read, buf);
+                                vmpi_queue_push_back(read, buf);
                         }
                         mutex_unlock(&read->lock);
 
@@ -552,11 +552,11 @@ static int xenmpi_tx_submit(struct vmpi_impl_info *vif)
                                         POLLRDBAND);
                 } else {
                         vif->read_cb(vif->read_cb_data, channel,
-                                        vmpi_buffer_data(buf),
-                                        buf->len - sizeof(struct vmpi_hdr));
+                                     vmpi_buffer_data(buf),
+                                     buf->len - sizeof(struct vmpi_hdr));
                         vmpi_buffer_destroy(buf);
                 }
-                stat_rxres++;
+                vif->stats->rxres++;
 
 		work_done++;
 	}
