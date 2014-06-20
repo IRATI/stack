@@ -1065,8 +1065,7 @@ public:
 /// Factory to return a WireMessageProvider
 class WireMessageProviderFactory{
 public:
-	virtual ~WireMessageProviderFactory() throw () {};
-	virtual WireMessageProviderInterface* createWireMessageProvider() = 0;
+	WireMessageProviderInterface* createWireMessageProvider();
 };
 
 class CDAPSessionManagerFactory {

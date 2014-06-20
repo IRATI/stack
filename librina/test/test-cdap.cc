@@ -25,27 +25,6 @@
 
 using namespace rina;
 
-class PlainWireMessageProvider: public WireMessageProviderInterface {
-public:
-	const CDAPMessage* deserializeMessage(const char message[]) {
-		int i = (int) message[0];
-		i++;
-		AuthValue auth_value;
-		return CDAPMessage::getOpenConnectionRequestMessage(CDAPMessage::AUTH_NONE, auth_value, "1", "dest instance",
-				"1", "dest", "1", "src instance", "1", "src", 1);
-	}
-	const char* serializeMessage(const CDAPMessage &cdapMessage) {
-		return cdapMessage.to_string().c_str();
-	}
-};
-
-class WireMessageFactoryProvider: public WireMessageProviderFactory {
-public:
-	WireMessageProviderInterface* createWireMessageProvider() {
-		return new PlainWireMessageProvider();
-	}
-};
-
 bool test1(CDAPSessionManagerInterface *session_manager,
 		CDAPSessionInterface *session) {
 	AuthValue auth_value;
@@ -55,25 +34,31 @@ bool test1(CDAPSessionManagerInterface *session_manager,
 					"1", "dest", "1", "src instance", "1", "src");
 	const char *serialized_message = session->encodeNextMessageToBeSent(
 			*sent_message);
-	std::cout<< std::endl;
-	std::cout<< std::endl;
+	session->messageSent(*sent_message);
+
+
+
 	const CDAPMessage *recevied_message = session->messageReceived(
 			serialized_message);
-	if (sent_message->to_string() == recevied_message->to_string())
+
+	if (sent_message->to_string() == recevied_message->to_string())	{
+		delete sent_message;
+		delete recevied_message;
 		return true;
-	else
+	}
+	else {
+		delete sent_message;
+		delete recevied_message;
 		return false;
-	delete sent_message;
-	delete recevied_message;
+	}
 }
 
 int main() {
-	WireMessageProviderFactory *wire_factory =
-			new WireMessageFactoryProvider();
+	WireMessageProviderFactory wire_factory;
 	CDAPSessionManagerFactory cdap_manager_factory;
 	long timeout = 2000;
 	CDAPSessionManagerInterface *session_manager =
-			cdap_manager_factory.createCDAPSessionManager(wire_factory,
+			cdap_manager_factory.createCDAPSessionManager(&wire_factory,
 					timeout);
 	CDAPSessionInterface *session = session_manager->createCDAPSession(1);
 
@@ -82,6 +67,5 @@ int main() {
 
 	delete session;
 	delete session_manager;
-	delete wire_factory;
 	return 0;
 }
