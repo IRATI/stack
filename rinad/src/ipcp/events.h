@@ -86,22 +86,12 @@ class EventManager
 		/// Subscribe to a single event
 		/// @param eventId The id of the event
 		/// @param eventListener The event listener
-		virtual void subscribeToEvent(const IPCProcessEventType& eventId, const EventListener& eventListener) = 0;
-
-		/// Subscribes to a list of events
-		/// @param eventIds the list of event ids
-		/// @param eventListener The event listener
-		virtual void subscribeToEvents(const std::list<IPCProcessEventType>& eventIds, const EventListener& eventListener) = 0;
+		virtual void subscribeToEvent(const IPCProcessEventType& eventId, EventListener * eventListener) = 0;
 
 		/// Unubscribe from a single event
 		/// @param eventId The id of the event
 		/// @param eventListener The event listener
-		virtual void unsubscribeFromEvent(const IPCProcessEventType& eventId, const EventListener& eventListener) = 0;
-
-		/// Unsubscribe from a list of events
-		/// @param eventIds the list of event ids
-	    /// @param eventListener The event listener
-		virtual void unsubscribeFromEvents(const std::list<IPCProcessEventType>& eventIds, const EventListener& eventListener) = 0;
+		virtual void unsubscribeFromEvent(const IPCProcessEventType& eventId, EventListener * eventListener) = 0;
 
 		/// Invoked when a certain event has happened.
 		/// The Event Manager will inform about this to

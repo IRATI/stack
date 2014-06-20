@@ -32,6 +32,8 @@
 
 namespace rinad {
 
+const unsigned int max_sdu_size_in_bytes = 10000;
+
 enum IPCProcessOperationalState {
 	NOT_INITIALIZED,
 	INITIALIZED,
@@ -470,15 +472,17 @@ public:
 	/// @throws Exception
 	virtual void addRIBObject(BaseRIBObject * ribObject) throw (Exception) = 0;
 
-	/// Remove an object from the RIB
+	/// Remove an object from the RIB. Ownership is passed to the RIB daemon,
+	/// who will delete the memory associated to the object.
 	/// @param ribObject
 	/// @throws Exception
 	virtual void removeRIBObject(BaseRIBObject * ribObject) throw (Exception) = 0;
 
-	/// Remove an object from the RIB by objectname
+	/// Remove an object from the RIB by objectname. Ownership is passed to the RIB daemon,
+	/// who will delete the memory associated to the object.
 	/// @param objectName
 	/// @throws Exception
-	virtual void removeRIBObject(const std::string objectName) throw (Exception) = 0;
+	virtual void removeRIBObject(const std::string& objectName) throw (Exception) = 0;
 
 	/// Send an information update, consisting on a set of CDAP messages, using the updateStrategy update strategy
 	/// (on demand, scheduled)
@@ -503,6 +507,12 @@ public:
 	/// @throws Exception
 	virtual void sendMessageToAddress(const rina::CDAPMessage& cdapMessage, int sessionId, long address,
 			const ICDAPResponseMessageHandler& cdapMessageHandler) throw (Exception) = 0;
+
+	/// Process an incoming message, still encoded
+	/// @param message the encoded CDAP message
+	/// @param length the length of the encoded message
+	/// @param portId the portId the message came from
+	virtual void cdapMessageDelivered(unsigned char* message, int length, int portId) = 0;
 
 	/// Reads/writes/created/deletes/starts/stops one or more objects at the RIB, matching the
 	/// information specified by objectId + objectClass or objectInstance.At least objectName or
@@ -559,7 +569,8 @@ public:
 	/// @param objectInstance the instance of the object
 	/// @param objectValue the new value of the object
 	/// @throws Exception
-	virtual void startObject(const std::string& objectClass, const std::string& objectName) throw (Exception) = 0;
+	virtual void startObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue) throw (Exception) = 0;
 
 	/// Stop an object at the RIB
 	/// @param objectClass the class of the object
@@ -567,13 +578,14 @@ public:
 	/// @param objectInstance the instance of the object
 	/// @param objectValue the new value of the object
 	/// @throws Exception
-	virtual void stopObject(const std::string& objectClass, const std::string& objectName) throw (Exception) = 0;
+	virtual void stopObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue) throw (Exception) = 0;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 
-	virtual const std::list<BaseRIBObject>& getRIBObjects() const = 0;
+	virtual std::list<BaseRIBObject *> getRIBObjects() = 0;
 };
 
 /// IPC Process interface
