@@ -17,7 +17,9 @@ Packages required to install the stack into Debian/Linux 7.0 (wheezy):
          /etc/apt/sources.list
       * Run 'apt-get update'
       * Run 'apt-get install libnl-genl-3-dev libnl-3-dev'
- 
+
+    * protobuf-compiler
+    * libprotobuf-dev
  
     * openjdk-6-jdk
     * maven 
