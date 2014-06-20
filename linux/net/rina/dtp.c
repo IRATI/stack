@@ -413,7 +413,13 @@ static struct pdu * seq_queue_pop(struct seq_queue * q)
         list_del(&p->next);
         seq_q_entry_destroy(p);
 
-        return p->pdu;        
+        return pdu;        
+}
+
+static bool seq_queue_is_empty(struct seq_queue * q)
+{
+        ASSERT(q);
+        return list_empty(&q->head);
 }
 
 struct pdu * seqQ_pop(struct sequencingQ * seqQ)
@@ -431,9 +437,271 @@ struct pdu * seqQ_pop(struct sequencingQ * seqQ)
         }
         spin_unlock(&seqQ->lock);
 
+        return pdu;
+}
+
+static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
+                                                   gfp_t        flags)
+{
+        struct seq_q_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        tmp->pdu = pdu;
+        tmp->time_stamp = jiffies;
+
+        return tmp;
+}
+
+static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
+{
+        static struct seq_q_entry * tmp, * cur, * last = NULL;
+        seq_num_t                   csn, psn;
+        const struct pci *          pci;
+
+        ASSERT(pdu);
+        ASSERT(q);
+
+        tmp = seq_q_entry_create_gfp(pdu, GFP_ATOMIC);
+        if (!tmp) {
+                LOG_ERR("Could not create sequencing queue entry");
+                return -1;
+        }
+
+        pci  = pdu_pci_get_ro(pdu);
+        csn  = pci_sequence_number_get((struct pci *) pci);
+
+        if (list_empty(&q->head)) {
+                list_add(&tmp->next, &q->head);
+                LOG_DBG("First PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                return 0;
+        }
+
+        last = list_last_entry(&q->head, struct seq_q_entry, next);
+        if (!last)
+                return -1;
+
+        pci  = pdu_pci_get_ro(last->pdu);
+        psn  = pci_sequence_number_get((struct pci *) pci);
+        if (csn == psn) {
+                LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                return -1;
+        }
+        if (csn > psn) {
+                list_add_tail(&tmp->next, &q->head);
+                LOG_DBG("Last PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                return 0;
+        }
+
+        list_for_each_entry(cur, &q->head, next) {
+                pci = pdu_pci_get_ro(cur->pdu);
+                psn = pci_sequence_number_get((struct pci *) pci);
+                if (csn == psn) {
+                        LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                        return -1;
+                }
+                if (csn > psn) {
+                        list_add(&tmp->next, &cur->next);
+                        LOG_DBG("Middle PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                        return 0;
+                }
+        }
+
         return 0;
 }
 
+int seqQ_deliver(struct sequencingQ * seqQ)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+static bool seq_queue_is_dup(struct seq_queue * q, seq_num_t seq_num) 
+{
+        struct seq_q_entry * cur;
+        const struct pci *   pci;
+        seq_num_t            csn;
+
+        ASSERT(q);
+
+        list_for_each_entry(cur, &q->head, next) {
+                pci = pdu_pci_get_ro(cur->pdu);
+                csn = pci_sequence_number_get((struct pci *) pci);
+                if (csn > seq_num) 
+                        return false;
+                if (csn == seq_num)
+                        return true;
+        }
+        return false;
+
+}
+
+bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
+{
+        ASSERT(seqQ);
+        ASSERT(seqQ->queue);
+
+        return seq_queue_is_dup(seqQ->queue, seq_num);
+}
+
+int seqQ_push(struct dtp * dtp, struct pdu * pdu)
+{
+        struct sequencingQ * seqQ;
+        struct dt *          dt;
+
+        ASSERT(dtp);
+        ASSERT(pdu);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        if (seqQ_pdu_is_duplicate(dtp->seqQ,
+                          pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
+                pdu_destroy(pdu);
+                dropped_pdus_inc(dtp->sv);
+                return 0;
+        }
+
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("No PDU to be pushed");
+                return -1;
+        }
+
+        if (!seqQ) {
+                LOG_ERR("No sequencing queue to work with");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        spin_lock(&seqQ->lock);
+        if (seq_queue_push_ni(seqQ->queue, pdu)) {
+                spin_unlock(&seqQ->lock);
+                LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        spin_unlock(&seqQ->lock);
+
+        return 0;
+}
+
+bool seqQ_is_empty(struct sequencingQ * seqQ)
+{
+        bool empty;
+        ASSERT(seqQ);
+
+        spin_lock(&seqQ->lock);
+        empty = seq_queue_is_empty(seqQ->queue);
+        spin_unlock(&seqQ->lock);
+
+        return empty;
+}
+seq_num_t seqQ_last_seq_num_in_time(struct sequencingQ * seqQ, timeout_t t)
+{
+        struct seq_q_entry * tmp;
+
+        LOG_MISSING;
+        /* FIXME: change this as it should be. It should return those PDUs with
+         * timestam < time - A plus those that with seq_num exactly consecutive
+         * to the last one */
+        spin_lock(&seqQ->lock);
+        tmp = list_last_entry(&seqQ->queue->head, struct seq_q_entry, next);
+        spin_unlock(&seqQ->lock);
+        
+        return pci_sequence_number_get(pdu_pci_get_rw(tmp->pdu));
+}
+
+static bool evaluate_ulwe_condition(struct pdu * pdu,
+                                    seq_num_t    seq_num,
+                                    seq_num_t    limit)
+{
+        bool condition = ((int) seq_num > 0) && pdu;
+        if (limit > 0)
+                return condition && (((int) seq_num) < (int) limit);
+        return condition;
+}
+
+static seq_num_t update_left_win_edge(struct dtp * dtp)
+{
+        struct dt *          dt;
+        struct dtp_sv *      sv;
+        struct sequencingQ * seqQ;
+        seq_num_t            LWE;
+        seq_num_t            seq_num;
+        seq_num_t            limit;
+        struct pdu *         pdu;
+        timeout_t            time;
+        bool                 in_order_del;
+        bool                 incomplete_del;
+        bool                 max_sdu_gap;
+
+        ASSERT(dtp);
+
+        sv = dtp->sv;
+        ASSERT(sv);
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        time = jiffies;
+        in_order_del   = sv->connection->policies_params->in_order_delivery;
+        incomplete_del = sv->connection->policies_params->incomplete_delivery;
+        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+
+        /* FIXME: Invoke delimiting */
+
+        LWE     = dt_sv_rcv_lft_win(dt);
+        pdu     = seqQ_pop(seqQ);
+        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+
+        if (dt_sv_a(dt))
+                limit = seqQ_last_seq_num_in_time(seqQ, time - dt_sv_a(dt));
+        else
+                limit = 0;
+
+        LOG_DBG("LWEU: Original LWE = %d", LWE);
+        LOG_DBG("LWEU: Limit = %d", limit);
+        LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
+
+        while (evaluate_ulwe_condition(pdu, seq_num, limit)) {
+                LOG_DBG("LWEU: Seq_num  = %d", seq_num);
+                if ((seq_num == (LWE + 1)) || ((seq_num - LWE) <= max_sdu_gap)) {
+                        sdu_post(dtp, pdu);
+                        LOG_DBG("LWEU posted");
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                return 0;
+                        }
+                        LWE     = dt_sv_rcv_lft_win(dt);
+                        pdu     = seqQ_pop(seqQ);
+                        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                        continue;
+
+                }
+                LOG_WARN("Could not fullfil QoS");
+                pdu_destroy(pdu);
+                break;
+        }
+        if (pdu)
+                seqQ_push(dtp, pdu);
+
+        LOG_DBG("LWEU: Final LWE = %d", LWE);
+        return LWE;
+}
+
+
+#if 0
 static void update_left_win_edge_and_post(struct dtp * dtp)
 {
         struct dt *          dt;
@@ -466,7 +734,7 @@ static void update_left_win_edge_and_post(struct dtp * dtp)
         pdu     = seqQ_pop(seqQ);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-        while (!seqQ_empty(seqQ)) {
+        while (!seqQ_is_empty(seqQ)) {
         /* while ((LWE <= max_seq_nr_rcv(sv)) && (seq_num > 0)) { */
                 /* if it is next pdu just post and update window edge */
                 if (seq_num == (LWE + 1) || !dt_sv_a(dt)) {
@@ -526,6 +794,7 @@ static void update_left_win_edge_and_post(struct dtp * dtp)
 
         return;
 }
+#endif
 
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
@@ -537,6 +806,7 @@ static void tf_a(void * data)
 {
         struct dtp *  dtp;
         struct dtcp * dtcp;
+        seq_num_t     seq_num_sv_update;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
@@ -545,12 +815,19 @@ static void tf_a(void * data)
         }
 
         /* Invoke delimiting and update left window edge */
-        update_left_win_edge_and_post(dtp);
-
+        seq_num_sv_update = update_left_win_edge(dtp);
         dtcp = dt_dtcp(dtp->parent);
         if (dtcp) {
+                if (!seq_num_sv_update) {
+                        LOG_ERR("ULWE returned no seq num to update");
+                        return;
+                }
+
+                if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
+                        LOG_ERR("Failed to update dtcp sv");
+                        return;
+                }
                 LOG_MISSING;
-                /* Invoke delimiting */
                 return;
         }
 
@@ -574,8 +851,9 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->rexmsn_ctrl  = rexmsn_ctrl;
         dtp->sv->window_based = window_based;
         dtp->sv->rate_based   = rate_based;
-        
-        rtimer_start(dtp->timers.a, a/AF);
+       
+        if (!a)
+                rtimer_start(dtp->timers.a, a/AF);
 
         return 0;
 }
@@ -925,158 +1203,6 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
-static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
-                                                   gfp_t        flags)
-{
-        struct seq_q_entry * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        INIT_LIST_HEAD(&tmp->next);
-
-        tmp->pdu = pdu;
-        tmp->time_stamp = jiffies;
-
-        return tmp;
-}
-
-static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
-{
-        static struct seq_q_entry * tmp, * cur, * last = NULL;
-        seq_num_t                   csn, psn;
-        const struct pci *          pci;
-
-        ASSERT(pdu);
-        ASSERT(q);
-
-        tmp = seq_q_entry_create_gfp(pdu, GFP_ATOMIC);
-        if (!tmp) {
-                LOG_ERR("Could not create sequencing queue entry");
-                return -1;
-        }
-
-        pci  = pdu_pci_get_ro(pdu);
-        csn  = pci_sequence_number_get((struct pci *) pci);
-
-        if (list_empty(&q->head)) {
-                list_add(&tmp->next, &q->head);
-                LOG_DBG("First PDU with seqnum: %d push to seqQ at: %pk", csn, q);
-                return 0;
-        }
-
-        last = list_last_entry(&q->head, struct seq_q_entry, next);
-        if (!last)
-                return -1;
-
-        pci  = pdu_pci_get_ro(last->pdu);
-        psn  = pci_sequence_number_get((struct pci *) pci);
-        if (csn == psn) {
-                LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
-                return -1;
-        }
-        if (csn > psn) {
-                list_add_tail(&tmp->next, &q->head);
-                LOG_DBG("Last PDU with seqnum: %d push to seqQ at: %pk", csn, q);
-                return 0;
-        }
-
-        list_for_each_entry(cur, &q->head, next) {
-                pci = pdu_pci_get_ro(cur->pdu);
-                psn = pci_sequence_number_get((struct pci *) pci);
-                if (csn == psn) {
-                        LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
-                        return -1;
-                }
-                if (csn > psn) {
-                        list_add(&tmp->next, &cur->next);
-                        LOG_DBG("Middle PDU with seqnum: %d push to seqQ at: %pk", csn, q);
-                        return 0;
-                }
-        }
-
-        return 0;
-}
-
-int seqQ_deliver(struct sequencingQ * seqQ)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-static bool seq_queu_is_dup(struct seq_queue * q, seq_num_t seq_num) 
-{
-        struct seq_q_entry * cur;
-        const struct pci *   pci;
-        seq_num_t            csn;
-
-        ASSERT(q);
-
-        list_for_each_entry(cur, &q->head, next) {
-                pci = pdu_pci_get_ro(cur->pdu);
-                csn = pci_sequence_number_get((struct pci *) pci);
-                if (csn > seq_num) 
-                        return false;
-                if (csn == seq_num)
-                        return true;
-        }
-        return false;
-
-}
-
-bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
-{
-        ASSERT(seqQ);
-        ASSERT(seqQ->queue);
-
-        return seq_queu_is_dup(seqQ->queue, seq_num);
-}
-
-static int seqQ_push(struct dtp * dtp, struct pdu * pdu)
-{
-        struct sequencingQ * seqQ;
-        struct dt *          dt;
-
-        ASSERT(dtp);
-        ASSERT(pdu);
-
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
-
-        dt = dtp->parent;
-        ASSERT(dt);
-
-        if (seqQ_pdu_is_duplicate(dtp->seqQ,
-                          pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
-                pdu_destroy(pdu);
-                dropped_pdus_inc(dtp->sv);
-                return 0;
-        }
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("No PDU to be pushed");
-                return -1;
-        }
-
-        if (!seqQ) {
-                LOG_ERR("No sequencing queue to work with");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        spin_lock(&seqQ->lock);
-        if (seq_queue_push_ni(seqQ->queue, pdu)) {
-                spin_unlock(&seqQ->lock);
-                LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
-                pdu_destroy(pdu);
-                return -1;
-        }
-        spin_unlock(&seqQ->lock);
-
-        return 0;
-}
-
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
@@ -1086,6 +1212,7 @@ int dtp_receive(struct dtp * instance,
         struct dtcp *         dtcp;
         struct dt *           dt;
         seq_num_t             seq_num;
+        seq_num_t             seq_num_sv_update = 0; 
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1140,6 +1267,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
         } else if (seq_num < dt_sv_rcv_lft_win(dt)) {
+                LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
                 dropped_pdus_inc(sv);
                 LOG_DBG("Dropped a PDU, total: %d", sv->dropped_pdus);
@@ -1163,35 +1291,56 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
                    seq_num <= max_seq_nr_rcv(sv) + 1) {
+                max_seq_nr_rcv_set(sv, seq_num);
+                LOG_DBG("DTP Receive GAP or +1");
                 /* This op puts the PDU in seq number order  and duplicates
                  * considered */
                 if (seqQ_push(instance, pdu)) {
                         LOG_ERR("Could not push PDU into sequencing queue");
                         return -1;
                 }
-
-                /*
-                 * FIXME: Invoke delimiting and put all SDUs thus
-                 * created into the KFA or EFCP instance above. Update
-                 * the receiver left window edge
-                 */
-                update_left_win_edge_and_post(instance);
-
-                if (dtcp) {
-                        if (dtcp_sv_update(dtcp, seq_num)) {
-                                LOG_ERR("Failed to update dtcp sv");
-                                return -1;
+                if (!dt_sv_a(dt)) {
+                        LOG_DBG("DTP Receive GAP or +1 no A");
+                        seq_num_sv_update = update_left_win_edge(instance);
+                        if (dtcp) {
+                                if (!seq_num_sv_update) {
+                                        LOG_ERR("ULWD returned not seq num"
+                                                "to udpate DTCP SV");
+                                        return -1;
+                                }
+                                /* This must send acks */        
+                                if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
+                                        LOG_ERR("Failed to update dtcp sv");
+                                        return -1;
+                                }
                         }
                 }
         } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
+                LOG_DBG("DTP Receive + >1");
                 max_seq_nr_rcv_set(sv, seq_num);
                 if (seqQ_push(instance, pdu)) {
                         LOG_ERR("Could not push PDU into sequencing queue");
                         return -1;
                 }
+                if (!dt_sv_a(dt)) {
+                        seq_num_sv_update = update_left_win_edge(instance);
+                        if (dtcp) {
+                                if (!seq_num_sv_update) {
+                                        LOG_ERR("ULWD returned not seq num"
+                                                "to udpate DTCP SV");
+                                        return -1;
+                                }
+                                /* This must send acks */        
+                                if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
+                                        LOG_ERR("Failed to update dtcp sv");
+                                        return -1;
+                                }
+                        }
+                }
                 LOG_MISSING;
 
         } else {
+                LOG_DBG("DTP Receive Wrong case");
                 /* Something went wrong! */
                 pdu_destroy(pdu);
                 LOG_ERR("Something is horribly wrong on receiving");
