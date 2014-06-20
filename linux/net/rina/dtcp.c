@@ -464,13 +464,13 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
         }
 
         my_lf_win_edge = dt_sv_rcv_lft_win(dtcp->parent);
-        if (pci_control_left_wind_edge_set(pci,my_lf_win_edge)) {
+        if (pci_control_my_left_wind_edge_set(pci,my_lf_win_edge)) {
                 pdu_destroy(pdu);
                 return NULL;
         }
 
         my_rt_win_edge = rcvr_rt_wind_edge(dtcp);
-        if (pci_control_rt_wind_edge_set(pci, my_rt_win_edge)) {
+        if (pci_control_my_rt_wind_edge_set(pci, my_rt_win_edge)) {
                 pdu_destroy(pdu);
                 return NULL;
         }
