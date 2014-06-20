@@ -23,6 +23,64 @@
 
 namespace rinad {
 
+//Class RIB
+RIB::RIB() {
+}
 
+RIB::~RIB() throw() {
+}
+
+BaseRIBObject* RIB::getRIBObject(const std::string& objectName) throw (Exception) {
+	BaseRIBObject* ribObject;
+	std::map<std::string, BaseRIBObject*>::iterator it;
+
+	lock();
+	it = rib_.find(objectName);
+	unlock();
+
+	if (it == rib_.end()) {
+		throw Exception("Could not find object in the RIB");
+	}
+
+	ribObject = it->second;
+	return ribObject;
+}
+
+void RIB::addRIBObject(BaseRIBObject* ribObject) throw (Exception) {
+	lock();
+	if (rib_.find(ribObject->get_name()) != rib_.end()) {
+		throw Exception("Object already exists in the RIB");
+	}
+	rib_[ribObject->get_name()] = ribObject;
+	unlock();
+}
+
+BaseRIBObject * RIB::removeRIBObject(const std::string& objectName) throw (Exception) {
+	std::map<std::string, BaseRIBObject*>::iterator it;
+	BaseRIBObject* ribObject;
+
+	lock();
+	it = rib_.find(objectName);
+	if (it == rib_.end()) {
+		throw Exception("Could not find object in the RIB");
+	}
+
+	ribObject = it->second;
+	rib_.erase(it);
+	unlock();
+
+	return ribObject;
+}
+
+std::list<BaseRIBObject*> RIB::getRIBObjects() {
+	std::list<BaseRIBObject*> result;
+
+	for(std::map<std::string, BaseRIBObject*>::iterator it = rib_.begin();
+			it != rib_.end(); ++it) {
+		result.push_back(it->second);
+	}
+
+	return result;
+}
 
 }

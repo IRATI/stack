@@ -24,10 +24,29 @@
 
 #ifdef __cplusplus
 
+#include <librina/concurrency.h>
+
 #include "ipcp/components.h"
 
 namespace rinad {
 
+class RIB : public rina::Lockable {
+public:
+	RIB();
+	~RIB() throw();
+
+	/// Given an objectname of the form "substring\0substring\0...substring" locate
+	/// the RIBObject that corresponds to it
+	/// @param objectName
+	/// @return
+	BaseRIBObject* getRIBObject(const std::string& objectName) throw (Exception);
+	void addRIBObject(BaseRIBObject* ribObject) throw (Exception);
+	BaseRIBObject * removeRIBObject(const std::string& objectName) throw (Exception);
+	std::list<BaseRIBObject*> getRIBObjects();
+
+private:
+	std::map<std::string, BaseRIBObject*> rib_;
+};
 
 }
 
