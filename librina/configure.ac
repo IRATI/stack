@@ -29,10 +29,10 @@ AC_PROG_GREP
 AC_PROG_MKDIR_P
 AC_PROG_LN_S
 
-AC_PATH_PROG([FMT],     [fmt],  [/bin/false])
-AC_PATH_PROG([SORT],    [sort], [/bin/false])
-AC_PATH_PROG([UNIQ],    [uniq], [/bin/false])
-AC_PATH_PROG([GIT],     [git],  [/bin/false])
+AC_PATH_PROG([FMT],  [fmt],  [/bin/false])
+AC_PATH_PROG([SORT], [sort], [/bin/false])
+AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
+AC_PATH_PROG([GIT],  [git],  [/bin/false])
 
 AC_PROG_CXXCPP
 AC_PROG_CXX
@@ -195,6 +195,15 @@ AX_HAVE_SYSCALL([management_sdu_write],[],[
 
 CFLAGS="$oldcflags"
 AC_LANG_POP([C])
+
+AC_PATH_PROG([PROTOC], [protoc], [/bin/false])
+
+LIBPROTOBUF_MIN_VERSION=2.5.0
+AC_SUBST(LIBPROTOBUF_MIN_VERSION, $LIBPROTOBUF_MIN_VERSION)
+
+PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
+    AC_MSG_ERROR([Your system lacks of libprotobuf support (>= $LIBPROTOBUF_MIN_VERSION)])
+])
 
 DX_DOXYGEN_FEATURE(ON)
 DX_DOT_FEATURE(ON)
