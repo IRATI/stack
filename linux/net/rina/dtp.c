@@ -603,19 +603,26 @@ bool seqQ_is_empty(struct sequencingQ * seqQ)
 
         return empty;
 }
-seq_num_t seqQ_last_seq_num_in_time(struct sequencingQ * seqQ, timeout_t t)
+
+static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
 {
-        struct seq_q_entry * tmp;
+        LOG_MISSING;
+        return 0;
+}
+
+seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
+{
+        seq_num_t tmp;
 
         LOG_MISSING;
         /* FIXME: change this as it should be. It should return those PDUs with
          * timestam < time - A plus those that with seq_num exactly consecutive
          * to the last one */
         spin_lock(&seqQ->lock);
-        tmp = list_last_entry(&seqQ->queue->head, struct seq_q_entry, next);
+        tmp = seq_queue_last_to_ack(seqQ->queue, t);
         spin_unlock(&seqQ->lock);
         
-        return pci_sequence_number_get(pdu_pci_get_rw(tmp->pdu));
+        return tmp;
 }
 
 static bool evaluate_ulwe_condition(struct pdu * pdu,
@@ -653,7 +660,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         seqQ = dtp->seqQ;
         ASSERT(seqQ);
 
-        time = jiffies;
+        time           = jiffies;
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
         max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
@@ -665,7 +672,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
         if (dt_sv_a(dt))
-                limit = seqQ_last_seq_num_in_time(seqQ, time - dt_sv_a(dt));
+                limit = seqQ_last_to_ack(seqQ, time - dt_sv_a(dt));
         else
                 limit = 0;
 
@@ -690,7 +697,10 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
 
                 }
                 LOG_WARN("Could not fullfil QoS");
-                pdu_destroy(pdu);
+                if (pdu) {
+                        LOG_ERR("LWEU PDU To be Deleted: %pk", pdu);
+                        /* pdu_destroy(pdu); */
+                }
                 break;
         }
         if (pdu)
