@@ -233,7 +233,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 mpi->stats.txreq++;
                 mutex_unlock(&ring->lock);
 
-                vmpi_impl_write_buf(mpi->vi, buf);
+                vmpi_impl_txkick(mpi->vi);
 
                 break;
         }

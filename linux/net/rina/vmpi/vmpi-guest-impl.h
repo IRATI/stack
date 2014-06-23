@@ -32,7 +32,6 @@ typedef void (*vmpi_impl_callback_t)(vmpi_impl_info_t *);
 struct vmpi_impl_info *vmpi_impl_get_instance(void);
 int vmpi_impl_write_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
 void vmpi_impl_txkick(vmpi_impl_info_t *vi);
-void vmpi_impl_rxkick(vmpi_impl_info_t *vi);
 struct vmpi_buffer * vmpi_impl_get_written_buffer(vmpi_impl_info_t *vi);
 struct vmpi_buffer * vmpi_impl_read_buffer(vmpi_impl_info_t *vi);
 bool vmpi_impl_send_cb(vmpi_impl_info_t *vi, int enable);

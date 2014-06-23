@@ -41,7 +41,7 @@
 typedef struct vmpi_impl_info vmpi_impl_info_t;
 typedef struct vmpi_info vmpi_info_t;
 
-int vmpi_impl_write_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
+int vmpi_impl_txkick(vmpi_impl_info_t *vi);
 int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t,
                                      void* opaque);
 

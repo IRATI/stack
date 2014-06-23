@@ -115,7 +115,7 @@ int vmpi_impl_register_read_callback(vmpi_impl_info_t *vif, vmpi_read_cb_t cb,
         return 0;
 }
 
-int vmpi_impl_write_buf(struct vmpi_impl_info *vif, struct vmpi_buffer *buf)
+int vmpi_impl_txkick(struct vmpi_impl_info *vif)
 {
 	int min_slots_needed = 1;
 

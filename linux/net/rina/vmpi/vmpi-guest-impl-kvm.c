@@ -101,12 +101,6 @@ vmpi_impl_txkick(struct vmpi_impl_info *vi)
         virtqueue_kick(vi->sq->vq);
 }
 
-void
-vmpi_impl_rxkick(struct vmpi_impl_info *vi)
-{
-        virtqueue_kick(vi->rq->vq);
-}
-
 struct vmpi_buffer *
 vmpi_impl_get_written_buffer(struct vmpi_impl_info *vi)
 {

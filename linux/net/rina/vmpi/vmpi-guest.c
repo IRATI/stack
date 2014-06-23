@@ -75,7 +75,7 @@ vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
 }
 
 static void
-vmpi_impl_clean_tx(struct vmpi_info *mpi)
+vmpi_clean_tx(struct vmpi_info *mpi)
 {
         struct vmpi_buffer *buf;
 
@@ -114,7 +114,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 current->state = TASK_INTERRUPTIBLE;
 
                 mutex_lock(&mpi->write.lock);
-                vmpi_impl_clean_tx(mpi);
+                vmpi_clean_tx(mpi);
                 if (vmpi_ring_unused(&mpi->write) == 0) {
                         if (vmpi_impl_send_cb(vi, 1)) {
                                 mutex_unlock(&mpi->write.lock);
@@ -127,7 +127,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                                 schedule();
                                 continue;
                         }
-                        vmpi_impl_clean_tx(mpi);
+                        vmpi_clean_tx(mpi);
                 }
 
                 buf = &mpi->write.bufs[mpi->write.nu];
@@ -235,9 +235,10 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
 static void
 xmit_callback(vmpi_impl_info_t *vi)
 {
-        //struct vmpi_info *mpi = vi->private;
         struct vmpi_info *mpi = vmpi_info_from_vmpi_impl_info(vi);
 
+        /* XXX can we disable xmit callbacks here, to avoid an
+               useless burst of TX interrupts? */
         wake_up_interruptible_poll(&mpi->write.wqh, POLLOUT |
                                    POLLWRNORM | POLLWRBAND);
 }
@@ -274,6 +275,7 @@ recv_worker_function(struct work_struct *work)
                         }
                         mutex_unlock(&queue->lock);
                 } else {
+                        /* XXX don't drop the lock here */
                         mutex_unlock(&mpi->recv_worker_lock);
                         mpi->read_cb(mpi->read_cb_data, channel,
                                      vmpi_buffer_data(buf),
@@ -301,7 +303,6 @@ recv_worker_function(struct work_struct *work)
 static void
 recv_callback(vmpi_impl_info_t *vi)
 {
-        //struct vmpi_info *mpi = vi->private;
         struct vmpi_info *mpi = vmpi_info_from_vmpi_impl_info(vi);
 
         vmpi_impl_receive_cb(vi, 0);
