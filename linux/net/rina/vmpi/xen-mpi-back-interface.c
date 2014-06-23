@@ -125,7 +125,7 @@ int vmpi_impl_txkick(struct vmpi_impl_info *vif)
 
         IFV(printk("%s\n", __func__));
 
-	/* If the skb can't possibly fit in the remaining slots
+	/* If a buffer can't possibly fit in the remaining slots
 	 * then turn off the queue to give the ring a chance to
 	 * drain.
 	 */
