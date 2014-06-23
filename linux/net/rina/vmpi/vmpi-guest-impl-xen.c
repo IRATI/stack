@@ -1183,7 +1183,7 @@ static int mpifront_remove(struct xenbus_device *dev)
 
 	del_timer_sync(&info->rx_refill_timer);
 
-        vmpi_fini(false);
+        vmpi_fini(info->private, false);
 
         vmpi_queue_fini(&info->rx_batch);
 

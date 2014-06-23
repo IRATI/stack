@@ -62,8 +62,6 @@ struct vmpi_info {
         struct vmpi_stats stats;
 };
 
-static struct vmpi_info *vmpi_info_instance = NULL;
-
 int
 vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
                             void *opaque)
@@ -346,9 +344,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         memset(mpi, 0, sizeof(*mpi));
         vmpi_stats_init(&mpi->stats);
 
-        /* Install the vmpi_info instance. */
-        vmpi_info_instance = mpi;
-
         mpi->vi = vi;
 
         *ret = vmpi_ring_init(&mpi->write, VMPI_BUF_SIZE);
@@ -415,15 +410,13 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
  alloc_test:
-        vmpi_info_instance = NULL;
 
         return NULL;
 }
 
 void
-vmpi_fini(bool deferred_test_fini)
+vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
-        struct vmpi_info *mpi = vmpi_info_instance;
         unsigned int i;
 
 #ifdef VMPI_TEST
@@ -449,9 +442,6 @@ vmpi_fini(bool deferred_test_fini)
          * can free the RX resources.
          */
         cancel_work_sync(&mpi->recv_worker);
-
-        /* Disinstall the vmpi_info instance. */
-        vmpi_info_instance = NULL;
 
         for (i = 0; i < vmpi_max_channels; i++) {
                 vmpi_queue_fini(&mpi->read[i]);
