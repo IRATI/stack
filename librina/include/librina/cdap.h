@@ -575,6 +575,14 @@ public:
 	virtual void reserveInvokeId(int invoke_id) = 0;
 };
 
+class SerializedMessage {
+public:
+	SerializedMessage(char* message, int size);
+	~SerializedMessage();
+	int size_;
+	char* message_;
+};
+
 /// Represents a CDAP session. Clients of the library are the ones managing the invoke ids. Application entities must
 /// use the CDAP library this way:
 ///  1) when sending a message:
@@ -599,7 +607,7 @@ public:
 	 * @return the serialized request message, ready to be sent to a flow
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const char* encodeNextMessageToBeSent(const CDAPMessage &message)
+	virtual const SerializedMessage* encodeNextMessageToBeSent(const CDAPMessage &message)
 	= 0;
 	/**
 	 * Tell the CDAP state machine that we've just sent the cdap Message,
@@ -615,7 +623,7 @@ public:
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const CDAPMessage* messageReceived(const char cdap_message[])
+	virtual const CDAPMessage* messageReceived(const SerializedMessage &cdap_message)
 	= 0;
 	/**
 	 * Tell the CDAP state machine that we've received a message. The state of the CDAP state machine will be updated
@@ -643,7 +651,7 @@ public:
 	/// @param port_id
 	/// @return Decoded CDAP Message
 	/// @throws CDAPException if the message is not consistent with the appropriate CDAP state machine
-	virtual const CDAPMessage* messageReceived(char encoded_cdap_message[],
+	virtual const CDAPMessage* messageReceived(const SerializedMessage &encoded_cdap_message,
 			int port_id) = 0;
 	/// Encodes the next CDAP message to be sent, and checks against the
 	/// CDAP state machine that this is a valid message to be sent
@@ -651,7 +659,7 @@ public:
 	/// @param port_id
 	/// @return encoded version of the CDAP Message
 	///  @throws CDAPException
-	virtual const char* encodeNextMessageToBeSent(
+	virtual const SerializedMessage* encodeNextMessageToBeSent(
 			const CDAPMessage &cdap_message, int port_id) = 0;
 	/// Creates a CDAPSession
 	/// @param port_id the port associated to this CDAP session
@@ -684,7 +692,7 @@ public:
 	/// @param cdap_message
 	/// @return
 	/// @throws CDAPException
-	virtual const char* encodeCDAPMessage(const CDAPMessage &cdap_message)
+	virtual const SerializedMessage* encodeCDAPMessage(const CDAPMessage &cdap_message)
 	= 0;
 	/// Decodes a CDAP message. It just converts the byte array into a CDAP
 	/// message, without caring about what session this CDAP message belongs to (and
@@ -694,7 +702,7 @@ public:
 	/// @param cdap_message
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* decodeCDAPMessage(char cdap_message[])
+	virtual const CDAPMessage* decodeCDAPMessage(const SerializedMessage &cdap_message)
 	= 0;
 	/// Return the port_id of the (N-1) Flow that supports the CDAP Session
 	/// with the IPC process identified by destinationApplicationProcessName and destinationApplicationProcessInstance
@@ -1054,12 +1062,12 @@ public:
 	/// @param message
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* deserializeMessage(const char message[]) = 0;
+	virtual const CDAPMessage* deserializeMessage(const SerializedMessage &message) = 0;
 	/// Convert from CDAP messages to wire format
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException
-	virtual const char* serializeMessage(const CDAPMessage &cdapMessage) = 0;
+	virtual const SerializedMessage* serializeMessage(const CDAPMessage &cdapMessage) = 0;
 };
 
 /// Factory to return a WireMessageProvider

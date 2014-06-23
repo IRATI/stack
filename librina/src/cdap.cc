@@ -426,7 +426,7 @@ void CDAPMessageValidator::validateObjName(const CDAPMessage *message) {
 }
 
 void CDAPMessageValidator::validateObjValue(const CDAPMessage *message) {
-	if (message->get_obj_value()->is_empty()) {
+	if (message->get_obj_value() == 0 || message->get_obj_value()->is_empty()) {
 		if (message->get_op_code() == CDAPMessage::M_WRITE) {
 			throw CDAPException(
 					"The objValue parameter must be set for M_WRITE messages");
@@ -559,7 +559,7 @@ CDAPMessage::CDAPMessage() {
 	flags_ = NONE_FLAGS;
 	invoke_id_ = 0;
 	obj_inst_ = 0;
-	obj_value_ = new ByteArrayObjectValue;
+	obj_value_ = 0;
 	op_code_ = NONE_OPCODE;
 	result_ = 0;
 	scope_ = 0;
@@ -923,7 +923,6 @@ std::string CDAPMessage::to_string() const {
 	return ss.str();
 }
 
-/*	TODO: Implement these functions	*/
 int CDAPMessage::get_abs_syntax() const {
 	return abs_syntax_;
 }
@@ -1006,7 +1005,8 @@ const ObjectValueInterface* CDAPMessage::get_obj_value() const {
 	return obj_value_;
 }
 void CDAPMessage::set_obj_value(ObjectValueInterface *arg0) {
-	delete obj_value_;
+	if (!obj_value_->is_empty() || obj_value_->isType() != arg0->isType())
+		delete obj_value_;
 	obj_value_ = arg0;
 }
 CDAPMessage::Opcode CDAPMessage::get_op_code() const {
@@ -1148,6 +1148,15 @@ RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
 RIBDaemonException::RIBDaemonException(ErrorCode arg0, const char* arg1) :
 		Exception(arg1) {
 	error_code_ = arg0;
+}
+
+// CLASS SerializedMessage
+SerializedMessage::SerializedMessage(char* message, int size){
+	size_ = size;
+	message_ = message;
+}
+SerializedMessage::~SerializedMessage(){
+	delete message_;
 }
 
 // CLASS WireMessageProviderFactory

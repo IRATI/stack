@@ -22,50 +22,61 @@
 //
 #include <iostream>
 #include "librina/cdap.h"
+#include "librina/ipc-process.h"
 
 using namespace rina;
 
-bool test1(CDAPSessionManagerInterface *session_manager,
-		CDAPSessionInterface *session) {
+bool test1(CDAPSessionManagerInterface &session_manager, int sen_port_id, int rec_port_id) {
 	AuthValue auth_value;
+	bool assert = false;
+
+	CDAPSessionInterface *sending_session = session_manager.createCDAPSession(sen_port_id);
+	CDAPSessionInterface *receving_session = session_manager.createCDAPSession(rec_port_id);
+
 	const CDAPMessage *sent_message =
-			session_manager->getOpenConnectionRequestMessage(1,
+			session_manager.getOpenConnectionRequestMessage(sen_port_id,
 					CDAPMessage::AUTH_NONE, auth_value, "1", "dest instance",
 					"1", "dest", "1", "src instance", "1", "src");
-	const char *serialized_message = session->encodeNextMessageToBeSent(
+	const SerializedMessage *serialized_message = sending_session->encodeNextMessageToBeSent(
 			*sent_message);
-	session->messageSent(*sent_message);
+	std::cout<<"Adeu"<<std::endl;
 
+	sending_session->messageSent(*sent_message);
 
+	std::cout<<"Adeu"<<std::endl;
 
-	const CDAPMessage *recevied_message = session->messageReceived(
-			serialized_message);
+	const CDAPMessage *recevied_message = receving_session->messageReceived(
+			*serialized_message);
+	std::cout<<"Adeu"<<std::endl;
 
 	if (sent_message->to_string() == recevied_message->to_string())	{
-		delete sent_message;
-		delete recevied_message;
-		return true;
+		assert = true;
 	}
-	else {
-		delete sent_message;
-		delete recevied_message;
-		return false;
-	}
+
+	delete sent_message;
+	delete recevied_message;
+	delete sending_session;
+	delete receving_session;
+
+	return assert;
 }
 
 int main() {
+	bool result = true;
 	WireMessageProviderFactory wire_factory;
 	CDAPSessionManagerFactory cdap_manager_factory;
 	long timeout = 2000;
 	CDAPSessionManagerInterface *session_manager =
 			cdap_manager_factory.createCDAPSessionManager(&wire_factory,
 					timeout);
-	CDAPSessionInterface *session = session_manager->createCDAPSession(1);
 
-	if (!test1(session_manager, session))
+	if (!test1(*session_manager, 1, 2)){
+		std::cout<<"Test1 Failed"<<std::endl;
+		result = false;
+	}
+
+	if (result)
+		return 0;
+	else
 		return -1;
-
-	delete session;
-	delete session_manager;
-	return 0;
 }
