@@ -34,6 +34,10 @@ AC_PATH_PROG([SORT], [sort], [/bin/false])
 AC_PATH_PROG([UNIQ], [uniq], [/bin/false])
 AC_PATH_PROG([GIT],  [git],  [/bin/false])
 
+AC_PROG_CPP
+AC_PROG_CC
+AC_PROG_CC_C_O
+
 AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
@@ -63,8 +67,6 @@ AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
-
-LT_INIT
 
 PKG_PROG_PKG_CONFIG([0.26])
 
@@ -145,17 +147,26 @@ AC_ARG_WITH([sysheaders],
 ])
 
 AS_IF([test -n "$sysheaders"],[
-  SYSINCLUDES=-nostdinc
+    AS_IF([test x"$GCC" != x"yes"],[
+        AC_MSG_ERROR([Your system lacks of GNU C compiler])
+    ])
 
-  for d in include ; do
-    i=`$CC -print-file-name="$d"` && test "x$i" != x && test "x$i" != "x$d" &&
-    SYSINCLUDES="$SYSINCLUDES -isystem $i"
-  done
+    SYSINCLUDES=-nostdinc
 
-  SYSINCLUDES="$SYSINCLUDES \
+    for d in include ; do
+        i=`$CC -print-file-name="$d"` && \
+        test "x$i" != x && \
+        test "x$i" != "x$d" && \
+        SYSINCLUDES="$SYSINCLUDES -isystem $i"
+    done
+
+    SYSINCLUDES="$SYSINCLUDES \
 -isystem `echo $sysheaders | $SED 's/:/ -isystem /g'`"
 
-  AS_IF([test -n "$CXX"],[
+    AS_IF([test x"$GXX" != x"yes"],[
+        AC_MSG_ERROR([Your system lacks of GNU C++ compiler])
+    ])
+    
     CXX_SYSINCLUDES=
 
     for cxxheaders in `$CXX -v -S -x c++ /dev/null -o /dev/null 2>&1 \
@@ -163,10 +174,9 @@ AS_IF([test -n "$sysheaders"],[
       test "x$cxxheaders" != x &&
       CXX_SYSINCLUDES="$CXX_SYSINCLUDES -isystem $cxxheaders"
     done
-  ])
 
-  SYSINCLUDES="$SYSINCLUDES -I$sysheaders"
-  CXX_SYSINCLUDES="$CXX_SYSINCLUDES -I$sysheaders"
+    SYSINCLUDES="$SYSINCLUDES -I$sysheaders"
+    CXX_SYSINCLUDES="$CXX_SYSINCLUDES -I$sysheaders"
 ])
 
 AC_SUBST(SYSINCLUDES)
