@@ -4,6 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+CLEANFILES       =
 MOSTLYCLEANFILES =
 
 MOSTLYCLEANFILES +=				\
@@ -135,7 +136,7 @@ librina.pc: Makefile librina.pc.in
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES = librina.pc
+CLEANFILES += librina.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = librina.pc
