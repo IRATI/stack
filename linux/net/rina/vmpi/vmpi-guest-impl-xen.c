@@ -388,6 +388,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 
 	np->tx.req_prod_pvt = i;
 
+        /* XXX move PUSH_REQUESTS and notify in txkick. */
 	RING_PUSH_REQUESTS_AND_CHECK_NOTIFY(&np->tx, notify);
 	if (notify)
 		notify_remote_via_irq(np->tx_irq);
@@ -1174,7 +1175,7 @@ static const struct xenbus_device_id mpifront_ids[] = {
 };
 
 
-static int xenmpi_remove(struct xenbus_device *dev)
+static int mpifront_remove(struct xenbus_device *dev)
 {
 	struct vmpi_impl_info *info = dev_get_drvdata(&dev->dev);
 
@@ -1199,7 +1200,7 @@ static int xenmpi_remove(struct xenbus_device *dev)
 
 static DEFINE_XENBUS_DRIVER(mpifront, ,
 	.probe = mpifront_probe,
-	.remove = xenmpi_remove,
+	.remove = mpifront_remove,
 	.resume = mpifront_resume,
 	.otherend_changed = mpiback_changed,
 );

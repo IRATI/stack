@@ -41,7 +41,7 @@ static irqreturn_t xenmpi_tx_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-void xenmpi_poll(struct work_struct *work)
+void xenmpi_tx_worker_function(struct work_struct *work)
 {
 	struct vmpi_impl_info *vif = container_of(work, struct vmpi_impl_info, tx_worker);
         int budget = 64;
@@ -196,7 +196,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 	for (i = 0; i < XEN_MPI_TX_RING_SIZE; i++)
 		vif->mmap_pages[i] = NULL;
 
-        INIT_WORK(&vif->tx_worker, xenmpi_poll);
+        INIT_WORK(&vif->tx_worker, xenmpi_tx_worker_function);
 
         vif->mpi = vmpi_init((void*)vif, &r, false);
         if (vif->mpi == NULL) {
