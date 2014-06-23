@@ -6,11 +6,11 @@
 
 nobase_pkginclude_HEADERS =			\
 	librina.h				\
-	logs.h                  \
+	logs.h					\
 	common.h				\
 	application.h				\
-	configuration.h                  		\
-	ipc-daemons.h               \
+	configuration.h				\
+	ipc-daemons.h				\
 	ipc-manager.h				\
 	ipc-process.h				\
 	faux-sockets.h				\
@@ -18,5 +18,5 @@ nobase_pkginclude_HEADERS =			\
 	sdu-protection.h			\
 	patterns.h				\
 	exceptions.h				\
-	concurrency.h           \
+	concurrency.h				\
 	timer.h

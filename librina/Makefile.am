@@ -9,9 +9,11 @@ DISTCLEANFILES            =
 MAINTAINERCLEANFILES      =
 BUILT_SOURCES             =
 DISTCHECK_CONFIGURE_FLAGS = --enable-java-wrappers
+DISTCHECK_CONFIGURE_FLAGS = --with-sysheaders=$(sysheaders)
 
 SUBDIRS =					\
 	include					\
+	include-system				\
 	src					\
 	wrap					\
 	test					\

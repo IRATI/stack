@@ -55,7 +55,8 @@ EXTRA_DIST =					\
 	netlink-messages.h			\
 	netlink-manager.h			\
 	netlink-parsers.h			\
-	rina-syscalls.h
+	rina-syscalls.h				\
+	cdap-impl.h
 
 librina_la_SOURCES  = $(allsources)
 librina_la_LDFLAGS  =

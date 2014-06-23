@@ -179,6 +179,7 @@ AS_IF([test -n "$sysheaders"],[
     CXX_SYSINCLUDES="$CXX_SYSINCLUDES -I$sysheaders"
 ])
 
+AC_SUBST(sysheaders)
 AC_SUBST(SYSINCLUDES)
 AC_SUBST(CXX_SYSINCLUDES)
 
@@ -232,6 +233,7 @@ AC_CONFIG_FILES([
 
     include/Makefile
     include/librina/Makefile
+    include-system/Makefile
 
     src/Makefile
 
