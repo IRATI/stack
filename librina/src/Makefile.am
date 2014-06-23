@@ -6,17 +6,14 @@
 
 CLEANFILES       =
 MOSTLYCLEANFILES =
-
-MOSTLYCLEANFILES +=				\
-        CDAP.stamp				\
-        CDAP.tmp				\
-        CDAP.pb..cc				\
-        CDAP.pb.h
+EXTRA_DIST       =
 
 CDAP.stamp: CDAP.proto
 	rm -f CDAP.tmp
 	touch CDAP.tmp
-	$(PROTOC) -I$(builddir) -I$(srcdir) --cpp_out=$(builddir) CDAP.proto
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/CDAP.proto
 	mv -f CDAP.tmp $@
 
 CDAP.pb.h CDAP.pb.cc: CDAP.stamp
@@ -24,6 +21,15 @@ CDAP.pb.h CDAP.pb.cc: CDAP.stamp
 	  rm -f CDAP.stamp;			\
 	  $(MAKE) $(AM_MAKEFLAGS) CDAP.stamp;	\
 	fi
+
+MOSTLYCLEANFILES +=				\
+        CDAP.tmp
+
+EXTRA_DIST +=					\
+	CDAP.proto				\
+	CDAP.pb.cc				\
+	CDAP.pb.h				\
+	CDAP.stamp
 
 allsources =					\
 	logs.cc					\
@@ -49,7 +55,7 @@ allsources =					\
 	CDAP.pb.cc				\
 	cdap-impl.cc
 
-EXTRA_DIST =					\
+EXTRA_DIST +=					\
 	utils.h					\
 	core.h					\
 	netlink-messages.h			\
