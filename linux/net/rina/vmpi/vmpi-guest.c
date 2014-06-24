@@ -332,10 +332,11 @@ vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
  */
 #include "vmpi-instances.h"
 
-struct vmpi_info *
-vmpi_find_instance(unsigned int id)
+int
+vmpi_find_instance(unsigned int id, struct vmpi_ops *ops)
 {
-        return __vmpi_find_instance(&vmpi_instances, &vmpi_instances_wqh, id);
+        return __vmpi_find_instance(&vmpi_instances, &vmpi_instances_wqh,
+                                    id, ops);
 }
 
 struct vmpi_info *
