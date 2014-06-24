@@ -45,6 +45,8 @@ module_param(vmpi_max_channels, uint, 0444);
 
 #define VMPI_GUEST_BUDGET  64
 
+LIST_HEAD(vmpi_instances);
+
 struct vmpi_info {
         vmpi_impl_info_t *vi;
 
@@ -60,6 +62,8 @@ struct vmpi_info {
 
         struct vmpi_ops ops;
         struct vmpi_stats stats;
+        unsigned int id;
+        struct list_head node;
 };
 
 int
@@ -321,6 +325,18 @@ vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
         return vmpi_register_read_callback(ops->priv, cb, opaque);
 }
 
+/*
+ * This is a "template" to be included after the definition of struct
+ * vmpi_info.
+ */
+#include "vmpi-instances.h"
+
+struct vmpi_info *
+vmpi_find_instance(unsigned int id)
+{
+        return __vmpi_find_instance(&vmpi_instances, id);
+}
+
 struct vmpi_info *
 vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 {
@@ -388,6 +404,8 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 #endif  /* VMPI_TEST */
 
 
+        vmpi_add_instance(&vmpi_instances, mpi);
+
         printk("vmpi_init completed\n");
 
         *ret = 0;
@@ -418,6 +436,8 @@ void
 vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
+
+        vmpi_remove_instance(&vmpi_instances, mpi);
 
 #ifdef VMPI_TEST
         vmpi_test_fini(mpi, deferred_test_fini);
