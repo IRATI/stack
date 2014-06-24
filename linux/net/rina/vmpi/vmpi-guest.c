@@ -404,7 +404,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
-
         vmpi_add_instance(&vmpi_instances, &vmpi_instances_wqh, mpi);
 
         printk("vmpi_init completed\n");
