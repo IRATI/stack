@@ -46,6 +46,7 @@ module_param(vmpi_max_channels, uint, 0444);
 #define VMPI_GUEST_BUDGET  64
 
 LIST_HEAD(vmpi_instances);
+DECLARE_WAIT_QUEUE_HEAD(vmpi_instances_wqh);
 
 struct vmpi_info {
         vmpi_impl_info_t *vi;
@@ -334,7 +335,7 @@ vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
 struct vmpi_info *
 vmpi_find_instance(unsigned int id)
 {
-        return __vmpi_find_instance(&vmpi_instances, id);
+        return __vmpi_find_instance(&vmpi_instances, &vmpi_instances_wqh, id);
 }
 
 struct vmpi_info *
@@ -404,7 +405,7 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 #endif  /* VMPI_TEST */
 
 
-        vmpi_add_instance(&vmpi_instances, mpi);
+        vmpi_add_instance(&vmpi_instances, &vmpi_instances_wqh, mpi);
 
         printk("vmpi_init completed\n");
 

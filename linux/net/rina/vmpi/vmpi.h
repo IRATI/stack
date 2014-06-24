@@ -55,8 +55,6 @@ typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
 int vmpi_register_read_callback(vmpi_info_t *mpi, vmpi_read_cb_t rcb,
                                 void *opaque);
 
-struct vmpi_info *vmpi_find_instance(unsigned int id);
-
 #include "vmpi-limits.h"
 
 #endif  /* __VMPI_H__ */

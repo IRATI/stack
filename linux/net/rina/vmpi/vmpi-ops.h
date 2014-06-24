@@ -35,6 +35,9 @@ struct vmpi_ops {
         void *priv;
 };
 
+struct vmpi_info *vmpi_find_instance(unsigned int id);
+void vmpi_fill_ops(struct vmpi_info *mpi, struct vmpi_ops *ops);
+
 #include "vmpi-limits.h"
 
 #endif  /* __VMPI_OPS_H__ */

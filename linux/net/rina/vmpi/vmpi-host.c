@@ -22,6 +22,8 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/socket.h>
+#include <linux/list.h>
+#include <linux/wait.h>
 
 #include "vmpi.h"
 #include "vmpi-stats.h"
@@ -36,6 +38,7 @@ unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
 module_param(vmpi_max_channels, uint, 0444);
 
 LIST_HEAD(vmpi_instances);
+DECLARE_WAIT_QUEUE_HEAD(vmpi_instances_wqh);
 
 struct vmpi_info {
         struct vmpi_impl_info *vi;
@@ -97,7 +100,7 @@ vmpi_get_stats(struct vmpi_info *mpi)
 struct vmpi_info *
 vmpi_find_instance(unsigned int id)
 {
-        return __vmpi_find_instance(&vmpi_instances, id);
+        return __vmpi_find_instance(&vmpi_instances, &vmpi_instances_wqh, id);
 }
 
 struct vmpi_info *
@@ -151,7 +154,7 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
-        vmpi_add_instance(&vmpi_instances, mpi);
+        vmpi_add_instance(&vmpi_instances, &vmpi_instances_wqh, mpi);
 
         return mpi;
 
