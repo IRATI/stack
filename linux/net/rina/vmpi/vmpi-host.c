@@ -35,6 +35,8 @@
 unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
 module_param(vmpi_max_channels, uint, 0444);
 
+LIST_HEAD(vmpi_instances);
+
 struct vmpi_info {
         struct vmpi_impl_info *vi;
 
@@ -43,6 +45,8 @@ struct vmpi_info {
 
         struct vmpi_ops ops;
         struct vmpi_stats stats;
+        unsigned int id;
+        struct list_head node;
 };
 
 int
@@ -82,6 +86,18 @@ struct vmpi_stats *
 vmpi_get_stats(struct vmpi_info *mpi)
 {
         return &mpi->stats;
+}
+
+/*
+ * This is a "template" to be included after the definition of struct
+ * vmpi_info.
+ */
+#include "vmpi-instances.h"
+
+struct vmpi_info *
+vmpi_find_instance(unsigned int id)
+{
+        return __vmpi_find_instance(&vmpi_instances, id);
 }
 
 struct vmpi_info *
@@ -135,6 +151,8 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
+        vmpi_add_instance(&vmpi_instances, mpi);
+
         return mpi;
 
 #ifdef VMPI_TEST
@@ -159,6 +177,8 @@ void
 vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
+
+        vmpi_remove_instance(&vmpi_instances, mpi);
 
 #ifdef VMPI_TEST
         vmpi_test_fini(mpi, deferred_test_fini);
