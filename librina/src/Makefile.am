@@ -27,42 +27,31 @@ MOSTLYCLEANFILES +=				\
 
 EXTRA_DIST +=					\
 	CDAP.proto				\
-	CDAP.pb.cc				\
-	CDAP.pb.h				\
 	CDAP.stamp
 
-allsources =					\
-	logs.cc					\
-	utils.cc				\
-	concurrency.cc				\
-	timer.cc				\
-	core.cc					\
-	exceptions.cc				\
-	librina.cc				\
-	common.cc				\
-	application.cc				\
-	configuration.cc			\
-	ipc-daemons.cc				\
-	ipc-manager.cc				\
-	ipc-process.cc				\
-	faux-sockets.cc				\
-	cdap.cc					\
-	sdu-protection.cc			\
-	netlink-messages.cc			\
-	netlink-parsers.cc			\
-	netlink-manager.cc			\
-	syscalls-wrappers.cc			\
-	CDAP.pb.cc				\
-	cdap-impl.cc
-
-EXTRA_DIST +=					\
-	utils.h					\
-	core.h					\
-	netlink-messages.h			\
-	netlink-manager.h			\
-	netlink-parsers.h			\
-	rina-syscalls.h				\
-	cdap-impl.h
+allsources =							\
+        logs.cc							\
+        utils.cc             utils.h				\
+        concurrency.cc						\
+        timer.cc						\
+        core.cc              core.h				\
+        exceptions.cc						\
+        librina.cc						\
+        common.cc						\
+        application.cc						\
+        configuration.cc					\
+        ipc-daemons.cc						\
+        ipc-manager.cc						\
+        ipc-process.cc						\
+        faux-sockets.cc						\
+        cdap.cc							\
+        sdu-protection.cc					\
+        netlink-messages.cc  netlink-messages.h			\
+        netlink-parsers.cc   netlink-parsers.h			\
+        netlink-manager.cc   netlink-manager.h			\
+        syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
+        CDAP.pb.cc	     CDAP.pb.h				\
+        cdap-impl.cc         cdap-impl.h
 
 librina_la_SOURCES  = $(allsources)
 librina_la_LDFLAGS  =
@@ -74,7 +63,6 @@ librina_la_CPPFLAGS =				\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
-	-I$(top_srcdir)/include-system		\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
@@ -90,7 +78,6 @@ librina_stubbed_la_CPPFLAGS =			\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=1				\
 	-I$(top_srcdir)/include			\
-	-I$(top_srcdir)/include-system		\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
@@ -106,7 +93,6 @@ test_linking_CFLAGS   =
 test_linking_CPPFLAGS =				\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
-	-I$(top_srcdir)/include-system		\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\

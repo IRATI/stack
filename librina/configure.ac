@@ -233,7 +233,6 @@ AC_CONFIG_FILES([
 
     include/Makefile
     include/librina/Makefile
-    include-system/Makefile
 
     src/Makefile
 
