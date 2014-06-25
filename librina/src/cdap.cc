@@ -426,7 +426,7 @@ void CDAPMessageValidator::validateObjName(const CDAPMessage *message) {
 }
 
 void CDAPMessageValidator::validateObjValue(const CDAPMessage *message) {
-	if (message->get_obj_value()->is_empty()) {
+	if (message->get_obj_value() == 0 || message->get_obj_value()->is_empty()) {
 		if (message->get_op_code() == CDAPMessage::M_WRITE) {
 			throw CDAPException(
 					"The objValue parameter must be set for M_WRITE messages");
@@ -559,7 +559,7 @@ CDAPMessage::CDAPMessage() {
 	flags_ = NONE_FLAGS;
 	invoke_id_ = 0;
 	obj_inst_ = 0;
-	obj_value_ = new ByteArrayObjectValue;
+	obj_value_ = 0;
 	op_code_ = NONE_OPCODE;
 	result_ = 0;
 	scope_ = 0;
@@ -855,75 +855,73 @@ const CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
 }
 std::string CDAPMessage::to_string() const {
 	std::stringstream ss;
-	ss << std::endl << get_op_code() << std::endl;
-	if (get_op_code() == CDAPMessage::M_CONNECT
-			|| get_op_code() == CDAPMessage::M_CONNECT_R) {
-		ss << "Abstract syntax: " << get_abs_syntax() << std::endl;
-		ss << "Authentication mechanism: " << get_auth_mech() << std::endl;
-		if (!get_auth_value().is_empty())
-			ss << "Authentication value: " << get_auth_value().to_string()
+	ss << std::endl << op_code_ << std::endl;
+	if (op_code_ == CDAPMessage::M_CONNECT
+			|| op_code_ == CDAPMessage::M_CONNECT_R) {
+		if (abs_syntax_ != 0)
+			ss << "Abstract syntax: " << abs_syntax_ << std::endl;
+		ss << "Authentication mechanism: " << auth_mech_ << std::endl;
+		if (!auth_value_.is_empty())
+			ss << "Authentication value: " << auth_value_.to_string()
 					<< std::endl;
-		if (!get_src_ap_name().empty())
-			ss << "Source AP name: " << get_src_ap_name() << std::endl;
-		if (!get_src_ap_inst().empty())
-			ss << "Source AP instance: " << get_src_ap_inst() << std::endl;
-		if (!get_src_ae_name().empty())
-			ss << "Source AE name: " << get_src_ae_name() << std::endl;
-		if (!get_src_ae_inst().empty())
-			ss << "Source AE instance: " << get_src_ae_inst() << std::endl;
-		if (!get_dest_ap_name().empty())
-			ss << "Destination AP name: " << get_dest_ap_name() << std::endl;
-		if (!get_dest_ap_inst().empty())
-			ss << "Destination AP instance: " << get_dest_ap_inst()
-					<< std::endl;
-		if (!get_dest_ae_name().empty())
-			ss << "Destination AE name: " << get_dest_ae_name() << std::endl;
-		if (!get_dest_ae_inst().empty())
-			ss << "Destination AE instance: " << get_dest_ae_inst()
-					<< std::endl;
+		if (!src_ap_name_.empty())
+			ss << "Source AP name: " << src_ap_name_ << std::endl;
+		if (!src_ap_inst_.empty())
+			ss << "Source AP instance: " << src_ap_inst_ << std::endl;
+		if (!src_ae_name_.empty())
+			ss << "Source AE name: " << src_ae_name_ << std::endl;
+		if (!src_ae_inst_.empty())
+			ss << "Source AE instance: " << src_ae_inst_ << std::endl;
+		if (!dest_ap_name_.empty())
+			ss << "Destination AP name: " << dest_ap_name_ << std::endl;
+		if (!dest_ap_inst_.empty())
+			ss << "Destination AP instance: " << dest_ap_inst_<< std::endl;
+		if (!dest_ae_name_.empty())
+			ss << "Destination AE name: " << dest_ae_name_ << std::endl;
+		if (!dest_ae_inst_.empty())
+			ss << "Destination AE instance: " << dest_ae_inst_ << std::endl;
 	}
-	if (get_filter() != 0)
-		ss << "Filter: " << get_filter() << std::endl;
-	if (get_flags() != CDAPMessage::NONE_FLAGS)
-		ss << "Flags: " << get_flags() << std::endl;
-	if (get_invoke_id() != 0)
-		ss << "Invoke id: " << get_invoke_id() << std::endl;
-	if (!get_obj_class().empty())
-		ss << "Object class: " << get_obj_class() << std::endl;
-	if (!get_obj_name().empty())
-		ss << "Object name: " << get_obj_name() << std::endl;
-	if (get_obj_inst() != 0)
-		ss << "Object instance: " + get_obj_inst() << std::endl;
-	if (!get_obj_value()->is_empty())
-		ss << "Object value: " << get_obj_value() << std::endl;
-	if (get_op_code() == CDAPMessage::M_CONNECT_R
-			|| get_op_code() == CDAPMessage::M_RELEASE_R
-			|| get_op_code() == CDAPMessage::M_READ_R
-			|| get_op_code() == CDAPMessage::M_WRITE_R
-			|| get_op_code() == CDAPMessage::M_CANCELREAD_R
-			|| get_op_code() == CDAPMessage::M_START_R
-			|| get_op_code() == CDAPMessage::M_STOP_R
-			|| get_op_code() == CDAPMessage::M_CREATE_R
-			|| get_op_code() == CDAPMessage::M_DELETE_R) {
-		ss << "Result: " << get_result() << std::endl;
-		if (!get_result_reason().empty())
-			ss << "Result Reason: " << get_result_reason() << std::endl;
+	if (filter_ != 0)
+		ss << "Filter: " << filter_ << std::endl;
+	if (flags_ != CDAPMessage::NONE_FLAGS)
+		ss << "Flags: " << flags_ << std::endl;
+	if (invoke_id_ != 0)
+		ss << "Invoke id: " << invoke_id_ << std::endl;
+	if (!obj_class_.empty())
+		ss << "Object class: " << obj_class_ << std::endl;
+	if (!obj_name_.empty())
+		ss << "Object name: " << obj_name_ << std::endl;
+	if (obj_inst_ != 0)
+		ss << "Object instance: " + obj_inst_ << std::endl;
+	if (obj_value_ != 0 && !obj_value_->is_empty())
+		ss << "Object value: " << obj_value_ << std::endl;
+	if (op_code_ == CDAPMessage::M_CONNECT_R
+			|| op_code_ == CDAPMessage::M_RELEASE_R
+			|| op_code_ == CDAPMessage::M_READ_R
+			|| op_code_ == CDAPMessage::M_WRITE_R
+			|| op_code_ == CDAPMessage::M_CANCELREAD_R
+			|| op_code_ == CDAPMessage::M_START_R
+			|| op_code_ == CDAPMessage::M_STOP_R
+			|| op_code_ == CDAPMessage::M_CREATE_R
+			|| op_code_ == CDAPMessage::M_DELETE_R) {
+		ss << "Result: " << result_ << std::endl;
+		if (!result_reason_.empty())
+			ss << "Result Reason: " << result_reason_ << std::endl;
 	}
-	if (get_op_code() == CDAPMessage::M_READ
-			|| get_op_code() == CDAPMessage::M_WRITE
-			|| get_op_code() == CDAPMessage::M_CANCELREAD
-			|| get_op_code() == CDAPMessage::M_START
-			|| get_op_code() == CDAPMessage::M_STOP
-			|| get_op_code() == CDAPMessage::M_CREATE
-			|| get_op_code() == CDAPMessage::M_DELETE) {
-		ss << "Scope: " << get_scope() << std::endl;
+	if (op_code_ == CDAPMessage::M_READ
+			|| op_code_ == CDAPMessage::M_WRITE
+			|| op_code_ == CDAPMessage::M_CANCELREAD
+			|| op_code_ == CDAPMessage::M_START
+			|| op_code_ == CDAPMessage::M_STOP
+			|| op_code_ == CDAPMessage::M_CREATE
+			|| op_code_ == CDAPMessage::M_DELETE) {
+		ss << "Scope: " << scope_ << std::endl;
 	}
-	if (get_version() != 0)
-		ss << "Version: " << get_version() << std::endl;
+	if (version_ != 0)
+		ss << "Version: " << version_ << std::endl;
 	return ss.str();
 }
 
-/*	TODO: Implement these functions	*/
 int CDAPMessage::get_abs_syntax() const {
 	return abs_syntax_;
 }
@@ -1006,7 +1004,8 @@ const ObjectValueInterface* CDAPMessage::get_obj_value() const {
 	return obj_value_;
 }
 void CDAPMessage::set_obj_value(ObjectValueInterface *arg0) {
-	delete obj_value_;
+	if (!obj_value_->is_empty() || obj_value_->isType() != arg0->isType())
+		delete obj_value_;
 	obj_value_ = arg0;
 }
 CDAPMessage::Opcode CDAPMessage::get_op_code() const {
@@ -1148,6 +1147,15 @@ RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
 RIBDaemonException::RIBDaemonException(ErrorCode arg0, const char* arg1) :
 		Exception(arg1) {
 	error_code_ = arg0;
+}
+
+// CLASS SerializedMessage
+SerializedMessage::SerializedMessage(char* message, int size){
+	size_ = size;
+	message_ = message;
+}
+SerializedMessage::~SerializedMessage(){
+	delete message_;
 }
 
 // CLASS WireMessageProviderFactory
