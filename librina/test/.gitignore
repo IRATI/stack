@@ -12,3 +12,4 @@
 /test-netlink-parsers
 /test-librina
 /test-syscalls
+/test-cdap
