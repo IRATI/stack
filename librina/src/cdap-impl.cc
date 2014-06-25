@@ -40,6 +40,7 @@ ConnectionStateMachine::ConnectionStateMachine(CDAPSessionImpl *cdap_session,
 	cdap_session_ = cdap_session;
 	timeout_ = timeout;
 	connection_state_= NONE;
+	open_timer_ = 0;
 }
 ConnectionStateMachine::~ConnectionStateMachine(){
 	LOG_DBG("ConectionStateMachine destroyed");
@@ -113,10 +114,10 @@ void ConnectionStateMachine::releaseResponseSentOrReceived(bool sent) {
 }
 void ConnectionStateMachine::connect() {
 	checkConnect();
-	connection_state_ = AWAITCON;
+	connection_state_ = AWAITCON;/*
 	ResetStablishmentTimerTask *reset = new ResetStablishmentTimerTask(this);
 	LOG_DBG("Opened a ResetStablishmentTimerTask with timeout %d", timeout_);
-	open_timer_.scheduleTask(reset, timeout_);
+	open_timer_.scheduleTask(reset, timeout_);*/
 }
 void ConnectionStateMachine::connectReceived() {
 	if (connection_state_ != NONE) {
@@ -139,8 +140,8 @@ void ConnectionStateMachine::connectResponseReceived() {
 						+ connection_state_ << " state";
 		throw CDAPException(ss.str());
 	}
-	LOG_DBG("Clear a ResetStablishmentTimerTask");
-	open_timer_.clear();
+	//LOG_DBG("Clear a ResetStablishmentTimerTask");
+	//open_timer_.clear();
 	connection_state_ = CONNECTED;
 }
 void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {

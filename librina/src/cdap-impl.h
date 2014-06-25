@@ -111,7 +111,7 @@ private:
 	/// The state of the CDAP connection, drives the CDAP connection
 	/// state machine
 	ConnectionState connection_state_;
-	Timer open_timer_;
+	Timer *open_timer_;
 	//Timer close_timer_;
 	friend class ResetStablishmentTimerTask;
 	friend class ReleaseConnectionTimerTask;
