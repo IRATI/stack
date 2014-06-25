@@ -1247,6 +1247,7 @@ int dtp_receive(struct dtp * instance,
         struct dt *           dt;
         seq_num_t             seq_num;
         seq_num_t             seq_num_sv_update = 0; 
+        timeout_t             a;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1280,6 +1281,9 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
+        a = dt_sv_a(dt);
+        LOG_DBG("A-timer timeout: %d", a);
+
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -1290,6 +1294,7 @@ int dtp_receive(struct dtp * instance,
         seq_num = pci_sequence_number_get(pci);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
+                LOG_DBG("Data run flag DRF");
                 max_seq_nr_rcv_set(sv, seq_num);
                 drf_flag_set(sv, true);
                 policies->initial_sequence_number(instance);
@@ -1300,7 +1305,7 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                 }
-        } else if (seq_num < dt_sv_rcv_lft_win(dt)) {
+        } else if (seq_num <= dt_sv_rcv_lft_win(dt)) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
                 dropped_pdus_inc(sv);
@@ -1323,15 +1328,12 @@ int dtp_receive(struct dtp * instance,
                         return -1;
                 }
                 return 0;
-        } else if (dt_sv_rcv_lft_win(dt) < seq_num &&
-                   seq_num <= max_seq_nr_rcv(sv) + 1) {
-                max_seq_nr_rcv_set(sv, seq_num);
-                LOG_DBG("DTP Receive GAP or +1");
+        } else if (seq_num < max_seq_nr_rcv(sv)) {
+                LOG_DBG("DTP Receive GAP");
                 /* This op puts the PDU in seq number order  and duplicates
                  * considered */
-                if (!dt_sv_a(dt)) {
+                if (!a) {
                         /* FIXME: delimiting goes here */
-                        /* FIXME: Not checking if pdu is a duplicate */
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -1365,10 +1367,10 @@ int dtp_receive(struct dtp * instance,
                                 }
                         }
                 }
-        } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
+        } else if (seq_num >= (max_seq_nr_rcv(sv) + 1)) {
                 LOG_DBG("DTP Receive + >1");
                 max_seq_nr_rcv_set(sv, seq_num);
-                if (!dt_sv_a(dt)) {
+                if (!a) {
                         /* FIXME: delimiting goes here */
                         /* FIXME: Not checking if pdu is a duplicate */
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
