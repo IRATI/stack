@@ -101,12 +101,6 @@ vmpi_impl_txkick(struct vmpi_impl_info *vi)
         virtqueue_kick(vi->sq->vq);
 }
 
-void
-vmpi_impl_rxkick(struct vmpi_impl_info *vi)
-{
-        virtqueue_kick(vi->rq->vq);
-}
-
 struct vmpi_buffer *
 vmpi_impl_get_written_buffer(struct vmpi_impl_info *vi)
 {
@@ -433,7 +427,7 @@ virtio_mpi_probe(struct virtio_device *vdev)
 
  setup_rxbufs:
         vmpi_impl_free_unused_bufs(vi);
-        vmpi_fini(false);
+        vmpi_fini(vi->private, false);
  vmpi_ini:
         virtio_mpi_del_vqs(vi);
  init_vqs:
@@ -447,7 +441,7 @@ virtio_mpi_remove(struct virtio_device *vdev)
 {
         struct vmpi_impl_info *vi = vdev->priv;
 
-        vmpi_fini(false);
+        vmpi_fini(vi->private, false);
 
         remove_vq_common(vi);
         kfree(vi);
