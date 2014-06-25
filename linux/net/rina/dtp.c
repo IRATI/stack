@@ -364,7 +364,7 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
 }
 #endif
 
-static int sdu_post(struct dtp * instance,
+static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
 {
         struct sdu *          sdu;
@@ -681,7 +681,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
 
         /* FIXME: Invoke delimiting */
 
-        spin_lock(&sv->lock);
+//        spin_lock(&sv->lock);
 
         LWE     = dt_sv_rcv_lft_win(dt);
         pdu     = seqQ_pop(seqQ);
@@ -699,12 +699,12 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         while (evaluate_ulwe_loop_condition(pdu, seq_num, limit)) {
                 LOG_DBG("LWEU: Seq_num  = %d", seq_num);
                 if (evaluate_seq_num_condition(seq_num, LWE, max_sdu_gap, a)) {
-                        sdu_post(dtp, pdu);
+                        pdu_post(dtp, pdu);
                         LOG_DBG("LWEU posted");
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-                                spin_unlock(&sv->lock);
+//                                spin_unlock(&sv->lock);
                                 return 0;
                         }
                         LWE     = dt_sv_rcv_lft_win(dt);
@@ -724,7 +724,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
                 seqQ_push(dtp, pdu);
 
         LOG_DBG("LWEU: Final LWE = %d", LWE);
-        spin_unlock(&sv->lock);
+//        spin_unlock(&sv->lock);
         return LWE;
 }
 
@@ -766,7 +766,7 @@ static void update_left_win_edge_and_post(struct dtp * dtp)
         /* while ((LWE <= max_seq_nr_rcv(sv)) && (seq_num > 0)) { */
                 /* if it is next pdu just post and update window edge */
                 if (seq_num == (LWE + 1) || !dt_sv_a(dt)) {
-                        sdu_post(dtp, pdu);
+                        pdu_post(dtp, pdu);
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -1329,12 +1329,28 @@ int dtp_receive(struct dtp * instance,
                 LOG_DBG("DTP Receive GAP or +1");
                 /* This op puts the PDU in seq number order  and duplicates
                  * considered */
-                if (seqQ_push(instance, pdu)) {
-                        LOG_ERR("Could not push PDU into sequencing queue");
-                        return -1;
-                }
                 if (!dt_sv_a(dt)) {
-                        LOG_DBG("DTP Receive GAP or +1 no A");
+                        /* FIXME: delimiting goes here */
+                        /* FIXME: Not checking if pdu is a duplicate */
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                return -1;
+                        }
+                        pdu_post(instance, pdu);
+                        if (dtcp) {
+                                /* This must send acks */        
+                                if (dtcp_sv_update(dtcp, seq_num)) {
+                                        LOG_ERR("Failed to update dtcp sv");
+                                        return -1;
+                                }
+                        }
+                        return 0;
+                } else {
+                        if (seqQ_push(instance, pdu)) {
+                                LOG_ERR("Could not push PDU into sequencing queue");
+                                return -1;
+                        }
                         seq_num_sv_update = update_left_win_edge(instance);
                         if (dtcp) {
                                 if (!seq_num_sv_update) {
@@ -1352,11 +1368,28 @@ int dtp_receive(struct dtp * instance,
         } else if (seq_num > (max_seq_nr_rcv(sv) + 1)) {
                 LOG_DBG("DTP Receive + >1");
                 max_seq_nr_rcv_set(sv, seq_num);
-                if (seqQ_push(instance, pdu)) {
-                        LOG_ERR("Could not push PDU into sequencing queue");
-                        return -1;
-                }
                 if (!dt_sv_a(dt)) {
+                        /* FIXME: delimiting goes here */
+                        /* FIXME: Not checking if pdu is a duplicate */
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                return -1;
+                        }
+                        pdu_post(instance, pdu);
+                        if (dtcp) {
+                                /* This must send acks */        
+                                if (dtcp_sv_update(dtcp, seq_num)) {
+                                        LOG_ERR("Failed to update dtcp sv");
+                                        return -1;
+                                }
+                        }
+                        return 0;
+                } else {
+                        if (seqQ_push(instance, pdu)) {
+                                LOG_ERR("Could not push PDU into sequencing queue");
+                                return -1;
+                        }
                         seq_num_sv_update = update_left_win_edge(instance);
                         if (dtcp) {
                                 if (!seq_num_sv_update) {
@@ -1372,7 +1405,6 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
                 LOG_MISSING;
-
         } else {
                 LOG_DBG("DTP Receive Wrong case");
                 /* Something went wrong! */
