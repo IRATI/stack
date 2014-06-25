@@ -1,0 +1,26 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=uninstall-user
+
+echo "$ME: Uninstalling rina-tools"
+(cd rina-tools && make uninstall) || {
+    echo "$ME: Cannot uninstall rina-tools"
+    exit 1
+}
+
+echo "$ME: Uninstalling rinad"
+(cd rinad && make uninstall) || {
+    echo "$ME: Cannot uninstall rinad"
+    exit 1
+}
+
+echo "$ME: Uninstalling librina"
+(cd librina && make uninstall) || {
+    echo "$ME: Cannot uninstall librina"
+    exit 1
+}

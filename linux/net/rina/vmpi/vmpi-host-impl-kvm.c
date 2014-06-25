@@ -125,7 +125,7 @@ read_cb_worker_function(struct work_struct *work)
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void
-handle_tx(struct vmpi_impl_info *vi)
+handle_guest_tx(struct vmpi_impl_info *vi)
 {
         struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_TX];
         struct vhost_virtqueue *vq = &nvq->vq;
@@ -297,7 +297,7 @@ static int get_rx_bufs(struct vhost_virtqueue *vq,
 /* Expects to be always run from workqueue - which acts as
  * read-size critical section for our kind of RCU. */
 static void
-handle_rx(struct vmpi_impl_info *vi)
+handle_guest_rx(struct vmpi_impl_info *vi)
 {
         struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_RX];
         struct vhost_virtqueue *vq = &nvq->vq;
@@ -374,7 +374,7 @@ handle_tx_kick(struct vhost_work *work)
         struct vmpi_impl_info *vi = container_of(vq->dev,
                                                  struct vmpi_impl_info, dev);
 
-        handle_tx(vi);
+        handle_guest_tx(vi);
 }
 
 static void
@@ -385,7 +385,7 @@ handle_rx_kick(struct vhost_work *work)
         struct vmpi_impl_info *vi = container_of(vq->dev,
                                                  struct vmpi_impl_info, dev);
 
-        handle_rx(vi);
+        handle_guest_rx(vi);
 }
 
 static void
@@ -393,7 +393,7 @@ handle_tx_mpi(struct vhost_work *work)
 {
         struct vmpi_impl_info *vi = container_of(work, struct vmpi_impl_info,
                                                  poll[VHOST_MPI_VQ_TX].work);
-        handle_tx(vi);
+        handle_guest_tx(vi);
 }
 
 static void
@@ -401,7 +401,7 @@ handle_rx_mpi(struct vhost_work *work)
 {
         struct vmpi_impl_info *vi = container_of(work, struct vmpi_impl_info,
                                                  poll[VHOST_MPI_VQ_RX].work);
-        handle_rx(vi);
+        handle_guest_rx(vi);
 }
 
 static int
@@ -761,7 +761,7 @@ vhost_mpi_poll(struct file *file, poll_table *wait)
 }
 
 int
-vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buffer *buf)
+vmpi_impl_txkick(struct vmpi_impl_info *vi)
 {
         wake_up_interruptible_poll(&vi->wqh_poll, POLLIN |
                                    POLLRDNORM | POLLRDBAND);

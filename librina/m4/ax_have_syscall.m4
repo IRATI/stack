@@ -1,7 +1,7 @@
 #
 # SYNOPSIS
 #
-#   AX_HAVE_SYSCALL([syscall],[ACTION-IF-FOUND], [ACTION-IF-NOT-FOUND])
+#   AX_HAVE_SYSCALL([syscall],[ACTION-IF-FOUND],[ACTION-IF-NOT-FOUND])
 #
 # WRITTEN BY:
 #
@@ -12,10 +12,10 @@ AC_DEFUN([AX_HAVE_SYSCALL], [dnl
     AC_MSG_CHECKING([for $1 syscall availability])
     AC_CACHE_VAL([ax_cv_have_syscall_$1], [
         AC_LINK_IFELSE([
-            AC_LANG_PRxOGRAM([
-                #include <sys/syscall.h>
+            AC_LANG_PROGRAM([
+                #include <asm/unistd.h>
             ], [
-                (void) syscall(SYS_$1);
+                int i = __NR_$1;
             ])
         ],[
             ax_cv_have_syscall_$1=yes

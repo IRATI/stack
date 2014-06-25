@@ -20,14 +20,8 @@
 // MA  02110-1301  USA
 //
 
-/* FIXME: PIGSTY HACK TO USE OUR SYSCALLS, PLEASE FIX ASAP !!! */
-#if defined(__x86_64__)
-#undef _ASM_X86_UNISTD_64_H
-#include "/usr/include/linux/include/asm-x86/unistd_64.h"
-#else
-#undef _ASM_X86_UNISTD_32_H
-#include "/usr/include/linux/include/asm-x86/unistd_32.h"
-#endif
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #define SYS_createIPCProcess   __NR_ipc_create
 #define SYS_destroyIPCProcess  __NR_ipc_destroy
@@ -38,6 +32,7 @@
 #define SYS_readManagementSDU  __NR_management_sdu_read
 #define SYS_writeManagementSDU __NR_management_sdu_write
 
+// These should be removed (should be checked at configuration time)
 #if !defined(__NR_ipc_create)
 #error No ipc_create syscall defined
 #endif
@@ -62,9 +57,6 @@
 #if !defined(__NR_management_sdu_write)
 #error No management_sdu_write syscall defined
 #endif
-
-#include <sys/syscall.h>
-#include <unistd.h>
 
 #define RINA_PREFIX "syscalls"
 

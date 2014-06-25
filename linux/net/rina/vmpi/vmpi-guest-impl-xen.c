@@ -21,7 +21,6 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
-#include <linux/skbuff.h>
 #include <linux/moduleparam.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
@@ -75,22 +74,22 @@ struct vmpi_impl_info {
 	int tx_ring_ref;
 
 	/*
-	 * {tx,rx}_skbs store outstanding skbuffs. Free tx_skb entries
-	 * are linked from tx_skb_freelist through skb_entry.link.
+	 * {tx,rx}_bufs store outstanding vmpibufs. Free tx_buf entries
+	 * are linked from tx_buf_freelist through buf_entry.link.
 	 *
 	 *  NB. Freelist index entries are always going to be less than
-	 *  PAGE_OFFSET, whereas pointers to skbs will always be equal or
+	 *  PAGE_OFFSET, whereas pointers to bufs will always be equal or
 	 *  greater than PAGE_OFFSET: we use this property to distinguish
 	 *  them.
 	 */
-	union skb_entry {
+	union buf_entry {
                 struct vmpi_buffer *buf;
 		unsigned long link;
-	} tx_skbs[NET_TX_RING_SIZE];
+	} tx_bufs[NET_TX_RING_SIZE];
 	grant_ref_t gref_tx_head;
 	grant_ref_t grant_tx_ref[NET_TX_RING_SIZE];
 	struct page *grant_tx_page[NET_TX_RING_SIZE];
-	unsigned tx_skb_freelist;
+	unsigned tx_buf_freelist;
 
 	spinlock_t   rx_lock ____cacheline_aligned_in_smp;
 	struct xen_mpi_rx_front_ring rx;
@@ -105,7 +104,7 @@ struct vmpi_impl_info {
 
 	struct timer_list rx_refill_timer;
 
-	struct vmpi_buffer *rx_skbs[NET_RX_RING_SIZE];
+	struct vmpi_buffer *rx_bufs[NET_RX_RING_SIZE];
 	grant_ref_t gref_rx_head;
 	grant_ref_t grant_rx_ref[NET_RX_RING_SIZE];
 
@@ -116,30 +115,30 @@ struct vmpi_impl_info {
 
 static struct vmpi_impl_info *instance = NULL;
 
-static void skb_entry_set_link(union skb_entry *list, unsigned short id)
+static void buf_entry_set_link(union buf_entry *list, unsigned short id)
 {
 	list->link = id;
 }
 
-static int skb_entry_is_link(const union skb_entry *list)
+static int buf_entry_is_link(const union buf_entry *list)
 {
 	BUILD_BUG_ON(sizeof(list->buf) != sizeof(list->link));
 	return (unsigned long)list->buf < PAGE_OFFSET;
 }
 
 /*
- * Access macros for acquiring freeing slots in tx_skbs[].
+ * Access macros for acquiring freeing slots in tx_bufs[].
  */
 
-static void add_id_to_freelist(unsigned *head, union skb_entry *list,
+static void add_id_to_freelist(unsigned *head, union buf_entry *list,
 			       unsigned short id)
 {
-	skb_entry_set_link(&list[id], *head);
+	buf_entry_set_link(&list[id], *head);
 	*head = id;
 }
 
 static unsigned short get_id_from_freelist(unsigned *head,
-					   union skb_entry *list)
+					   union buf_entry *list)
 {
 	unsigned int id = *head;
 	*head = list[id].link;
@@ -151,12 +150,12 @@ static int xenmpi_rxidx(RING_IDX idx)
 	return idx & (NET_RX_RING_SIZE - 1);
 }
 
-static struct vmpi_buffer *xenmpi_get_rx_skb(struct vmpi_impl_info *np,
+static struct vmpi_buffer *xenmpi_get_rx_buf(struct vmpi_impl_info *np,
 					 RING_IDX ri)
 {
 	int i = xenmpi_rxidx(ri);
-	struct vmpi_buffer *buf = np->rx_skbs[i];
-	np->rx_skbs[i] = NULL;
+	struct vmpi_buffer *buf = np->rx_bufs[i];
+	np->rx_bufs[i] = NULL;
 	return buf;
 }
 
@@ -191,7 +190,7 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
         printk("%s: I should not be called\n", __func__);
 
 	/*
-	 * Allocate skbuffs greedily, even though we batch updates to the
+	 * Allocate vmpibufs greedily, even though we batch updates to the
 	 * receive ring. This creates a less bursty demand on the memory
 	 * allocator, so should reduce the chance of failed allocation requests
 	 * both for ourself and for other kernel subsystems.
@@ -201,11 +200,11 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
                 /* Allocate the buffer as a page. */
                 buf = vmpi_buffer_create(0);
 		if (unlikely(!buf)) {
-			/* Could not allocate any skbuffs. Try again later. */
+			/* Could not allocate any vmpibufs. Try again later. */
 			mod_timer(&np->rx_refill_timer,
 				  jiffies + (HZ/10));
 
-			/* Any skbuffs queued for refill? Force them out. */
+			/* Any vmpibufs queued for refill? Force them out. */
 			if (i != 0)
 				goto refill;
 			break;
@@ -233,8 +232,8 @@ static void xenmpi_alloc_rx_buffers(struct vmpi_impl_info *np)
 			break;
 
 		id = xenmpi_rxidx(req_prod);
-		BUG_ON(np->rx_skbs[id]);
-		np->rx_skbs[id] = buf;
+		BUG_ON(np->rx_bufs[id]);
+		np->rx_bufs[id] = buf;
 
 		ref = gnttab_claim_grant_reference(&np->gref_rx_head);
 		BUG_ON((signed short)ref < 0);
@@ -285,7 +284,7 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                         continue; */
 
                 id  = txrsp->id;
-                buf = np->tx_skbs[id].buf;
+                buf = np->tx_bufs[id].buf;
                 if (unlikely(gnttab_query_foreign_access(
                                                 np->grant_tx_ref[id]) != 0)) {
                         pr_alert("%s: warning -- grant still in use by backend domain\n",
@@ -298,7 +297,7 @@ struct vmpi_buffer *vmpi_impl_get_written_buffer(vmpi_impl_info_t *np)
                                 &np->gref_tx_head, np->grant_tx_ref[id]);
                 np->grant_tx_ref[id] = GRANT_INVALID_REF;
                 np->grant_tx_page[id] = NULL;
-                add_id_to_freelist(&np->tx_skb_freelist, np->tx_skbs, id);
+                add_id_to_freelist(&np->tx_buf_freelist, np->tx_bufs, id);
 
                 IFV(printk("%s: buf %p, freed id %d, cons %d\n", __func__, buf, id, cons));
 
@@ -327,12 +326,12 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
             goto drop;
         }
 
-	/* If skb->len is too big for wire format, drop skb and alert
+	/* If buf->len is too big for wire format, drop buf and alert
 	 * user about misconfiguration.
 	 */
 	if (unlikely(len > XEN_MPI_MAX_TX_SIZE)) {
 		net_alert_ratelimited(
-			"xenmpi: skb->len = %u, too big for wire format\n",
+			"xenmpi: buf->len = %u, too big for wire format\n",
 			len);
 		goto drop;
 	}
@@ -359,8 +358,8 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
                         slice = PAGE_SIZE - offset;
                 }
 
-	        id = get_id_from_freelist(&np->tx_skb_freelist, np->tx_skbs);
-	        np->tx_skbs[id].buf = buf;
+	        id = get_id_from_freelist(&np->tx_buf_freelist, np->tx_bufs);
+	        np->tx_bufs[id].buf = buf;
 
 	        ref = gnttab_claim_grant_reference(&np->gref_tx_head);
 	        BUG_ON((signed short)ref < 0);
@@ -388,6 +387,7 @@ vmpi_impl_write_buf(struct vmpi_impl_info *np, struct vmpi_buffer *buf)
 
 	np->tx.req_prod_pvt = i;
 
+        /* XXX move PUSH_REQUESTS and notify in txkick. */
 	RING_PUSH_REQUESTS_AND_CHECK_NOTIFY(&np->tx, notify);
 	if (notify)
 		notify_remote_via_irq(np->tx_irq);
@@ -419,8 +419,8 @@ static void xenmpi_refill_one(struct vmpi_impl_info *np)
         }
 
         id = xenmpi_rxidx(req_prod);
-        BUG_ON(np->rx_skbs[id]);
-        np->rx_skbs[id] = buf;
+        BUG_ON(np->rx_bufs[id]);
+        np->rx_bufs[id] = buf;
 
         ref = gnttab_claim_grant_reference(&np->gref_rx_head);
         BUG_ON((signed short)ref < 0);
@@ -472,7 +472,7 @@ struct vmpi_buffer *vmpi_impl_read_buffer(vmpi_impl_info_t *np)
                         printk("%s: Warning: error in response [%d]",
                                 __func__, rx->status);
                 }
-                buf = xenmpi_get_rx_skb(np, cons);
+                buf = xenmpi_get_rx_buf(np, cons);
                 ref = xenmpi_get_rx_ref(np, cons);
 
                 IFV(printk("%s: rx rsp [cons=%d] [id=%d] [size=%d]\n", __func__,
@@ -516,7 +516,7 @@ static void xenmpi_release_tx_bufs(struct vmpi_impl_info *np)
 
 	for (i = 0; i < NET_TX_RING_SIZE; i++) {
 		/* Skip over entries which are actually freelist references */
-		if (skb_entry_is_link(&np->tx_skbs[i]))
+		if (buf_entry_is_link(&np->tx_bufs[i]))
 			continue;
 
 		get_page(np->grant_tx_page[i]);
@@ -525,8 +525,8 @@ static void xenmpi_release_tx_bufs(struct vmpi_impl_info *np)
 					  (unsigned long)page_address(np->grant_tx_page[i]));
 		np->grant_tx_page[i] = NULL;
 		np->grant_tx_ref[i] = GRANT_INVALID_REF;
-		add_id_to_freelist(&np->tx_skb_freelist, np->tx_skbs, i);
-		buf = np->tx_skbs[i].buf;
+		add_id_to_freelist(&np->tx_buf_freelist, np->tx_bufs, i);
+		buf = np->tx_bufs[i].buf;
 	}
 }
 
@@ -540,7 +540,7 @@ static void xenmpi_release_rx_bufs(struct vmpi_impl_info *np)
 		struct page *page;
                 struct vmpi_buffer *buf;
 
-		buf = np->rx_skbs[id];
+		buf = np->rx_bufs[id];
 		if (!buf)
 			continue;
 
@@ -678,16 +678,16 @@ static struct vmpi_impl_info *xenmpi_create_dev(struct xenbus_device *dev)
 	np->rx_refill_timer.data = (unsigned long)np;
 	np->rx_refill_timer.function = rx_refill_timeout;
 
-	/* Initialise tx_skbs as a free chain containing every entry. */
-	np->tx_skb_freelist = 0;
+	/* Initialise tx_bufs as a free chain containing every entry. */
+	np->tx_buf_freelist = 0;
 	for (i = 0; i < NET_TX_RING_SIZE; i++) {
-		skb_entry_set_link(&np->tx_skbs[i], i+1);
+		buf_entry_set_link(&np->tx_bufs[i], i+1);
 		np->grant_tx_ref[i] = GRANT_INVALID_REF;
 	}
 
-	/* Clear out rx_skbs */
+	/* Clear out rx_bufs */
 	for (i = 0; i < NET_RX_RING_SIZE; i++) {
-		np->rx_skbs[i] = NULL;
+		np->rx_bufs[i] = NULL;
 		np->grant_rx_ref[i] = GRANT_INVALID_REF;
 		np->grant_tx_page[i] = NULL;
 	}
@@ -1042,7 +1042,6 @@ again:
 static int xenmpi_connect(struct vmpi_impl_info *np)
 {
 	int i, requeue_idx, err;
-	struct sk_buff *skb;
 	grant_ref_t ref;
 	struct xen_mpi_rx_request *req;
 	unsigned int feature_rx_copy;
@@ -1070,18 +1069,16 @@ static int xenmpi_connect(struct vmpi_impl_info *np)
 
 	/* Step 2: Rebuild the RX buffer freelist and the RX ring itself. */
 	for (requeue_idx = 0, i = 0; i < NET_RX_RING_SIZE; i++) {
-		skb_frag_t *frag;
 		const struct page *page;
                 struct vmpi_buffer *buf;
 
-		if (!np->rx_skbs[i])
+		if (!np->rx_bufs[i])
 			continue;
 
-		buf = np->rx_skbs[requeue_idx] = xenmpi_get_rx_skb(np, i);
+		buf = np->rx_bufs[requeue_idx] = xenmpi_get_rx_buf(np, i);
 		ref = np->grant_rx_ref[requeue_idx] = xenmpi_get_rx_ref(np, i);
 		req = RING_GET_REQUEST(&np->rx, requeue_idx);
 
-		frag = &skb_shinfo(skb)->frags[0];
 		page = virt_to_page(buf->p);
 		gnttab_grant_foreign_access_ref(
 			ref, np->xbdev->otherend_id,
@@ -1174,7 +1171,7 @@ static const struct xenbus_device_id mpifront_ids[] = {
 };
 
 
-static int xenmpi_remove(struct xenbus_device *dev)
+static int mpifront_remove(struct xenbus_device *dev)
 {
 	struct vmpi_impl_info *info = dev_get_drvdata(&dev->dev);
 
@@ -1186,7 +1183,7 @@ static int xenmpi_remove(struct xenbus_device *dev)
 
 	del_timer_sync(&info->rx_refill_timer);
 
-        vmpi_fini(false);
+        vmpi_fini(info->private, false);
 
         vmpi_queue_fini(&info->rx_batch);
 
@@ -1199,7 +1196,7 @@ static int xenmpi_remove(struct xenbus_device *dev)
 
 static DEFINE_XENBUS_DRIVER(mpifront, ,
 	.probe = mpifront_probe,
-	.remove = xenmpi_remove,
+	.remove = mpifront_remove,
 	.resume = mpifront_resume,
 	.otherend_changed = mpiback_changed,
 );

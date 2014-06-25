@@ -54,15 +54,15 @@ FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina.la
 #
 
 test_01_SOURCES  = test-01.cc
-test_01_CPPFLAGS = $(COMMONCPPFLAGS)
+test_01_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_01_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_02_SOURCES  = test-02.cc
-test_02_CPPFLAGS = $(COMMONCPPFLAGS)
+test_02_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_02_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_03_SOURCES  = test-03.cc
-test_03_CPPFLAGS = $(COMMONCPPFLAGS)
+test_03_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_03_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 #

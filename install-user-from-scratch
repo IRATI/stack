@@ -21,7 +21,7 @@ fi
 #
 
 echo "$ME: Starting librina phase"
-(cd librina && ./bootstrap && ./configure --enable-java-bindings --prefix=$PREFIX && make CPPFLAGS="-I $PREFIX/usr/include" clean install installcheck) || {
+(cd librina && ./bootstrap && ./configure --enable-java-bindings --with-sysheaders=`pwd`/../linux/usr/include --prefix=$PREFIX && make clean install installcheck) || {
     echo "$ME: Cannot complete librina phase"
     exit 1
 }

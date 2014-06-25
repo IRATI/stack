@@ -8,7 +8,8 @@ ACLOCAL_AMFLAGS           = -I m4
 DISTCLEANFILES            =
 MAINTAINERCLEANFILES      =
 BUILT_SOURCES             =
-DISTCHECK_CONFIGURE_FLAGS = --enable-java-wrappers
+DISTCHECK_CONFIGURE_FLAGS = \
+	--enable-java-wrappers --with-sysheaders=$(sysheaders)
 
 SUBDIRS =					\
 	include					\
@@ -22,6 +23,7 @@ EXTRA_DIST =					\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
 	LICENSE					\
+	LICENSE-protobuf			\
 	INSTALL					\
 	README
 

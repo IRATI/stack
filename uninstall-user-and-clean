@@ -5,22 +5,22 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-ME=uninstall-and-clean
+ME=uninstall-user-and-clean
 
-echo "$ME: Starting phase rina-tools"
+echo "$ME: Uninstalling and cleaning rina-tools"
 (cd rina-tools && make uninstall && make maintainer-clean) || {
-    echo "$ME: Cannot complete rina-tools phase"
+    echo "$ME: Cannot uninstall or clean rina-tools"
     exit 1
 }
 
-echo "$ME: Starting phase rinad"
+echo "$ME: Uninstalling and cleaning rinad"
 (cd rinad && make uninstall && make maintainer-clean) || {
-    echo "$ME: Cannot complete rinad phase"
+    echo "$ME: Cannot uninstall or clean rinad"
     exit 1
 }
 
-echo "$ME: Starting phase librina"
+echo "$ME: Uninstalling and cleaning librina"
 (cd librina && make uninstall && make maintainer-clean) || {
-    echo "$ME: Cannot complete librina phase"
+    echo "$ME: Cannot uninstall or clean librina"
     exit 1
 }

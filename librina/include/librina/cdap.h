@@ -34,27 +34,42 @@ namespace rina {
 class AuthValue {
 public:
 	AuthValue();
-	AuthValue(const std::string *auth_name, const std::string *auth_password,
-			const std::string *auth_other);
-	~AuthValue();
+	AuthValue(const std::string &auth_name, const std::string &auth_password,
+			const std::string &auth_other);
+	const std::string get_auth_name() const;
+	const std::string get_auth_password() const;
+	const std::string get_auth_other() const;
 	bool is_empty() const;
 	std::string to_string() const;
 private:
 	/// Authentication name
-	const std::string *auth_name_;
+	std::string auth_name_;
 	/// Authentication password
-	const std::string *auth_password_;
+	std::string auth_password_;
 	/// Additional authentication information
-	const std::string *auth_other_;
+	std::string auth_other_;
 };
 
 /// Encapsulates the data to set an object value
 class ObjectValueInterface {
 public:
+	enum types{
+		inttype,
+		sinttype,
+		longtype,
+		slongtype,
+		stringtype,
+		bytetype,
+		floattype,
+		doubletype,
+		booltype,
+	};
 	virtual ~ObjectValueInterface() {
 	}
 	;
 	virtual bool is_empty() const = 0;
+	virtual const void* get_value() const = 0;
+	virtual types isType() const = 0;
 };
 
 template<typename T>
@@ -63,9 +78,10 @@ public:
 	AbstractObjectValue();
 	AbstractObjectValue(T &value);
 	virtual ~AbstractObjectValue();
-	T get_value() const;
+	const void* get_value() const;
 	virtual bool operator==(const AbstractObjectValue<T> &other) = 0;
 	bool is_empty() const;
+	virtual types isType() const = 0;
 protected:
 	T value_;
 	bool empty_;
@@ -76,6 +92,7 @@ public:
 	IntObjectValue();
 	IntObjectValue(int value);
 	bool operator==(const AbstractObjectValue<int> &other);
+	types isType() const;
 };
 
 class SIntObjectValue: public AbstractObjectValue<short int> {
@@ -83,6 +100,7 @@ public:
 	SIntObjectValue();
 	SIntObjectValue(short int value);
 	bool operator==(const AbstractObjectValue<short int> &other);
+	types isType() const;
 };
 
 class LongObjectValue: public AbstractObjectValue<long long> {
@@ -90,6 +108,7 @@ public:
 	LongObjectValue();
 	LongObjectValue(long long value);
 	bool operator==(const AbstractObjectValue<long long> &other);
+	types isType() const;
 };
 
 class SLongObjectValue: public AbstractObjectValue<long> {
@@ -97,6 +116,7 @@ public:
 	SLongObjectValue();
 	SLongObjectValue(long value);
 	bool operator==(const AbstractObjectValue<long> &other);
+	types isType() const;
 };
 
 class StringObjectValue: public AbstractObjectValue<std::string> {
@@ -104,13 +124,16 @@ public:
 	StringObjectValue();
 	StringObjectValue(std::string value);
 	bool operator==(const AbstractObjectValue<std::string> &other);
+	types isType() const;
 };
 
 class ByteArrayObjectValue: public AbstractObjectValue<char*> {
 public:
 	ByteArrayObjectValue();
+	~ByteArrayObjectValue();
 	ByteArrayObjectValue(char* value);
 	bool operator==(const AbstractObjectValue<char*> &other);
+	types isType() const;
 };
 
 class FloatObjectValue: public AbstractObjectValue<float> {
@@ -118,6 +141,15 @@ public:
 	FloatObjectValue();
 	FloatObjectValue(float value);
 	bool operator==(const AbstractObjectValue<float> &other);
+	types isType() const;
+};
+
+class DoubleObjectValue: public AbstractObjectValue<double> {
+public:
+	DoubleObjectValue();
+	DoubleObjectValue(double value);
+	bool operator==(const AbstractObjectValue<double> &other);
+	types isType() const;
 };
 
 class BooleanObjectValue: public AbstractObjectValue<bool> {
@@ -125,6 +157,7 @@ public:
 	BooleanObjectValue();
 	BooleanObjectValue(bool value);
 	bool operator==(const AbstractObjectValue<bool> &other);
+	types isType() const;
 };
 
 /// Exception produced in the CDAP
@@ -251,32 +284,32 @@ public:
 			int result, const std::string &result_reason, int invoke_id);
 	static CDAPMessage* getCreateObjectRequestMessage(char filter[],
 			Flags flags, const std::string &obj_class, long obj_inst,
-			const std::string &obj_name, const ObjectValueInterface &obj_value,
+			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int scope);
 	static const CDAPMessage* getCreateObjectResponseMessage(Flags flags,
 			const std::string &obj_class, long obj_inst,
-			const std::string &obj_name, const ObjectValueInterface &obj_value,
+			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int result, const std::string &result_reason, int invoke_id);
 	static CDAPMessage* getDeleteObjectRequestMessage(char filter[],
 			Flags flags, const std::string &obj_class, long obj_inst,
 			const std::string &obj_name,
-			const ObjectValueInterface &object_value, int scope);
+			ObjectValueInterface *object_value, int scope);
 	static const CDAPMessage* getDeleteObjectResponseMessage(Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
 	static CDAPMessage* getStartObjectRequestMessage(char filter[], Flags flags,
-			const std::string &obj_class, const ObjectValueInterface &obj_value,
+			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope);
 	static const CDAPMessage* getStartObjectResponseMessage(Flags flags,
 			int result, const std::string &result_reason, int invoke_id);
 	static const CDAPMessage* getStartObjectResponseMessage(Flags flags,
 			const std::string &objectClass,
-			const ObjectValueInterface &object_value, long obj_inst,
+			ObjectValueInterface *object_value, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
 	static CDAPMessage* getStopObjectRequestMessage(char filter[], Flags flags,
-			const std::string &obj_class, const ObjectValueInterface &obj_value,
+			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope);
 	static const CDAPMessage* getStopObjectResponseMessage(Flags flags,
 			int result, const std::string &result_reason, int invoke_id);
@@ -285,11 +318,11 @@ public:
 			const std::string &obj_name, int scope);
 	static const CDAPMessage* getReadObjectResponseMessage(Flags flags,
 			const std::string &obj_class, long obj_inst,
-			const std::string &obj_name, const ObjectValueInterface &obj_value,
+			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int result, const std::string &result_reason, int invoke_id);
 	static CDAPMessage* getWriteObjectRequestMessage(char filter[], Flags flags,
 			const std::string &obj_class, long obj_inst,
-			const ObjectValueInterface &obj_value, const std::string &obj_name,
+			ObjectValueInterface *obj_value, const std::string &obj_name,
 			int scope);
 	static const CDAPMessage* getWriteObjectResponseMessage(Flags flags,
 			int result, int invoke_id, const std::string &result_reason);
@@ -318,7 +351,7 @@ public:
 	void set_dest_ap_inst(const std::string &dest_ap_inst);
 	const std::string& get_dest_ap_name() const;
 	void set_dest_ap_name(const std::string &dest_ap_name);
-	char* get_filter() const;
+	const char* get_filter() const;
 	void set_filter(char filter[]);
 	Flags get_flags() const;
 	void set_flags(Flags flags);
@@ -331,23 +364,23 @@ public:
 	const std::string& get_obj_name() const;
 	void set_obj_name(const std::string &obj_name);
 	const ObjectValueInterface* get_obj_value() const;
-	void set_obj_value(const ObjectValueInterface &obj_value);
+	void set_obj_value(ObjectValueInterface *obj_value);
 	Opcode get_op_code() const;
 	void set_op_code(Opcode op_code);
 	int get_result() const;
 	void set_result(int result);
 	const std::string& get_result_reason() const;
-	void set_result_reason(const std::string& result_reason);
+	void set_result_reason(const std::string &result_reason);
 	int get_scope() const;
 	void set_scope(int scope);
 	const std::string& get_src_ae_inst() const;
-	void set_src_ae_inst(const std::string& src_ae_inst);
+	void set_src_ae_inst(const std::string &src_ae_inst);
 	const std::string& get_src_ae_name() const;
-	void set_src_ae_name(const std::string& src_ae_name);
+	void set_src_ae_name(const std::string &src_ae_name);
 	const std::string& get_src_ap_inst() const;
-	void set_src_ap_inst(const std::string& src_ap_inst);
+	void set_src_ap_inst(const std::string &src_ap_inst);
 	const std::string& get_src_ap_name() const;
-	void set_src_ap_name(const std::string& src_ap_name);
+	void set_src_ap_name(const std::string &src_ap_name);
 	long get_version() const;
 	void set_version(long version);
 private:
@@ -440,7 +473,6 @@ private:
 	/// related behaviors that are subject to change over time. See text for details
 	/// of use.
 	long version_;
-
 };
 
 ///Describes a CDAPSession, by identifying the source and destination application processes.
@@ -451,25 +483,24 @@ public:
 	CDAPSessionDescriptor(int port_id);
 	CDAPSessionDescriptor(int abs_syntax, CDAPMessage::AuthTypes auth_mech,
 			AuthValue auth_value);
-	~CDAPSessionDescriptor();
 	/// The source naming information is always the naming information of the local Application process
-	const ApplicationProcessNamingInformation* get_source_application_process_naming_info();
+	const ApplicationProcessNamingInformation get_source_application_process_naming_info();
 	/// The destination naming information is always the naming information of the remote application process
-	const ApplicationProcessNamingInformation* get_destination_application_process_naming_info();
-	void set_dest_ae_inst(const std::string dest_ae_inst);
-	void set_dest_ae_name(const std::string dest_ae_name);
-	void set_dest_ap_inst(const std::string dest_ap_inst);
-	void set_dest_ap_name(const std::string dest_ap_name);
-	void set_src_ae_inst(const std::string src_ae_inst);
-	void set_src_ae_name(const std::string src_ae_name);
-	void set_src_ap_inst(const std::string src_ap_inst);
-	void set_src_ap_name(const std::string src_ap_name);
+	const ApplicationProcessNamingInformation get_destination_application_process_naming_info();
+	void set_dest_ae_inst(const std::string *dest_ae_inst);
+	void set_dest_ae_name(const std::string *dest_ae_name);
+	void set_dest_ap_inst(const std::string *dest_ap_inst);
+	void set_dest_ap_name(const std::string *dest_ap_name);
+	void set_src_ae_inst(const std::string *src_ae_inst);
+	void set_src_ae_name(const std::string *src_ae_name);
+	void set_src_ap_inst(const std::string *src_ap_inst);
+	void set_src_ap_name(const std::string *src_ap_name);
 	void set_version(const long version);
 	void set_ap_naming_info(
-			ApplicationProcessNamingInformation* ap_naming_info);
+			const ApplicationProcessNamingInformation* ap_naming_info);
 	int get_port_id() const;
 	std::string get_dest_ap_name() const;
-	ApplicationProcessNamingInformation* get_ap_naming_info() const;
+	const ApplicationProcessNamingInformation& get_ap_naming_info() const;
 private:
 	/// AbstractSyntaxID (int32), mandatory. The specific version of the
 	/// CDAP protocol message declarations that the message conforms to
@@ -524,7 +555,7 @@ private:
 	/// of the (N-1) flow that supports the CDAP Session
 	int port_id_;
 
-	ApplicationProcessNamingInformation *ap_naming_info_;
+	ApplicationProcessNamingInformation ap_naming_info_;
 };
 
 /// Manages the invoke ids of a session.
@@ -542,6 +573,14 @@ public:
 	/// Mark an invoke_id as reserved (don't use it)
 	/// @param invoke_id
 	virtual void reserveInvokeId(int invoke_id) = 0;
+};
+
+class SerializedMessage {
+public:
+	SerializedMessage(char* message, int size);
+	~SerializedMessage();
+	int size_;
+	char* message_;
 };
 
 /// Represents a CDAP session. Clients of the library are the ones managing the invoke ids. Application entities must
@@ -568,8 +607,7 @@ public:
 	 * @return the serialized request message, ready to be sent to a flow
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const char* encodeNextMessageToBeSent(const CDAPMessage &message)
-	= 0;
+	virtual const SerializedMessage* encodeNextMessageToBeSent(const CDAPMessage &message) = 0;
 	/**
 	 * Tell the CDAP state machine that we've just sent the cdap Message,
 	 * so the internal state machine will be updated
@@ -584,16 +622,14 @@ public:
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const CDAPMessage* messageReceived(const char cdap_message[])
-	= 0;
+	virtual const CDAPMessage* messageReceived(const SerializedMessage &cdap_message) = 0;
 	/**
 	 * Tell the CDAP state machine that we've received a message. The state of the CDAP state machine will be updated
 	 * @param cdap_message
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual void messageReceived(const CDAPMessage &cdap_message)
-	= 0;
+	virtual void messageReceived(const CDAPMessage &cdap_message) = 0;
 
 	///Return the descriptor of this session
 	virtual CDAPSessionDescriptor* get_session_descriptor() const = 0;
@@ -612,7 +648,7 @@ public:
 	/// @param port_id
 	/// @return Decoded CDAP Message
 	/// @throws CDAPException if the message is not consistent with the appropriate CDAP state machine
-	virtual const CDAPMessage* messageReceived(char encoded_cdap_message[],
+	virtual const CDAPMessage* messageReceived(const SerializedMessage &encoded_cdap_message,
 			int port_id) = 0;
 	/// Encodes the next CDAP message to be sent, and checks against the
 	/// CDAP state machine that this is a valid message to be sent
@@ -620,7 +656,7 @@ public:
 	/// @param port_id
 	/// @return encoded version of the CDAP Message
 	///  @throws CDAPException
-	virtual const char* encodeNextMessageToBeSent(
+	virtual const SerializedMessage* encodeNextMessageToBeSent(
 			const CDAPMessage &cdap_message, int port_id) = 0;
 	/// Creates a CDAPSession
 	/// @param port_id the port associated to this CDAP session
@@ -653,7 +689,7 @@ public:
 	/// @param cdap_message
 	/// @return
 	/// @throws CDAPException
-	virtual const char* encodeCDAPMessage(const CDAPMessage &cdap_message)
+	virtual const SerializedMessage* encodeCDAPMessage(const CDAPMessage &cdap_message)
 	= 0;
 	/// Decodes a CDAP message. It just converts the byte array into a CDAP
 	/// message, without caring about what session this CDAP message belongs to (and
@@ -663,7 +699,7 @@ public:
 	/// @param cdap_message
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* decodeCDAPMessage(char cdap_message[])
+	virtual const CDAPMessage* decodeCDAPMessage(const SerializedMessage &cdap_message)
 	= 0;
 	/// Return the port_id of the (N-1) Flow that supports the CDAP Session
 	/// with the IPC process identified by destinationApplicationProcessName and destinationApplicationProcessInstance
@@ -751,7 +787,7 @@ public:
 	virtual const CDAPMessage* getCreateObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags,
 			const std::string &obj_class, long obj_inst,
-			const std::string &obj_name, const ObjectValueInterface &obj_value,
+			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int scope, bool invoke_id) = 0;
 	/// Crate a M_CREATE_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -768,7 +804,7 @@ public:
 	virtual const CDAPMessage* getCreateObjectResponseMessage(
 			CDAPMessage::Flags flags, const std::string &obj_class,
 			long obj_inst, const std::string &obj_name,
-			const ObjectValueInterface &obj_value, int result,
+			ObjectValueInterface *obj_value, int result,
 			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_DELETE CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -786,7 +822,7 @@ public:
 			char* filter, CDAPMessage::Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name,
-			const ObjectValueInterface &object_value, int scope,
+			ObjectValueInterface *object_value, int scope,
 			bool invoke_id)= 0;
 	/// Create a M_DELETE_R CDAP MESSAGE
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -817,7 +853,7 @@ public:
 	/// @throws CDAPException
 	virtual const CDAPMessage* getStartObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags,
-			const std::string &obj_class, const ObjectValueInterface &obj_value,
+			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope,
 			bool invoke_id) = 0;
 	/// Create a M_START_R CDAP Message
@@ -841,7 +877,7 @@ public:
 	/// @throws CDAPException
 	virtual const CDAPMessage* getStartObjectResponseMessage(
 			CDAPMessage::Flags flags, const std::string &obj_class,
-			const ObjectValueInterface &obj_value, long obj_inst,
+			ObjectValueInterface *obj_value, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_STOP CDAP Message
@@ -858,7 +894,7 @@ public:
 	/// @throws CDAPException
 	virtual const CDAPMessage* getStopObjectRequestMessage(int port_id,
 			char* filter, CDAPMessage::Flags flags,
-			const std::string &obj_class, const ObjectValueInterface &obj_value,
+			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope,
 			bool invoke_id) = 0;
 	/// Create a M_STOP_R CDAP Message
@@ -903,7 +939,7 @@ public:
 	virtual const CDAPMessage* getReadObjectResponseMessage(
 			CDAPMessage::Flags flags, const std::string &obj_class,
 			long obj_inst, const std::string &obj_name,
-			const ObjectValueInterface &obj_value, int result,
+			ObjectValueInterface *obj_value, int result,
 			const std::string &result_reason, int invoke_id) = 0;
 	/// Create a M_WRITE CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -920,7 +956,7 @@ public:
 	virtual const CDAPMessage* getWriteObjectRequestMessage(int port_id,
 			char filter[], CDAPMessage::Flags flags,
 			const std::string &obj_class, long obj_inst,
-			const ObjectValueInterface &obj_value, const std::string &obj_name,
+			ObjectValueInterface *obj_value, const std::string &obj_name,
 			int scope, bool invoke_id) = 0;
 	/// Create a M_WRITE_R CDAP Message
 	/// @param port_id identifies the CDAP Session that this message is part of
@@ -1023,27 +1059,24 @@ public:
 	/// @param message
 	/// @return
 	/// @throws CDAPException
-	virtual const CDAPMessage* deserializeMessage(const char message[]) = 0;
+	virtual const CDAPMessage* deserializeMessage(const SerializedMessage &message) = 0;
 	/// Convert from CDAP messages to wire format
 	/// @param cdapMessage
 	/// @return
 	/// @throws CDAPException
-	virtual const char* serializeMessage(const CDAPMessage &cdapMessage) = 0;
+	virtual const SerializedMessage* serializeMessage(const CDAPMessage &cdapMessage) = 0;
 };
 
 /// Factory to return a WireMessageProvider
-class WireMessageProviderFactoryInterface {
+class WireMessageProviderFactory{
 public:
-	virtual ~WireMessageProviderFactoryInterface() throw () {
-	}
-	;
-	virtual WireMessageProviderInterface* createWireMessageProvider() = 0;
+	WireMessageProviderInterface* createWireMessageProvider();
 };
 
 class CDAPSessionManagerFactory {
 public:
 	CDAPSessionManagerInterface* createCDAPSessionManager(
-			WireMessageProviderFactoryInterface *wire_message_provider_factory,
+			WireMessageProviderFactory *wire_message_provider_factory,
 			long timeout);
 };
 }

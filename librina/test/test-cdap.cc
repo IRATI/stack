@@ -22,66 +22,83 @@
 //
 #include <iostream>
 #include "librina/cdap.h"
+#include "librina/ipc-process.h"
 
 using namespace rina;
 
-class PlainWireMessageProvider: public WireMessageProviderInterface {
-public:
-	const CDAPMessage* deserializeMessage(const char message[]) {
-		int i = (int) message[0];
-		i++;
-		AuthValue auth_value;
-		return CDAPMessage::getOpenConnectionRequestMessage(CDAPMessage::AUTH_NONE, auth_value, "1", "dest instance",
-				"1", "dest", "1", "src instance", "1", "src", 1);
-	}
-	const char* serializeMessage(const CDAPMessage &cdapMessage) {
-		return cdapMessage.to_string().c_str();
-	}
-};
-
-class WireMessageFactoryProvider: public WireMessageProviderFactoryInterface {
-public:
-	WireMessageProviderInterface* createWireMessageProvider() {
-		return new PlainWireMessageProvider();
-	}
-};
-
-bool test1(CDAPSessionManagerInterface *session_manager,
-		CDAPSessionInterface *session) {
+bool conection(CDAPSessionManagerInterface &session_manager, int sen_port_id, int rec_port_id) {
 	AuthValue auth_value;
-	const CDAPMessage *sent_message =
-			session_manager->getOpenConnectionRequestMessage(1,
-					CDAPMessage::AUTH_NONE, auth_value, "1", "dest instance",
-					"1", "dest", "1", "src instance", "1", "src");
-	const char *serialized_message = session->encodeNextMessageToBeSent(
+	bool assert1 = false, assert2 = false;
+	const CDAPMessage *sent_message, *recevied_message;
+	const SerializedMessage *serialized_message;
+
+	std::cout<<"Creating first session"<< std::endl;
+	CDAPSessionInterface *sending_session = session_manager.createCDAPSession(sen_port_id);
+	std::cout<<"Creating second session"<< std::endl;
+	CDAPSessionInterface *receving_session = session_manager.createCDAPSession(rec_port_id);
+
+	// M_CONNECT Message
+	sent_message =
+			session_manager.getOpenConnectionRequestMessage(sen_port_id,
+					CDAPMessage::AUTH_NONE, auth_value, "1", "B instance",
+					"1", "B", "1", "A instance", "1", "A");
+	serialized_message = sending_session->encodeNextMessageToBeSent(
 			*sent_message);
-	std::cout<< std::endl;
-	std::cout<< std::endl;
-	const CDAPMessage *recevied_message = session->messageReceived(
-			serialized_message);
-	if (sent_message->to_string() == recevied_message->to_string())
-		return true;
-	else
-		return false;
+	sending_session->messageSent(*sent_message);
+	recevied_message = receving_session->messageReceived(
+			*serialized_message);
+	if (sent_message->to_string() == recevied_message->to_string())	{
+		assert1 = true;
+	}
+
 	delete sent_message;
 	delete recevied_message;
+
+	std::cout<< "DEBUG 1" << std::endl;
+	// M_CONNECT_R message
+	sent_message =
+			session_manager.getOpenConnectionResponseMessage(
+					CDAPMessage::AUTH_NONE, auth_value, "1", "A instance",
+					"1", "A", 1, "OK", "1", "B instance", "1", "B", 1);
+	std::cout<< "DEBUG 2" << std::endl;
+	serialized_message = sending_session->encodeNextMessageToBeSent(
+			*sent_message);
+	std::cout<< "DEBUG 3" << std::endl;
+	sending_session->messageSent(*sent_message);
+	std::cout<< "DEBUG 4" << std::endl;
+	recevied_message = receving_session->messageReceived(
+			*serialized_message);
+	std::cout<< "DEBUG 5" << std::endl;
+	if (sent_message->to_string() == recevied_message->to_string())	{
+		assert2 = true;
+	}
+	std::cout<< "DEBUG 6" << std::endl;
+	delete sent_message;
+	delete recevied_message;
+
+	// FINALLY
+	delete sending_session;
+	delete receving_session;
+
+	return assert1 && assert2;
 }
 
 int main() {
-	WireMessageProviderFactoryInterface *wire_factory =
-			new WireMessageFactoryProvider();
+	bool result = true;
+	WireMessageProviderFactory wire_factory;
 	CDAPSessionManagerFactory cdap_manager_factory;
 	long timeout = 2000;
 	CDAPSessionManagerInterface *session_manager =
-			cdap_manager_factory.createCDAPSessionManager(wire_factory,
+			cdap_manager_factory.createCDAPSessionManager(&wire_factory,
 					timeout);
-	CDAPSessionInterface *session = session_manager->createCDAPSession(1);
 
-	if (!test1(session_manager, session))
+	if (!conection(*session_manager, 1, 2)){
+		std::cout<<"Test1 Failed"<<std::endl;
+		result = false;
+	}
+
+	if (result)
+		return 0;
+	else
 		return -1;
-
-	delete session;
-	delete session_manager;
-	delete wire_factory;
-	return 0;
 }
