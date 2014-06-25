@@ -29,10 +29,8 @@ typedef struct vmpi_info vmpi_info_t;
 
 typedef void (*vmpi_impl_callback_t)(vmpi_impl_info_t *);
 
-struct vmpi_impl_info *vmpi_impl_get_instance(void);
 int vmpi_impl_write_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
 void vmpi_impl_txkick(vmpi_impl_info_t *vi);
-void vmpi_impl_rxkick(vmpi_impl_info_t *vi);
 struct vmpi_buffer * vmpi_impl_get_written_buffer(vmpi_impl_info_t *vi);
 struct vmpi_buffer * vmpi_impl_read_buffer(vmpi_impl_info_t *vi);
 bool vmpi_impl_send_cb(vmpi_impl_info_t *vi, int enable);
@@ -45,7 +43,7 @@ void vmpi_impl_callbacks_unregister(vmpi_impl_info_t *vi);
 vmpi_info_t *vmpi_info_from_vmpi_impl_info(vmpi_impl_info_t *vi);
 vmpi_info_t *vmpi_init(vmpi_impl_info_t *vi, int *err,
                        bool deferred_test_init);
-void vmpi_fini(bool deferred_test_fini);
+void vmpi_fini(vmpi_info_t *mpi, bool deferred_test_fini);
 
 
 #endif  /* __VMPI_GUEST_IMPL_H__ */

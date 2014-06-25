@@ -35,7 +35,7 @@
 #include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
-#include "vmpi-ops.h"
+#include "vmpi-provider.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
 #if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
@@ -57,12 +57,6 @@ module_param(vmpi_max_channels, uint, 0444);
 static struct ipcp_factory_data {
         struct list_head        instances;
 } shim_hv_factory_data;
-
-/* For now there can be only a VMPI device and then only a shim IPC
- * process. Therefore it is enough to hold the associated VMPI handler
- * in a global variable.
- */
-static struct vmpi_ops *gops = NULL;
 
 enum channel_state {
         CHANNEL_STATE_NULL = 0,
@@ -95,8 +89,9 @@ enum shim_hv_response {
  * the VMPI-related information (among the other).
  */
 struct shim_hv_vmpi {
-        struct vmpi_ops        *ops;
+        struct vmpi_ops        ops;
         struct shim_hv_channel *channels;
+        unsigned int id;
 };
 
 /* Private data associated to a shim IPC process. */
@@ -229,7 +224,7 @@ shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
 
         iov.iov_base = msg;
         iov.iov_len = len;
-        ret = priv->vmpi.ops->write(priv->vmpi.ops, 0, &iov, 1);
+        ret = priv->vmpi.ops.write(&priv->vmpi.ops, 0, &iov, 1);
         LOG_DBGF("vmpi_write_kernel(0, %d) --> %d",
                  (int) len, (int) ret);
 
@@ -286,10 +281,15 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         uint32_t slen, dlen;
         int err = -ENOMEM;
 
-        /* TODO move this checs to the caller. */
+        /* TODO move this checks to the caller. */
         ASSERT(priv);
         ASSERT(src_application);
         ASSERT(dst_application);
+
+        if (unlikely(!priv->assigned)) {
+                LOG_ERR("%s: IPC process not ready", __func__);
+                return -ENOENT;
+        }
 
         mutex_lock(&priv->vc_lock);
 
@@ -377,6 +377,11 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         unsigned int ch;
         int ret;
         int response = RESP_KO;
+
+        if (unlikely(!priv->assigned)) {
+                LOG_ERR("%s: IPC process not ready", __func__);
+                return -ENOENT;
+        }
 
         mutex_lock(&priv->vc_lock);
 
@@ -472,6 +477,11 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
 {
         int ret = 0;
         unsigned int ch;
+
+        if (unlikely(!priv->assigned)) {
+                LOG_ERR("%s: IPC process not ready", __func__);
+                return -ENOENT;
+        }
 
         mutex_lock(&priv->vc_lock);
 
@@ -887,6 +897,10 @@ static int
 shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                       const struct dif_info *dif_information)
 {
+        struct ipcp_config *elem;
+        bool vmpi_id_found = false;
+        int ret;
+
         ASSERT(priv);
         ASSERT(dif_information);
 
@@ -897,14 +911,59 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                 return -1;
         }
 
-        priv->assigned = 1;
         if (name_cpy(dif_information->dif_name, &priv->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed\n", __func__);
                 return -1;
         }
 
-        LOG_DBGF("ipcp %d assigned to DIF %s",
-                 priv->id, priv->dif_name.process_name);
+        list_for_each_entry(elem,
+                        &(dif_information->configuration->ipcp_config_entries),
+                        next) {
+                const struct ipcp_config_entry *entry = elem->entry;
+
+                if (!strcmp(entry->name, "vmpi-id")) {
+                        ASSERT(entry->value);
+                        ret = kstrtouint(entry->value, 10, &priv->vmpi.id);
+                        if (ret) {
+                                LOG_ERR("%s: Invalid vmpi-id", __func__);
+                                return -1;
+                        }
+                        vmpi_id_found = true;
+                } else {
+                        LOG_WARN("%s: Unknown config param", __func__);
+                }
+        }
+
+        if (!vmpi_id_found) {
+                LOG_ERR("%s: Missing vmpi-id configuration parameter",
+                        __func__);
+                return -1;
+        }
+
+        /*
+         * Try to get the VMPI instance specified by the "vmpi-id"
+         * configuration parameter.
+         */
+        ret = vmpi_provider_find_instance(VMPI_PROVIDER_AUTO, priv->vmpi.id,
+                                          &priv->vmpi.ops);
+        if (ret) {
+                LOG_ERR("%s: mpi instance %u not found\n", __func__, 0);
+                return -1;
+        }
+
+        ret = priv->vmpi.ops.register_read_callback(&priv->vmpi.ops,
+                                                     shim_hv_recv_callback,
+                                                     priv);
+        if (ret) {
+                LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
+                return -1;
+        }
+
+        /* Now the IPC process is ready to be used. */
+        priv->assigned = 1;
+
+        LOG_DBGF("ipcp %d assigned to DIF %s, VMPI instance %u",
+                 priv->id, priv->dif_name.process_name, priv->vmpi.id);
 
         return 0;
 }
@@ -921,6 +980,11 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
         struct iovec iov;
         int ret = -1;
         int n;
+
+        if (unlikely(!priv->assigned)) {
+                LOG_ERR("%s: IPC process not ready", __func__);
+                goto out;
+        }
 
         if (unlikely(!ch)) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
@@ -941,7 +1005,7 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
 
         iov.iov_base = buffer_data_rw(buf);
         iov.iov_len = buffer_length(buf);
-        n = priv->vmpi.ops->write(priv->vmpi.ops, ch, &iov, 1);
+        n = priv->vmpi.ops.write(&priv->vmpi.ops, ch, &iov, 1);
         if (likely(n == iov.iov_len))
                 ret = 0;
         LOG_DBGF("vmpi_write_kernel(%u, %d) --> %d",
@@ -1029,7 +1093,6 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         struct ipcp_instance *      ipcp;
         struct ipcp_instance_data * priv;
         int i;
-        int err;
 
         /* Check if there already is an instance with the specified id. */
         if (find_instance(factory_data, id)) {
@@ -1082,8 +1145,6 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
 
         /* Initialize the VMPI-related data structure. */
         bzero(&priv->vmpi, sizeof(priv->vmpi));
-        priv->vmpi.ops = gops;
-        ASSERT(priv->vmpi.ops);
         priv->vmpi.channels = rkzalloc(
                         sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
                         GFP_KERNEL);
@@ -1097,13 +1158,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
                 name_init_with(&priv->vmpi.channels[i].application_name,
                                NULL, NULL, NULL, NULL);
         }
-        err = priv->vmpi.ops->register_read_callback(priv->vmpi.ops,
-                                                     shim_hv_recv_callback,
-                                                     priv);
-        if (err) {
-                LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
-                goto read_callback;
-        }
+        priv->vmpi.id = ~0U;
 
         /* Add this IPC process to the factory global list. */
         list_add(&priv->list, &factory_data->instances);
@@ -1112,8 +1167,6 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
 
         return ipcp;
 
- read_callback:
-        kfree(priv->vmpi.channels);
  alloc_channels:
         name_fini(&priv->name);
  alloc_name:
@@ -1169,15 +1222,8 @@ static struct ipcp_factory_ops shim_hv_factory_ops = {
 /* A factory for shim IPC processes for hypervisors. */
 static struct ipcp_factory *shim_hv_ipcp_factory = NULL;
 
-/* As a first solution, this shim initialization and uninitialization
- * functions are called by the vmpi code. This is why these functions
- * are not static.
- */
-int shim_hv_init(struct vmpi_ops *ops)
+static int __init shim_hv_init(void)
 {
-        ASSERT(ops);
-        gops = ops;
-
         shim_hv_ipcp_factory =
                 kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,
                                             &shim_hv_factory_data,
@@ -1192,9 +1238,8 @@ int shim_hv_init(struct vmpi_ops *ops)
 
         return 0;
 }
-EXPORT_SYMBOL_GPL(shim_hv_init);
 
-void shim_hv_fini(void)
+static void __exit shim_hv_fini(void)
 {
         ASSERT(shim_hv_ipcp_factory);
 
@@ -1202,7 +1247,9 @@ void shim_hv_fini(void)
 
         LOG_INFO("Shim for Hypervisors support unloaded");
 }
-EXPORT_SYMBOL_GPL(shim_hv_fini);
+
+module_init(shim_hv_init);
+module_exit(shim_hv_fini);
 
 MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 MODULE_LICENSE("GPL");

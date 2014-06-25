@@ -30,8 +30,8 @@
 #include "vmpi-structs.h"
 #include "vmpi.h"
 #include "vmpi-ops.h"
-#include "shim-hv.h"
 #include "vmpi-test.h"
+#include "vmpi-provider.h"
 
 
 #ifdef VERBOSE
@@ -58,11 +58,9 @@ struct vmpi_info {
         vmpi_read_cb_t read_cb;
         void *read_cb_data;
 
-        struct vmpi_ops ops;
         struct vmpi_stats stats;
+        unsigned int id;
 };
-
-static struct vmpi_info *vmpi_info_instance = NULL;
 
 int
 vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
@@ -75,7 +73,7 @@ vmpi_register_read_callback(struct vmpi_info *mpi, vmpi_read_cb_t cb,
 }
 
 static void
-vmpi_impl_clean_tx(struct vmpi_info *mpi)
+vmpi_clean_tx(struct vmpi_info *mpi)
 {
         struct vmpi_buffer *buf;
 
@@ -114,7 +112,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 current->state = TASK_INTERRUPTIBLE;
 
                 mutex_lock(&mpi->write.lock);
-                vmpi_impl_clean_tx(mpi);
+                vmpi_clean_tx(mpi);
                 if (vmpi_ring_unused(&mpi->write) == 0) {
                         if (vmpi_impl_send_cb(vi, 1)) {
                                 mutex_unlock(&mpi->write.lock);
@@ -127,7 +125,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                                 schedule();
                                 continue;
                         }
-                        vmpi_impl_clean_tx(mpi);
+                        vmpi_clean_tx(mpi);
                 }
 
                 buf = &mpi->write.bufs[mpi->write.nu];
@@ -235,9 +233,10 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
 static void
 xmit_callback(vmpi_impl_info_t *vi)
 {
-        //struct vmpi_info *mpi = vi->private;
         struct vmpi_info *mpi = vmpi_info_from_vmpi_impl_info(vi);
 
+        /* XXX can we disable xmit callbacks here, to avoid an
+               useless burst of TX interrupts? */
         wake_up_interruptible_poll(&mpi->write.wqh, POLLOUT |
                                    POLLWRNORM | POLLWRBAND);
 }
@@ -274,6 +273,7 @@ recv_worker_function(struct work_struct *work)
                         }
                         mutex_unlock(&queue->lock);
                 } else {
+                        /* XXX don't drop the lock here */
                         mutex_unlock(&mpi->recv_worker_lock);
                         mpi->read_cb(mpi->read_cb_data, channel,
                                      vmpi_buffer_data(buf),
@@ -301,31 +301,25 @@ recv_worker_function(struct work_struct *work)
 static void
 recv_callback(vmpi_impl_info_t *vi)
 {
-        //struct vmpi_info *mpi = vi->private;
         struct vmpi_info *mpi = vmpi_info_from_vmpi_impl_info(vi);
 
         vmpi_impl_receive_cb(vi, 0);
         schedule_work(&mpi->recv_worker);
 }
 
-static ssize_t
-vmpi_guest_ops_write(struct vmpi_ops *ops, unsigned int channel,
-                     const struct iovec *iv, unsigned long iovcnt)
-{
-        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
-}
+/*
+ * This is a "template" to be included after the definition of struct
+ * vmpi_info.
+ */
+#include "vmpi-instances.h"
 
-static int
-vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
-                                      void *opaque)
-{
-        return vmpi_register_read_callback(ops->priv, cb, opaque);
-}
+static unsigned int vmpi_id_counter = 0;
 
 struct vmpi_info *
 vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
+        struct vmpi_ops ops;
         int i;
 
         *ret = -ENOMEM;
@@ -344,9 +338,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         }
         memset(mpi, 0, sizeof(*mpi));
         vmpi_stats_init(&mpi->stats);
-
-        /* Install the vmpi_info instance. */
-        vmpi_info_instance = mpi;
 
         mpi->vi = vi;
 
@@ -375,14 +366,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         vmpi_impl_callbacks_register(mpi->vi, xmit_callback, recv_callback);
         mpi->read_cb = NULL;
 
-        mpi->ops.priv = mpi;
-        mpi->ops.write = vmpi_guest_ops_write;
-        mpi->ops.register_read_callback = vmpi_guest_ops_register_read_callback;
-        *ret = shim_hv_init(&mpi->ops);
-        if (*ret) {
-                goto alloc_read_buf;
-        }
-
 #ifdef VMPI_TEST
         *ret = vmpi_test_init(mpi, deferred_test_init);
         if (*ret) {
@@ -391,6 +374,12 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
+        mpi->id = vmpi_id_counter++;
+
+        ops.priv = mpi;
+        ops.write = vmpi_ops_write;
+        ops.register_read_callback = vmpi_ops_register_read_callback;
+        vmpi_provider_register(VMPI_PROVIDER_GUEST, mpi->id, &ops);
 
         printk("vmpi_init completed\n");
 
@@ -400,7 +389,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 
 #ifdef VMPI_TEST
  vmpi_test_ini:
-        shim_hv_fini();
         vmpi_impl_callbacks_unregister(mpi->vi);
 #endif  /* VMPI_TEST */
  alloc_read_buf:
@@ -414,16 +402,16 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
  alloc_test:
-        vmpi_info_instance = NULL;
 
         return NULL;
 }
 
 void
-vmpi_fini(bool deferred_test_fini)
+vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
-        struct vmpi_info *mpi = vmpi_info_instance;
         unsigned int i;
+
+        vmpi_provider_unregister(VMPI_PROVIDER_GUEST, mpi->id);
 
 #ifdef VMPI_TEST
         vmpi_test_fini(mpi, deferred_test_fini);
@@ -434,8 +422,6 @@ vmpi_fini(bool deferred_test_fini)
                 BUG_ON(1);
                 return;
         }
-
-        shim_hv_fini();
 
         /*
          * Deregister the callbacks, so that vmpi-impl will stop
@@ -448,9 +434,6 @@ vmpi_fini(bool deferred_test_fini)
          * can free the RX resources.
          */
         cancel_work_sync(&mpi->recv_worker);
-
-        /* Disinstall the vmpi_info instance. */
-        vmpi_info_instance = NULL;
 
         for (i = 0; i < vmpi_max_channels; i++) {
                 vmpi_queue_fini(&mpi->read[i]);

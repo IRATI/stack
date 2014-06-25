@@ -9,6 +9,8 @@ ccflags-y += -I$(srctree)/net/rina
 ccflags-y += -I$(srctree)/net/rina/ipcps
 ccflags-y += -Wtype-limits
 
+obj-m += vmpi-provider.o
+
 obj-$(CONFIG_VMPI_KVM_GUEST) += vmpi-kvm-guest.o
 
 vmpi-kvm-guest-y :=						\
