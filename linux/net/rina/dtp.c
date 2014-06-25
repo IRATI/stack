@@ -1305,7 +1305,7 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                 }
-        } else if (seq_num <= dt_sv_rcv_lft_win(dt)) {
+        } else if (seq_num <= dt_sv_rcv_lft_win(dt) || seq_num == max_seq_nr_rcv(sv)) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
                 dropped_pdus_inc(sv);
