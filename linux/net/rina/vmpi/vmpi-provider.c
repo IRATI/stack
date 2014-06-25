@@ -106,6 +106,8 @@ int vmpi_provider_register(unsigned int provider, unsigned int id,
 
         wake_up_interruptible(&wqh);
 
+        printk("%s: Provider %u:%u registered\n", __func__, provider, id);
+
         return 0;
 }
 EXPORT_SYMBOL_GPL(vmpi_provider_register);
@@ -127,6 +129,8 @@ int vmpi_provider_unregister(unsigned int provider, unsigned int id)
 
         list_del(&elem->node);
         kfree(elem);
+
+        printk("%s: Provider %u:%u unregistered\n", __func__, provider, id);
 
         return 0;
 }
