@@ -482,14 +482,17 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         }
 
         last = list_last_entry(&q->head, struct seq_q_entry, next);
-        if (!last)
+        if (!last) {
+                seq_q_entry_destroy(tmp);
                 return -1;
+        }
 
         pci  = pdu_pci_get_ro(last->pdu);
         psn  = pci_sequence_number_get((struct pci *) pci);
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
-                return -1;
+                seq_q_entry_destroy(tmp);
+                return 0;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
@@ -502,7 +505,8 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 psn = pci_sequence_number_get((struct pci *) pci);
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
-                        return -1;
+                        seq_q_entry_destroy(tmp);
+                        return 0;
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
@@ -584,7 +588,6 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
         if (seq_queue_push_ni(seqQ->queue, pdu)) {
                 spin_unlock(&seqQ->lock);
                 LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
-                pdu_destroy(pdu);
                 return -1;
         }
         spin_unlock(&seqQ->lock);
