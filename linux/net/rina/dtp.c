@@ -625,15 +625,24 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         return tmp;
 }
 
-static bool evaluate_ulwe_condition(struct pdu * pdu,
-                                    seq_num_t    seq_num,
-                                    seq_num_t    limit)
+static bool evaluate_ulwe_loop_condition(struct pdu * pdu,
+                                         seq_num_t    seq_num,
+                                         seq_num_t    limit)
 {
         bool condition = ((int) seq_num > 0) && pdu;
         if (limit > 0)
                 return condition && (((int) seq_num) < (int) limit);
         return condition;
 }
+
+static bool evaluate_seq_num_condition(seq_num_t seq_num,
+                                       seq_num_t LWE,
+                                       seq_num_t max_sdu_gap,
+                                       timeout_t a)
+{
+        return ((a == 0) || (seq_num == (LWE + 1)) || ((seq_num - LWE) <= max_sdu_gap));
+}
+
 
 static seq_num_t update_left_win_edge(struct dtp * dtp)
 {
@@ -648,6 +657,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         bool                 in_order_del;
         bool                 incomplete_del;
         bool                 max_sdu_gap;
+        timeout_t            a;
 
         ASSERT(dtp);
 
@@ -660,6 +670,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         seqQ = dtp->seqQ;
         ASSERT(seqQ);
 
+        a              = dt_sv_a(dt);
         time           = jiffies;
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
@@ -673,8 +684,8 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         pdu     = seqQ_pop(seqQ);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-        if (dt_sv_a(dt))
-                limit = seqQ_last_to_ack(seqQ, time - dt_sv_a(dt));
+        if (a)
+                limit = seqQ_last_to_ack(seqQ, time - a);
         else
                 limit = 0;
 
@@ -682,9 +693,9 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
         LOG_DBG("LWEU: Limit = %d", limit);
         LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
 
-        while (evaluate_ulwe_condition(pdu, seq_num, limit)) {
+        while (evaluate_ulwe_loop_condition(pdu, seq_num, limit)) {
                 LOG_DBG("LWEU: Seq_num  = %d", seq_num);
-                if ((seq_num == (LWE + 1)) || ((seq_num - LWE) <= max_sdu_gap)) {
+                if (evaluate_seq_num_condition(seq_num, LWE, max_sdu_gap, a)) {
                         sdu_post(dtp, pdu);
                         LOG_DBG("LWEU posted");
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
@@ -851,7 +862,9 @@ static void tf_a(void * data)
                 return;
         }
 
-        rtimer_restart(dtp->timers.a, dt_sv_a(dtp->parent)/AF);
+        /* FIXME: timer must be restarted. The following line produces a
+         * soft lockup */
+        /* rtimer_restart(dtp->timers.a, dt_sv_a(dtp->parent)/AF);*/
         return;
 }
 
