@@ -44,6 +44,7 @@ class CDAPSessionImpl;
 class ConnectionStateMachine {
 public:
 	ConnectionStateMachine(CDAPSessionImpl* cdap_session, long timeout);
+	~ConnectionStateMachine();
 	// FIXME: synchronized
 	bool is_connected() const;
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
@@ -111,7 +112,7 @@ private:
 	/// state machine
 	ConnectionState connection_state_;
 	Timer open_timer_;
-	Timer close_timer_;
+	//Timer close_timer_;
 	friend class ResetStablishmentTimerTask;
 	friend class ReleaseConnectionTimerTask;
 };

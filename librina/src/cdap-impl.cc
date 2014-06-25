@@ -41,6 +41,9 @@ ConnectionStateMachine::ConnectionStateMachine(CDAPSessionImpl *cdap_session,
 	timeout_ = timeout;
 	connection_state_= NONE;
 }
+ConnectionStateMachine::~ConnectionStateMachine(){
+	LOG_DBG("ConectionStateMachine destroyed");
+}
 bool ConnectionStateMachine::is_connected() const {
 	return connection_state_ == CONNECTED;
 }
@@ -112,6 +115,7 @@ void ConnectionStateMachine::connect() {
 	checkConnect();
 	connection_state_ = AWAITCON;
 	ResetStablishmentTimerTask *reset = new ResetStablishmentTimerTask(this);
+	LOG_DBG("Opened a ResetStablishmentTimerTask with timeout %d", timeout_);
 	open_timer_.scheduleTask(reset, timeout_);
 }
 void ConnectionStateMachine::connectReceived() {
@@ -131,21 +135,23 @@ void ConnectionStateMachine::connectResponse() {
 void ConnectionStateMachine::connectResponseReceived() {
 	if (connection_state_ != AWAITCON) {
 		std::stringstream ss;
-		ss
-				<< "Received an M_CONNECT_R message, but this CDAP session is currently in "
+		ss << "Received an M_CONNECT_R message, but this CDAP session is currently in "
 						+ connection_state_ << " state";
 		throw CDAPException(ss.str());
 	}
+	LOG_DBG("Clear a ResetStablishmentTimerTask");
 	open_timer_.clear();
 	connection_state_ = CONNECTED;
 }
 void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {
 	checkRelease();
 	connection_state_ = AWAITCLOSE;
-	if (cdap_message.get_invoke_id() != 0) {
+	if (cdap_message.get_invoke_id() != 0) {/*
 		ReleaseConnectionTimerTask *reset = new ReleaseConnectionTimerTask(
 				this);
+		LOG_DBG("Opened a ReleaseConnectionTimerTask with timeout %d", timeout_);
 		close_timer_.scheduleTask(reset, timeout_);
+		*/
 	}
 }
 void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
@@ -175,7 +181,8 @@ void ConnectionStateMachine::releaseResponseReceived() {
 				<< connection_state_ << " state";
 		throw CDAPException(ss.str());
 	}
-	close_timer_.clear();
+	LOG_DBG("Clear a ReleaseConnectionTimerTask");
+	//close_timer_.clear();
 	connection_state_ = NONE;
 	cdap_session_->stopConnection();
 }
@@ -218,9 +225,11 @@ CDAPSessionImpl::CDAPSessionImpl(CDAPSessionManager *cdap_session_manager,
 	connection_state_machine_ = new ConnectionStateMachine(this, timeout);
 	wire_message_provider_ = wire_message_provider;
 	invoke_id_manager_ = new CDAPSessionInvokeIdManagerImpl();
+	session_descriptor_ = 0;
 }
 
 CDAPSessionImpl::~CDAPSessionImpl() throw () {
+	LOG_DBG("CDAPSession with name dest name %s destroyed", session_descriptor_->get_dest_ap_name().c_str() );
 	delete connection_state_machine_;
 	delete session_descriptor_;
 	delete invoke_id_manager_;
@@ -602,7 +611,8 @@ const CDAPMessage* CDAPSessionImpl::deserializeMessage(
 }
 void CDAPSessionImpl::populateSessionDescriptor(const CDAPMessage &cdap_message,
 		bool send) {
-	delete session_descriptor_;
+	if (session_descriptor_ != 0)
+		delete session_descriptor_;
 	session_descriptor_ = new CDAPSessionDescriptor(
 			cdap_message.get_abs_syntax(), cdap_message.get_auth_mech(),
 			cdap_message.get_auth_value());
@@ -979,75 +989,70 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 			gpfCDAPMessage.authvalue().authpassword(),
 			gpfCDAPMessage.authvalue().authother());
 	cdapMessage->set_auth_value(auth_value);
-	cdapMessage->set_dest_ae_inst(gpfCDAPMessage.destaeinst());
-	cdapMessage->set_dest_ae_name(gpfCDAPMessage.destaename());
-	cdapMessage->set_dest_ap_inst(gpfCDAPMessage.destapinst());
-	cdapMessage->set_dest_ap_name(gpfCDAPMessage.destapname());
-	char *filter = new char[gpfCDAPMessage.filter().size() + 1];
-	strcpy(filter, gpfCDAPMessage.filter().c_str());;
-	cdapMessage->set_filter(filter);
+	if (gpfCDAPMessage.has_destaeinst())
+		cdapMessage->set_dest_ae_inst(gpfCDAPMessage.destaeinst());
+	if (gpfCDAPMessage.has_destaename())
+		cdapMessage->set_dest_ae_name(gpfCDAPMessage.destaename());
+	if (gpfCDAPMessage.has_destapinst())
+		cdapMessage->set_dest_ap_inst(gpfCDAPMessage.destapinst());
+	if (gpfCDAPMessage.has_destapname())
+		cdapMessage->set_dest_ap_name(gpfCDAPMessage.destapname());
+	if (gpfCDAPMessage.has_filter())
+	{
+		char *filter = new char[gpfCDAPMessage.filter().size() + 1];
+		strcpy(filter, gpfCDAPMessage.filter().c_str());;
+		cdapMessage->set_filter(filter);
+	}
 	int flag_value = gpfCDAPMessage.flags();
 	CDAPMessage::Flags flags = static_cast<CDAPMessage::Flags>(flag_value);
 	cdapMessage->set_flags(flags);
 	cdapMessage->set_invoke_id(gpfCDAPMessage.invokeid());
-	cdapMessage->set_obj_class(gpfCDAPMessage.objclass());
+	if (gpfCDAPMessage.has_objclass())
+		cdapMessage->set_obj_class(gpfCDAPMessage.objclass());
 	cdapMessage->set_obj_inst(gpfCDAPMessage.objinst());
-	cdapMessage->set_obj_name(gpfCDAPMessage.objname());
+	if (gpfCDAPMessage.has_objname())
+		cdapMessage->set_obj_name(gpfCDAPMessage.objname());
 
 	cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
-	if (obj_val_t.has_intval())	{
+	if (obj_val_t.has_intval())
 		cdapMessage->set_obj_value(new IntObjectValue(obj_val_t.intval()));
-	}
-	LOG_DBG("Debug 1");
-	if (obj_val_t.has_sintval())	{
+	if (obj_val_t.has_sintval())
 		cdapMessage->set_obj_value(new SIntObjectValue(obj_val_t.sintval()));
-	}
-	LOG_DBG("Debug 2");
-	if (obj_val_t.has_int64val())	{
+	if (obj_val_t.has_int64val())
 		cdapMessage->set_obj_value(new LongObjectValue(obj_val_t.int64val()));
-	}
-	LOG_DBG("Debug 3");
-	if (obj_val_t.has_sint64val())	{
+	if (obj_val_t.has_sint64val())
 		cdapMessage->set_obj_value(new SLongObjectValue(obj_val_t.sint64val()));
-	}
-	LOG_DBG("Debug 4");
-	if (obj_val_t.has_strval())	{
+	if (obj_val_t.has_strval())
 		cdapMessage->set_obj_value(new StringObjectValue(obj_val_t.strval()));
-	}
-	LOG_DBG("Debug 5");
+
 	if (obj_val_t.has_byteval())	{
 		char *byte_val = new char[obj_val_t.byteval().size() +1];
 		strcpy(byte_val, obj_val_t.byteval().c_str());
-		LOG_DBG("Debug 5.1");
 		cdapMessage->set_obj_value(new ByteArrayObjectValue(byte_val));
 	}
-	LOG_DBG("Debug 6");
-	if (obj_val_t.has_floatval())	{
+	if (obj_val_t.has_floatval())
 		cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
-	}
-	LOG_DBG("Debug 7");
-	if (obj_val_t.has_doubleval())	{
+	if (obj_val_t.has_doubleval())
 		cdapMessage->set_obj_value(new DoubleObjectValue(obj_val_t.doubleval()));
-	}
-	LOG_DBG("Debug 8");
-	if (obj_val_t.has_boolval())	{
+	if (obj_val_t.has_boolval())
 		cdapMessage->set_obj_value(new BooleanObjectValue(obj_val_t.boolval()));
-	}
-	LOG_DBG("Debug 9");
 	int opcode_val = gpfCDAPMessage.opcode();
 	CDAPMessage::Opcode opcode =
 			static_cast<CDAPMessage::Opcode>(opcode_val);
-	LOG_DBG("Debug 10");
 	cdapMessage->set_op_code(opcode);
 	cdapMessage->set_result(gpfCDAPMessage.result());
-	cdapMessage->set_result_reason(gpfCDAPMessage.resultreason());
+	if (gpfCDAPMessage.has_resultreason())
+		cdapMessage->set_result_reason(gpfCDAPMessage.resultreason());
 	cdapMessage->set_scope(gpfCDAPMessage.scope());
-	cdapMessage->set_src_ae_inst(gpfCDAPMessage.srcaeinst());
-	cdapMessage->set_src_ae_name(gpfCDAPMessage.srcaename());
-	cdapMessage->set_src_ap_inst(gpfCDAPMessage.srcapinst());
-	cdapMessage->set_src_ap_name(gpfCDAPMessage.srcapname());
+	if (gpfCDAPMessage.has_srcaeinst())
+		cdapMessage->set_src_ae_inst(gpfCDAPMessage.srcaeinst());
+	if (gpfCDAPMessage.has_srcaename())
+		cdapMessage->set_src_ae_name(gpfCDAPMessage.srcaename());
+	if (gpfCDAPMessage.has_srcapinst())
+		cdapMessage->set_src_ap_inst(gpfCDAPMessage.srcapinst());
+	if (gpfCDAPMessage.has_srcapname())
+		cdapMessage->set_src_ap_name(gpfCDAPMessage.srcapname());
 	cdapMessage->set_version(gpfCDAPMessage.version());
-	LOG_DBG("Debug 11");
 
 	return cdapMessage;
 }
@@ -1078,37 +1083,39 @@ const SerializedMessage* GPBWireMessageProvider::serializeMessage(
 	gpfCDAPMessage.set_objinst(cdapMessage.get_obj_inst());
 	gpfCDAPMessage.set_objname(cdapMessage.get_obj_name());
 
-	cdap::impl::googleprotobuf::objVal_t *gpb_obj_val = new cdap::impl::googleprotobuf::objVal_t();
-	switch(cdapMessage.get_obj_value()->isType()) {
-	case ObjectValueInterface::inttype:
-		gpb_obj_val->set_intval(*(int*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::sinttype:
-		gpb_obj_val->set_sintval(*(short int*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::longtype:
-		gpb_obj_val->set_int64val(*(long long*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::slongtype:
-		gpb_obj_val->set_sint64val(*(long*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::stringtype:
-		gpb_obj_val->set_strval(*(std::string*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::bytetype:
-		gpb_obj_val->set_byteval((char*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::floattype:
-		gpb_obj_val->set_floatval(*(float*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::doubletype:
-		gpb_obj_val->set_doubleval(*(double*)cdapMessage.get_obj_value()->get_value());
-		break;
-	case ObjectValueInterface::booltype:
-		gpb_obj_val->set_boolval(*(bool*)cdapMessage.get_obj_value()->get_value());
-		break;
+	if (cdapMessage.get_obj_value() != 0 && !cdapMessage.get_obj_value()->is_empty()) {
+		cdap::impl::googleprotobuf::objVal_t *gpb_obj_val = new cdap::impl::googleprotobuf::objVal_t();
+		switch(cdapMessage.get_obj_value()->isType()) {
+		case ObjectValueInterface::inttype:
+			gpb_obj_val->set_intval(*(int*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::sinttype:
+			gpb_obj_val->set_sintval(*(short int*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::longtype:
+			gpb_obj_val->set_int64val(*(long long*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::slongtype:
+			gpb_obj_val->set_sint64val(*(long*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::stringtype:
+			gpb_obj_val->set_strval(*(std::string*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::bytetype:
+			gpb_obj_val->set_byteval((char*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::floattype:
+			gpb_obj_val->set_floatval(*(float*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::doubletype:
+			gpb_obj_val->set_doubleval(*(double*)cdapMessage.get_obj_value()->get_value());
+			break;
+		case ObjectValueInterface::booltype:
+			gpb_obj_val->set_boolval(*(bool*)cdapMessage.get_obj_value()->get_value());
+			break;
+		}
+		gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
 	}
-	gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
 
 	if (!cdap::impl::googleprotobuf::opCode_t_IsValid(cdapMessage.get_op_code())) {
 		throw CDAPException("Serializing Message: Not a valid OpCode");

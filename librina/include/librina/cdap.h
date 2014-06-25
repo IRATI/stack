@@ -607,8 +607,7 @@ public:
 	 * @return the serialized request message, ready to be sent to a flow
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const SerializedMessage* encodeNextMessageToBeSent(const CDAPMessage &message)
-	= 0;
+	virtual const SerializedMessage* encodeNextMessageToBeSent(const CDAPMessage &message) = 0;
 	/**
 	 * Tell the CDAP state machine that we've just sent the cdap Message,
 	 * so the internal state machine will be updated
@@ -623,16 +622,14 @@ public:
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual const CDAPMessage* messageReceived(const SerializedMessage &cdap_message)
-	= 0;
+	virtual const CDAPMessage* messageReceived(const SerializedMessage &cdap_message) = 0;
 	/**
 	 * Tell the CDAP state machine that we've received a message. The state of the CDAP state machine will be updated
 	 * @param cdap_message
 	 * @return
 	 * @throws CDAPException if the message is bad formed or inconsistent with the protocol state machine
 	 */
-	virtual void messageReceived(const CDAPMessage &cdap_message)
-	= 0;
+	virtual void messageReceived(const CDAPMessage &cdap_message) = 0;
 
 	///Return the descriptor of this session
 	virtual CDAPSessionDescriptor* get_session_descriptor() const = 0;
