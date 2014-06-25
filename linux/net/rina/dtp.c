@@ -640,7 +640,7 @@ static bool evaluate_seq_num_condition(seq_num_t seq_num,
                                        seq_num_t max_sdu_gap,
                                        timeout_t a)
 {
-        return ((a == 0) || (seq_num == (LWE + 1)) || ((seq_num - LWE) <= max_sdu_gap));
+        return (((a == 0) && (seq_num > LWE)) || (seq_num == (LWE + 1)) || ((seq_num - LWE) <= max_sdu_gap));
 }
 
 
@@ -838,6 +838,7 @@ static void tf_a(void * data)
         struct dtp *  dtp;
         struct dtcp * dtcp;
         seq_num_t     seq_num_sv_update;
+        timeout_t     a;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
@@ -862,9 +863,11 @@ static void tf_a(void * data)
                 return;
         }
 
-        /* FIXME: timer must be restarted. The following line produces a
-         * soft lockup */
-        /* rtimer_restart(dtp->timers.a, dt_sv_a(dtp->parent)/AF);*/
+        /* FIXME: timer must be restarted. The following line may produce a soft
+         * lockup */
+        a = dt_sv_a(dtp->parent);
+        rtimer_restart(dtp->timers.a, a/AF);
+
         return;
 }
 
@@ -880,7 +883,7 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->window_based = window_based;
         dtp->sv->rate_based   = rate_based;
        
-        if (!a)
+        if (a)
                 rtimer_start(dtp->timers.a, a/AF);
 
         return 0;
