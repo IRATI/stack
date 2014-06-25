@@ -30,7 +30,6 @@
 #include "vmpi-structs.h"
 #include "vmpi.h"
 #include "vmpi-ops.h"
-#include "shim-hv.h"
 #include "vmpi-test.h"
 #include "vmpi-provider.h"
 
@@ -59,7 +58,6 @@ struct vmpi_info {
         vmpi_read_cb_t read_cb;
         void *read_cb_data;
 
-        struct vmpi_ops ops;
         struct vmpi_stats stats;
         unsigned int id;
 };
@@ -309,20 +307,6 @@ recv_callback(vmpi_impl_info_t *vi)
         schedule_work(&mpi->recv_worker);
 }
 
-static ssize_t
-vmpi_guest_ops_write(struct vmpi_ops *ops, unsigned int channel,
-                     const struct iovec *iv, unsigned long iovcnt)
-{
-        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
-}
-
-static int
-vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
-                                      void *opaque)
-{
-        return vmpi_register_read_callback(ops->priv, cb, opaque);
-}
-
 /*
  * This is a "template" to be included after the definition of struct
  * vmpi_info.
@@ -382,14 +366,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         vmpi_impl_callbacks_register(mpi->vi, xmit_callback, recv_callback);
         mpi->read_cb = NULL;
 
-        mpi->ops.priv = mpi;
-        mpi->ops.write = vmpi_guest_ops_write;
-        mpi->ops.register_read_callback = vmpi_guest_ops_register_read_callback;
-        *ret = shim_hv_init(&mpi->ops);
-        if (*ret) {
-                goto alloc_read_buf;
-        }
-
 #ifdef VMPI_TEST
         *ret = vmpi_test_init(mpi, deferred_test_init);
         if (*ret) {
@@ -413,7 +389,6 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 
 #ifdef VMPI_TEST
  vmpi_test_ini:
-        shim_hv_fini();
         vmpi_impl_callbacks_unregister(mpi->vi);
 #endif  /* VMPI_TEST */
  alloc_read_buf:
@@ -447,8 +422,6 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
                 BUG_ON(1);
                 return;
         }
-
-        shim_hv_fini();
 
         /*
          * Deregister the callbacks, so that vmpi-impl will stop

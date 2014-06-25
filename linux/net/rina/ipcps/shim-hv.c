@@ -35,7 +35,7 @@
 #include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
-#include "vmpi-ops.h"
+#include "vmpi-provider.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
 #if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
@@ -57,12 +57,6 @@ module_param(vmpi_max_channels, uint, 0444);
 static struct ipcp_factory_data {
         struct list_head        instances;
 } shim_hv_factory_data;
-
-/* For now there can be only a VMPI device and then only a shim IPC
- * process. Therefore it is enough to hold the associated VMPI handler
- * in a global variable.
- */
-static struct vmpi_ops *gops = NULL;
 
 enum channel_state {
         CHANNEL_STATE_NULL = 0,
@@ -95,7 +89,7 @@ enum shim_hv_response {
  * the VMPI-related information (among the other).
  */
 struct shim_hv_vmpi {
-        struct vmpi_ops        *ops;
+        struct vmpi_ops        ops;
         struct shim_hv_channel *channels;
 };
 
@@ -229,7 +223,7 @@ shim_hv_send_ctrl_msg(struct ipcp_instance_data *priv,
 
         iov.iov_base = msg;
         iov.iov_len = len;
-        ret = priv->vmpi.ops->write(priv->vmpi.ops, 0, &iov, 1);
+        ret = priv->vmpi.ops.write(&priv->vmpi.ops, 0, &iov, 1);
         LOG_DBGF("vmpi_write_kernel(0, %d) --> %d",
                  (int) len, (int) ret);
 
@@ -941,7 +935,7 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
 
         iov.iov_base = buffer_data_rw(buf);
         iov.iov_len = buffer_length(buf);
-        n = priv->vmpi.ops->write(priv->vmpi.ops, ch, &iov, 1);
+        n = priv->vmpi.ops.write(&priv->vmpi.ops, ch, &iov, 1);
         if (likely(n == iov.iov_len))
                 ret = 0;
         LOG_DBGF("vmpi_write_kernel(%u, %d) --> %d",
@@ -1082,8 +1076,14 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
 
         /* Initialize the VMPI-related data structure. */
         bzero(&priv->vmpi, sizeof(priv->vmpi));
-        priv->vmpi.ops = gops;
-        ASSERT(priv->vmpi.ops);
+        err = vmpi_provider_find_instance(VMPI_PROVIDER_AUTO, 0,
+                                          &priv->vmpi.ops);
+        if (err) {
+                printk("%s: vmpi_find_instance() failed\n", __func__); //XXX remove
+                LOG_ERR("%s: mpi instance %u not found\n", __func__, 0);
+                goto alloc_channels;
+        }
+
         priv->vmpi.channels = rkzalloc(
                         sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
                         GFP_KERNEL);
@@ -1097,7 +1097,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
                 name_init_with(&priv->vmpi.channels[i].application_name,
                                NULL, NULL, NULL, NULL);
         }
-        err = priv->vmpi.ops->register_read_callback(priv->vmpi.ops,
+        err = priv->vmpi.ops.register_read_callback(&priv->vmpi.ops,
                                                      shim_hv_recv_callback,
                                                      priv);
         if (err) {
@@ -1169,15 +1169,8 @@ static struct ipcp_factory_ops shim_hv_factory_ops = {
 /* A factory for shim IPC processes for hypervisors. */
 static struct ipcp_factory *shim_hv_ipcp_factory = NULL;
 
-/* As a first solution, this shim initialization and uninitialization
- * functions are called by the vmpi code. This is why these functions
- * are not static.
- */
-int shim_hv_init(struct vmpi_ops *ops)
+static int __init shim_hv_init(void)
 {
-        ASSERT(ops);
-        gops = ops;
-
         shim_hv_ipcp_factory =
                 kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,
                                             &shim_hv_factory_data,
@@ -1192,9 +1185,8 @@ int shim_hv_init(struct vmpi_ops *ops)
 
         return 0;
 }
-EXPORT_SYMBOL_GPL(shim_hv_init);
 
-void shim_hv_fini(void)
+static void __exit shim_hv_fini(void)
 {
         ASSERT(shim_hv_ipcp_factory);
 
@@ -1202,7 +1194,9 @@ void shim_hv_fini(void)
 
         LOG_INFO("Shim for Hypervisors support unloaded");
 }
-EXPORT_SYMBOL_GPL(shim_hv_fini);
+
+module_init(shim_hv_init);
+module_exit(shim_hv_fini);
 
 MODULE_DESCRIPTION("RINA Shim IPC for Hypervisors");
 MODULE_LICENSE("GPL");
