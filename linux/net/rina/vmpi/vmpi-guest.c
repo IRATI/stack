@@ -32,6 +32,7 @@
 #include "vmpi-ops.h"
 #include "shim-hv.h"
 #include "vmpi-test.h"
+#include "vmpi-provider.h"
 
 
 #ifdef VERBOSE
@@ -44,9 +45,6 @@ unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
 module_param(vmpi_max_channels, uint, 0444);
 
 #define VMPI_GUEST_BUDGET  64
-
-LIST_HEAD(vmpi_instances);
-DECLARE_WAIT_QUEUE_HEAD(vmpi_instances_wqh);
 
 struct vmpi_info {
         vmpi_impl_info_t *vi;
@@ -64,7 +62,6 @@ struct vmpi_info {
         struct vmpi_ops ops;
         struct vmpi_stats stats;
         unsigned int id;
-        struct list_head node;
 };
 
 int
@@ -332,17 +329,13 @@ vmpi_guest_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
  */
 #include "vmpi-instances.h"
 
-int
-vmpi_find_instance(unsigned int id, struct vmpi_ops *ops)
-{
-        return __vmpi_find_instance(&vmpi_instances, &vmpi_instances_wqh,
-                                    id, ops);
-}
+static unsigned int vmpi_id_counter = 0;
 
 struct vmpi_info *
 vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
+        struct vmpi_ops ops;
         int i;
 
         *ret = -ENOMEM;
@@ -405,7 +398,12 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
-        vmpi_add_instance(&vmpi_instances, &vmpi_instances_wqh, mpi);
+        mpi->id = vmpi_id_counter++;
+
+        ops.priv = mpi;
+        ops.write = vmpi_ops_write;
+        ops.register_read_callback = vmpi_ops_register_read_callback;
+        vmpi_provider_register(VMPI_PROVIDER_GUEST, mpi->id, &ops);
 
         printk("vmpi_init completed\n");
 
@@ -438,7 +436,7 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
 
-        vmpi_remove_instance(&vmpi_instances, mpi);
+        vmpi_provider_unregister(VMPI_PROVIDER_GUEST, mpi->id);
 
 #ifdef VMPI_TEST
         vmpi_test_fini(mpi, deferred_test_fini);

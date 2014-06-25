@@ -1,5 +1,5 @@
 /*
- * A Virtual MPI interface
+ * Support for multiple VMPI providers
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
@@ -18,23 +18,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __VMPI_OPS_H__
-#define __VMPI_OPS_H__
+#ifndef __VMPI_PROVIDER_H__
+#define __VMPI_PROVIDER_H__
 
-typedef void (*vmpi_read_cb_t)(void *opaque, unsigned int channel,
-                               const char *buffer, int len);
+#include "vmpi-ops.h"
 
-struct vmpi_ops {
-        /* Write a kernelspace buffer. */
-        ssize_t (*write)(struct vmpi_ops *ops, unsigned int channel,
-                         const struct iovec *iv, unsigned long iovlen);
-        int (*register_read_callback)(struct vmpi_ops *ops, vmpi_read_cb_t rcb,
-                                      void *opaque);
 
-        /* Private: do not use. */
-        void *priv;
-};
+#define VMPI_PROVIDER_HOST       0U
+#define VMPI_PROVIDER_GUEST      1U
+#define VMPI_PROVIDER_AUTO       2U
 
-#include "vmpi-limits.h"
 
-#endif  /* __VMPI_OPS_H__ */
+int vmpi_provider_find_instance(unsigned int provider, int id,
+                                struct vmpi_ops *ops);
+
+int vmpi_provider_register(unsigned int provider, unsigned int id,
+                           const struct vmpi_ops *ops);
+
+int vmpi_provider_unregister(unsigned int provider, unsigned int id);
+
+#endif  /* __VMPI_PROVIDER_H__ */
