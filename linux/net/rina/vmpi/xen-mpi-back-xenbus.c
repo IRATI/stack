@@ -38,7 +38,7 @@ static void backend_create_xenmpi(struct backend_info *be);
 static void set_backend_state(struct backend_info *be,
 			      enum xenbus_state state);
 
-static int netback_remove(struct xenbus_device *dev)
+static int mpiback_remove(struct xenbus_device *dev)
 {
 	struct backend_info *be = dev_get_drvdata(&dev->dev);
 
@@ -63,7 +63,7 @@ static int netback_remove(struct xenbus_device *dev)
  * Entry point to this code when a new device is created.  Allocate the basic
  * structures and switch to InitWait.
  */
-static int netback_probe(struct xenbus_device *dev,
+static int mpiback_probe(struct xenbus_device *dev,
 			 const struct xenbus_device_id *id)
 {
 	const char *message;
@@ -134,7 +134,7 @@ abort_transaction:
 	xenbus_dev_fatal(dev, err, "%s", message);
 fail:
 	pr_debug("failed\n");
-	netback_remove(dev);
+	mpiback_remove(dev);
 	return err;
 }
 
@@ -436,8 +436,8 @@ static const struct xenbus_device_id mpiback_ids[] = {
 
 
 static DEFINE_XENBUS_DRIVER(mpiback, ,
-	.probe = netback_probe,
-	.remove = netback_remove,
+	.probe = mpiback_probe,
+	.remove = mpiback_remove,
 	.otherend_changed = frontend_changed,
 );
 

@@ -10,8 +10,8 @@ EXTRA_DIST       =
 BUILT_SOURCES    =
 MOSTLYCLEANFILES =
 
-# FIXME: Remove this workaround
-EXTRA_DIST += *.md
+## FIXME: Remove this workaround
+##EXTRA_DIST += *.md
 
 EXTRA_DIST += doxygen.cfg.in
 

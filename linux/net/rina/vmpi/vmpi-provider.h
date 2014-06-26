@@ -1,7 +1,7 @@
 /*
- * Empty
+ * Support for multiple VMPI providers
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,5 +18,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-int empty()
-{ return 0; }
+#ifndef __VMPI_PROVIDER_H__
+#define __VMPI_PROVIDER_H__
+
+#include "vmpi-ops.h"
+
+
+#define VMPI_PROVIDER_HOST       0U
+#define VMPI_PROVIDER_GUEST      1U
+#define VMPI_PROVIDER_AUTO       2U
+
+
+int vmpi_provider_find_instance(unsigned int provider, int id,
+                                struct vmpi_ops *ops);
+
+int vmpi_provider_register(unsigned int provider, unsigned int id,
+                           const struct vmpi_ops *ops);
+
+int vmpi_provider_unregister(unsigned int provider, unsigned int id);
+
+#endif  /* __VMPI_PROVIDER_H__ */

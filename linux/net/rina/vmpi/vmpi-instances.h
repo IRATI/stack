@@ -1,6 +1,7 @@
-/* Interface to SHIM-HV for VMPI.
+/*
+ * Support for lists of VMPI instances
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,15 +15,23 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __SHIM_HV_H__
-#define __SHIM_HV_H__
+#include "vmpi-ops.h"
 
-struct vmpi_ops;
+static ssize_t
+vmpi_ops_write(struct vmpi_ops *ops, unsigned int channel,
+               const struct iovec *iv, unsigned long iovcnt)
+{
+        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
+}
 
-int shim_hv_init(struct vmpi_ops *ops);
-void shim_hv_fini(void);
+static int
+vmpi_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
+                                void *opaque)
+{
+        return vmpi_register_read_callback(ops->priv, cb, opaque);
+}
 
-#endif  /* __SHIM_HV_H__ */
+

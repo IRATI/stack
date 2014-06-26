@@ -31,7 +31,11 @@
     "difsToRegisterAt" : ["test-shim-hv.DIF"]
    } ],
   "difConfigurations" : [ {
-    "difName" : "test-shim-hv.DIF"
+    "difName" : "test-shim-hv.DIF",
+    "configParameters" : [ {
+     "name" : "vmpi-id",
+     "value" : "0"
+      } ]
   }, {
     "difName" : "test-normal.DIF",
     "dataTransferConstants" : {

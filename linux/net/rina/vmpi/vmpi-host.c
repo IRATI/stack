@@ -22,14 +22,16 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/socket.h>
+#include <linux/list.h>
+#include <linux/wait.h>
 
 #include "vmpi.h"
 #include "vmpi-stats.h"
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-ops.h"
-#include "shim-hv.h"
 #include "vmpi-test.h"
+#include "vmpi-provider.h"
 
 
 unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
@@ -41,8 +43,8 @@ struct vmpi_info {
         struct vmpi_ring write;
         struct vmpi_queue *read;
 
-        struct vmpi_ops ops;
         struct vmpi_stats stats;
+        unsigned int id;
 };
 
 int
@@ -64,30 +66,25 @@ vmpi_get_read_queue(struct vmpi_info *mpi)
         return mpi->read;
 }
 
-static ssize_t
-vmpi_host_ops_write(struct vmpi_ops *ops, unsigned int channel,
-                    const struct iovec *iv, unsigned long iovcnt)
-{
-        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
-}
-
-static int
-vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
-                                     void *opaque)
-{
-        return vmpi_register_read_callback(ops->priv, cb, opaque);
-}
-
 struct vmpi_stats *
 vmpi_get_stats(struct vmpi_info *mpi)
 {
         return &mpi->stats;
 }
 
+static unsigned int vmpi_id_counter = 0;
+
+/*
+ * This is a "template" to be included after the definition of struct
+ * vmpi_info.
+ */
+#include "vmpi-instances.h"
+
 struct vmpi_info *
 vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
+        struct vmpi_ops ops;
         int i;
 
         mpi = kmalloc(sizeof(struct vmpi_info), GFP_KERNEL);
@@ -119,14 +116,6 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
                 }
         }
 
-        mpi->ops.priv = mpi;
-        mpi->ops.write = vmpi_host_ops_write;
-        mpi->ops.register_read_callback = vmpi_host_ops_register_read_callback;
-        *err = shim_hv_init(&mpi->ops);
-        if (*err) {
-                goto init_read;
-        }
-
 #ifdef VMPI_TEST
         *err = vmpi_test_init(mpi, deferred_test_init);
         if (*err) {
@@ -135,11 +124,17 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
+        mpi->id = vmpi_id_counter++;
+
+        ops.priv = mpi;
+        ops.write = vmpi_ops_write;
+        ops.register_read_callback = vmpi_ops_register_read_callback;
+        vmpi_provider_register(VMPI_PROVIDER_HOST, mpi->id, &ops);
+
         return mpi;
 
 #ifdef VMPI_TEST
  test_ini:
-        shim_hv_fini();
 #endif  /* VMPI_TEST */
  init_read:
         for (--i; i >= 0; i--) {
@@ -160,11 +155,11 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
 
+        vmpi_provider_unregister(VMPI_PROVIDER_HOST, mpi->id);
+
 #ifdef VMPI_TEST
         vmpi_test_fini(mpi, deferred_test_fini);
 #endif  /* VMPI_TEST */
-
-        shim_hv_fini();
 
         mpi->vi = NULL;
         vmpi_ring_fini(&mpi->write);
@@ -233,7 +228,7 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 mpi->stats.txreq++;
                 mutex_unlock(&ring->lock);
 
-                vmpi_impl_write_buf(mpi->vi, buf);
+                vmpi_impl_txkick(mpi->vi);
 
                 break;
         }
