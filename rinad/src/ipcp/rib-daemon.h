@@ -98,6 +98,13 @@ public:
 	void stopObject(const std::string& objectClass, const std::string& objectName,
 				const void* objectValue) throw (Exception);
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
+	void cdapMessageDelivered(char* message, int length, int portId);
+	void sendMessage(const rina::CDAPMessage & cdapMessage, int sessionId,
+				ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
+	void sendMessageToAddress(const rina::CDAPMessage & cdapMessage, int sessionId,
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
+	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
+				const IUpdateStrategy& updateStrategy);
 
 private:
 	RIB rib_;
@@ -107,22 +114,44 @@ private:
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	rina::Thread * management_sdu_reader_;
 
-	///CDAP Message handlers that have sent a CDAP message and are waiting for a reply
+	/// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
 	std::map<int, ICDAPResponseMessageHandler *> handlers_waiting_for_reply_;
 
 	/// Lock to protect concurrent access to the handlers table
 	rina::Lockable handlers_lock_;
 
-	///Lock to control that when sending a message requiring a reply the
+	/// Lock to control that when sending a message requiring a reply the
 	/// CDAP Session manager has been updated before receiving the response message
 	rina::Lockable atomic_send_lock_;
 
 	void subscribeToEvents();
 
-	///Invoked by the Resource allocator when it detects that a certain flow has been deallocated, and therefore a
+	/// Invoked by the Resource allocator when it detects that a certain flow has been deallocated, and therefore a
 	/// any CDAP sessions over it should be terminated.
 	void nMinusOneFlowDeallocated(int portId);
 	void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event);
+
+	//Get a CDAP Message Handler waiting for a response message
+	ICDAPResponseMessageHandler * getCDAPMessageHandler(const rina::CDAPMessage * cdapMessage);
+
+	/// Process an incoming CDAP request message
+	void processIncomingRequestMessage(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// Process an incoming CDAP response message
+	void processIncomingResponseMessage(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// Send a message to another IPC Process. Takes ownership of the CDAPMessage.
+	/// @param useAddress true if we're sending a message to an address, false if
+	/// we are directly using the N-1 port-id
+	/// @param cdapMessage the message to be sent
+	/// @param sessionId the CDAP session id to be used
+	/// @param address the address of the destination IPC Process
+	/// @param cdapMessageHandler pointer to the class that will be handling the response
+	/// message (if any)
+	void sendMessage(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
 };
 
 }

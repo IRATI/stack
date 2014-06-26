@@ -114,29 +114,33 @@ public:
 	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
 	virtual const std::list<std::string>& get_enrolled_ipc_process_names() const = 0;
 
-	/// A remote IPC process Connect request has been received
+	/// A remote IPC process Connect request has been received. Ownership
+	/// of the CDAP message is passed to this class
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
-	virtual void connect(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void connect(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
-	/// A remote IPC process Connect response has been received
+	/// A remote IPC process Connect response has been received. Ownership
+	/// of the CDAP message is passed to this class
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
-	virtual void connectResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void connectResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
-	/// A remote IPC process Release request has been received
+	/// A remote IPC process Release request has been received. Ownership
+	/// of the CDAP message is passed to this class
 	/// @param cdapMessage
 	/// @param cdapSessionDescripton
-	virtual void release(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void release(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
-	/// A remote IPC process Release response has been received
+	/// A remote IPC process Release response has been received. Ownership
+	/// of the CDAP message is passed to this class
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
-	virtual void releaseResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void releaseResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
@@ -392,21 +396,22 @@ public:
 	virtual void startObject(const void* object) throw (Exception);
 	virtual void stopObject(const void* object) throw (Exception);
 
-	/// Remote invocations via CDAP messages
-	virtual void remoteCreateObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	virtual void remoteDeleteObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	virtual void remoteReadObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	virtual void remoteCancelReadObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	virtual void remoteWriteObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	virtual void remoteStartObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
-	virtual void remoteStopObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
+	/// Remote invocations via CDAP messages, ownership of cdapMessage is passed to
+	/// the oeprations
+	virtual void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	virtual void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	virtual void remoteReadObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	virtual void remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	virtual void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	virtual void remoteStartObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	virtual void remoteStopObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
 
 private:
 	std::string class_;
@@ -419,8 +424,8 @@ private:
 	IEncoder * encoder_;
 	void operation_not_supported() throw (Exception);
 	void operation_not_supported(const void* object) throw (Exception);
-	void operation_not_supported(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception);
+	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
 	void operartion_not_supported(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue) throw (Exception);
 };
@@ -431,24 +436,25 @@ public:
 	virtual ~IUpdateStrategy(){};
 };
 
-/// Interface of classes that handle CDAP response message
+/// Interface of classes that handle CDAP response message.
+/// Ownership of CDAP messages is tranferred to this class.
 class ICDAPResponseMessageHandler {
 public:
 	virtual ~ICDAPResponseMessageHandler(){};
-	virtual void createResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
-	virtual void deleteResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
-	virtual void readResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
-	virtual void cancelReadResponse(const rina::CDAPMessage & cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
-	virtual void writeResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor & cdapSessionDescriptor) = 0;
-	virtual void startResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
-	virtual void stopResponse(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) = 0;
+	virtual void createResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void deleteResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 };
 
 /// Part of the RIB Daemon API to control if the changes have to be notified
@@ -485,44 +491,38 @@ public:
 	virtual void removeRIBObject(const std::string& objectName) throw (Exception) = 0;
 
 	/// Send an information update, consisting on a set of CDAP messages, using the updateStrategy update strategy
-	/// (on demand, scheduled)
+	/// (on demand, scheduled). Takes ownership of the CDAP messages
 	/// @param cdapMessages
 	/// @param updateStrategy
-	virtual void sendMessages(const std::list<rina::CDAPMessage>& cdapMessages,
+	virtual void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 			const IUpdateStrategy& updateStrategy) = 0;
 
-	/// Causes a CDAP message to be sent
+	/// Causes a CDAP message to be sent. Takes ownership of the CDAP message
 	/// @param cdapMessage the message to be sent
 	/// @param sessionId the CDAP session id
 	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
 	/// @throws Exception
-	virtual void sendMessage(const rina::CDAPMessage& cdapMessage, int sessionId,
-			const ICDAPResponseMessageHandler& cdapMessageHandler) throw (Exception) = 0;
+	virtual void sendMessage(const rina::CDAPMessage & cdapMessage, int sessionId,
+			ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) = 0;
 
-	/// Causes a CDAP message to be sent
+	/// Causes a CDAP message to be sent. Takes ownership of the CDAPMessage
 	/// @param cdapMessage the message to be sent
 	/// @param sessionId the CDAP session id
 	/// @param address the address of the IPC Process to send the Message To
 	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
 	/// @throws Exception
-	virtual void sendMessageToAddress(const rina::CDAPMessage& cdapMessage, int sessionId, long address,
-			const ICDAPResponseMessageHandler& cdapMessageHandler) throw (Exception) = 0;
+	virtual void sendMessageToAddress(const rina::CDAPMessage & cdapMessage, int sessionId,
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) = 0;
 
-	/// Process an incoming message, still encoded
+	/// The RIB Daemon has to process the CDAP message and,
+	/// if valid, it will either pass it to interested subscribers and/or write to storage and/or modify other
+	/// tasks data structures. It may be the case that the CDAP message is not addressed to an application
+	/// entity within this IPC process, then the RMT may decide to rely the message to the right destination
+	/// (after consulting an adequate forwarding table).
 	/// @param message the encoded CDAP message
 	/// @param length the length of the encoded message
 	/// @param portId the portId the message came from
-	virtual void cdapMessageDelivered(unsigned char* message, int length, int portId) = 0;
-
-	/// Reads/writes/created/deletes/starts/stops one or more objects at the RIB, matching the
-	/// information specified by objectId + objectClass or objectInstance.At least objectName or
-	/// objectInstance have to be not null. This operation is invoked because the RIB Daemon has
-	/// received a CDAP message from another IPC process
-	/// @param cdapMessage The CDAP message received
-	/// @param cdapSessionDescriptor Describes the CDAP session to where the CDAP message belongs
-	/// @throws Exception on a number of circumstances
-	virtual void processOperation(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) = 0;
+	virtual void cdapMessageDelivered(char* message, int length, int portId) = 0;
 
 	/// Create or update an object in the RIB
 	/// @param objectClass the class of the object
