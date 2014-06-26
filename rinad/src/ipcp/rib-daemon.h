@@ -89,6 +89,10 @@ public:
 	void removeRIBObject(BaseRIBObject * ribObject) throw (Exception);
 	void removeRIBObject(const std::string& objectName) throw (Exception);
 	std::list<BaseRIBObject *> getRIBObjects();
+	void createObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception);
+	void deleteObject(const std::string& objectClass, const std::string& objectName,
+				const NotificationPolicy * notificationPolicy) throw (Exception);
 	BaseRIBObject * readObject(const std::string& objectClass,
 				const std::string& objectName) throw (Exception);
 	void writeObject(const std::string& objectClass, const std::string& objectName,
@@ -152,6 +156,12 @@ private:
 	/// message (if any)
 	void sendMessage(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
 			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
+
+	/// Finds out of the candidate number is on the list
+	/// @param candidate
+	/// @param list
+	/// @return true if candidate is on list, false otherwise
+	bool isOnList(int candidate, std::list<int> list);
 };
 
 }

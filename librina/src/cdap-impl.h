@@ -245,7 +245,7 @@ public:
 	const CDAPMessage* getReleaseConnectionResponseMessage(
 			CDAPMessage::Flags flags, int result,
 			const std::string &result_reason, int invoke_id);
-	const CDAPMessage* getCreateObjectRequestMessage(int port_id, char filter[],
+	const CDAPMessage* getCreateObjectRequestMessage(int port_id, char* filter,
 			CDAPMessage::Flags flags, const std::string &obj_class,
 			long obj_inst, const std::string &obj_name,
 			ObjectValueInterface *obj_value, int scope, bool invoke_id);
@@ -262,7 +262,7 @@ public:
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
-	const CDAPMessage* getStartObjectRequestMessage(int port_id, char filter[],
+	const CDAPMessage* getStartObjectRequestMessage(int port_id, char* filter,
 			CDAPMessage::Flags flags, const std::string &obj_class,
 			ObjectValueInterface *obj_value, long obj_inst,
 			const std::string &obj_name, int scope, bool invoke_id);
@@ -277,7 +277,7 @@ public:
 				long obj_inst, const std::string &obj_name, int scope,
 				bool invoke_id);
 	const CDAPMessage* getStopObjectResponseMessage(CDAPMessage::Flags flags, int result, const std::string &result_reason, int invoke_id);
-	const CDAPMessage* getReadObjectRequestMessage(int port_id, char filter[],
+	const CDAPMessage* getReadObjectRequestMessage(int port_id, char * filter,
 			CDAPMessage::Flags flags, const std::string &obj_class,
 			long obj_inst, const std::string &obj_name, int scope,
 			bool invoke_id);
@@ -285,7 +285,7 @@ public:
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int result, const std::string &result_reason, int invoke_id);
-	const CDAPMessage* getWriteObjectRequestMessage(int port_id, char filter[],
+	const CDAPMessage* getWriteObjectRequestMessage(int port_id, char * filter,
 			CDAPMessage::Flags flags, const std::string &obj_class,
 			long obj_inst, ObjectValueInterface *obj_value,
 			const std::string &obj_name, int scope, bool invoke_id);

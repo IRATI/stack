@@ -122,7 +122,7 @@ throw (Exception) {
 		std::stringstream ss;
 		ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getPortId();
 		rib_daemon_->createObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(),
-				&(flow->getFlowInformation()));
+				&(flow->getFlowInformation()), 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
@@ -157,7 +157,7 @@ throw (Exception) {
 			std::stringstream ss;
 			ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getPortId();
 			rib_daemon_->createObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(),
-					&(flow->getFlowInformation()));
+					&(flow->getFlowInformation()), 0);
 		} catch (Exception &e){
 			LOG_ERR("Error creating RIB object: %s", e.what());
 		}
@@ -200,7 +200,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 	try{
 		std::stringstream ss;
 		ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<portId;
-		rib_daemon_->deleteObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str());
+		rib_daemon_->deleteObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0);
 	}catch(Exception &e) {
 		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
 	}
@@ -228,7 +228,7 @@ throw (Exception) {
 			std::stringstream ss;
 			ss<<DIF_REGISTRATION_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getDIFName().getProcessName();
 			rib_daemon_->createObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
-					&(event.getDIFName().getProcessName()));
+					&(event.getDIFName().getProcessName()), 0);
 		}catch(Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());;
 		}
@@ -243,7 +243,7 @@ throw (Exception) {
 	try {
 		std::stringstream ss;
 		ss<<DIF_REGISTRATION_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getDIFName().getProcessName();
-		rib_daemon_->deleteObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str());
+		rib_daemon_->deleteObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0);
 	}catch (Exception &e) {
 		LOG_ERR("Problems deleting object from RIB: %s", e.what());
 	}
