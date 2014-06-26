@@ -1248,6 +1248,8 @@ int dtp_receive(struct dtp * instance,
         seq_num_t             seq_num;
         seq_num_t             seq_num_sv_update = 0; 
         timeout_t             a;
+        timeout_t             max_rcv;
+        timeout_t             LWE;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1281,7 +1283,10 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-        a = dt_sv_a(dt);
+        a       = dt_sv_a(dt);
+        max_rcv = max_seq_nr_rcv(sv);
+        LWE     = dt_sv_rcv_lft_win(dt);
+
         LOG_DBG("A-timer timeout: %d", a);
 
         /* Stop ReceiverInactivityTimer */
@@ -1305,7 +1310,7 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                 }
-        } else if (seq_num <= dt_sv_rcv_lft_win(dt) || seq_num == max_seq_nr_rcv(sv)) {
+        } else if (seq_num <= LWE || seq_num == max_rcv) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
                 dropped_pdus_inc(sv);
@@ -1328,7 +1333,7 @@ int dtp_receive(struct dtp * instance,
                         return -1;
                 }
                 return 0;
-        } else if (seq_num < max_seq_nr_rcv(sv)) {
+        } else if (seq_num < max_rcv) {
                 LOG_DBG("DTP Receive GAP");
                 /* This op puts the PDU in seq number order  and duplicates
                  * considered */
@@ -1367,7 +1372,7 @@ int dtp_receive(struct dtp * instance,
                                 }
                         }
                 }
-        } else if (seq_num >= (max_seq_nr_rcv(sv) + 1)) {
+        } else if (seq_num >= (max_rcv + 1)) {
                 LOG_DBG("DTP Receive + >1");
                 max_seq_nr_rcv_set(sv, seq_num);
                 if (!a) {
@@ -1406,7 +1411,6 @@ int dtp_receive(struct dtp * instance,
                                 }
                         }
                 }
-                LOG_MISSING;
         } else {
                 LOG_DBG("DTP Receive Wrong case");
                 /* Something went wrong! */
