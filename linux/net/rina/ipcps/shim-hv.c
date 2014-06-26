@@ -1191,7 +1191,7 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         }
 
         name_fini(&ipcp->data->name);
-        kfree(ipcp->data->vmpi.channels);
+        rkfree(ipcp->data->vmpi.channels);
         name_fini(&ipcp->data->dif_name);
         LOG_DBGF("ipcp destroyed (id = %d)", ipcp->data->id);
         rkfree(ipcp->data);
