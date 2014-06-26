@@ -1,5 +1,5 @@
 /*
- * Options parsing
+ * Dummy
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
@@ -18,28 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINAD_OPTIONS_H
-#define RINAD_OPTIONS_H
+#ifndef RINAD_DUMMY_H
+#define RINAD_DUMMY_H
 
 #ifdef __cplusplus
-
-#include <string>
-
-namespace rinad {
-
-// FIXME: Just started
-
-class option {
- public:
-        option(const std::string & lng,
-               const std::string & shrt);
-
- private:
-        std::string long_;
-        std::string short_;
-};
-
-}
 
 #endif
 

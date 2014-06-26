@@ -19,15 +19,46 @@
  */
 
 #include <cstdlib>
+#include <string>
+#include <iostream>
 
 #include <librina/common.h>
 
-#include "common/options.h"
+#include "tclap/CmdLine.h"
+
+using namespace TCLAP;
+
 
 int main(int argc, char * argv[])
 {
-        (void) argc;
-        (void) argv;
+        // Wrap everything in a try block.  Do this every time, 
+        // because exceptions will be thrown for problems. 
+        try {  
+
+                // Define the command line object.
+                TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
+
+                // Define a value argument and add it to the command line.
+                TCLAP::ValueArg<std::string> nameArg("n",
+                                                     "name",
+                                                     "Name to print",
+                                                     true,
+                                                     "homer",
+                                                     "string");
+                cmd.add(nameArg);
+
+                // Parse the args.
+                cmd.parse(argc, argv);
+
+                // Get the value parsed by each arg. 
+                std::string name = nameArg.getValue();
+
+                std::cout << "My name is: " << name << std::endl;
+
+        } catch (ArgException &e) {
+                std::cerr << "error: " << e.error() << " for arg "
+                          << e.argId() << std::endl;
+        }
 
         rina::initialize("test", "/tmp/test");
 
