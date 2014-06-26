@@ -628,6 +628,8 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         return tmp;
 }
 
+/* FIME: To be deleted */
+#if 0
 static bool evaluate_ulwe_loop_condition(struct pdu * pdu,
                                          seq_num_t    seq_num,
                                          seq_num_t    limit)
@@ -681,7 +683,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
 
         /* FIXME: Invoke delimiting */
 
-//        spin_lock(&sv->lock);
+        spin_lock(&sv->lock);
 
         LWE     = dt_sv_rcv_lft_win(dt);
         pdu     = seqQ_pop(seqQ);
@@ -704,7 +706,7 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-//                                spin_unlock(&sv->lock);
+                                spin_unlock(&sv->lock);
                                 return 0;
                         }
                         LWE     = dt_sv_rcv_lft_win(dt);
@@ -724,9 +726,107 @@ static seq_num_t update_left_win_edge(struct dtp * dtp)
                 seqQ_push(dtp, pdu);
 
         LOG_DBG("LWEU: Final LWE = %d", LWE);
-//        spin_unlock(&sv->lock);
+        spin_unlock(&sv->lock);
         return LWE;
 }
+#endif
+
+#define seqQ_for_each_entry_safe(seqQ, pos, n)                                 \
+                spin_lock(&seqQ->lock);                                        \
+                list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
+
+#define seqQ_for_each_entry_safe_end(seqQ)                                     \
+                spin_unlock(&seqQ->lock)
+
+static seq_num_t process_A_expiration(struct dtp * dtp)
+{
+        struct dt *          dt;
+        struct dtcp *        dtcp;
+        struct dtp_sv *      sv;
+        struct sequencingQ * seqQ;
+        seq_num_t            LWE;
+        seq_num_t            seq_num;
+        struct pdu *         pdu;
+        timeout_t            time;
+        bool                 in_order_del;
+        bool                 incomplete_del;
+        bool                 max_sdu_gap;
+        timeout_t            a;
+
+        struct seq_q_entry * pos, * n;
+
+
+        ASSERT(dtp);
+
+        sv = dtp->sv;
+        ASSERT(sv);
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        dtcp = dt_dtcp(dtp->parent);
+
+        a              = dt_sv_a(dt);
+        time           = jiffies;
+        in_order_del   = sv->connection->policies_params->in_order_delivery;
+        incomplete_del = sv->connection->policies_params->incomplete_delivery;
+        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+
+        /* FIXME: Invoke delimiting */
+
+        LWE     = dt_sv_rcv_lft_win(dt);
+
+        LOG_DBG("LWEU: Original LWE = %d", LWE);
+        LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
+
+        seqQ_for_each_entry_safe(seqQ, pos, n) {
+                pdu = pos->pdu;
+                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+
+                if ((seq_num == LWE +1) || (seq_num - LWE - 1 <= max_sdu_gap)) {
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                return 0;
+                        }
+                        pos->pdu = NULL;
+                        seq_q_entry_destroy(pos);
+
+                        if (pdu_post(dtp, pdu))
+                                return 0;
+                        LWE     = dt_sv_rcv_lft_win(dt);
+                        continue;
+                }
+
+                if (pos->time_stamp + a <= time) {
+                        /* FIXME: this have to work differently when DTCP is
+                         * here */
+                        if (!dtcp) {
+                                if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                        LOG_ERR("Failed to set new "
+                                                "left window edge");
+                                        return 0;
+                                }
+                                pos->pdu = NULL;
+                                seq_q_entry_destroy(pos);
+                                if (pdu_post(dtp, pdu))
+                                        return 0;
+                                LWE     = dt_sv_rcv_lft_win(dt);
+                        }
+                        LOG_MISSING;
+                        continue;
+                } else 
+                        break;
+                
+        }
+        seqQ_for_each_entry_safe_end(seqQ);
+
+        return LWE;
+}
+
 
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
@@ -754,7 +854,7 @@ static void tf_a(void * data)
         }
 
         /* Invoke delimiting and update left window edge */
-        seq_num_sv_update = update_left_win_edge(dtp);
+        seq_num_sv_update =  process_A_expiration(dtp);
         dtcp = dt_dtcp(dtp->parent);
         if (dtcp) {
                 if (!seq_num_sv_update) {
@@ -766,7 +866,6 @@ static void tf_a(void * data)
                         LOG_ERR("Failed to update dtcp sv");
                         return;
                 }
-                LOG_MISSING;
                 return;
         }
 
@@ -1150,7 +1249,6 @@ int dtp_receive(struct dtp * instance,
         struct dtcp *         dtcp;
         struct dt *           dt;
         seq_num_t             seq_num;
-        seq_num_t             seq_num_sv_update = 0; 
         timeout_t             a;
         timeout_t             max_rcv;
         timeout_t             LWE;
@@ -1236,93 +1334,35 @@ int dtp_receive(struct dtp * instance,
                         LOG_ERR("Failed to start timer");
                         return -1;
                 }
-                return 0;
-        } else if (seq_num < max_rcv) {
+        } else {
                 LOG_DBG("DTP Receive GAP");
                 /* This op puts the PDU in seq number order  and duplicates
                  * considered */
-                if (!a) {
+                /* FIXME: probably this is not needed */
+                if (seq_num > max_rcv)
+                        max_seq_nr_rcv_set(sv, seq_num);
+
+                if (!a || (seq_num == LWE + 1)) {
                         /* FIXME: delimiting goes here */
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
                                 return -1;
                         }
-                        pdu_post(instance, pdu);
+                        if (pdu_post(instance, pdu))
+                                return -1;
                         if (dtcp) {
-                                /* This must send acks */        
                                 if (dtcp_sv_update(dtcp, seq_num)) {
                                         LOG_ERR("Failed to update dtcp sv");
                                         return -1;
                                 }
                         }
-                        return 0;
                 } else {
                         if (seqQ_push(instance, pdu)) {
-                                LOG_ERR("Could not push PDU into sequencing queue");
+                               LOG_ERR("Could not push PDU into sequencing queue");
                                 return -1;
-                        }
-                        seq_num_sv_update = update_left_win_edge(instance);
-                        if (dtcp) {
-                                if (!seq_num_sv_update) {
-                                        LOG_ERR("ULWD returned not seq num"
-                                                "to udpate DTCP SV");
-                                        return -1;
-                                }
-                                /* This must send acks */        
-                                if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
-                                        LOG_ERR("Failed to update dtcp sv");
-                                        return -1;
-                                }
                         }
                 }
-        } else if (seq_num >= (max_rcv + 1)) {
-                LOG_DBG("DTP Receive + >1");
-                max_seq_nr_rcv_set(sv, seq_num);
-                if (!a) {
-                        /* FIXME: delimiting goes here */
-                        /* FIXME: Not checking if pdu is a duplicate */
-                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                LOG_ERR("Failed to set new "
-                                        "left window edge");
-                                return -1;
-                        }
-                        pdu_post(instance, pdu);
-                        if (dtcp) {
-                                /* This must send acks */        
-                                if (dtcp_sv_update(dtcp, seq_num)) {
-                                        LOG_ERR("Failed to update dtcp sv");
-                                        return -1;
-                                }
-                        }
-                        return 0;
-                } else {
-                        if (seqQ_push(instance, pdu)) {
-                                LOG_ERR("Could not push PDU into sequencing queue");
-                                return -1;
-                        }
-                        seq_num_sv_update = update_left_win_edge(instance);
-                        if (dtcp) {
-                                if (!seq_num_sv_update) {
-                                        LOG_ERR("ULWD returned not seq num"
-                                                "to udpate DTCP SV");
-                                        return -1;
-                                }
-                                /* This must send acks */        
-                                if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
-                                        LOG_ERR("Failed to update dtcp sv");
-                                        return -1;
-                                }
-                        }
-                }
-        } else {
-                LOG_DBG("DTP Receive Wrong case");
-                /* Something went wrong! */
-                pdu_destroy(pdu);
-                LOG_ERR("Something is horribly wrong on receiving");
-                LOG_ERR("Seq num: %d", seq_num);
-                LOG_ERR("Max seq num received: %d", max_seq_nr_rcv(sv));
-                return -1;
         }
 
         /* Start ReceiverInactivityTimer */
