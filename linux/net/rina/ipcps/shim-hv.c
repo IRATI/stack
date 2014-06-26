@@ -96,7 +96,7 @@ struct shim_hv_vmpi {
 
 /* Private data associated to a shim IPC process. */
 struct ipcp_instance_data {
-        struct list_head    list;
+        struct list_head    node;
         ipc_process_id_t    id;
         struct name         name;
         int                 assigned;
@@ -110,7 +110,7 @@ struct ipcp_instance_data {
 };
 
 struct name_list_element {
-        struct list_head list;
+        struct list_head node;
         struct name      application_name;
 };
 
@@ -136,7 +136,7 @@ find_instance(struct ipcp_factory_data *factory_data, ipc_process_id_t id)
 
         struct ipcp_instance_data *cur;
 
-        list_for_each_entry(cur, &(factory_data->instances), list) {
+        list_for_each_entry(cur, &(factory_data->instances), node) {
                 if (cur->id == id) {
                         return cur;
                 }
@@ -799,7 +799,7 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
         mutex_lock(&priv->reg_lock);
 
         /* Is this application already registered? */
-        list_for_each_entry(cur, &priv->registered_applications, list) {
+        list_for_each_entry(cur, &priv->registered_applications, node) {
                 if (name_is_equal(application_name, &cur->application_name)) {
                         LOG_ERR("%s: Application %s already registered",
                                 __func__, tmpstr);
@@ -819,7 +819,7 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
                 goto name_alloc;
         }
 
-        list_add(&cur->list, &priv->registered_applications);
+        list_add(&cur->node, &priv->registered_applications);
 
         ret = 0;
         LOG_DBGF("Application %s registered", tmpstr);
@@ -849,7 +849,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         mutex_lock(&priv->reg_lock);
 
         /* Is this application registered? */
-        list_for_each_entry(cur, &priv->registered_applications, list) {
+        list_for_each_entry(cur, &priv->registered_applications, node) {
                 if (name_is_equal(application_name, &cur->application_name)) {
                         found = cur;
                         break;
@@ -870,7 +870,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
 
         /* Remove the application from the list of registered applications. */
         name_fini(&found->application_name);
-        list_del(&found->list);
+        list_del(&found->node);
         rkfree(found);
 
         LOG_DBGF("Application %s unregistered", tmpstr);
@@ -1100,18 +1100,6 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
                 goto alloc_ipcp;
         }
 
-        /*
-         * For now we only accept a single IPC process for DIF.
-         * This restriction will be removed when we are able to
-         * manage multiple VMPI devices per Virtual Machine, e.g.
-         * when we have a naming scheme for that.
-         */
-        if (!list_empty(&factory_data->instances)) {
-                LOG_ERR("%s: multiple IPC processes are not allowed",
-                        __func__);
-                goto alloc_ipcp;
-        }
-
         /* Allocate a new ipcp instance. */
         ipcp = rkzalloc(sizeof(*ipcp), GFP_KERNEL);
         if (!ipcp)
@@ -1161,7 +1149,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         priv->vmpi.id = ~0U;
 
         /* Add this IPC process to the factory global list. */
-        list_add(&priv->list, &factory_data->instances);
+        list_add(&priv->node, &factory_data->instances);
 
         LOG_DBGF("ipcp created (id = %d)", id);
 
@@ -1190,9 +1178,9 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         ASSERT(ipcp);
 
         found = NULL;
-        list_for_each_entry_safe(cur, next, &factory_data->instances, list) {
+        list_for_each_entry_safe(cur, next, &factory_data->instances, node) {
                 if (cur == ipcp->data) {
-                        list_del(&cur->list);
+                        list_del(&cur->node);
                         found = cur;
                         break;
                 }
