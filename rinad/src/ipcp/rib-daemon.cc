@@ -299,6 +299,110 @@ std::list<BaseRIBObject *> RIBDaemon::getRIBObjects() {
 	return rib_.getRIBObjects();
 }
 
+bool RIBDaemon::isOnList(int candidate, std::list<int> list){
+	for(std::list<int>::iterator it = list.begin(); it != list.end(); ++it) {
+		if ((*it) == candidate) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void RIBDaemon::createObject(const std::string& objectClass, const std::string& objectName,
+		const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception) {
+	BaseRIBObject * ribObject;
+
+	try {
+		ribObject = rib_.getRIBObject(objectClass, objectName);
+	} catch (Exception &e) {
+		//Delegate creation to the parent if the object is not there
+		int position = objectName.rfind(RIBObjectNames::SEPARATOR);
+		if (position == std::string::npos) {
+			throw e;
+		}
+		std::string parentObjectName = objectName.substr(0, position);
+		ribObject = rib_.getRIBObject(objectClass, parentObjectName);
+	}
+
+	//Create the object
+	ribObject->createObject(objectClass, objectName, objectValue);
+
+	//Notify neighbors if needed
+	if (!notificationPolicy) {
+		return;
+	}
+
+	//We need to notify, find out to whom the notifications must be sent to, and do it
+	std::list<int> peersToIgnore = notificationPolicy->get_cdap_session_ids();
+	std::vector<int> peers;
+	cdap_session_manager_->getAllCDAPSessionIds(peers);
+	rina::ObjectValueInterface * encodedObjectValue;
+
+	try {
+		encodedObjectValue = new rina::ByteArrayObjectValue(encoder_->encode(objectValue));
+	} catch(Exception & e) {
+		LOG_ERR("Error encoding object value: %s", e.what());
+		return;
+	}
+
+	const rina::CDAPMessage * cdapMessage;
+	for(int i=0; i<peers.size(); i++) {
+		if (!isOnList(peers[i], peersToIgnore)) {
+			try{
+				cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(peers[i], 0,
+						rina::CDAPMessage::NONE_FLAGS, objectClass, 0, objectName, encodedObjectValue,
+						0, false);
+				sendMessage(*cdapMessage, peers[i], 0);
+				delete cdapMessage;
+			}catch(Exception & e){
+				LOG_ERR("Problems notifying neighbors: %s", e.what());
+				if (cdapMessage) {
+					delete cdapMessage;
+				}
+			}
+		}
+	}
+
+	delete encodedObjectValue;
+}
+
+void RIBDaemon::deleteObject(const std::string& objectClass, const std::string& objectName,
+		const NotificationPolicy * notificationPolicy) throw (Exception) {
+	BaseRIBObject * ribObject;
+
+	ribObject = rib_.getRIBObject(objectClass, objectName);
+	ribObject->deleteObject();
+
+	//Notify neighbors if needed
+	if (!notificationPolicy) {
+		return;
+	}
+
+	//We need to notify, find out to whom the notifications must be sent to, and do it
+	std::list<int> peersToIgnore = notificationPolicy->get_cdap_session_ids();
+	std::vector<int> peers;
+	cdap_session_manager_->getAllCDAPSessionIds(peers);
+
+	const rina::CDAPMessage * cdapMessage;
+	for(int i=0; i<peers.size(); i++) {
+		if (!isOnList(peers[i], peersToIgnore)) {
+			try{
+				cdapMessage = cdap_session_manager_->getDeleteObjectRequestMessage(peers[i], 0,
+						rina::CDAPMessage::NONE_FLAGS, objectClass, 0, objectName, 0,
+						0, false);
+				sendMessage(*cdapMessage, peers[i], 0);
+				delete cdapMessage;
+			}catch(Exception & e){
+				LOG_ERR("Problems notifying neighbors: %s", e.what());
+				if (cdapMessage) {
+					delete cdapMessage;
+				}
+			}
+		}
+	}
+}
+
 BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
 			const std::string& objectName) throw (Exception) {
 	return rib_.getRIBObject(objectClass, objectName);

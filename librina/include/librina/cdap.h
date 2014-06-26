@@ -282,7 +282,7 @@ public:
 	static CDAPMessage* getReleaseConnectionRequestMessage(Flags flags);
 	static const CDAPMessage* getReleaseConnectionResponseMessage(Flags flags,
 			int result, const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getCreateObjectRequestMessage(char filter[],
+	static CDAPMessage* getCreateObjectRequestMessage(char * filter,
 			Flags flags, const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int scope);
@@ -290,7 +290,7 @@ public:
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int result, const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getDeleteObjectRequestMessage(char filter[],
+	static CDAPMessage* getDeleteObjectRequestMessage(char * filter,
 			Flags flags, const std::string &obj_class, long obj_inst,
 			const std::string &obj_name,
 			ObjectValueInterface *object_value, int scope);
@@ -298,7 +298,7 @@ public:
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getStartObjectRequestMessage(char filter[], Flags flags,
+	static CDAPMessage* getStartObjectRequestMessage(char * filter, Flags flags,
 			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope);
 	static const CDAPMessage* getStartObjectResponseMessage(Flags flags,
@@ -308,19 +308,19 @@ public:
 			ObjectValueInterface *object_value, long obj_inst,
 			const std::string &obj_name, int result,
 			const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getStopObjectRequestMessage(char filter[], Flags flags,
+	static CDAPMessage* getStopObjectRequestMessage(char * filter, Flags flags,
 			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope);
 	static const CDAPMessage* getStopObjectResponseMessage(Flags flags,
 			int result, const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getReadObjectRequestMessage(char filter[], Flags flags,
+	static CDAPMessage* getReadObjectRequestMessage(char * filter, Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int scope);
 	static const CDAPMessage* getReadObjectResponseMessage(Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int result, const std::string &result_reason, int invoke_id);
-	static CDAPMessage* getWriteObjectRequestMessage(char filter[], Flags flags,
+	static CDAPMessage* getWriteObjectRequestMessage(char * filter, Flags flags,
 			const std::string &obj_class, long obj_inst,
 			ObjectValueInterface *obj_value, const std::string &obj_name,
 			int scope);
@@ -352,7 +352,7 @@ public:
 	const std::string& get_dest_ap_name() const;
 	void set_dest_ap_name(const std::string &dest_ap_name);
 	const char* get_filter() const;
-	void set_filter(char filter[]);
+	void set_filter(char * filter);
 	Flags get_flags() const;
 	void set_flags(Flags flags);
 	int get_invoke_id() const;
@@ -787,7 +787,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual const CDAPMessage* getCreateObjectRequestMessage(int port_id,
-			char filter[], CDAPMessage::Flags flags,
+			char * filter, CDAPMessage::Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, ObjectValueInterface *obj_value,
 			int scope, bool invoke_id) = 0;
@@ -854,7 +854,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual const CDAPMessage* getStartObjectRequestMessage(int port_id,
-			char filter[], CDAPMessage::Flags flags,
+			char * filter, CDAPMessage::Flags flags,
 			const std::string &obj_class, ObjectValueInterface *obj_value,
 			long obj_inst, const std::string &obj_name, int scope,
 			bool invoke_id) = 0;
@@ -922,7 +922,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual const CDAPMessage* getReadObjectRequestMessage(int port_id,
-			char filter[], CDAPMessage::Flags flags,
+			char * filter, CDAPMessage::Flags flags,
 			const std::string &obj_class, long obj_inst,
 			const std::string &obj_name, int scope, bool invoke_id)
 			= 0;
@@ -956,7 +956,7 @@ public:
 	/// @return
 	/// @throws CDAPException
 	virtual const CDAPMessage* getWriteObjectRequestMessage(int port_id,
-			char filter[], CDAPMessage::Flags flags,
+			char * filter, CDAPMessage::Flags flags,
 			const std::string &obj_class, long obj_inst,
 			ObjectValueInterface *obj_value, const std::string &obj_name,
 			int scope, bool invoke_id) = 0;
