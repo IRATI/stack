@@ -208,38 +208,38 @@ void BaseRIBObject::stopObject(const void* object) throw (Exception) {
 	operation_not_supported(object);
 }
 
-void BaseRIBObject::remoteCreateObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::remoteDeleteObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::remoteReadObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::remoteCancelReadObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::remoteWriteObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteWriteObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::remoteStartObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::remoteStopObject(const rina::CDAPMessage& cdapMessage,
-			const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::remoteStopObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
@@ -255,12 +255,12 @@ void BaseRIBObject::operation_not_supported(const void* object) throw (Exception
 	throw Exception(ss.str().c_str());
 }
 
-void BaseRIBObject::operation_not_supported(const rina::CDAPMessage& cdapMessage,
-		const rina::CDAPSessionDescriptor& cdapSessionDescriptor) throw (Exception) {
+void BaseRIBObject::operation_not_supported(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
-	ss<<"CDAP Message code: "<<cdapMessage.get_op_code();
-	ss<<" N-1 port-id: "<<cdapSessionDescriptor.get_port_id()<<std::endl;
+	ss<<"CDAP Message code: "<<cdapMessage->get_op_code();
+	ss<<" N-1 port-id: "<<cdapSessionDescriptor->get_port_id()<<std::endl;
 
 	throw Exception(ss.str().c_str());
 }
