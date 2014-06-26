@@ -1,5 +1,5 @@
 /*
- * VMPI common definitions and limits
+ * Support for multiple VMPI providers
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
@@ -18,10 +18,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __VMPI_LIMITS_H__
-#define __VMPI_LIMITS_H__
+#ifndef __VMPI_PROVIDER_H__
+#define __VMPI_PROVIDER_H__
 
-#define VMPI_MAX_CHANNELS_DEFAULT 64
-#define VMPI_BUF_SIZE   2048
+#include "vmpi-ops.h"
 
-#endif   /* __VMPI_LIMITS_H__ */
+
+#define VMPI_PROVIDER_HOST       0U
+#define VMPI_PROVIDER_GUEST      1U
+#define VMPI_PROVIDER_AUTO       2U
+
+
+int vmpi_provider_find_instance(unsigned int provider, int id,
+                                struct vmpi_ops *ops);
+
+int vmpi_provider_register(unsigned int provider, unsigned int id,
+                           const struct vmpi_ops *ops);
+
+int vmpi_provider_unregister(unsigned int provider, unsigned int id);
+
+#endif  /* __VMPI_PROVIDER_H__ */

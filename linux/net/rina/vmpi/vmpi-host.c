@@ -22,29 +22,29 @@
 #include <linux/mutex.h>
 #include <linux/sched.h>
 #include <linux/socket.h>
+#include <linux/list.h>
+#include <linux/wait.h>
 
 #include "vmpi.h"
+#include "vmpi-stats.h"
 #include "vmpi-iovec.h"
 #include "vmpi-host-impl.h"
 #include "vmpi-ops.h"
-#include "shim-hv.h"
 #include "vmpi-test.h"
+#include "vmpi-provider.h"
 
 
-unsigned int stat_txreq = 0;
-module_param(stat_txreq, uint, 0444);
-unsigned int stat_txres = 0;
-module_param(stat_txres, uint, 0444);
-unsigned int stat_rxres = 0;
-module_param(stat_rxres, uint, 0444);
+unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
+module_param(vmpi_max_channels, uint, 0444);
 
 struct vmpi_info {
         struct vmpi_impl_info *vi;
 
         struct vmpi_ring write;
-        struct vmpi_queue read[VMPI_MAX_CHANNELS];
+        struct vmpi_queue *read;
 
-        struct vmpi_ops ops;
+        struct vmpi_stats stats;
+        unsigned int id;
 };
 
 int
@@ -66,24 +66,25 @@ vmpi_get_read_queue(struct vmpi_info *mpi)
         return mpi->read;
 }
 
-static ssize_t
-vmpi_host_ops_write(struct vmpi_ops *ops, unsigned int channel,
-                    const struct iovec *iv, unsigned long iovcnt)
+struct vmpi_stats *
+vmpi_get_stats(struct vmpi_info *mpi)
 {
-        return vmpi_write_common(ops->priv, channel, iv, iovcnt, 0);
+        return &mpi->stats;
 }
 
-static int
-vmpi_host_ops_register_read_callback(struct vmpi_ops *ops, vmpi_read_cb_t cb,
-                                     void *opaque)
-{
-        return vmpi_register_read_callback(ops->priv, cb, opaque);
-}
+static unsigned int vmpi_id_counter = 0;
+
+/*
+ * This is a "template" to be included after the definition of struct
+ * vmpi_info.
+ */
+#include "vmpi-instances.h"
 
 struct vmpi_info *
 vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
 {
         struct vmpi_info *mpi;
+        struct vmpi_ops ops;
         int i;
 
         mpi = kmalloc(sizeof(struct vmpi_info), GFP_KERNEL);
@@ -91,6 +92,8 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
                 *err = -ENOMEM;
                 return NULL;
         }
+        memset(mpi, 0, sizeof(*mpi));
+        vmpi_stats_init(&mpi->stats);
 
         mpi->vi = vi;
 
@@ -99,19 +102,18 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
                 goto init_write;
         }
 
-        for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
+        mpi->read = kmalloc(sizeof(mpi->read[0]) * vmpi_max_channels,
+                            GFP_KERNEL);
+        if (mpi->read == NULL) {
+                *err = -ENOMEM;
+                goto alloc_read_queues;
+        }
+
+        for (i = 0; i < vmpi_max_channels; i++) {
                 *err = vmpi_queue_init(&mpi->read[i], 0, VMPI_BUF_SIZE);
                 if (*err) {
                         goto init_read;
                 }
-        }
-
-        mpi->ops.priv = mpi;
-        mpi->ops.write = vmpi_host_ops_write;
-        mpi->ops.register_read_callback = vmpi_host_ops_register_read_callback;
-        *err = shim_hv_init(&mpi->ops);
-        if (*err) {
-                goto init_read;
         }
 
 #ifdef VMPI_TEST
@@ -122,18 +124,27 @@ vmpi_init(struct vmpi_impl_info *vi, int *err, bool deferred_test_init)
         }
 #endif  /* VMPI_TEST */
 
+        mpi->id = vmpi_id_counter++;
+
+        ops.priv = mpi;
+        ops.write = vmpi_ops_write;
+        ops.register_read_callback = vmpi_ops_register_read_callback;
+        vmpi_provider_register(VMPI_PROVIDER_HOST, mpi->id, &ops);
+
         return mpi;
 
 #ifdef VMPI_TEST
  test_ini:
-        shim_hv_fini();
 #endif  /* VMPI_TEST */
  init_read:
         for (--i; i >= 0; i--) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
+        kfree(mpi->read);
+ alloc_read_queues:
         vmpi_ring_fini(&mpi->write);
  init_write:
+        vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
 
         return NULL;
@@ -144,17 +155,19 @@ vmpi_fini(struct vmpi_info *mpi, bool deferred_test_fini)
 {
         unsigned int i;
 
-#ifdef VMPI_TEST
-        vmpi_test_fini(deferred_test_fini);
-#endif  /* VMPI_TEST */
+        vmpi_provider_unregister(VMPI_PROVIDER_HOST, mpi->id);
 
-        shim_hv_fini();
+#ifdef VMPI_TEST
+        vmpi_test_fini(mpi, deferred_test_fini);
+#endif  /* VMPI_TEST */
 
         mpi->vi = NULL;
         vmpi_ring_fini(&mpi->write);
-        for (i = 0; i < VMPI_MAX_CHANNELS; i++) {
+        for (i = 0; i < vmpi_max_channels; i++) {
                 vmpi_queue_fini(&mpi->read[i]);
         }
+        kfree(mpi->read);
+        vmpi_stats_fini(&mpi->stats);
         kfree(mpi);
 }
 
@@ -162,7 +175,7 @@ ssize_t
 vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                   const struct iovec *iv, unsigned long iovcnt, bool user)
 {
-        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_RX];
+        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_MPI_VQ_RX];
         struct vmpi_ring *ring = &mpi->write;
         size_t len = iov_length(iv, iovcnt);
         DECLARE_WAITQUEUE(wait, current);
@@ -212,10 +225,10 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 buf->len = sizeof(struct vmpi_hdr) + copylen;
                 VMPI_RING_INC(ring->nu);
-                stat_txreq++;
+                mpi->stats.txreq++;
                 mutex_unlock(&ring->lock);
 
-                vmpi_impl_write_buf(mpi->vi, buf);
+                vmpi_impl_txkick(mpi->vi);
 
                 break;
         }
@@ -230,7 +243,7 @@ ssize_t
 vmpi_read(struct vmpi_info *mpi, unsigned int channel,
           const struct iovec *iv, unsigned long iovcnt)
 {
-        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_NET_VQ_TX];
+        //struct vhost_mpi_virtqueue *nvq = &mpi->vqs[VHOST_MPI_VQ_TX];
         struct vmpi_queue *queue;
         ssize_t len = iov_length(iv, iovcnt);
         DECLARE_WAITQUEUE(wait, current);
@@ -240,7 +253,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
                 return -EBADFD;
         }
 
-        if (unlikely(channel >= VMPI_MAX_CHANNELS || len < 0)) {
+        if (unlikely(channel >= vmpi_max_channels || len < 0)) {
                 return -EINVAL;
         }
 
@@ -266,7 +279,7 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
                         continue;
                 }
 
-                buf = vmpi_queue_pop(queue);
+                buf = vmpi_queue_pop_front(queue);
                 mutex_unlock(&queue->lock);
 
                 copylen = buf->len - sizeof(struct vmpi_hdr);

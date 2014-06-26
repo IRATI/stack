@@ -32,6 +32,9 @@ module_param(write_channel, uint, 0644);
 static unsigned int read_channel = 0;
 module_param(read_channel, uint, 0644);
 
+
+static vmpi_info_t *vmpi_instance = NULL;
+
 static ssize_t
 vmpi_test_aio_write(struct kiocb *iocb, const struct iovec *iv,
                     unsigned long iovlen, loff_t pos)
@@ -60,19 +63,17 @@ vmpi_test_aio_read(struct kiocb *iocb, const struct iovec *iv,
         return ret;
 }
 
-static vmpi_info_t *instance = NULL;
-
 static int
 vmpi_test_open(struct inode *inode, struct file *f)
 {
-        if (instance == NULL) {
+        if (vmpi_instance == NULL) {
                 /* Not yet ready.. this should not happen! */
                 printk("vmpi_test_open: not ready\n");
                 BUG_ON(1);
                 return -ENXIO;
         }
 
-        f->private_data = instance;
+        f->private_data = vmpi_instance;
 
         printk("vmpi_test_open completed\n");
 
@@ -134,7 +135,7 @@ static void
 vmpi_test_fini_work(struct work_struct *unused)
 {
         misc_deregister(&vmpi_test_misc);
-        instance = NULL;
+        vmpi_instance = NULL;
 
         printk("vmpi_test_fini completed\n");
 }
@@ -145,7 +146,10 @@ static DECLARE_WORK(fini_work, vmpi_test_fini_work);
 int
 vmpi_test_init(void *opaque, bool deferred)
 {
-        instance = opaque;
+        if (vmpi_instance) {
+                return 0;
+        }
+        vmpi_instance = opaque;
 
         if (!deferred) {
                 return __vmpi_test_init();
@@ -158,9 +162,13 @@ vmpi_test_init(void *opaque, bool deferred)
 }
 
 void
-vmpi_test_fini(bool deferred)
+vmpi_test_fini(void *opaque, bool deferred)
 {
-        if (deferred) {
+        if (!vmpi_instance || opaque != vmpi_instance) {
+                return;
+        }
+
+        if (!deferred) {
                 return vmpi_test_fini_work(&fini_work);
         }
 

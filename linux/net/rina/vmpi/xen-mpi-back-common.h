@@ -32,7 +32,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 
-#include "xen-mpi-front.h"  //#include <xen/interface/io/mpi.h>
+#include "xen-mpi-ioring.h"  //#include <xen/interface/io/mpi.h>
 #include <xen/interface/grant_table.h>
 #include <xen/grant_table.h>
 #include <xen/xenbus.h>
@@ -152,6 +152,7 @@ struct vmpi_impl_info {
         struct vmpi_info *mpi;
         struct vmpi_ring *write;
         struct vmpi_queue *read;
+        struct vmpi_stats *stats;
         vmpi_read_cb_t read_cb;
         void *read_cb_data;
 };

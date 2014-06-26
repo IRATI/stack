@@ -137,7 +137,7 @@ int vmpi_queue_init(struct vmpi_queue *queue, unsigned int initial_length,
                     unsigned int buf_size);
 void vmpi_queue_fini(struct vmpi_queue *queue);
 void vmpi_queue_purge(struct vmpi_queue *queue);
-void vmpi_queue_push(struct vmpi_queue *queue, struct vmpi_buffer *buf);
-struct vmpi_buffer *vmpi_queue_pop(struct vmpi_queue *queue);
+void vmpi_queue_push_back(struct vmpi_queue *queue, struct vmpi_buffer *buf);
+struct vmpi_buffer *vmpi_queue_pop_front(struct vmpi_queue *queue);
 
 #endif  /*  __VMPI_STRUCTS_H__ */
