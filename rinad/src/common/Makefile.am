@@ -9,8 +9,8 @@ noinst_LTLIBRARIES = librinad.la
 librinad_la_CFLAGS   =
 librinad_la_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS)
 librinad_la_LIBADD   = $(LIBRINA_LIBS)
-librinad_la_SOURCES  =				\
-	dummy.cc dummy.h			\
+
+tclapSOURCES =					\
 	tclap/ArgException.h			\
 	tclap/Arg.h				\
 	tclap/ArgTraits.h			\
@@ -38,3 +38,7 @@ librinad_la_SOURCES  =				\
 	tclap/Visitor.h				\
 	tclap/XorHandler.h			\
 	tclap/ZshCompletionOutput.h
+
+librinad_la_SOURCES  =				\
+	dummy.cc              dummy.h		\
+	$(tclapSOURCES)
