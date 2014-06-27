@@ -21,6 +21,9 @@
 
 #include <sstream>
 
+#define RINA_PREFIX "flow-allocator"
+
+#include <librina/logs.h>
 #include "flow-allocator.h"
 
 namespace rinad {
@@ -189,6 +192,135 @@ std::string Flow::toString() {
 	}
 	ss << "* Index of the current active connection for this flow: " << current_connection_index_ << std::endl;
 	return ss.str();
+}
+
+//Class Flow RIB Object
+FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
+		IFlowAllocatorInstance * flow_allocator_instance):
+	SimpleSetMemberRIBObject(ipc_process, Flow::FLOW_RIB_OBJECT_CLASS, object_name,
+			flow_allocator_instance->get_flow()) {
+	flow_allocator_instance_ = flow_allocator_instance;
+}
+
+void FlowRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+	flow_allocator_instance_->deleteFlowRequestMessageReceived(cdapMessage,
+			cdapSessionDescriptor->get_port_id());
+}
+
+//Class Flow Set RIB Object
+FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator):
+		BaseRIBObject(ipc_process, Flow::FLOW_SET_RIB_OBJECT_CLASS,
+				objectInstanceGenerator->getObjectInstance(), Flow::FLOW_SET_RIB_OBJECT_NAME) {
+	flow_allocator_ = flow_allocator;
+}
+
+void FlowSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+	flow_allocator_->createFlowRequestMessageReceived(cdapMessage,
+			cdapSessionDescriptor->get_port_id());
+}
+
+void FlowSetRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+		IFlowAllocatorInstance* objectValue) throw (Exception) {
+	FlowRIBObject * flowRIBObject;
+
+	flowRIBObject = new FlowRIBObject(get_ipc_process(), objectName, objectValue);
+	add_child(flowRIBObject);
+	get_rib_daemon()->addRIBObject(flowRIBObject);
+}
+
+const void* FlowSetRIBObject::get_value() const {
+	return flow_allocator_;
+}
+
+//Class QoS Cube Set RIB Object
+const std::string QoSCubeSetRIBObject::QOS_CUBE_SET_RIB_OBJECT_NAME = RIBObjectNames::SEPARATOR +
+		RIBObjectNames::DIF + RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT +
+		RIBObjectNames::SEPARATOR + RIBObjectNames::FLOW_ALLOCATOR + RIBObjectNames::SEPARATOR +
+		RIBObjectNames::QOS_CUBES;
+const std::string QoSCubeSetRIBObject::QOS_CUBE_SET_RIB_OBJECT_CLASS = "qoscube set";
+const std::string QoSCubeSetRIBObject::QOS_CUBE_RIB_OBJECT_CLASS = "qoscube";
+
+QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process):
+		BaseRIBObject(ipc_process, QOS_CUBE_SET_RIB_OBJECT_CLASS,
+				objectInstanceGenerator->getObjectInstance(), QOS_CUBE_SET_RIB_OBJECT_NAME) {
+}
+
+void QoSCubeSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+	//TODO, depending on IEncoder
+}
+
+void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
+		const std::string& objectName, rina::QoSCube* objectValue) throw (Exception) {
+	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(),
+			QOS_CUBE_RIB_OBJECT_CLASS, objectName, objectValue);
+	add_child(ribObject);
+	get_rib_daemon()->addRIBObject(ribObject);
+	//TODO: the QoS cube should be added into the configuration
+}
+
+void QoSCubeSetRIBObject::deleteObject() throw (Exception) {
+	std::list<std::string> childNames;
+	std::list<BaseRIBObject*>::const_iterator childrenIt;
+	std::list<std::string>::const_iterator namesIt;
+
+	for(childrenIt = get_children().begin();
+			childrenIt != get_children().end(); ++childrenIt) {
+		childNames.push_back((*childrenIt)->get_name());
+	}
+
+	for(namesIt = childNames.begin(); namesIt != childNames.end();
+			++namesIt) {
+		remove_child(*namesIt);
+	}
+}
+
+const void* QoSCubeSetRIBObject::get_value() const {
+	return 0;
+}
+
+//Class Flow Allocator
+FlowAllocator::FlowAllocator() {
+	ipc_process_ = 0;
+	rib_daemon_ = 0;
+	cdap_session_manager_ = 0;
+	encoder_ = 0;
+	namespace_manager_ = 0;
+}
+
+FlowAllocator::~FlowAllocator() {
+	std::map<int, IFlowAllocatorInstance *>::iterator it;
+
+	fai_map_lock_.lock();
+
+	for(it = flow_allocator_instances_.begin();
+			it != flow_allocator_instances_.end(); ++it){
+		delete it->second;
+	}
+
+	fai_map_lock_.unlock();
+}
+
+void FlowAllocator::set_ipc_process(IPCProcess * ipc_process) {
+	ipc_process_ = ipc_process;
+	rib_daemon_ = ipc_process_->get_rib_daemon();
+	encoder_ = ipc_process_->get_encoder();
+	cdap_session_manager_ = ipc_process_->get_cdap_session_manager();
+	namespace_manager_ = ipc_process_->get_namespace_manager();
+	populateRIB();
+}
+
+void FlowAllocator::populateRIB() {
+	try {
+		BaseRIBObject * object = new FlowSetRIBObject(ipc_process_, this);
+		rib_daemon_->addRIBObject(object);
+		object = new QoSCubeSetRIBObject(ipc_process_);
+		rib_daemon_->addRIBObject(object);
+	} catch (Exception &e) {
+		LOG_ERR("Problems adding object to the RIB : %s", e.what());
+	}
 }
 
 }
