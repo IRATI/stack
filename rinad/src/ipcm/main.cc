@@ -51,10 +51,16 @@ EventLoop::run()
 {
         for (;;) {
                 rina::IPCEvent *event = rina::ipcEventProducer->eventWait();
+                rina::IPCEventType ty;
 
                 if (!event) {
                         std::cerr << "Null event received" << std::endl;
                         break;
+                }
+
+                ty = event->getType();
+                if (handlers.count(ty) && handlers[ty]) {
+                        handlers[ty](event);
                 }
         }
 }
