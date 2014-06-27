@@ -209,9 +209,12 @@ ObjectValueInterface::types BooleanObjectValue::isType() const {
 // CLASS CDAPException
 CDAPException::CDAPException() :
 		Exception("CDAP message caused an Exception") {
+	result_ = 0;
 }
+
 CDAPException::CDAPException(std::string arg0) :
 		Exception(arg0.c_str()) {
+	result_ = 0;
 }
 CDAPException::CDAPException(int arg0, std::string arg1) :
 		Exception(arg1.c_str()) {
@@ -1067,12 +1070,17 @@ void CDAPMessage::set_version(long arg0) {
 /*	class CDAPSessionDescriptor	*/
 CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
 	port_id_ = port_id;
+	version_ = 0;
+	auth_mech_ = CDAPMessage::AUTH_NONE;
+	abs_syntax_ = 0;
 }
 CDAPSessionDescriptor::CDAPSessionDescriptor(int abs_syntax,
 		CDAPMessage::AuthTypes auth_mech, AuthValue auth_value) {
 	abs_syntax_ = abs_syntax;
 	auth_mech_ = auth_mech;
 	auth_value_ = auth_value;
+	port_id_ = 0;
+	version_ = 0;
 }
 const ApplicationProcessNamingInformation CDAPSessionDescriptor::get_source_application_process_naming_info() {
 	ap_naming_info_ = ApplicationProcessNamingInformation(src_ap_name_,src_ap_inst_);
@@ -1138,17 +1146,6 @@ const ApplicationProcessNamingInformation& CDAPSessionDescriptor::get_ap_naming_
 	return ap_naming_info_;
 }
 
-//	CLASS RIBDaemonException
-RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
-		Exception("RIBDaemon caused an exception") {
-	error_code_ = arg0;
-}
-
-RIBDaemonException::RIBDaemonException(ErrorCode arg0, const char* arg1) :
-		Exception(arg1) {
-	error_code_ = arg0;
-}
-
 // CLASS SerializedMessage
 SerializedMessage::SerializedMessage(char* message, int size){
 	size_ = size;
@@ -1156,6 +1153,14 @@ SerializedMessage::SerializedMessage(char* message, int size){
 }
 SerializedMessage::~SerializedMessage(){
 	delete message_;
+}
+
+int SerializedMessage::get_size() const {
+	return size_;
+}
+
+char* SerializedMessage::get_message() const {
+	return message_;
 }
 
 // CLASS WireMessageProviderFactory

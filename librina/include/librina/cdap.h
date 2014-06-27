@@ -579,6 +579,8 @@ class SerializedMessage {
 public:
 	SerializedMessage(char* message, int size);
 	~SerializedMessage();
+	int get_size() const;
+	char* get_message() const;
 	int size_;
 	char* message_;
 };
@@ -988,65 +990,6 @@ public:
 	virtual const CDAPMessage* getCancelReadResponseMessage(
 			CDAPMessage::Flags flags, int invoke_id, int result,
 			const std::string &result_reason) = 0;
-};
-
-/// Exceptions thrown by the RIB Daemon
-class RIBDaemonException: public Exception {
-public:
-	/// Error codes
-	enum ErrorCode {
-		UNKNOWN_OBJECT_CLASS,
-		MALFORMED_MESSAGE_SUBSCRIPTION_REQUEST,
-		MALFORMED_MESSAGE_UNSUBSCRIPTION_REQUEST,
-		SUBSCRIBER_WAS_NOT_SUBSCRIBED,
-		OBJECTCLASS_AND_OBJECT_NAME_OR_OBJECT_INSTANCE_NOT_SPECIFIED,
-		OBJECTNAME_NOT_PRESENT_IN_THE_RIB,
-		RESPONSE_REQUIRED_BUT_MESSAGE_HANDLER_IS_NULL,
-		PROBLEMS_SENDING_CDAP_MESSAGE,
-		OPERATION_NOT_ALLOWED_AT_THIS_OBJECT,
-		UNRECOGNIZED_OBJECT_NAME,
-		OBJECTCLASS_DOES_NOT_MATCH_OBJECTNAME,
-		OBJECT_ALREADY_HAS_THIS_CHILD,
-		CHILD_NOT_FOUND,
-		OBJECT_ALREADY_EXISTS,
-		RIB_OBJECT_AND_OBJECT_NAME_NULL,
-		PROBLEMS_DECODING_OBJECT,
-		OBJECT_VALUE_IS_NULL
-	};
-	RIBDaemonException();
-	RIBDaemonException(ErrorCode error_code);
-	RIBDaemonException(ErrorCode error_code, const char* error_message);
-private:
-	ErrorCode error_code_;
-};
-
-/// Handles CDAP messages
-class CDAPMessageHandlerInterface {
-public:
-	virtual ~CDAPMessageHandlerInterface() throw () {
-	}
-	;
-	virtual void createResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
-	virtual void deleteResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
-	virtual void readResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
-	virtual void cancelReadResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
-	virtual void writeResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
-	virtual void startResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
-	virtual void stopResponse(const CDAPMessage &cdap_message,
-			const CDAPSessionDescriptor &cdap_session_descriptor)
-					throw (RIBDaemonException) = 0;
 };
 
 /// Provides a wire format for CDAP messages
