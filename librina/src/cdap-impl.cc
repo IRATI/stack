@@ -654,11 +654,13 @@ CDAPSessionManager::CDAPSessionManager() {
 CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0) {
 	wire_message_provider_factory_ = arg0;
 	timeout_ = DEFAULT_TIMEOUT_IN_MS;
+	wire_message_provider_ = 0;
 }
 CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0,
 		long arg1) {
 	wire_message_provider_factory_ = arg0;
 	timeout_ = arg1;
+	wire_message_provider_ = 0;
 }
 CDAPSessionImpl* CDAPSessionManager::createCDAPSession(int port_id) {
 	if (cdap_sessions_.find(port_id) != cdap_sessions_.end()) {
@@ -849,7 +851,7 @@ const CDAPMessage* CDAPSessionManager::getReleaseConnectionResponseMessage(
 			result_reason, invoke_id);
 }
 const CDAPMessage* CDAPSessionManager::getCreateObjectRequestMessage(
-		int port_id, char filter[], CDAPMessage::Flags flags,
+		int port_id, char * filter, CDAPMessage::Flags flags,
 		const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, ObjectValueInterface *obj_value, int scope,
 		bool invoke_id) {
@@ -926,7 +928,7 @@ const CDAPMessage* getStopObjectResponseMessage(CDAPMessage::Flags flags,
 			result_reason, invoke_id);
 }
 const CDAPMessage* CDAPSessionManager::getReadObjectRequestMessage(int port_id,
-		char filter[], CDAPMessage::Flags flags, const std::string &obj_class,
+		char * filter, CDAPMessage::Flags flags, const std::string &obj_class,
 		long obj_inst, const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getReadObjectRequestMessage(filter,
 			flags, obj_class, obj_inst, obj_name, scope);
@@ -941,7 +943,7 @@ const CDAPMessage* CDAPSessionManager::getReadObjectResponseMessage(
 			obj_name, obj_value, result, result_reason, invoke_id);
 }
 const CDAPMessage* CDAPSessionManager::getWriteObjectRequestMessage(int port_id,
-		char filter[], CDAPMessage::Flags flags, const std::string &obj_class,
+		char * filter, CDAPMessage::Flags flags, const std::string &obj_class,
 		long obj_inst, ObjectValueInterface *obj_value,
 		const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getWriteObjectRequestMessage(

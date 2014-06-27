@@ -86,7 +86,7 @@ public:
 /// Interface that Encodes and Decodes an object to/from bytes
 class IEncoder {
 	public:
-		virtual char* encode(void* object) throw (Exception) = 0;
+		virtual char* encode(const void* object) throw (Exception) = 0;
 		virtual void* decode(const char serializedObject[]) throw (Exception) = 0;
 		virtual ~IEncoder(){};
 };
@@ -460,11 +460,11 @@ public:
 /// Part of the RIB Daemon API to control if the changes have to be notified
 class NotificationPolicy {
 public:
-	NotificationPolicy(const std::list<unsigned int>& cdap_session_ids);
-	const std::list<unsigned int>& get_cdap_session_ids() const;
+	NotificationPolicy(const std::list< int>& cdap_session_ids);
+	const std::list<int>& get_cdap_session_ids() const;
 
 private:
-	std::list<unsigned int> cdap_session_ids_;
+	std::list<int> cdap_session_ids_;
 };
 
 /// Interface that provides de RIB Daemon API
@@ -532,7 +532,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception) = 0;
+			const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception) = 0;
 
 	/// Delete an object from the RIB
 	/// @param objectClass the class of the object
@@ -541,8 +541,8 @@ public:
 	/// @param object the value of the object
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
-	virtual void deleteObject(const std::string& objectClass,
-			const std::string& objectName) throw (Exception) = 0;
+	virtual void deleteObject(const std::string& objectClass, const std::string& objectName,
+			const NotificationPolicy * notificationPolicy) throw (Exception) = 0;
 
 	/// Read an object from the RIB
 	/// @param objectClass the class of the object

@@ -30,7 +30,11 @@ libjsoncpp_la_LIBADD   =
 libjsoncpp_la_CPPFLAGS = -I$(srcdir)/jsoncpp
 
 ipcm_CFLAGS   =
-ipcm_CPPFLAGS = $(LIBRINA_CFLAGS) -I$(srcdir)/..
+ipcm_CPPFLAGS =					\
+	$(LIBRINA_CFLAGS)			\
+	-I$(srcdir)/..				\
+	-I$(builddir)/../common			\
+	-I$(srcdir)/jsoncpp
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\

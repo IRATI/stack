@@ -1,5 +1,5 @@
 //
-// Options parsing
+// Dummy
 //
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
@@ -18,16 +18,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include "options.h"
+#include "dummy.h"
 
 namespace rinad {
-
-// FIXME: Just started
-
-option::option(const std::string & lng,
-               const std::string & shrt) :
-        long_(lng),
-        short_(shrt)
-{ }
 
 }
