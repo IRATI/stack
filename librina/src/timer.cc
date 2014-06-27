@@ -32,7 +32,7 @@ namespace rina {
 LockableMap::LockableMap() : Lockable() {
 }
 LockableMap::~LockableMap() throw() {
-	LOG_DBG("Lockable Map destroyer");
+	clear();
 }
 void LockableMap::insert(std::pair<double, TimerTask*> pair) {
 	lock();
@@ -43,25 +43,18 @@ void LockableMap::clear() {
 	lock();
 	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin(); iter != tasks_.end(); ++iter)
 	{
-		LOG_DBG("Erasing task");
 		delete iter->second;
 		tasks_.erase(iter);
 	}
-	if (tasks_.empty())
-		LOG_DBG("Clear on Lockable map: Tasks are empty");
-	else
-		LOG_DBG("ALARM!!! Clear on Lockable map: Tasks are not empty");
 	unlock();
 }
 void LockableMap::runTasks() {
 	std::clock_t now;
 	lock();
-	LOG_DBG("Run tasks: There are %d", tasks_.size());
 	now = std::clock();
 	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin();
 			iter != tasks_.upper_bound(now); ++iter)
 	{
-		LOG_DBG("Running task");
 		iter->second->run();
 		delete iter->second;
 	}
@@ -97,11 +90,7 @@ Timer::Timer() {
 	thread_ = new Thread(&threadAttributes, &doWorkTimers, (void *) &lockableMap_);
 }
 Timer::~Timer() {
-	LOG_DBG("Timer destroyer called");
-	lockableMap_.clear();
-	LOG_DBG("Lockable Map cleared");
 	delete thread_;
-	LOG_DBG("thread deleted");
 }
 void Timer::scheduleTask(TimerTask* task, double delay_ms) {
 	std::clock_t now = std::clock();

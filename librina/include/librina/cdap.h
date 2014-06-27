@@ -483,10 +483,14 @@ public:
 	CDAPSessionDescriptor(int port_id);
 	CDAPSessionDescriptor(int abs_syntax, CDAPMessage::AuthTypes auth_mech,
 			AuthValue auth_value);
+	~CDAPSessionDescriptor();
 	/// The source naming information is always the naming information of the local Application process
 	const ApplicationProcessNamingInformation get_source_application_process_naming_info();
 	/// The destination naming information is always the naming information of the remote application process
 	const ApplicationProcessNamingInformation get_destination_application_process_naming_info();
+	void set_abs_syntax(const int abs_syntax);
+	void set_auth_mech(const CDAPMessage::AuthTypes auth_mech);
+	void set_auth_value(const AuthValue set_auth_value);
 	void set_dest_ae_inst(const std::string *dest_ae_inst);
 	void set_dest_ae_name(const std::string *dest_ae_name);
 	void set_dest_ap_inst(const std::string *dest_ap_inst);
@@ -559,9 +563,9 @@ private:
 };
 
 /// Manages the invoke ids of a session.
-class CDAPSessionInvokeIdManagerInterface {
+class CDAPInvokeIdManagerInterface {
 public:
-	virtual ~CDAPSessionInvokeIdManagerInterface() {
+	virtual ~CDAPInvokeIdManagerInterface() {
 	}
 	;
 	/// Obtains a valid invoke id for this session

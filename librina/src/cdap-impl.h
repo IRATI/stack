@@ -26,6 +26,7 @@ class ConnectionStateMachine;
 class ResetStablishmentTimerTask : public TimerTask {
 public:
 	ResetStablishmentTimerTask(ConnectionStateMachine *con_state_machine);
+	~ResetStablishmentTimerTask();
 	void run();
 private:
 	ConnectionStateMachine *con_state_machine_;
@@ -34,6 +35,7 @@ private:
 class ReleaseConnectionTimerTask : public TimerTask {
 public:
 	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine);
+	~ReleaseConnectionTimerTask();
 	void run();
 private:
 	ConnectionStateMachine *con_state_machine_;
@@ -41,47 +43,38 @@ private:
 
 /// Implements the CDAP connection state machine
 class CDAPSessionImpl;
-class ConnectionStateMachine {
+class ConnectionStateMachine: public Lockable {
 public:
 	ConnectionStateMachine(CDAPSessionImpl* cdap_session, long timeout);
-	~ConnectionStateMachine();
-	// FIXME: synchronized
+	~ConnectionStateMachine() throw();
 	bool is_connected() const;
 	/// Checks if a the CDAP connection can be opened (i.e. an M_CONNECT message can be sent)
 	/// @throws CDAPException
-	// FIXME: synchronized
 	void checkConnect();
 	void connectSentOrReceived(bool sent);
 	/// Checks if the CDAP M_CONNECT_R message can be sent
 	/// @throws CDAPException
-	// FIXME: synchronized
 	void checkConnectResponse();
-	// FIXME: synchronized
 	void connectResponseSentOrReceived(bool sent);
 	/// Checks if the CDAP M_RELEASE message can be sent
 	/// @throws CDAPException
-	// FIXME: synchronized
 	void checkRelease();
-	// FIXME: synchronized
 	void releaseSentOrReceived(const CDAPMessage &cdap_message, bool sent);
 	/// Checks if the CDAP M_RELEASE_R message can be sent
 	/// @throws CDAPException
-	// FIXME: synchronized
 	void checkReleaseResponse();
-	// FIXME: synchronized
 	void releaseResponseSentOrReceived(bool sent);
 private:
 	enum ConnectionState {
 		NONE, AWAITCON, CONNECTED, AWAITCLOSE
 	};
+	void resetConnection();
 	void noConnectionResponse();
 	/// The AE has sent an M_CONNECT message
 	/// @throws CDAPException
-	// FIXME: synchronized
 	void connect();
 	/// An M_CONNECT message has been received, update the state
 	/// @param message
-	// FIXME: synchronized
 	void connectReceived();
 	/// The AE has sent an M_CONNECT_R  message
 	/// @param openConnectionResponseMessage
@@ -112,7 +105,7 @@ private:
 	/// state machine
 	ConnectionState connection_state_;
 	Timer *open_timer_;
-	//Timer close_timer_;
+	Timer *close_timer_;
 	friend class ResetStablishmentTimerTask;
 	friend class ReleaseConnectionTimerTask;
 };
@@ -122,6 +115,7 @@ private:
 class CDAPOperationState {
 public:
 	CDAPOperationState(CDAPMessage::Opcode op_code, bool sender);
+	~CDAPOperationState();
 	CDAPMessage::Opcode get_op_code() const;
 	bool is_sender() const;
 private:
@@ -132,13 +126,12 @@ private:
 };
 
 /// It will always try to use short invokeIds (as close to 1 as possible)
-class CDAPSessionInvokeIdManagerImpl: public CDAPSessionInvokeIdManagerInterface {
+class CDAPInvokeIdManagerImpl: public CDAPInvokeIdManagerInterface, Lockable {
 public:
-	// synchronized
+	CDAPInvokeIdManagerImpl();
+	~CDAPInvokeIdManagerImpl() throw ();
 	void freeInvokeId(int invoke_id);
-	//synchronized
 	int newInvokeId();
-	// synchronized
 	void reserveInvokeId(int invoke_id);
 private:
 	std::list<int> used_invoke_ids_;
@@ -151,7 +144,7 @@ class CDAPSessionManager;
 class CDAPSessionImpl: public CDAPSessionInterface {
 public:
 	CDAPSessionImpl(CDAPSessionManager *cdap_session_manager, long timeout,
-			WireMessageProviderInterface *wire_message_provider);
+			WireMessageProviderInterface *wire_message_provider, CDAPInvokeIdManagerImpl *invoke_id_manager);
 	~CDAPSessionImpl() throw ();
 	//const CDAPSessionInvokeIdManagerInterface* getInvokeIdManager();
 	//bool isConnected() const;
@@ -162,7 +155,7 @@ public:
 	void set_session_descriptor(CDAPSessionDescriptor *session_descriptor);
 	int get_port_id() const;
 	CDAPSessionDescriptor* get_session_descriptor() const;
-	CDAPSessionInvokeIdManagerImpl* get_invoke_id_manager() const;
+	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
 	void stopConnection();
 private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);
@@ -200,7 +193,7 @@ private:
 	WireMessageProviderInterface *wire_message_provider_;
 	CDAPSessionDescriptor *session_descriptor_;
 	CDAPSessionManager *cdap_session_manager_;
-	CDAPSessionInvokeIdManagerImpl *invoke_id_manager_;
+	CDAPInvokeIdManagerImpl *invoke_id_manager_;
 };
 
 /// Implements a CDAP session manager.
@@ -302,10 +295,14 @@ private:
 	WireMessageProviderInterface *wire_message_provider_;
 	/// The maximum time the CDAP state machine of a session will wait for connect or release responses (in ms)
 	long timeout_;
+	CDAPInvokeIdManagerImpl *invoke_id_manager_;
 };
 
 /// Google Protocol Buffers Wire Message Provider
 class GPBWireMessageProvider :  public WireMessageProviderInterface {
+public:
+	GPBWireMessageProvider();
+	~GPBWireMessageProvider() throw();
 	const CDAPMessage* deserializeMessage(const SerializedMessage &message);
 	const SerializedMessage* serializeMessage(const CDAPMessage &cdapMessage);
 };
