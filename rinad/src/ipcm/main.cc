@@ -24,8 +24,10 @@
 #include <map>
 
 #include <librina/common.h>
+#include <librina/ipc-manager.h>
 
 #include "event-loop.h"
+#include "rina-configuration.h"
 #include "tclap/CmdLine.h"
 
 using namespace std;
@@ -37,6 +39,7 @@ class IPCManager : public EventLoopData {
         IPCManager();
  private:
         rina::Thread *console;
+        rinad::RINAConfiguration config;
 };
 
 void *console_work(void *arg)
