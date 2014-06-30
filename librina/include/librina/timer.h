@@ -32,22 +32,21 @@
 namespace rina {
 
 /// Interface for tasks to be scheduled in a timer
-class TimerTask {
+class TimerTask{
 public:
-	virtual ~TimerTask(){};
+	virtual ~TimerTask() throw() {};
 	virtual void run() = 0;
 };
 
-class LockableMap : public Lockable {
+class TaskScheduler : public Lockable {
 public:
-	LockableMap();
-	~LockableMap() throw();
-	void insert(std::pair<double, TimerTask*> pair);
-	void clear();
+	TaskScheduler();
+	~TaskScheduler() throw();
+	void insert(double time, TimerTask* timer_task);
 	void runTasks();
 	void cancelTask(TimerTask *task);
 private:
-	std::map<double, TimerTask*> tasks_;
+	std::map<double, TimerTask* > tasks_;
 };
 
 /// Class that implements a timer which contains a thread
@@ -58,9 +57,14 @@ public:
 	void scheduleTask(TimerTask* task, double delay_ms);
 	void cancelTask(TimerTask *task);
 	void clear();
+	TaskScheduler* get_task_scheduler() const;
+	bool is_continue();
 private:
+	void cancel();
 	Thread *thread_;
-	LockableMap lockableMap_;
+	TaskScheduler *task_scheduler;
+	bool continue_;
+	Lockable continue_lock_;
 };
 
 }

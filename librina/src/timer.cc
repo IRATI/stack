@@ -25,50 +25,52 @@
 
 #include "librina/logs.h"
 #include "librina/timer.h"
+#include <sys/select.h>
+#include <sys/time.h>
 
 namespace rina {
 
 // CLASS LockableMap
-LockableMap::LockableMap() : Lockable() {
+void* doWorkTask(void *arg) {
+	TimerTask *timer_task = (TimerTask*) arg;
+	timer_task->run();
+	delete timer_task;
+	timer_task = 0;
+	return (void *) 0;
 }
-LockableMap::~LockableMap() throw() {
-	clear();
+
+TaskScheduler::TaskScheduler() : Lockable() {
 }
-void LockableMap::insert(std::pair<double, TimerTask*> pair) {
+TaskScheduler::~TaskScheduler() throw() {
+}
+void TaskScheduler::insert(double time, TimerTask* timer_task) {
 	lock();
+	std::pair<double, TimerTask*> pair (time, timer_task);
 	tasks_.insert( pair );
 	unlock();
 }
-void LockableMap::clear() {
-	lock();
-	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin(); iter != tasks_.end(); ++iter)
-	{
-		delete iter->second;
-		tasks_.erase(iter);
-	}
-	unlock();
-}
-void LockableMap::runTasks() {
+void TaskScheduler::runTasks() {
 	std::clock_t now;
 	lock();
 	now = std::clock();
 	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin();
-			iter != tasks_.upper_bound(now); ++iter)
-	{
-		iter->second->run();
-		delete iter->second;
+		iter != tasks_.upper_bound(now); ++iter) {
+		ThreadAttributes threadAttributes;
+		Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
+		LOG_DBG("Thread with ID %d started ", t);
+		delete t;
+		t = 0;
+		tasks_.erase(iter);
 	}
-	tasks_.erase(tasks_.begin(), tasks_.upper_bound(now));
 	unlock();
 }
-void LockableMap::cancelTask(TimerTask *task) {
+void TaskScheduler::cancelTask(TimerTask *task) {
 	lock();
-	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin();
-			iter != tasks_.end(); ++iter)
-	{
-		if (iter->second == task)
-		{
+	for (std::map<double, TimerTask* >::iterator iter = tasks_.begin();
+			iter != tasks_.end(); ++iter) {
+		if (iter->second== task)	{
 			delete iter->second;
+			iter->second = 0;
 			tasks_.erase(iter);
 		}
 	}
@@ -76,33 +78,61 @@ void LockableMap::cancelTask(TimerTask *task) {
 }
 
 // CLASS Timer
-void* doWorkTimers(void *arg) {
-	LockableMap *lockableMap = (LockableMap*) arg;
-	while(true)
+void* doWorkTimer(void *arg) {
+	Timer *timer = (Timer*) arg;
+	//timeval timeout;
+	//timeout.tv_sec = 0;
+	//timeout.tv_usec = 500;
+	while(timer->is_continue())
 	{
-		lockableMap->runTasks();
+		//select(0, NULL, NULL, NULL, &timeout);
+		timer->get_task_scheduler()->runTasks();
 	}
-	return (void *) lockableMap;
+	return (void *) 0;
 }
 
 Timer::Timer() {
 	ThreadAttributes threadAttributes;
-	thread_ = new Thread(&threadAttributes, &doWorkTimers, (void *) &lockableMap_);
+	continue_lock_.lock();
+	continue_ = true;
+	continue_lock_.unlock();
+	task_scheduler =  new TaskScheduler();
+	thread_ = new Thread(&threadAttributes, &doWorkTimer, (void *) this);
+	LOG_DBG("Timer with ID %d started", thread_);
 }
 Timer::~Timer() {
+	cancel();
+	delete task_scheduler;
+	task_scheduler = 0;
 	delete thread_;
+	thread_ = 0;
 }
 void Timer::scheduleTask(TimerTask* task, double delay_ms) {
 	std::clock_t now = std::clock();
 	double executeTime = now + delay_ms;
-	lockableMap_.insert(std::pair<double, TimerTask*>(executeTime, task));
+	task_scheduler->insert(executeTime, task);
 }
 void Timer::cancelTask(TimerTask* task) {
-	lockableMap_.cancelTask(task);
+	task_scheduler->cancelTask(task);
 }
-void Timer::clear() {
-	lockableMap_.clear();
+void Timer::cancel() {
+	continue_lock_.lock();
+	continue_ = false;
+	continue_lock_.unlock();
+	void *r;
+	LOG_DBG("Waiting for the timer %d to join", thread_);
+	thread_->join(&r);
+	LOG_DBG("Timer with ID %d ended", thread_);
 }
-
+TaskScheduler* Timer::get_task_scheduler() const {
+	return task_scheduler;
+}
+bool Timer::is_continue(){
+	bool result;
+	continue_lock_.lock();
+	result = continue_;
+	continue_lock_.unlock();
+	return result;
+}
 }
 

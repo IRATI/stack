@@ -164,15 +164,18 @@ public:
 class CDAPMessage;
 class CDAPException: public Exception {
 public:
+	enum ErrorCode {
+		RELEASE_CONNECITON,
+		OTHER
+	};
 	CDAPException();
 	CDAPException(std::string result_reason);
-	CDAPException(int result, std::string error_message);
-	virtual ~CDAPException() throw () {
-	}
-	;
+	CDAPException(ErrorCode result, std::string error_message);
+	virtual ~CDAPException() throw () {};
+	ErrorCode get_result() const;
 private:
 	/// Operation result code
-	int result_;
+	ErrorCode result_;
 };
 
 /// Validates that a CDAP message is well formed
