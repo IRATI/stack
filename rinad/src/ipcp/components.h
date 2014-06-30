@@ -192,7 +192,7 @@ public:
 	/// with a status of success or failure.
 	/// @param allocateRequest the characteristics of the flow to be allocated.
 	/// to honour the request
-	virtual void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent) = 0;
+	virtual void submitAllocateRequest(rina::FlowRequestEvent * flowRequestEvent) = 0;
 
 	virtual void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) = 0;
 

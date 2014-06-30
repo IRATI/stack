@@ -235,11 +235,17 @@ public:
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage, int underlyingPortId);
+	void submitAllocateRequest(rina::FlowRequestEvent * flowRequestEvent);
+	void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event);
+	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
+	void processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event);
+	void processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event);
+	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
+	void removeFlowAllocatorInstance(int portId);
 
 private:
 	/// Flow allocator instances, each one associated to a port-id
-	std::map<int, IFlowAllocatorInstance *> flow_allocator_instances_;
-	rina::Lockable fai_map_lock_;
+	rina::ThreadSafeMapOfPointers<int, IFlowAllocatorInstance> flow_allocator_instances_;
 
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
@@ -249,6 +255,9 @@ private:
 
 	/// Create initial RIB objects
 	void populateRIB();
+
+	/// Reply to the IPC Manager
+	void replyToIPCManager(const rina::FlowRequestEvent& event, int result);
 };
 
 }

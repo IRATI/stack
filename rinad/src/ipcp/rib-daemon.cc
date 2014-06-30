@@ -445,25 +445,16 @@ void RIBDaemon::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& ev
 
 ICDAPResponseMessageHandler * RIBDaemon::getCDAPMessageHandler(const rina::CDAPMessage * cdapMessage) {
 	ICDAPResponseMessageHandler * handler;
-	std::map<int, ICDAPResponseMessageHandler *>::iterator it;
 
 	if (!cdapMessage) {
 		return 0;
 	}
 
-	handlers_lock_.lock();
-	it = handlers_waiting_for_reply_.find(cdapMessage->get_invoke_id());
-	if (it == handlers_waiting_for_reply_.end()) {
-		handlers_lock_.unlock();
-		return 0;
-	}
-
-	handler = it->second;
-
 	if (cdapMessage->get_flags() != rina::CDAPMessage::F_RD_INCOMPLETE) {
-		handlers_waiting_for_reply_.erase(it);
+		handler = handlers_waiting_for_reply_.erase(cdapMessage->get_invoke_id());
+	} else {
+		handler = handlers_waiting_for_reply_.find(cdapMessage->get_invoke_id());
 	}
-	handlers_lock_.unlock();
 
 	return handler;
 }
@@ -747,9 +738,7 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_DELETE_R
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_START_R
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_STOP_R) {
-    	handlers_lock_.lock();
-    	handlers_waiting_for_reply_[cdapMessage.get_invoke_id()] = cdapMessageHandler;
-    	handlers_lock_.unlock();
+    	handlers_waiting_for_reply_.put(cdapMessage.get_invoke_id(), cdapMessageHandler);
     }
 
 	atomic_send_lock_.unlock();

@@ -291,16 +291,7 @@ FlowAllocator::FlowAllocator() {
 }
 
 FlowAllocator::~FlowAllocator() {
-	std::map<int, IFlowAllocatorInstance *>::iterator it;
-
-	fai_map_lock_.lock();
-
-	for(it = flow_allocator_instances_.begin();
-			it != flow_allocator_instances_.end(); ++it){
-		delete it->second;
-	}
-
-	fai_map_lock_.unlock();
+	flow_allocator_instances_.deleteValues();
 }
 
 void FlowAllocator::set_ipc_process(IPCProcess * ipc_process) {
@@ -326,7 +317,7 @@ void FlowAllocator::populateRIB() {
 void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
 		int underlyingPortId) {
 	Flow * flow;
-	IFlowAllocatorInstance * flow_allocator_instance;
+	IFlowAllocatorInstance * flowAllocatorInstance;
 	unsigned int myAddress = 0;
 	int portId = 0;
 
@@ -359,11 +350,10 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 
 		LOG_DBG("The destination application process is reachable through me. Assigning the local port-id %d to the flow", portId);
 		//TODO create FlowAllocatorInstance
-		fai_map_lock_.lock();
-		flow_allocator_instances_[portId] = flow_allocator_instance;
-		fai_map_lock_.unlock();
+		flow_allocator_instances_.put(portId, flowAllocatorInstance);
 
-		flow_allocator_instance->createFlowRequestMessageReceived(flow, cdapMessage, underlyingPortId);
+		//TODO check if this operation throws an exception an react accordingly
+		flowAllocatorInstance->createFlowRequestMessageReceived(flow, cdapMessage, underlyingPortId);
 		return;
 	}
 
@@ -378,6 +368,144 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 	}
 
 	LOG_ERR("Missing code");
+}
+
+void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event, int result) {
+	try{
+		rina::extendedIPCManager->allocateFlowRequestResult(event, result);
+	}catch (Exception &e){
+		LOG_ERR("Problems communicating with the IPC Manager Daemon: %s", e.what());
+	}
+}
+
+void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent * event) {
+	int portId = 0;
+	IFlowAllocatorInstance * flowAllocatorInstance;
+
+	try {
+		portId = rina::extendedIPCManager->allocatePortId(event->getLocalApplicationName());
+		LOG_DBG("Got assigned port-id %d", portId);
+	} catch (Exception &e) {
+		LOG_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s"
+				, e.what());
+		replyToIPCManager(*event, -1);
+	}
+
+	event->setPortId(portId);
+	//TODO create Flow ALlocator Instance
+	flow_allocator_instances_.put(portId, flowAllocatorInstance);
+
+	try {
+		flowAllocatorInstance->submitAllocateRequest(*event);
+	} catch (Exception &e) {
+		flow_allocator_instances_.erase(portId);
+		delete flowAllocatorInstance;
+
+		try {
+			rina::extendedIPCManager->deallocatePortId(portId);
+		} catch (Exception &e) {
+			LOG_ERR("Problems releasing port-id %d: %s", portId, e.what());
+		}
+
+		replyToIPCManager(*event, -1);
+	}
+}
+
+void FlowAllocator::processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) {
+	IFlowAllocatorInstance * flowAllocatorInstance;
+
+	flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+	if (flowAllocatorInstance) {
+		flowAllocatorInstance->processCreateConnectionResponseEvent(event);
+	} else {
+		LOG_ERR("Received create connection response event associated to unknown port-id %d",
+				event.getPortId());
+	}
+}
+
+void FlowAllocator::submitAllocateResponse(const rina::AllocateFlowResponseEvent& event) {
+	IFlowAllocatorInstance * flowAllocatorInstance;
+
+	LOG_DBG("Local application invoked allocate response with seq num %ud and result %d, "
+			, event.getSequenceNumber(), event.getResult());
+
+	std::list<IFlowAllocatorInstance *> fais = flow_allocator_instances_.getEntries();
+	std::list<IFlowAllocatorInstance *>::iterator iterator;
+	for(iterator = fais.begin(); iterator != fais.end(); ++iterator) {
+		if ((*iterator)->get_allocate_response_message_handle() == event.getSequenceNumber()) {
+			flowAllocatorInstance = *iterator;
+			flowAllocatorInstance->submitAllocateResponse(event);
+			return;
+		}
+	}
+
+	LOG_ERR("Could not find FAI with handle %ud", event.getSequenceNumber());
+}
+
+void FlowAllocator::processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event) {
+	IFlowAllocatorInstance * flowAllocatorInstance;
+
+	flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+	if (!flowAllocatorInstance) {
+		LOG_ERR("Problems looking for FAI at portId %d", event.getPortId());
+		try {
+			rina::extendedIPCManager->deallocatePortId(event.getPortId());
+		} catch (Exception &e) {
+			LOG_ERR("Problems requesting IPC Manager to deallocate port-id %d: %s",
+					event.getPortId(), e.what());
+		}
+	} else {
+		flowAllocatorInstance->processCreateConnectionResultEvent(event);
+	}
+}
+
+void FlowAllocator::processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event) {
+	IFlowAllocatorInstance * flowAllocatorInstance;
+
+	flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+	if (!flowAllocatorInstance) {
+		LOG_ERR("Problems looking for FAI at portId %d", event.getPortId());
+		try {
+			rina::extendedIPCManager->deallocatePortId(event.getPortId());
+		} catch (Exception &e) {
+			LOG_ERR("Problems requesting IPC Manager to deallocate port-id %d: %s",
+					event.getPortId(), e.what());
+		}
+	} else {
+		flowAllocatorInstance->processUpdateConnectionResponseEvent(event);
+	}
+}
+
+void FlowAllocator::submitDeallocate(const rina::FlowDeallocateRequestEvent& event) {
+	IFlowAllocatorInstance * flowAllocatorInstance;
+
+	flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+	if (!flowAllocatorInstance) {
+		LOG_ERR("Problems looking for FAI at portId %d", event.getPortId());
+		try {
+			rina::extendedIPCManager->deallocatePortId(event.getPortId());
+		} catch (Exception &e) {
+			LOG_ERR("Problems requesting IPC Manager to deallocate port-id %d: %s",
+					event.getPortId(), e.what());
+		}
+
+		try {
+			rina::extendedIPCManager->notifyflowDeallocated(event, -1);
+		} catch (Exception &e) {
+			LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
+		}
+	} else {
+		flowAllocatorInstance->submitDeallocate(event);
+		try {
+			rina::extendedIPCManager->notifyflowDeallocated(event, -1);
+		} catch (Exception &e) {
+			LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
+		}
+	}
+}
+
+void FlowAllocator::removeFlowAllocatorInstance(int portId) {
+	flow_allocator_instances_.erase(portId);
 }
 
 }

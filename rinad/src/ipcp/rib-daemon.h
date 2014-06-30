@@ -119,10 +119,7 @@ private:
 	rina::Thread * management_sdu_reader_;
 
 	/// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
-	std::map<int, ICDAPResponseMessageHandler *> handlers_waiting_for_reply_;
-
-	/// Lock to protect concurrent access to the handlers table
-	rina::Lockable handlers_lock_;
+	rina::ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
 
 	/// Lock to control that when sending a message requiring a reply the
 	/// CDAP Session manager has been updated before receiving the response message
