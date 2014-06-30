@@ -23,60 +23,177 @@
 #include <iostream>
 #include <map>
 
-#include <librina/common.h>
+#define RINA_PREFIX     "ipcm"
 
+#include <librina/common.h>
+#include <librina/ipc-manager.h>
+#include <librina/logs.h>
+
+#include "event-loop.h"
+#include "rina-configuration.h"
 #include "tclap/CmdLine.h"
 
+using namespace std;
 using namespace TCLAP;
 
-class EventLoopData {
- public:
-        virtual ~EventLoopData() { }
-};
 
-class EventLoop {
- public:
-        typedef void (*EventHandler)(rina::IPCEvent *event, EventLoopData *);
+/* Macro useful to perform downcasts in declarations. */
+#define DOWNCAST_DECL(_var,_class,_name)        \
+        _class *_name = dynamic_cast<_class*>(_var);
 
-        void register_event(rina::IPCEventType type, EventHandler handler);
-        void run();
-
-        EventLoop(EventLoopData *dm) : data_model(dm) { }
- private:
-        std::map<rina::IPCEventType, EventHandler> handlers;
-        EventLoopData *data_model;
-
-};
-
-void
-EventLoop::register_event(rina::IPCEventType type, EventHandler handler)
-{
-        handlers[type] = handler;
-}
-
-void
-EventLoop::run()
-{
-        for (;;) {
-                rina::IPCEvent *event = rina::ipcEventProducer->eventWait();
-                rina::IPCEventType ty;
-
-                if (!event) {
-                        std::cerr << "Null event received" << std::endl;
-                        break;
-                }
-
-                ty = event->getType();
-                if (handlers.count(ty) && handlers[ty]) {
-                        handlers[ty](event, data_model);
-                }
-        }
-}
+#define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
 class IPCManager : public EventLoopData {
  public:
-        int fake;
+        IPCManager();
+        int apply_configuration();
+
+        rinad::RINAConfiguration config;
+
+        map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
+        map<long, rina::IPCProcess*> pending_ipcp_dif_assignments;
+
+ private:
+        rina::Thread *console;
 };
+
+void *console_work(void *arg)
+{
+        IPCManager *ipcm = static_cast<IPCManager *>(arg);
+
+        cout << "Console starts: " << ipcm << endl;
+        cout << "Console stops" << endl;
+
+        return NULL;
+}
+
+IPCManager::IPCManager()
+{
+        /* Initialize the IPC manager infrastructure in librina. */
+        try {
+                rina::initializeIPCManager(1, config.local.installationPath,
+                                           config.local.libraryPath,
+                                           LOG_LEVEL_INFO, IPCM_LOG_FILE);
+        } catch (rina::InitializationException) {
+                cerr << "Cannot initialize librina-ipc-manager" << endl;
+                exit(EXIT_FAILURE);
+        }
+
+        /* Create and start the console thread. */
+        console = new rina::Thread(new rina::ThreadAttributes(),
+                                   console_work, this);
+}
+
+int
+IPCManager::apply_configuration()
+{
+        /* Examine all the IPCProcesses that are going to be created
+         * according to the configuration file.
+         */
+        for (list<rinad::IPCProcessToCreate>::iterator
+                it = config.ipcProcessesToCreate.begin();
+                        it != config.ipcProcessesToCreate.end(); it++) {
+                rina::IPCProcess *ipcp;
+
+                try {
+                        ipcp = rina::ipcProcessFactory->create(it->name,
+                                                               it->type);
+                        if (it->type != rina::NORMAL_IPC_PROCESS) {
+                                /* Shim IPC processes are set as initialized
+                                 * immediately. */
+                                ipcp->setInitialized();
+                        } else {
+                                /* Normal IPC processes can be set as
+                                 * initialized only when the corresponding
+                                 * IPC process daemon is initialized, so we
+                                 * defer the operation. */
+                                pending_normal_ipcp_inits[ipcp->getId()] = ipcp;
+                        }
+                } catch (rina::CreateIPCProcessException) {
+                        cerr << "Failed to create  IPC process '" <<
+                                it->name.toString() << "' of type '" <<
+                                it->type << "'" << endl;
+                }
+
+                if (it->difName.size()) {
+                        rinad::DIFProperties dif_props;
+                        rina::DIFInformation dif_info;
+                        rina::DIFConfiguration dif_config;
+                        rina::ApplicationProcessNamingInformation dif_name(
+                                                        it->difName, string());
+                        bool found;
+
+                        /* Try to extract the DIF properties from the
+                         * configuration. */
+                        found = config.lookup_DIF_properties(it->difName,
+                                                             dif_props);
+                        if (!found) {
+                                throw new rina::AssignToDIFException(
+                                        string("Cannot find properties "
+                                                "for DIF ") + it->difName);
+                        }
+
+                        /* Fill in the DIFConfiguration object. */
+                        if (ipcp->getType() == rina::NORMAL_IPC_PROCESS) {
+                                rina::EFCPConfiguration efcp_config;
+                                long address;
+
+                                /* FIll in the EFCPConfiguration object. */
+                                efcp_config.set_data_transfer_constants(
+                                        dif_props.dataTransferConstants);
+                                for (list<rina::QoSCube>::iterator
+                                        qit = dif_props.qosCubes.begin();
+                                        qit != dif_props.qosCubes.end();
+                                                                qit++) {
+                                        efcp_config.add_qos_cube(*qit);
+                                }
+
+                                found = dif_props.
+                                        lookup_ipcp_address(ipcp->getName(),
+                                                            address);
+                                if (!found) {
+                                        ostringstream ss;
+
+                                        ss << "No address for IPC process " <<
+                                                ipcp->getName().toString() <<
+                                                " in DIF " << it->difName <<
+                                                endl;
+
+                                        throw new rina::AssignToDIFException(
+                                                                ss.str());
+                                }
+                                dif_config.set_efcp_configuration(efcp_config);
+                                dif_config.set_address(address);
+                        }
+
+                        for (list<rina::Parameter>::const_iterator
+                                pit = dif_props.configParameters.begin();
+                                pit != dif_props.configParameters.end();
+                                                                pit++) {
+                                dif_config.add_parameter(*pit);
+                        }
+
+                        /* Fill in the DIFInformation object. */
+                        dif_info.set_dif_name(dif_name);
+                        dif_info.set_dif_type(ipcp->getType());
+                        dif_info.set_dif_configuration(dif_config);
+
+                        /* Invoke librina to assign the IPC process to the
+                         * DIF specified by dif_info. */
+                        try {
+                                long seqnum = ipcp->assignToDIF(dif_info);
+
+                                pending_ipcp_dif_assignments[seqnum] = ipcp;
+                        } catch (rina::AssignToDIFException) {
+                                cerr << "Cannot assign " <<
+                                        ipcp->getName().toString() <<
+                                        " to DIF " << it->difName << endl;
+                        }
+                }
+        }
+
+        return 0;
+}
 
 static void FlowAllocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
 {
@@ -194,8 +311,24 @@ static void QueryRibResponseEventHandler(rina::IPCEvent *event, EventLoopData *d
 {
 }
 
-static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
+                                                    EventLoopData *dm)
 {
+        DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
+        DOWNCAST_DECL(dm, IPCManager, ipcm);
+        map<unsigned short, rina::IPCProcess *>::iterator mit;
+
+        /* Perform deferred "setInitiatialized()" of a normal IPC process, if
+         * needed. */
+        mit = ipcm->pending_normal_ipcp_inits.find(event->getIPCProcessId());
+        if (mit != ipcm->pending_normal_ipcp_inits.end()) {
+                mit->second->setInitialized();
+                ipcm->pending_normal_ipcp_inits.erase(mit);
+        } else {
+                cerr <<  __func__ << ": Warning: IPCP daemon initialized, "
+                        "but no pending normal IPC process initialization"
+                        << endl;
+        }
 }
 
 static void TimerExpiredEventHandler(rina::IPCEvent *event, EventLoopData *dm)
@@ -226,13 +359,13 @@ int main(int argc, char * argv[])
 {
         // Wrap everything in a try block.  Do this every time, 
         // because exceptions will be thrown for problems. 
-        try {  
+        try {
 
                 // Define the command line object.
                 TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
 
                 // Define a value argument and add it to the command line.
-                TCLAP::ValueArg<std::string> nameArg("n",
+                TCLAP::ValueArg<string> nameArg("n",
                                                      "name",
                                                      "Name to print",
                                                      true,
@@ -244,19 +377,17 @@ int main(int argc, char * argv[])
                 cmd.parse(argc, argv);
 
                 // Get the value parsed by each arg. 
-                std::string name = nameArg.getValue();
+                string name = nameArg.getValue();
 
-                std::cout << "My name is: " << name << std::endl;
+                cout << "My name is: " << name << endl;
 
         } catch (ArgException &e) {
-                std::cerr << "error: " << e.error() << " for arg "
-                          << e.argId() << std::endl;
+                cerr << "error: " << e.error() << " for arg "
+                          << e.argId() << endl;
         }
 
         IPCManager *ipcm = new IPCManager();
         EventLoop loop(ipcm);
-
-        rina::initialize("test", "/tmp/test");
 
         loop.register_event(rina::FLOW_ALLOCATION_REQUESTED_EVENT,
                         FlowAllocationRequestedEventHandler);

@@ -35,16 +35,12 @@ namespace rinad {
  * @param difName
  * @result
  */
-bool RINAConfiguration::getDIFConfiguration(const std::string& difName,
-                                            DIFProperties& result)
+bool RINAConfiguration::lookup_DIF_properties(const std::string& dif_name,
+                                              DIFProperties& result) const
 {
-        if (!difConfigurations.size()){
-                return false;
-        }
-
-        for (list<DIFProperties>::iterator it = difConfigurations.begin();
+        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
                                         it != difConfigurations.end(); it++) {
-                if (it->difName == difName) {
+                if (it->difName == dif_name) {
                         result = *it;
                         return true;
                 }
@@ -53,10 +49,76 @@ bool RINAConfiguration::getDIFConfiguration(const std::string& difName,
         return false;
 }
 
-std::string toString() const
+#if 0
+/*
+ * Return the address of the IPC process named "name" if it is known,
+ * 0 otherwise
+ * @param dif_name
+ * @param ipcp_name
+ * @return
+ */
+bool RINAConfiguration::lookup_ipcp_address(const std::string dif_name,
+                const rina::ApplicationProcessNamingInformation& ipcp_name,
+                long& result)
 {
-        return localConfiguration.toString();
+        DIFProperties dif_props;
+        bool found;
+
+        found = lookup_DIF_properties(dif_name, dif_props);
+        if (!found) {
+                return false;
+        }
+
+        for (list<KnownIPCProcessAddress>::const_iterator
+                it = dif_props.knownIPCProcessAddresses.begin();
+                        it != dif_props.knownIPCProcessAddresses.end(); it++) {
+                        if (it->name == ipcp_name) {
+                                result = it->address;
+                                return true;
+                        }
+        }
+
+        return false;
+}
+#endif
+
+std::string LocalConfiguration::toString() const
+{
+        std::ostringstream ss;
+
+        ss <<  "Local Configuration\n";
+        ss << "   Installation path: " << installationPath << std::endl;
+        ss << "   Library path: " << libraryPath << std::endl;
+        ss << "   Console port: " << consolePort << std::endl;
+        ss << "   CDAP timeout in ms: " << cdapTimeoutInMs << std::endl;
+        ss << "   Enrollment timeout in ms: " << enrollmentTimeoutInMs << std::endl;
+        ss << "   Flow allocator timeout in ms:  " << flowAllocatorTimeoutInMs << std::endl;
+        ss << "   Watchdog period in ms: " << watchdogPeriodInMs << std::endl;
+        ss << "   Declared dead interval in ms: " << declaredDeadIntervalInMs << std::endl;
+        ss << "   Neighbors enroller period in ms: " << neighborsEnrollerPeriodInMs << std::endl;
+
+        return ss.str();
+}
+
+std::string RINAConfiguration::toString() const
+{
+        return local.toString();
+}
+
+bool DIFProperties::lookup_ipcp_address(
+                const rina::ApplicationProcessNamingInformation& ipcp_name,
+                long& result)
+{
+        for (list<KnownIPCProcessAddress>::const_iterator
+                it = knownIPCProcessAddresses.begin();
+                        it != knownIPCProcessAddresses.end(); it++) {
+                        if (it->name == ipcp_name) {
+                                result = it->address;
+                                return true;
+                        }
+        }
+
+        return false;
 }
 
 }
-
