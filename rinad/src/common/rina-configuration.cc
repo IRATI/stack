@@ -36,13 +36,13 @@ namespace rinad {
  * @result
  */
 bool RINAConfiguration::getDIFConfiguration(const std::string& difName,
-                                            DIFProperties& result)
+                                            DIFProperties& result) const
 {
         if (!difConfigurations.size()){
                 return false;
         }
 
-        for (list<DIFProperties>::iterator it = difConfigurations.begin();
+        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
                                         it != difConfigurations.end(); it++) {
                 if (it->difName == difName) {
                         result = *it;
@@ -53,7 +53,25 @@ bool RINAConfiguration::getDIFConfiguration(const std::string& difName,
         return false;
 }
 
-std::string toString() const
+std::string LocalConfiguration::toString() const
+{
+        std::ostringstream ss;
+
+        ss <<  "Local Configuration\n";
+        ss << "   Installation path: " << installationPath << std::endl;
+        ss << "   Library path: " << libraryPath << std::endl;
+        ss << "   Console port: " << consolePort << std::endl;
+        ss << "   CDAP timeout in ms: " << cdapTimeoutInMs << std::endl;
+        ss << "   Enrollment timeout in ms: " << enrollmentTimeoutInMs << std::endl;
+        ss << "   Flow allocator timeout in ms:  " << flowAllocatorTimeoutInMs << std::endl;
+        ss << "   Watchdog period in ms: " << watchdogPeriodInMs << std::endl;
+        ss << "   Declared dead interval in ms: " << declaredDeadIntervalInMs << std::endl;
+        ss << "   Neighbors enroller period in ms: " << neighborsEnrollerPeriodInMs << std::endl;
+
+        return ss.str();
+}
+
+std::string RINAConfiguration::toString() const
 {
         return localConfiguration.toString();
 }

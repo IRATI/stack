@@ -27,6 +27,7 @@
 #include <librina/common.h>
 
 #include <string>
+#include <sstream>
 #include <list>
 #include <map>
 
@@ -62,178 +63,6 @@ struct ApplicationToDIFMapping {
         std::string difName;
 };
 
-/* The configuration required to create a DIF */
-struct DIFProperties {
-
-        std::string difName;
-        std::string difType;
-        rina::DataTransferConstants dataTransferConstants;
-        std::list<rina::QoSCube> qosCubes;
-        rina::RMTConfiguration rmtConfiguration;
-        std::list<Property> policies;
-        std::list<Property> policyParameters;
-
-        /* Only for normal DIFs */
-        NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
-
-        /* Only for shim IP DIFs */
-        std::list<ExpectedApplicationRegistration> expectedApplicationRegistrations;
-        std::list<DirectoryEntry> directory;
-
-        /*
-         * The addresses of the known IPC Process (apname, address)
-         * that can potentially be members of the DIFs I know
-         */
-        std::list<KnownIPCProcessAddress> knownIPCProcessAddresses;
-
-        /* The PDU forwarding table configurations */
-        PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
-
-        /* The address prefixes, assigned to different organizations */
-        std::list<AddressPrefixConfiguration> addressPrefixes;
-
-        /* Extra configuration parameters (name/value pairs) */
-        std::list<Parameter> configParameters;
-};
-
-struct DirectoryEntry {
-
-        std::string applicationProcessName;
-        std::string applicationProcessInstance;
-        std::string applicationEntityName;
-        std::string hostname;
-        int socketPortNumber;
-
-        DirectoryEntry() : socketPortNumber(-1) { }
-};
-
-struct ExpectedApplicationRegistration {
-
-        std::string applicationProcessName;
-        std::string applicationProcessInstance;
-        std::string applicationEntityName;
-        int socketPortNumber;
-
-        ExpectedApplicationRegistration() : socketPortNumber(-1) { }
-}
-
-/* The configuration required to create an IPC Process */
-struct IPCProcessToCreate {
-
-        std::string type;
-        ApplicationProcessNamingInformation nameInfo;
-        std::string difName;
-        std::list<NeighborData> neighbors;
-        std::list<std::string> difsToRegisterAt;
-        std::string hostname;
-        std::list<SDUProtectionOption> sduProtectionOptions;
-        std::map<std::string, std::string> parameters;
-};
-
-/* The configuration of a known IPC Process */
-struct KnownIPCProcessAddress {
-
-        /* The application name of the remote IPC Process */
-        ApplicationProcessNamingInformation apNameInfo;
-
-        /* The address of the remote IPC Process */
-        long address;
-
-        KnownIPCProcessAddress() : address(0) { }
-};
-
-/* Configuration of the local RINA Software instantiation */
-struct LocalConfiguration {
-
-        /*
-         * The port where the IPC Manager is listening for incoming local
-         * TCP connections from administrators
-         */
-        int consolePort = 32766;
-
-        /*
-         * The maximum time the CDAP state machine of a session will wait
-         * for connect or release responses (in ms)
-         */
-        int cdapTimeoutInMs = 10000;
-
-        /*
-         * The maximum time to wait between steps of the enrollment
-         * sequence (in ms)
-         */
-        int enrollmentTimeoutInMs = 10000;
-
-        /*
-         * The maximum number of attempts to re-enroll with a neighbor
-         * with whom we've lost connectivity
-         */
-        int maxEnrollmentRetries = 3;
-
-        /*
-         * The maximum time to wait to complete the flow allocation request
-         * once the process has been initiated (in ms)
-         */
-        int flowAllocatorTimeoutInMs = 15000;
-
-        /*
-         * The period of execution of the watchdog. The watchdog send an
-         * M_READ message over all the active CDAP connections to make
-         * sure they are still alive.
-         */
-        int watchdogPeriodInMs = 60000;
-
-        /*
-         * The period after which, if no keepAlive message from a neighbor
-         * IPC process has been received, it will be declared dead (and
-         * adequate action will be taken)
-         */
-        int declaredDeadIntervalInMs = 120000;
-
-        /*
-         * The period of execution of the neighbors enroller. This task
-         * looks for known neighbors in the RIB. If we're not enrolled to
-         * them, he is going to try to initiate the enrollment
-         */
-        int neighborsEnrollerPeriodInMs = 10000;
-
-        /* The length of Flow queues */
-        int lengthOfFlowQueues = 10;
-
-        /* The path to the RINA binaries installation in the system */
-        std::string installationPath;
-
-        /* The path to the RINA libraries in the system */
-        std::string libraryPath;
-
-        std::string tostd::string() const
-        {
-                std::string result = "Local Configuration \n";
-
-                result += "   Installation path: " + installationPath + "\n";
-                result += "   Library path: " + libraryPath + "\n";
-                result += "   Console port: " + consolePort + "\n";
-                result += "   CDAP timeout in ms: "+ cdapTimeoutInMs + "\n";
-                result += "   Enrollment timeout in ms: " + enrollmentTimeoutInMs + "\n";
-                result += "   Flow allocator timeout in ms:  "+flowAllocatorTimeoutInMs + "\n";
-                result += "   Watchdog period in ms: " + watchdogPeriodInMs + "\n";
-                result += "   Declared dead interval in ms: " + declaredDeadIntervalInMs + "\n";
-                result += "   Neighbors enroller period in ms: " + neighborsEnrollerPeriodInMs + "\n";
-
-                return result;
-        }
-
-        LocalConfiguration() :
-                        consolePort(32766),
-                        cdapTimeoutInMs(10000),
-                        enrollmentTimeoutInMs(10000),
-                        maxEnrollmentRetries(3),
-                        flowAllocatorTimeoutInMs(15000),
-                        watchdogPeriodInMs(60000),
-                        declaredDeadIntervalInMs(120000),
-                        neighborsEnrollerPeriodInMs(10000),
-                        lengthOfFlowQueues(10) { }
-};
-
 struct NMinusOneFlowsConfiguration {
 
         /* The N-1 QoS id required by a management flow */
@@ -249,13 +78,179 @@ struct NMinusOneFlowsConfiguration {
         NMinusOneFlowsConfiguration() : managementFlowQoSId(2) { }
 };
 
+struct ExpectedApplicationRegistration {
+
+        std::string applicationProcessName;
+        std::string applicationProcessInstance;
+        std::string applicationEntityName;
+        int socketPortNumber;
+
+        ExpectedApplicationRegistration() : socketPortNumber(-1) { }
+};
+
+struct DirectoryEntry {
+
+        std::string applicationProcessName;
+        std::string applicationProcessInstance;
+        std::string applicationEntityName;
+        std::string hostname;
+        int socketPortNumber;
+
+        DirectoryEntry() : socketPortNumber(-1) { }
+};
+
+/* The configuration of a known IPC Process */
+struct KnownIPCProcessAddress {
+
+        /* The application name of the remote IPC Process */
+        rina::ApplicationProcessNamingInformation apNameInfo;
+
+        /* The address of the remote IPC Process */
+        long address;
+
+        KnownIPCProcessAddress() : address(0) { }
+};
+
+/* The configuration required to create a DIF */
+struct DIFProperties {
+
+        std::string difName;
+        std::string difType;
+        rina::DataTransferConstants dataTransferConstants;
+        std::list<rina::QoSCube> qosCubes;
+        rina::RMTConfiguration rmtConfiguration;
+        std::list<rina::Parameter> policies;
+        std::list<rina::Parameter> policyParameters;
+
+        /* Only for normal DIFs */
+        NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
+
+        /* Only for shim IP DIFs */
+        std::list<ExpectedApplicationRegistration> expectedApplicationRegistrations;
+        std::list<DirectoryEntry> directory;
+
+        /*
+         * The addresses of the known IPC Process (apname, address)
+         * that can potentially be members of the DIFs I know
+         */
+        std::list<KnownIPCProcessAddress> knownIPCProcessAddresses;
+
+        /* The PDU forwarding table configurations */
+        rina::PDUFTableGeneratorConfiguration pdufTableGeneratorConfiguration;
+
+        /* The address prefixes, assigned to different organizations */
+        std::list<AddressPrefixConfiguration> addressPrefixes;
+
+        /* Extra configuration parameters (name/value pairs) */
+        std::list<rina::Parameter> configParameters;
+};
+
 struct NeighborData {
 
-        ApplicationProcessNamingInformation apNameInfo;
+        rina::ApplicationProcessNamingInformation apNameInfo;
         std::string supportingDifName;
         std::string difName;
 };
 
+/*
+ * Specifies what SDU Protection Module should be used for each possible
+ * N-1 DIF (being NULL the default one)
+ */
+struct SDUProtectionOption {
+
+        std::string nMinus1DIFName;
+        std::string sduProtectionType;
+};
+
+/* The configuration required to create an IPC Process */
+struct IPCProcessToCreate {
+
+        std::string type;
+        rina::ApplicationProcessNamingInformation nameInfo;
+        std::string difName;
+        std::list<NeighborData> neighbors;
+        std::list<std::string> difsToRegisterAt;
+        std::string hostname;
+        std::list<SDUProtectionOption> sduProtectionOptions;
+        std::map<std::string, std::string> parameters;
+};
+
+/* Configuration of the local RINA Software instantiation */
+struct LocalConfiguration {
+
+        /*
+         * The port where the IPC Manager is listening for incoming local
+         * TCP connections from administrators
+         */
+        int consolePort;
+
+        /*
+         * The maximum time the CDAP state machine of a session will wait
+         * for connect or release responses (in ms)
+         */
+        int cdapTimeoutInMs;
+
+        /*
+         * The maximum time to wait between steps of the enrollment
+         * sequence (in ms)
+         */
+        int enrollmentTimeoutInMs;
+
+        /*
+         * The maximum number of attempts to re-enroll with a neighbor
+         * with whom we've lost connectivity
+         */
+        int maxEnrollmentRetries;
+
+        /*
+         * The maximum time to wait to complete the flow allocation request
+         * once the process has been initiated (in ms)
+         */
+        int flowAllocatorTimeoutInMs;
+
+        /*
+         * The period of execution of the watchdog. The watchdog send an
+         * M_READ message over all the active CDAP connections to make
+         * sure they are still alive.
+         */
+        int watchdogPeriodInMs;
+
+        /*
+         * The period after which, if no keepAlive message from a neighbor
+         * IPC process has been received, it will be declared dead (and
+         * adequate action will be taken)
+         */
+        int declaredDeadIntervalInMs;
+
+        /*
+         * The period of execution of the neighbors enroller. This task
+         * looks for known neighbors in the RIB. If we're not enrolled to
+         * them, he is going to try to initiate the enrollment
+         */
+        int neighborsEnrollerPeriodInMs;
+
+        /* The length of Flow queues */
+        int lengthOfFlowQueues;
+
+        /* The path to the RINA binaries installation in the system */
+        std::string installationPath;
+
+        /* The path to the RINA libraries in the system */
+        std::string libraryPath;
+
+        std::string toString() const;
+
+        LocalConfiguration() :
+                        consolePort(32766),
+                        cdapTimeoutInMs(10000),
+                        enrollmentTimeoutInMs(10000),
+                        maxEnrollmentRetries(3),
+                        flowAllocatorTimeoutInMs(15000),
+                        watchdogPeriodInMs(60000),
+                        declaredDeadIntervalInMs(120000),
+                        neighborsEnrollerPeriodInMs(10000),
+                        lengthOfFlowQueues(10) { }
+};
 
 /*
  * Global configuration for the RINA software
@@ -286,7 +281,7 @@ class RINAConfiguration {
         bool getDIFConfiguration(const std::string& difName,
                                  DIFProperties& result) const;
         std::string toString() const;
-}
+};
 
 }
 

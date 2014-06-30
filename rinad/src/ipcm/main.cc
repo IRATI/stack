@@ -226,7 +226,7 @@ int main(int argc, char * argv[])
 {
         // Wrap everything in a try block.  Do this every time, 
         // because exceptions will be thrown for problems. 
-        try {  
+        try {
 
                 // Define the command line object.
                 TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
