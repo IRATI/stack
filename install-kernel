@@ -20,8 +20,9 @@ ME=install-kernel
 # FIXME: we should definitely do a VPATH build ...
 #
 
-echo "$ME: Installing kernel headers"
+echo "$ME: Installing kernel headers (sandboxed)"
 #(cd linux && make INSTALL_HDR_PATH=/usr headers_install) || {
+#(cd linux && make headers_install INSTALL_HDR_PATH=`pwd`/usr) || {
 (cd linux && make headers_install) || {
     echo "$ME: Cannot install kernel headers"
     exit 1

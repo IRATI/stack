@@ -210,12 +210,14 @@ public:
 	/// @throws IPCException
 	virtual void submitDeallocate(const rina::FlowDeallocateRequestEvent& event) = 0;
 
-	/// When an Flow Allocator receives a Create_Request PDU for a Flow object, it consults its local Directory to see if it has an entry.
-	/// If there is an entry and the address is this IPC Process, it creates an FAI and passes the Create_request to it.If there is an
-	/// entry and the address is not this IPC Process, it forwards the Create_Request to the IPC Process designated by the address.
+	/// When an Flow Allocator receives a Create_Request PDU for a Flow object,
+	/// it consults its local Directory to see if it has an entry. If there is an
+	/// entry and the address is this IPC Process, it creates an FAI and passes
+	/// the Create_request to it.If there is an entry and the address is not this IPC
+	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage& cdapMessage, int underlyingPortId) = 0;
+	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage, int underlyingPortId) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId

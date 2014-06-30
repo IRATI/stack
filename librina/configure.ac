@@ -42,13 +42,15 @@ AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
 
+# Just to avoid warning from libtool 1.14
+AM_PROG_AR
 LT_INIT
 
 CPPFLAGS_EXTRA=""
 AX_CHECK_COMPILE_FLAG([ -Wall ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
 ])
-AX_CHECK_COMPILE_FLAG([ -Wformat ],[
+AX_CHECK_COMPILE_FLAG([ -Wformat ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
