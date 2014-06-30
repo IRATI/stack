@@ -23,7 +23,6 @@
 
 #include <librina/common.h>
 
-
 class EventLoopData {
  public:
         virtual ~EventLoopData() { }
@@ -40,5 +39,4 @@ class EventLoop {
  private:
         std::map<rina::IPCEventType, EventHandler> handlers;
         EventLoopData *data_model;
-
 };
