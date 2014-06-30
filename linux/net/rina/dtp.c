@@ -743,7 +743,7 @@ static void tf_a(void * data)
         struct dtp *  dtp;
         struct dtcp * dtcp;
         seq_num_t     seq_num_sv_update;
-//        timeout_t     a;
+        timeout_t     a;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
