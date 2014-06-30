@@ -25,55 +25,12 @@
 
 #include <librina/common.h>
 
+#include "event-loop.h"
 #include "tclap/CmdLine.h"
 
 using namespace std;
 using namespace TCLAP;
 
-
-class EventLoopData {
- public:
-        virtual ~EventLoopData() { }
-};
-
-class EventLoop {
- public:
-        typedef void (*EventHandler)(rina::IPCEvent *event, EventLoopData *);
-
-        void register_event(rina::IPCEventType type, EventHandler handler);
-        void run();
-
-        EventLoop(EventLoopData *dm) : data_model(dm) { }
- private:
-        map<rina::IPCEventType, EventHandler> handlers;
-        EventLoopData *data_model;
-
-};
-
-void
-EventLoop::register_event(rina::IPCEventType type, EventHandler handler)
-{
-        handlers[type] = handler;
-}
-
-void
-EventLoop::run()
-{
-        for (;;) {
-                rina::IPCEvent *event = rina::ipcEventProducer->eventWait();
-                rina::IPCEventType ty;
-
-                if (!event) {
-                        cerr << "Null event received" << endl;
-                        break;
-                }
-
-                ty = event->getType();
-                if (handlers.count(ty) && handlers[ty]) {
-                        handlers[ty](event, data_model);
-                }
-        }
-}
 
 class IPCManager : public EventLoopData {
  public:
