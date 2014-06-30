@@ -369,6 +369,7 @@ class FlowRequestEvent: public IPCEvent {
 	unsigned short ipcProcessId;
 
 public:
+	FlowRequestEvent();
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,

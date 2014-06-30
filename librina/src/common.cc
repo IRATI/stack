@@ -496,6 +496,13 @@ int BaseResponseEvent::getResult() const {
 }
 
 /* CLASS FLOW REQUEST EVENT */
+FlowRequestEvent::FlowRequestEvent(){
+	localRequest = false;
+	portId = 0;
+	ipcProcessId = 0;
+	flowRequestorIpcProcessId = 0;
+}
+
 FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
 		bool localRequest,

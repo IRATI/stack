@@ -41,4 +41,5 @@ tclapSOURCES =					\
 
 librinad_la_SOURCES  =				\
 	dummy.cc              dummy.h		\
+	concurrency.h   \
 	$(tclapSOURCES)

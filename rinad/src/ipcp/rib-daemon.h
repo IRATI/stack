@@ -26,6 +26,7 @@
 
 #include <librina/concurrency.h>
 
+#include "common/concurrency.h"
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -119,7 +120,7 @@ private:
 	rina::Thread * management_sdu_reader_;
 
 	/// CDAP Message handlers that have sent a CDAP message and are waiting for a reply
-	rina::ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
+	ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
 
 	/// Lock to control that when sending a message requiring a reply the
 	/// CDAP Session manager has been updated before receiving the response message
