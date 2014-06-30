@@ -13,7 +13,7 @@ AC_INIT([RINA Daemons],
 AC_PREREQ([2.68])
 
 AC_CONFIG_HEADERS([src/config.h])
-AC_CONFIG_SRCDIR([src/common/options.h])
+AC_CONFIG_SRCDIR([src/ipcm/main.cc])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -34,6 +34,13 @@ AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
 
+# To be removed
+AC_CXX_HAVE_SSTREAM
+AC_CXX_HAVE_STRSTREAM
+AC_CXX_HAVE_LONG_LONG
+
+# Just to avoid warnings from libtool 1.14
+AM_PROG_AR
 LT_INIT
 
 CPPFLAGS_EXTRA=""

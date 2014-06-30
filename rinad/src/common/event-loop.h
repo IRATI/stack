@@ -1,7 +1,7 @@
 /*
- * Options parsing
+ * Event loop over librina
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,29 +18,25 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINAD_OPTIONS_H
-#define RINAD_OPTIONS_H
+#include <iostream>
+#include <map>
 
-#ifdef __cplusplus
+#include <librina/common.h>
 
-#include <string>
-
-namespace rinad {
-
-// FIXME: Just started
-
-class option {
+class EventLoopData {
  public:
-        option(const std::string & lng,
-               const std::string & shrt);
-
- private:
-        std::string long_;
-        std::string short_;
+        virtual ~EventLoopData() { }
 };
 
-}
+class EventLoop {
+ public:
+        typedef void (*EventHandler)(rina::IPCEvent *event, EventLoopData *);
 
-#endif
+        void register_event(rina::IPCEventType type, EventHandler handler);
+        void run();
 
-#endif
+        EventLoop(EventLoopData *dm) : data_model(dm) { }
+ private:
+        std::map<rina::IPCEventType, EventHandler> handlers;
+        EventLoopData *data_model;
+};

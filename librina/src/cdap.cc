@@ -213,6 +213,7 @@ CDAPException::CDAPException() :
 		Exception("CDAP message caused an Exception") {
 	result_ = OTHER;
 }
+
 CDAPException::CDAPException(std::string arg0) :
 		Exception(arg0.c_str()) {
 	result_ = OTHER;
@@ -649,7 +650,7 @@ const CDAPMessage* CDAPMessage::getReleaseConnectionResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-CDAPMessage* CDAPMessage::getCreateObjectRequestMessage(char filter[],
+CDAPMessage* CDAPMessage::getCreateObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, ObjectValueInterface *obj_value,
 		int scope) {
@@ -682,7 +683,7 @@ const CDAPMessage* CDAPMessage::getCreateObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-CDAPMessage* CDAPMessage::getDeleteObjectRequestMessage(char filter[],
+CDAPMessage* CDAPMessage::getDeleteObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, ObjectValueInterface *obj_value,
 		int scope) {
@@ -713,7 +714,7 @@ const CDAPMessage* CDAPMessage::getDeleteObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-CDAPMessage* CDAPMessage::getStartObjectRequestMessage(char filter[],
+CDAPMessage* CDAPMessage::getStartObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class,
 		ObjectValueInterface *objValue, long obj_inst,
 		const std::string &obj_name, int scope) {
@@ -757,7 +758,7 @@ const CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-CDAPMessage* CDAPMessage::getStopObjectRequestMessage(char filter[],
+CDAPMessage* CDAPMessage::getStopObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class,
 		ObjectValueInterface *obj_value, long obj_inst,
 		const std::string &obj_name, int scope) {
@@ -784,7 +785,7 @@ const CDAPMessage* CDAPMessage::getStopObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-CDAPMessage* CDAPMessage::getReadObjectRequestMessage(char filter[],
+CDAPMessage* CDAPMessage::getReadObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, int scope) {
 	CDAPMessage *cdap_message = new CDAPMessage();
@@ -815,7 +816,7 @@ const CDAPMessage* CDAPMessage::getReadObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-CDAPMessage* CDAPMessage::getWriteObjectRequestMessage(char filter[],
+CDAPMessage* CDAPMessage::getWriteObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
 		ObjectValueInterface *obj_value, const std::string &obj_name,
 		int scope) {
@@ -976,8 +977,8 @@ void CDAPMessage::set_dest_ap_name(const std::string &arg0) {
 const char* CDAPMessage::get_filter() const {
 	return filter_;
 }
-void CDAPMessage::set_filter(char arg0[]) {
-	filter_ = arg0;
+void CDAPMessage::set_filter(char * filter) {
+	filter_ = filter;
 }
 CDAPMessage::Flags CDAPMessage::get_flags() const {
 	return flags_;
@@ -1076,12 +1077,17 @@ void CDAPMessage::set_version(long arg0) {
 /*	class CDAPSessionDescriptor	*/
 CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
 	port_id_ = port_id;
+	version_ = 0;
+	auth_mech_ = CDAPMessage::AUTH_NONE;
+	abs_syntax_ = 0;
 }
 CDAPSessionDescriptor::CDAPSessionDescriptor(int abs_syntax,
 		CDAPMessage::AuthTypes auth_mech, AuthValue auth_value) {
 	abs_syntax_ = abs_syntax;
 	auth_mech_ = auth_mech;
 	auth_value_ = auth_value;
+	port_id_ = 0;
+	version_ = 0;
 }
 CDAPSessionDescriptor::~CDAPSessionDescriptor() {
 }
@@ -1157,17 +1163,6 @@ const ApplicationProcessNamingInformation& CDAPSessionDescriptor::get_ap_naming_
 	return ap_naming_info_;
 }
 
-//	CLASS RIBDaemonException
-RIBDaemonException::RIBDaemonException(ErrorCode arg0) :
-		Exception("RIBDaemon caused an exception") {
-	error_code_ = arg0;
-}
-
-RIBDaemonException::RIBDaemonException(ErrorCode arg0, const char* arg1) :
-		Exception(arg1) {
-	error_code_ = arg0;
-}
-
 // CLASS SerializedMessage
 SerializedMessage::SerializedMessage(char* message, int size){
 	size_ = size;
@@ -1176,6 +1171,14 @@ SerializedMessage::SerializedMessage(char* message, int size){
 SerializedMessage::~SerializedMessage(){
 	delete message_;
 	message_ = 0;
+}
+
+int SerializedMessage::get_size() const {
+	return size_;
+}
+
+char* SerializedMessage::get_message() const {
+	return message_;
 }
 
 // CLASS WireMessageProviderFactory

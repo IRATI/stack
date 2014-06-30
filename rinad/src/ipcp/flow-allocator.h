@@ -127,15 +127,16 @@ public:
 
 	/// Returns the portId associated to this Flow Allocator Instance
 	/// @return
-	virtual int get_port_id() = 0;
+	virtual int get_port_id() const = 0;
 
 	/// Return the Flow object associated to this Flow Allocator Instance
 	/// @return
-	virtual Flow get_flow() = 0;
+	virtual const Flow * get_flow() const = 0;
 
 	/// Called by the FA to forward an Allocate request to a FAI
 	/// @param event
-	/// @param applicationCallback the callback to invoke the application for allocateResponse and any other calls
+	/// @param applicationCallback the callback to invoke the application for
+	/// allocateResponse and any other calls
 	/// @throws IPCException
 	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event) throw (Exception) = 0;
 
@@ -150,13 +151,15 @@ public:
 	virtual void createFlowRequestMessageReceived(const Flow& flow, const rina::CDAPMessage& requestMessage,
 			int underlyingPortId) = 0;
 
-	/// When the FAI gets a Allocate_Response from the destination application, it formulates a Create_Response
-	/// on the flow object requested.If the response was positive, the FAI will cause DTP and if required DTCP
-	/// instances to be created to support this allocation. A positive Create_Response Flow is sent to the
-	/// requesting FAI with the connection-endpoint-id and other information provided by the destination FAI.
-	/// The Create_Response is sent to requesting FAI with the necessary information reflecting the existing flow,
-	/// or an indication as to why the flow was refused.
-	/// If the response was negative, the FAI does any necessary housekeeping and terminates.
+	/// When the FAI gets a Allocate_Response from the destination application,
+	/// it formulates a Create_Response on the flow object requested.If the
+	/// response was positive, the FAI will cause DTP and if required DTCP instances
+	/// to be created to support this allocation. A positive Create_Response Flow is
+	/// sent to the requesting FAI with the connection-endpoint-id and other information
+	/// provided by the destination FAI. The Create_Response is sent to requesting FAI
+	/// with the necessary information reflecting the existing flow, or an indication as
+	/// to why the flow was refused. If the response was negative, the FAI does any
+	/// necessary housekeeping and terminates.
 	/// @param AllocateFlowResponseEvent - the reply from the application
 	/// @throws IPCException
 	virtual void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event) = 0;
@@ -165,19 +168,86 @@ public:
 
 	virtual void processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event) = 0;
 
-	/// When a deallocate primitive is invoked, it is passed to the FAI responsible for that port-id.
-	/// The FAI sends an M_DELETE request CDAP PDU on the Flow object referencing the destination port-id, deletes the local
-	/// binding between the Application and the DTP-instance and waits for a response.  (Note that
+	/// When a deallocate primitive is invoked, it is passed to the FAI responsible
+	/// for that port-id. The FAI sends an M_DELETE request CDAP PDU on the Flow
+	/// object referencing the destination port-id, deletes the local binding between
+	/// the Application and the DTP-instance and waits for a response.  (Note that
 	/// the DTP and DTCP if it exists will be deleted automatically after 2MPL)
 	/// @param the flow deallocate request event
 	/// @throws IPCException
 	virtual void submitDeallocate(const rina::FlowDeallocateRequestEvent& event) = 0;
 
-	/// When this PDU is received by the FAI with this port-id, the FAI invokes a Deallocate.deliver to notify the local Application,
-	/// deletes the binding between the Application and the local DTP-instance, and sends a Delete_Response indicating the result.
-	virtual void deleteFlowRequestMessageReceived(const rina::CDAPMessage& requestMessage, int underlyingPortId) = 0;
+	/// When this PDU is received by the FAI with this port-id, the FAI invokes
+	/// a Deallocate.deliver to notify the local Application,
+	/// deletes the binding between the Application and the local DTP-instance,
+	/// and sends a Delete_Response indicating the result.
+	virtual void deleteFlowRequestMessageReceived(const rina::CDAPMessage * requestMessage,
+			int underlyingPortId) = 0;
 
 	virtual long get_allocate_response_message_handle() = 0;
+};
+
+/// Representation of a flow object in the RIB
+class FlowRIBObject : public SimpleSetMemberRIBObject {
+public:
+	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
+			IFlowAllocatorInstance * flow_allocator_instance);
+	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+
+private:
+	IFlowAllocatorInstance * flow_allocator_instance_;
+};
+
+/// Representation of a set of Flow objects in the RIB
+class FlowSetRIBObject: public BaseRIBObject {
+public:
+	FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator);
+	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	void createObject(const std::string& objectClass,
+			const std::string& objectName, IFlowAllocatorInstance* objectValue) throw (Exception);
+	const void* get_value() const;
+
+private:
+	IFlowAllocator * flow_allocator_;
+};
+
+/// Representation of a set of QoS cubes in the RIB
+class QoSCubeSetRIBObject: public BaseRIBObject {
+public:
+	static const std::string QOS_CUBE_SET_RIB_OBJECT_NAME;
+	static const std::string QOS_CUBE_SET_RIB_OBJECT_CLASS ;
+	static const std::string QOS_CUBE_RIB_OBJECT_CLASS;
+
+	QoSCubeSetRIBObject(IPCProcess * ipc_process);
+	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+	void createObject(const std::string& objectClass,
+			const std::string& objectName, rina::QoSCube* objectValue) throw (Exception);
+	void deleteObject() throw (Exception);
+	const void* get_value() const;
+};
+
+class FlowAllocator : public IFlowAllocator {
+public:
+	FlowAllocator();
+	~FlowAllocator();
+	void set_ipc_process(IPCProcess * ipc_process);
+
+private:
+	/// Flow allocator instances, each one associated to a port-id
+	std::map<int, IFlowAllocatorInstance *> flow_allocator_instances_;
+	rina::Lockable fai_map_lock_;
+
+	IPCProcess * ipc_process_;
+	IRIBDaemon * rib_daemon_;
+	rina::CDAPSessionManagerInterface * cdap_session_manager_;
+	IEncoder * encoder_;
+	INamespaceManager * namespace_manager_;
+
+	/// Create initial RIB objects
+	void populateRIB();
 };
 
 }
