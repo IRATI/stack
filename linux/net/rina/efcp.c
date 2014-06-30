@@ -492,9 +492,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         mfps = container->config->dt_cons->max_pdu_size;
         mfss = container->config->dt_cons->max_pdu_size;
         mpl  = container->config->dt_cons->max_pdu_life; 
+        //a    = msecs_to_jiffies(connection->policies_params->initial_a_timer);
         a    = connection->policies_params->initial_a_timer;
         if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
+                tr = msecs_to_jiffies(tr);
                 /* FIXME: r should be passed and must be a bound */
                 r  = dtcp_data_retransmit_max(connection->policies_params->dtcp_cfg)*tr;
         }
@@ -504,7 +506,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 "A: %d, R: %d, TR: %d",
                 mfps, mfss, a, r, tr);
 
-        if (dt_sv_init(tmp->dt, mfps, mfss, mpl, r, a, tr)) {
+        if (dt_sv_init(tmp->dt, mfps, mfss, mpl, a, r, tr)) {
                 LOG_ERR("Could not init dt_sv");
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -515,8 +517,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         dtcp_window_based_fctrl(connection->policies_params
                                                 ->dtcp_cfg),
                         dtcp_rate_based_fctrl(connection->policies_params
-                                                ->dtcp_cfg),
-                        a)) {
+                                              ->dtcp_cfg),
+                                              a)) {
                 LOG_ERR("Could not init dtp_sv");
                 efcp_destroy(tmp);
                 return cep_id_bad();

@@ -454,7 +454,7 @@ timeout_t dt_sv_a(struct dt * dt)
 {
         uint_t tmp;
 
-        if (!dt || !dt->sv)
+        if (!dt || !dt->sv) 
                 return 0;
 
         spin_lock(&dt->lock);

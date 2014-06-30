@@ -628,115 +628,18 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         return tmp;
 }
 
-/* FIME: To be deleted */
-#if 0
-static bool evaluate_ulwe_loop_condition(struct pdu * pdu,
-                                         seq_num_t    seq_num,
-                                         seq_num_t    limit)
-{
-        bool condition = ((int) seq_num > 0) && pdu;
-        if (limit > 0)
-                return condition && (((int) seq_num) < (int) limit);
-        return condition;
-}
-
-static bool evaluate_seq_num_condition(seq_num_t seq_num,
-                                       seq_num_t LWE,
-                                       seq_num_t max_sdu_gap,
-                                       timeout_t a)
-{
-        return (((a == 0) && (seq_num > LWE)) || (seq_num == (LWE + 1)) || ((seq_num - LWE) <= max_sdu_gap));
-}
-
-
-static seq_num_t update_left_win_edge(struct dtp * dtp)
-{
-        struct dt *          dt;
-        struct dtp_sv *      sv;
-        struct sequencingQ * seqQ;
-        seq_num_t            LWE;
-        seq_num_t            seq_num;
-        seq_num_t            limit;
-        struct pdu *         pdu;
-        timeout_t            time;
-        bool                 in_order_del;
-        bool                 incomplete_del;
-        bool                 max_sdu_gap;
-        timeout_t            a;
-
-        ASSERT(dtp);
-
-        sv = dtp->sv;
-        ASSERT(sv);
-
-        dt = dtp->parent;
-        ASSERT(dt);
-
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
-
-        a              = dt_sv_a(dt);
-        time           = jiffies;
-        in_order_del   = sv->connection->policies_params->in_order_delivery;
-        incomplete_del = sv->connection->policies_params->incomplete_delivery;
-        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
-
-        /* FIXME: Invoke delimiting */
-
-        spin_lock(&sv->lock);
-
-        LWE     = dt_sv_rcv_lft_win(dt);
-        pdu     = seqQ_pop(seqQ);
-        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-
-        if (a)
-                limit = seqQ_last_to_ack(seqQ, time - a);
-        else
-                limit = 0;
-
-        LOG_DBG("LWEU: Original LWE = %d", LWE);
-        LOG_DBG("LWEU: Limit = %d", limit);
-        LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
-
-        while (evaluate_ulwe_loop_condition(pdu, seq_num, limit)) {
-                LOG_DBG("LWEU: Seq_num  = %d", seq_num);
-                if (evaluate_seq_num_condition(seq_num, LWE, max_sdu_gap, a)) {
-                        pdu_post(dtp, pdu);
-                        LOG_DBG("LWEU posted");
-                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                LOG_ERR("Failed to set new "
-                                        "left window edge");
-                                spin_unlock(&sv->lock);
-                                return 0;
-                        }
-                        LWE     = dt_sv_rcv_lft_win(dt);
-                        pdu     = seqQ_pop(seqQ);
-                        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-                        continue;
-
-                }
-                LOG_WARN("Could not fullfil QoS");
-                if (pdu) {
-                        LOG_ERR("LWEU PDU To be Deleted: %pk", pdu);
-                        /* pdu_destroy(pdu); */
-                }
-                break;
-        }
-        if (pdu)
-                seqQ_push(dtp, pdu);
-
-        LOG_DBG("LWEU: Final LWE = %d", LWE);
-        spin_unlock(&sv->lock);
-        return LWE;
-}
-#endif
-
 #define seqQ_for_each_entry_safe(seqQ, pos, n)                                 \
                 spin_lock(&seqQ->lock);                                        \
                 list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
 
 #define seqQ_for_each_entry_safe_end(seqQ)                                     \
                 spin_unlock(&seqQ->lock)
+
+/* AF is the factor to which A is devided in order to obtain the
+ * period of the A-timer:
+ *      Ta = A / AF
+ */
+#define AF 1
 
 static seq_num_t process_A_expiration(struct dtp * dtp)
 {
@@ -750,7 +653,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
         timeout_t            time;
         bool                 in_order_del;
         bool                 incomplete_del;
-        bool                 max_sdu_gap;
+        seq_num_t            max_sdu_gap;
         timeout_t            a;
 
         struct seq_q_entry * pos, * n;
@@ -777,10 +680,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
 
         /* FIXME: Invoke delimiting */
 
-        LWE     = dt_sv_rcv_lft_win(dt);
+        LOG_DBG("Processing A timer expiration\n\n");
 
+        LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %d", LWE);
         LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
+
 
         seqQ_for_each_entry_safe(seqQ, pos, n) {
                 pdu = pos->pdu;
@@ -797,11 +702,11 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
 
                         if (pdu_post(dtp, pdu))
                                 return 0;
-                        LWE     = dt_sv_rcv_lft_win(dt);
+                        LWE = dt_sv_rcv_lft_win(dt);
                         continue;
                 }
 
-                if (pos->time_stamp + a <= time) {
+                if (pos->time_stamp + msecs_to_jiffies(a) <= time) {
                         /* FIXME: this have to work differently when DTCP is
                          * here */
                         if (!dtcp) {
@@ -814,16 +719,15 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
                                 seq_q_entry_destroy(pos);
                                 if (pdu_post(dtp, pdu))
                                         return 0;
-                                LWE     = dt_sv_rcv_lft_win(dt);
+                                LWE = dt_sv_rcv_lft_win(dt);
                         }
-                        LOG_MISSING;
                         continue;
                 } else 
                         break;
                 
         }
         seqQ_for_each_entry_safe_end(seqQ);
-
+        
         return LWE;
 }
 
@@ -834,18 +738,12 @@ static void tf_sender_inactivity(void * data)
 static void tf_receiver_inactivity(void * data)
 { /* Runs the ReceiverInactivityTimerPolicy */ }
 
-/* AF is the factor to which A is devided in order to obtain the
- * period of the A-timer:
- *      Ta = A / AF
- */
-#define AF 10
-
 static void tf_a(void * data)
 {
         struct dtp *  dtp;
         struct dtcp * dtcp;
         seq_num_t     seq_num_sv_update;
-        timeout_t     a;
+//        timeout_t     a;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
@@ -872,8 +770,9 @@ static void tf_a(void * data)
         /* FIXME: timer must be restarted. The following line may produce a soft
          * lockup */
         a = dt_sv_a(dtp->parent);
+        LOG_DBG("Going to restart A timer in tf_a with a = %d and a/AF = %d", a, a/AF);
         rtimer_restart(dtp->timers.a, a/AF);
-
+        
         return;
 }
 
@@ -889,8 +788,10 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->window_based = window_based;
         dtp->sv->rate_based   = rate_based;
        
-        if (a)
+        if (a) {
+                LOG_DBG("Going to start A timer with t = %d", a/AF); 
                 rtimer_start(dtp->timers.a, a/AF);
+        }
 
         return 0;
 }
@@ -1321,7 +1222,8 @@ int dtp_receive(struct dtp * instance,
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
                         if (dtcp_ack_flow_control_pdu_send(dtcp)) {
-                                LOG_ERR("Failed to send ack / flow control pdu");
+                                LOG_ERR("Failed to send ack / flow "
+                                        "control pdu");
                                 return -1;
                         }
                 }
@@ -1335,7 +1237,6 @@ int dtp_receive(struct dtp * instance,
                         return -1;
                 }
         } else {
-                LOG_DBG("DTP Receive GAP");
                 /* This op puts the PDU in seq number order  and duplicates
                  * considered */
                 /* FIXME: probably this is not needed */
@@ -1344,6 +1245,7 @@ int dtp_receive(struct dtp * instance,
 
                 if (!a || (seq_num == LWE + 1)) {
                         /* FIXME: delimiting goes here */
+                        LOG_DBG("DTP Receive (!a || (seq_num == LWE + 1))");
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -1358,8 +1260,10 @@ int dtp_receive(struct dtp * instance,
                                 }
                         }
                 } else {
+                        LOG_DBG("DTP Receive ELSE");
                         if (seqQ_push(instance, pdu)) {
-                               LOG_ERR("Could not push PDU into sequencing queue");
+                               LOG_ERR("Could not push PDU into "
+                                       "sequencing queue");
                                 return -1;
                         }
                 }
