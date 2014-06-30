@@ -23,8 +23,11 @@
 #include <iostream>
 #include <map>
 
+#define RINA_PREFIX     "ipcm"
+
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/logs.h>
 
 #include "event-loop.h"
 #include "rina-configuration.h"
@@ -33,6 +36,8 @@
 using namespace std;
 using namespace TCLAP;
 
+
+#define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
 class IPCManager : public EventLoopData {
  public:
@@ -54,6 +59,17 @@ void *console_work(void *arg)
 
 IPCManager::IPCManager()
 {
+        /* Initialize the IPC manager infrastructure in librina. */
+        try {
+                rina::initializeIPCManager(1, config.local.installationPath,
+                                           config.local.libraryPath,
+                                           LOG_LEVEL_INFO, IPCM_LOG_FILE);
+        } catch (rina::InitializationException) {
+                cerr << "Cannot initialize librina-ipc-manager" << endl;
+                exit(EXIT_FAILURE);
+        }
+
+        /* Create and start the console thread. */
         console = new rina::Thread(new rina::ThreadAttributes, console_work, this);
 }
 
@@ -234,8 +250,6 @@ int main(int argc, char * argv[])
 
         IPCManager *ipcm = new IPCManager();
         EventLoop loop(ipcm);
-
-        rina::initialize("test", "/tmp/test");
 
         loop.register_event(rina::FLOW_ALLOCATION_REQUESTED_EVENT,
                         FlowAllocationRequestedEventHandler);

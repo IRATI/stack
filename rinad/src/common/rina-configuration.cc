@@ -73,7 +73,7 @@ std::string LocalConfiguration::toString() const
 
 std::string RINAConfiguration::toString() const
 {
-        return localConfiguration.toString();
+        return local.toString();
 }
 
 }

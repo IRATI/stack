@@ -260,7 +260,7 @@ class RINAConfiguration {
         /*
          * The local software configuration (console port, timeouts, ...)
          */
-        LocalConfiguration localConfiguration;
+        LocalConfiguration local;
 
         /*
          * The list of IPC Process to create when the software starts
