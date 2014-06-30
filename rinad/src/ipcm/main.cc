@@ -247,6 +247,10 @@ static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
         if (mit != ipcm->pending_normal_ipcp_inits.end()) {
                 mit->second->setInitialized();
                 ipcm->pending_normal_ipcp_inits.erase(mit);
+        } else {
+                cerr <<  __func__ << ": Warning: IPCP daemon initialized, "
+                        "but no pending normal IPC process initialization"
+                        << endl;
         }
 }
 
