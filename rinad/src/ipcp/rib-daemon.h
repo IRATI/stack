@@ -40,9 +40,9 @@ public:
 	/// @param objectName
 	/// @return
 	BaseRIBObject* getRIBObject(const std::string& objectClass,
-			const std::string& objectName) throw (Exception);
-	void addRIBObject(BaseRIBObject* ribObject) throw (Exception);
-	BaseRIBObject * removeRIBObject(const std::string& objectName) throw (Exception);
+			const std::string& objectName);
+	void addRIBObject(BaseRIBObject* ribObject);
+	BaseRIBObject * removeRIBObject(const std::string& objectName);
 	std::list<BaseRIBObject*> getRIBObjects();
 
 private:
@@ -85,28 +85,28 @@ public:
 	RIBDaemon();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void eventHappened(Event * event);
-	void addRIBObject(BaseRIBObject * ribObject) throw (Exception);
-	void removeRIBObject(BaseRIBObject * ribObject) throw (Exception);
-	void removeRIBObject(const std::string& objectName) throw (Exception);
+	void addRIBObject(BaseRIBObject * ribObject);
+	void removeRIBObject(BaseRIBObject * ribObject);
+	void removeRIBObject(const std::string& objectName);
 	std::list<BaseRIBObject *> getRIBObjects();
 	void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception);
+			const void* objectValue, const NotificationPolicy * notificationPolicy);
 	void deleteObject(const std::string& objectClass, const std::string& objectName,
-				const NotificationPolicy * notificationPolicy) throw (Exception);
+				const NotificationPolicy * notificationPolicy);
 	BaseRIBObject * readObject(const std::string& objectClass,
-				const std::string& objectName) throw (Exception);
+				const std::string& objectName);
 	void writeObject(const std::string& objectClass, const std::string& objectName,
-				const void* objectValue) throw (Exception);
+				const void* objectValue);
 	void startObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception);
+			const void* objectValue);
 	void stopObject(const std::string& objectClass, const std::string& objectName,
-				const void* objectValue) throw (Exception);
+				const void* objectValue);
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
 	void cdapMessageDelivered(char* message, int length, int portId);
 	void sendMessage(const rina::CDAPMessage & cdapMessage, int sessionId,
-				ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
+				ICDAPResponseMessageHandler * cdapMessageHandler);
 	void sendMessageToAddress(const rina::CDAPMessage & cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler);
 	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 				const IUpdateStrategy& updateStrategy);
 
@@ -155,7 +155,7 @@ private:
 	/// @param cdapMessageHandler pointer to the class that will be handling the response
 	/// message (if any)
 	void sendMessage(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception);
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler);
 
 	/// Finds out of the candidate number is on the list
 	/// @param candidate

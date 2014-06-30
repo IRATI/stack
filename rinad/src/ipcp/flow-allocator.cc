@@ -203,7 +203,7 @@ FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process, const std::string& object
 }
 
 void FlowRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	flow_allocator_instance_->deleteFlowRequestMessageReceived(cdapMessage,
 			cdapSessionDescriptor->get_port_id());
 }
@@ -216,13 +216,13 @@ FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * fl
 }
 
 void FlowSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	flow_allocator_->createFlowRequestMessageReceived(cdapMessage,
 			cdapSessionDescriptor->get_port_id());
 }
 
 void FlowSetRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		IFlowAllocatorInstance* objectValue) throw (Exception) {
+		IFlowAllocatorInstance* objectValue) {
 	FlowRIBObject * flowRIBObject;
 
 	flowRIBObject = new FlowRIBObject(get_ipc_process(), objectName, objectValue);
@@ -248,12 +248,12 @@ QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process):
 }
 
 void QoSCubeSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	//TODO, depending on IEncoder
 }
 
 void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName, rina::QoSCube* objectValue) throw (Exception) {
+		const std::string& objectName, rina::QoSCube* objectValue) {
 	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(),
 			QOS_CUBE_RIB_OBJECT_CLASS, objectName, objectValue);
 	add_child(ribObject);
@@ -261,7 +261,7 @@ void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 	//TODO: the QoS cube should be added into the configuration
 }
 
-void QoSCubeSetRIBObject::deleteObject() throw (Exception) {
+void QoSCubeSetRIBObject::deleteObject() {
 	std::list<std::string> childNames;
 	std::list<BaseRIBObject*>::const_iterator childrenIt;
 	std::list<std::string>::const_iterator namesIt;
@@ -321,6 +321,63 @@ void FlowAllocator::populateRIB() {
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
+}
+
+void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
+		int underlyingPortId) {
+	Flow * flow;
+	IFlowAllocatorInstance * flow_allocator_instance;
+	unsigned int myAddress = 0;
+	int portId = 0;
+
+	try{
+		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+		flow = (Flow *) encoder_->decode((char*) value->get_value());
+	}catch (Exception &e){
+		LOG_ERR("Problems decoding object value: %s", e.what());
+		return;
+	}
+
+	unsigned int address = namespace_manager_->getDFTNextHop(flow->get_destination_naming_info());
+	myAddress = ipc_process_->get_address();
+	if (address == 0){
+		LOG_ERR("The directory forwarding table returned no entries when looking up %s",
+				flow->get_destination_naming_info().toString().c_str());
+		return;
+	}
+
+	if (address == myAddress) {
+		//There is an entry and the address is this IPC Process, create a FAI, extract the Flow
+		//object from the CDAP message and call the FAI
+		try {
+			portId = rina::extendedIPCManager->allocatePortId(flow->get_destination_naming_info());
+		}catch (Exception &e) {
+			LOG_ERR("Problems requesting an available port-id: %s. Ignoring the Flow allocation request",
+					e.what());
+			return;
+		}
+
+		LOG_DBG("The destination application process is reachable through me. Assigning the local port-id %d to the flow", portId);
+		//TODO create FlowAllocatorInstance
+		fai_map_lock_.lock();
+		flow_allocator_instances_[portId] = flow_allocator_instance;
+		fai_map_lock_.unlock();
+
+		flow_allocator_instance->createFlowRequestMessageReceived(flow, cdapMessage, underlyingPortId);
+		return;
+	}
+
+
+	//The address is not this IPC process, forward the CDAP message to that address increment the hop
+	//count of the Flow object extract the flow object from the CDAP message
+	flow->set_hop_count(flow->get_hop_count() - 1);
+	if (flow->get_hop_count() <= 0) {
+		//TODO send negative create Flow response CDAP message to the source IPC process, specifying
+		//that the application process could not be found before the hop count expired
+		LOG_ERR("Missing code");
+	}
+
+	LOG_ERR("Missing code");
 }
 
 }

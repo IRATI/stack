@@ -76,7 +76,7 @@ void NMinusOneFlowManager::populateRIB(){
 }
 
 const rina::FlowInformation& NMinusOneFlowManager::getNMinus1FlowInformation(int portId)
-const throw (Exception) {
+const {
 	rina::Flow * flow = rina::extendedIPCManager->getAllocatedFlow(portId);
 	if (flow == 0) {
 		throw Exception("Unknown N-1 flow");
@@ -85,8 +85,7 @@ const throw (Exception) {
 	return flow->getFlowInformation();
 }
 
-unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformation& flowInformation)
-throw (Exception) {
+unsigned int NMinusOneFlowManager::allocateNMinus1Flow(const rina::FlowInformation& flowInformation) {
 	unsigned int handle = 0;
 
 	try {
@@ -105,8 +104,7 @@ throw (Exception) {
 	return handle;
 }
 
-void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event)
-throw (Exception) {
+void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) {
 	if (event.getPortId() <= 0) {
 		LOG_ERR("Allocation of N-1 flow denied. Error code: %d", event.getPortId());
 		rina::FlowInformation flowInformation = rina::extendedIPCManager->withdrawPendingFlow(event.getSequenceNumber());
@@ -132,8 +130,7 @@ throw (Exception) {
 	rib_daemon_->deliverEvent(flowAllocatedEvent);
 }
 
-void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event)
-throw (Exception) {
+void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
 	if (event.getLocalApplicationName().getProcessName().compare(
 			ipc_process_->get_name().getProcessName()) == 0 &&
 			event.getLocalApplicationName().getProcessInstance().compare(
@@ -174,12 +171,12 @@ throw (Exception) {
 	rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
 }
 
-void NMinusOneFlowManager::deallocateNMinus1Flow(int portId) throw(Exception) {
+void NMinusOneFlowManager::deallocateNMinus1Flow(int portId) {
 	rina::extendedIPCManager->requestFlowDeallocation(portId);
 }
 
 void NMinusOneFlowManager::deallocateFlowResponse(
-		const rina::DeallocateFlowResponseEvent& event) throw (Exception) {
+		const rina::DeallocateFlowResponseEvent& event) {
 	bool success = false;
 
 	if (event.getResult() == 0){
@@ -190,8 +187,7 @@ void NMinusOneFlowManager::deallocateFlowResponse(
 	cleanFlowAndNotify(event.getPortId());
 }
 
-void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event)
-throw(Exception) {
+void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) {
 	rina::extendedIPCManager->flowDeallocated(event.getPortId());
 	cleanFlowAndNotify(event.getPortId());
 }
@@ -217,9 +213,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 	rib_daemon_->deliverEvent(flowDeEvent);
 }
 
-void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event)
-throw (Exception) {
-
+void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) {
 	if (event.isRegistered()) {
 		rina::extendedIPCManager->appRegistered(event.getIPCProcessName(), event.getDIFName());
 		LOG_INFO("IPC Process registered to N-1 DIF %s",

@@ -86,8 +86,8 @@ public:
 /// Interface that Encodes and Decodes an object to/from bytes
 class IEncoder {
 	public:
-		virtual char* encode(const void* object) throw (Exception) = 0;
-		virtual void* decode(const char serializedObject[]) throw (Exception) = 0;
+		virtual char* encode(const void * object) = 0;
+		virtual void* decode(char * serializedObject) = 0;
 		virtual ~IEncoder(){};
 };
 
@@ -278,41 +278,41 @@ public:
 	/// @param flowInformation contains the destination IPC Process and requested
     /// QoS information
 	/// @return handle to the flow request
-	virtual unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) throw (Exception) = 0;
+	virtual unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) = 0;
 
 	/// Process the result of an allocate request event
 	/// @param event
 	/// @throws IPCException
-	virtual void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) throw (Exception) = 0;
+	virtual void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) = 0;
 
 	/// Process a flow allocation request
 	/// @param event
 	/// @throws IPCException if something goes wrong
-	virtual void flowAllocationRequested(const rina::FlowRequestEvent& event) throw (Exception) = 0;
+	virtual void flowAllocationRequested(const rina::FlowRequestEvent& event) = 0;
 
 	/// Deallocate the N-1 Flow identified by portId
 	/// @param portId
 	/// @throws IPCException if no N-1 Flow identified by portId exists
-	virtual void deallocateNMinus1Flow(int portId) throw(Exception) = 0;
+	virtual void deallocateNMinus1Flow(int portId) = 0;
 
 	/// Process the response of a flow deallocation request
 	/// @throws IPCException
-	virtual void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) throw (Exception) = 0;
+	virtual void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) = 0;
 
 	/// A flow has been deallocated remotely, process
 	/// @param portId
-	virtual void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) throw(Exception) = 0;
+	virtual void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) = 0;
 
 	/// Return the N-1 Flow descriptor associated to the flow identified by portId
 	/// @param portId
 	/// @return the N-1 Flow information
     /// @throws IPCException if no N-1 Flow identified by portId exists
-	virtual const rina::FlowInformation& getNMinus1FlowInformation(int portId) const throw (Exception) = 0;
+	virtual const rina::FlowInformation& getNMinus1FlowInformation(int portId) const = 0;
 
 	/// The IPC Process has been unregistered from or registered to an N-1 DIF
 	/// @param evet
 	/// @throws IPCException
-	virtual void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) throw (Exception) = 0;
+	virtual void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) = 0;
 
 	/// True if the DIF name is a supoprting DIF, false otherwise
 	/// @param difName
@@ -386,34 +386,34 @@ public:
 	BaseRIBObject * get_parent() const;
 	void set_parent(BaseRIBObject * parent);
 	const std::list<BaseRIBObject*>& get_children() const;
-	void add_child(BaseRIBObject * child) throw (Exception);
-	void remove_child(const std::string& objectName) throw (Exception);
+	void add_child(BaseRIBObject * child);
+	void remove_child(const std::string& objectName);
 
 	/// Local invocations
 	virtual void createObject(const std::string& objectClass,
-			const std::string& objectName, const void* objectValue) throw (Exception);
-	virtual void deleteObject() throw (Exception);
-	virtual BaseRIBObject * readObject() throw (Exception);
-	virtual void writeObject(const void* object_value) throw (Exception);
-	virtual void startObject(const void* object) throw (Exception);
-	virtual void stopObject(const void* object) throw (Exception);
+			const std::string& objectName, const void* objectValue);
+	virtual void deleteObject();
+	virtual BaseRIBObject * readObject();
+	virtual void writeObject(const void* object_value);
+	virtual void startObject(const void* object);
+	virtual void stopObject(const void* object);
 
 	/// Remote invocations via CDAP messages, ownership of cdapMessage is passed to
 	/// the oeprations
 	virtual void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteReadObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteStartObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteStopObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 private:
 	std::string class_;
@@ -424,12 +424,12 @@ private:
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
 	IEncoder * encoder_;
-	void operation_not_supported() throw (Exception);
-	void operation_not_supported(const void* object) throw (Exception);
+	void operation_not_supported();
+	void operation_not_supported(const void* object);
 	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void operartion_not_supported(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception);
+			const void* objectValue);
 };
 
 /// Common interface for update strategies implementations. Can be on demand, scheduled, periodic
@@ -478,19 +478,19 @@ public:
 	/// @param ribHandler
 	/// @param objectName
 	/// @throws Exception
-	virtual void addRIBObject(BaseRIBObject * ribObject) throw (Exception) = 0;
+	virtual void addRIBObject(BaseRIBObject * ribObject) = 0;
 
 	/// Remove an object from the RIB. Ownership is passed to the RIB daemon,
 	/// who will delete the memory associated to the object.
 	/// @param ribObject
 	/// @throws Exception
-	virtual void removeRIBObject(BaseRIBObject * ribObject) throw (Exception) = 0;
+	virtual void removeRIBObject(BaseRIBObject * ribObject) = 0;
 
 	/// Remove an object from the RIB by objectname. Ownership is passed to the RIB daemon,
 	/// who will delete the memory associated to the object.
 	/// @param objectName
 	/// @throws Exception
-	virtual void removeRIBObject(const std::string& objectName) throw (Exception) = 0;
+	virtual void removeRIBObject(const std::string& objectName) = 0;
 
 	/// Send an information update, consisting on a set of CDAP messages, using the updateStrategy update strategy
 	/// (on demand, scheduled). Takes ownership of the CDAP messages
@@ -505,7 +505,7 @@ public:
 	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
 	/// @throws Exception
 	virtual void sendMessage(const rina::CDAPMessage & cdapMessage, int sessionId,
-			ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) = 0;
+			ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
 	/// Causes a CDAP message to be sent. Takes ownership of the CDAPMessage
 	/// @param cdapMessage the message to be sent
@@ -514,7 +514,7 @@ public:
 	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
 	/// @throws Exception
 	virtual void sendMessageToAddress(const rina::CDAPMessage & cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) = 0;
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
 	/// The RIB Daemon has to process the CDAP message and,
 	/// if valid, it will either pass it to interested subscribers and/or write to storage and/or modify other
@@ -534,7 +534,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception) = 0;
+			const void* objectValue, const NotificationPolicy * notificationPolicy) = 0;
 
 	/// Delete an object from the RIB
 	/// @param objectClass the class of the object
@@ -544,7 +544,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void deleteObject(const std::string& objectClass, const std::string& objectName,
-			const NotificationPolicy * notificationPolicy) throw (Exception) = 0;
+			const NotificationPolicy * notificationPolicy) = 0;
 
 	/// Read an object from the RIB
 	/// @param objectClass the class of the object
@@ -553,7 +553,7 @@ public:
 	/// @return a RIB object
 	/// @throws Exception
 	virtual BaseRIBObject * readObject(const std::string& objectClass,
-			const std::string& objectName) throw (Exception) = 0;
+			const std::string& objectName) = 0;
 
 	/// Update the value of an object in the RIB
     /// @param objectClass the class of the object
@@ -563,7 +563,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void writeObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception) = 0;
+			const void* objectValue) = 0;
 
 	/// Start an object at the RIB
 	/// @param objectClass the class of the object
@@ -572,7 +572,7 @@ public:
 	/// @param objectValue the new value of the object
 	/// @throws Exception
 	virtual void startObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception) = 0;
+			const void* objectValue) = 0;
 
 	/// Stop an object at the RIB
 	/// @param objectClass the class of the object
@@ -581,7 +581,7 @@ public:
 	/// @param objectValue the new value of the object
 	/// @throws Exception
 	virtual void stopObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception) = 0;
+			const void* objectValue) = 0;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
@@ -676,11 +676,11 @@ public:
 	SimpleRIBObject(IPCProcess* ipc_process, const std::string& object_class,
 			const std::string& object_name, const void* object_value);
 	virtual const void* get_value() const;
-	virtual void writeObject(const void* object) throw (Exception);
+	virtual void writeObject(const void* object);
 
 	/// Create has the semantics of update
 	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception);
+			const void* objectValue);
 
 private:
 	const void* object_value_;
@@ -692,7 +692,7 @@ public:
 	SimpleSetRIBObject(IPCProcess * ipc_process, const std::string& object_class,
 			const std::string& set_member_object_class, const std::string& object_name);
 	void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception);
+			const void* objectValue);
 
 private:
 	std::string set_member_object_class_;
@@ -703,7 +703,7 @@ class SimpleSetMemberRIBObject: public SimpleRIBObject {
 public:
 	SimpleSetMemberRIBObject(IPCProcess* ipc_process, const std::string& object_class,
 				const std::string& object_name, const void* object_value);
-	virtual void deleteObject() throw (Exception);
+	virtual void deleteObject();
 };
 
 }

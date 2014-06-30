@@ -138,7 +138,7 @@ public:
 	/// @param applicationCallback the callback to invoke the application for
 	/// allocateResponse and any other calls
 	/// @throws IPCException
-	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event) throw (Exception) = 0;
+	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event) = 0;
 
 	virtual void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) = 0;
 
@@ -148,7 +148,7 @@ public:
 	/// @param portId the destination portid as decided by the Flow allocator
 	/// @param requestMessate the CDAP request message
 	/// @param underlyingPortId the port id to reply later on
-	virtual void createFlowRequestMessageReceived(const Flow& flow, const rina::CDAPMessage& requestMessage,
+	virtual void createFlowRequestMessageReceived(Flow * flow, const rina::CDAPMessage * requestMessage,
 			int underlyingPortId) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
@@ -193,7 +193,7 @@ public:
 	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			IFlowAllocatorInstance * flow_allocator_instance);
 	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 private:
 	IFlowAllocatorInstance * flow_allocator_instance_;
@@ -204,9 +204,9 @@ class FlowSetRIBObject: public BaseRIBObject {
 public:
 	FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator);
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass,
-			const std::string& objectName, IFlowAllocatorInstance* objectValue) throw (Exception);
+			const std::string& objectName, IFlowAllocatorInstance* objectValue);
 	const void* get_value() const;
 
 private:
@@ -222,10 +222,10 @@ public:
 
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception);
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass,
-			const std::string& objectName, rina::QoSCube* objectValue) throw (Exception);
-	void deleteObject() throw (Exception);
+			const std::string& objectName, rina::QoSCube* objectValue);
+	void deleteObject();
 	const void* get_value() const;
 };
 
@@ -234,6 +234,7 @@ public:
 	FlowAllocator();
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
+	void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage, int underlyingPortId);
 
 private:
 	/// Flow allocator instances, each one associated to a port-id

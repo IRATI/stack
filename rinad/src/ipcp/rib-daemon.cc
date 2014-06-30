@@ -33,7 +33,7 @@ RIB::RIB() {
 RIB::~RIB() throw() {
 }
 
-BaseRIBObject* RIB::getRIBObject(const std::string& objectClass, const std::string& objectName) throw (Exception) {
+BaseRIBObject* RIB::getRIBObject(const std::string& objectClass, const std::string& objectName) {
 	BaseRIBObject* ribObject;
 	std::map<std::string, BaseRIBObject*>::iterator it;
 
@@ -53,7 +53,7 @@ BaseRIBObject* RIB::getRIBObject(const std::string& objectClass, const std::stri
 	return ribObject;
 }
 
-void RIB::addRIBObject(BaseRIBObject* ribObject) throw (Exception) {
+void RIB::addRIBObject(BaseRIBObject* ribObject) {
 	lock();
 	if (rib_.find(ribObject->get_name()) != rib_.end()) {
 		throw Exception("Object already exists in the RIB");
@@ -62,7 +62,7 @@ void RIB::addRIBObject(BaseRIBObject* ribObject) throw (Exception) {
 	unlock();
 }
 
-BaseRIBObject * RIB::removeRIBObject(const std::string& objectName) throw (Exception) {
+BaseRIBObject * RIB::removeRIBObject(const std::string& objectName) {
 	std::map<std::string, BaseRIBObject*>::iterator it;
 	BaseRIBObject* ribObject;
 
@@ -268,7 +268,7 @@ void RIBDaemon::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event) {
 	}
 }
 
-void RIBDaemon::addRIBObject(BaseRIBObject * ribObject) throw (Exception) {
+void RIBDaemon::addRIBObject(BaseRIBObject * ribObject) {
 	if (!ribObject) {
 		throw Exception("Object is null");
 	}
@@ -278,7 +278,7 @@ void RIBDaemon::addRIBObject(BaseRIBObject * ribObject) throw (Exception) {
 			ribObject->get_instance());
 }
 
-void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject) throw (Exception) {
+void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject) {
 	if (!ribObject) {
 		throw Exception("Object is null");
 	}
@@ -286,7 +286,7 @@ void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject) throw (Exception) {
 	removeRIBObject(ribObject->get_name());
 }
 
-void RIBDaemon::removeRIBObject(const std::string& objectName) throw (Exception){
+void RIBDaemon::removeRIBObject(const std::string& objectName) {
 	BaseRIBObject * object = rib_.removeRIBObject(objectName);
 	LOG_INFO("Object with name %s, class %s, instance %ld removed from the RIB",
 			object->get_name().c_str(), object->get_class().c_str(),
@@ -310,7 +310,7 @@ bool RIBDaemon::isOnList(int candidate, std::list<int> list){
 }
 
 void RIBDaemon::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception) {
+		const void* objectValue, const NotificationPolicy * notificationPolicy) {
 	BaseRIBObject * ribObject;
 
 	try {
@@ -368,7 +368,7 @@ void RIBDaemon::createObject(const std::string& objectClass, const std::string& 
 }
 
 void RIBDaemon::deleteObject(const std::string& objectClass, const std::string& objectName,
-		const NotificationPolicy * notificationPolicy) throw (Exception) {
+		const NotificationPolicy * notificationPolicy) {
 	BaseRIBObject * ribObject;
 
 	ribObject = rib_.getRIBObject(objectClass, objectName);
@@ -404,24 +404,24 @@ void RIBDaemon::deleteObject(const std::string& objectClass, const std::string& 
 }
 
 BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
-			const std::string& objectName) throw (Exception) {
+			const std::string& objectName) {
 	return rib_.getRIBObject(objectClass, objectName);
 }
 
 void RIBDaemon::writeObject(const std::string& objectClass, const std::string& objectName,
-				const void* objectValue) throw (Exception) {
+				const void* objectValue) {
 	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
 	object->writeObject(objectValue);
 }
 
 void RIBDaemon::startObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception) {
+			const void* objectValue) {
 	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
 	object->startObject(objectValue);
 }
 
 void RIBDaemon::stopObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) throw (Exception) {
+		const void* objectValue) {
 	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
 	object->stopObject(objectValue);
 }
@@ -674,17 +674,17 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId) {
 }
 
 void RIBDaemon::sendMessage(const rina::CDAPMessage& cdapMessage, int sessionId,
-				ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+				ICDAPResponseMessageHandler * cdapMessageHandler) {
 	sendMessage(false, cdapMessage, sessionId, 0, cdapMessageHandler);
 }
 
 void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage, int sessionId,
-		unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+		unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) {
 	sendMessage(true, cdapMessage, sessionId, address, cdapMessageHandler);
 }
 
 void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) {
 	const rina::SerializedMessage * sdu;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0

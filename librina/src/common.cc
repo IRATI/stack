@@ -938,8 +938,7 @@ bool librinaInitialized = false;
 Lockable librinaInitializationLock;
 
 void initialize(unsigned int localPort, const std::string& logLevel,
-                const std::string& pathToLogFile)
-        throw(InitializationException) {
+                const std::string& pathToLogFile) {
 
         librinaInitializationLock.lock();
         if (librinaInitialized) {
@@ -959,8 +958,7 @@ void initialize(unsigned int localPort, const std::string& logLevel,
 }
 
 void initialize(const std::string& logLevel,
-                const std::string& pathToLogFile)
-throw (InitializationException){
+                const std::string& pathToLogFile) {
 
         librinaInitializationLock.lock();
         if (librinaInitialized) {

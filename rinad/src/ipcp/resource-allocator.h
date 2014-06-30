@@ -39,14 +39,14 @@ public:
 
 	NMinusOneFlowManager();
 	void set_ipc_process(IPCProcess * ipc_process);
-	unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation) throw (Exception);
-	void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event) throw (Exception);
-	void flowAllocationRequested(const rina::FlowRequestEvent& event) throw (Exception);
-	void deallocateNMinus1Flow(int portId) throw(Exception);
-	void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event) throw (Exception);
-	void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) throw(Exception);
-	const rina::FlowInformation& getNMinus1FlowInformation(int portId) const throw (Exception);
-	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) throw (Exception);
+	unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation);
+	void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event);
+	void flowAllocationRequested(const rina::FlowRequestEvent& event);
+	void deallocateNMinus1Flow(int portId);
+	void deallocateFlowResponse(const rina::DeallocateFlowResponseEvent& event);
+	void flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event);
+	const rina::FlowInformation& getNMinus1FlowInformation(int portId) const;
+	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);
 	bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName);
 
 private:
