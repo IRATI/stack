@@ -35,7 +35,7 @@ namespace rinad {
  * @param difName
  * @result
  */
-bool RINAConfiguration::lookup_DIF_properties(const std::string& dif_name,
+bool RINAConfiguration::lookup_dif_properties(const std::string& dif_name,
                                               DIFProperties& result) const
 {
         for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
@@ -64,7 +64,7 @@ bool RINAConfiguration::lookup_ipcp_address(const std::string dif_name,
         DIFProperties dif_props;
         bool found;
 
-        found = lookup_DIF_properties(dif_name, dif_props);
+        found = lookup_dif_properties(dif_name, dif_props);
         if (!found) {
                 return false;
         }

@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <vector>
 
 #define RINA_PREFIX     "ipcm"
 
@@ -48,10 +49,19 @@ class IPCManager : public EventLoopData {
         IPCManager();
         int apply_configuration();
 
+        rina::IPCProcess *create_ipcp(const rinad::IPCProcessToCreate& iptc);
+        int assign_to_dif(rina::IPCProcess *ipcp,
+                          const rinad::IPCProcessToCreate& iptc);
+        int register_at_difs(rina::IPCProcess *ipcp,
+                             const rinad::IPCProcessToCreate& iptc);
+        rina::IPCProcess *select_ipcp_by_dif(const
+                        rina::ApplicationProcessNamingInformation& dif_name);
+
         rinad::RINAConfiguration config;
 
         map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
         map<long, rina::IPCProcess*> pending_ipcp_dif_assignments;
+        map<long, rina::IPCProcess*> pending_ipcp_registrations;
 
  private:
         rina::Thread *console;
@@ -84,6 +94,168 @@ IPCManager::IPCManager()
                                    console_work, this);
 }
 
+rina::IPCProcess *
+IPCManager::create_ipcp(const rinad::IPCProcessToCreate& iptc)
+{
+        rina::IPCProcess *ipcp = NULL;
+
+        try {
+                ipcp = rina::ipcProcessFactory->create(iptc.name,
+                                iptc.type);
+                if (iptc.type != rina::NORMAL_IPC_PROCESS) {
+                        /* Shim IPC processes are set as initialized
+                         * immediately. */
+                        ipcp->setInitialized();
+                } else {
+                        /* Normal IPC processes can be set as
+                         * initialized only when the corresponding
+                         * IPC process daemon is initialized, so we
+                         * defer the operation. */
+                        pending_normal_ipcp_inits[ipcp->getId()] = ipcp;
+                }
+        } catch (rina::CreateIPCProcessException) {
+                cerr << "Failed to create  IPC process '" <<
+                        iptc.name.toString() << "' of type '" <<
+                        iptc.type << "'" << endl;
+        }
+
+        return ipcp;
+}
+
+int
+IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
+                              const rinad::IPCProcessToCreate& iptc)
+{
+        if (!ipcp || !iptc.difName.size()) {
+                return 0;
+        }
+
+        rinad::DIFProperties dif_props;
+        rina::DIFInformation dif_info;
+        rina::DIFConfiguration dif_config;
+        rina::ApplicationProcessNamingInformation dif_name(
+                        iptc.difName, string());
+        bool found;
+
+        /* Try to extract the DIF properties from the
+         * configuration. */
+        found = config.lookup_dif_properties(iptc.difName,
+                        dif_props);
+        if (!found) {
+                throw new rina::AssignToDIFException(
+                                string("Cannot find properties "
+                                        "for DIF ") + iptc.difName);
+        }
+
+        /* Fill in the DIFConfiguration object. */
+        if (ipcp->getType() == rina::NORMAL_IPC_PROCESS) {
+                rina::EFCPConfiguration efcp_config;
+                long address;
+
+                /* FIll in the EFCPConfiguration object. */
+                efcp_config.set_data_transfer_constants(
+                                dif_props.dataTransferConstants);
+                for (list<rina::QoSCube>::iterator
+                                qit = dif_props.qosCubes.begin();
+                                qit != dif_props.qosCubes.end();
+                                qit++) {
+                        efcp_config.add_qos_cube(*qit);
+                }
+
+                found = dif_props.
+                        lookup_ipcp_address(ipcp->getName(),
+                                        address);
+                if (!found) {
+                        ostringstream ss;
+
+                        ss << "No address for IPC process " <<
+                                ipcp->getName().toString() <<
+                                " in DIF " << iptc.difName <<
+                                endl;
+
+                        throw new rina::AssignToDIFException(
+                                        ss.str());
+                }
+                dif_config.set_efcp_configuration(efcp_config);
+                dif_config.set_address(address);
+        }
+
+        for (list<rina::Parameter>::const_iterator
+                        pit = dif_props.configParameters.begin();
+                        pit != dif_props.configParameters.end();
+                        pit++) {
+                dif_config.add_parameter(*pit);
+        }
+
+        /* Fill in the DIFInformation object. */
+        dif_info.set_dif_name(dif_name);
+        dif_info.set_dif_type(ipcp->getType());
+        dif_info.set_dif_configuration(dif_config);
+
+        /* Invoke librina to assign the IPC process to the
+         * DIF specified by dif_info. */
+        try {
+                long seqnum = ipcp->assignToDIF(dif_info);
+
+                pending_ipcp_dif_assignments[seqnum] = ipcp;
+        } catch (rina::AssignToDIFException) {
+                cerr << "Cannot assign " <<
+                        ipcp->getName().toString() <<
+                        " to DIF " << iptc.difName << endl;
+        }
+
+        return 0;
+}
+
+/* Returns an IPC process assigned to the DIF specified by @dif_name,
+ * if any.
+ */
+rina::IPCProcess *IPCManager::select_ipcp_by_dif(const
+                        rina::ApplicationProcessNamingInformation& dif_name)
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
+
+                if (dif_info.get_dif_name() == dif_name) {
+                        return ipcps[i];
+                }
+        }
+
+        return NULL;
+}
+
+int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
+                                 const rinad::IPCProcessToCreate& iptc)
+{
+        for (list<string>::const_iterator sit = iptc.difsToRegisterAt.begin();
+                        sit != iptc.difsToRegisterAt.end(); sit++) {
+                rina::ApplicationProcessNamingInformation dif_name(
+                                                        *sit, string());
+                /* Select a slave (N-1) IPC process. */
+                rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
+                long seqnum;
+
+                if (!slave_ipcp) {
+                        cerr << "Cannot find any IPC process belonging "
+                                << "to DIF " << *sit << endl;
+                        continue;
+                }
+
+                /* Try to register @ipcp to the slave IPC process. */
+                try {
+                        seqnum = slave_ipcp->registerApplication(
+                                        ipcp->getName(), ipcp->getId());
+                        pending_ipcp_registrations[seqnum] = ipcp;
+                } catch (Exception) {
+                        cerr << __func__ << ": Error while requesting "
+                                << "registration" << endl;
+                }
+        }
+}
+
 int
 IPCManager::apply_configuration()
 {
@@ -95,101 +267,9 @@ IPCManager::apply_configuration()
                         it != config.ipcProcessesToCreate.end(); it++) {
                 rina::IPCProcess *ipcp;
 
-                try {
-                        ipcp = rina::ipcProcessFactory->create(it->name,
-                                                               it->type);
-                        if (it->type != rina::NORMAL_IPC_PROCESS) {
-                                /* Shim IPC processes are set as initialized
-                                 * immediately. */
-                                ipcp->setInitialized();
-                        } else {
-                                /* Normal IPC processes can be set as
-                                 * initialized only when the corresponding
-                                 * IPC process daemon is initialized, so we
-                                 * defer the operation. */
-                                pending_normal_ipcp_inits[ipcp->getId()] = ipcp;
-                        }
-                } catch (rina::CreateIPCProcessException) {
-                        cerr << "Failed to create  IPC process '" <<
-                                it->name.toString() << "' of type '" <<
-                                it->type << "'" << endl;
-                }
-
-                if (it->difName.size()) {
-                        rinad::DIFProperties dif_props;
-                        rina::DIFInformation dif_info;
-                        rina::DIFConfiguration dif_config;
-                        rina::ApplicationProcessNamingInformation dif_name(
-                                                        it->difName, string());
-                        bool found;
-
-                        /* Try to extract the DIF properties from the
-                         * configuration. */
-                        found = config.lookup_DIF_properties(it->difName,
-                                                             dif_props);
-                        if (!found) {
-                                throw new rina::AssignToDIFException(
-                                        string("Cannot find properties "
-                                                "for DIF ") + it->difName);
-                        }
-
-                        /* Fill in the DIFConfiguration object. */
-                        if (ipcp->getType() == rina::NORMAL_IPC_PROCESS) {
-                                rina::EFCPConfiguration efcp_config;
-                                long address;
-
-                                /* FIll in the EFCPConfiguration object. */
-                                efcp_config.set_data_transfer_constants(
-                                        dif_props.dataTransferConstants);
-                                for (list<rina::QoSCube>::iterator
-                                        qit = dif_props.qosCubes.begin();
-                                        qit != dif_props.qosCubes.end();
-                                                                qit++) {
-                                        efcp_config.add_qos_cube(*qit);
-                                }
-
-                                found = dif_props.
-                                        lookup_ipcp_address(ipcp->getName(),
-                                                            address);
-                                if (!found) {
-                                        ostringstream ss;
-
-                                        ss << "No address for IPC process " <<
-                                                ipcp->getName().toString() <<
-                                                " in DIF " << it->difName <<
-                                                endl;
-
-                                        throw new rina::AssignToDIFException(
-                                                                ss.str());
-                                }
-                                dif_config.set_efcp_configuration(efcp_config);
-                                dif_config.set_address(address);
-                        }
-
-                        for (list<rina::Parameter>::const_iterator
-                                pit = dif_props.configParameters.begin();
-                                pit != dif_props.configParameters.end();
-                                                                pit++) {
-                                dif_config.add_parameter(*pit);
-                        }
-
-                        /* Fill in the DIFInformation object. */
-                        dif_info.set_dif_name(dif_name);
-                        dif_info.set_dif_type(ipcp->getType());
-                        dif_info.set_dif_configuration(dif_config);
-
-                        /* Invoke librina to assign the IPC process to the
-                         * DIF specified by dif_info. */
-                        try {
-                                long seqnum = ipcp->assignToDIF(dif_info);
-
-                                pending_ipcp_dif_assignments[seqnum] = ipcp;
-                        } catch (rina::AssignToDIFException) {
-                                cerr << "Cannot assign " <<
-                                        ipcp->getName().toString() <<
-                                        " to DIF " << it->difName << endl;
-                        }
-                }
+                ipcp = create_ipcp(*it);
+                assign_to_dif(ipcp, *it);
+                register_at_difs(ipcp, *it);
         }
 
         return 0;

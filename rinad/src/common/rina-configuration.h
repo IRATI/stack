@@ -282,7 +282,7 @@ class RINAConfiguration {
         std::list<ApplicationToDIFMapping> applicationToDIFMappings;
 
 
-        bool lookup_DIF_properties(const std::string& dif_name,
+        bool lookup_dif_properties(const std::string& dif_name,
                                    DIFProperties& result) const;
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
