@@ -103,7 +103,7 @@ struct DirectoryEntry {
 struct KnownIPCProcessAddress {
 
         /* The application name of the remote IPC Process */
-        rina::ApplicationProcessNamingInformation apNameInfo;
+        rina::ApplicationProcessNamingInformation name;
 
         /* The address of the remote IPC Process */
         long address;
@@ -143,6 +143,10 @@ struct DIFProperties {
 
         /* Extra configuration parameters (name/value pairs) */
         std::list<rina::Parameter> configParameters;
+
+        bool lookup_ipcp_address(
+                        const rina::ApplicationProcessNamingInformation&,
+                        long& result);
 };
 
 struct NeighborData {
@@ -278,8 +282,13 @@ class RINAConfiguration {
         std::list<ApplicationToDIFMapping> applicationToDIFMappings;
 
 
-        bool getDIFConfiguration(const std::string& difName,
-                                 DIFProperties& result) const;
+        bool lookup_DIF_properties(const std::string& dif_name,
+                                   DIFProperties& result) const;
+#if 0
+        bool lookup_ipcp_address(const std::string dif_name,
+                const rina::ApplicationProcessNamingInformation& ipcp_name,
+                long& result);
+#endif
         std::string toString() const;
 };
 
