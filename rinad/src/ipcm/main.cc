@@ -37,14 +37,23 @@ using namespace std;
 using namespace TCLAP;
 
 
+/* Macro useful to perform downcasts in declarations. */
+#define DOWNCAST_DECL(_var,_class,_name)        \
+        _class *_name = dynamic_cast<_class*>(_var);
+
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
+        int apply_configuration();
+
+        rinad::RINAConfiguration config;
+
+        map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
+
  private:
         rina::Thread *console;
-        rinad::RINAConfiguration config;
 };
 
 void *console_work(void *arg)
@@ -70,7 +79,43 @@ IPCManager::IPCManager()
         }
 
         /* Create and start the console thread. */
-        console = new rina::Thread(new rina::ThreadAttributes, console_work, this);
+        console = new rina::Thread(new rina::ThreadAttributes(),
+                                   console_work, this);
+}
+
+int
+IPCManager::apply_configuration()
+{
+        /* Examine all the IPCProcesses that are going to be created
+         * according to the configuration file.
+         */
+        for (list<rinad::IPCProcessToCreate>::iterator
+                it = config.ipcProcessesToCreate.begin();
+                        it != config.ipcProcessesToCreate.end(); it++) {
+                rina::IPCProcess *ipcp;
+
+                try {
+                        ipcp = rina::ipcProcessFactory->create(it->name,
+                                                               it->type);
+                        if (it->type != rina::NORMAL_IPC_PROCESS) {
+                                /* Shim IPC processes are set as initialized
+                                 * immediately. */
+                                ipcp->setInitialized();
+                        } else {
+                                /* Normal IPC processes can be set as
+                                 * initialized only when the corresponding
+                                 * IPC process daemon is initialized, so we
+                                 * defer the operation. */
+                                pending_normal_ipcp_inits[ipcp->getId()] = ipcp;
+                        }
+                } catch (rina::CreateIPCProcessException) {
+                        cerr << "Failed to create  IPC process '" <<
+                                it->name.toString() << "' of type '" <<
+                                it->type << "'" << endl;
+                }
+        }
+
+        return 0;
 }
 
 static void FlowAllocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
@@ -189,8 +234,20 @@ static void QueryRibResponseEventHandler(rina::IPCEvent *event, EventLoopData *d
 {
 }
 
-static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
+                                                    EventLoopData *dm)
 {
+        DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
+        DOWNCAST_DECL(dm, IPCManager, ipcm);
+        map<unsigned short, rina::IPCProcess *>::iterator mit;
+
+        /* Perform deferred "setInitiatialized()" of a normal IPC process, if
+         * needed. */
+        mit = ipcm->pending_normal_ipcp_inits.find(event->getIPCProcessId());
+        if (mit != ipcm->pending_normal_ipcp_inits.end()) {
+                mit->second->setInitialized();
+                ipcm->pending_normal_ipcp_inits.erase(mit);
+        }
 }
 
 static void TimerExpiredEventHandler(rina::IPCEvent *event, EventLoopData *dm)

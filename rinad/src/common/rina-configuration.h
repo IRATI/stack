@@ -166,7 +166,7 @@ struct SDUProtectionOption {
 struct IPCProcessToCreate {
 
         std::string type;
-        rina::ApplicationProcessNamingInformation nameInfo;
+        rina::ApplicationProcessNamingInformation name;
         std::string difName;
         std::list<NeighborData> neighbors;
         std::list<std::string> difsToRegisterAt;
