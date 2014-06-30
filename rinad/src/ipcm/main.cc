@@ -27,7 +27,9 @@
 
 #include "tclap/CmdLine.h"
 
+using namespace std;
 using namespace TCLAP;
+
 
 class EventLoopData {
  public:
@@ -43,7 +45,7 @@ class EventLoop {
 
         EventLoop(EventLoopData *dm) : data_model(dm) { }
  private:
-        std::map<rina::IPCEventType, EventHandler> handlers;
+        map<rina::IPCEventType, EventHandler> handlers;
         EventLoopData *data_model;
 
 };
@@ -62,7 +64,7 @@ EventLoop::run()
                 rina::IPCEventType ty;
 
                 if (!event) {
-                        std::cerr << "Null event received" << std::endl;
+                        cerr << "Null event received" << endl;
                         break;
                 }
 
@@ -75,8 +77,23 @@ EventLoop::run()
 
 class IPCManager : public EventLoopData {
  public:
-        int fake;
+        IPCManager();
+ private:
+        rina::Thread *console;
 };
+
+void *console_work(void *arg)
+{
+        cout << "Console starts" << endl;
+        cout << "Console stops" << endl;
+
+        return NULL;
+}
+
+IPCManager::IPCManager()
+{
+        console = new rina::Thread(new rina::ThreadAttributes, console_work, NULL);
+}
 
 static void FlowAllocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
 {
@@ -232,7 +249,7 @@ int main(int argc, char * argv[])
                 TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
 
                 // Define a value argument and add it to the command line.
-                TCLAP::ValueArg<std::string> nameArg("n",
+                TCLAP::ValueArg<string> nameArg("n",
                                                      "name",
                                                      "Name to print",
                                                      true,
@@ -244,13 +261,13 @@ int main(int argc, char * argv[])
                 cmd.parse(argc, argv);
 
                 // Get the value parsed by each arg. 
-                std::string name = nameArg.getValue();
+                string name = nameArg.getValue();
 
-                std::cout << "My name is: " << name << std::endl;
+                cout << "My name is: " << name << endl;
 
         } catch (ArgException &e) {
-                std::cerr << "error: " << e.error() << " for arg "
-                          << e.argId() << std::endl;
+                cerr << "error: " << e.error() << " for arg "
+                          << e.argId() << endl;
         }
 
         IPCManager *ipcm = new IPCManager();
