@@ -26,7 +26,6 @@ class ConnectionStateMachine;
 class ResetStablishmentTimerTask : public TimerTask {
 public:
 	ResetStablishmentTimerTask(ConnectionStateMachine *con_state_machine);
-	~ResetStablishmentTimerTask();
 	void run();
 private:
 	ConnectionStateMachine *con_state_machine_;
@@ -35,7 +34,6 @@ private:
 class ReleaseConnectionTimerTask : public TimerTask {
 public:
 	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine);
-	~ReleaseConnectionTimerTask();
 	void run();
 private:
 	ConnectionStateMachine *con_state_machine_;
@@ -301,8 +299,6 @@ private:
 /// Google Protocol Buffers Wire Message Provider
 class GPBWireMessageProvider :  public WireMessageProviderInterface {
 public:
-	GPBWireMessageProvider();
-	~GPBWireMessageProvider() throw();
 	const CDAPMessage* deserializeMessage(const SerializedMessage &message);
 	const SerializedMessage* serializeMessage(const CDAPMessage &cdapMessage);
 };
