@@ -44,7 +44,9 @@ class IPCManager : public EventLoopData {
 
 void *console_work(void *arg)
 {
-        cout << "Console starts" << endl;
+        IPCManager *ipcm = static_cast<IPCManager *>(arg);
+
+        cout << "Console starts: " << ipcm << endl;
         cout << "Console stops" << endl;
 
         return NULL;
@@ -52,7 +54,7 @@ void *console_work(void *arg)
 
 IPCManager::IPCManager()
 {
-        console = new rina::Thread(new rina::ThreadAttributes, console_work, NULL);
+        console = new rina::Thread(new rina::ThreadAttributes, console_work, this);
 }
 
 static void FlowAllocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
