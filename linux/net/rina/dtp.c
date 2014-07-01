@@ -703,10 +703,11 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         pos->pdu = NULL;
                         seq_q_entry_destroy(pos);
 
-                        if (pdu_post(dtp, pdu)) {
-                                spin_unlock(&seqQ->lock);
+                        spin_unlock(&seqQ->lock);
+                        if (pdu_post(dtp, pdu))
                                 return 0;
-                        }
+
+                        spin_lock(&seqQ->lock);
                         LWE = dt_sv_rcv_lft_win(dt);
                         continue;
                 }
@@ -724,11 +725,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                 }
                                 pos->pdu = NULL;
                                 seq_q_entry_destroy(pos);
-                                if (pdu_post(dtp, pdu)){
-                                        spin_unlock(&seqQ->lock);
+                                spin_unlock(&seqQ->lock);
+                                if (pdu_post(dtp, pdu))
                                         return 0;
-                                }
-                        LWE = dt_sv_rcv_lft_win(dt);
+
+                                spin_lock(&seqQ->lock);
+                                LWE = dt_sv_rcv_lft_win(dt);
                         }
                         continue;
                 }
