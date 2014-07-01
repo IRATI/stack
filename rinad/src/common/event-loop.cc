@@ -36,11 +36,11 @@ EventLoop::register_event(rina::IPCEventType type, EventHandler handler)
 { handlers[type] = handler; }
 
 void
-EventLoop::register_pre_function(PrePostFunction func)
+EventLoop::register_pre_function(EventHandler func)
 { pre_function = func; }
 
 void
-EventLoop::register_post_function(PrePostFunction func)
+EventLoop::register_post_function(EventHandler func)
 { post_function = func; }
 
 void
@@ -56,14 +56,14 @@ EventLoop::run()
                 }
 
                 if (pre_function) {
-                        pre_function(data_model);
+                        pre_function(event, data_model);
                 }
                 ty = event->getType();
                 if (handlers.count(ty) && handlers[ty]) {
                         handlers[ty](event, data_model);
                 }
                 if (post_function) {
-                        post_function(data_model);
+                        post_function(event, data_model);
                 }
         }
 }

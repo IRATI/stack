@@ -39,6 +39,8 @@ class IPCManager : public EventLoopData {
 
         int apply_configuration();
 
+        void wait_for_event(rina::IPCEventType ty, unsigned int seqnum);
+
         rina::IPCProcess *create_ipcp(
                         const rina::ApplicationProcessNamingInformation& name,
                         const std::string& type);
@@ -72,7 +74,12 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_registrations;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
 
-        rina::ConditionVariable response;
+        rina::Lockable lock;
+
+        rina::ConditionVariable event_arrived;
+        bool event_waiting;
+        rina::IPCEventType event_ty;
+        unsigned int event_sn;
 
  private:
         rina::Thread *console;

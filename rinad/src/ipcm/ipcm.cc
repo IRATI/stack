@@ -74,6 +74,8 @@ IPCManager::IPCManager()
                 exit(EXIT_FAILURE);
         }
 
+        event_waiting = false;
+
         /* Create and start the console thread. */
         console = new rina::Thread(new rina::ThreadAttributes(),
                                    console_function, this);
@@ -82,11 +84,46 @@ IPCManager::IPCManager()
                                    script_function, this);
 }
 
+void
+IPCManager::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
+{
+        event_arrived.lock();
+        event_waiting = true;
+        event_ty = ty;
+        event_sn = seqnum;
+        event_arrived.unlock();
+}
+
+static void
+ipcm_pre_function(rina::IPCEvent *event, EventLoopData *opaque)
+{
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+
+        ipcm->lock.lock();
+}
+
+static void
+ipcm_post_function(rina::IPCEvent *event, EventLoopData *opaque)
+{
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+
+        ipcm->lock.unlock();
+
+        ipcm->event_arrived.lock();
+        if (ipcm->event_waiting && ipcm->event_ty == event->getType()
+                        && ipcm->event_sn == event->getSequenceNumber()) {
+                ipcm->event_arrived.signal();
+                ipcm->event_waiting = false;
+        }
+        ipcm->event_arrived.unlock();
+}
+
 rina::IPCProcess *
 IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                         const string& type)
 {
         rina::IPCProcess *ipcp = NULL;
+        bool wait = false;
 
         try {
                 ipcp = rina::ipcProcessFactory->create(name,
@@ -101,11 +138,16 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                          * IPC process daemon is initialized, so we
                          * defer the operation. */
                         pending_normal_ipcp_inits[ipcp->getId()] = ipcp;
+                        wait = true;
                 }
         } catch (rina::CreateIPCProcessException) {
                 cerr << "Failed to create  IPC process '" <<
                         name.toString() << "' of type '" <<
                         type << "'" << endl;
+        }
+
+        if (wait) {
+                wait_for_event(rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT, 0);
         }
 
         return ipcp;
@@ -478,6 +520,9 @@ static void IpcProcessDumpFtResponseHandler(rina::IPCEvent *event, EventLoopData
 
 void register_handlers_all(EventLoop& loop)
 {
+        loop.register_pre_function(ipcm_pre_function);
+        loop.register_post_function(ipcm_post_function);
+
         loop.register_event(rina::FLOW_ALLOCATION_REQUESTED_EVENT,
                         FlowAllocationRequestedEventHandler);
         loop.register_event(rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
