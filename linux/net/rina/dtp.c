@@ -252,7 +252,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
         dt = dtp->parent;
         ASSERT(dt);
 
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
         /* Start SenderInactivityTimer */
         if (rtimer_restart(dtp->timers.sender_inactivity,
                            2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
@@ -871,13 +871,19 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
+#if INACTIVITY_TIMERS_ENABLE        
+        LOG_DBG("Inactivity Timers created....\n\n");
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
                                                         tmp);
+#endif        
         tmp->timers.a                   = rtimer_create(tf_a, tmp);
-        if (!tmp->timers.sender_inactivity   ||
+        if (
+#if INACTIVITY_TIMERS_ENABLE        
+            !tmp->timers.sender_inactivity   ||
             !tmp->timers.receiver_inactivity ||
+#endif            
             !tmp->timers.a) {
                 dtp_destroy(tmp);
                 return NULL;
@@ -896,10 +902,12 @@ int dtp_destroy(struct dtp * instance)
         }
 
         if (instance->seqQ) seqQ_destroy(instance->seqQ);
+#if INACTIVITY_TIMERS_ENABLE        
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
         if (instance->timers.receiver_inactivity)
                 rtimer_destroy(instance->timers.receiver_inactivity);
+#endif                
         if (instance->timers.a)
                 rtimer_destroy(instance->timers.a);
 
@@ -935,7 +943,7 @@ int dtp_write(struct dtp * instance,
 
 #ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop SenderInactivityTimer */
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
@@ -1072,7 +1080,7 @@ int dtp_write(struct dtp * instance,
                         LOG_MISSING;
                 }
 
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
                                    2 * (dt_sv_mpl(dt) +
@@ -1085,7 +1093,7 @@ int dtp_write(struct dtp * instance,
                 return 0;
         }
 
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
         /* Start SenderInactivityTimer */
         if (rtimer_restart(instance->timers.sender_inactivity,
                            2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
@@ -1221,7 +1229,7 @@ int dtp_receive(struct dtp * instance,
 
         LOG_DBG("A-timer timeout: %d", a);
 
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
@@ -1258,7 +1266,7 @@ int dtp_receive(struct dtp * instance,
                         }
                 }
 
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
                 /* Start ReceiverInactivityTimer */
                 if (rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
@@ -1277,7 +1285,7 @@ int dtp_receive(struct dtp * instance,
 
                 if (!a || (seq_num == LWE + 1)) {
                         /* FIXME: delimiting goes here */
-                        LOG_DBG("DTP Receive (!a || (seq_num == LWE + 1))");
+                        LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d", seq_num, LWE);
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -1301,7 +1309,7 @@ int dtp_receive(struct dtp * instance,
                 }
         }
 
-#ifdef INACTIVITY_TIMERS_ENABLE        
+#if INACTIVITY_TIMERS_ENABLE        
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
                            3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
