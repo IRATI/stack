@@ -57,6 +57,9 @@ void *script_function(void *arg)
         IPCManager *ipcm = static_cast<IPCManager *>(arg);
 
         cout << "Script starts: " << ipcm << endl;
+
+        ipcm->apply_configuration();
+
         cout << "Script stops" << endl;
 
         return NULL;
