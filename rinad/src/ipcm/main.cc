@@ -54,6 +54,7 @@ class IPCManager : public EventLoopData {
                         const string& type);
         int assign_to_dif(rina::IPCProcess *ipcp,
                           const string& difName);
+        int register_at_dif(rina::IPCProcess *ipcp, const string& difName);
         int register_at_difs(rina::IPCProcess *ipcp,
                              const list<string>& difs);
         rina::IPCProcess *select_ipcp_by_dif(const
@@ -233,33 +234,43 @@ rina::IPCProcess *IPCManager::select_ipcp_by_dif(const
         return NULL;
 }
 
+int
+IPCManager::register_at_dif(rina::IPCProcess *ipcp, const string& difName)
+{
+        rina::ApplicationProcessNamingInformation dif_name(
+                        difName, string());
+        /* Select a slave (N-1) IPC process. */
+        rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
+        unsigned int seqnum;
+
+        if (!slave_ipcp) {
+                cerr << "Cannot find any IPC process belonging "
+                        << "to DIF " << difName << endl;
+                return -1;
+        }
+
+        /* Try to register @ipcp to the slave IPC process. */
+        try {
+                seqnum = slave_ipcp->registerApplication(
+                                ipcp->getName(), ipcp->getId());
+                pending_ipcp_registrations[seqnum] = ipcp;
+        } catch (Exception) {
+                cerr << __func__ << ": Error while requesting "
+                        << "registration" << endl;
+        }
+
+        return 0;
+}
+
 int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
                                  const list<string>& difs)
 {
         for (list<string>::const_iterator sit = difs.begin();
                         sit != difs.end(); sit++) {
-                rina::ApplicationProcessNamingInformation dif_name(
-                                                        *sit, string());
-                /* Select a slave (N-1) IPC process. */
-                rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
-                unsigned int seqnum;
-
-                if (!slave_ipcp) {
-                        cerr << "Cannot find any IPC process belonging "
-                                << "to DIF " << *sit << endl;
-                        continue;
-                }
-
-                /* Try to register @ipcp to the slave IPC process. */
-                try {
-                        seqnum = slave_ipcp->registerApplication(
-                                        ipcp->getName(), ipcp->getId());
-                        pending_ipcp_registrations[seqnum] = ipcp;
-                } catch (Exception) {
-                        cerr << __func__ << ": Error while requesting "
-                                << "registration" << endl;
-                }
+                register_at_dif(ipcp, *sit);
         }
+
+        return 0;
 }
 
 int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
@@ -281,6 +292,8 @@ int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
                                 << endl;
                 }
         }
+
+        return 0;
 }
 
 int
