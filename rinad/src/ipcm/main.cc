@@ -49,7 +49,9 @@ class IPCManager : public EventLoopData {
         IPCManager();
         int apply_configuration();
 
-        rina::IPCProcess *create_ipcp(const rinad::IPCProcessToCreate& iptc);
+        rina::IPCProcess *create_ipcp(
+                        const rina::ApplicationProcessNamingInformation& name,
+                        const string& type);
         int assign_to_dif(rina::IPCProcess *ipcp,
                           const string& difName);
         int register_at_difs(rina::IPCProcess *ipcp,
@@ -98,14 +100,15 @@ IPCManager::IPCManager()
 }
 
 rina::IPCProcess *
-IPCManager::create_ipcp(const rinad::IPCProcessToCreate& iptc)
+IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
+                        const string& type)
 {
         rina::IPCProcess *ipcp = NULL;
 
         try {
-                ipcp = rina::ipcProcessFactory->create(iptc.name,
-                                iptc.type);
-                if (iptc.type != rina::NORMAL_IPC_PROCESS) {
+                ipcp = rina::ipcProcessFactory->create(name,
+                                type);
+                if (type != rina::NORMAL_IPC_PROCESS) {
                         /* Shim IPC processes are set as initialized
                          * immediately. */
                         ipcp->setInitialized();
@@ -118,8 +121,8 @@ IPCManager::create_ipcp(const rinad::IPCProcessToCreate& iptc)
                 }
         } catch (rina::CreateIPCProcessException) {
                 cerr << "Failed to create  IPC process '" <<
-                        iptc.name.toString() << "' of type '" <<
-                        iptc.type << "'" << endl;
+                        name.toString() << "' of type '" <<
+                        type << "'" << endl;
         }
 
         return ipcp;
@@ -294,7 +297,7 @@ IPCManager::apply_configuration()
                         cit != config.ipcProcessesToCreate.end(); cit++) {
                 rina::IPCProcess *ipcp;
 
-                ipcp = create_ipcp(*cit);
+                ipcp = create_ipcp(cit->name, cit->type);
                 assign_to_dif(ipcp, cit->difName);
                 register_at_difs(ipcp, cit->difsToRegisterAt);
 
