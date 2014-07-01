@@ -84,6 +84,12 @@ IPCManager::IPCManager()
                                    script_function, this);
 }
 
+IPCManager::~IPCManager()
+{
+        delete console;
+        delete script;
+}
+
 void
 IPCManager::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
 {

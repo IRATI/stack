@@ -36,6 +36,7 @@
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
+        ~IPCManager();
 
         int apply_configuration();
 
