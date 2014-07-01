@@ -373,11 +373,13 @@ static int pdu_post(struct dtp * instance,
         ASSERT(instance->sv);
 
         buffer = pdu_buffer_get_rw(pdu);
-        sdu    = sdu_create_buffer_with(buffer);
+        sdu    = sdu_create_buffer_with_ni(buffer);
         if (!sdu) {
                 pdu_destroy(pdu);
                 return -1;
         }
+
+        pdu_buffer_disown(pdu);
 
         if (kfa_sdu_post(instance->kfa,
                          instance->sv->connection->port_id,
@@ -387,7 +389,6 @@ static int pdu_post(struct dtp * instance,
                 return -1;
         }
 
-        pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
 
         return 0;
@@ -566,7 +567,7 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
         dt = dtp->parent;
         ASSERT(dt);
 
-        if (seqQ_pdu_is_duplicate(dtp->seqQ,
+        if (seqQ_pdu_is_duplicate(seqQ,
                           pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
                 pdu_destroy(pdu);
                 dropped_pdus_inc(dtp->sv);
@@ -575,12 +576,6 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("No PDU to be pushed");
-                return -1;
-        }
-
-        if (!seqQ) {
-                LOG_ERR("No sequencing queue to work with");
-                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -650,7 +645,6 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
         seq_num_t            LWE;
         seq_num_t            seq_num;
         struct pdu *         pdu;
-        timeout_t            time;
         bool                 in_order_del;
         bool                 incomplete_del;
         seq_num_t            max_sdu_gap;
@@ -673,7 +667,6 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
         dtcp = dt_dtcp(dtp->parent);
 
         a              = dt_sv_a(dt);
-        time           = jiffies;
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
         max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
@@ -691,7 +684,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
                 pdu = pos->pdu;
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-                if ((seq_num == LWE +1) || (seq_num - LWE - 1 <= max_sdu_gap)) {
+                if (seq_num - LWE - 1 <= max_sdu_gap) {
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -702,11 +695,11 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
 
                         if (pdu_post(dtp, pdu))
                                 return 0;
-                        LWE = dt_sv_rcv_lft_win(dt);
+                        LWE = seq_num;
                         continue;
                 }
 
-                if (pos->time_stamp + msecs_to_jiffies(a) <= time) {
+                if (time_before_eq(jiffies, pos->time_stamp + msecs_to_jiffies(a))) {
                         /* FIXME: this have to work differently when DTCP is
                          * here */
                         if (!dtcp) {
@@ -719,11 +712,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp)
                                 seq_q_entry_destroy(pos);
                                 if (pdu_post(dtp, pdu))
                                         return 0;
-                                LWE = dt_sv_rcv_lft_win(dt);
+                                LWE = seq_num;
                         }
                         continue;
-                } else 
-                        break;
+                }
+
+                break;
                 
         }
         seqQ_for_each_entry_safe_end(seqQ);
@@ -1234,7 +1228,7 @@ int dtp_receive(struct dtp * instance,
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                         LOG_ERR("Failed to start timer");
-                        return -1;
+                        return 0;
                 }
         } else {
                 /* This op puts the PDU in seq number order  and duplicates
