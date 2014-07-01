@@ -113,7 +113,8 @@ ipcm_post_function(rina::IPCEvent *event, EventLoopData *opaque)
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
 
         if (ipcm->event_waiting && ipcm->event_ty == event->getType()
-                        && ipcm->event_sn == event->getSequenceNumber()) {
+                        && (ipcm->event_sn == 0 ||
+                            ipcm->event_sn == event->getSequenceNumber())) {
                 ipcm->event_arrived.signal();
                 ipcm->event_waiting = false;
         }
@@ -233,6 +234,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 unsigned int seqnum = ipcp->assignToDIF(dif_info);
 
                 pending_ipcp_dif_assignments[seqnum] = ipcp;
+                wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT, seqnum);
         } catch (rina::AssignToDIFException) {
                 cerr << "Error while assigning " <<
                         ipcp->getName().toString() <<
@@ -288,6 +290,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 seqnum = slave_ipcp->registerApplication(
                                 ipcp->getName(), ipcp->getId());
                 pending_ipcp_registrations[seqnum] = ipcp;
+                wait_for_event(rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);
         } catch (Exception) {
                 cerr << __func__ << ": Error while requesting "
                         << "registration" << endl;
