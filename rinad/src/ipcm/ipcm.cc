@@ -42,12 +42,22 @@ using namespace std;
 
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
-void *console_work(void *arg)
+void *console_function(void *arg)
 {
         IPCManager *ipcm = static_cast<IPCManager *>(arg);
 
         cout << "Console starts: " << ipcm << endl;
         cout << "Console stops" << endl;
+
+        return NULL;
+}
+
+void *script_function(void *arg)
+{
+        IPCManager *ipcm = static_cast<IPCManager *>(arg);
+
+        cout << "Script starts: " << ipcm << endl;
+        cout << "Script stops" << endl;
 
         return NULL;
 }
@@ -66,7 +76,10 @@ IPCManager::IPCManager()
 
         /* Create and start the console thread. */
         console = new rina::Thread(new rina::ThreadAttributes(),
-                                   console_work, this);
+                                   console_function, this);
+
+        script = new rina::Thread(new rina::ThreadAttributes(),
+                                   script_function, this);
 }
 
 rina::IPCProcess *
