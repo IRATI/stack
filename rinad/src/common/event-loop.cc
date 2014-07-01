@@ -25,9 +25,23 @@
 
 #include "event-loop.h"
 
+EventLoop::EventLoop(EventLoopData *dm) : data_model(dm),
+                               pre_function(NULL),
+                               post_function(NULL)
+{
+}
+
 void
 EventLoop::register_event(rina::IPCEventType type, EventHandler handler)
 { handlers[type] = handler; }
+
+void
+EventLoop::register_pre_function(PrePostFunction func)
+{ pre_function = func; }
+
+void
+EventLoop::register_post_function(PrePostFunction func)
+{ post_function = func; }
 
 void
 EventLoop::run()
@@ -41,9 +55,15 @@ EventLoop::run()
                         break;
                 }
 
+                if (pre_function) {
+                        pre_function(data_model);
+                }
                 ty = event->getType();
                 if (handlers.count(ty) && handlers[ty]) {
                         handlers[ty](event, data_model);
+                }
+                if (post_function) {
+                        post_function(data_model);
                 }
         }
 }

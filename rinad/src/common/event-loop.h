@@ -34,14 +34,19 @@ class EventLoopData {
 class EventLoop {
  public:
         typedef void (*EventHandler)(rina::IPCEvent *event, EventLoopData *);
+        typedef void (*PrePostFunction)(EventLoopData *);
 
+        void register_pre_function(PrePostFunction func);
+        void register_post_function(PrePostFunction func);
         void register_event(rina::IPCEventType type, EventHandler handler);
         void run();
 
-        EventLoop(EventLoopData *dm) : data_model(dm) { }
+        EventLoop(EventLoopData *dm);
  private:
         std::map<rina::IPCEventType, EventHandler> handlers;
         EventLoopData *data_model;
+        PrePostFunction pre_function;
+        PrePostFunction post_function;
 };
 
 #endif   /* __EVENT_LOOP_H__ */
