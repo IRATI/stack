@@ -40,4 +40,5 @@ ipcm_LDADD    =					\
 	$(builddir)/libjsoncpp.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
-	main.cc
+	main.cc					\
+	ipcm.cc ipcm.h
