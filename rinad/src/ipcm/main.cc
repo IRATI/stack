@@ -47,22 +47,34 @@ using namespace TCLAP;
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
+
         int apply_configuration();
 
         rina::IPCProcess *create_ipcp(
                         const rina::ApplicationProcessNamingInformation& name,
                         const string& type);
+
         int assign_to_dif(rina::IPCProcess *ipcp,
-                          const string& difName);
-        int register_at_dif(rina::IPCProcess *ipcp, const string& difName);
-        int register_at_difs(rina::IPCProcess *ipcp,
-                             const list<string>& difs);
+                          const rina::ApplicationProcessNamingInformation&
+                          difName);
+
+        int register_at_dif(rina::IPCProcess *ipcp,
+                            const rina::ApplicationProcessNamingInformation&
+                            difName);
+
+        int register_at_difs(rina::IPCProcess *ipcp, const
+                             list<rina::ApplicationProcessNamingInformation>&
+                             difs);
+
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
+
         int enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor);
+
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const list<rinad::NeighborData>& neighbors);
+
 
         rinad::RINAConfiguration config;
 
@@ -133,27 +145,26 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 
 int
 IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
-                          const string& difName)
+                          const rina::ApplicationProcessNamingInformation&
+                          dif_name)
 {
-        if (!ipcp || !difName.size()) {
+        if (!ipcp) {
                 return 0;
         }
 
         rinad::DIFProperties dif_props;
         rina::DIFInformation dif_info;
         rina::DIFConfiguration dif_config;
-        rina::ApplicationProcessNamingInformation dif_name(
-                        difName, string());
         bool found;
 
         /* Try to extract the DIF properties from the
          * configuration. */
-        found = config.lookup_dif_properties(difName,
+        found = config.lookup_dif_properties(dif_name,
                         dif_props);
         if (!found) {
                 throw new rina::AssignToDIFException(
                                 string("Cannot find properties "
-                                        "for DIF ") + difName);
+                                        "for DIF ") + dif_name.toString());
         }
 
         /* Fill in the DIFConfiguration object. */
@@ -179,7 +190,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
 
                         ss << "No address for IPC process " <<
                                 ipcp->getName().toString() <<
-                                " in DIF " << difName <<
+                                " in DIF " << dif_name.toString() <<
                                 endl;
 
                         throw new rina::AssignToDIFException(
@@ -208,9 +219,9 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
 
                 pending_ipcp_dif_assignments[seqnum] = ipcp;
         } catch (rina::AssignToDIFException) {
-                cerr << "Cannot assign " <<
+                cerr << "Error while assigning " <<
                         ipcp->getName().toString() <<
-                        " to DIF " << difName << endl;
+                        " to DIF " << dif_name.toString() << endl;
         }
 
         return 0;
@@ -237,17 +248,17 @@ rina::IPCProcess *IPCManager::select_ipcp_by_dif(const
 }
 
 int
-IPCManager::register_at_dif(rina::IPCProcess *ipcp, const string& difName)
+IPCManager::register_at_dif(rina::IPCProcess *ipcp,
+                            const rina::ApplicationProcessNamingInformation&
+                            dif_name)
 {
-        rina::ApplicationProcessNamingInformation dif_name(
-                        difName, string());
         /* Select a slave (N-1) IPC process. */
         rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
         unsigned int seqnum;
 
         if (!slave_ipcp) {
                 cerr << "Cannot find any IPC process belonging "
-                        << "to DIF " << difName << endl;
+                        << "to DIF " << dif_name.toString() << endl;
                 return -1;
         }
 
@@ -265,11 +276,11 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp, const string& difName)
 }
 
 int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
-                                 const list<string>& difs)
+                const list<rina::ApplicationProcessNamingInformation>& difs)
 {
-        for (list<string>::const_iterator sit = difs.begin();
-                        sit != difs.end(); sit++) {
-                register_at_dif(ipcp, *sit);
+        for (list<rina::ApplicationProcessNamingInformation>::const_iterator
+                        nit = difs.begin(); nit != difs.end(); nit++) {
+                register_at_dif(ipcp, *nit);
         }
 
         return 0;
@@ -328,6 +339,7 @@ IPCManager::apply_configuration()
                 ipcps.push_back(ipcp);
         }
 
+        /* Perform all the enrollments specified by the configuration file. */
         for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
                                         pit != ipcps.end(); pit++, cit++) {
                 enroll_to_difs(*pit, cit->neighbors);

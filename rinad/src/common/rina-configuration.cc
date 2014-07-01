@@ -35,8 +35,9 @@ namespace rinad {
  * @param difName
  * @result
  */
-bool RINAConfiguration::lookup_dif_properties(const std::string& dif_name,
-                                              DIFProperties& result) const
+bool RINAConfiguration::lookup_dif_properties(
+                const rina::ApplicationProcessNamingInformation& dif_name,
+                DIFProperties& result) const
 {
         for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
                                         it != difConfigurations.end(); it++) {
