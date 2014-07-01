@@ -57,7 +57,7 @@ class IPCManager : public EventLoopData {
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
         int enroll_to_difs(rina::IPCProcess *ipcp,
-                           const rinad::IPCProcessToCreate& iptc);
+                           const list<rinad::NeighborData>& neighbors);
 
         rinad::RINAConfiguration config;
 
@@ -260,11 +260,11 @@ int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
 }
 
 int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
-                               const rinad::IPCProcessToCreate& iptc)
+                               const list<rinad::NeighborData>& neighbors)
 {
         for (list<rinad::NeighborData>::const_iterator
-                        nit = iptc.neighbors.begin();
-                                nit != iptc.neighbors.end(); nit++) {
+                        nit = neighbors.begin();
+                                nit != neighbors.end(); nit++) {
                 try {
                         unsigned int seqnum;
 
@@ -303,7 +303,7 @@ IPCManager::apply_configuration()
 
         for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
                                         pit != ipcps.end(); pit++, cit++) {
-                enroll_to_difs(*pit, *cit);
+                enroll_to_difs(*pit, cit->neighbors);
         }
 
         return 0;
