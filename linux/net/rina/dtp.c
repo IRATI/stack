@@ -381,6 +381,8 @@ static int pdu_post(struct dtp * instance,
                 return -1;
         }
 
+        pdu_buffer_disown(pdu);
+
         if (kfa_sdu_post(instance->kfa,
                          instance->sv->connection->port_id,
                          sdu)) {
@@ -389,7 +391,6 @@ static int pdu_post(struct dtp * instance,
                 return -1;
         }
 
-        pdu_buffer_disown(pdu);
         pdu_destroy(pdu);
 
         return 0;
@@ -568,7 +569,7 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
         dt = dtp->parent;
         ASSERT(dt);
 
-        if (seqQ_pdu_is_duplicate(dtp->seqQ,
+        if (seqQ_pdu_is_duplicate(seqQ,
                           pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
                 pdu_destroy(pdu);
                 dropped_pdus_inc(dtp->sv);
@@ -577,12 +578,6 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("No PDU to be pushed");
-                return -1;
-        }
-
-        if (!seqQ) {
-                LOG_ERR("No sequencing queue to work with");
-                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -652,7 +647,6 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seq_num_t            LWE;
         seq_num_t            seq_num;
         struct pdu *         pdu;
-        timeout_t            time;
         bool                 in_order_del;
         bool                 incomplete_del;
         seq_num_t            max_sdu_gap;
@@ -675,7 +669,6 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         //dtcp = dt_dtcp(dtp->parent);
 
         a              = dt_sv_a(dt);
-        time           = jiffies;
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
         /* FIXME: This has to be fixed from user-space */
@@ -699,7 +692,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 pdu = pos->pdu;
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-                if ((seq_num == LWE +1) || (seq_num - LWE - 1 <= max_sdu_gap)) {
+                if (seq_num - LWE - 1 <= max_sdu_gap) {
                         LOG_DBG("Processing A timer order or in gap");
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
@@ -718,8 +711,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         continue;
                 }
 
-                //if (pos->time_stamp + msecs_to_jiffies(a) >= time) {
-                if (time_after_eq(pos->time_stamp + msecs_to_jiffies(a), time)) {
+                if (time_before_eq(jiffies, pos->time_stamp + msecs_to_jiffies(a))) {
                         LOG_DBG("Processing A timer expired");
                         /* FIXME: this have to work differently when DTCP is
                          * here */
@@ -739,10 +731,9 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         LWE = dt_sv_rcv_lft_win(dt);
                         }
                         continue;
-                } else {
-                        LOG_DBG("Processing A timer else");
-                        break;
                 }
+
+                break;
                 
         }
         spin_unlock(&seqQ->lock);
@@ -1274,7 +1265,7 @@ int dtp_receive(struct dtp * instance,
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                         LOG_ERR("Failed to start timer");
-                        return -1;
+                        return 0;
                 }
 #endif                
         } else {
