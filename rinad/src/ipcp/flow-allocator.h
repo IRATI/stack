@@ -301,7 +301,7 @@ private:
 };
 
 ///Implementation of the FlowAllocatorInstance
-class FlowAllocatorInstance: public IFlowAllocatorInstance, public ICDAPResponseMessageHandler {
+class FlowAllocatorInstance: public IFlowAllocatorInstance, public BaseCDAPResponseMessageHandler {
 public:
 	enum FAIState {NO_STATE, CONNECTION_CREATE_REQUESTED, MESSAGE_TO_PEER_FAI_SENT,
 		APP_NOTIFIED_OF_INCOMING_FLOW, CONNECTION_UPDATE_REQUESTED, FLOW_ALLOCATED,
@@ -328,19 +328,20 @@ public:
 	void deleteFlowRequestMessageReceived(const rina::CDAPMessage * requestMessage,
 				int underlyingPortId);
 	void destroyFlowAllocatorInstance(const std::string& flowObjectName, bool requestor);
+
+	/// If the response to the allocate request is negative
+    /// the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a
+	/// positive result, a new Create_Flow Request is sent and the CreateFlowTimer is reset.
+	/// Otherwise, if the AllocateRetryPolicy returns a negative result or the MaxCreateRetries
+	/// has been exceeded, an Allocate_Request.deliver primitive to notify the Application that
+	/// the flow could not be created. (If the reason was "Application Not Found", the primitive
+	/// will be delivered to the Inter-DIF Directory to search elsewhere.The FAI deletes the DTP
+	/// and DTCP instances it created and does any other housekeeping necessary, before
+	/// terminating.  If the response is positive, it completes the binding of the DTP-instance
+	/// with this connection-endpoint-id to the requesting Application and invokes a
+	/// Allocate_Request.submit primitive to notify the requesting Application that its allocation
+	/// request has been satisfied.
 	void createResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void deleteResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void writeResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void stopResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 private:
@@ -371,10 +372,29 @@ private:
 	const rina::CDAPMessage * request_message_;
 	int underlying_port_id_;
 	rina::Lockable * lock_;
+	rina::Timer * timer_;
 
 	void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator, int port_id);
 	void replyToIPCManager(rina::FlowRequestEvent & event, int result);
 	void releasePortId();
+
+	/// Release the port-id, unlock and remove the FAI from the FA
+	void releaseUnlockRemove();
+};
+
+class TearDownFlowTimerTask: public rina::TimerTask {
+public:
+	static const double DELAY;
+
+	TearDownFlowTimerTask(FlowAllocatorInstance * flow_allocator_instance,
+			const std::string& flow_object_name, bool requestor);
+	~TearDownFlowTimerTask() throw() {}
+	void run();
+
+private:
+	FlowAllocatorInstance * flow_allocator_instance_;
+	std::string flow_object_name_;
+	bool requestor_;
 };
 
 }
