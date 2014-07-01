@@ -1,7 +1,7 @@
 /*
- * Dummy
+ * Event loop over librina
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,25 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINAD_DUMMY_H
-#define RINAD_DUMMY_H
+#include <iostream>
+#include <map>
 
-#ifdef __cplusplus
+#include <librina/common.h>
 
-#endif
+class EventLoopData {
+ public:
+        virtual ~EventLoopData() { }
+};
 
-#endif
+class EventLoop {
+ public:
+        typedef void (*EventHandler)(rina::IPCEvent *event, EventLoopData *);
+
+        void register_event(rina::IPCEventType type, EventHandler handler);
+        void run();
+
+        EventLoop(EventLoopData *dm) : data_model(dm) { }
+ private:
+        std::map<rina::IPCEventType, EventHandler> handlers;
+        EventLoopData *data_model;
+};
