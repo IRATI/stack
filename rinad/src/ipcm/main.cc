@@ -70,8 +70,8 @@ int main(int argc, char * argv[])
                           << e.argId() << endl;
         }
 
-        IPCManager *ipcm = new IPCManager();
-        EventLoop loop(ipcm);
+        IPCManager ipcm;
+        EventLoop loop(&ipcm);
 
         register_handlers_all(loop);
 
