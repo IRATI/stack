@@ -46,7 +46,7 @@ struct AddressPrefixConfiguration {
          * The address prefix (it is the first valid address for the
          * given subdomain)
          */
-        long addressPrefix;
+        unsigned int addressPrefix;
 
         /* The organization whose addresses start by the prefix */
         std::string organization;
@@ -60,7 +60,7 @@ struct ApplicationToDIFMapping {
          * APName-APInstance-AEName-AEInstance
          */
         std::string encodedAppName;
-        std::string difName;
+        rina::ApplicationProcessNamingInformation difName;
 };
 
 struct NMinusOneFlowsConfiguration {
@@ -106,7 +106,7 @@ struct KnownIPCProcessAddress {
         rina::ApplicationProcessNamingInformation name;
 
         /* The address of the remote IPC Process */
-        long address;
+        unsigned int address;
 
         KnownIPCProcessAddress() : address(0) { }
 };
@@ -114,7 +114,7 @@ struct KnownIPCProcessAddress {
 /* The configuration required to create a DIF */
 struct DIFProperties {
 
-        std::string difName;
+        rina::ApplicationProcessNamingInformation difName;
         std::string difType;
         rina::DataTransferConstants dataTransferConstants;
         std::list<rina::QoSCube> qosCubes;
@@ -146,14 +146,14 @@ struct DIFProperties {
 
         bool lookup_ipcp_address(
                         const rina::ApplicationProcessNamingInformation&,
-                        long& result);
+                        unsigned int& result);
 };
 
 struct NeighborData {
 
-        rina::ApplicationProcessNamingInformation apNameInfo;
-        std::string supportingDifName;
-        std::string difName;
+        rina::ApplicationProcessNamingInformation apName;
+        rina::ApplicationProcessNamingInformation supportingDifName;
+        rina::ApplicationProcessNamingInformation difName;
 };
 
 /*
@@ -171,9 +171,9 @@ struct IPCProcessToCreate {
 
         std::string type;
         rina::ApplicationProcessNamingInformation name;
-        std::string difName;
+        rina::ApplicationProcessNamingInformation difName;
         std::list<NeighborData> neighbors;
-        std::list<std::string> difsToRegisterAt;
+        std::list<rina::ApplicationProcessNamingInformation> difsToRegisterAt;
         std::string hostname;
         std::list<SDUProtectionOption> sduProtectionOptions;
         std::map<std::string, std::string> parameters;
@@ -282,12 +282,13 @@ class RINAConfiguration {
         std::list<ApplicationToDIFMapping> applicationToDIFMappings;
 
 
-        bool lookup_DIF_properties(const std::string& dif_name,
-                                   DIFProperties& result) const;
+        bool lookup_dif_properties(
+                        const rina::ApplicationProcessNamingInformation& dif_name,
+                        DIFProperties& result) const;
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
-                long& result);
+                unsigned int& result);
 #endif
         std::string toString() const;
 };

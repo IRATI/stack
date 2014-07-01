@@ -18,6 +18,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef __EVENT_LOOP_H__
+#define __EVENT_LOOP_H__
+
 #include <iostream>
 #include <map>
 
@@ -40,3 +43,5 @@ class EventLoop {
         std::map<rina::IPCEventType, EventHandler> handlers;
         EventLoopData *data_model;
 };
+
+#endif   /* __EVENT_LOOP_H__ */
