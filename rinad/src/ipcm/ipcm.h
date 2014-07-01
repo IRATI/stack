@@ -33,14 +33,25 @@
 #include "rina-configuration.h"
 
 
+class IPCMConcurrency : public rina::ConditionVariable {
+ public:
+        void wait_for_event(rina::IPCEventType ty, unsigned int seqnum);
+        void notify_event(rina::IPCEvent *event);
+
+        IPCMConcurrency() : event_waiting(false) { }
+
+ private:
+        bool event_waiting;
+        rina::IPCEventType event_ty;
+        unsigned int event_sn;
+};
+
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
         ~IPCManager();
 
         int apply_configuration();
-
-        void wait_for_event(rina::IPCEventType ty, unsigned int seqnum);
 
         rina::IPCProcess *create_ipcp(
                         const rina::ApplicationProcessNamingInformation& name,
@@ -75,10 +86,7 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_registrations;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
 
-        rina::ConditionVariable event_arrived; /* Also acts as lock. */
-        bool event_waiting;
-        rina::IPCEventType event_ty;
-        unsigned int event_sn;
+        IPCMConcurrency concurrency;
 
  private:
         rina::Thread *console;

@@ -74,8 +74,6 @@ IPCManager::IPCManager()
                 exit(EXIT_FAILURE);
         }
 
-        event_waiting = false;
-
         /* Create and start the console thread. */
         console = new rina::Thread(new rina::ThreadAttributes(),
                                    console_function, this);
@@ -91,12 +89,22 @@ IPCManager::~IPCManager()
 }
 
 void
-IPCManager::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
+IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
 {
         event_waiting = true;
         event_ty = ty;
         event_sn = seqnum;
-        event_arrived.doWait();
+        doWait();
+}
+
+void IPCMConcurrency::notify_event(rina::IPCEvent *event)
+{
+        if (event_waiting && event_ty == event->getType()
+                        && (event_sn == 0 ||
+                            event_sn == event->getSequenceNumber())) {
+                signal();
+                event_waiting = false;
+        }
 }
 
 static void
@@ -104,7 +112,7 @@ ipcm_pre_function(rina::IPCEvent *event, EventLoopData *opaque)
 {
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
 
-        ipcm->event_arrived.lock();
+        ipcm->concurrency.lock();
 }
 
 static void
@@ -112,13 +120,8 @@ ipcm_post_function(rina::IPCEvent *event, EventLoopData *opaque)
 {
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
 
-        if (ipcm->event_waiting && ipcm->event_ty == event->getType()
-                        && (ipcm->event_sn == 0 ||
-                            ipcm->event_sn == event->getSequenceNumber())) {
-                ipcm->event_arrived.signal();
-                ipcm->event_waiting = false;
-        }
-        ipcm->event_arrived.unlock();
+        ipcm->concurrency.notify_event(event);
+        ipcm->concurrency.unlock();
 }
 
 rina::IPCProcess *
@@ -128,7 +131,7 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
         rina::IPCProcess *ipcp = NULL;
         bool wait = false;
 
-        event_arrived.lock();
+        concurrency.lock();
 
         try {
                 ipcp = rina::ipcProcessFactory->create(name,
@@ -152,10 +155,11 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
         }
 
         if (wait) {
-                wait_for_event(rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT, 0);
+                concurrency.wait_for_event(
+                        rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT, 0);
         }
 
-        event_arrived.unlock();
+        concurrency.unlock();
 
         return ipcp;
 }
@@ -175,7 +179,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         bool found;
         int ret = -1;
 
-        event_arrived.lock();
+        concurrency.lock();
 
         /* Try to extract the DIF properties from the
          * configuration. */
@@ -234,7 +238,8 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 unsigned int seqnum = ipcp->assignToDIF(dif_info);
 
                 pending_ipcp_dif_assignments[seqnum] = ipcp;
-                wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT, seqnum);
+                concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
+                                           seqnum);
         } catch (rina::AssignToDIFException) {
                 cerr << "Error while assigning " <<
                         ipcp->getName().toString() <<
@@ -243,7 +248,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
 
         ret = 0;
 out:
-        event_arrived.unlock();
+        concurrency.unlock();
 
         return ret;
 }
@@ -283,20 +288,21 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 return -1;
         }
 
-        event_arrived.lock();
+        concurrency.lock();
 
         /* Try to register @ipcp to the slave IPC process. */
         try {
                 seqnum = slave_ipcp->registerApplication(
                                 ipcp->getName(), ipcp->getId());
                 pending_ipcp_registrations[seqnum] = ipcp;
-                wait_for_event(rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);
+                concurrency.wait_for_event(
+                        rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);
         } catch (Exception) {
                 cerr << __func__ << ": Error while requesting "
                         << "registration" << endl;
         }
 
-        event_arrived.unlock();
+        concurrency.unlock();
 
         return 0;
 }
@@ -316,7 +322,7 @@ int
 IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor)
 {
-        event_arrived.lock();
+        concurrency.lock();
 
         try {
                 unsigned int seqnum;
@@ -331,7 +337,7 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                         << endl;
         }
 
-        event_arrived.unlock();
+        concurrency.unlock();
 
         return 0;
 }
