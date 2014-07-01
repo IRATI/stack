@@ -39,9 +39,7 @@ tclapSOURCES =					\
 	tclap/XorHandler.h			\
 	tclap/ZshCompletionOutput.h
 
-librinad_la_SOURCES  =				\
-	dummy.cc              dummy.h		\
-	rina-configuration.cc			\
-	rina-configuration.h 			\
-	event-loop.cc	event-loop.h		\
+librinad_la_SOURCES  =					\
+	rina-configuration.cc rina-configuration.h	\
+	event-loop.cc	      event-loop.h		\
 	$(tclapSOURCES)

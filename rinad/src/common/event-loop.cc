@@ -22,13 +22,12 @@
 #include <map>
 
 #include <librina/common.h>
+
 #include "event-loop.h"
 
 void
 EventLoop::register_event(rina::IPCEventType type, EventHandler handler)
-{
-        handlers[type] = handler;
-}
+{ handlers[type] = handler; }
 
 void
 EventLoop::run()
