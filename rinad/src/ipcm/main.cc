@@ -53,7 +53,7 @@ class IPCManager : public EventLoopData {
         int assign_to_dif(rina::IPCProcess *ipcp,
                           const rinad::IPCProcessToCreate& iptc);
         int register_at_difs(rina::IPCProcess *ipcp,
-                             const rinad::IPCProcessToCreate& iptc);
+                             const list<string>& difs);
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
         int enroll_to_difs(rina::IPCProcess *ipcp,
@@ -231,10 +231,10 @@ rina::IPCProcess *IPCManager::select_ipcp_by_dif(const
 }
 
 int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
-                                 const rinad::IPCProcessToCreate& iptc)
+                                 const list<string>& difs)
 {
-        for (list<string>::const_iterator sit = iptc.difsToRegisterAt.begin();
-                        sit != iptc.difsToRegisterAt.end(); sit++) {
+        for (list<string>::const_iterator sit = difs.begin();
+                        sit != difs.end(); sit++) {
                 rina::ApplicationProcessNamingInformation dif_name(
                                                         *sit, string());
                 /* Select a slave (N-1) IPC process. */
@@ -296,7 +296,7 @@ IPCManager::apply_configuration()
 
                 ipcp = create_ipcp(*cit);
                 assign_to_dif(ipcp, *cit);
-                register_at_difs(ipcp, *cit);
+                register_at_difs(ipcp, cit->difsToRegisterAt);
 
                 ipcps.push_back(ipcp);
         }
