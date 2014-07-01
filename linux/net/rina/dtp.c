@@ -678,6 +678,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         time           = jiffies;
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
+        /* FIXME: This has to be fixed from user-space */
         //max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
         max_sdu_gap    = 0;
 
@@ -690,46 +691,62 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
 
 
-        seqQ_for_each_entry_safe(seqQ, pos, n) {
+        //seqQ_for_each_entry_safe(seqQ, pos, n) {
+        spin_lock(&seqQ->lock);                                        
+        list_for_each_entry_safe(pos, n, &seqQ->queue->head, next) {
+                LOG_DBG("LWEU: Loop LWE = %d", LWE);
+
                 pdu = pos->pdu;
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
                 if ((seq_num == LWE +1) || (seq_num - LWE - 1 <= max_sdu_gap)) {
+                        LOG_DBG("Processing A timer order or in gap");
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
+                                spin_unlock(&seqQ->lock);
                                 return 0;
                         }
                         pos->pdu = NULL;
                         seq_q_entry_destroy(pos);
 
-                        if (pdu_post(dtp, pdu))
+                        if (pdu_post(dtp, pdu)) {
+                                spin_unlock(&seqQ->lock);
                                 return 0;
+                        }
                         LWE = dt_sv_rcv_lft_win(dt);
                         continue;
                 }
 
-                if (pos->time_stamp + msecs_to_jiffies(a) <= time) {
+                //if (pos->time_stamp + msecs_to_jiffies(a) >= time) {
+                if (time_after_eq(pos->time_stamp + msecs_to_jiffies(a), time)) {
+                        LOG_DBG("Processing A timer expired");
                         /* FIXME: this have to work differently when DTCP is
                          * here */
                         if (!dtcp) {
                                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                         LOG_ERR("Failed to set new "
                                                 "left window edge");
+                                        spin_unlock(&seqQ->lock);
                                         return 0;
                                 }
                                 pos->pdu = NULL;
                                 seq_q_entry_destroy(pos);
-                                if (pdu_post(dtp, pdu))
+                                if (pdu_post(dtp, pdu)){
+                                        spin_unlock(&seqQ->lock);
                                         return 0;
-                                LWE = dt_sv_rcv_lft_win(dt);
+                                }
+                        LWE = dt_sv_rcv_lft_win(dt);
                         }
                         continue;
-                } else 
+                } else {
+                        LOG_DBG("Processing A timer else");
                         break;
+                }
                 
         }
-        seqQ_for_each_entry_safe_end(seqQ);
+        spin_unlock(&seqQ->lock);
+        //seqQ_for_each_entry_safe_end(seqQ);
         
         return LWE;
 }
@@ -757,7 +774,8 @@ static void tf_a(void * data)
         dtcp = dt_dtcp(dtp->parent);
 
         /* Invoke delimiting and update left window edge */
-        /*seq_num_sv_update =  process_A_expiration(dtp, dtcp);
+        
+        seq_num_sv_update =  process_A_expiration(dtp, dtcp);
         if (dtcp) {
                 if (!seq_num_sv_update) {
                         LOG_ERR("ULWE returned no seq num to update");
@@ -769,7 +787,18 @@ static void tf_a(void * data)
                         return;
                 }
                 return;
-        }*/
+        }
+
+        /***************
+        LOG_DBG("TF_A executed");
+        
+        struct pdu * pdu = seqQ_pop(dtp->seqQ);
+        if (pdu)
+                pdu_post(dtp, pdu);
+        seq_num_t seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));        
+        dt_sv_rcv_lft_win_set(dtp->parent, seq_num);        
+        ***************/
+
 
         /* FIXME: timer must be restarted. The following line may produce a soft
          * lockup */
