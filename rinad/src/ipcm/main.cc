@@ -56,12 +56,15 @@ class IPCManager : public EventLoopData {
                              const rinad::IPCProcessToCreate& iptc);
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
+        int enroll_to_difs(rina::IPCProcess *ipcp,
+                           const rinad::IPCProcessToCreate& iptc);
 
         rinad::RINAConfiguration config;
 
         map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
-        map<long, rina::IPCProcess*> pending_ipcp_dif_assignments;
-        map<long, rina::IPCProcess*> pending_ipcp_registrations;
+        map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
+        map<unsigned int, rina::IPCProcess*> pending_ipcp_registrations;
+        map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
 
  private:
         rina::Thread *console;
@@ -150,7 +153,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         /* Fill in the DIFConfiguration object. */
         if (ipcp->getType() == rina::NORMAL_IPC_PROCESS) {
                 rina::EFCPConfiguration efcp_config;
-                long address;
+                unsigned int address;
 
                 /* FIll in the EFCPConfiguration object. */
                 efcp_config.set_data_transfer_constants(
@@ -195,7 +198,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         /* Invoke librina to assign the IPC process to the
          * DIF specified by dif_info. */
         try {
-                long seqnum = ipcp->assignToDIF(dif_info);
+                unsigned int seqnum = ipcp->assignToDIF(dif_info);
 
                 pending_ipcp_dif_assignments[seqnum] = ipcp;
         } catch (rina::AssignToDIFException) {
@@ -236,7 +239,7 @@ int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
                                                         *sit, string());
                 /* Select a slave (N-1) IPC process. */
                 rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
-                long seqnum;
+                unsigned int seqnum;
 
                 if (!slave_ipcp) {
                         cerr << "Cannot find any IPC process belonging "
@@ -256,20 +259,51 @@ int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
         }
 }
 
+int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
+                               const rinad::IPCProcessToCreate& iptc)
+{
+        for (list<rinad::NeighborData>::const_iterator
+                        nit = iptc.neighbors.begin();
+                                nit != iptc.neighbors.end(); nit++) {
+                try {
+                        unsigned int seqnum;
+
+                        seqnum = ipcp->enroll(nit->difName,
+                                              nit->supportingDifName,
+                                              nit->apName);
+                        pending_ipcp_enrollments[seqnum] = ipcp;
+                } catch (rina::EnrollException) {
+                        cerr << __func__ << ": Error while enrolling "
+                                << "to DIF " << nit->difName.toString()
+                                << endl;
+                }
+        }
+}
+
 int
 IPCManager::apply_configuration()
 {
+        list<rina::IPCProcess *> ipcps;
+        list<rinad::IPCProcessToCreate>::iterator cit;
+        list<rina::IPCProcess *>::iterator pit;
+
         /* Examine all the IPCProcesses that are going to be created
          * according to the configuration file.
          */
-        for (list<rinad::IPCProcessToCreate>::iterator
-                it = config.ipcProcessesToCreate.begin();
-                        it != config.ipcProcessesToCreate.end(); it++) {
+        for (cit = config.ipcProcessesToCreate.begin();
+                        cit != config.ipcProcessesToCreate.end(); cit++) {
                 rina::IPCProcess *ipcp;
 
-                ipcp = create_ipcp(*it);
-                assign_to_dif(ipcp, *it);
-                register_at_difs(ipcp, *it);
+                ipcp = create_ipcp(*cit);
+                assign_to_dif(ipcp, *cit);
+                register_at_difs(ipcp, *cit);
+
+                ipcps.push_back(ipcp);
+        }
+
+        for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
+                                        pit != ipcps.end(); pit++, cit++) {
+                enroll_to_difs(*pit, *cit);
         }
 
         return 0;

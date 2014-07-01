@@ -46,7 +46,7 @@ struct AddressPrefixConfiguration {
          * The address prefix (it is the first valid address for the
          * given subdomain)
          */
-        long addressPrefix;
+        unsigned int addressPrefix;
 
         /* The organization whose addresses start by the prefix */
         std::string organization;
@@ -106,7 +106,7 @@ struct KnownIPCProcessAddress {
         rina::ApplicationProcessNamingInformation name;
 
         /* The address of the remote IPC Process */
-        long address;
+        unsigned int address;
 
         KnownIPCProcessAddress() : address(0) { }
 };
@@ -146,14 +146,14 @@ struct DIFProperties {
 
         bool lookup_ipcp_address(
                         const rina::ApplicationProcessNamingInformation&,
-                        long& result);
+                        unsigned int& result);
 };
 
 struct NeighborData {
 
-        rina::ApplicationProcessNamingInformation apNameInfo;
-        std::string supportingDifName;
-        std::string difName;
+        rina::ApplicationProcessNamingInformation apName;
+        rina::ApplicationProcessNamingInformation supportingDifName;
+        rina::ApplicationProcessNamingInformation difName;
 };
 
 /*
@@ -287,7 +287,7 @@ class RINAConfiguration {
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
-                long& result);
+                unsigned int& result);
 #endif
         std::string toString() const;
 };

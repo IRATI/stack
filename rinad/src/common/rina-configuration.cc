@@ -59,7 +59,7 @@ bool RINAConfiguration::lookup_dif_properties(const std::string& dif_name,
  */
 bool RINAConfiguration::lookup_ipcp_address(const std::string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
-                long& result)
+                unsigned int& result)
 {
         DIFProperties dif_props;
         bool found;
@@ -107,7 +107,7 @@ std::string RINAConfiguration::toString() const
 
 bool DIFProperties::lookup_ipcp_address(
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
-                long& result)
+                unsigned int& result)
 {
         for (list<KnownIPCProcessAddress>::const_iterator
                 it = knownIPCProcessAddresses.begin();
