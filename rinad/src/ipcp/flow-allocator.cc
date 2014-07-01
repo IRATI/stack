@@ -631,6 +631,10 @@ FlowAllocatorInstance::~FlowAllocatorInstance() {
 	if (lock_) {
 		delete lock_;
 	}
+
+	if (timer_) {
+		delete timer_;
+	}
 }
 
 void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
@@ -646,6 +650,7 @@ void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
 	request_message_ = 0;
 	underlying_port_id_ = 0;
 	lock_ = new rina::Lockable();
+	timer_ = new rina::Timer();
 }
 
 int FlowAllocatorInstance::get_port_id() const {
@@ -729,6 +734,12 @@ void FlowAllocatorInstance::releasePortId() {
 	}
 }
 
+void FlowAllocatorInstance::releaseUnlockRemove() {
+	releasePortId();
+	lock_->unlock();
+	flow_allocator_->removeFlowAllocatorInstance(port_id_);
+}
+
 void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) {
 	lock_->lock();
 
@@ -750,6 +761,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	LOG_DBG("Created connection with cep-id %d", event.getCepId());
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
+	const rina::CDAPMessage * cdapMessage = 0;
 	try{
 		//5 get the portId of any open CDAP session
 		std::vector<int> cdapSessions;
@@ -758,7 +770,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 
 		//6 Encode the flow object and send it to the destination IPC process
 		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
-		const rina::CDAPMessage * cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(cdapSessionId, 0,
+		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(cdapSessionId, 0,
 				rina::CDAPMessage::NONE_FLAGS, Flow::FLOW_RIB_OBJECT_CLASS, 0, object_name_, &objectValue, 0, true);
 
 		underlying_port_id_ = cdapSessionId;
@@ -766,13 +778,13 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 		state_ = MESSAGE_TO_PEER_FAI_SENT;
 
 		rib_daemon_->sendMessageToAddress(*request_message_, cdapSessionId, flow_->get_destination_address(), this);
+		delete cdapMessage;
 	}catch(Exception &e){
 		LOG_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
 				e.what());
-		releasePortId();
+		delete cdapMessage;
 		replyToIPCManager(flow_request_event_, -1);
-		lock_->unlock();
-		flow_allocator_->removeFlowAllocatorInstance(port_id_);
+		releaseUnlockRemove();
 		return;
 	}
 
@@ -781,69 +793,370 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 
 void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow, const rina::CDAPMessage * requestMessage,
 		int underlyingPortId){
-	rina::AccessGuard guard = rina::AccessGuard(*lock_);
-	//TODO
+	lock_->lock();
+
+	LOG_DBG("Create flow request received: %s", flow->toString().c_str());
+	flow_ = flow;
+	if (flow_->get_destination_address() == 0) {
+		flow_->set_destination_address(ipc_process_->get_address());
+	}
+	request_message_ = requestMessage;
+	underlying_port_id_ = underlyingPortId;
+	flow_->set_destination_port_id(port_id_);
+
+	//1 Reverse connection source/dest addresses and CEP-ids
+	rina::Connection * connection = flow_->getActiveConnection();
+	connection->setPortId(port_id_);
+	unsigned int aux = connection->getSourceAddress();
+	connection->setSourceAddress(connection->getDestAddress());
+	connection->setDestAddress(aux);
+	connection->setDestCepId(connection->getSourceCepId());
+	connection->setFlowUserIpcProcessId(namespace_manager_->getRegIPCProcessId(flow_->get_destination_naming_info()));
+	LOG_DBG("Target application IPC Process id is %d", connection->getFlowUserIpcProcessId());
+
+	//2 TODO Check if the source application process has access to the destination application process.
+	// If not send negative M_CREATE_R back to the sender IPC process, and housekeeping.
+	// Not done in this version, this decision is left to the application
+	//3 TODO If it has, determine if the proposed policies for the flow are acceptable (invoke NewFlowREquestPolicy)
+	//Not done in this version, it is assumed that the proposed policies for the flow are acceptable.
+
+	//4 Request creation of connection
+	try {
+		state_ = CONNECTION_CREATE_REQUESTED;
+		rina::kernelIPCProcess->createConnectionArrived(*connection);
+		LOG_DBG("Requested the creation of a connection to the kernel to support flow with port-id %d",
+				port_id_);
+	} catch (Exception &e) {
+		LOG_ERR("Problems requesting a connection to the kernel: %s ", e.what());
+		releaseUnlockRemove();
+		return;
+	}
+
+	lock_->unlock();
 }
 
 void FlowAllocatorInstance::processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event) {
-	rina::AccessGuard(*lock_);
-	//TODO
+	lock_->lock();
+
+	if (state_ != CONNECTION_CREATE_REQUESTED) {
+		LOG_ERR("Received an allocate response event while not in APP_NOTIFIED_OF_INCOMING_FLOW state. Current state: %d",
+				state_);
+		lock_->unlock();
+		return;
+	}
+
+	if (event.getSourceCepId() < 0) {
+		LOG_ERR("Create connection operation was unsuccessful: %d", event.getSourceCepId());
+		releaseUnlockRemove();
+		return;
+	}
+
+	try {
+		state_ = APP_NOTIFIED_OF_INCOMING_FLOW;
+		allocate_response_message_handle_  = rina::extendedIPCManager->allocateFlowRequestArrived(flow_->get_destination_naming_info(),
+				flow_->get_source_naming_info(), flow_->get_flow_specification(), port_id_);
+		LOG_DBG("Informed IPC Manager about incoming flow allocation request, got handle: %ud"
+				, allocate_response_message_handle_);
+	} catch(Exception &e) {
+		LOG_ERR("Problems informing the IPC Manager about an incoming flow allocation request: %s",
+				e.what());
+		releaseUnlockRemove();
+		return;
+	}
+
+	lock_->unlock();
 }
 
 void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowResponseEvent& event) {
-	rina::AccessGuard(*lock_);
-	//TODO
+	lock_->lock();
+
+	if (state_ != APP_NOTIFIED_OF_INCOMING_FLOW) {
+		LOG_ERR("Received an allocate response event while not in APP_NOTIFIED_OF_INCOMING_FLOW state. Current state: %d",
+				state_);
+		lock_->unlock();
+		return;
+	}
+
+	const rina::CDAPMessage * cdapMessage = 0;
+	if (event.getResult() == 0){
+		//Flow has been accepted
+		try{
+			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
+			cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS, request_message_->get_obj_class(), 0,
+					request_message_->get_obj_name(), &objectValue, 0, 0, request_message_->get_invoke_id());
+
+			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
+					flow_->get_source_address(), 0);
+			delete cdapMessage;
+		}catch(Exception &e){
+			LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s", e.what());
+			delete cdapMessage;
+
+			try{
+				rina::extendedIPCManager->flowDeallocated(port_id_);
+			} catch(Exception &e) {
+				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+			}
+
+			releaseUnlockRemove();
+			return;
+		}
+
+		try{
+			flow_->set_state(Flow::ALLOCATED);
+			rib_daemon_->createObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, this, 0);
+		} catch(Exception &e) {
+			LOG_WARN("Error creating Flow Rib object: %s", e.what());
+		}
+
+		state_ = FLOW_ALLOCATED;
+		lock_->unlock();
+		return;
+	}
+
+	//Flow has been rejected
+	try{
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
+		cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
+				rina::CDAPMessage::NONE_FLAGS, request_message_->get_obj_class(), 0,
+				request_message_->get_obj_name(), &objectValue, -1, "Application rejected the flow",
+				request_message_->get_invoke_id());
+
+		rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
+				flow_->get_source_address(), 0);
+		delete cdapMessage;
+		cdapMessage = 0;
+	}catch(Exception &e){
+		LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s", e.what());
+		if (cdapMessage) {
+			delete cdapMessage;
+		}
+	}
+
+	releaseUnlockRemove();
 }
 
 void FlowAllocatorInstance::processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event)  {
-	rina::AccessGuard(*lock_);
-	//TODO
+	lock_->lock();
+
+	if (state_ != CONNECTION_UPDATE_REQUESTED) {
+		LOG_ERR("Received CDAP Message while not in CONNECTION_UPDATE_REQUESTED state. Current state is: %d", state_);
+		lock_->unlock();
+		return;
+	}
+
+	//Update connection was unsuccessful
+	if (event.getResult() != 0) {
+		LOG_ERR("The kernel denied the update of a connection: %d", event.getResult());
+
+		try {
+			flow_request_event_.setPortId(-1);
+			rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_, event.getResult());
+		} catch(Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		releaseUnlockRemove();
+		return;
+	}
+
+	//Update connection was successful
+	try {
+		flow_->set_state(Flow::ALLOCATED);
+		rib_daemon_->createObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, this, 0);
+	} catch(Exception &e) {
+		LOG_WARN("Problems requesting the RIB Daemon to create a RIB object: %s", e.what());
+	}
+
+	state_ = FLOW_ALLOCATED;
+
+	try{
+		flow_request_event_.setPortId(port_id_);
+		rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_, 0);
+	} catch(Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+
+	lock_->unlock();
 }
 
 void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEvent& event){
 	rina::AccessGuard(*lock_);
-	//TODO
+
+	if (state_ != FLOW_ALLOCATED) {
+		LOG_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d", state_);
+		return;
+	}
+
+	try{
+		//1 Update flow state
+		flow_->set_state(Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN);
+		state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
+
+		//2 Send M_DELETE
+		const rina::CDAPMessage * cdapMessage = 0;
+		try{
+			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
+			cdapMessage = cdap_session_manager_->getDeleteObjectRequestMessage(underlying_port_id_, 0,
+					rina::CDAPMessage::NONE_FLAGS, Flow::FLOW_RIB_OBJECT_CLASS, 0, object_name_, &objectValue,
+					0, false);
+
+			unsigned int address = 0;
+			if (ipc_process_->get_address() == flow_->get_source_address()) {
+				address = flow_->get_destination_address();
+			} else {
+				address = flow_->get_source_address();
+			}
+
+			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_, address, 0);
+			delete cdapMessage;
+		}catch(Exception &e){
+			LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
+			delete cdapMessage;
+		}
+
+		//3 Wait 2*MPL before tearing down the flow
+		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this, object_name_, true);
+		timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+	}catch(Exception &e){
+		LOG_ERR("Problems processing flow deallocation request: %s", +e.what());
+	}
+
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived(const rina::CDAPMessage * requestMessage,
 		int underlyingPortId) {
 	rina::AccessGuard(*lock_);
-	//TODO
+
+	if (state_ != FLOW_ALLOCATED) {
+		LOG_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
+				state_);
+		return;
+	}
+
+	//1 Update flow state
+	flow_->set_state(Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN);
+	state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
+
+	//3 Wait 2*MPL before tearing down the flow
+	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this, object_name_, true);
+	timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+
+	//4 Inform IPC Manager
+	try{
+		rina::extendedIPCManager->flowDeallocatedRemotely(port_id_, 0);
+	}catch(Exception &e){
+		LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
+	}
 }
 
 void FlowAllocatorInstance::destroyFlowAllocatorInstance(const std::string& flowObjectName, bool requestor) {
-	rina::AccessGuard(*lock_);
-	//TODO
+	lock_->lock();
+
+	if (state_ != WAITING_2_MPL_BEFORE_TEARING_DOWN) {
+		LOG_ERR("Invoked destroy flow allocator instance while not in WAITING_2_MPL_BEFORE_TEARING_DOWN. State: %d",
+				state_);
+		lock_->unlock();
+		return;
+	}
+
+	try{
+		rib_daemon_->deleteObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, 0);
+	}catch(Exception &e){
+		LOG_ERR("Problems deleting object from RIB: %s", e.what());
+	}
+
+	releaseUnlockRemove();
 }
 
 void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor){
-	rina::AccessGuard(*lock_);
-		//TODO
+	lock_->lock();
+
+	if (state_ != MESSAGE_TO_PEER_FAI_SENT) {
+		LOG_ERR("Received CDAP Message while not in MESSAGE_TO_PEER_FAI_SENT state. Current state is: %d",
+				state_);
+		delete cdapMessage;
+		lock_->unlock();
+		return;
+	}
+
+	if (cdapMessage->get_obj_name().compare(request_message_->get_obj_name()) != 0){
+		LOG_ERR("Expected create flow response message for flow %s, but received create flow response message for flow %s ",
+				request_message_->get_obj_name().c_str(), cdapMessage->get_obj_name().c_str());
+		delete cdapMessage;
+		lock_->unlock();
+		return;
+	}
+
+	//Flow allocation unsuccessful
+	if (cdapMessage->get_result() != 0){
+		LOG_DBG("Unsuccessful create flow response message received for flow %s",
+				cdapMessage->get_obj_name().c_str());
+
+		//Answer IPC Manager
+		try {
+			flow_request_event_.setPortId(-1);
+			rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
+					cdapMessage->get_result());
+		} catch(Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		delete cdapMessage;
+
+		releaseUnlockRemove();
+
+		return;
+	}
+
+	//Flow allocation successful
+	//Update the EFCP connection with the destination cep-id
+	try {
+		if (cdapMessage->get_obj_value()) {
+			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+			Flow * receivedFlow = (Flow *) encoder_->decode((char*) value->get_value());
+			flow_->set_destination_port_id(receivedFlow->get_destination_port_id());
+			flow_->getActiveConnection()->setDestCepId(receivedFlow->getActiveConnection()->getDestCepId());
+
+			delete receivedFlow;
+		}
+		state_ = CONNECTION_UPDATE_REQUESTED;
+		rina::kernelIPCProcess->updateConnection(*(flow_->getActiveConnection()));
+		delete cdapMessage;
+		lock_->unlock();
+	} catch(Exception &e) {
+		LOG_ERR("Problems requesting kernel to update connection: %s", e.what());
+
+		//Answer IPC Manager
+		try {
+			flow_request_event_.setPortId(-1);
+			rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
+					cdapMessage->get_result());
+		} catch(Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		delete cdapMessage;
+
+		releaseUnlockRemove();
+		return;
+	}
 }
 
-void FlowAllocatorInstance::deleteResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+//CLASS TEARDOWNFLOW TIMERTASK
+const double TearDownFlowTimerTask::DELAY = 5000;
+
+TearDownFlowTimerTask::TearDownFlowTimerTask(FlowAllocatorInstance * flow_allocator_instance,
+const std::string& flow_object_name, bool requestor) {
+	flow_allocator_instance_ = flow_allocator_instance;
+	flow_object_name_ = flow_object_name;
+	requestor_ = requestor;
 }
 
-void FlowAllocatorInstance::readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-}
-
-void FlowAllocatorInstance::cancelReadResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-}
-
-void FlowAllocatorInstance::writeResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-}
-
-void FlowAllocatorInstance::startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-}
-
-void FlowAllocatorInstance::stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void TearDownFlowTimerTask::run() {
+	flow_allocator_instance_->destroyFlowAllocatorInstance(flow_object_name_, requestor_);
 }
 
 }

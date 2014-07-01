@@ -459,6 +459,38 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 };
 
+class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
+public:
+	virtual void createResponse(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+	virtual void deleteResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+	virtual void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+		delete cdapMessage;
+	}
+};
+
 /// Part of the RIB Daemon API to control if the changes have to be notified
 class NotificationPolicy {
 public:
