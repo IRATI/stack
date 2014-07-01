@@ -59,6 +59,8 @@ class IPCManager : public EventLoopData {
                              const list<string>& difs);
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
+        int enroll_to_dif(rina::IPCProcess *ipcp,
+                          const rinad::NeighborData& neighbor);
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const list<rinad::NeighborData>& neighbors);
 
@@ -273,24 +275,33 @@ int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
         return 0;
 }
 
+int
+IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
+                          const rinad::NeighborData& neighbor)
+{
+        try {
+                unsigned int seqnum;
+
+                seqnum = ipcp->enroll(neighbor.difName,
+                                neighbor.supportingDifName,
+                                neighbor.apName);
+                pending_ipcp_enrollments[seqnum] = ipcp;
+        } catch (rina::EnrollException) {
+                cerr << __func__ << ": Error while enrolling "
+                        << "to DIF " << neighbor.difName.toString()
+                        << endl;
+        }
+
+        return 0;
+}
+
 int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
                                const list<rinad::NeighborData>& neighbors)
 {
         for (list<rinad::NeighborData>::const_iterator
                         nit = neighbors.begin();
                                 nit != neighbors.end(); nit++) {
-                try {
-                        unsigned int seqnum;
-
-                        seqnum = ipcp->enroll(nit->difName,
-                                              nit->supportingDifName,
-                                              nit->apName);
-                        pending_ipcp_enrollments[seqnum] = ipcp;
-                } catch (rina::EnrollException) {
-                        cerr << __func__ << ": Error while enrolling "
-                                << "to DIF " << nit->difName.toString()
-                                << endl;
-                }
+                enroll_to_dif(ipcp, *nit);
         }
 
         return 0;
