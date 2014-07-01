@@ -552,11 +552,11 @@ int rtxq_push(struct rtxq * q,
         if (!q || !pdu_is_ok(pdu))
                 return -1;
 
-        spin_lock(&q->lock);
         /* is the first transmitted PDU */
         if (!rtimer_is_pending(q->r_timer))
                 rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 
+        spin_lock(&q->lock);
         rtxqueue_push(q->queue, pdu);
         spin_unlock(&q->lock);
         return 0;
@@ -569,8 +569,9 @@ int rtxq_drop(struct rtxq * q,
         if (!q)
                 return -1;
 
-        spin_lock(&q->lock);
         rtimer_stop(q->r_timer);
+
+        spin_lock(&q->lock);
         rtxqueue_drop(q->queue, from, to);
         spin_unlock(&q->lock);
         return 0;
