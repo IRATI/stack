@@ -93,7 +93,7 @@ public:
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue, const NotificationPolicy * notificationPolicy);
 	void deleteObject(const std::string& objectClass, const std::string& objectName,
-				const NotificationPolicy * notificationPolicy);
+			const void* objectValue, const NotificationPolicy * notificationPolicy);
 	BaseRIBObject * readObject(const std::string& objectClass,
 				const std::string& objectName);
 	void writeObject(const std::string& objectClass, const std::string& objectName,

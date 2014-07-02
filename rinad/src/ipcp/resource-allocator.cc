@@ -196,7 +196,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 	try{
 		std::stringstream ss;
 		ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<portId;
-		rib_daemon_->deleteObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0);
+		rib_daemon_->deleteObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
 	}catch(Exception &e) {
 		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
 	}
@@ -237,7 +237,7 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 	try {
 		std::stringstream ss;
 		ss<<DIF_REGISTRATION_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getDIFName().getProcessName();
-		rib_daemon_->deleteObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0);
+		rib_daemon_->deleteObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0, 0);
 	}catch (Exception &e) {
 		LOG_ERR("Problems deleting object from RIB: %s", e.what());
 	}

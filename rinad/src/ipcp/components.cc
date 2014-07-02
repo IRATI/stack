@@ -188,8 +188,8 @@ void BaseRIBObject::createObject(const std::string& objectClass, const std::stri
 	operartion_not_supported(objectClass, objectName, objectValue);
 }
 
-void BaseRIBObject::deleteObject() {
-	operation_not_supported();
+void BaseRIBObject::deleteObject(const void* objectValue) {
+	operation_not_supported(objectValue);
 }
 
 BaseRIBObject * BaseRIBObject::readObject() {
@@ -341,10 +341,9 @@ SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IPCProcess* ipc_process,
 				SimpleRIBObject(ipc_process, object_class, object_name, object_value){
 }
 
-void SimpleSetMemberRIBObject::deleteObject() {
+void SimpleSetMemberRIBObject::deleteObject(const void* objectValue) {
 	get_parent()->remove_child(get_name());
 	get_rib_daemon()->removeRIBObject(get_name());
-	delete this;
 }
 
 }

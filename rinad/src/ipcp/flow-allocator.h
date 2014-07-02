@@ -242,7 +242,7 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, rina::QoSCube* objectValue);
-	void deleteObject();
+	void deleteObject(const void* objectValue);
 	const void* get_value() const;
 };
 
@@ -384,7 +384,7 @@ private:
 
 class TearDownFlowTimerTask: public rina::TimerTask {
 public:
-	static const double DELAY;
+	static const long DELAY;
 
 	TearDownFlowTimerTask(FlowAllocatorInstance * flow_allocator_instance,
 			const std::string& flow_object_name, bool requestor);
