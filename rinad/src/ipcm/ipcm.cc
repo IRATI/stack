@@ -412,35 +412,35 @@ IPCManager::apply_configuration()
         return 0;
 }
 
-static void FlowAllocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void flow_allocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void AllocateFlowRequestResultEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void allocate_flow_request_result_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void AllocateFlowResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void allocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void FlowDeallocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void flow_deallocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void DeallocateFlowResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void ApplicationUnregisteredEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void FlowDeallocatedEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void flow_deallocated_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent *e,
+static void application_registration_request_event_handler(rina::IPCEvent *e,
                                                        EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
@@ -497,27 +497,27 @@ static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent *e,
         }
 }
 
-static void RegisterApplicationResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void register_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void ApplicationUnregistrationRequestEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void application_unregistration_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void UnregisterApplicationResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void unregister_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void ApplicationRegistrationCanceledEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void application_registration_canceled_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void AssignToDifRequestEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void AssignToDifResponseEventHandler(rina::IPCEvent *e,
+static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
                                             EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
@@ -544,43 +544,43 @@ static void AssignToDifResponseEventHandler(rina::IPCEvent *e,
         }
 }
 
-static void UpdateDifConfigRequestEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void update_dif_config_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void UpdateDifConfigResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void update_dif_config_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void EnrollToDifRequestEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void EnrollToDifResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void enroll_to_dif_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void NeighborsModifiedNotificaitonEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessDifRegistrationNotificationHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessQueryRibHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void GetDifPropertiesHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void GetDifPropertiesResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void OsProcessFinalizedHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void os_process_finalized_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
@@ -674,7 +674,7 @@ static void ipcm_register_response_app(
         }
 }
 
-static void IpcmRegisterAppResponseEventHandler(rina::IPCEvent *e,
+static void ipcm_register_app_response_event_handler(rina::IPCEvent *e,
                                                 EventLoopData *opaque)
 {
 
@@ -696,23 +696,23 @@ static void IpcmRegisterAppResponseEventHandler(rina::IPCEvent *e,
         }
 }
 
-static void IpcmUnregisterAppResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipcm_unregister_app_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcmDeallocateFlowResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcmAllocateFlowRequestResultHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void QueryRibResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void query_rib_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
+static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
                                                     EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
@@ -732,27 +732,27 @@ static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
         }
 }
 
-static void TimerExpiredEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessCreateConnectionResponseHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_create_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessUpdateConnectionResponseHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_update_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessCreateConnectionResultHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_create_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessDestroyConnectionResultHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_destroy_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
-static void IpcProcessDumpFtResponseHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ipc_process_dump_ft_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
@@ -762,75 +762,75 @@ void register_handlers_all(EventLoop& loop)
         loop.register_post_function(ipcm_post_function);
 
         loop.register_event(rina::FLOW_ALLOCATION_REQUESTED_EVENT,
-                        FlowAllocationRequestedEventHandler);
+                        flow_allocation_requested_event_handler);
         loop.register_event(rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                        AllocateFlowRequestResultEventHandler);
+                        allocate_flow_request_result_event_handler);
         loop.register_event(rina::ALLOCATE_FLOW_RESPONSE_EVENT,
-                        AllocateFlowResponseEventHandler);
+                        allocate_flow_response_event_handler);
         loop.register_event(rina::FLOW_DEALLOCATION_REQUESTED_EVENT,
-                        FlowDeallocationRequestedEventHandler);
+                        flow_deallocation_requested_event_handler);
         loop.register_event(rina::DEALLOCATE_FLOW_RESPONSE_EVENT,
-                        DeallocateFlowResponseEventHandler);
+                        deallocate_flow_response_event_handler);
         loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,
-                        ApplicationUnregisteredEventHandler);
+                        application_unregistered_event_handler);
         loop.register_event(rina::FLOW_DEALLOCATED_EVENT,
-                        FlowDeallocatedEventHandler);
+                        flow_deallocated_event_handler);
         loop.register_event(rina::APPLICATION_REGISTRATION_REQUEST_EVENT,
-                        ApplicationRegistrationRequestEventHandler);
+                        application_registration_request_event_handler);
         loop.register_event(rina::REGISTER_APPLICATION_RESPONSE_EVENT,
-                        RegisterApplicationResponseEventHandler);
+                        register_application_response_event_handler);
         loop.register_event(rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT,
-                        ApplicationUnregistrationRequestEventHandler);
+                        application_unregistration_request_event_handler);
         loop.register_event(rina::UNREGISTER_APPLICATION_RESPONSE_EVENT,
-                        UnregisterApplicationResponseEventHandler);
+                        unregister_application_response_event_handler);
         loop.register_event(rina::APPLICATION_REGISTRATION_CANCELED_EVENT,
-                        ApplicationRegistrationCanceledEventHandler);
+                        application_registration_canceled_event_handler);
         loop.register_event(rina::ASSIGN_TO_DIF_REQUEST_EVENT,
-                        AssignToDifRequestEventHandler);
+                        assign_to_dif_request_event_handler);
         loop.register_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-                        AssignToDifResponseEventHandler);
+                        assign_to_dif_response_event_handler);
         loop.register_event(rina::UPDATE_DIF_CONFIG_REQUEST_EVENT,
-                        UpdateDifConfigRequestEventHandler);
+                        update_dif_config_request_event_handler);
         loop.register_event(rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT,
-                        UpdateDifConfigResponseEventHandler);
+                        update_dif_config_response_event_handler);
         loop.register_event(rina::ENROLL_TO_DIF_REQUEST_EVENT,
-                        EnrollToDifRequestEventHandler);
+                        enroll_to_dif_request_event_handler);
         loop.register_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
-                        EnrollToDifResponseEventHandler);
+                        enroll_to_dif_response_event_handler);
         loop.register_event(rina::NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
-                        NeighborsModifiedNotificaitonEventHandler);
+                        neighbors_modified_notificaiton_event_handler);
         loop.register_event(rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-                        IpcProcessDifRegistrationNotificationHandler);
+                        ipc_process_dif_registration_notification_handler);
         loop.register_event(rina::IPC_PROCESS_QUERY_RIB,
-                        IpcProcessQueryRibHandler);
+                        ipc_process_query_rib_handler);
         loop.register_event(rina::GET_DIF_PROPERTIES,
-                        GetDifPropertiesHandler);
+                        get_dif_properties_handler);
         loop.register_event(rina::GET_DIF_PROPERTIES_RESPONSE_EVENT,
-                        GetDifPropertiesResponseEventHandler);
+                        get_dif_properties_response_event_handler);
         loop.register_event(rina::OS_PROCESS_FINALIZED,
-                        OsProcessFinalizedHandler);
+                        os_process_finalized_handler);
         loop.register_event(rina::IPCM_REGISTER_APP_RESPONSE_EVENT,
-                        IpcmRegisterAppResponseEventHandler);
+                        ipcm_register_app_response_event_handler);
         loop.register_event(rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                        IpcmUnregisterAppResponseEventHandler);
+                        ipcm_unregister_app_response_event_handler);
         loop.register_event(rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
-                        IpcmDeallocateFlowResponseEventHandler);
+                        ipcm_deallocate_flow_response_event_handler);
         loop.register_event(rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                        IpcmAllocateFlowRequestResultHandler);
+                        ipcm_allocate_flow_request_result_handler);
         loop.register_event(rina::QUERY_RIB_RESPONSE_EVENT,
-                        QueryRibResponseEventHandler);
+                        query_rib_response_event_handler);
         loop.register_event(rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-                        IpcProcessDaemonInitializedEventHandler);
+                        ipc_process_daemon_initialized_event_handler);
         loop.register_event(rina::TIMER_EXPIRED_EVENT,
-                        TimerExpiredEventHandler);
+                        timer_expired_event_handler);
         loop.register_event(rina::IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
-                        IpcProcessCreateConnectionResponseHandler);
+                        ipc_process_create_connection_response_handler);
         loop.register_event(rina::IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
-                        IpcProcessUpdateConnectionResponseHandler);
+                        ipc_process_update_connection_response_handler);
         loop.register_event(rina::IPC_PROCESS_CREATE_CONNECTION_RESULT,
-                        IpcProcessCreateConnectionResultHandler);
+                        ipc_process_create_connection_result_handler);
         loop.register_event(rina::IPC_PROCESS_DESTROY_CONNECTION_RESULT,
-                        IpcProcessDestroyConnectionResultHandler);
+                        ipc_process_destroy_connection_result_handler);
         loop.register_event(rina::IPC_PROCESS_DUMP_FT_RESPONSE,
-                        IpcProcessDumpFtResponseHandler);
+                        ipc_process_dump_ft_response_handler);
 }
