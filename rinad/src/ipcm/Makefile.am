@@ -41,4 +41,5 @@ ipcm_LDADD    =					\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =					\
 	main.cc					\
-	ipcm.cc ipcm.h
+	ipcm.cc ipcm.h				\
+	configuration.cc configuration.h
