@@ -160,13 +160,13 @@ struct dtp {
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
          */
-        struct dtp_sv *       sv; /* The state-vector */
+        struct dtp_sv *           sv; /* The state-vector */
 
-        struct dtp_policies * policies;
-        struct rmt *          rmt;
-        struct kfa *          kfa;
-        struct sequencingQ *  seqQ;
-
+        struct dtp_policies *     policies;
+        struct rmt *              rmt;
+        struct kfa *              kfa;
+        struct sequencingQ *      seqQ;
+        struct workqueue_struct * twq;
         struct {
                 struct rtimer * sender_inactivity;
                 struct rtimer * receiver_inactivity;
@@ -625,6 +625,13 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         return tmp;
 }
 
+static void tf_sender_inactivity(void * data)
+{ /* Runs the SenderInactivityTimerPolicy */ }
+
+static void tf_receiver_inactivity(void * data)
+
+{ /* Runs the ReceiverInactivityTimerPolicy */ }
+
 #define seqQ_for_each_entry_safe(seqQ, pos, n)                                 \
                 spin_lock(&seqQ->lock);                                        \
                 list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
@@ -682,7 +689,6 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %d", LWE);
         LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
-
 
         //seqQ_for_each_entry_safe(seqQ, pos, n) {
         spin_lock(&seqQ->lock);                                        
@@ -744,24 +750,19 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         return LWE;
 }
 
-
-static void tf_sender_inactivity(void * data)
-{ /* Runs the SenderInactivityTimerPolicy */ }
-
-static void tf_receiver_inactivity(void * data)
-{ /* Runs the ReceiverInactivityTimerPolicy */ }
-
-static void tf_a(void * data)
+static int post_worker(void * o)
 {
         struct dtp *  dtp;
         struct dtcp * dtcp;
         seq_num_t     seq_num_sv_update;
         timeout_t     a;
 
-        dtp = (struct dtp *) data;
+        LOG_DBG("TWQ Post worker called");
+
+        dtp = (struct dtp *) o;
         if (!dtp) {
-                LOG_ERR("No dtp to work with");
-                return;
+                LOG_ERR("No instance passed to post worker !!!");
+                return -1;
         }
 
         dtcp = dt_dtcp(dtp->parent);
@@ -772,33 +773,41 @@ static void tf_a(void * data)
         if (dtcp) {
                 if (!seq_num_sv_update) {
                         LOG_ERR("ULWE returned no seq num to update");
-                        return;
+                        return -1;
                 }
 
                 if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
                         LOG_ERR("Failed to update dtcp sv");
-                        return;
+                        return -1;
                 }
-                return;
         }
-
-        /***************
-        LOG_DBG("TF_A executed");
-        
-        struct pdu * pdu = seqQ_pop(dtp->seqQ);
-        if (pdu)
-                pdu_post(dtp, pdu);
-        seq_num_t seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));        
-        dt_sv_rcv_lft_win_set(dtp->parent, seq_num);        
-        ***************/
-
-
-        /* FIXME: timer must be restarted. The following line may produce a soft
-         * lockup */
         a = dt_sv_a(dtp->parent);
-        LOG_DBG("Going to restart A timer in tf_a with a = %d and a/AF = %d", a, a/AF);
+        LOG_DBG("Going to restart A timer with a = %d and a/AF = %d", a, a/AF);
         rtimer_start(dtp->timers.a, a/AF);
         
+        return 0;
+}
+
+static void tf_a(void * data)
+{
+        struct dtp *           dtp;
+        struct rwq_work_item * item;
+
+        dtp = (struct dtp *) data;
+        if (!dtp) {
+                LOG_ERR("No dtp to work with");
+                return;
+        }
+        
+        item = rwq_work_create_ni(post_worker, dtp);
+        if (!item) {
+                LOG_ERR("Could not create twq item");
+        }
+
+         if (rwq_work_post(dtp->twq, item)) {
+                 LOG_ERR("Could not add twq item to the wq");
+         }
+
         return;
 }
 
@@ -822,12 +831,30 @@ int dtp_sv_init(struct dtp * dtp,
         return 0;
 }
 
+#define MAX_NAME_SIZE 128
+static const char * create_twq_name(const char *       prefix,
+                                    const struct dtp * instance)
+{
+        static char name[MAX_NAME_SIZE];
+
+        ASSERT(prefix);
+        ASSERT(instance);
+
+        if (snprintf(name, sizeof(name),
+                     RINA_PREFIX "-%s-%pK", prefix, instance) >=
+            sizeof(name))
+                return NULL;
+
+        return name;
+}
+
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection)
 {
         struct dtp * tmp;
+        const char * twq_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -873,6 +900,17 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
+        twq_name = create_twq_name("twq", tmp);
+        if (!twq_name) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+        tmp->twq = rwq_create(twq_name);
+        if (!tmp->twq) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+
 #if INACTIVITY_TIMERS_ENABLE        
         LOG_DBG("Inactivity Timers created....\n\n");
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
@@ -904,6 +942,7 @@ int dtp_destroy(struct dtp * instance)
         }
 
         if (instance->seqQ) seqQ_destroy(instance->seqQ);
+        if (instance->twq)  rwq_destroy(instance->twq);
 #if INACTIVITY_TIMERS_ENABLE        
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
