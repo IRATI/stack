@@ -440,8 +440,61 @@ static void FlowDeallocatedEventHandler(rina::IPCEvent *event, EventLoopData *op
 {
 }
 
-static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent *event, EventLoopData *opaque)
+static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent *e,
+                                                       EventLoopData *opaque)
 {
+        DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        const rina::ApplicationRegistrationInformation& info = event->
+                                getApplicationRegistrationInformation();
+        const rina::ApplicationProcessNamingInformation app_name =
+                                info.getApplicationName();
+        rina::IPCProcess *slave_ipcp = NULL;
+        unsigned int seqnum;
+
+        if (info.getRegistrationType() ==
+                        rina::APPLICATION_REGISTRATION_ANY_DIF) {
+                rina::ApplicationProcessNamingInformation dif_name;
+                bool found;
+
+                // See if the configuration specifies a mapping between
+                // the registering application and a DIF.
+                found = ipcm->config.lookup_dif_by_application(app_name,
+                                                               dif_name);
+                if (found) {
+                        // If a mapping exists, select an IPC process
+                        // from the specified DIF.
+                        slave_ipcp = ipcm->select_ipcp_by_dif(dif_name);
+                } else {
+                        // Otherwise select any IPC process.
+                        slave_ipcp = ipcm->select_ipcp();
+                }
+        } else if (info.getRegistrationType() ==
+                        rina::APPLICATION_REGISTRATION_SINGLE_DIF) {
+                // Select an IPC process from the DIF specified in the
+                // registration request.
+                slave_ipcp = ipcm->select_ipcp_by_dif(info.getDIFName());
+        } else {
+                cerr << __func__ << ": Unsupported registration type: "
+                        << info.getRegistrationType() << endl;
+                return;
+        }
+
+        if (!slave_ipcp) {
+                cerr << __func__ << ": Cannot find a suitable DIF to "
+                        "register application " << app_name.toString() << endl;
+                return;
+        }
+
+        try {
+                seqnum = slave_ipcp->registerApplication(app_name,
+                                                info.getIpcProcessId());
+                ipcm->pending_app_registrations[seqnum] =
+                        PendingAppRegistration(slave_ipcp, app_name);
+        } catch (rina::IpcmRegisterApplicationException) {
+                cerr << __func__ << ": Error while registering application "
+                        << app_name.toString() << endl;
+        }
 }
 
 static void RegisterApplicationResponseEventHandler(rina::IPCEvent *event, EventLoopData *opaque)

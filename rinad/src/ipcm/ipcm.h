@@ -55,6 +55,16 @@ struct PendingIPCPRegistration {
                                 : ipcp(p), slave_ipcp(s) { }
 };
 
+struct PendingAppRegistration {
+        rina::IPCProcess *slave_ipcp;
+        rina::ApplicationProcessNamingInformation app_name;
+
+        PendingAppRegistration() : slave_ipcp(NULL) { }
+        PendingAppRegistration(rina::IPCProcess *p,
+                        const rina::ApplicationProcessNamingInformation& n)
+                                        : slave_ipcp(p), app_name(n) { }
+};
+
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
@@ -96,6 +106,7 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
         std::map<unsigned int, PendingIPCPRegistration> pending_ipcp_registrations;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
+        std::map<unsigned int, PendingAppRegistration> pending_app_registrations;
 
         IPCMConcurrency concurrency;
 
