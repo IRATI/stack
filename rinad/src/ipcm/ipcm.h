@@ -57,12 +57,12 @@ struct PendingIPCPRegistration {
 
 struct PendingAppRegistration {
         rina::IPCProcess *slave_ipcp;
-        rina::ApplicationProcessNamingInformation app_name;
+        rina::ApplicationRegistrationRequestEvent req_event;
 
         PendingAppRegistration() : slave_ipcp(NULL) { }
         PendingAppRegistration(rina::IPCProcess *p,
-                        const rina::ApplicationProcessNamingInformation& n)
-                                        : slave_ipcp(p), app_name(n) { }
+                        const rina::ApplicationRegistrationRequestEvent& n)
+                                        : slave_ipcp(p), req_event(n) { }
 };
 
 class IPCManager : public EventLoopData {

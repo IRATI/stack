@@ -490,7 +490,7 @@ static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent *e,
                 seqnum = slave_ipcp->registerApplication(app_name,
                                                 info.getIpcProcessId());
                 ipcm->pending_app_registrations[seqnum] =
-                        PendingAppRegistration(slave_ipcp, app_name);
+                        PendingAppRegistration(slave_ipcp, *event);
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr << __func__ << ": Error while registering application "
                         << app_name.toString() << endl;
@@ -584,62 +584,112 @@ static void OsProcessFinalizedHandler(rina::IPCEvent *event, EventLoopData *opaq
 {
 }
 
+static bool ipcm_register_response_common(
+        rina::IpcmRegisterApplicationResponseEvent *event,
+        const rina::ApplicationProcessNamingInformation& app_name,
+        rina::IPCProcess *slave_ipcp,
+        const rina::ApplicationProcessNamingInformation& slave_dif_name)
+{
+        bool success = (event->getResult() == 0);
+
+        try {
+                /* Notify the N-1 IPC process. */
+                slave_ipcp->registerApplicationResult(
+                                        event->getSequenceNumber(), success);
+        } catch (rina::IpcmRegisterApplicationException) {
+                cerr <<  __func__ << ": Error while reporting DIF "
+                        "assignment result of IPC process "
+                        << app_name.toString() <<
+                        " to N-1 DIF " << slave_dif_name.toString()
+                        << endl;
+        }
+
+        return success;
+}
+
+static void ipcm_register_response_ipcp(
+        rina::IpcmRegisterApplicationResponseEvent *event,
+        IPCManager *ipcm,
+        map<unsigned int, PendingIPCPRegistration>::iterator mit)
+{
+        rina::IPCProcess *ipcp = mit->second.ipcp;
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        const rina::ApplicationProcessNamingInformation&
+                slave_dif_name = slave_ipcp->
+                getDIFInformation().get_dif_name();
+        bool success;
+
+        success = ipcm_register_response_common(event, ipcp->getName(),
+                                        slave_ipcp, slave_dif_name);
+        if (success) {
+                /* Notify the registered IPC process. */
+                try {
+                        ipcp->notifyRegistrationToSupportingDIF(
+                                        slave_ipcp->getName(),
+                                        slave_dif_name
+                                        );
+                } catch (rina::NotifyRegistrationToDIFException) {
+                        cerr << __func__ << ": Error while notifying "
+                                "IPC process " <<
+                                ipcp->getName().toString() <<
+                                " about registration to N-1 DIF"
+                                << slave_dif_name.toString() << endl;
+                }
+        } else {
+                cerr << __func__ << "Cannot register IPC process "
+                        << ipcp->getName().toString() <<
+                        " to DIF " << slave_dif_name.toString() << endl;
+        }
+
+        ipcm->pending_ipcp_registrations.erase(mit);
+}
+
+static void ipcm_register_response_app(
+        rina::IpcmRegisterApplicationResponseEvent *event,
+        IPCManager *ipcm,
+        map<unsigned int, PendingAppRegistration>::iterator mit)
+{
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        const rina::ApplicationRegistrationRequestEvent& req_event =
+                        mit->second.req_event;
+        const rina::ApplicationProcessNamingInformation& app_name =
+                req_event.getApplicationRegistrationInformation().
+                getApplicationName();
+        const rina::ApplicationProcessNamingInformation&
+                slave_dif_name = slave_ipcp->
+                getDIFInformation().get_dif_name();
+        bool success;
+
+        success = ipcm_register_response_common(event, app_name, slave_ipcp,
+                                           slave_dif_name);
+
+        /* Notify the application about the successful registration. */
+        try {
+                rina::applicationManager->applicationRegistered(req_event,
+                                slave_dif_name, success ? 0 : -1);
+        } catch (rina::NotifyApplicationRegisteredException) {
+                cerr << __func__ << "Error while notifying application "
+                        << app_name.toString() << " about registration "
+                        "to DIF " << slave_dif_name.toString() << endl;
+        }
+}
+
 static void IpcmRegisterAppResponseEventHandler(rina::IPCEvent *e,
                                                 EventLoopData *opaque)
 {
 
         DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
-        map<unsigned int, PendingIPCPRegistration>::iterator mit;
-        bool success = (event->getResult() == 0);
+        map<unsigned int, PendingIPCPRegistration>::iterator it;
+        map<unsigned int, PendingAppRegistration>::iterator jt;
 
-        mit = ipcm->pending_ipcp_registrations.find(
-                                        event->getSequenceNumber());
-        if (mit != ipcm->pending_ipcp_registrations.end()) {
-                rina::IPCProcess *ipcp = mit->second.ipcp;
-                rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
-                const rina::ApplicationProcessNamingInformation&
-                        slave_dif_name = slave_ipcp->
-                                getDIFInformation().get_dif_name();
+        it = ipcm->pending_ipcp_registrations.find(event->getSequenceNumber());
+        jt = ipcm->pending_app_registrations.find(event->getSequenceNumber());
 
-                try {
-                        /* Notify the N-1 IPC process. */
-                        slave_ipcp->registerApplicationResult(
-                                                        mit->first, success);
-
-                } catch (rina::IpcmRegisterApplicationException) {
-                        cerr <<  __func__ << ": Error while reporting DIF "
-                                "assignment result of IPC process "
-                                << ipcp->getName().toString() <<
-                                " to N-1 DIF " << slave_dif_name.toString()
-                                << endl;
-                }
-
-                if (success) {
-                        /* Notify the registered IPC process. */
-                        try {
-                                ipcp->notifyRegistrationToSupportingDIF(
-                                                slave_ipcp->getName(),
-                                                slave_dif_name
-                                                );
-                        } catch (rina::NotifyRegistrationToDIFException) {
-                                cerr << __func__ << ": Error while notifying "
-                                        "IPC process " <<
-                                        ipcp->getName().toString() <<
-                                        " about registration to N-1 DIF"
-                                        << slave_dif_name.toString() << endl;
-                        }
-                } else {
-                        cerr << __func__ << "Cannot register "
-                                "IPC process " <<
-                                ipcp->getName().toString() <<
-                                " to DIF " << slave_dif_name.toString()
-                                << endl;
-                }
-
-                ipcm->pending_ipcp_registrations.erase(mit);
-        } else if (0) {
-                // normal application registration response
+        if (it != ipcm->pending_ipcp_registrations.end()) {
+                ipcm_register_response_ipcp(event, ipcm, it);
+        } else if (jt != ipcm->pending_app_registrations.end()) {
+                ipcm_register_response_app(event, ipcm, jt);
         } else {
                 cerr <<  __func__ << ": Warning: DIF assignment response "
                         "received, but no pending DIF assignment " << endl;
