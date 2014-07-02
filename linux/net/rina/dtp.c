@@ -941,8 +941,8 @@ int dtp_destroy(struct dtp * instance)
                 return -1;
         }
 
-        if (instance->seqQ) seqQ_destroy(instance->seqQ);
         if (instance->twq)  rwq_destroy(instance->twq);
+        if (instance->seqQ) seqQ_destroy(instance->seqQ);
 #if INACTIVITY_TIMERS_ENABLE        
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
