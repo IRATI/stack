@@ -45,7 +45,7 @@ using namespace TCLAP;
 bool parse_configuration(std::string file_loc, IPCManager *ipcm)
 {
         // FIXME: General note: Params should be checked before they are used
-        // Some can be NULL 
+        // Some can be NULL
 
         // Parse config file with jsoncpp
         Json::Value root;
@@ -60,7 +60,7 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
 
         if (!reader.parse(file, root, false)) {
                 LOG_ERR("Failed to parse configuration");
-                
+
                 // FIXME: Log messages need to take std::string for this to work
                 std::cout << "Failed to parse JSON" << std::endl
                           << reader.getFormatedErrorMessages() << std::endl;
@@ -74,26 +74,26 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
 
         Json::Value local_conf = root["localConfiguration"];
         if (local_conf != 0) {
-                local.consolePort 
-                        = local_conf.get("consolePort", 
+                local.consolePort
+                        = local_conf.get("consolePort",
                                          local.consolePort).asInt();
-                local.cdapTimeoutInMs 
-                        = local_conf.get("cdapTimeoutInMs", 
+                local.cdapTimeoutInMs
+                        = local_conf.get("cdapTimeoutInMs",
                                          local.cdapTimeoutInMs).asInt();
-                local.enrollmentTimeoutInMs 
+                local.enrollmentTimeoutInMs
                         = local_conf.get("enrollmentTimeoutInMs",
                                          local.enrollmentTimeoutInMs).asInt();
                 local.maxEnrollmentRetries
                         = local_conf.get("maxEnrollmentRetries",
                                          local.maxEnrollmentRetries).asInt();
-                local.flowAllocatorTimeoutInMs 
+                local.flowAllocatorTimeoutInMs
                         = local_conf.get("flowAllocatorTimeoutInMs",
                                          local.flowAllocatorTimeoutInMs).asInt();
                 local.watchdogPeriodInMs
                         = local_conf.get("watchdogPeriodInMs",
                                          local.watchdogPeriodInMs).asInt();
-                local.declaredDeadIntervalInMs 
-                        = local_conf.get("declaredDeadIntervalInMs", 
+                local.declaredDeadIntervalInMs
+                        = local_conf.get("declaredDeadIntervalInMs",
                                          local.declaredDeadIntervalInMs).asInt();
                 local.neighborsEnrollerPeriodInMs
                         = local_conf.get("neighborsEnrollerPeriodInMs",
@@ -124,13 +124,13 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
                         appToDIFMapping.encodedAppName =
                                 appToDIF[i].get("encodedAppName",
                                 appToDIFMapping.encodedAppName).asString();
-                
+
                         applicationToDIFMappings.push_back(appToDIFMapping);
                 }
         }
         config.applicationToDIFMappings = applicationToDIFMappings;
 
-        // IPC processes to create 
+        // IPC processes to create
         Json::Value ipc_processes = root["ipcProcessesToCreate"];
         for (unsigned int i = 0; i < ipc_processes.size(); i++) {
 
@@ -138,7 +138,7 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
 
                 ipc.type = ipc_processes[i].get("type",
                                                 ipc.type).asString();
-                
+
                 // IPC process Names
                 // Might want to move this to another function
                 rina::ApplicationProcessNamingInformation name;
@@ -158,9 +158,9 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
                 name.setProcessName(applicationProcessName);
                 name.setProcessInstance(applicationProcessInstance);
                 name.setEntityName(applicationEntityName);
-                name.setEntityInstance(applicationEntityInstance);    
+                name.setEntityInstance(applicationEntityInstance);
                 ipc.name = name;
-              
+
                 ipc.difName = rina::ApplicationProcessNamingInformation(
                         ipc_processes[i].get("difName", string()).asString(),
                         string());
@@ -188,7 +188,7 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
                                 name.setProcessName(applicationProcessName);
                                 name.setProcessInstance(applicationProcessInstance);
                                 name.setEntityName(applicationEntityName);
-                                name.setEntityInstance(applicationEntityInstance);    
+                                name.setEntityInstance(applicationEntityInstance);
                                 neigh_data.apName = name;
 
                                 neigh_data.difName =
@@ -196,12 +196,12 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
                                         neigh[j].get("difName", string()).asString(),
                                         string());
 
-                                neigh_data.supportingDifName = 
+                                neigh_data.supportingDifName =
                                         rina::ApplicationProcessNamingInformation(
                                         neigh[j].get("supportingDifName",
                                         string()).asString(),
                                         string());
-                              
+
                                 ipc.neighbors.push_back(neigh_data);
 
                         }
@@ -238,7 +238,7 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
                         }
                 }
 
-                // parameters 
+                // parameters
                 Json::Value params = ipc_processes[i]["parameters"];
                 if (params != 0) {
                         //FIXME: Parse the extra params here
@@ -249,7 +249,7 @@ bool parse_configuration(std::string file_loc, IPCManager *ipcm)
 
                 config.ipcProcessesToCreate.push_back(ipc);
         }
-      
+
 
         // FIXME: Set the DIF configurations here
         Json::Value dif_configs = root["difConfigurations"];
@@ -268,8 +268,8 @@ int main(int argc, char * argv[])
 {
         std::string conf;
 
-        // Wrap everything in a try block.  Do this every time, 
-        // because exceptions will be thrown for problems. 
+        // Wrap everything in a try block.  Do this every time,
+        // because exceptions will be thrown for problems.
         try {
 
                 // Define the command line object.
@@ -283,11 +283,11 @@ int main(int argc, char * argv[])
                                                       "string");
 
                 cmd.add(conf_arg);
-                
+
                 // Parse the args.
                 cmd.parse(argc, argv);
 
-                // Get the value parsed by each arg. 
+                // Get the value parsed by each arg.
                 conf = conf_arg.getValue();
 
                 LOG_DBG("Config file is: %s", conf.c_str());
