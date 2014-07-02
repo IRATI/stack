@@ -623,6 +623,49 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         return tmp;
 }
 
+static void seqQ_cleanup(struct dtp * dtp)
+{
+        struct sequencingQ * seqQ;
+        seq_num_t            seq_num;
+        seq_num_t            LWE;
+        seq_num_t            max_sdu_gap;
+        struct dtp_sv *      sv;
+        struct dt *          dt;
+        struct pdu *         pdu;
+
+        ASSERT(dtp);
+
+        seqQ = dtp->seqQ;
+        ASSERT(seqQ);
+
+        sv = dtp->sv;
+        ASSERT(sv);
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+
+        spin_lock(&seqQ->lock);
+        pdu = seq_queue_pop(seqQ->queue);
+        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+        LWE = dt_sv_rcv_lft_win(dt);
+        while (pdu && (seq_num - LWE - 1 <= max_sdu_gap)) {
+                dt_sv_rcv_lft_win_set(dt, seq_num);
+                spin_unlock(&seqQ->lock);
+                pdu_post(dtp, pdu);
+
+                spin_lock(&seqQ->lock);
+                pdu = seq_queue_pop(seqQ->queue);
+                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                LWE = dt_sv_rcv_lft_win(dt);
+        }
+        if (pdu) seq_queue_push_ni(seqQ->queue, pdu);
+
+        spin_unlock(&seqQ->lock);
+
+}
+
 #define seqQ_for_each_entry_safe(seqQ, pos, n)                                 \
                 spin_lock(&seqQ->lock);                                        \
                 list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
@@ -1237,7 +1280,7 @@ int dtp_receive(struct dtp * instance,
                 if (seq_num > max_rcv)
                         max_seq_nr_rcv_set(sv, seq_num);
 
-                if (!a || (seq_num == LWE + 1)) {
+                if (!a) {
                         /* FIXME: delimiting goes here */
                         LOG_DBG("DTP Receive (!a || (seq_num == LWE + 1))");
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
@@ -1260,6 +1303,7 @@ int dtp_receive(struct dtp * instance,
                                        "sequencing queue");
                                 return -1;
                         }
+                        seqQ_cleanup(instance);
                 }
         }
 
