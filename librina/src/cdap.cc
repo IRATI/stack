@@ -279,10 +279,12 @@ void CDAPMessageValidator::validateAuthMech(const CDAPMessage *message) {
 }
 
 void CDAPMessageValidator::validateAuthValue(const CDAPMessage *message) {
-	if ((message->get_op_code() != CDAPMessage::M_CONNECT)
-			&& (message->get_op_code() != CDAPMessage::M_CONNECT_R)) {
-		throw CDAPException(
-				"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
+	if (!message->get_auth_value().is_empty())	{
+		if ((message->get_op_code() != CDAPMessage::M_CONNECT)
+				&& (message->get_op_code() != CDAPMessage::M_CONNECT_R)) {
+			throw CDAPException(
+					"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
+		}
 	}
 }
 
@@ -512,17 +514,16 @@ void CDAPMessageValidator::validateSrcAEInst(const CDAPMessage *message) {
 
 void CDAPMessageValidator::validateSrcAEName(const CDAPMessage *message) {
 	if (!message->get_src_ae_name().empty()) {
-
-	}
-	if (message->get_op_code() != CDAPMessage::M_CONNECT
-			&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
-		throw CDAPException(
-				"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
+		if (message->get_op_code() != CDAPMessage::M_CONNECT
+				&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
+			throw CDAPException(
+					"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
+		}
 	}
 }
 
 void CDAPMessageValidator::validateSrcApInst(const CDAPMessage *message) {
-	if (message->get_src_ap_inst().empty()) {
+	if (!message->get_src_ap_inst().empty()) {
 		if (message->get_op_code() != CDAPMessage::M_CONNECT
 				&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(

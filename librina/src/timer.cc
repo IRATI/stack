@@ -25,10 +25,32 @@
 
 #include "librina/logs.h"
 #include "librina/timer.h"
-#include <sys/select.h>
-#include <sys/time.h>
+#include "librina/common.h"
 
 namespace rina {
+
+// CLASS Time
+Time::Time() {
+	gettimeofday(&time_, 0);
+}
+Time::Time(timeval t) {
+	time_ = t;
+}
+int Time::get_time_seconds() const {
+	return (int)time_.tv_sec;
+}
+int Time::get_only_milliseconds() const {
+	return (int)time_.tv_usec;
+}
+bool Time::operator<(const Time &other) const {
+	if ((int)time_.tv_sec != (int)other.get_time_seconds())
+		return (int)time_.tv_sec < (int)other.get_time_seconds();
+	else
+		return (int)time_.tv_usec < (int)other.get_only_milliseconds();
+}
+void Time::set_timeval(timeval t) {
+	time_ = t;
+}
 
 // CLASS LockableMap
 void* doWorkTask(void *arg) {
@@ -43,17 +65,17 @@ TaskScheduler::TaskScheduler() : Lockable() {
 }
 TaskScheduler::~TaskScheduler() throw() {
 }
-void TaskScheduler::insert(double time, TimerTask* timer_task) {
+void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 	lock();
-	std::pair<double, TimerTask*> pair (time, timer_task);
+	std::pair<Time, TimerTask*> pair (time, timer_task);
 	tasks_.insert( pair );
 	unlock();
 }
 void TaskScheduler::runTasks() {
-	std::clock_t now;
 	lock();
-	now = std::clock();
-	for (std::map<double, TimerTask*>::iterator iter = tasks_.begin();
+	Time now;
+	LOG_DBG("RunTask time sec %d and microsec %d", now.get_time_seconds(), now.get_only_milliseconds());
+	for (std::map<Time, TimerTask*>::iterator iter = tasks_.begin();
 		iter != tasks_.upper_bound(now); ++iter) {
 		ThreadAttributes threadAttributes;
 		Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
@@ -66,7 +88,7 @@ void TaskScheduler::runTasks() {
 }
 void TaskScheduler::cancelTask(TimerTask *task) {
 	lock();
-	for (std::map<double, TimerTask* >::iterator iter = tasks_.begin();
+	for (std::map<Time, TimerTask* >::iterator iter = tasks_.begin();
 			iter != tasks_.end(); ++iter) {
 		if (iter->second== task)	{
 			delete iter->second;
@@ -80,12 +102,11 @@ void TaskScheduler::cancelTask(TimerTask *task) {
 // CLASS Timer
 void* doWorkTimer(void *arg) {
 	Timer *timer = (Timer*) arg;
-	//timeval timeout;
-	//timeout.tv_sec = 0;
-	//timeout.tv_usec = 500;
+	Sleep sleep;
 	while(timer->is_continue())
 	{
-		//select(0, NULL, NULL, NULL, &timeout);
+		sleep.sleepForMili(500);
+		LOG_DBG("Run tasks");
 		timer->get_task_scheduler()->runTasks();
 	}
 	return (void *) 0;
@@ -107,9 +128,14 @@ Timer::~Timer() {
 	delete thread_;
 	thread_ = 0;
 }
-void Timer::scheduleTask(TimerTask* task, double delay_ms) {
-	std::clock_t now = std::clock();
-	double executeTime = now + delay_ms;
+void Timer::scheduleTask(TimerTask* task, long delay_ms) {
+	Time executeTime;
+	timeval t;
+	LOG_DBG("Task scheduled at time %d and microsec %d", executeTime.get_time_seconds(), executeTime.get_only_milliseconds());
+	t.tv_sec = executeTime.get_time_seconds() + (delay_ms / 1000);
+	t.tv_usec = executeTime.get_only_milliseconds() + ((delay_ms % 1000) * 1000);
+	executeTime.set_timeval(t);
+	LOG_DBG("Task will be executed at time %d and microsec %d", executeTime.get_time_seconds(), executeTime.get_only_milliseconds());
 	task_scheduler->insert(executeTime, task);
 }
 void Timer::cancelTask(TimerTask* task) {
