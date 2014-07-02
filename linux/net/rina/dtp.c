@@ -650,7 +650,7 @@ static void seqQ_cleanup(struct dtp * dtp)
         pdu = seq_queue_pop(seqQ->queue);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
         LWE = dt_sv_rcv_lft_win(dt);
-        while (pdu && (seq_num - LWE - 1 <= max_sdu_gap)) {
+        while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
                 spin_unlock(&seqQ->lock);
                 pdu_post(dtp, pdu);
