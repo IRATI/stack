@@ -259,7 +259,8 @@ out:
 /* Returns an IPC process assigned to the DIF specified by @dif_name,
  * if any.
  */
-rina::IPCProcess *IPCManager::select_ipcp_by_dif(const
+rina::IPCProcess *
+IPCManager::select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name)
 {
         const vector<rina::IPCProcess *>& ipcps =
@@ -271,6 +272,27 @@ rina::IPCProcess *IPCManager::select_ipcp_by_dif(const
                 if (dif_info.get_dif_name() == dif_name) {
                         return ipcps[i];
                 }
+        }
+
+        return NULL;
+}
+
+// Returns any IPC process in the system, giving priority to
+// normal IPC processes.
+rina::IPCProcess *
+IPCManager::select_ipcp()
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                if (ipcps[i]->getType() == rina::NORMAL_IPC_PROCESS) {
+                        return ipcps[i];
+                }
+        }
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                return ipcps[i];
         }
 
         return NULL;

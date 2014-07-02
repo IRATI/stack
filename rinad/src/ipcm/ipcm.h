@@ -81,6 +81,8 @@ class IPCManager : public EventLoopData {
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
 
+        rina::IPCProcess *select_ipcp();
+
         int enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor);
 
