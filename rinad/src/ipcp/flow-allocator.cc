@@ -1139,7 +1139,7 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 }
 
 //CLASS TEARDOWNFLOW TIMERTASK
-const double TearDownFlowTimerTask::DELAY = 5000;
+const long TearDownFlowTimerTask::DELAY = 5000;
 
 TearDownFlowTimerTask::TearDownFlowTimerTask(FlowAllocatorInstance * flow_allocator_instance,
 const std::string& flow_object_name, bool requestor) {
