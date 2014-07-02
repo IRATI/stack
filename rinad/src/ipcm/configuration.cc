@@ -118,8 +118,7 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
                                 appToDIF[i].get("difName", string()).asString(),
                                 string());
                         appToDIFMapping.encodedAppName =
-                                appToDIF[i].get("encodedAppName",
-                                appToDIFMapping.encodedAppName).asString();
+                                appToDIF[i].get("encodedAppName", string()).asString();
 
                         applicationToDIFMappings.push_back(appToDIFMapping);
                 }
@@ -132,24 +131,23 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
 
                 rinad::IPCProcessToCreate ipc;
 
-                ipc.type = ipc_processes[i].get("type",
-                                                ipc.type).asString();
+                ipc.type = ipc_processes[i].get("type", string()).asString();
 
                 // IPC process Names
                 // Might want to move this to another function
                 rina::ApplicationProcessNamingInformation name;
                 string applicationProcessName =
                         ipc_processes[i].get("applicationProcessName",
-                                             name.getProcessName()).asString();
+                                             string()).asString();
                 string applicationProcessInstance =
                         ipc_processes[i].get("applicationProcessInstance",
-                                             name.getProcessInstance()).asString();
+                                             string()).asString();
                 string applicationEntityName =
                         ipc_processes[i].get("applicationEntityName",
-                                             name.getEntityName()).asString();
+                                             string()).asString();
                 string applicationEntityInstance =
                         ipc_processes[i].get("applicationEntityInstance",
-                                             name.getEntityInstance()).asString();
+                                             string()).asString();
 
                 name.setProcessName(applicationProcessName);
                 name.setProcessInstance(applicationProcessInstance);
@@ -170,16 +168,16 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
                                 rina::ApplicationProcessNamingInformation name;
                                 string applicationProcessName =
                                         neigh[j].get("applicationProcessName",
-                                                     name.getProcessName()).asString();
+                                                     string()).asString();
                                 string applicationProcessInstance =
                                         neigh[j].get("applicationProcessInstance",
-                                                     name.getProcessInstance()).asString();
+                                                     string()).asString();
                                 string applicationEntityName =
                                         neigh[j].get("applicationEntityName",
-                                                     name.getEntityName()).asString();
+                                                     string()).asString();
                                 string applicationEntityInstance =
                                         neigh[j].get("applicationEntityInstance",
-                                                     name.getEntityInstance()).asString();
+                                                     string()).asString();
 
                                 name.setProcessName(applicationProcessName);
                                 name.setProcessInstance(applicationProcessInstance);
@@ -216,8 +214,7 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
                         }
                 }
 
-                ipc.hostname = ipc_processes[i].get("hostName",
-                                                   ipc.hostname).asString();
+                ipc.hostname = ipc_processes[i].get("hostName", string()).asString();
 
                 // SDU protection options
                 Json::Value sdu_prot = ipc_processes[i]["sduProtectionOptions"];
@@ -226,10 +223,10 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
                                 rinad::SDUProtectionOption option;
                                 option.nMinus1DIFName =
                                         sdu_prot[j].get("nMinus1DIFName",
-                                                        option.nMinus1DIFName).asString();
+                                                        string()).asString();
                                 option.nMinus1DIFName =
                                         sdu_prot[j].get("sduProtectionType",
-                                                        option.sduProtectionType).asString();
+                                                        string()).asString();
                                 ipc.sduProtectionOptions.push_back(option);
                         }
                 }
@@ -247,11 +244,59 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
         }
 
 
-        // FIXME: Set the DIF configurations here
+        // Set the DIF configurations here
         Json::Value dif_configs = root["difConfigurations"];
         for (unsigned int i = 0; i < dif_configs.size(); i++) {
+                rinad::DIFProperties props;
 
+                props.difName =
+                        rina::ApplicationProcessNamingInformation
+                        (neigh[i].get("difName", string()).asString(),
+                         string());
+                
+                props.difType = neigh[i].get("difType", string()).asString();
+                
+                // Data transfer constants
+                Json::Value dt_const = dif_configs[i]["difProperties"];
+                if (dt_const != 0) {
+                        rina::DataTransferConstants dt; 
+                        
+                        // There is no asShort()
+                        dt.set_address_length(static_cast<unsigned short> 
+                                              dt_const.get("addressLength", 0).asUInt());
+                        dt.set_cep_id_length(static_cast<unsigned short> 
+                                             dt_const.get("cepIdLength", 0).asUInt());
+                        dt.set_dif_integrity(dt_const.get("difIntegrity", false).asBool());
+                        dt.set_length_length(static_cast<unsigned short> 
+                                              dt_const.get("lengthLength", 0).asUInt());
+                        dt.set_max_pdu_lifetime(dt_const.get("maxPduLifetime", 0).asUInt());
+                        dt.set_max_pdu_size(dt_const.get("maxPduSize", 0).asUInt());
+                        dt.set_port_id_length(static_cast<unsigned short> 
+                                              dt_const.get("portIdLength", 0).asUInt());
+                        dt.set_qos_id_lenght(static_cast<unsigned short> 
+                                             dt_const.get("qosIdLength", 0).asUInt());
+                        dt.set_sequence_number_length(static_cast<unsigned short> 
+                                                      dt_const.get("sequenceNumberLength", 0).asUInt());
+                        props.dt_const = dt;
+                }
 
+                // QoS cubes
+                Json::Value cubes = dif_configs[i]["qosCubes"];
+                for (int j = 0; j < cubes.size(); j++) {
+                        rina::QoSCube cube;
+
+                        cube.set_id(cubes.get("id", 0).asUInt());
+                        cube.set_name(cubes.get("name", string()).asString());
+                        
+                        rina::ConnectionPolicies cp;
+                        
+                        props.qosCubes.push_back(cube);
+                }
+
+               
+               
+
+                config.difConfigurations.push_back(props);
         }
 
 
