@@ -688,6 +688,14 @@ public:
 	}
 };
 
+/// Wrapper to sleep a thread
+class Sleep{
+public:
+	bool sleep(int sec, int milisec);
+	bool sleepForMili(int milisec);
+	bool sleepForSec(int sec);
+};
+
 /**
  * Initialize librina providing the local Netlink port-id where this librina
  * instantiation will be bound
