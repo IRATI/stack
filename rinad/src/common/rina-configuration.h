@@ -285,6 +285,10 @@ class RINAConfiguration {
         bool lookup_dif_properties(
                         const rina::ApplicationProcessNamingInformation& dif_name,
                         DIFProperties& result) const;
+
+        bool lookup_dif_by_application(
+                const rina::ApplicationProcessNamingInformation& app_name,
+                rina::ApplicationProcessNamingInformation& result);
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,

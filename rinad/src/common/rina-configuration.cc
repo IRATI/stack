@@ -122,4 +122,22 @@ bool DIFProperties::lookup_ipcp_address(
         return false;
 }
 
+bool RINAConfiguration::lookup_dif_by_application(
+                const rina::ApplicationProcessNamingInformation& app_name,
+                rina::ApplicationProcessNamingInformation& result)
+{
+        string encoded_name = app_name.getEncodedString();
+
+        for (list<ApplicationToDIFMapping>::iterator
+                it = applicationToDIFMappings.begin();
+                        it != applicationToDIFMappings.end(); it++) {
+                if (it->encodedAppName == encoded_name) {
+                        result = it->difName;
+                        return true;
+                }
+        }
+
+        return false;
+}
+
 }
