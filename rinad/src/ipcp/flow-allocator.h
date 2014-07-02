@@ -242,7 +242,7 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, rina::QoSCube* objectValue);
-	void deleteObject();
+	void deleteObject(const void* objectValue);
 	const void* get_value() const;
 };
 

@@ -286,7 +286,7 @@ void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 	//TODO: the QoS cube should be added into the configuration
 }
 
-void QoSCubeSetRIBObject::deleteObject() {
+void QoSCubeSetRIBObject::deleteObject(const void* objectValue) {
 	std::list<std::string> childNames;
 	std::list<BaseRIBObject*>::const_iterator childrenIt;
 	std::list<std::string>::const_iterator namesIt;
@@ -1062,7 +1062,7 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(const std::string& flow
 	}
 
 	try{
-		rib_daemon_->deleteObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, 0);
+		rib_daemon_->deleteObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, 0, 0);
 	}catch(Exception &e){
 		LOG_ERR("Problems deleting object from RIB: %s", e.what());
 	}
@@ -1077,7 +1077,6 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 	if (state_ != MESSAGE_TO_PEER_FAI_SENT) {
 		LOG_ERR("Received CDAP Message while not in MESSAGE_TO_PEER_FAI_SENT state. Current state is: %d",
 				state_);
-		delete cdapMessage;
 		lock_->unlock();
 		return;
 	}
@@ -1085,7 +1084,6 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 	if (cdapMessage->get_obj_name().compare(request_message_->get_obj_name()) != 0){
 		LOG_ERR("Expected create flow response message for flow %s, but received create flow response message for flow %s ",
 				request_message_->get_obj_name().c_str(), cdapMessage->get_obj_name().c_str());
-		delete cdapMessage;
 		lock_->unlock();
 		return;
 	}
@@ -1103,8 +1101,6 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 		} catch(Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
-
-		delete cdapMessage;
 
 		releaseUnlockRemove();
 
@@ -1124,7 +1120,6 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 		}
 		state_ = CONNECTION_UPDATE_REQUESTED;
 		rina::kernelIPCProcess->updateConnection(*(flow_->getActiveConnection()));
-		delete cdapMessage;
 		lock_->unlock();
 	} catch(Exception &e) {
 		LOG_ERR("Problems requesting kernel to update connection: %s", e.what());
@@ -1137,8 +1132,6 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 		} catch(Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
-
-		delete cdapMessage;
 
 		releaseUnlockRemove();
 		return;

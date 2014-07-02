@@ -114,29 +114,25 @@ public:
 	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
 	virtual const std::list<std::string>& get_enrolled_ipc_process_names() const = 0;
 
-	/// A remote IPC process Connect request has been received. Ownership
-	/// of the CDAP message is passed to this class
+	/// A remote IPC process Connect request has been received.
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
 	virtual void connect(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
-	/// A remote IPC process Connect response has been received. Ownership
-	/// of the CDAP message is passed to this class
+	/// A remote IPC process Connect response has been received.
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
 	virtual void connectResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
-	/// A remote IPC process Release request has been received. Ownership
-	/// of the CDAP message is passed to this class
+	/// A remote IPC process Release request has been received.
 	/// @param cdapMessage
 	/// @param cdapSessionDescripton
 	virtual void release(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
 
-	/// A remote IPC process Release response has been received. Ownership
-	/// of the CDAP message is passed to this class
+	/// A remote IPC process Release response has been received.
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
 	virtual void releaseResponse(const rina::CDAPMessage * cdapMessage,
@@ -243,12 +239,12 @@ public:
 
 	/// Add an entry to the directory forwarding table
 	/// @param entry
-	virtual void addDFTEntry(const rina::DirectoryForwardingTableEntry& entry) = 0;
+	virtual void addDFTEntry(rina::DirectoryForwardingTableEntry * entry) = 0;
 
 	/// Get an entry from the application name
 	/// @param apNamingInfo
 	/// @return
-	virtual rina::DirectoryForwardingTableEntry getDFTEntry(
+	virtual rina::DirectoryForwardingTableEntry * getDFTEntry(
 			const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
 
 	/// Remove an entry from the directory forwarding table
@@ -392,14 +388,13 @@ public:
 	/// Local invocations
 	virtual void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
-	virtual void deleteObject();
+	virtual void deleteObject(const void* objectValue);
 	virtual BaseRIBObject * readObject();
 	virtual void writeObject(const void* object_value);
 	virtual void startObject(const void* object);
 	virtual void stopObject(const void* object);
 
-	/// Remote invocations via CDAP messages, ownership of cdapMessage is passed to
-	/// the oeprations
+	/// Remote invocations via CDAP messages
 	virtual void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
@@ -439,7 +434,6 @@ public:
 };
 
 /// Interface of classes that handle CDAP response message.
-/// Ownership of CDAP messages is tranferred to this class.
 class ICDAPResponseMessageHandler {
 public:
 	virtual ~ICDAPResponseMessageHandler(){};
@@ -463,38 +457,31 @@ class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
 public:
 	virtual void createResponse(const rina::CDAPMessage * cdapMessage,
 				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 	virtual void deleteResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 	virtual void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-		delete cdapMessage;
 	}
 };
 
 /// Part of the RIB Daemon API to control if the changes have to be notified
 class NotificationPolicy {
 public:
-	NotificationPolicy(const std::list< int>& cdap_session_ids);
+	NotificationPolicy(const std::list<int>& cdap_session_ids);
 	const std::list<int>& get_cdap_session_ids() const;
 
 private:
@@ -576,7 +563,7 @@ public:
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
 	virtual void deleteObject(const std::string& objectClass, const std::string& objectName,
-			const NotificationPolicy * notificationPolicy) = 0;
+			const void* objectValue, const NotificationPolicy * notificationPolicy) = 0;
 
 	/// Read an object from the RIB
 	/// @param objectClass the class of the object
@@ -626,6 +613,7 @@ public:
 class IPCProcess {
 public:
 	virtual ~IPCProcess(){};
+	virtual unsigned short get_id() = 0;
 	virtual IDelimiter* get_delimiter() = 0;
 	virtual IEncoder* get_encoder() = 0;
 	virtual rina::CDAPSessionManagerInterface* get_cdap_session_manager() = 0;
@@ -735,7 +723,7 @@ class SimpleSetMemberRIBObject: public SimpleRIBObject {
 public:
 	SimpleSetMemberRIBObject(IPCProcess* ipc_process, const std::string& object_class,
 				const std::string& object_name, const void* object_value);
-	virtual void deleteObject();
+	virtual void deleteObject(const void* objectValue);
 };
 
 }

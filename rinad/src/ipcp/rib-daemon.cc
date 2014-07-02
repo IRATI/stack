@@ -357,9 +357,7 @@ void RIBDaemon::createObject(const std::string& objectClass, const std::string& 
 				delete cdapMessage;
 			}catch(Exception & e){
 				LOG_ERR("Problems notifying neighbors: %s", e.what());
-				if (cdapMessage) {
-					delete cdapMessage;
-				}
+				delete cdapMessage;
 			}
 		}
 	}
@@ -368,11 +366,11 @@ void RIBDaemon::createObject(const std::string& objectClass, const std::string& 
 }
 
 void RIBDaemon::deleteObject(const std::string& objectClass, const std::string& objectName,
-		const NotificationPolicy * notificationPolicy) {
+		const void* objectValue, const NotificationPolicy * notificationPolicy) {
 	BaseRIBObject * ribObject;
 
 	ribObject = rib_.getRIBObject(objectClass, objectName);
-	ribObject->deleteObject();
+	ribObject->deleteObject(objectValue);
 
 	//Notify neighbors if needed
 	if (!notificationPolicy) {
@@ -520,11 +518,9 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			break;
 		default:
 			LOG_ERR("Invalid operation code for a request message: %d", cdapMessage->get_op_code());
-			delete cdapMessage;
 		}
 	} catch(Exception &e) {
 		LOG_ERR("Problems processing incoming CDAP request message %s", e.what());
-		delete cdapMessage;
 	}
 
 	return;
@@ -538,35 +534,37 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
 	if (!handler) {
 		LOG_ERR("Could not find a message handler for invoke-id %d",
 				cdapMessage->get_invoke_id());
-		delete cdapMessage;
 		return;
 	}
 
-	switch (cdapMessage->get_op_code()) {
-	case rina::CDAPMessage::M_CREATE_R:
-		handler->createResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_DELETE_R:
-		handler->deleteResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_START_R:
-		handler->startResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_STOP_R:
-		handler->stopResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_READ_R:
-		handler->readResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CANCELREAD_R:
-		handler->cancelReadResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_WRITE_R:
-		handler->writeResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	default:
-		LOG_ERR("Invalid operation code for a response message %d", cdapMessage->get_op_code());
-		delete cdapMessage;
+	try {
+		switch (cdapMessage->get_op_code()) {
+		case rina::CDAPMessage::M_CREATE_R:
+			handler->createResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_DELETE_R:
+			handler->deleteResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_START_R:
+			handler->startResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_STOP_R:
+			handler->stopResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_READ_R:
+			handler->readResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_CANCELREAD_R:
+			handler->cancelReadResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_WRITE_R:
+			handler->writeResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		default:
+			LOG_ERR("Invalid operation code for a response message %d", cdapMessage->get_op_code());
+		}
+	}catch (Exception &e){
+		LOG_ERR("Problems processing CDAP response message: %s", e.what());
 	}
 }
 
@@ -603,63 +601,86 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId) {
 	//2 Find the message recipient and call it
 	rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
 	enrollmentTask = ipc_process_->get_enrollment_task();
-	switch (opcode) {
-	case rina::CDAPMessage::M_CONNECT:
-		enrollmentTask->connect(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CONNECT_R:
-		enrollmentTask->connectResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_RELEASE:
-		enrollmentTask->release(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_RELEASE_R:
-		enrollmentTask->releaseResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CREATE:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CREATE_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_DELETE:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_DELETE_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_START:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_START_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_STOP:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_STOP_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_READ:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_READ_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CANCELREAD:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CANCELREAD_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_WRITE:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_WRITE_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	default:
-		LOG_ERR("Unrecognized CDAP operation code: %d", cdapMessage->get_op_code());
+	try {
+		switch (opcode) {
+		case rina::CDAPMessage::M_CONNECT:
+			enrollmentTask->connect(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CONNECT_R:
+			enrollmentTask->connectResponse(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_RELEASE:
+			enrollmentTask->release(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_RELEASE_R:
+			enrollmentTask->releaseResponse(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CREATE:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CREATE_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_DELETE:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_DELETE_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_START:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_START_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_STOP:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_STOP_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_READ:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_READ_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CANCELREAD:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CANCELREAD_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_WRITE:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_WRITE_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		default:
+			LOG_ERR("Unrecognized CDAP operation code: %d", cdapMessage->get_op_code());
+			delete cdapMessage;
+		}
+	}catch(Exception &e){
+		LOG_ERR("Problems processing incoming CDAP message: %s", e.what());
 		delete cdapMessage;
 	}
 }

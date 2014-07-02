@@ -78,7 +78,7 @@ public:
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
 	std::string getProcessNamePlusInstance();
-	std::string getEncodedString();
+	const std::string getEncodedString() const;
 	const std::string toString() const;
 private:
 	/**
