@@ -486,6 +486,7 @@ class ApplicationRegistrationRequestEvent: public IPCEvent {
 	ApplicationRegistrationInformation applicationRegistrationInformation;
 
 public:
+        ApplicationRegistrationRequestEvent() { }
 	ApplicationRegistrationRequestEvent(
 		const ApplicationRegistrationInformation&
 		applicationRegistrationInformation, unsigned int sequenceNumber);
