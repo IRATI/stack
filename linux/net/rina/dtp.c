@@ -802,10 +802,12 @@ static void tf_a(void * data)
         item = rwq_work_create_ni(post_worker, dtp);
         if (!item) {
                 LOG_ERR("Could not create twq item");
+                return;
         }
 
          if (rwq_work_post(dtp->twq, item)) {
-                 LOG_ERR("Could not add twq item to the wq");
+                LOG_ERR("Could not add twq item to the wq");
+                return;
          }
 
         return;
