@@ -293,8 +293,6 @@ CDAPSessionImpl::CDAPSessionImpl(CDAPSessionManager *cdap_session_manager,
 CDAPSessionImpl::~CDAPSessionImpl() throw () {
 	delete connection_state_machine_;
 	connection_state_machine_ = 0;
-	delete wire_message_provider_;
-	wire_message_provider_ = 0;
 	delete session_descriptor_;
 	session_descriptor_ = 0;
 	for (std::map<int, CDAPOperationState*>::iterator iter =
@@ -731,7 +729,7 @@ CDAPSessionManager::CDAPSessionManager() {
 CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0) {
 	wire_message_provider_factory_ = arg0;
 	timeout_ = DEFAULT_TIMEOUT_IN_MS;
-	wire_message_provider_ = 0;
+	wire_message_provider_ = wire_message_provider_factory_->createWireMessageProvider();
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
 }
 
@@ -739,7 +737,7 @@ CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0,
 		long arg1) {
 	wire_message_provider_factory_ = arg0;
 	timeout_ = arg1;
-	wire_message_provider_ = 0;
+	wire_message_provider_ = wire_message_provider_factory_->createWireMessageProvider();
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
 }
 
@@ -748,8 +746,7 @@ CDAPSessionImpl* CDAPSessionManager::createCDAPSession(int port_id) {
 		return cdap_sessions_.find(port_id)->second;
 	} else {
 		CDAPSessionImpl *cdap_session = new CDAPSessionImpl(this, timeout_,
-				wire_message_provider_factory_->createWireMessageProvider(),
-				invoke_id_manager_);
+				wire_message_provider_,	invoke_id_manager_);
 		CDAPSessionDescriptor *descriptor = new CDAPSessionDescriptor(port_id);
 		cdap_session->set_session_descriptor(descriptor);
 		cdap_sessions_.insert(
@@ -766,6 +763,8 @@ CDAPSessionManager::~CDAPSessionManager() throw () {
 		iter->second = 0;
 	}
 	cdap_sessions_.clear();
+	delete wire_message_provider_;
+	wire_message_provider_ = 0;
 }
 void CDAPSessionManager::getAllCDAPSessionIds(std::vector<int> &vector) {
 	vector.clear();

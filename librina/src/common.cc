@@ -28,8 +28,8 @@
 #include "librina/logs.h"
 #include "config.h"
 #include "core.h"
-
 #include "librina/common.h"
+#include <unistd.h>
 
 namespace rina {
 
@@ -930,6 +930,17 @@ const std::string& Parameter::getValue() const {
 
 void Parameter::setValue(const std::string& value) {
 	this->value = value;
+}
+
+// Class Sleep
+bool Sleep::sleep(int sec, int milisec) {
+	return usleep(sec * 1000000 + milisec * 1000);
+}
+bool Sleep::sleepForMili(int milisec) {
+	return usleep(milisec * 1000);
+}
+bool Sleep::sleepForSec(int sec) {
+	return usleep(sec * 1000000);
 }
 
 /* INITIALIZATION OPERATIONS */
