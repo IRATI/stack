@@ -16,7 +16,6 @@ ResetStablishmentTimerTask::ResetStablishmentTimerTask(
 void ResetStablishmentTimerTask::run() {
 	con_state_machine_->lock();
 	if(con_state_machine_->connection_state_ == ConnectionStateMachine::AWAITCON) {
-		std::stringstream ss;
 		LOG_ERR("M_CONNECT_R message not received within %d ms. Reseting the connection", con_state_machine_->timeout_);
 		con_state_machine_->resetConnection();
 	}
@@ -31,7 +30,7 @@ ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(
 }
 void ReleaseConnectionTimerTask::run() {
 	con_state_machine_->lock();
-	if(con_state_machine_->connection_state_ == ConnectionStateMachine::CONNECTED) {
+	if(con_state_machine_->connection_state_ == ConnectionStateMachine::AWAITCLOSE) {
 		LOG_ERR("M_RELEASE_R message not received within %d ms. Reseting the connection", con_state_machine_->timeout_);
 		con_state_machine_->resetConnection();
 	}
@@ -195,8 +194,8 @@ void ConnectionStateMachine::release(const CDAPMessage &cdap_message) {
 				this);
 		LOG_DBG("Waiting timeout %d to receive a release response", timeout_);
 		close_timer_->scheduleTask(reset, timeout_);
-
 	}
+
 }
 void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
 	lock();
@@ -212,7 +211,7 @@ void ConnectionStateMachine::releaseReceived(const CDAPMessage &message) {
 		connection_state_ = AWAITCLOSE;
 	} else {
 		connection_state_ = NONE;
-		//cdap_session_->stopConnection();
+		cdap_session_->stopConnection();
 	}
 	unlock();
 }
@@ -435,7 +434,6 @@ void CDAPSessionImpl::messageSentOrReceived(const CDAPMessage &cdap_message,
 		break;
 	case CDAPMessage::M_RELEASE_R:
 		connection_state_machine_->releaseResponseSentOrReceived(sent);
-		emptySessionDescriptor();
 		break;
 	case CDAPMessage::M_CREATE:
 		requestMessageSentOrReceived(cdap_message, CDAPMessage::M_CREATE, sent);
