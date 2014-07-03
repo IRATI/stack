@@ -549,10 +549,14 @@ static bool seq_queue_is_dup(struct seq_queue * q, seq_num_t seq_num)
 
 bool seqQ_pdu_is_duplicate(struct sequencingQ * seqQ, seq_num_t seq_num)
 {
+        bool tmp;
         ASSERT(seqQ);
         ASSERT(seqQ->queue);
-
-        return seq_queue_is_dup(seqQ->queue, seq_num);
+        
+        spin_lock(&seqQ->lock);
+        tmp = seq_queue_is_dup(seqQ->queue, seq_num);
+        spin_unlock(&seqQ->lock);
+        return tmp;
 }
 
 int seqQ_push(struct dtp * dtp, struct pdu * pdu)
@@ -738,6 +742,10 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 LOG_DBG("LWEU: Loop LWE = %d", LWE);
 
                 pdu = pos->pdu;
+                if (!pdu_is_ok(pdu)) {
+                        LOG_ERR("Bogus data, bailing out");
+                        return -1;
+                }
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
@@ -749,6 +757,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                 return 0;
                         }
                         pos->pdu = NULL;
+                        list_del(&pos->next);
                         seq_q_entry_destroy(pos);
 
                         spin_unlock(&seqQ->lock);
