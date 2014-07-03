@@ -28,8 +28,13 @@ def compute_name(sg):
 
 def setter_repl(m):
     global name
-    return name + ' = ' + m.group(1)
+    return m.group(1) + name + ' = ' + m.group(2)
 
+def getter_repl(m):
+    global name
+    return m.group(1) + name
+
+showfp = False
 
 # collects all headers
 headers_dirs = ['librina/include']
@@ -56,7 +61,8 @@ for path in headers_paths:
         if m:
             getters.add(candidate)
         else:
-            print "False positive", name
+            if showfp:
+                print "False positive", name
 
     candidates = re.findall(r'(set[^ \t\n\r(]+)\(', content)
     for candidate in candidates:
@@ -65,11 +71,11 @@ for path in headers_paths:
         if m:
             setters.add(candidate)
         else:
-            print "False positive", name
+            if showfp:
+                print "False positive", name
 
     f.close()
 print "Header crawling completed"
-
 
 for c in getters:
     print c, compute_name(c)
@@ -94,12 +100,12 @@ for path in target_paths:
 
     for g in getters:
         name = compute_name(g)
-        getter_pattern = r'' + g + '\(\)'
-        content = re.sub(getter_pattern, name, content)
+        getter_pattern = r'(\.|>[ \t\n]*)' + g + '\(\)'
+        content = re.sub(getter_pattern, getter_repl, content)
 
     for s in setters:
         name = compute_name(s)
-        setter_pattern = r'' + s + '\(([^)]+)\)'
+        setter_pattern = r'(\.|>[ \t\n]*)' + s + '\(([^)]+)\)'
         content = re.sub(setter_pattern, setter_repl, content)
 
     f = open(path, 'w')
