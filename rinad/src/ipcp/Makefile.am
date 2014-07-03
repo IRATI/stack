@@ -7,7 +7,7 @@
 bin_PROGRAMS = ipcp
 
 ipcp_CFLAGS   =
-ipcp_CPPFLAGS = $(LIBRINA_CFLAGS) -I$(srcdir)/..
+ipcp_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS) -I$(srcdir)/..
 ipcp_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 ipcp_SOURCES  =						\
 	main.cc						\
