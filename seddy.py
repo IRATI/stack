@@ -82,7 +82,7 @@ target_paths = []
 for target_dir in target_dirs:
     for dirname, dirnames, filenames in os.walk(target_dir):
         for filename in filenames:
-            m = re.search(r'.+\.((cc)|(h)|(c)|(java))$', filename)
+            m = re.search(r'[^.]+\.((cc)|(h)|(c)|(java))$', filename)
             if m:
                 target_paths.append(os.path.join(dirname, filename))
 
