@@ -135,7 +135,7 @@ rina::Connection * Flow::getActiveConnection() {
 	rina::Connection result;
 	std::list<rina::Connection*>::iterator iterator;
 
-	int i=0;
+	unsigned int i=0;
 	for(iterator = connections_.begin(); iterator != connections_.end(); ++iterator) {
 		if (i == current_connection_index_) {
 			return *iterator;
@@ -221,8 +221,8 @@ std::string Flow::toString() {
 
 //Class Flow RIB Object
 FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
-		IFlowAllocatorInstance * flow_allocator_instance):
-	SimpleSetMemberRIBObject(ipc_process, Flow::FLOW_RIB_OBJECT_CLASS, object_name,
+		const std::string& object_class, IFlowAllocatorInstance * flow_allocator_instance):
+	SimpleSetMemberRIBObject(ipc_process, object_class, object_name,
 			flow_allocator_instance->get_flow()) {
 	flow_allocator_instance_ = flow_allocator_instance;
 }
@@ -246,11 +246,12 @@ void FlowSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			cdapSessionDescriptor->get_port_id());
 }
 
-void FlowSetRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		IFlowAllocatorInstance* objectValue) {
+void FlowSetRIBObject::createObject(const std::string& objectClass,
+                                  const std::string& objectName,
+                                  IFlowAllocatorInstance* objectValue) {
 	FlowRIBObject * flowRIBObject;
 
-	flowRIBObject = new FlowRIBObject(get_ipc_process(), objectName, objectValue);
+	flowRIBObject = new FlowRIBObject(get_ipc_process(), objectClass, objectName, objectValue);
 	add_child(flowRIBObject);
 	get_rib_daemon()->addRIBObject(flowRIBObject);
 }
@@ -275,18 +276,24 @@ QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process):
 void QoSCubeSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	//TODO, depending on IEncoder
+	LOG_ERR("Missing code %d, %d", cdapMessage->get_op_code(),
+			cdapSessionDescriptor->get_port_id());
 }
 
 void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 		const std::string& objectName, rina::QoSCube* objectValue) {
 	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(),
-			QOS_CUBE_RIB_OBJECT_CLASS, objectName, objectValue);
+			objectClass, objectName, objectValue);
 	add_child(ribObject);
 	get_rib_daemon()->addRIBObject(ribObject);
 	//TODO: the QoS cube should be added into the configuration
 }
 
 void QoSCubeSetRIBObject::deleteObject(const void* objectValue) {
+	if (objectValue) {
+		LOG_WARN("Object value should have been NULL");
+	}
+
 	std::list<std::string> childNames;
 	std::list<BaseRIBObject*>::const_iterator childrenIt;
 	std::list<std::string>::const_iterator namesIt;
@@ -538,7 +545,7 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId) {
 
 //Class Simple New flow Request Policy
 Flow * SimpleNewFlowRequestPolicy::generateFlowObject(const rina::FlowRequestEvent& event,
-				const std::string& difName, const std::list<rina::QoSCube>& qosCubes) {
+				const std::list<rina::QoSCube>& qosCubes) {
 	Flow* flow;
 
 	flow = new Flow();
@@ -680,7 +687,6 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 
 	flow_request_event_ = rina::FlowRequestEvent(event);
 	flow_ = new_flow_request_policy_->generateFlowObject(event,
-			ipc_process_->get_dif_information().get_dif_name().getProcessName(),
 			ipc_process_->get_dif_information().get_dif_configuration().get_efcp_configuration().get_qos_cubes());
 
 	LOG_DBG("Generated flow object");

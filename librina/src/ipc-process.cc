@@ -1147,11 +1147,11 @@ void DirectoryForwardingTableEntry::set_ap_naming_info(
 	ap_naming_info_ = ap_naming_info;
 }
 
-long DirectoryForwardingTableEntry::get_address() const {
+unsigned int DirectoryForwardingTableEntry::get_address() const {
 	return address_;
 }
 
-void DirectoryForwardingTableEntry::set_address(long address) {
+void DirectoryForwardingTableEntry::set_address(unsigned int address) {
 	address_ = address;
 }
 

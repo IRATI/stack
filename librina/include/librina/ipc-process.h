@@ -931,8 +931,8 @@ public:
 	bool operator==(const DirectoryForwardingTableEntry &object);
 	ApplicationProcessNamingInformation get_ap_naming_info() const;
 	void set_ap_naming_info(const ApplicationProcessNamingInformation& ap_naming_info);
-	long get_address() const;
-	void set_address(long address);
+	unsigned int get_address() const;
+	void set_address(unsigned int address);
 	long get_timestamp() const;
 	void set_timestamp(long timestamp);
 
@@ -948,7 +948,7 @@ private:
 	ApplicationProcessNamingInformation ap_naming_info_;
 
 	/// The address of the IPC process it is currently attached to
-	long address_;
+	unsigned int address_;
 
 	/// A timestamp for this entry
 	long timestamp_;

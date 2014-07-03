@@ -215,7 +215,7 @@ public:
 class FlowRIBObject : public SimpleSetMemberRIBObject {
 public:
 	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
-			IFlowAllocatorInstance * flow_allocator_instance);
+			const std::string& object_class, IFlowAllocatorInstance * flow_allocator_instance);
 	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
@@ -229,6 +229,7 @@ public:
 	FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator);
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
                           const std::string& objectName,
                           IFlowAllocatorInstance* objectValue);
@@ -248,6 +249,7 @@ public:
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, rina::QoSCube* objectValue);
 	void deleteObject(const void* objectValue);
@@ -293,7 +295,7 @@ class INewFlowRequetPolicy {
 public:
 	virtual ~INewFlowRequetPolicy(){};
 	virtual Flow * generateFlowObject(const rina::FlowRequestEvent& flowRequestEvent,
-			const std::string& difName, const std::list<rina::QoSCube>& qosCubes) = 0;
+			const std::list<rina::QoSCube>& qosCubes) = 0;
 };
 
 class SimpleNewFlowRequestPolicy: public INewFlowRequetPolicy {
@@ -301,7 +303,7 @@ public:
 	SimpleNewFlowRequestPolicy(){};
 	~SimpleNewFlowRequestPolicy(){};
 	Flow * generateFlowObject(const rina::FlowRequestEvent& flowRequestEvent,
-				const std::string& difName, const std::list<rina::QoSCube>& qosCubes);
+				const std::list<rina::QoSCube>& qosCubes);
 
 private:
 	rina::QoSCube selectQoSCube(const rina::FlowSpecification& flowSpec,
