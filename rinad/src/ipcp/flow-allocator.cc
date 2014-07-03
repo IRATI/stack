@@ -353,7 +353,7 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 	unsigned int myAddress = 0;
 	int portId = 0;
 
-	try{
+	try {
 		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
 		flow = (Flow *) encoder_->decode((char*) value->get_value());
 	}catch (Exception &e){
@@ -403,7 +403,7 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 }
 
 void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event, int result) {
-	try{
+	try {
 		rina::extendedIPCManager->allocateFlowRequestResult(event, result);
 	}catch (Exception &e){
 		LOG_ERR("Problems communicating with the IPC Manager Daemon: %s", e.what());
@@ -672,30 +672,39 @@ bool FlowAllocatorInstance::isFinished() const {
 	return state_ == FINISHED;
 }
 
-unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const {
-	rina::AccessGuard guard = rina::AccessGuard(*lock_);
-	return allocate_response_message_handle_;
+unsigned int FlowAllocatorInstance::get_allocate_response_message_handle() const
+{
+        unsigned int t;
+
+        {
+                rina::AccessGuard g(*lock_);
+                t = allocate_response_message_handle_;
+        }
+
+	return t;
 }
 
-void FlowAllocatorInstance::set_allocate_response_message_handle(unsigned int allocate_response_message_handle) {
-	rina::AccessGuard(*lock_);
-	allocate_response_message_handle_ = allocate_response_message_handle;
+void FlowAllocatorInstance::set_allocate_response_message_handle(unsigned int allocate_response_message_handle)
+{
+        rina::AccessGuard g(*lock_);
+        allocate_response_message_handle_ = allocate_response_message_handle;
 }
 
-void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& event) {
-	rina::AccessGuard(*lock_);
-
+void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& event)
+{
+	rina::AccessGuard g(*lock_);
+        
 	flow_request_event_ = rina::FlowRequestEvent(event);
-	flow_ = new_flow_request_policy_->generateFlowObject(event,
-			ipc_process_->get_dif_information().get_dif_configuration().get_efcp_configuration().get_qos_cubes());
+	flow_               = new_flow_request_policy_->generateFlowObject(event,
+                                                                           ipc_process_->get_dif_information().get_dif_configuration().get_efcp_configuration().get_qos_cubes());
 
 	LOG_DBG("Generated flow object");
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress =
-			namespace_manager_->getDFTNextHop(event.getRemoteApplicationName());
+                namespace_manager_->getDFTNextHop(event.getRemoteApplicationName());
 	LOG_DBG("The directory forwarding table returned address %ud",
-			destinationAddress);
+                destinationAddress);
 	flow_->set_destination_address(destinationAddress);
 	if (destinationAddress == 0){
 		std::stringstream ss;
@@ -721,11 +730,13 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 	state_ = CONNECTION_CREATE_REQUESTED;
 	rina::kernelIPCProcess->createConnection(*(flow_->getActiveConnection()));
 	LOG_DBG("Requested the creation of a connection to the kernel, for flow with port-id %d",
-			port_id_);
+                port_id_);
 }
 
-void FlowAllocatorInstance::replyToIPCManager(rina::FlowRequestEvent & event, int result) {
-	try{
+void FlowAllocatorInstance::replyToIPCManager(rina::FlowRequestEvent & event,
+                                              int result)
+{
+	try {
 		rina::extendedIPCManager->allocateFlowRequestResult(event, result);
 	} catch(Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager Daemon: %s", e.what());
@@ -733,7 +744,7 @@ void FlowAllocatorInstance::replyToIPCManager(rina::FlowRequestEvent & event, in
 }
 
 void FlowAllocatorInstance::releasePortId() {
-	try{
+	try {
 		rina::extendedIPCManager->deallocatePortId(port_id_);
 	} catch(Exception &e) {
 		LOG_ERR("Problems releasing port-id %d", port_id_);
@@ -768,7 +779,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
 	const rina::CDAPMessage * cdapMessage = 0;
-	try{
+	try {
 		//5 get the portId of any open CDAP session
 		std::vector<int> cdapSessions;
 		cdap_session_manager_->getAllCDAPSessionIds(cdapSessions);
@@ -785,7 +796,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 
 		rib_daemon_->sendMessageToAddress(*request_message_, cdapSessionId, flow_->get_destination_address(), this);
 		delete cdapMessage;
-	}catch(Exception &e){
+	} catch (Exception &e){
 		LOG_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
 				e.what());
 		delete cdapMessage;
@@ -886,7 +897,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 	const rina::CDAPMessage * cdapMessage = 0;
 	if (event.getResult() == 0){
 		//Flow has been accepted
-		try{
+		try {
 			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
 			cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
 					rina::CDAPMessage::NONE_FLAGS, request_message_->get_obj_class(), 0,
@@ -895,11 +906,11 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
 					flow_->get_source_address(), 0);
 			delete cdapMessage;
-		}catch(Exception &e){
+		} catch (Exception &e){
 			LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s", e.what());
 			delete cdapMessage;
 
-			try{
+			try {
 				rina::extendedIPCManager->flowDeallocated(port_id_);
 			} catch(Exception &e) {
 				LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
@@ -909,7 +920,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 			return;
 		}
 
-		try{
+		try {
 			flow_->set_state(Flow::ALLOCATED);
 			rib_daemon_->createObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, this, 0);
 		} catch(Exception &e) {
@@ -922,7 +933,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 	}
 
 	//Flow has been rejected
-	try{
+	try {
 		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
 		cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
 				rina::CDAPMessage::NONE_FLAGS, request_message_->get_obj_class(), 0,
@@ -933,7 +944,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 				flow_->get_source_address(), 0);
 		delete cdapMessage;
 		cdapMessage = 0;
-	}catch(Exception &e){
+	} catch (Exception &e){
 		LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s", e.what());
 		if (cdapMessage) {
 			delete cdapMessage;
@@ -977,7 +988,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(const rina::Upd
 
 	state_ = FLOW_ALLOCATED;
 
-	try{
+	try {
 		flow_request_event_.setPortId(port_id_);
 		rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_, 0);
 	} catch(Exception &e) {
@@ -987,22 +998,25 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(const rina::Upd
 	lock_->unlock();
 }
 
-void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEvent& event){
-	rina::AccessGuard(*lock_);
+void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEvent& event)
+{
+	rina::AccessGuard g(*lock_);
+
+        (void) event; // Stop compiler barfs
 
 	if (state_ != FLOW_ALLOCATED) {
 		LOG_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d", state_);
 		return;
 	}
 
-	try{
+	try {
 		//1 Update flow state
 		flow_->set_state(Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN);
 		state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 		//2 Send M_DELETE
 		const rina::CDAPMessage * cdapMessage = 0;
-		try{
+		try {
 			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(encoder_->encode(flow_));
 			cdapMessage = cdap_session_manager_->getDeleteObjectRequestMessage(underlying_port_id_, 0,
 					rina::CDAPMessage::NONE_FLAGS, Flow::FLOW_RIB_OBJECT_CLASS, 0, object_name_, &objectValue,
@@ -1017,7 +1031,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 
 			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_, address, 0);
 			delete cdapMessage;
-		}catch(Exception &e){
+		} catch (Exception &e){
 			LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
 			delete cdapMessage;
 		}
@@ -1025,15 +1039,19 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		//3 Wait 2*MPL before tearing down the flow
 		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this, object_name_, true);
 		timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
-	}catch(Exception &e){
+	} catch (Exception &e){
 		LOG_ERR("Problems processing flow deallocation request: %s", +e.what());
 	}
 
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived(const rina::CDAPMessage * requestMessage,
-		int underlyingPortId) {
-	rina::AccessGuard(*lock_);
+                                                             int underlyingPortId)
+{
+        (void) underlyingPortId; // Stop compiler barfs
+        (void) requestMessage; // Stop compiler barfs
+
+	rina::AccessGuard g(*lock_);
 
 	if (state_ != FLOW_ALLOCATED) {
 		LOG_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
@@ -1050,14 +1068,19 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived(const rina::CDAPMes
 	timer_->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 
 	//4 Inform IPC Manager
-	try{
+	try {
 		rina::extendedIPCManager->flowDeallocatedRemotely(port_id_, 0);
-	}catch(Exception &e){
+	} catch (Exception &e){
 		LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
 	}
 }
 
-void FlowAllocatorInstance::destroyFlowAllocatorInstance(const std::string& flowObjectName, bool requestor) {
+void FlowAllocatorInstance::destroyFlowAllocatorInstance(const std::string& flowObjectName,
+                                                         bool requestor)
+{
+        (void) flowObjectName; // Stop compiler barfs
+        (void) requestor; // Stop compiler barfs
+
 	lock_->lock();
 
 	if (state_ != WAITING_2_MPL_BEFORE_TEARING_DOWN) {
@@ -1067,9 +1090,9 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(const std::string& flow
 		return;
 	}
 
-	try{
+	try {
 		rib_daemon_->deleteObject(Flow::FLOW_RIB_OBJECT_CLASS, object_name_, 0, 0);
-	}catch(Exception &e){
+	} catch (Exception &e){
 		LOG_ERR("Problems deleting object from RIB: %s", e.what());
 	}
 
@@ -1077,7 +1100,10 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(const std::string& flow
 }
 
 void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor){
+                                           rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+{
+        (void) cdapSessionDescriptor; // Stop compiler barfs
+
 	lock_->lock();
 
 	if (state_ != MESSAGE_TO_PEER_FAI_SENT) {
