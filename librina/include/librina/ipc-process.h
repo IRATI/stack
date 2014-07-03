@@ -47,7 +47,9 @@ public:
 
 	AssignToDIFRequestEvent(const DIFInformation& difInformation,
 			unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
 	const DIFInformation& getDIFInformation() const;
+#endif
 };
 
 /**
@@ -62,7 +64,9 @@ public:
         UpdateDIFConfigurationRequestEvent(
                         const DIFConfiguration& difConfiguration,
                         unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         const DIFConfiguration& getDIFConfiguration() const;
+#endif
 };
 
 /**
@@ -87,9 +91,11 @@ public:
                 const ApplicationProcessNamingInformation& supportingDIFName,
                 const ApplicationProcessNamingInformation& neighbourName,
                 unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         const ApplicationProcessNamingInformation& getDifName() const;
         const ApplicationProcessNamingInformation& getNeighborName() const;
         const ApplicationProcessNamingInformation& getSupportingDifName() const;
+#endif
 };
 
 /**
@@ -111,9 +117,11 @@ public:
 			const ApplicationProcessNamingInformation& difName,
 			bool registered,
 			unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	bool isRegistered() const;
+#endif
 };
 
 /**
@@ -145,11 +153,13 @@ public:
 	QueryRIBRequestEvent(const std::string& objectClass,
 			const std::string& objectName, long objectInstance, int scope,
 			const std::string& filter, unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
 	const std::string& getObjectClass() const;
 	const std::string& getObjectName() const;
 	long getObjectInstance() const;
 	int getScope() const;
 	const std::string& getFilter() const;
+#endif
 };
 
 /**
@@ -170,8 +180,10 @@ public:
 
         CreateConnectionResponseEvent(int portId, int cepId,
                         unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         int getCepId() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -190,8 +202,10 @@ public:
 
         UpdateConnectionResponseEvent(int portId, int result,
                         unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         int getResult() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -215,9 +229,11 @@ public:
 
         CreateConnectionResultEvent(int portId, int sourceCepId,
                         int destCepId, unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         int getSourceCepId() const;
         int getDestCepId() const;
         int getPortId() const;
+#endif
 };
 
 class DestroyConnectionResultEvent: public IPCEvent {
@@ -230,8 +246,10 @@ public:
 
         DestroyConnectionResultEvent(int portId, int result,
                         unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         int getResult() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -427,11 +445,13 @@ public:
 	static const std::string error_allocate_flow;
 	ExtendedIPCManager();
 	~ExtendedIPCManager() throw();
+#ifndef LIBRINAFORSWIG
 	const DIFInformation& getCurrentDIFInformation() const;
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
 	void setIPCManagerPort(unsigned int ipcManagerPort);
+#endif
 
 	/**
 	 * Notify the IPC Manager about the successful initialization of the
@@ -714,6 +734,7 @@ public:
         unsigned short flowUserIpcProcessId;
 
         Connection();
+#ifndef LIBRINAFORSWIG
         unsigned int getDestAddress() const;
         void setDestAddress(unsigned int destAddress);
         int getPortId() const;
@@ -730,6 +751,7 @@ public:
         void setSourceCepId(int sourceCepId);
         const ConnectionPolicies& getPolicies() const;
         void setPolicies(const ConnectionPolicies& policies);
+#endif
         const std::string toString();
 };
 
@@ -750,6 +772,7 @@ public:
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
         bool operator!=(const PDUForwardingTableEntry &other) const;
+#ifndef LIBRINAFORSWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
         const std::list<unsigned int> getPortIds() const;
@@ -757,6 +780,7 @@ public:
         void addPortId(unsigned int portId);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
+#endif
         const std::string toString();
 };
 
@@ -775,8 +799,10 @@ public:
 
         DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
                         int result, unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         const std::list<PDUForwardingTableEntry>& getEntries() const;
         int getResult() const;
+#endif
 };
 
 
@@ -789,10 +815,12 @@ public:
         int portId;
 
         ReadManagementSDUResult();
+#ifndef LIBRINAFORSWIG
         int getBytesRead() const;
         void setBytesRead(int bytesRead);
         int getPortId() const;
         void setPortId(int portId);
+#endif
 };
 
 /**
@@ -944,12 +972,14 @@ class DirectoryForwardingTableEntry {
 public:
 	DirectoryForwardingTableEntry();
 	bool operator==(const DirectoryForwardingTableEntry &object);
+#ifndef LIBRINAFORSWIG
 	ApplicationProcessNamingInformation get_ap_naming_info() const;
 	void set_ap_naming_info(const ApplicationProcessNamingInformation& ap_naming_info);
 	long get_address() const;
 	void set_address(long address);
 	long get_timestamp() const;
 	void set_timestamp(long timestamp);
+#endif
 
 	/**
 	 * Returns a key identifying this entry

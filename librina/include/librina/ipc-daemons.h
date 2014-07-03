@@ -35,6 +35,7 @@ public:
         Neighbor();
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
+#ifndef LIBRINAFORSWIG
         const ApplicationProcessNamingInformation& get_name() const;
         void set_name(const ApplicationProcessNamingInformation& name);
         const ApplicationProcessNamingInformation&
@@ -58,6 +59,7 @@ public:
         unsigned int get_number_of_enrollment_attempts() const;
         void set_number_of_enrollment_attempts(
                         unsigned int number_of_enrollment_attempts);
+#endif
         const std::string toString();
 
         /// The IPC Process name of the neighbor
@@ -105,6 +107,7 @@ public:
 			long long instance, RIBObjectValue value);
 	bool operator==(const RIBObjectData &other) const;
 	bool operator!=(const RIBObjectData &other) const;
+#ifndef LIBRINAFORSWIG
 	const std::string& get_class() const;
 	void set_class(const std::string& clazz);
 	unsigned long get_instance() const;
@@ -115,6 +118,7 @@ public:
 	void set_value(RIBObjectValue value);
 	const std::string& get_displayable_value() const;
 	void set_displayable_value(const std::string& displayable_value);
+#endif
 
 	/** The class (type) of object */
 	std::string class_;

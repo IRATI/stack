@@ -288,6 +288,7 @@ void initializeIPCManager(unsigned int localPort,
  * properties of one or more DIFs
  */
 class GetDIFPropertiesRequestEvent: public IPCEvent {
+public:
 	/** The application that wants to get the DIF properties */
 	ApplicationProcessNamingInformation applicationName;
 
@@ -298,13 +299,14 @@ class GetDIFPropertiesRequestEvent: public IPCEvent {
 	 */
 	ApplicationProcessNamingInformation DIFName;
 
-public:
 	GetDIFPropertiesRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
+#endif
 };
 
 /**
@@ -384,6 +386,7 @@ public:
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
+#ifndef LIBRINAFORSWIG
 	unsigned short getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
@@ -391,10 +394,11 @@ public:
 	void setPortId(unsigned int portId);
 	pid_t getPid() const;
 	void setPid(pid_t pid);
-	const DIFInformation& getDIFInformation() const;
-	void setDIFInformation(const DIFInformation& difInformation);
 	bool isDIFMember() const;
 	void setDIFMember(bool difMember);
+#endif
+	const DIFInformation& getDIFInformation() const;
+	void setDIFInformation(const DIFInformation& difInformation);
 
 	/**
 	 * Invoked by the IPC Manager to set the IPC Process as initialized.
@@ -909,7 +913,9 @@ public:
 
         IpcmAllocateFlowRequestResultEvent(
                         int result, int portId, unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         int getPortId() const;
+#endif
 };
 
 /**
@@ -922,7 +928,9 @@ public:
         QueryRIBResponseEvent(const std::list<RIBObjectData>& ribObjects,
                         int result,
                         unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         const std::list<RIBObjectData>& getRIBObject() const;
+#endif
 };
 
 /**
@@ -956,8 +964,10 @@ public:
                         const std::list<Neighbor> & neighbors,
                         const DIFInformation& difInformation,
                         int result, unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         const std::list<Neighbor>& getNeighbors() const;
         const DIFInformation& getDIFInformation() const;
+#endif
 };
 
 /**
@@ -974,9 +984,11 @@ public:
                         unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         const std::list<Neighbor>& getNeighbors() const;
         bool isAdded() const;
         unsigned short getIpcProcessId() const;
+#endif
 };
 
 /**
@@ -991,8 +1003,10 @@ public:
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
                         const ApplicationProcessNamingInformation& name,
                         unsigned int sequenceNumber);
+#ifndef LIBRINAFORSWIG
         unsigned short getIPCProcessId() const;
         const ApplicationProcessNamingInformation& getName() const;
+#endif
 };
 
 /**

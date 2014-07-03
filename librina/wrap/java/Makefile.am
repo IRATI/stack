@@ -21,6 +21,7 @@ wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/include/librina/*.h
 	$(MKDIR_P) eu/irati/librina &&			\
 	$(SWIG) $(SWIG_FLAGS) $(SWIG_JAVA_FLAGS)	\
 		-c++					\
+		-DLIBRINAFORSWIG				\
 		-o librina_java.cc			\
 		-outdir ./eu/irati/librina		\
 		$(top_srcdir)/wrap/librina.i || {	\

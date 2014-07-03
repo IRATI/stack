@@ -38,10 +38,12 @@ public:
         PolicyParameter(const std::string& name, const std::string& value);
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
+#ifndef LIBRINAFORSWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
         const std::string& get_value() const;
         void set_value(const std::string& value);
+#endif
 
         /// the name of the parameter
         std::string name_;
@@ -57,6 +59,7 @@ public:
         PolicyConfig(const std::string& name, const std::string& version);
         bool operator==(const PolicyConfig &other) const;
         bool operator!=(const PolicyConfig &other) const;
+#ifndef LIBRINAFORSWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
         const std::list<PolicyParameter>& get_parameters() const;
@@ -64,6 +67,7 @@ public:
         void add_parameter(const PolicyParameter& paremeter);
         const std::string& get_version() const;
         void set_version(const std::string& version);
+#endif
 
         /// the name of policy
         std::string name_;
@@ -79,6 +83,7 @@ public:
 class DTCPWindowBasedFlowControlConfig {
 public:
     DTCPWindowBasedFlowControlConfig();
+#ifndef LIBRINAFORSWIG
     unsigned int get_initial_credit() const;
     void set_initial_credit(int initial_credit);
     unsigned int get_maxclosed_window_queue_length() const;
@@ -88,6 +93,7 @@ public:
                     const PolicyConfig& rcvr_flow_control_policy);
     const PolicyConfig& getTxControlPolicy() const;
     void set_tx_control_policy(const PolicyConfig& tx_control_policy);
+#endif
     const std::string toString();
 
         /// Integer that the number PDUs that can be put on the
@@ -111,6 +117,7 @@ public:
 class DTCPRateBasedFlowControlConfig {
 public:
         DTCPRateBasedFlowControlConfig();
+#ifndef LIBRINAFORSWIG
         const PolicyConfig& get_no_override_default_peak_policy() const;
         void set_no_override_default_peak_policy(
                         const PolicyConfig& no_override_default_peak_policy);
@@ -123,6 +130,7 @@ public:
         void set_sending_rate(unsigned int sending_rate);
         unsigned int get_time_period() const;
         void set_time_period(unsigned int time_period);
+#endif
         const std::string toString();
 
         /// the number of PDUs that may be sent in a TimePeriod. Used with
@@ -150,6 +158,7 @@ public:
 class DTCPFlowControlConfig {
 public:
         DTCPFlowControlConfig();
+#ifndef LIBRINAFORSWIG
         const PolicyConfig& get_closed_window_policy() const;
         void set_closed_window_policy(const PolicyConfig& closed_window_policy);
         const PolicyConfig& get_flow_control_overrun_policy() const;
@@ -184,6 +193,7 @@ public:
         const PolicyConfig& get_receiving_flow_control_policy() const;
         void set_receiving_flow_control_policy(
                         const PolicyConfig& receiving_flow_control_policy);
+#endif
         const std::string toString();
 
         ///indicates whether window-based flow control is in use
@@ -247,6 +257,7 @@ public:
 class DTCPRtxControlConfig{
 public:
         DTCPRtxControlConfig();
+#ifndef LIBRINAFORSWIG
         unsigned int get_data_rxmsn_max() const;
         void set_data_rxmsn_max(unsigned int data_rxmsn_max);
         unsigned int get_initial_rtx_time() const;
@@ -266,6 +277,7 @@ public:
         void set_sender_ack_policy(const PolicyConfig& sender_ack_policy);
         const PolicyConfig& get_sending_ack_policy() const;
         void set_sending_ack_policy(const PolicyConfig& sending_ack_policy);
+#endif
         const std::string toString();
 
         /// the number of times the retransmission of a PDU will be attempted
@@ -314,6 +326,7 @@ public:
 class DTCPConfig {
 public:
         DTCPConfig();
+#ifndef LIBRINAFORSWIG
         bool is_flow_control() const;
         void set_flow_control(bool flow_control);
         const DTCPFlowControlConfig& get_flow_control_config() const;
@@ -338,6 +351,7 @@ public:
                         const PolicyConfig& sender_timer_inactivity_policy);
         const PolicyConfig& get_rtt_estimator_policy() const;
         void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
+#endif
         const std::string toString();
 
         /// True if flow control is required
@@ -389,6 +403,7 @@ public:
 class ConnectionPolicies {
 public:
         ConnectionPolicies();
+#ifndef LIBRINAFORSWIG
         const DTCPConfig& get_dtcp_configuration() const;
         void set_dtcp_configuration(const DTCPConfig& dtcp_configuration);
         bool is_dtcp_present() const;
@@ -407,6 +422,7 @@ public:
         void set_partial_delivery(bool partial_delivery);
         bool is_incomplete_delivery() const;
         void set_incomplete_delivery(bool incomplete_delivery);
+#endif
         const std::string toString();
 
         /// Indicates if DTCP is required
@@ -450,6 +466,7 @@ public:
 	QoSCube(const std::string& name, int id);
 	bool operator==(const QoSCube &other) const;
 	bool operator!=(const QoSCube &other) const;
+#ifndef LIBRINAFORSWIG
 	void set_id(unsigned int id);
 	unsigned int get_id() const;
 	const std::string& get_name() const;
@@ -476,6 +493,7 @@ public:
 	void set_peak_sdu_bandwidth_duration(unsigned int peak_sdu_bandwidth_duration);
 	double get_undetected_bit_error_rate() const;
 	void set_undetected_bit_error_rate(double undetected_bit_error_rate);
+#endif
 	const std::string toString();
 
 	/// The name of the QoS cube
@@ -527,6 +545,7 @@ public:
 class DataTransferConstants {
 public:
         DataTransferConstants();
+#ifndef LIBRINAFORSWIG
         unsigned short get_address_length() const;
         void set_address_length(unsigned short address_length);
         unsigned short get_cep_id_length() const;
@@ -545,6 +564,7 @@ public:
         void set_qos_id_lenght(unsigned short qos_id_lenght);
         unsigned short get_sequence_number_length() const;
         void set_sequence_number_length(unsigned short sequence_number_length);
+#endif
         bool isInitialized();
         const std::string toString();
 
@@ -586,6 +606,7 @@ public:
 class EFCPConfiguration {
 public:
         EFCPConfiguration();
+#ifndef LIBRINAFORSWIG
         const DataTransferConstants& get_data_transfer_constants() const;
         void set_data_transfer_constants(
                         const DataTransferConstants& data_transfer_constants);
@@ -594,6 +615,7 @@ public:
         void add_qos_cube(const QoSCube& qos_cube);
         const PolicyConfig& get_unknown_flow_policy() const;
         void set_unknown_flow_policy(const PolicyConfig& unknown_flow_policy);
+#endif
 
         /// DIF-wide parameters that define the concrete syntax of EFCP for this
         /// DIF and other DIF-wide values
@@ -612,6 +634,7 @@ public:
 class FlowAllocatorConfiguration {
 public:
         FlowAllocatorConfiguration();
+#ifndef LIBRINAFORSWIG
         const PolicyConfig& get_allocate_notify_policy() const;
         void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
         const PolicyConfig& get_allocate_retry_policy() const;
@@ -622,6 +645,7 @@ public:
         void set_new_flow_request_policy(const PolicyConfig& new_flow_request_policy);
         const PolicyConfig& get_seq_rollover_policy() const;
         void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
+#endif
 
         /// Maximum number of attempts to retry the flow allocation
         int max_create_flow_retries_;
@@ -655,12 +679,14 @@ public:
 class RMTConfiguration {
 public:
         RMTConfiguration();
+#ifndef LIBRINAFORSWIG
         const PolicyConfig& get_max_queue_policy() const;
         void set_max_queue_policy(const PolicyConfig& max_queue_policy);
         const PolicyConfig& get_rmt_queue_monitor_policy() const;
         void set_rmt_queue_monitor_policy(const PolicyConfig& rmt_queue_monitor_policy);
         const PolicyConfig& get_rmt_scheduling_policy() const;
         void set_rmt_scheduling_policy(const PolicyConfig& rmt_scheduling_policy);
+#endif
 
         /// Three parameters are provided to monitor the queues. This policy
         /// can be invoked whenever a PDU is placed in a queue and may keep
@@ -687,6 +713,7 @@ class LinkStateRoutingConfiguration {
 public:
         LinkStateRoutingConfiguration();
         const std::string toString();
+#ifndef LIBRINAFORSWIG
         int get_wait_until_age_increment() const;
         void set_wait_until_age_increment(const int wait_until_age_increment);
         int get_wait_until_error() const;
@@ -701,6 +728,7 @@ public:
         void set_object_maximum_age(const int object_maximum_age);
         const std::string& get_routing_algorithm() const;
         void set_routing_algorithm(const std::string& routing_algorithm);
+#endif
 
         static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
         static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
@@ -723,11 +751,13 @@ class PDUFTableGeneratorConfiguration {
 public:
         PDUFTableGeneratorConfiguration();
         PDUFTableGeneratorConfiguration(const PolicyConfig& pduft_generator_policy);
+#ifndef LIBRINAFORSWIG
         const PolicyConfig& get_pduft_generator_policy() const;
         void set_pduft_generator_policy(const PolicyConfig& pduft_generator_policy);
         const LinkStateRoutingConfiguration& get_link_state_routing_configuration() const;
         void set_link_state_routing_configuration(
                         const LinkStateRoutingConfiguration& link_state_routing_configuration);
+#endif
 
         /// Name, version and configuration of the PDU FT Generator policy
         PolicyConfig pduft_generator_policy_;
@@ -741,6 +771,7 @@ public:
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
 public:
+#ifndef LIBRINAFORSWIG
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;
@@ -760,6 +791,7 @@ public:
 	const FlowAllocatorConfiguration& get_fa_configuration() const;
 	void set_fa_configuration(
 			const FlowAllocatorConfiguration& fa_configuration);
+#endif
 
 	/// The address of the IPC Process in the DIF
 	unsigned int address_;
@@ -787,11 +819,13 @@ public:
 class DIFInformation{
 public:
 	const ApplicationProcessNamingInformation& get_dif_name() const;
+#ifndef LIBRINAFORSWIG
 	void set_dif_name(const ApplicationProcessNamingInformation& dif_name);
 	const std::string& get_dif_type() const;
 	void set_dif_type(const std::string& dif_type);
 	const DIFConfiguration& get_dif_configuration() const;
 	void set_dif_configuration(const DIFConfiguration& dif_configuration);
+#endif
 
 	/// The type of DIF
 	std::string dif_type_;
