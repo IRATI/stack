@@ -712,6 +712,17 @@ void initialize(const std::string& logLevel,
                 const std::string& pathToLogFile)
         throw (InitializationException);
 
+class SerializedObject {
+public:
+	SerializedObject();
+	SerializedObject(char* message, int size);
+	~SerializedObject();
+	int get_size() const;
+	char* get_message() const;
+	int size_;
+	char* message_;
+};
+
 }
 #endif
 

@@ -309,7 +309,7 @@ CDAPSessionImpl::~CDAPSessionImpl() throw () {
 	}
 	cancel_read_pending_messages_.clear();
 }
-const SerializedMessage* CDAPSessionImpl::encodeNextMessageToBeSent(
+const SerializedObject* CDAPSessionImpl::encodeNextMessageToBeSent(
 		const CDAPMessage &cdap_message) {
 	CDAPMessageValidator::validate(&cdap_message);
 
@@ -395,7 +395,7 @@ void CDAPSessionImpl::messageSent(const CDAPMessage &cdap_message) {
 	messageSentOrReceived(cdap_message, true);
 }
 const CDAPMessage* CDAPSessionImpl::messageReceived(
-		const SerializedMessage &message) {
+		const SerializedObject &message) {
 	const CDAPMessage *cdap_message = deserializeMessage(message);
 	messageSentOrReceived(*cdap_message, false);
 	return cdap_message;
@@ -674,12 +674,12 @@ void CDAPSessionImpl::cancelReadResponseMessageSentOrReceived(
 	cancel_read_pending_messages_.erase(cdap_message.get_invoke_id());
 	pending_messages_.erase(cdap_message.get_invoke_id());
 }
-const SerializedMessage* CDAPSessionImpl::serializeMessage(
+const SerializedObject* CDAPSessionImpl::serializeMessage(
 		const CDAPMessage &cdap_message) const {
 	return wire_message_provider_->serializeMessage(cdap_message);
 }
 const CDAPMessage* CDAPSessionImpl::deserializeMessage(
-		const SerializedMessage &message) const {
+		const SerializedObject &message) const {
 	return wire_message_provider_->deserializeMessage(message);
 }
 void CDAPSessionImpl::populateSessionDescriptor(const CDAPMessage &cdap_message,
@@ -791,12 +791,12 @@ CDAPSessionImpl* CDAPSessionManager::get_cdap_session(int port_id) {
 	else
 		return 0;
 }
-const SerializedMessage* CDAPSessionManager::encodeCDAPMessage(
+const SerializedObject* CDAPSessionManager::encodeCDAPMessage(
 		const CDAPMessage &cdap_message) {
 	return wire_message_provider_->serializeMessage(cdap_message);
 }
 const CDAPMessage* CDAPSessionManager::decodeCDAPMessage(
-		const SerializedMessage &cdap_message) {
+		const SerializedObject &cdap_message) {
 	return wire_message_provider_->deserializeMessage(cdap_message);
 }
 void CDAPSessionManager::removeCDAPSession(int port_id) {
@@ -806,7 +806,7 @@ void CDAPSessionManager::removeCDAPSession(int port_id) {
 	itr->second = 0;
 	cdap_sessions_.erase(itr);
 }
-const SerializedMessage* CDAPSessionManager::encodeNextMessageToBeSent(
+const SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
 		const CDAPMessage &cdap_message, int port_id) {
 	std::map<int, CDAPSessionImpl*>::iterator it = cdap_sessions_.find(port_id);
 	CDAPSessionInterface* cdap_session;
@@ -827,7 +827,7 @@ const SerializedMessage* CDAPSessionManager::encodeNextMessageToBeSent(
 	return cdap_session->encodeNextMessageToBeSent(cdap_message);
 }
 const CDAPMessage* CDAPSessionManager::messageReceived(
-		const SerializedMessage &encoded_cdap_message, int port_id) {
+		const SerializedObject &encoded_cdap_message, int port_id) {
 	const CDAPMessage *cdap_message = decodeCDAPMessage(encoded_cdap_message);
 	CDAPSessionImpl *cdap_session = get_cdap_session(port_id);
 	if (cdap_session != 0) {
@@ -1074,7 +1074,7 @@ void CDAPSessionManager::assignInvokeId(CDAPMessage &cdap_message,
 
 // CLASS GPBWireMessageProvider
 const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
-		const SerializedMessage &message) {
+		const SerializedObject &message) {
 	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
 	CDAPMessage *cdapMessage = new CDAPMessage;
 
@@ -1126,8 +1126,9 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 
 	if (obj_val_t.has_byteval()) {
 		char *byte_val = new char[obj_val_t.byteval().size() + 1];
+		SerializedObject sr_message (byte_val ,obj_val_t.byteval().size() + 1);
 		strcpy(byte_val, obj_val_t.byteval().c_str());
-		cdapMessage->set_obj_value(new ByteArrayObjectValue(byte_val));
+		cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
 	}
 	if (obj_val_t.has_floatval())
 		cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
@@ -1155,7 +1156,7 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 
 	return cdapMessage;
 }
-const SerializedMessage* GPBWireMessageProvider::serializeMessage(
+const SerializedObject* GPBWireMessageProvider::serializeMessage(
 		const CDAPMessage &cdapMessage) {
 	cdap::impl::googleprotobuf::CDAPMessage gpfCDAPMessage;
 	gpfCDAPMessage.set_abssyntax(cdapMessage.get_abs_syntax());
@@ -1248,7 +1249,7 @@ const SerializedMessage* GPBWireMessageProvider::serializeMessage(
 	int size = gpfCDAPMessage.ByteSize();
 	char *serialized_message = new char[size];
 	gpfCDAPMessage.SerializeToArray(serialized_message, size);
-	SerializedMessage *serialized_class = new SerializedMessage(
+	SerializedObject *serialized_class = new SerializedObject(
 			serialized_message, size);
 
 	return serialized_class;

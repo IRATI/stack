@@ -943,6 +943,28 @@ bool Sleep::sleepForSec(int sec) {
 	return usleep(sec * 1000000);
 }
 
+// CLASS SerializedMessage
+SerializedObject::SerializedObject() {
+	size_ = 0;
+	message_ = 0;
+}
+SerializedObject::SerializedObject(char* message, int size){
+	size_ = size;
+	message_ = message;
+}
+SerializedObject::~SerializedObject(){
+	delete message_;
+	message_ = 0;
+}
+
+int SerializedObject::get_size() const {
+	return size_;
+}
+
+char* SerializedObject::get_message() const {
+	return message_;
+}
+
 /* INITIALIZATION OPERATIONS */
 
 bool librinaInitialized = false;

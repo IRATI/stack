@@ -23,6 +23,10 @@
 
 #ifdef __cplusplus
 
+#include <string>
+#include <map>
+#include "librina/common.h"
+
 namespace rinad {
 
 /// Encodes and Decodes an object to/from bytes)
@@ -33,20 +37,20 @@ public:
 	 /// @param object
 	 /// @throws exception if the object is not recognized by the encoder
 	 /// @return
-	virtual const char* encode(const void* object) const = 0;
+	virtual const rina::SerializedObject* encode(const void* object) const = 0;
 	 /// Converts a byte array to an object of the type specified by "className"
 	 /// @param byte[] serializedObject
 	 /// @param objectClass The type of object to be decoded
 	 /// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
 	 /// byte array value doesn't correspond to an object of the type "className"
 	 /// @return
-	virtual void* decode(const char serialized_object[]) const = 0;
+	virtual void* decode(const rina::SerializedObject &serialized_object) const = 0;
 };
 
 /// Factory that provides and Encoder instance
 class EncoderFactoryInterface {
 public:
-	virtual ~EncoderFactory(){};
+	virtual ~EncoderFactoryInterface(){};
 	virtual EncoderInterface* createEncoderInstance() = 0;
 };
 
@@ -54,35 +58,40 @@ public:
 /// Implements an encoder that delegates the encoding/decoding
 /// tasks to different subencoders. A different encoder is registered
 /// by each type of object
-class Encoder{
+class Encoder {
 public:
 	enum ObjectClass {
 
 	};
-	Encoder();
+	~Encoder();
 	/// Set the class that serializes/unserializes an object class
 	/// @param objectClass The object class
 	/// @param serializer
-	void addEncoder(std::string object_class, EncoderInterface *encoder);
+	void addEncoder(ObjectClass object_class, EncoderInterface *encoder);
 	/// Converts an object of the type specified by "className" to a byte array.
 	/// @param object
 	/// @return
-	const char* encode(const void* object);
+	const rina::SerializedObject* encode(const void* object, ObjectClass object_class);
 	/// Converts a byte array to an object of the type specified by "className"
 	/// @param serializedObject
 	/// @param The type of object to be decoded
 	/// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
 	/// byte array value doesn't correspond to an object of the type "className"
 	/// @return
-	void* decode(const char serialized_object[], const ObjectClass &object_class);
+	void* decode(const rina::SerializedObject &serialized_object, ObjectClass object_class);
 private:
-	EncoderInterface& getEncoder(ObjectClass object_class);
-
-	std::map<ObjectClass, Encoder> encoders;
+	std::map<ObjectClass, EncoderInterface*> encoders_;
 };
+
+/// Encoder of the ApplicationRegistrationEncoder
+class ApplicationRegistrationEncoder: public  EncoderInterface{
+	const rina::SerializedObject* encode(const void* object) const;
+	void* decode(const rina::SerializedObject &serialized_object) const;
+};
+
 
 }
 
 
 #endif
-#endif /* ENCODER_H_////
+#endif /// ENCODER_H_////

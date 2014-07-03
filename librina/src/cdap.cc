@@ -153,14 +153,12 @@ ByteArrayObjectValue::ByteArrayObjectValue() :
 		AbstractObjectValue() {
 }
 ByteArrayObjectValue::~ByteArrayObjectValue() {
-	delete value_;
-	value_ = 0;
 }
-ByteArrayObjectValue::ByteArrayObjectValue(char* value) :
+ByteArrayObjectValue::ByteArrayObjectValue(SerializedObject value) :
 		AbstractObjectValue(value) {
 }
-bool ByteArrayObjectValue::operator==(const AbstractObjectValue<char*> &other) {
-	return value_ == (char*)other.get_value();
+bool ByteArrayObjectValue::operator==(const AbstractObjectValue<SerializedObject> &other) {
+	return value_.message_ == (*(SerializedObject*)other.get_value()).message_;
 }
 ObjectValueInterface::types ByteArrayObjectValue::isType() const {
 	return ObjectValueInterface::bytetype;
@@ -1162,24 +1160,6 @@ std::string CDAPSessionDescriptor::get_dest_ap_name() const {
 }
 const ApplicationProcessNamingInformation& CDAPSessionDescriptor::get_ap_naming_info() const {
 	return ap_naming_info_;
-}
-
-// CLASS SerializedMessage
-SerializedMessage::SerializedMessage(char* message, int size){
-	size_ = size;
-	message_ = message;
-}
-SerializedMessage::~SerializedMessage(){
-	delete message_;
-	message_ = 0;
-}
-
-int SerializedMessage::get_size() const {
-	return size_;
-}
-
-char* SerializedMessage::get_message() const {
-	return message_;
 }
 
 // CLASS WireMessageProviderFactory

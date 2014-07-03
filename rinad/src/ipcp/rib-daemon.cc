@@ -588,7 +588,7 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId) {
 	//1 Decode the message and obtain the CDAP session descriptor
 	atomic_send_lock_.lock();
 	try{
-		rina::SerializedMessage serializedMessage = rina::SerializedMessage(message, length);
+		rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
 		cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
 	} catch (Exception &e) {
 		atomic_send_lock_.unlock();
@@ -685,7 +685,7 @@ void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage, int s
 
 void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
 			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
-	const rina::SerializedMessage * sdu;
+	const rina::SerializedObject * sdu;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
