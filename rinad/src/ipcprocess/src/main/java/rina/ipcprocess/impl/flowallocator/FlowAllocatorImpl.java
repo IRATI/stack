@@ -220,6 +220,8 @@ public class FlowAllocatorImpl implements FlowAllocator{
 		try {
 			flowAllocatorInstance.submitAllocateRequest(event);
 		} catch(Exception ex) {
+			log.error("Problems allocating flow: "+ex.getMessage());
+			
 			flowAllocatorInstances.remove(portId);
 			
 			try {
