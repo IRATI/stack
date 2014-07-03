@@ -22,6 +22,7 @@
 #define RINA_PREFIX "rib-daemon"
 
 #include <librina/logs.h>
+#include <librina/common.h>
 #include "rib-daemon.h"
 
 namespace rinad {
@@ -617,13 +618,8 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
 
 	//1 Decode the message and obtain the CDAP session descriptor
 	atomic_send_lock_.lock();
-<<<<<<< HEAD
-	try{
-		rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
-=======
 	try {
 		rina::SerializedMessage serializedMessage = rina::SerializedMessage(message, length);
->>>>>>> 848f4c99454859ff3d4cd723c7438f3d0faccd83
 		cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
 	} catch (Exception &e) {
 		atomic_send_lock_.unlock();
@@ -745,19 +741,9 @@ void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage,
 	sendMessage(true, cdapMessage, sessionId, address, cdapMessageHandler);
 }
 
-<<<<<<< HEAD
 void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
 			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
 	const rina::SerializedObject * sdu;
-=======
-void RIBDaemon::sendMessage(bool useAddress,
-                            const rina::CDAPMessage& cdapMessage,
-                            int sessionId,
-                            unsigned int address,
-                            ICDAPResponseMessageHandler * cdapMessageHandler)
-{
-	const rina::SerializedMessage * sdu;
->>>>>>> 848f4c99454859ff3d4cd723c7438f3d0faccd83
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
