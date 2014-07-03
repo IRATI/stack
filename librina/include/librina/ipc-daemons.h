@@ -60,7 +60,6 @@ public:
                         unsigned int number_of_enrollment_attempts);
         const std::string toString();
 
-private:
         /// The IPC Process name of the neighbor
         ApplicationProcessNamingInformation name_;
 
@@ -117,7 +116,6 @@ public:
 	const std::string& get_displayable_value() const;
 	void set_displayable_value(const std::string& displayable_value);
 
-private:
 	/** The class (type) of object */
 	std::string class_;
 

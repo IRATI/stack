@@ -43,7 +43,6 @@ public:
         const std::string& get_value() const;
         void set_value(const std::string& value);
 
-private:
         /// the name of the parameter
         std::string name_;
 
@@ -66,7 +65,6 @@ public:
         const std::string& get_version() const;
         void set_version(const std::string& version);
 
-private:
         /// the name of policy
         std::string name_;
 
@@ -92,7 +90,6 @@ public:
     void set_tx_control_policy(const PolicyConfig& tx_control_policy);
     const std::string toString();
 
-private:
         /// Integer that the number PDUs that can be put on the
         /// ClosedWindowQueue before something must be done.
         unsigned int max_closed_window_queue_length_;
@@ -128,7 +125,6 @@ public:
         void set_time_period(unsigned int time_period);
         const std::string toString();
 
-private:
         /// the number of PDUs that may be sent in a TimePeriod. Used with
         /// rate-based flow control.
         unsigned int sending_rate_;
@@ -190,7 +186,6 @@ public:
                         const PolicyConfig& receiving_flow_control_policy);
         const std::string toString();
 
-private:
         ///indicates whether window-based flow control is in use
         bool window_based_;
 
@@ -273,7 +268,6 @@ public:
         void set_sending_ack_policy(const PolicyConfig& sending_ack_policy);
         const std::string toString();
 
-private:
         /// the number of times the retransmission of a PDU will be attempted
         /// before some other action must be taken.
         unsigned int data_rxms_nmax_;
@@ -346,7 +340,6 @@ public:
         void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
         const std::string toString();
 
-private:
         /// True if flow control is required
         bool flow_control_;
 
@@ -416,7 +409,6 @@ public:
         void set_incomplete_delivery(bool incomplete_delivery);
         const std::string toString();
 
-private:
         /// Indicates if DTCP is required
         bool dtcp_present_;
 
@@ -486,7 +478,6 @@ public:
 	void set_undetected_bit_error_rate(double undetected_bit_error_rate);
 	const std::string toString();
 
-private:
 	/// The name of the QoS cube
 	std::string name_;
 
@@ -557,7 +548,6 @@ public:
         bool isInitialized();
         const std::string toString();
 
-private:
         /// The length of QoS-id field in the DTP PCI, in bytes
         unsigned short qos_id_lenght_;
 
@@ -605,7 +595,6 @@ public:
         const PolicyConfig& get_unknown_flow_policy() const;
         void set_unknown_flow_policy(const PolicyConfig& unknown_flow_policy);
 
-private:
         /// DIF-wide parameters that define the concrete syntax of EFCP for this
         /// DIF and other DIF-wide values
         DataTransferConstants data_transfer_constants_;
@@ -634,7 +623,6 @@ public:
         const PolicyConfig& get_seq_rollover_policy() const;
         void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
 
-private:
         /// Maximum number of attempts to retry the flow allocation
         int max_create_flow_retries_;
 
@@ -674,7 +662,6 @@ public:
         const PolicyConfig& get_rmt_scheduling_policy() const;
         void set_rmt_scheduling_policy(const PolicyConfig& rmt_scheduling_policy);
 
-private:
         /// Three parameters are provided to monitor the queues. This policy
         /// can be invoked whenever a PDU is placed in a queue and may keep
         /// additional variables that may be of use to the decision process of
@@ -715,7 +702,6 @@ public:
         const std::string& get_routing_algorithm() const;
         void set_routing_algorithm(const std::string& routing_algorithm);
 
-private:
         static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
         static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
         static const int WAIT_UNTIL_ERROR_DEFAULT = 5001;
@@ -743,7 +729,6 @@ public:
         void set_link_state_routing_configuration(
                         const LinkStateRoutingConfiguration& link_state_routing_configuration);
 
-private:
         /// Name, version and configuration of the PDU FT Generator policy
         PolicyConfig pduft_generator_policy_;
 
@@ -776,7 +761,6 @@ public:
 	void set_fa_configuration(
 			const FlowAllocatorConfiguration& fa_configuration);
 
-private:
 	/// The address of the IPC Process in the DIF
 	unsigned int address_;
 
@@ -809,7 +793,6 @@ public:
 	const DIFConfiguration& get_dif_configuration() const;
 	void set_dif_configuration(const DIFConfiguration& dif_configuration);
 
-private:
 	/// The type of DIF
 	std::string dif_type_;
 

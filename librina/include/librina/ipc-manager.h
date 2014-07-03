@@ -312,7 +312,10 @@ public:
  * a single IPC Process (besides creation/destruction)
  */
 class IPCProcess {
+	/** The current information of the DIF where the IPC Process is assigned*/
+	DIFInformation difInformation;
 
+public:
 	/** The identifier of the IPC Process, unique within the system */
 	unsigned short id;
 
@@ -327,9 +330,6 @@ class IPCProcess {
 
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
-
-	/** The current information of the DIF where the IPC Process is assigned*/
-	DIFInformation difInformation;
 
 	/** True if the IPC Process is initialized and can start processing operations*/
 	bool initialized;
@@ -373,7 +373,6 @@ class IPCProcess {
 	FlowInformation getPendingFlowOperation(unsigned int seqNumber)
 	throw (IPCException);
 
-public:
 	static const std::string error_assigning_to_dif;
 	static const std::string error_update_dif_config;
 	static const std::string error_registering_app;
@@ -904,9 +903,10 @@ public:
  */
 class IpcmAllocateFlowRequestResultEvent: public BaseResponseEvent {
 
+public:
         /** The port id assigned to the flow */
         int portId;
-public:
+
         IpcmAllocateFlowRequestResultEvent(
                         int result, int portId, unsigned int sequenceNumber);
         int getPortId() const;
@@ -916,8 +916,9 @@ public:
  * Event informing about the result of a query RIB operation
  */
 class QueryRIBResponseEvent: public BaseResponseEvent {
-        std::list<RIBObjectData> ribObjects;
 public:
+        std::list<RIBObjectData> ribObjects;
+
         QueryRIBResponseEvent(const std::list<RIBObjectData>& ribObjects,
                         int result,
                         unsigned int sequenceNumber);
@@ -946,11 +947,11 @@ public:
  * Event informing about the result of an enroll to DIF operation
  */
 class EnrollToDIFResponseEvent: public BaseResponseEvent {
+public:
         std::list<Neighbor> neighbors;
 
         DIFInformation difInformation;
 
-public:
         EnrollToDIFResponseEvent(
                         const std::list<Neighbor> & neighbors,
                         const DIFInformation& difInformation,
@@ -964,11 +965,11 @@ public:
  * neighbors being removed
  */
 class NeighborsModifiedNotificationEvent: public IPCEvent {
+public:
         unsigned short ipcProcessId;
         std::list<Neighbor> neighbors;
         bool added;
 
-public:
         NeighborsModifiedNotificationEvent(
                         unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
@@ -983,9 +984,10 @@ public:
  * Daemon
  */
 class IPCProcessDaemonInitializedEvent: public IPCEvent {
+public:
         unsigned short ipcProcessId;
         ApplicationProcessNamingInformation name;
-public:
+
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
                         const ApplicationProcessNamingInformation& name,
                         unsigned int sequenceNumber);
