@@ -35,17 +35,19 @@
 
 #include "vmpi.h"
 #include "vmpi-structs.h"
+#include "vmpi-stats.h"
 
 
 typedef struct vmpi_impl_info vmpi_impl_info_t;
 typedef struct vmpi_info vmpi_info_t;
 
-int vmpi_impl_write_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
+int vmpi_impl_txkick(vmpi_impl_info_t *vi);
 int vmpi_impl_register_read_callback(vmpi_impl_info_t *vi, vmpi_read_cb_t,
                                      void* opaque);
 
 struct vmpi_ring *vmpi_get_write_ring(vmpi_info_t *mpi);
 struct vmpi_queue *vmpi_get_read_queue(vmpi_info_t *mpi);
+struct vmpi_stats *vmpi_get_stats(vmpi_info_t *mpi);
 struct vmpi_info *vmpi_init(vmpi_impl_info_t *vi, int *err,
                             bool deferred_test_init);
 void vmpi_fini(vmpi_info_t *mpi, bool deferred_test_fini);

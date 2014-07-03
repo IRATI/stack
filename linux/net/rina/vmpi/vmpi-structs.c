@@ -134,7 +134,7 @@ vmpi_ring_fini(struct vmpi_ring *ring)
 }
 
 void
-vmpi_queue_push(struct vmpi_queue *queue, struct vmpi_buffer *buf)
+vmpi_queue_push_back(struct vmpi_queue *queue, struct vmpi_buffer *buf)
 {
         buf->next = NULL;
         if (queue->tail) {
@@ -148,7 +148,7 @@ vmpi_queue_push(struct vmpi_queue *queue, struct vmpi_buffer *buf)
 }
 
 struct vmpi_buffer *
-vmpi_queue_pop(struct vmpi_queue *queue)
+vmpi_queue_pop_front(struct vmpi_queue *queue)
 {
         struct vmpi_buffer *ret = queue->head;
 
@@ -169,7 +169,7 @@ vmpi_queue_purge(struct vmpi_queue *queue)
 {
         struct vmpi_buffer *qbuf;
 
-        while ((qbuf = vmpi_queue_pop(queue))) {
+        while ((qbuf = vmpi_queue_pop_front(queue))) {
                 vmpi_buffer_destroy(qbuf);
         }
 }
@@ -196,7 +196,7 @@ vmpi_queue_init(struct vmpi_queue *queue, unsigned int initial_length,
                                 vmpi_queue_purge(queue);
                                 return -ENOMEM;
                         }
-                        vmpi_queue_push(queue, buf);
+                        vmpi_queue_push_back(queue, buf);
                 }
         }
 

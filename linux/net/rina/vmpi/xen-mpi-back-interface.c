@@ -41,7 +41,7 @@ static irqreturn_t xenmpi_tx_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-void xenmpi_poll(struct work_struct *work)
+void xenmpi_tx_worker_function(struct work_struct *work)
 {
 	struct vmpi_impl_info *vif = container_of(work, struct vmpi_impl_info, tx_worker);
         int budget = 64;
@@ -115,7 +115,7 @@ int vmpi_impl_register_read_callback(vmpi_impl_info_t *vif, vmpi_read_cb_t cb,
         return 0;
 }
 
-int vmpi_impl_write_buf(struct vmpi_impl_info *vif, struct vmpi_buffer *buf)
+int vmpi_impl_txkick(struct vmpi_impl_info *vif)
 {
 	int min_slots_needed = 1;
 
@@ -125,7 +125,7 @@ int vmpi_impl_write_buf(struct vmpi_impl_info *vif, struct vmpi_buffer *buf)
 
         IFV(printk("%s\n", __func__));
 
-	/* If the skb can't possibly fit in the remaining slots
+	/* If a buffer can't possibly fit in the remaining slots
 	 * then turn off the queue to give the ring a chance to
 	 * drain.
 	 */
@@ -196,7 +196,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
 	for (i = 0; i < XEN_MPI_TX_RING_SIZE; i++)
 		vif->mmap_pages[i] = NULL;
 
-        INIT_WORK(&vif->tx_worker, xenmpi_poll);
+        INIT_WORK(&vif->tx_worker, xenmpi_tx_worker_function);
 
         vif->mpi = vmpi_init((void*)vif, &r, false);
         if (vif->mpi == NULL) {
@@ -205,6 +205,7 @@ struct vmpi_impl_info *xenmpi_alloc(struct device *parent, domid_t domid)
         vif->write = vmpi_get_write_ring(vif->mpi);
         vif->read = vmpi_get_read_queue(vif->mpi);
         vif->read_cb = NULL;
+        vif->stats = vmpi_get_stats(vif->mpi);
 
 	__module_get(THIS_MODULE);
 
