@@ -78,7 +78,7 @@ public:
 	const std::string& getProcessName() const;
 	void setProcessName(const std::string& processName);
 	std::string getProcessNamePlusInstance();
-	std::string getEncodedString();
+	const std::string getEncodedString() const;
 	const std::string toString() const;
 private:
 	/**
@@ -289,7 +289,8 @@ enum IPCEventType {
 	IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
 	IPC_PROCESS_CREATE_CONNECTION_RESULT,
 	IPC_PROCESS_DESTROY_CONNECTION_RESULT,
-	IPC_PROCESS_DUMP_FT_RESPONSE
+	IPC_PROCESS_DUMP_FT_RESPONSE,
+	NO_EVENT
 };
 
 /**
@@ -308,7 +309,10 @@ class IPCEvent {
 public:
 	virtual ~IPCEvent(){}
 
-        IPCEvent() { }
+	IPCEvent() {
+		eventType = NO_EVENT;
+		sequenceNumber = 0;
+	}
 
 	IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
 		this->eventType = eventType;
@@ -365,6 +369,7 @@ class FlowRequestEvent: public IPCEvent {
 	unsigned short ipcProcessId;
 
 public:
+	FlowRequestEvent();
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,
@@ -699,8 +704,7 @@ public:
  * @param pathToLogFile the path to the log file
  */
 void initialize(unsigned int localPort, const std::string& logLevel,
-                const std::string& pathToLogFile)
-        throw (InitializationException);
+                const std::string& pathToLogFile);
 
 /**
  * Initialize librina letting the OS choose the Netlink port-id where this
@@ -709,8 +713,7 @@ void initialize(unsigned int localPort, const std::string& logLevel,
  * @param pathToLogFile the path to the log file
  */
 void initialize(const std::string& logLevel,
-                const std::string& pathToLogFile)
-        throw (InitializationException);
+                const std::string& pathToLogFile);
 
 class SerializedObject {
 public:

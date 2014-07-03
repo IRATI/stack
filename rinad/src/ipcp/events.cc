@@ -108,4 +108,20 @@ const std::string NMinusOneFlowDeallocatedEvent::toString() {
 	return ss.str();
 }
 
+//CLASS Connectivity to Neighbor lost
+ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(rina::Neighbor* neighbor):
+		BaseEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
+	neighbor_ = neighbor;
+}
+
+rina::Neighbor * ConnectiviyToNeighborLostEvent::get_neighbor() {
+	return neighbor_;
+}
+
+const std::string ConnectiviyToNeighborLostEvent::toString() {
+	std::stringstream ss;
+	ss<<"Event id: "<<get_id()<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	return ss.str();
+}
+
 }

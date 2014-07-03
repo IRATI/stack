@@ -12,7 +12,8 @@ DISTCHECK_CONFIGURE_FLAGS =
 
 SUBDIRS =					\
 	src					\
-	doc
+	doc					\
+	etc
 
 EXTRA_DIST =					\
 	bootstrap				\

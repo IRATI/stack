@@ -105,7 +105,7 @@ void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
 }
 
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
-		unsigned short ipcProcessId) throw(NetlinkException) {
+		unsigned short ipcProcessId) {
 	std::map<unsigned short, RINANetlinkEndpoint *>::iterator it =
 			ipcProcessIdMappings.find(ipcProcessId);
 	if (it == ipcProcessIdMappings.end()){
@@ -133,7 +133,7 @@ void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 }
 
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
-		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
+		ApplicationProcessNamingInformation apName) {
 	std::map<std::string, RINANetlinkEndpoint *>::iterator it =
 			applicationNameMappings.find(apName.getProcessNamePlusInstance());
 	if (it == applicationNameMappings.end()){
@@ -151,7 +151,7 @@ unsigned int NetlinkPortIdMap::getIPCManagerPortId(){
 }
 
 void NetlinkPortIdMap::updateMessageOrPortIdMap(
-		BaseNetlinkMessage* message, bool send) throw(NetlinkException){
+		BaseNetlinkMessage* message, bool send) {
 	switch (message->getOperationCode()) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
 		if(send){
@@ -515,9 +515,7 @@ RINAManager::~RINAManager() {
 	delete eventQueue;
 }
 
-void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage)
-throw (NetlinkException)
-{
+void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage) {
 	sendReceiveLock.lock();
 
 	try{
@@ -537,7 +535,7 @@ throw (NetlinkException)
 }
 
 void RINAManager::sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
-                size_t maxSize) throw (NetlinkException) {
+                size_t maxSize) {
         sendReceiveLock.lock();
 
         try{

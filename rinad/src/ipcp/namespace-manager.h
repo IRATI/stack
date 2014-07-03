@@ -24,6 +24,7 @@
 
 #ifdef __cplusplus
 
+#include "common/concurrency.h"
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -58,6 +59,97 @@ private:
 
 	/// The rule to select one or more members from the set
 	std::string rule_;
+};
+
+class DirectoryForwardingTableEntryRIBObject: public SimpleSetMemberRIBObject {
+public:
+	DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process, const std::string& object_name,
+			rina::DirectoryForwardingTableEntry * entry);
+	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void createObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue);
+	void deleteObject(const void* objectValue);
+
+private:
+	INamespaceManager * namespace_manager_;
+	rina::ApplicationProcessNamingInformation ap_name_entry_;
+};
+
+class DirectoryForwardingTableEntrySetRIBObject: public BaseRIBObject, public EventListener {
+public:
+	static const std::string DFT_ENTRY_SET_RIB_OBJECT_NAME;
+	static const std::string DFT_ENTRY_SET_RIB_OBJECT_CLASS;
+	static const std::string DFT_ENTRY_RIB_OBJECT_CLASS;
+
+	DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process);
+
+	/// Called when the connectivity to a neighbor has been lost. All the
+	/// applications registered from that neighbor have to be removed from the directory
+	void eventHappened(Event * event);
+
+	/// A routing update with new and/or updated entries has been received -or
+	/// during enrollment-. See what parts of the update we didn't now, and tell the
+	/// RIB Daemon about them (will create/update the objects and notify my neighbors
+	/// except for the one that has sent me the update)
+	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+					rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// One or more local applications have registered to this DIF or a routing update
+	/// has been received
+	void createObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue);
+
+	/// A routing update has been received
+	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// One or more local applications have unregistered from this DIF or a routing
+	/// update has been received
+	void deleteObject(const void* objectValue);
+	const void* get_value() const;
+
+private:
+	INamespaceManager * namespace_manager_;
+	void deleteObjects(const std::list<std::string>& namesToDelete);
+	void populateEntriesToCreateList(rina::DirectoryForwardingTableEntry* entry,
+			std::list<rina::DirectoryForwardingTableEntry *> * list);
+	void populateEntriesToDeleteList(rina::DirectoryForwardingTableEntry* entry,
+			std::list<rina::DirectoryForwardingTableEntry *> * list);
+	BaseRIBObject * getObject(const std::string& candidateKey);
+};
+
+class NamespaceManager: public INamespaceManager {
+public:
+	NamespaceManager();
+	void set_ipc_process(IPCProcess * ipc_process);
+	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	void addDFTEntry(rina::DirectoryForwardingTableEntry * entry);
+	rina::DirectoryForwardingTableEntry * getDFTEntry(
+				const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	void processApplicationRegistrationRequestEvent(
+				const rina::ApplicationRegistrationRequestEvent& event);
+	void processApplicationUnregistrationRequestEvent(
+				const rina::ApplicationUnregistrationRequestEvent& event);
+
+private:
+	/// The directory forwarding table
+	ThreadSafeMapOfPointers<std::string, rina::DirectoryForwardingTableEntry> dft_;
+
+	/// Applications registered in this IPC Process
+	ThreadSafeMapOfPointers<std::string, rina::ApplicationRegistrationInformation> registrations_;
+
+	IPCProcess * ipc_process_;
+	IRIBDaemon * rib_daemon_;
+
+	void populateRIB();
+	int replyToIPCManagerRegister(const rina::ApplicationRegistrationRequestEvent& event,
+			int result);
+	int replyToIPCManagerUnregister(const rina::ApplicationUnregistrationRequestEvent& event,
+			int result);
 };
 
 }
