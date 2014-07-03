@@ -41,7 +41,7 @@ public:
 	const std::string get_auth_other() const;
 	bool is_empty() const;
 	std::string to_string() const;
-private:
+
 	/// Authentication name
 	std::string auth_name_;
 	/// Authentication password
@@ -383,7 +383,7 @@ public:
 	void set_src_ap_name(const std::string &src_ap_name);
 	long get_version() const;
 	void set_version(long version);
-private:
+
 	static const int ABSTRACT_SYNTAX_VERSION;
 	/// AbstractSyntaxID (int32), mandatory. The specific version of the
 	/// CDAP protocol message declarations that the message conforms to
@@ -505,7 +505,7 @@ public:
 	int get_port_id() const;
 	std::string get_dest_ap_name() const;
 	const ApplicationProcessNamingInformation& get_ap_naming_info() const;
-private:
+
 	/// AbstractSyntaxID (int32), mandatory. The specific version of the
 	/// CDAP protocol message declarations that the message conforms to
 	///

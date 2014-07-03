@@ -46,6 +46,25 @@ class IPCMConcurrency : public rina::ConditionVariable {
         unsigned int event_sn;
 };
 
+struct PendingIPCPRegistration {
+        rina::IPCProcess *ipcp;
+        rina::IPCProcess *slave_ipcp;
+
+        PendingIPCPRegistration() : ipcp(NULL), slave_ipcp(NULL) { }
+        PendingIPCPRegistration(rina::IPCProcess *p, rina::IPCProcess *s)
+                                : ipcp(p), slave_ipcp(s) { }
+};
+
+struct PendingAppRegistration {
+        rina::IPCProcess *slave_ipcp;
+        rina::ApplicationRegistrationRequestEvent req_event;
+
+        PendingAppRegistration() : slave_ipcp(NULL) { }
+        PendingAppRegistration(rina::IPCProcess *p,
+                        const rina::ApplicationRegistrationRequestEvent& n)
+                                        : slave_ipcp(p), req_event(n) { }
+};
+
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
@@ -72,6 +91,8 @@ class IPCManager : public EventLoopData {
         rina::IPCProcess *select_ipcp_by_dif(const
                         rina::ApplicationProcessNamingInformation& dif_name);
 
+        rina::IPCProcess *select_ipcp();
+
         int enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor);
 
@@ -83,8 +104,9 @@ class IPCManager : public EventLoopData {
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
-        std::map<unsigned int, rina::IPCProcess*> pending_ipcp_registrations;
+        std::map<unsigned int, PendingIPCPRegistration> pending_ipcp_registrations;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
+        std::map<unsigned int, PendingAppRegistration> pending_app_registrations;
 
         IPCMConcurrency concurrency;
 

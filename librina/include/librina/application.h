@@ -235,13 +235,13 @@ public:
  * name and the DIFs where it is registered
  */
 class ApplicationRegistration {
+public:
 	/** The registered application name */
 	ApplicationProcessNamingInformation applicationName;
 
 	/** The list of one or more DIFs in which the application is registered */
 	std::list<ApplicationProcessNamingInformation> DIFNames;
 
-public:
 	ApplicationRegistration(
 			const ApplicationProcessNamingInformation& applicationName);
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -523,13 +523,13 @@ extern Singleton<IPCManager> ipcManager;
  * without the application having requested it
  */
 class ApplicationUnregisteredEvent: public IPCEvent {
+public:
 	/** The application that has been unregistered */
 	ApplicationProcessNamingInformation applicationName;
 
 	/** The DIF from which the application has been unregistered */
 	ApplicationProcessNamingInformation DIFName;
 
-public:
 	ApplicationUnregisteredEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
@@ -543,7 +543,7 @@ public:
  * without the application having requested it
  */
 class AppRegistrationCanceledEvent: public IPCEvent {
-
+public:
 	/** The application whose registration has been canceled */
 	ApplicationProcessNamingInformation applicationName;
 
@@ -555,7 +555,7 @@ class AppRegistrationCanceledEvent: public IPCEvent {
 
 	/** Optional explanation giving more details about why the application registration has been canceled */
 	std::string reason;
-public:
+
 	AppRegistrationCanceledEvent(int code, const std::string& reason,
 			const ApplicationProcessNamingInformation& difName,
 			unsigned int sequenceNumber);
@@ -569,6 +569,7 @@ public:
  * Event informing about the result of a flow allocation request
  */
 class AllocateFlowRequestResultEvent: public IPCEvent {
+public:
         /** The application that requested the flow allocation */
         ApplicationProcessNamingInformation sourceAppName;
 
@@ -583,7 +584,6 @@ class AllocateFlowRequestResultEvent: public IPCEvent {
          */
         ApplicationProcessNamingInformation difName;
 
-public:
         AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
@@ -597,12 +597,13 @@ public:
  * Event informing about the result of a flow deallocation request
  */
 class DeallocateFlowResponseEvent: public BaseResponseEvent {
+public:
         /** The application that requested the flow deallocation */
         ApplicationProcessNamingInformation appName;
 
         /** The portId of the flow */
         int portId;
-public:
+
         DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int portId, int result, unsigned int sequenceNumber);
@@ -614,6 +615,7 @@ public:
  * Event informing about the result of a get DIF properties operation
  */
 class GetDIFPropertiesResponseEvent: public BaseResponseEvent {
+public:
         /**
          * The name of the application that is querying the DIF properties
          */
@@ -622,7 +624,6 @@ class GetDIFPropertiesResponseEvent: public BaseResponseEvent {
         /** The properties of zero or more DIFs */
         std::list<DIFProperties> difProperties;
 
-public:
         GetDIFPropertiesResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
