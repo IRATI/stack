@@ -1,8 +1,9 @@
 /*
  * Common interfaces and constants of the IPC Process components
  *
- *    Bernat Gaston <bernat.gaston@i2cat.net>
- *    Eduard Grasa <eduard.grasa@i2cat.net>
+ *    Bernat Gaston         <bernat.gaston@i2cat.net>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +29,7 @@
 
 #include <librina/cdap.h>
 #include <librina/ipc-process.h>
+
 #include "events.h"
 
 namespace rinad {
@@ -55,7 +57,7 @@ public:
 class IDelimiter
 {
 public:
-  virtual ~IDelimiter() {};
+  virtual ~IDelimiter() { };
 
   /// Takes a single rawSdu and produces a single delimited byte array, consisting in
   /// [length][sdu]
@@ -75,7 +77,8 @@ public:
   ///  @param byteArray
   /// @return the value of the integer encoded as a varint, or -1 if there is not a valid encoded varint32, or -2 if
   ///this may be a complete varint32 but still more bytes are needed
-  virtual int readVarint32(char byteArray[], int length) = 0;
+  virtual int readVarint32(char byteArray[],
+                           int  length) = 0;
 
   /// Takes a delimited byte array ([length][sdu][length][sdu] ..) and extracts the sdus
   /// @param delimitedSdus
@@ -86,8 +89,8 @@ public:
 /// Interface that Encodes and Decodes an object to/from bytes
 class IEncoder {
 	public:
-		virtual char* encode(const void * object) = 0;
-		virtual void* decode(char * serializedObject) = 0;
+		virtual char * encode(const void * object) = 0;
+		virtual void * decode(char * serializedObject) = 0;
 		virtual ~IEncoder(){};
 };
 
@@ -95,7 +98,8 @@ class IEncoder {
 class EnrollmentRequest
 {
 public:
-	EnrollmentRequest(const rina::Neighbor &neighbor, const rina::EnrollToDIFRequestEvent &event);
+	EnrollmentRequest(const rina::Neighbor &neighbor,
+                          const rina::EnrollToDIFRequestEvent &event);
 	const rina::Neighbor& get_neighbor() const;
 	void set_neighbor(const rina::Neighbor &neighbor);
 	const rina::EnrollToDIFRequestEvent& get_event() const;
@@ -155,7 +159,8 @@ public:
 	/// @param enrollee true if this IPC process is the one that initiated the
 	/// enrollment sequence (i.e. it is the application process that wants to
 	/// join the DIF)
-	virtual void enrollmentCompleted(const rina::Neighbor& candidate, bool enrollee) = 0;
+	virtual void enrollmentCompleted(const rina::Neighbor& candidate,
+                                         bool enrollee) = 0;
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	/// @param remotePeer
@@ -164,7 +169,10 @@ public:
 	/// @param sendMessage
 	/// @param reason
 	virtual void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage) = 0;
+                                      int portId,
+                                      const std::string& reason,
+                                      bool enrolle,
+                                      bool sendReleaseMessage) = 0;
 
 	/// Finds out if the ICP process is already enrolled to the IPC process identified by
 	/// the provided apNamingInfo
@@ -213,7 +221,8 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage, int underlyingPortId) = 0;
+	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
+                                                      int                       underlyingPortId) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
@@ -322,9 +331,13 @@ public:
 	virtual ~IPDUFTGeneratorPolicy(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-	virtual void enrollmentToNeighbor(unsigned int address, bool newMember, unsigned int portId) = 0;
-	virtual void flowAllocated(unsigned int address, unsigned int portId,
-			unsigned int neighborAddress, unsigned int neighborPortId) = 0;
+	virtual void enrollmentToNeighbor(unsigned int address,
+                                          bool         newMember,
+                                          unsigned int portId) = 0;
+	virtual void flowAllocated(unsigned int address,
+                                   unsigned int portId,
+                                   unsigned int neighborAddress,
+                                   unsigned int neighborPortId) = 0;
 	virtual bool flowDeallocated(unsigned int portId) = 0;
 };
 
@@ -367,8 +380,10 @@ class IRIBDaemon;
 class BaseRIBObject {
 public:
 	virtual ~BaseRIBObject(){};
-	BaseRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-				long object_instance, const std::string& object_name);
+	BaseRIBObject(IPCProcess* ipc_process,
+                      const std::string& object_class,
+                      long object_instance,
+                      const std::string& object_name);
 	rina::RIBObjectData get_data();
 	const std::string& get_name() const;
 	const std::string& get_class() const;
@@ -387,7 +402,8 @@ public:
 
 	/// Local invocations
 	virtual void createObject(const std::string& objectClass,
-			const std::string& objectName, const void* objectValue);
+                                  const std::string& objectName,
+                                  const void* objectValue);
 	virtual void deleteObject(const void* objectValue);
 	virtual BaseRIBObject * readObject();
 	virtual void writeObject(const void* object_value);
@@ -423,7 +439,8 @@ private:
 	void operation_not_supported(const void* object);
 	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void operartion_not_supported(const std::string& objectClass, const std::string& objectName,
+	void operartion_not_supported(const std::string& objectClass,
+                                      const std::string& objectName,
 			const void* objectValue);
 };
 
@@ -456,25 +473,39 @@ public:
 class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
 public:
 	virtual void createResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                                    rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 	virtual void deleteResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 	virtual void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                (void) cdapMessage; // Stop compiler barfs
+                (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
 };
 
@@ -523,8 +554,9 @@ public:
 	/// @param sessionId the CDAP session id
 	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
 	/// @throws Exception
-	virtual void sendMessage(const rina::CDAPMessage & cdapMessage, int sessionId,
-			ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
+	virtual void sendMessage(const rina::CDAPMessage & cdapMessage,
+                                 int sessionId,
+                                 ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
 	/// Causes a CDAP message to be sent. Takes ownership of the CDAPMessage
 	/// @param cdapMessage the message to be sent
@@ -532,8 +564,10 @@ public:
 	/// @param address the address of the IPC Process to send the Message To
 	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
 	/// @throws Exception
-	virtual void sendMessageToAddress(const rina::CDAPMessage & cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
+	virtual void sendMessageToAddress(const rina::CDAPMessage & cdapMessage,
+                                          int sessionId,
+                                          unsigned int address,
+                                          ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
 	/// The RIB Daemon has to process the CDAP message and,
 	/// if valid, it will either pass it to interested subscribers and/or write to storage and/or modify other
@@ -543,7 +577,9 @@ public:
 	/// @param message the encoded CDAP message
 	/// @param length the length of the encoded message
 	/// @param portId the portId the message came from
-	virtual void cdapMessageDelivered(char* message, int length, int portId) = 0;
+	virtual void cdapMessageDelivered(char* message,
+                                          int length,
+                                          int portId) = 0;
 
 	/// Create or update an object in the RIB
 	/// @param objectClass the class of the object
@@ -552,8 +588,10 @@ public:
 	/// @param objectValue the value of the object
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
-	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue, const NotificationPolicy * notificationPolicy) = 0;
+	virtual void createObject(const std::string& objectClass,
+                                  const std::string& objectName,
+                                  const void* objectValue,
+                                  const NotificationPolicy * notificationPolicy) = 0;
 
 	/// Delete an object from the RIB
 	/// @param objectClass the class of the object
@@ -562,8 +600,10 @@ public:
 	/// @param object the value of the object
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
-	virtual void deleteObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue, const NotificationPolicy * notificationPolicy) = 0;
+	virtual void deleteObject(const std::string& objectClass,
+                                  const std::string& objectName,
+                                  const void* objectValue,
+                                  const NotificationPolicy * notificationPolicy) = 0;
 
 	/// Read an object from the RIB
 	/// @param objectClass the class of the object
@@ -581,8 +621,9 @@ public:
 	/// @param objectValue the new value of the object
 	/// @param notify if not null notify some of the neighbors about the change
 	/// @throws Exception
-	virtual void writeObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) = 0;
+	virtual void writeObject(const std::string& objectClass,
+                                 const std::string& objectName,
+                                 const void* objectValue) = 0;
 
 	/// Start an object at the RIB
 	/// @param objectClass the class of the object
@@ -590,8 +631,9 @@ public:
 	/// @param objectInstance the instance of the object
 	/// @param objectValue the new value of the object
 	/// @throws Exception
-	virtual void startObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) = 0;
+	virtual void startObject(const std::string& objectClass,
+                                 const std::string& objectName,
+                                 const void* objectValue) = 0;
 
 	/// Stop an object at the RIB
 	/// @param objectClass the class of the object
@@ -599,8 +641,9 @@ public:
 	/// @param objectInstance the instance of the object
 	/// @param objectValue the new value of the object
 	/// @throws Exception
-	virtual void stopObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) = 0;
+	virtual void stopObject(const std::string& objectClass,
+                                const std::string& objectName,
+                                const void* objectValue) = 0;
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
@@ -693,14 +736,17 @@ extern Singleton<ObjectInstanceGenerator> objectInstanceGenerator;
 /// updating the value of the object
 class SimpleRIBObject: public BaseRIBObject {
 public:
-	SimpleRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-			const std::string& object_name, const void* object_value);
+	SimpleRIBObject(IPCProcess* ipc_process,
+                        const std::string& object_class,
+			const std::string& object_name,
+                        const void* object_value);
 	virtual const void* get_value() const;
-	virtual void writeObject(const void* object);
+	virtual void        writeObject(const void* object);
 
 	/// Create has the semantics of update
-	virtual void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue);
+	virtual void createObject(const std::string& objectClass,
+                                  const std::string& objectName,
+                                  const void* objectValue);
 
 private:
 	const void* object_value_;
@@ -709,10 +755,13 @@ private:
 /// Class SimpleSetRIBObject. A RIB object that is a set and has no side effects
 class SimpleSetRIBObject: public SimpleRIBObject {
 public:
-	SimpleSetRIBObject(IPCProcess * ipc_process, const std::string& object_class,
-			const std::string& set_member_object_class, const std::string& object_name);
-	void createObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue);
+	SimpleSetRIBObject(IPCProcess * ipc_process,
+                           const std::string& object_class,
+                           const std::string& set_member_object_class,
+                           const std::string& object_name);
+	void createObject(const std::string& objectClass,
+                          const std::string& objectName,
+                          const void* objectValue);
 
 private:
 	std::string set_member_object_class_;
@@ -721,8 +770,10 @@ private:
 /// Class SimpleSetMemberRIBObject. A RIB object that is member of a set
 class SimpleSetMemberRIBObject: public SimpleRIBObject {
 public:
-	SimpleSetMemberRIBObject(IPCProcess* ipc_process, const std::string& object_class,
-				const std::string& object_name, const void* object_value);
+	SimpleSetMemberRIBObject(IPCProcess* ipc_process,
+                                 const std::string& object_class,
+                                 const std::string& object_name,
+                                 const void* object_value);
 	virtual void deleteObject(const void* objectValue);
 };
 

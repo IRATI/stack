@@ -24,9 +24,10 @@
 
 #ifdef __cplusplus
 
+#include <librina/timer.h>
+
 #include "common/concurrency.h"
 #include "ipcp/components.h"
-#include <librina/timer.h>
 
 namespace rinad {
 
@@ -37,7 +38,13 @@ public:
 	static const std::string FLOW_SET_RIB_OBJECT_CLASS ;
 	static const std::string FLOW_RIB_OBJECT_CLASS;
 
-	enum IPCPFlowState {EMPTY, ALLOCATION_IN_PROGRESS, ALLOCATED, WAITING_2_MPL_BEFORE_TEARING_DOWN, DEALLOCATED};
+	enum IPCPFlowState {
+                EMPTY,
+                ALLOCATION_IN_PROGRESS,
+                ALLOCATED,
+                WAITING_2_MPL_BEFORE_TEARING_DOWN,
+                DEALLOCATED
+        };
 
 	Flow();
 	~Flow();
@@ -223,7 +230,8 @@ public:
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass,
-			const std::string& objectName, IFlowAllocatorInstance* objectValue);
+                          const std::string& objectName,
+                          IFlowAllocatorInstance* objectValue);
 	const void* get_value() const;
 
 private:
@@ -387,14 +395,16 @@ public:
 	static const long DELAY;
 
 	TearDownFlowTimerTask(FlowAllocatorInstance * flow_allocator_instance,
-			const std::string& flow_object_name, bool requestor);
+                              const std::string& flow_object_name,
+                              bool requestor);
 	~TearDownFlowTimerTask() throw() {}
+
 	void run();
 
 private:
 	FlowAllocatorInstance * flow_allocator_instance_;
-	std::string flow_object_name_;
-	bool requestor_;
+	std::string             flow_object_name_;
+	bool                    requestor_;
 };
 
 }

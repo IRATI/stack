@@ -337,11 +337,17 @@ void SimpleSetRIBObject::createObject(const std::string& objectClass, const std:
 
 //Class SimpleSetMemberRIBObject
 SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IPCProcess* ipc_process,
-		const std::string& object_class, const std::string& object_name, const void* object_value) :
-				SimpleRIBObject(ipc_process, object_class, object_name, object_value){
+                                                   const std::string& object_class,
+                                                   const std::string& object_name,
+                                                   const void* object_value) :
+        SimpleRIBObject(ipc_process, object_class, object_name, object_value)
+{
 }
 
-void SimpleSetMemberRIBObject::deleteObject(const void* objectValue) {
+void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
+{
+        (void) objectValue; // Stop compiler barfs
+
 	get_parent()->remove_child(get_name());
 	get_rib_daemon()->removeRIBObject(get_name());
 }

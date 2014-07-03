@@ -122,7 +122,13 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(const rina::CDAP
 }
 
 void DirectoryForwardingTableEntryRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName, const void* objectValue) {
+                                                          const std::string& objectName,
+                                                          const void* objectValue)
+{
+        (void) objectClass; // Stop compiler barfs;
+        (void) objectName; // Stop compiler barfs;
+        (void) objectValue; // Stop compiler barfs
+
 	//Do nothing
 }
 
@@ -139,7 +145,10 @@ void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(const rina::CDAP
 	}
 }
 
-void DirectoryForwardingTableEntryRIBObject::deleteObject(const void* objectValue) {
+void DirectoryForwardingTableEntryRIBObject::deleteObject(const void* objectValue)
+{
+        (void) objectValue;
+
 	namespace_manager_->removeDFTEntry(ap_name_entry_);
 	get_parent()->remove_child(get_name());
 	get_rib_daemon()->removeRIBObject(get_name());
@@ -246,7 +255,12 @@ void DirectoryForwardingTableEntrySetRIBObject::populateEntriesToCreateList(rina
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName, const void* objectValue) {
+                                                             const std::string& objectName,
+                                                             const void*        objectValue)
+{
+        (void) objectClass; // Stop compiler barfs
+        (void) objectName;  // Stop compiler barfs
+
 	std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
 	rina::DirectoryForwardingTableEntry * currentEntry;
 	std::list<rina::DirectoryForwardingTableEntry *> * entries =
@@ -328,9 +342,10 @@ void DirectoryForwardingTableEntrySetRIBObject::populateEntriesToDeleteList(rina
 	delete entry;
 }
 
-void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectValue) {
+void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectValue)
+{
 	std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
-	rina::DirectoryForwardingTableEntry * currentEntry;
+	//rina::DirectoryForwardingTableEntry * currentEntry;
 	std::list<rina::DirectoryForwardingTableEntry *> * entries =
 			(std::list<rina::DirectoryForwardingTableEntry *> *) objectValue;
 
