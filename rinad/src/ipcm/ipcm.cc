@@ -497,93 +497,6 @@ static void application_registration_request_event_handler(rina::IPCEvent *e,
         }
 }
 
-static void register_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void application_unregistration_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void unregister_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void application_registration_canceled_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
-                                            EventLoopData *opaque)
-{
-        DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager, ipcm);
-        map<unsigned int, rina::IPCProcess*>::iterator mit;
-        bool success = (event->result == 0);
-
-        mit = ipcm->pending_ipcp_dif_assignments.find(
-                                        event->sequenceNumber);
-        if (mit != ipcm->pending_ipcp_dif_assignments.end()) {
-                rina::IPCProcess *ipcp = mit->second;
-
-                try {
-                        ipcp->assignToDIFResult(success);
-                } catch (rina::AssignToDIFException) {
-                        cerr <<  __func__ << ": Error while reporting DIF "
-                                "assignment result for IPC process "
-                                << ipcp->name.toString() << endl;
-                }
-                ipcm->pending_ipcp_dif_assignments.erase(mit);
-        } else {
-                cerr <<  __func__ << ": Warning: DIF assignment response "
-                        "received, but no pending DIF assignment " << endl;
-        }
-}
-
-static void update_dif_config_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void update_dif_config_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void enroll_to_dif_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void os_process_finalized_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
 static bool ipcm_register_response_common(
         rina::IpcmRegisterApplicationResponseEvent *event,
         const rina::ApplicationProcessNamingInformation& app_name,
@@ -697,6 +610,93 @@ static void ipcm_register_app_response_event_handler(rina::IPCEvent *e,
 }
 
 static void ipcm_unregister_app_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void register_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void application_unregistration_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void unregister_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void application_registration_canceled_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
+                                            EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess*>::iterator mit;
+        bool success = (event->result == 0);
+
+        mit = ipcm->pending_ipcp_dif_assignments.find(
+                                        event->sequenceNumber);
+        if (mit != ipcm->pending_ipcp_dif_assignments.end()) {
+                rina::IPCProcess *ipcp = mit->second;
+
+                try {
+                        ipcp->assignToDIFResult(success);
+                } catch (rina::AssignToDIFException) {
+                        cerr <<  __func__ << ": Error while reporting DIF "
+                                "assignment result for IPC process "
+                                << ipcp->name.toString() << endl;
+                }
+                ipcm->pending_ipcp_dif_assignments.erase(mit);
+        } else {
+                cerr <<  __func__ << ": Warning: DIF assignment response "
+                        "received, but no pending DIF assignment " << endl;
+        }
+}
+
+static void update_dif_config_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void update_dif_config_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void enroll_to_dif_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+{
+}
+
+static void os_process_finalized_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
