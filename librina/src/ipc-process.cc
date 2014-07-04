@@ -278,9 +278,7 @@ void ExtendedIPCManager::setIPCManagerPort(
 }
 
 void ExtendedIPCManager::notifyIPCProcessInitialized(
-                const ApplicationProcessNamingInformation& name)
-        throw(IPCException)
-{
+                const ApplicationProcessNamingInformation& name) {
         lock();
         if (ipcProcessInitialized) {
                 unlock();
@@ -315,8 +313,7 @@ bool ExtendedIPCManager::isIPCProcessInitialized() const {
 
 ApplicationRegistration * ExtendedIPCManager::appRegistered(
                         const ApplicationProcessNamingInformation& appName,
-                        const ApplicationProcessNamingInformation& DIFName)
-throw (ApplicationRegistrationException) {
+                        const ApplicationProcessNamingInformation& DIFName) {
         ApplicationRegistration * applicationRegistration;
 
         lock();
@@ -339,8 +336,7 @@ throw (ApplicationRegistrationException) {
 
 void ExtendedIPCManager::appUnregistered(
                 const ApplicationProcessNamingInformation& appName,
-                const ApplicationProcessNamingInformation& DIFName)
-                throw (ApplicationUnregistrationException) {
+                const ApplicationProcessNamingInformation& DIFName) {
         lock();
         ApplicationRegistration * applicationRegistration =
                         getApplicationRegistration(appName);
@@ -368,9 +364,7 @@ void ExtendedIPCManager::appUnregistered(
 }
 
 void ExtendedIPCManager::assignToDIFResponse(
-		const AssignToDIFRequestEvent& event, int result)
-	throw(AssignToDIFResponseException)
-{
+		const AssignToDIFRequestEvent& event, int result) {
 	if (result == 0) {
 		this->currentDIFInformation = event.getDIFInformation();
 	}
@@ -393,8 +387,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 
 void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
                         int result, const std::list<Neighbor> & newNeighbors,
-                        const DIFInformation& difInformation)
-        throw (EnrollException) {
+                        const DIFInformation& difInformation) {
 #if STUB_API
         // Do nothing
 
@@ -420,9 +413,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
 }
 
 void ExtendedIPCManager::notifyNeighborsModified(bool added,
-                        const std::list<Neighbor> &   neighbors)
-        throw (EnrollException)
-{
+                        const std::list<Neighbor> &   neighbors) {
 #if STUB_API
         // Do nothing
 
@@ -446,9 +437,7 @@ void ExtendedIPCManager::notifyNeighborsModified(bool added,
 }
 
 void ExtendedIPCManager::registerApplicationResponse(
-		const ApplicationRegistrationRequestEvent& event, int result)
-	throw(RegisterApplicationResponseException)
-{
+		const ApplicationRegistrationRequestEvent& event, int result) {
 #if STUB_API
 	//Do nothing
 
@@ -470,8 +459,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 }
 
 void ExtendedIPCManager::unregisterApplicationResponse(
-		const ApplicationUnregistrationRequestEvent& event, int result)
-	throw(UnregisterApplicationResponseException) {
+		const ApplicationUnregistrationRequestEvent& event, int result) {
 #if STUB_API
 	// Do nothing
 
@@ -493,8 +481,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 }
 
 void ExtendedIPCManager::allocateFlowRequestResult(
-		const FlowRequestEvent& event, int result)
-	throw(AllocateFlowResponseException) {
+		const FlowRequestEvent& event, int result) {
 #if STUB_API
 	// Do nothing
 
@@ -522,8 +509,7 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpecification,
-			int portId)
-		throw (AllocateFlowRequestArrivedException) {
+			int portId) {
 #if STUP_API
         (void) localAppName;
         (void) remoteAppName;
@@ -555,8 +541,7 @@ unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
 unsigned int ExtendedIPCManager::requestFlowAllocation(
                 const ApplicationProcessNamingInformation& localAppName,
                 const ApplicationProcessNamingInformation& remoteAppName,
-                const FlowSpecification& flowSpec)
-throw (FlowAllocationException) {
+                const FlowSpecification& flowSpec) {
         return internalRequestFlowAllocation(
                         localAppName, remoteAppName, flowSpec, ipcProcessId);
 }
@@ -565,16 +550,14 @@ unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
                 const ApplicationProcessNamingInformation& localAppName,
                 const ApplicationProcessNamingInformation& remoteAppName,
                 const ApplicationProcessNamingInformation& difName,
-                const FlowSpecification& flowSpec)
-throw (FlowAllocationException) {
+                const FlowSpecification& flowSpec) {
         return internalRequestFlowAllocationInDIF(localAppName,
                         remoteAppName, difName, ipcProcessId, flowSpec);
 }
 
 Flow * ExtendedIPCManager::allocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent, int result,
-                bool notifySource) throw (FlowAllocationException)
-{
+                bool notifySource) {
         return internalAllocateFlowResponse(flowRequestEvent,
                                             result,
                                             notifySource,
@@ -583,9 +566,7 @@ Flow * ExtendedIPCManager::allocateFlowResponse(
 
 void ExtendedIPCManager::notifyflowDeallocated(
 		const FlowDeallocateRequestEvent flowDeallocateEvent,
-		int result)
-	throw (DeallocateFlowResponseException)
-{
+		int result) {
 #if STUB_API
 	// Do nothing
 
@@ -607,8 +588,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 }
 
 void ExtendedIPCManager::flowDeallocatedRemotely(
-		int portId, int code)
-		throw (DeallocateFlowResponseException) {
+		int portId, int code) {
 #if STUB_API
 	// Do nothing
 
@@ -631,8 +611,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 
 void ExtendedIPCManager::queryRIBResponse(
 		const QueryRIBRequestEvent& event, int result,
-		const std::list<RIBObjectData>& ribObjects)
-	throw(QueryRIBResponseException) {
+		const std::list<RIBObjectData>& ribObjects) {
 #if STUB_API
 	//Do nothing
 
@@ -657,8 +636,7 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
-int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
-        throw (PortAllocationException) {
+int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName) {
 #if STUB_API
         // Do nothing
 
@@ -675,8 +653,7 @@ int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation
 #endif
 }
 
-void ExtendedIPCManager::deallocatePortId(int portId)
-        throw (PortAllocationException) {
+void ExtendedIPCManager::deallocatePortId(int portId) {
 #if STUB_API
         // Do nothing
 
@@ -878,8 +855,7 @@ unsigned short KernelIPCProcess::getIPCProcessId() const {
 }
 
 unsigned int KernelIPCProcess::assignToDIF(
-                const DIFInformation& difInformation)
-throw (AssignToDIFException) {
+                const DIFInformation& difInformation) {
         unsigned int seqNum = 0;
 
 #if STUB_API
@@ -905,8 +881,7 @@ throw (AssignToDIFException) {
 }
 
 unsigned int KernelIPCProcess::updateDIFConfiguration(
-                const DIFConfiguration& difConfiguration)
-throw (UpdateDIFConfigurationException) {
+                const DIFConfiguration& difConfiguration) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -933,8 +908,7 @@ throw (UpdateDIFConfigurationException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(const Connection& connection)
-throw (CreateConnectionException) {
+unsigned int KernelIPCProcess::createConnection(const Connection& connection) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -960,8 +934,7 @@ throw (CreateConnectionException) {
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::updateConnection(const Connection& connection)
-throw (UpdateConnectionException) {
+unsigned int KernelIPCProcess::updateConnection(const Connection& connection) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -992,8 +965,7 @@ throw (UpdateConnectionException) {
 }
 
 unsigned int KernelIPCProcess::
-createConnectionArrived(const Connection& connection)
-throw (CreateConnectionException) {
+createConnectionArrived(const Connection& connection) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -1021,9 +993,7 @@ throw (CreateConnectionException) {
 }
 
 unsigned int KernelIPCProcess::
-destroyConnection(const Connection& connection)
-        throw (DestroyConnectionException)
-{
+destroyConnection(const Connection& connection) {
         unsigned int seqNum = 0;
 
 #if STUB_API
@@ -1052,8 +1022,7 @@ destroyConnection(const Connection& connection)
 
 void KernelIPCProcess::
 modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
-                        int mode) throw (PDUForwardingTableException)
-{
+                        int mode) {
 #if STUB_API
         //Do nothing
 
@@ -1076,8 +1045,7 @@ modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entrie
 #endif
 }
 
-unsigned int KernelIPCProcess::dumptPDUFT()
-        throw (PDUForwardingTableException) {
+unsigned int KernelIPCProcess::dumptPDUFT() {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -1102,8 +1070,7 @@ unsigned int KernelIPCProcess::dumptPDUFT()
 }
 
 void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
-                unsigned int portId)
-                throw (WriteSDUException) {
+                unsigned int portId) {
 #if STUB_API
         // Do nothing
 
@@ -1120,8 +1087,7 @@ void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
 }
 
 void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
-                unsigned int address)
-                throw (WriteSDUException) {
+                unsigned int address) {
 #if STUB_API
         // Do nothing
         (void) sdu;
@@ -1138,9 +1104,7 @@ void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
 Singleton<KernelIPCProcess> kernelIPCProcess;
 
 ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
-                                                            int    maxBytes)
-        throw (ReadSDUException)
-{
+		int    maxBytes){
         ReadManagementSDUResult readResult;
 
 #if STUB_API
@@ -1183,11 +1147,11 @@ void DirectoryForwardingTableEntry::set_ap_naming_info(
 	ap_naming_info_ = ap_naming_info;
 }
 
-long DirectoryForwardingTableEntry::get_address() const {
+unsigned int DirectoryForwardingTableEntry::get_address() const {
 	return address_;
 }
 
-void DirectoryForwardingTableEntry::set_address(long address) {
+void DirectoryForwardingTableEntry::set_address(unsigned int address) {
 	address_ = address;
 }
 

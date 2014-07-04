@@ -36,9 +36,11 @@ public:
 	AuthValue();
 	AuthValue(const std::string &auth_name, const std::string &auth_password,
 			const std::string &auth_other);
+#ifndef SWIG
 	const std::string get_auth_name() const;
 	const std::string get_auth_password() const;
 	const std::string get_auth_other() const;
+#endif
 	bool is_empty() const;
 	std::string to_string() const;
 
@@ -164,15 +166,18 @@ public:
 class CDAPMessage;
 class CDAPException: public Exception {
 public:
+	enum ErrorCode {
+		RELEASE_CONNECITON,
+		OTHER
+	};
 	CDAPException();
 	CDAPException(std::string result_reason);
-	CDAPException(int result, std::string error_message);
-	virtual ~CDAPException() throw () {
-	}
-	;
+	CDAPException(ErrorCode result, std::string error_message);
+	virtual ~CDAPException() throw () {};
+	ErrorCode get_result() const;
 private:
 	/// Operation result code
-	int result_;
+	ErrorCode result_;
 };
 
 /// Validates that a CDAP message is well formed
@@ -336,6 +341,7 @@ public:
 	/// @param requestMessage
 	/// @return
 	/// @throws CDAPException
+#ifndef SWIG
 	CDAPMessage getReplyMessage();
 	int get_abs_syntax() const;
 	void set_abs_syntax(int abs_syntax);
@@ -383,6 +389,7 @@ public:
 	void set_src_ap_name(const std::string &src_ap_name);
 	long get_version() const;
 	void set_version(long version);
+#endif
 
 	static const int ABSTRACT_SYNTAX_VERSION;
 	/// AbstractSyntaxID (int32), mandatory. The specific version of the
@@ -488,6 +495,7 @@ public:
 	const ApplicationProcessNamingInformation get_source_application_process_naming_info();
 	/// The destination naming information is always the naming information of the remote application process
 	const ApplicationProcessNamingInformation get_destination_application_process_naming_info();
+#ifndef SWIG
 	void set_abs_syntax(const int abs_syntax);
 	void set_auth_mech(const CDAPMessage::AuthTypes auth_mech);
 	void set_auth_value(const AuthValue set_auth_value);
@@ -505,6 +513,7 @@ public:
 	int get_port_id() const;
 	std::string get_dest_ap_name() const;
 	const ApplicationProcessNamingInformation& get_ap_naming_info() const;
+#endif
 
 	/// AbstractSyntaxID (int32), mandatory. The specific version of the
 	/// CDAP protocol message declarations that the message conforms to

@@ -50,8 +50,7 @@ void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
                 const std::string& libraryPath,
                 const std::string& logLevel,
-                const std::string& pathToLogFile)
-	throw (InitializationException){
+                const std::string& pathToLogFile){
 	initialize(localPort, logLevel, pathToLogFile);
 
 	_installationPath = installationPath;
@@ -88,7 +87,7 @@ const std::string IPCProcess::error_querying_rib =
 
 /** Return the information of a registration request */
 ApplicationProcessNamingInformation IPCProcess::getPendingRegistration(
-                unsigned int seqNumber) throw (IPCException) {
+                unsigned int seqNumber) {
         std::map<unsigned int, ApplicationProcessNamingInformation>::iterator iterator;
 
         iterator = pendingRegistrations.find(seqNumber);
@@ -99,8 +98,7 @@ ApplicationProcessNamingInformation IPCProcess::getPendingRegistration(
         return iterator->second;
 }
 
-FlowInformation IPCProcess::getPendingFlowOperation(unsigned int seqNumber)
-throw (IPCException) {
+FlowInformation IPCProcess::getPendingFlowOperation(unsigned int seqNumber) {
 	std::map<unsigned int, FlowInformation>::iterator iterator;
 
 	iterator = pendingFlowOperations.find(seqNumber);
@@ -185,8 +183,7 @@ void IPCProcess::setInitialized() {
 }
 
 unsigned int IPCProcess::assignToDIF(
-                const DIFInformation& difInformation)
-throw (AssignToDIFException) {
+                const DIFInformation& difInformation) {
         unsigned int seqNum = 0;
 
         if (!initialized)
@@ -229,7 +226,7 @@ throw (AssignToDIFException) {
 	return seqNum;
 }
 
-void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
+void IPCProcess::assignToDIFResult(bool success) {
         if (!assignInProcess) {
                 throw AssignToDIFException(
                                 "There was no assignment operation in process");
@@ -248,9 +245,7 @@ void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
 }
 
 unsigned int IPCProcess::updateDIFConfiguration(
-                        const DIFConfiguration& difConfiguration)
-        throw (UpdateDIFConfigurationException)
-{
+                        const DIFConfiguration& difConfiguration) {
         unsigned int seqNum=0;
 
         std::string currentDIFName =
@@ -290,8 +285,7 @@ unsigned int IPCProcess::updateDIFConfiguration(
         return seqNum;
 }
 
-void IPCProcess::updateDIFConfigurationResult(bool success)
-        throw (UpdateDIFConfigurationException) {
+void IPCProcess::updateDIFConfigurationResult(bool success) {
 
         if(!configureInProcess){
                 throw UpdateDIFConfigurationException(
@@ -308,8 +302,7 @@ void IPCProcess::updateDIFConfigurationResult(bool success)
 
 void IPCProcess::notifyRegistrationToSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName)
-throw (NotifyRegistrationToDIFException) {
+		const ApplicationProcessNamingInformation& difName) {
         std::list<ApplicationProcessNamingInformation>::iterator it =
                         std::find(nMinusOneDIFs.begin(),
                                   nMinusOneDIFs.end(), difName);
@@ -342,8 +335,7 @@ throw (NotifyRegistrationToDIFException) {
 
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName)
-throw (NotifyUnregistrationFromDIFException) {
+		const ApplicationProcessNamingInformation& difName) {
         std::list<ApplicationProcessNamingInformation>::iterator it =
                         std::find(nMinusOneDIFs.begin(),
                                         nMinusOneDIFs.end(), difName);
@@ -382,8 +374,7 @@ IPCProcess::getSupportingDIFs() {
 unsigned int IPCProcess::enroll(
         const ApplicationProcessNamingInformation& difName,
         const ApplicationProcessNamingInformation& supportingDifName,
-        const ApplicationProcessNamingInformation& neighborName)
-throw (EnrollException) {
+        const ApplicationProcessNamingInformation& neighborName) {
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -433,8 +424,7 @@ std::list<Neighbor> IPCProcess::getNeighbors() {
 }
 
 void IPCProcess::disconnectFromNeighbor(
-		const ApplicationProcessNamingInformation& neighbor)
-throw (DisconnectFromNeighborException) {
+		const ApplicationProcessNamingInformation& neighbor) {
 	LOG_DBG("IPCProcess::disconnect from neighbour called");
 	/* TODO: IMPLEMENT FUNCTIONALITY */
 	ApplicationProcessNamingInformation a = neighbor;
@@ -443,8 +433,7 @@ throw (DisconnectFromNeighborException) {
 
 unsigned int IPCProcess::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
-		unsigned short regIpcProcessId)
-throw (IpcmRegisterApplicationException) {
+		unsigned short regIpcProcessId) {
 	if (!difMember){
 		throw IpcmRegisterApplicationException(
 		                IPCProcess::error_not_a_dif_member);
@@ -477,8 +466,7 @@ throw (IpcmRegisterApplicationException) {
 }
 
 void IPCProcess::registerApplicationResult(
-                unsigned int sequenceNumber, bool success)
-throw (IpcmRegisterApplicationException) {
+                unsigned int sequenceNumber, bool success) {
         if (!difMember){
                 throw IpcmRegisterApplicationException(
                                 IPCProcess::error_not_a_dif_member);
@@ -503,8 +491,7 @@ std::list<ApplicationProcessNamingInformation>
 }
 
 unsigned int IPCProcess::unregisterApplication(
-		const ApplicationProcessNamingInformation& applicationName)
-throw (IpcmUnregisterApplicationException) {
+		const ApplicationProcessNamingInformation& applicationName) {
         if (!difMember){
                 throw IpcmUnregisterApplicationException(
                                 IPCProcess::error_not_a_dif_member);
@@ -550,8 +537,7 @@ throw (IpcmUnregisterApplicationException) {
         return seqNum;
 }
 
-void IPCProcess::unregisterApplicationResult(unsigned int sequenceNumber, bool success)
-throw (IpcmUnregisterApplicationException) {
+void IPCProcess::unregisterApplicationResult(unsigned int sequenceNumber, bool success) {
         if (!difMember){
                 throw IpcmRegisterApplicationException(
                                 IPCProcess::error_not_a_dif_member);
@@ -571,8 +557,7 @@ throw (IpcmUnregisterApplicationException) {
         }
 }
 
-unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest)
-throw (AllocateFlowException) {
+unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest) {
 	if (!difMember){
 		throw AllocateFlowException(IPCProcess::error_not_a_dif_member);
 	}
@@ -615,8 +600,7 @@ throw (AllocateFlowException) {
 }
 
 void IPCProcess::allocateFlowResult(
-                unsigned int sequenceNumber, bool success, int portId)
-	throw (AllocateFlowException) {
+                unsigned int sequenceNumber, bool success, int portId) {
 	if (!difMember){
 		throw AllocateFlowException(
 				IPCProcess::error_not_a_dif_member);
@@ -637,8 +621,7 @@ void IPCProcess::allocateFlowResult(
 }
 
 void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
-		int result, bool notifySource, int flowAcceptorIpcProcessId)
-		throw(AllocateFlowException){
+		int result, bool notifySource, int flowAcceptorIpcProcessId) {
 
 	if (result == 0) {
 		FlowInformation flowInformation;
@@ -678,8 +661,7 @@ std::list<FlowInformation> IPCProcess::getAllocatedFlows() {
 	return allocatedFlows;
 }
 
-FlowInformation IPCProcess::getFlowInformation(int flowPortId)
-throw(IPCException) {
+FlowInformation IPCProcess::getFlowInformation(int flowPortId) {
 	std::list<FlowInformation>::const_iterator iterator;
 	for (iterator = allocatedFlows.begin();
 			iterator != allocatedFlows.end(); ++iterator) {
@@ -690,8 +672,7 @@ throw(IPCException) {
 	throw IPCException("Unknown flow");
 }
 
-unsigned int IPCProcess::deallocateFlow(int flowPortId)
-	throw (IpcmDeallocateFlowException){
+unsigned int IPCProcess::deallocateFlow(int flowPortId) {
 	unsigned int seqNum = 0;
 	FlowInformation flowInformation;
 
@@ -724,8 +705,7 @@ unsigned int IPCProcess::deallocateFlow(int flowPortId)
 	return seqNum;
 }
 
-void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
-	throw (IpcmDeallocateFlowException) {
+void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success) {
 	FlowInformation flowInformation;
 
 	try {
@@ -740,8 +720,7 @@ void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
 	}
 }
 
-FlowInformation IPCProcess::flowDeallocated(int flowPortId)
-throw (IpcmDeallocateFlowException) {
+FlowInformation IPCProcess::flowDeallocated(int flowPortId) {
 	FlowInformation flowInformation;
 
 	try {
@@ -755,8 +734,7 @@ throw (IpcmDeallocateFlowException) {
 
 unsigned int IPCProcess::queryRIB(const std::string& objectClass,
 		const std::string& objectName, unsigned long objectInstance,
-		unsigned int scope, const std::string& filter)
-			throw (QueryRIBException){
+		unsigned int scope, const std::string& filter) {
 #if STUB_API
         (void)objectClass;
         (void)objectName;
@@ -825,7 +803,7 @@ std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 
 IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const std::string& difType) throw (CreateIPCProcessException) {
+		const std::string& difType) {
 	lock();
 	unsigned short ipcProcessId = 1;
 	unsigned int portId = 0;
@@ -910,8 +888,7 @@ IPCProcess * IPCProcessFactory::create(
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(unsigned short ipcProcessId)
-throw (DestroyIPCProcessException) {
+void IPCProcessFactory::destroy(unsigned short ipcProcessId) {
 	lock();
 
 	int resultUserSpace = 0;
@@ -966,9 +943,7 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 	return response;
 }
 
-IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId)
-        throw (GetIPCProcessException)
-{
+IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId) {
         std::map<unsigned short, IPCProcess*>::iterator iterator;
 
         lock();
@@ -986,8 +961,7 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 /** CLASS APPLICATION MANAGER */
 void ApplicationManager::applicationRegistered(
 		const ApplicationRegistrationRequestEvent& event,
-		const ApplicationProcessNamingInformation& difName, int result)
-			throw (NotifyApplicationRegisteredException) {
+		const ApplicationProcessNamingInformation& difName, int result) {
 	LOG_DBG("ApplicationManager::applicationRegistered called");
 
 #if STUB_API
@@ -1014,8 +988,7 @@ void ApplicationManager::applicationRegistered(
 
 void ApplicationManager::applicationUnregistered(
 		const ApplicationUnregistrationRequestEvent& event,
-		int result)
-			throw (NotifyApplicationUnregisteredException) {
+		int result) {
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
 
 #if STUB_API
@@ -1036,8 +1009,7 @@ void ApplicationManager::applicationUnregistered(
 #endif
 }
 
-void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent)
-throw (NotifyFlowAllocatedException) {
+void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent) {
 	LOG_DBG("ApplicationManager::flowAllocated called");
 
 #if STUB_API
@@ -1063,7 +1035,7 @@ unsigned int ApplicationManager::flowRequestArrived(
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
 			const ApplicationProcessNamingInformation& difName,
-			int portId) throw (AppFlowArrivedException){
+			int portId) {
 #if STUB_API
         (void)localAppName;
         (void)remoteAppName;
@@ -1091,8 +1063,7 @@ unsigned int ApplicationManager::flowRequestArrived(
 }
 
 void ApplicationManager::flowDeallocated(
-		const FlowDeallocateRequestEvent& event, int result)
-		throw (NotifyFlowDeallocatedException){
+		const FlowDeallocateRequestEvent& event, int result) {
 	LOG_DBG("ApplicationManager::flowdeallocated called");
 
 #if STUB_API
@@ -1116,8 +1087,7 @@ void ApplicationManager::flowDeallocated(
 
 void ApplicationManager::flowDeallocatedRemotely(
 		int portId, int code,
-		const ApplicationProcessNamingInformation& appName)
-	throw (NotifyFlowDeallocatedException){
+		const ApplicationProcessNamingInformation& appName) {
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
 #if STUB_API
 	//Do nothing
@@ -1140,8 +1110,7 @@ void ApplicationManager::flowDeallocatedRemotely(
 
 void ApplicationManager::getDIFPropertiesResponse(
 		const GetDIFPropertiesRequestEvent &event,
-			int result, const std::list<DIFProperties>& difProperties)
-			throw (GetDIFPropertiesResponseException){
+			int result, const std::list<DIFProperties>& difProperties) {
 #if STUB_API
 	//Do nothing
         (void)event;

@@ -65,6 +65,29 @@ struct PendingAppRegistration {
                                         : slave_ipcp(p), req_event(n) { }
 };
 
+struct PendingIPCPUnregistration {
+        rina::IPCProcess *slave_ipcp;
+        rina::IPCProcess *ipcp;
+/*      TODO complete
+        rina::ApplicationUnregistrationRequestEvent req_event;
+
+        PendingIPCPUnregistration() : slave_ipcp(NULL) { }
+        PendingIPCPUnregistration(rina::IPCProcess *p,
+                        const rina::ApplicationUnregistrationRequestEvent& n)
+                                        : slave_ipcp(p), req_event(n) { }
+*/
+};
+
+struct PendingAppUnregistration {
+        rina::IPCProcess *slave_ipcp;
+        rina::ApplicationUnregistrationRequestEvent req_event;
+
+        PendingAppUnregistration() : slave_ipcp(NULL) { }
+        PendingAppUnregistration(rina::IPCProcess *p,
+                        const rina::ApplicationUnregistrationRequestEvent& n)
+                                        : slave_ipcp(p), req_event(n) { }
+};
+
 class IPCManager : public EventLoopData {
  public:
         IPCManager();
@@ -99,14 +122,23 @@ class IPCManager : public EventLoopData {
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const std::list<rinad::NeighborData>& neighbors);
 
+        bool application_is_registered_to_ipcp(
+                        const rina::ApplicationProcessNamingInformation&,
+                        rina::IPCProcess *slave_ipcp);
+
+        int unregister_app_from_ipcp(
+                const rina::ApplicationUnregistrationRequestEvent& req_event,
+                rina::IPCProcess *slave_ipcp);
 
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
         std::map<unsigned int, PendingIPCPRegistration> pending_ipcp_registrations;
+        std::map<unsigned int, PendingIPCPUnregistration> pending_ipcp_unregistrations;
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
         std::map<unsigned int, PendingAppRegistration> pending_app_registrations;
+        std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
 
         IPCMConcurrency concurrency;
 

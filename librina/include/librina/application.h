@@ -213,8 +213,7 @@ public:
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(void * sdu, int maxBytes)
-			throw (FlowNotAllocatedException, ReadSDUException);
+	int readSDU(void * sdu, int maxBytes);
 
 	/**
 	 * Writes an SDU to the flow
@@ -224,8 +223,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
-	void writeSDU(void * sdu, int size)
-			throw (FlowNotAllocatedException, WriteSDUException);
+	void writeSDU(void * sdu, int size);
 
 	friend class IPCManager;
 };
@@ -244,8 +242,10 @@ public:
 
 	ApplicationRegistration(
 			const ApplicationProcessNamingInformation& applicationName);
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const std::list<ApplicationProcessNamingInformation>& getDIFNames() const;
+#endif
 	void addDIFName(const ApplicationProcessNamingInformation& DIFName);
 	void removeDIFName(const ApplicationProcessNamingInformation& DIFName);
 };
@@ -275,7 +275,7 @@ protected:
 
 	/** Return the information of a registration request */
 	ApplicationRegistrationInformation getRegistrationInfo(
-	                unsigned int seqNumber) throw (IPCException);
+	                unsigned int seqNumber);
 
 	ApplicationRegistration * getApplicationRegistration(
 	                const ApplicationProcessNamingInformation& appName);
@@ -291,21 +291,18 @@ protected:
 	        const ApplicationProcessNamingInformation& localAppName,
 	        const ApplicationProcessNamingInformation& remoteAppName,
 	        const FlowSpecification& flow,
-	        unsigned short sourceIPCProcessId)
-	throw (FlowAllocationException);
+	        unsigned short sourceIPCProcessId);
 
 	unsigned int internalRequestFlowAllocationInDIF(
 	        const ApplicationProcessNamingInformation& localAppName,
 	        const ApplicationProcessNamingInformation& remoteAppName,
 	        const ApplicationProcessNamingInformation& difName,
 	        unsigned short sourceIPCProcessId,
-	        const FlowSpecification& flow)
-	throw (FlowAllocationException);
+	        const FlowSpecification& flow);
 
 	Flow * internalAllocateFlowResponse(
 	        const FlowRequestEvent& flowRequestEvent,
-	        int result, bool notifySource, unsigned short ipcProcessId)
-        throw (FlowAllocationException);
+	        int result, bool notifySource, unsigned short ipcProcessId);
 
 public:
 	IPCManager();
@@ -341,8 +338,7 @@ public:
 	 */
 	unsigned int getDIFProperties(
 			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName)
-			throw (GetDIFPropertiesException);
+			const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Requests an application to be registered in a DIF
@@ -353,8 +349,7 @@ public:
 	 * @return A handler to be able to identify the proper response event
 	 */
 	unsigned int requestApplicationRegistration(
-			const ApplicationRegistrationInformation& appRegistrationInfo)
-			throw (ApplicationRegistrationException);
+			const ApplicationRegistrationInformation& appRegistrationInfo);
 
 	/**
 	 * The application registration has been successful,
@@ -367,8 +362,7 @@ public:
 	 */
 	ApplicationRegistration * commitPendingResitration(
 	                unsigned int seqNumber,
-	                const ApplicationProcessNamingInformation& DIFName)
-	throw (ApplicationRegistrationException);
+	                const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * The application registration has been unsuccessful,
@@ -377,8 +371,7 @@ public:
 	 * @throws ApplicationRegistrationException if the pending registration
 	 * is not found
 	 */
-	void withdrawPendingRegistration(unsigned int seqNumber)
-	throw (ApplicationRegistrationException);
+	void withdrawPendingRegistration(unsigned int seqNumber);
 
 	/**
 	 * Requests an application to be unregistered from a DIF
@@ -391,16 +384,14 @@ public:
 	 */
 	unsigned int requestApplicationUnregistration(
 			const ApplicationProcessNamingInformation& applicationName,
-			const ApplicationProcessNamingInformation& DIFName)
-			throw (ApplicationUnregistrationException);
+			const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Inform about the result of a pending application unregistration request
 	 * @param seqNumber the id of the request
 	 * @param success true if request was successful, false otherwise
 	 */
-	 void appUnregistrationResult(unsigned int seqNumber, bool success)
-	                        throw (ApplicationUnregistrationException);
+	 void appUnregistrationResult(unsigned int seqNumber, bool success);
 
 	/**
 	 * Requests the allocation of a Flow
@@ -414,7 +405,7 @@ public:
 	virtual unsigned int requestFlowAllocation(
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flow) throw (FlowAllocationException);
+			const FlowSpecification& flow);
 
 	/**
 	 * Requests the allocation of a flow using a speficif dIF
@@ -429,7 +420,7 @@ public:
 	                const ApplicationProcessNamingInformation& localAppName,
 	                const ApplicationProcessNamingInformation& remoteAppName,
 	                const ApplicationProcessNamingInformation& difName,
-	                const FlowSpecification& flow) throw (FlowAllocationException);
+	                const FlowSpecification& flow);
 
 	/**
 	 * Tell the IPC Manager that a pending flow has been allocated, and
@@ -441,8 +432,7 @@ public:
 	 * @throws FlowAllocationException if the pending flow is not found
 	 */
 	Flow * commitPendingFlow(unsigned int sequenceNumber, int portId,
-	                const ApplicationProcessNamingInformation& DIFName)
-	        throw (FlowAllocationException);
+	                const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Tell the IPC Manager that a pending flow allocation has been denied
@@ -450,8 +440,7 @@ public:
 	 * @returns the information of the flow that has been withdrawn
 	 * @throws FlowAllocationException if the pending flow is not found
 	 */
-	FlowInformation withdrawPendingFlow(unsigned int sequenceNumber)
-	        throw (FlowAllocationException);
+	FlowInformation withdrawPendingFlow(unsigned int sequenceNumber);
 
 	/**
 	 * Confirms or denies the request for a flow to this application.
@@ -466,8 +455,7 @@ public:
 	 * confirming/denying the flow
 	 */
 	virtual Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-			int result, bool notifySource)
-			throw (FlowAllocationException);
+			int result, bool notifySource);
 
 	/**
 	 * Requests the deallocation of a flow
@@ -476,8 +464,7 @@ public:
 	 * @throws FlowDeallocationException if the flow is not in
 	 * the ALLOCATED state or there are problems deallocating the flow
 	 */
-	unsigned int requestFlowDeallocation(int portId)
-			throw (FlowDeallocationException);
+	unsigned int requestFlowDeallocation(int portId);
 
 	/**
 	 * Inform about the success/failure of a flow deallocation request
@@ -485,8 +472,7 @@ public:
 	 * @param portId the portId of the flow to be deallocated
 	 * @throws flowDeallocationException if there are problems
 	 */
-	void flowDeallocationResult(int portId, bool success)
-	                throw (FlowDeallocationException);
+	void flowDeallocationResult(int portId, bool success);
 
 	/**
 	 * Inform the IPC Manager that a flow has been deallocated remotely,
@@ -495,7 +481,7 @@ public:
 	 * @throws FlowDeallocationException if no flow with the provided
 	 * portId was allocated
 	 */
-	void flowDeallocated(int portId) throw (FlowDeallocationException);
+	void flowDeallocated(int portId);
 
 	/**
 	 * Returns the flows that are currently allocated
@@ -534,8 +520,10 @@ public:
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
+#endif
 };
 
 /**
@@ -559,10 +547,12 @@ public:
 	AppRegistrationCanceledEvent(int code, const std::string& reason,
 			const ApplicationProcessNamingInformation& difName,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	int getCode() const;
 	const std::string getReason() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation getDIFName() const;
+#endif
 };
 
 /**
@@ -588,9 +578,11 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
                         int portId, unsigned int sequenceNumber);
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getAppName() const;
         const ApplicationProcessNamingInformation& getDIFName() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -607,8 +599,10 @@ public:
         DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int portId, int result, unsigned int sequenceNumber);
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getAppName() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -628,8 +622,10 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
                         int result, unsigned int sequenceNumber);
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getAppName() const;
         const std::list<DIFProperties>& getDIFProperties() const;
+#endif
 };
 
 }

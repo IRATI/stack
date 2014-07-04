@@ -159,7 +159,7 @@ const std::list<BaseRIBObject*>& BaseRIBObject::get_children() const {
 	return children_;
 }
 
-void BaseRIBObject::add_child(BaseRIBObject * child) throw (Exception) {
+void BaseRIBObject::add_child(BaseRIBObject * child) {
 	for (std::list<BaseRIBObject*>::iterator it = children_.begin();
 			it != children_.end(); it++) {
 		if ((*it)->get_name().compare(child->get_name()) == 0) {
@@ -171,7 +171,7 @@ void BaseRIBObject::add_child(BaseRIBObject * child) throw (Exception) {
 	child->set_parent(this);
 }
 
-void BaseRIBObject::remove_child(const std::string& objectName) throw (Exception) {
+void BaseRIBObject::remove_child(const std::string& objectName) {
 	for (std::list<BaseRIBObject*>::iterator it = children_.begin();
 			it != children_.end(); it++) {
 		if ( (*it)->get_name().compare(objectName) == 0) {
@@ -184,70 +184,70 @@ void BaseRIBObject::remove_child(const std::string& objectName) throw (Exception
 }
 
 void BaseRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) throw (Exception) {
+		const void* objectValue) {
 	operartion_not_supported(objectClass, objectName, objectValue);
 }
 
-void BaseRIBObject::deleteObject() throw (Exception) {
-	operation_not_supported();
+void BaseRIBObject::deleteObject(const void* objectValue) {
+	operation_not_supported(objectValue);
 }
 
-BaseRIBObject * BaseRIBObject::readObject() throw (Exception) {
+BaseRIBObject * BaseRIBObject::readObject() {
 	return this;
 }
 
-void BaseRIBObject::writeObject(const void* object_value) throw (Exception) {
+void BaseRIBObject::writeObject(const void* object_value) {
 	operation_not_supported(object_value);
 }
 
-void BaseRIBObject::startObject(const void* object) throw (Exception) {
+void BaseRIBObject::startObject(const void* object) {
 	operation_not_supported(object);
 }
 
-void BaseRIBObject::stopObject(const void* object) throw (Exception) {
+void BaseRIBObject::stopObject(const void* object) {
 	operation_not_supported(object);
 }
 
 void BaseRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
 void BaseRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
 void BaseRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
 void BaseRIBObject::remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
 void BaseRIBObject::remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
 void BaseRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
 void BaseRIBObject::remoteStopObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	operation_not_supported(cdapMessage, cdapSessionDescriptor);
 }
 
-void BaseRIBObject::operation_not_supported() throw (Exception) {
+void BaseRIBObject::operation_not_supported() {
 	throw Exception("Operation not supported");
 }
 
-void BaseRIBObject::operation_not_supported(const void* object) throw (Exception) {
+void BaseRIBObject::operation_not_supported(const void* object) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
 	ss<<"Object value memory @: "<<object;
@@ -256,7 +256,7 @@ void BaseRIBObject::operation_not_supported(const void* object) throw (Exception
 }
 
 void BaseRIBObject::operation_not_supported(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) throw (Exception) {
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
 	ss<<"CDAP Message code: "<<cdapMessage->get_op_code();
@@ -266,7 +266,7 @@ void BaseRIBObject::operation_not_supported(const rina::CDAPMessage * cdapMessag
 }
 
 void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
-		const std::string& objectName, const void* objectValue) throw (Exception) {
+		const std::string& objectName, const void* objectValue) {
 	std::stringstream ss;
 	ss<<"Operation not allowed. Data: "<<std::endl;
 	ss<<"Class: "<<objectClass<<"; Name: "<<objectName;
@@ -305,12 +305,12 @@ const void* SimpleRIBObject::get_value() const {
 	return object_value_;
 }
 
-void SimpleRIBObject::writeObject(const void* object_value) throw (Exception) {
+void SimpleRIBObject::writeObject(const void* object_value) {
 	object_value_ = object_value;
 }
 
 void SimpleRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) throw (Exception) {
+		const void* objectValue) {
 	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
 		object_value_ = objectValue;
 	}
@@ -324,7 +324,7 @@ SimpleSetRIBObject::SimpleSetRIBObject(IPCProcess * ipc_process, const std::stri
 }
 
 void SimpleSetRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) throw (Exception) {
+		const void* objectValue) {
 	if (set_member_object_class_.compare(objectClass) != 0) {
 		throw Exception("Class of set member does not match the expected value");
 	}
@@ -337,14 +337,19 @@ void SimpleSetRIBObject::createObject(const std::string& objectClass, const std:
 
 //Class SimpleSetMemberRIBObject
 SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IPCProcess* ipc_process,
-		const std::string& object_class, const std::string& object_name, const void* object_value) :
-				SimpleRIBObject(ipc_process, object_class, object_name, object_value){
+                                                   const std::string& object_class,
+                                                   const std::string& object_name,
+                                                   const void* object_value) :
+        SimpleRIBObject(ipc_process, object_class, object_name, object_value)
+{
 }
 
-void SimpleSetMemberRIBObject::deleteObject() throw (Exception) {
+void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
+{
+        (void) objectValue; // Stop compiler barfs
+
 	get_parent()->remove_child(get_name());
 	get_rib_daemon()->removeRIBObject(get_name());
-	delete this;
 }
 
 }

@@ -74,23 +74,23 @@ class NetlinkManager{
 	int family;
 
 	/** Creates the Netlink socket and binds it to the netlinkPid */
-	void initialize(bool ipcManager) throw(NetlinkException);
+	void initialize(bool ipcManager);
 
 	/** Send a Netlink message */
-	void _sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)
-	        throw(NetlinkException);
+	void _sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage);
+
 public:
 	/**
 	 * Creates an instance of a Netlink socket and binds it to the local port
 	 * whose number is the same as the OS process PID
 	 */
-	NetlinkManager() throw(NetlinkException);
+	NetlinkManager();
 
 	/**
 	 * Creates an instance of a Netlink socket and binds it to the specified
 	 * local port
 	 */
-	NetlinkManager(unsigned int localPort) throw(NetlinkException);
+	NetlinkManager(unsigned int localPort);
 
 	/**
 	 * Closes the Netlink socket
@@ -108,12 +108,11 @@ public:
 	 */
 	unsigned int getSequenceNumber();
 
-	void sendMessage(BaseNetlinkMessage * message) throw(NetlinkException);
+	void sendMessage(BaseNetlinkMessage * message);
 
-	void sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize)
-	        throw(NetlinkException);
+	void sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize);
 
-	BaseNetlinkMessage *  getMessage() throw(NetlinkException);
+	BaseNetlinkMessage *  getMessage();
 };
 
 }
