@@ -334,7 +334,7 @@ public:
 	virtual ~IPDUForwardingTableGenerator(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-	virtual const IPDUFTGeneratorPolicy& get_pdu_ft_generator_policy() const = 0;
+	virtual IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const = 0;
 };
 
 /// Resource Allocator Interface

@@ -119,6 +119,7 @@ public:
 	static const std::string WHATEVERCAST_NAMES;
 	static const std::string ROUTING;
 	static const std::string FLOWSTATEOBJECTGROUP;
+	static const std::string LINKSTATE;
 	static const std::string DIF_NAME_WHATEVERCAST_RULE;
 
 	/* Full names */
@@ -132,6 +133,9 @@ public:
 	static const std::string FLOW_SET_RIB_OBJECT_NAME;
 	static const std::string FLOW_SET_RIB_OBJECT_CLASS ;
 	static const std::string FLOW_RIB_OBJECT_CLASS;
+	static const std::string FLOW_STATE_OBJECT_RIB_OBJECT_CLASS;
+	static const std::string FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
+	static const std::string FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME;
 	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS;
 	static const std::string N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS;
 	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
@@ -146,7 +150,6 @@ public:
 	static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
 	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
 };
-
 
 }
 
