@@ -302,7 +302,7 @@ public:
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 #endif
@@ -384,7 +384,7 @@ public:
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	unsigned short getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
@@ -887,7 +887,7 @@ public:
 
         IpcmAllocateFlowRequestResultEvent(
                         int result, int portId, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         int getPortId() const;
 #endif
 };
@@ -902,7 +902,7 @@ public:
         QueryRIBResponseEvent(const std::list<RIBObjectData>& ribObjects,
                         int result,
                         unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const std::list<RIBObjectData>& getRIBObject() const;
 #endif
 };
@@ -938,7 +938,7 @@ public:
                         const std::list<Neighbor> & neighbors,
                         const DIFInformation& difInformation,
                         int result, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const std::list<Neighbor>& getNeighbors() const;
         const DIFInformation& getDIFInformation() const;
 #endif
@@ -958,7 +958,7 @@ public:
                         unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const std::list<Neighbor>& getNeighbors() const;
         bool isAdded() const;
         unsigned short getIpcProcessId() const;
@@ -977,7 +977,7 @@ public:
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
                         const ApplicationProcessNamingInformation& name,
                         unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         unsigned short getIPCProcessId() const;
         const ApplicationProcessNamingInformation& getName() const;
 #endif

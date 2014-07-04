@@ -35,7 +35,7 @@ public:
         Neighbor();
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const ApplicationProcessNamingInformation& get_name() const;
         void set_name(const ApplicationProcessNamingInformation& name);
         const ApplicationProcessNamingInformation&
@@ -107,7 +107,7 @@ public:
 			long long instance, RIBObjectValue value);
 	bool operator==(const RIBObjectData &other) const;
 	bool operator!=(const RIBObjectData &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const std::string& get_class() const;
 	void set_class(const std::string& clazz);
 	unsigned long get_instance() const;

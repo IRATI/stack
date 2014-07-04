@@ -242,7 +242,7 @@ public:
 
 	ApplicationRegistration(
 			const ApplicationProcessNamingInformation& applicationName);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const std::list<ApplicationProcessNamingInformation>& getDIFNames() const;
 #endif
@@ -520,7 +520,7 @@ public:
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 #endif
@@ -547,7 +547,7 @@ public:
 	AppRegistrationCanceledEvent(int code, const std::string& reason,
 			const ApplicationProcessNamingInformation& difName,
 			unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	int getCode() const;
 	const std::string getReason() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
@@ -578,7 +578,7 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
                         int portId, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getAppName() const;
         const ApplicationProcessNamingInformation& getDIFName() const;
         int getPortId() const;
@@ -599,7 +599,7 @@ public:
         DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int portId, int result, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getAppName() const;
         int getPortId() const;
 #endif
@@ -622,7 +622,7 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
                         int result, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getAppName() const;
         const std::list<DIFProperties>& getDIFProperties() const;
 #endif

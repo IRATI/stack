@@ -38,7 +38,7 @@ public:
         PolicyParameter(const std::string& name, const std::string& value);
         bool operator==(const PolicyParameter &other) const;
         bool operator!=(const PolicyParameter &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
         const std::string& get_value() const;
@@ -59,7 +59,7 @@ public:
         PolicyConfig(const std::string& name, const std::string& version);
         bool operator==(const PolicyConfig &other) const;
         bool operator!=(const PolicyConfig &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const std::string& get_name() const;
         void set_name(const std::string& name);
         const std::list<PolicyParameter>& get_parameters() const;
@@ -83,7 +83,7 @@ public:
 class DTCPWindowBasedFlowControlConfig {
 public:
     DTCPWindowBasedFlowControlConfig();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
     unsigned int get_initial_credit() const;
     void set_initial_credit(int initial_credit);
     unsigned int get_maxclosed_window_queue_length() const;
@@ -117,7 +117,7 @@ public:
 class DTCPRateBasedFlowControlConfig {
 public:
         DTCPRateBasedFlowControlConfig();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const PolicyConfig& get_no_override_default_peak_policy() const;
         void set_no_override_default_peak_policy(
                         const PolicyConfig& no_override_default_peak_policy);
@@ -158,7 +158,7 @@ public:
 class DTCPFlowControlConfig {
 public:
         DTCPFlowControlConfig();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const PolicyConfig& get_closed_window_policy() const;
         void set_closed_window_policy(const PolicyConfig& closed_window_policy);
         const PolicyConfig& get_flow_control_overrun_policy() const;
@@ -257,7 +257,7 @@ public:
 class DTCPRtxControlConfig{
 public:
         DTCPRtxControlConfig();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         unsigned int get_data_rxmsn_max() const;
         void set_data_rxmsn_max(unsigned int data_rxmsn_max);
         unsigned int get_initial_rtx_time() const;
@@ -326,7 +326,7 @@ public:
 class DTCPConfig {
 public:
         DTCPConfig();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         bool is_flow_control() const;
         void set_flow_control(bool flow_control);
         const DTCPFlowControlConfig& get_flow_control_config() const;
@@ -403,7 +403,7 @@ public:
 class ConnectionPolicies {
 public:
         ConnectionPolicies();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const DTCPConfig& get_dtcp_configuration() const;
         void set_dtcp_configuration(const DTCPConfig& dtcp_configuration);
         bool is_dtcp_present() const;
@@ -466,7 +466,7 @@ public:
 	QoSCube(const std::string& name, int id);
 	bool operator==(const QoSCube &other) const;
 	bool operator!=(const QoSCube &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	void set_id(unsigned int id);
 	unsigned int get_id() const;
 	const std::string& get_name() const;
@@ -545,7 +545,7 @@ public:
 class DataTransferConstants {
 public:
         DataTransferConstants();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         unsigned short get_address_length() const;
         void set_address_length(unsigned short address_length);
         unsigned short get_cep_id_length() const;
@@ -606,7 +606,7 @@ public:
 class EFCPConfiguration {
 public:
         EFCPConfiguration();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const DataTransferConstants& get_data_transfer_constants() const;
         void set_data_transfer_constants(
                         const DataTransferConstants& data_transfer_constants);
@@ -634,7 +634,7 @@ public:
 class FlowAllocatorConfiguration {
 public:
         FlowAllocatorConfiguration();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const PolicyConfig& get_allocate_notify_policy() const;
         void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
         const PolicyConfig& get_allocate_retry_policy() const;
@@ -679,7 +679,7 @@ public:
 class RMTConfiguration {
 public:
         RMTConfiguration();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const PolicyConfig& get_max_queue_policy() const;
         void set_max_queue_policy(const PolicyConfig& max_queue_policy);
         const PolicyConfig& get_rmt_queue_monitor_policy() const;
@@ -713,7 +713,7 @@ class LinkStateRoutingConfiguration {
 public:
         LinkStateRoutingConfiguration();
         const std::string toString();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         int get_wait_until_age_increment() const;
         void set_wait_until_age_increment(const int wait_until_age_increment);
         int get_wait_until_error() const;
@@ -751,7 +751,7 @@ class PDUFTableGeneratorConfiguration {
 public:
         PDUFTableGeneratorConfiguration();
         PDUFTableGeneratorConfiguration(const PolicyConfig& pduft_generator_policy);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const PolicyConfig& get_pduft_generator_policy() const;
         void set_pduft_generator_policy(const PolicyConfig& pduft_generator_policy);
         const LinkStateRoutingConfiguration& get_link_state_routing_configuration() const;
@@ -771,7 +771,7 @@ public:
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
 public:
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	const EFCPConfiguration& get_efcp_configuration() const;
@@ -819,7 +819,7 @@ public:
 class DIFInformation{
 public:
 	const ApplicationProcessNamingInformation& get_dif_name() const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	void set_dif_name(const ApplicationProcessNamingInformation& dif_name);
 	const std::string& get_dif_type() const;
 	void set_dif_type(const std::string& dif_type);

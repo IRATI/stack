@@ -36,7 +36,7 @@ public:
 	AuthValue();
 	AuthValue(const std::string &auth_name, const std::string &auth_password,
 			const std::string &auth_other);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const std::string get_auth_name() const;
 	const std::string get_auth_password() const;
 	const std::string get_auth_other() const;
@@ -341,7 +341,7 @@ public:
 	/// @param requestMessage
 	/// @return
 	/// @throws CDAPException
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	CDAPMessage getReplyMessage();
 	int get_abs_syntax() const;
 	void set_abs_syntax(int abs_syntax);
@@ -495,7 +495,7 @@ public:
 	const ApplicationProcessNamingInformation get_source_application_process_naming_info();
 	/// The destination naming information is always the naming information of the remote application process
 	const ApplicationProcessNamingInformation get_destination_application_process_naming_info();
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	void set_abs_syntax(const int abs_syntax);
 	void set_auth_mech(const CDAPMessage::AuthTypes auth_mech);
 	void set_auth_value(const AuthValue set_auth_value);

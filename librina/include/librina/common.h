@@ -69,7 +69,7 @@ public:
 	bool operator<=(const ApplicationProcessNamingInformation &other) const;
 	bool operator<(const ApplicationProcessNamingInformation &other) const;
 	bool operator>=(const ApplicationProcessNamingInformation &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const std::string& getEntityInstance() const;
 	void setEntityInstance(const std::string& entityInstance);
 	const std::string& getEntityName() const;
@@ -167,7 +167,7 @@ public:
 	FlowSpecification();
 	bool operator==(const FlowSpecification &other) const;
 	bool operator!=(const FlowSpecification &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	unsigned int getAverageBandwidth() const;
 	void setAverageBandwidth(unsigned int averageBandwidth);
 	unsigned int getAverageSduBandwidth() const;
@@ -216,7 +216,7 @@ public:
 
 	bool operator==(const FlowInformation &other) const;
 	bool operator!=(const FlowInformation &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
 	const FlowSpecification& getFlowSpecification() const;
@@ -251,7 +251,7 @@ public:
 	DIFProperties();
 	DIFProperties(const ApplicationProcessNamingInformation& DIFName,
 			int maxSDUSize);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getDifName() const;
 	unsigned int getMaxSduSize() const;
 #endif
@@ -325,7 +325,7 @@ public:
 		this->eventType = eventType;
 		this->sequenceNumber = sequenceNumber;
 	}
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	IPCEventType getType() const {
 		return eventType;
 	}
@@ -345,7 +345,7 @@ public:
                         int result,
                         IPCEventType eventType,
                         unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         int getResult() const;
 #endif
 };
@@ -394,7 +394,7 @@ public:
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned short ipcProcessId,
 			unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	int getPortId() const;
 	bool isLocalRequest() const;
 	const FlowSpecification& getFlowSpecification() const;
@@ -424,7 +424,7 @@ public:
 			unsigned int sequenceNumber);
 	FlowDeallocateRequestEvent(int portId,
 				unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	int getPortId() const;
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 #endif
@@ -443,7 +443,7 @@ public:
 	int code;
 
 	FlowDeallocatedEvent(int portId, int code);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	int getPortId() const;
 	int getCode() const;
 	const ApplicationProcessNamingInformation getDIFName() const;
@@ -485,7 +485,7 @@ public:
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	void setApplicationName(
 	                const ApplicationProcessNamingInformation& appName);
@@ -511,7 +511,7 @@ public:
 	ApplicationRegistrationRequestEvent(
 		const ApplicationRegistrationInformation&
 		applicationRegistrationInformation, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationRegistrationInformation&
 		getApplicationRegistrationInformation() const;
 #endif
@@ -534,7 +534,7 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         IPCEventType eventType,
                         unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getApplicationName() const;
         const ApplicationProcessNamingInformation& getDIFName() const;
 #endif
@@ -570,7 +570,7 @@ public:
                         int result,
                         IPCEventType eventType,
                         unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         int getResult() const;
 #endif
 };
@@ -618,7 +618,7 @@ public:
                         bool notifysource,
                         int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         bool isNotifySource() const;
         int getFlowAcceptorIpcProcessId() const;
 #endif
@@ -645,7 +645,7 @@ public:
 
 	OSProcessFinalizedEvent(const ApplicationProcessNamingInformation& appName,
 			unsigned int ipcProcessId, unsigned int sequenceNumber);
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	unsigned int getIPCProcessId() const;
 #endif
@@ -696,7 +696,7 @@ public:
         Parameter(const std::string & name, const std::string & value);
         bool operator==(const Parameter &other) const;
         bool operator!=(const Parameter &other) const;
-#ifndef LIBRINAFORSWIG
+#ifndef SWIG
         const std::string& getName() const;
         void setName(const std::string& name);
         const std::string& getValue() const;
