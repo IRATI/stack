@@ -19,7 +19,7 @@
  */
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include "encoder.h"
-#include "librina/application.h"
+#include <librina/application.h>
 #include "encoders/ApplicationProcessNamingInfoMessage.pb.h"
 #include "encoders/ApplicationRegistrationMessage.pb.h"
 

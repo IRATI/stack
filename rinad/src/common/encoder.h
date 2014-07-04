@@ -55,7 +55,6 @@ public:
 	virtual EncoderInterface* createEncoderInstance() = 0;
 };
 
-
 /// Implements an encoder that delegates the encoding/decoding
 /// tasks to different subencoders. A different encoder is registered
 /// by each type of object

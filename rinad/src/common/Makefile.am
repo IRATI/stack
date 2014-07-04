@@ -38,10 +38,16 @@ tclapSOURCES =					\
 	tclap/Visitor.h				\
 	tclap/XorHandler.h			\
 	tclap/ZshCompletionOutput.h
+	
+encoderSOURCES =					\
+	encoders/ApplicationProcessNamingInfoMessage.pb.cc \
+	encoders/ApplicationRegistrationMessage.pb.cc  \
+	encoders/CommonMessages.pb.cc
 
 librinad_la_SOURCES  =					\
+	$(encoderSOURCES)			\
 	rina-configuration.cc rina-configuration.h	\
 	event-loop.cc	      event-loop.h		\
 	encoder.cc	      	  encoder.h		\
-                              concurrency.h		\
+                          concurrency.h		\
 	$(tclapSOURCES)
