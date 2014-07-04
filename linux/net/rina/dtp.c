@@ -486,8 +486,9 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 
         last = list_last_entry(&q->head, struct seq_q_entry, next);
         if (!last) {
+                LOG_ERR("Could not retrieve last pdu from seqQ");
                 seq_q_entry_destroy(tmp);
-                return -1;
+                return 0;
         }
 
         pci  = pdu_pci_get_ro(last->pdu);
@@ -495,7 +496,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
                 seq_q_entry_destroy(tmp);
-                return 0;
+                return -1;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
@@ -578,16 +579,19 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
                 return -1;
         }
 
+        /* this is not needed cosae seq_queue_push already checks this*/
+        /*
         if (seqQ_pdu_is_duplicate(seqQ,
                           pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
                 pdu_destroy(pdu);
                 dropped_pdus_inc(dtp->sv);
                 return 0;
-        }
+        }*/
 
         spin_lock(&seqQ->lock);
         if (seq_queue_push_ni(seqQ->queue, pdu)) {
                 spin_unlock(&seqQ->lock);
+                dropped_pdus_inc(dtp->sv);
                 LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
                 return -1;
         }
@@ -1401,7 +1405,7 @@ int dtp_receive(struct dtp * instance,
                                        "sequencing queue");
                                 return -1;
                         }
-                        seqQ_cleanup(instance);
+                        //seqQ_cleanup(instance);
                 }
         }
 
