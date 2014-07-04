@@ -447,7 +447,8 @@ IPCManager::unregister_app_from_ipcp(
                                 PendingAppUnregistration(slave_ipcp, req_event);
         } catch (rina::IpcmUnregisterApplicationException) {
                 cerr << __func__ << ": Error while unregistering application "
-                        << req_event.applicationName.toString() << endl;
+                        << req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->name.toString() << endl;
                 return -1;
         }
 
@@ -870,8 +871,36 @@ static void get_dif_properties_response_event_handler(rina::IPCEvent *event, Eve
 {
 }
 
-static void os_process_finalized_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void os_process_finalized_handler(rina::IPCEvent *e,
+                                         EventLoopData *opaque)
 {
+        DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+        const rina::ApplicationProcessNamingInformation& app_name =
+                                                event->applicationName;
+
+        // TODO clean pending flows
+
+        // Look if the terminating application has pending registrations
+        // with some IPC process
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                if (ipcm->application_is_registered_to_ipcp(app_name,
+                                                            ipcps[i])) {
+                        // Build a structure that will be used during
+                        // the unregistration process. The last argument
+                        // is the request sequence number: 0 means that
+                        // the unregistration response does not match
+                        // an application request - this is indeed an
+                        // unregistration forced by the IPCM.
+                        rina::ApplicationUnregistrationRequestEvent
+                                req_event(app_name, ipcps[i]->
+                                        getDIFInformation().dif_name_, 0);
+
+                        ipcm->unregister_app_from_ipcp(req_event, ipcps[i]);
+                }
+        }
 }
 
 static void ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
