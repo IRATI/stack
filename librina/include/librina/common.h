@@ -525,6 +525,7 @@ public:
         /** The DIF to which the application wants to cancel the registration */
         ApplicationProcessNamingInformation DIFName;
 
+        BaseApplicationRegistrationEvent() { }
         BaseApplicationRegistrationEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& DIFName,
@@ -547,6 +548,8 @@ public:
 class ApplicationUnregistrationRequestEvent:
                 public BaseApplicationRegistrationEvent {
 public:
+        ApplicationUnregistrationRequestEvent() :
+                                BaseApplicationRegistrationEvent() { }
 	ApplicationUnregistrationRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
