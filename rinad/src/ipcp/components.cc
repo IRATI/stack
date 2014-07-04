@@ -32,29 +32,9 @@ EnrollmentRequest::EnrollmentRequest(
 	event_ = event;
 }
 
-const rina::Neighbor& EnrollmentRequest::get_neighbor() const {
-	return neighbor_;
-}
-
-void EnrollmentRequest::set_neighbor(const rina::Neighbor &neighbor) {
-	neighbor_ = neighbor;
-}
-
-const rina::EnrollToDIFRequestEvent& EnrollmentRequest::get_event() const{
-	return event_;
-}
-
-void EnrollmentRequest::set_event(const rina::EnrollToDIFRequestEvent& event) {
-	event_ = event;
-}
-
 // CLASS NotificationPolicy
 NotificationPolicy::NotificationPolicy(const std::list<int>& cdap_session_ids) {
 	cdap_session_ids_ = cdap_session_ids;
-}
-
-const std::list<int>& NotificationPolicy::get_cdap_session_ids() const {
-	return cdap_session_ids_;
 }
 
 // Class BaseRIBObject
@@ -86,38 +66,6 @@ rina::RIBObjectData BaseRIBObject::get_data() {
     return result;
 }
 
-const std::string& BaseRIBObject::get_name() const {
-	return name_;
-}
-
-const std::string& BaseRIBObject::get_class() const {
-	return class_;
-}
-
-long BaseRIBObject::get_instance() const {
-	return instance_;
-}
-
-IPCProcess* BaseRIBObject::get_ipc_process() {
-	return ipc_process_;
-}
-
-IRIBDaemon* BaseRIBObject::get_rib_daemon() {
-	return rib_daemon_;
-}
-
-Encoder* BaseRIBObject::get_encoder() {
-	return encoder_;
-}
-
-BaseRIBObject * BaseRIBObject::get_parent() const {
-	return parent_;
-}
-
-void BaseRIBObject::set_parent(BaseRIBObject * parent) {
-	parent_ = parent;
-}
-
 const std::list<BaseRIBObject*>& BaseRIBObject::get_children() const {
 	return children_;
 }
@@ -125,19 +73,19 @@ const std::list<BaseRIBObject*>& BaseRIBObject::get_children() const {
 void BaseRIBObject::add_child(BaseRIBObject * child) {
 	for (std::list<BaseRIBObject*>::iterator it = children_.begin();
 			it != children_.end(); it++) {
-		if ((*it)->get_name().compare(child->get_name()) == 0) {
+		if ((*it)->name_.compare(child->name_) == 0) {
 			throw Exception("Object is already a child");
 		}
 	}
 
 	children_.push_back(child);
-	child->set_parent(this);
+	child->parent_ = this;
 }
 
 void BaseRIBObject::remove_child(const std::string& objectName) {
 	for (std::list<BaseRIBObject*>::iterator it = children_.begin();
 			it != children_.end(); it++) {
-		if ( (*it)->get_name().compare(objectName) == 0) {
+		if ( (*it)->name_.compare(objectName) == 0) {
 			children_.erase(it);
 			return;
 		}
@@ -292,10 +240,10 @@ void SimpleSetRIBObject::createObject(const std::string& objectClass, const std:
 		throw Exception("Class of set member does not match the expected value");
 	}
 
-	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(), objectClass,
+	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_, objectClass,
 			objectName, objectValue);
 	add_child(ribObject);
-	get_rib_daemon()->addRIBObject(ribObject);
+	rib_daemon_->addRIBObject(ribObject);
 }
 
 //Class SimpleSetMemberRIBObject
@@ -311,8 +259,8 @@ void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
 {
         (void) objectValue; // Stop compiler barfs
 
-	get_parent()->remove_child(get_name());
-	get_rib_daemon()->removeRIBObject(get_name());
+	parent_->remove_child(name_);
+	rib_daemon_->removeRIBObject(name_);
 }
 
 }

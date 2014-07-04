@@ -52,78 +52,6 @@ Flow::~Flow() {
 	}
 }
 
-bool Flow::is_source() const {
-	return source_;
-}
-
-void Flow::set_source(bool source) {
-	source_ = source;
-}
-
-const rina::ApplicationProcessNamingInformation& Flow::get_source_naming_info() const {
-	return source_naming_info_;
-}
-
-void Flow::set_source_naming_info(const rina::ApplicationProcessNamingInformation& source_naming_info) {
-	source_naming_info_ = source_naming_info;
-}
-
-const rina::ApplicationProcessNamingInformation& Flow::get_destination_naming_info() const {
-	return destination_naming_info_;
-}
-
-void Flow::set_destination_naming_info(const rina::ApplicationProcessNamingInformation& destination_naming_info) {
-	destination_naming_info_ = destination_naming_info;
-}
-
-unsigned int Flow::get_source_port_id() const {
-	return source_port_id_;
-}
-
-void Flow::set_source_port_id(unsigned int source_port_id) {
-	source_port_id_ = source_port_id;
-}
-
-unsigned int Flow::get_destination_port_id() const {
-	return destination_port_id_;
-}
-
-void Flow::set_destination_port_id(unsigned int destination_port_id) {
-	destination_port_id_ = destination_port_id;
-}
-
-unsigned int Flow::get_source_address() const {
-	return source_address_;
-}
-
-void Flow::set_source_address(unsigned int source_address) {
-	source_address_ = source_address;
-}
-
-unsigned int Flow::get_destination_address() const {
-	return destination_address_;
-}
-
-void Flow::set_destination_address(unsigned int destination_address) {
-	destination_address_ = destination_address;
-}
-
-const std::list<rina::Connection*>& Flow::get_connections() const {
-	return connections_;
-}
-
-void Flow::set_connections(const std::list<rina::Connection*>& connections) {
-	connections_ = connections;
-}
-
-unsigned int Flow::get_current_connection_index() const {
-	return current_connection_index_;
-}
-
-void Flow::set_current_connection_index(unsigned int current_connection_index) {
-	current_connection_index_ = current_connection_index;
-}
-
 rina::Connection * Flow::getActiveConnection() {
 	rina::Connection result;
 	std::list<rina::Connection*>::iterator iterator;
@@ -138,54 +66,6 @@ rina::Connection * Flow::getActiveConnection() {
 	}
 
 	throw Exception("No active connection is currently defined");
-}
-
-Flow::IPCPFlowState Flow::get_state() const{
-	return state_;
-}
-
-void Flow::set_state(IPCPFlowState state) {
-	state_ = state;
-}
-
-const rina::FlowSpecification& Flow::get_flow_specification() const {
-	return flow_specification_;
-}
-
-void Flow::set_flow_specification(const rina::FlowSpecification& flow_specification) {
-	flow_specification_ = flow_specification;
-}
-
-char* Flow::get_access_control() const {
-	return access_control_;
-}
-
-void Flow::set_access_control(char* access_control) {
-	access_control_ = access_control;
-}
-
-unsigned int Flow::get_max_create_flow_retries() const {
-	return max_create_flow_retries_;
-}
-
-void Flow::set_max_create_flow_retries(unsigned int max_create_flow_retries) {
-	max_create_flow_retries_ = max_create_flow_retries;
-}
-
-unsigned int Flow::get_create_flow_retries() const {
-	return create_flow_retries_;
-}
-
-void Flow::set_create_flow_retries(unsigned int create_flow_retries) {
-	create_flow_retries_ = create_flow_retries;
-}
-
-unsigned int Flow::get_hop_count() const {
-	return hop_count_;
-}
-
-void Flow::set_hop_count(unsigned int hop_count) {
-	hop_count_ = hop_count;
 }
 
 std::string Flow::toString() {
@@ -244,9 +124,9 @@ void FlowSetRIBObject::createObject(const std::string& objectClass,
                                   IFlowAllocatorInstance* objectValue) {
 	FlowRIBObject * flowRIBObject;
 
-	flowRIBObject = new FlowRIBObject(get_ipc_process(), objectClass, objectName, objectValue);
+	flowRIBObject = new FlowRIBObject(ipc_process_, objectClass, objectName, objectValue);
 	add_child(flowRIBObject);
-	get_rib_daemon()->addRIBObject(flowRIBObject);
+	rib_daemon_->addRIBObject(flowRIBObject);
 }
 
 const void* FlowSetRIBObject::get_value() const {
@@ -269,10 +149,10 @@ void QoSCubeSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessa
 
 void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 		const std::string& objectName, rina::QoSCube* objectValue) {
-	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(get_ipc_process(),
+	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_,
 			objectClass, objectName, objectValue);
 	add_child(ribObject);
-	get_rib_daemon()->addRIBObject(ribObject);
+	rib_daemon_->addRIBObject(ribObject);
 	//TODO: the QoS cube should be added into the configuration
 }
 
@@ -287,7 +167,7 @@ void QoSCubeSetRIBObject::deleteObject(const void* objectValue) {
 
 	for(childrenIt = get_children().begin();
 			childrenIt != get_children().end(); ++childrenIt) {
-		childNames.push_back((*childrenIt)->get_name());
+		childNames.push_back((*childrenIt)->name_);
 	}
 
 	for(namesIt = childNames.begin(); namesIt != childNames.end();
@@ -350,11 +230,11 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 		return;
 	}
 
-	unsigned int address = namespace_manager_->getDFTNextHop(flow->get_destination_naming_info());
+	unsigned int address = namespace_manager_->getDFTNextHop(flow->destination_naming_info_);
 	myAddress = ipc_process_->get_address();
 	if (address == 0){
 		LOG_ERR("The directory forwarding table returned no entries when looking up %s",
-				flow->get_destination_naming_info().toString().c_str());
+				flow->destination_naming_info_.toString().c_str());
 		return;
 	}
 
@@ -362,7 +242,7 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 		//There is an entry and the address is this IPC Process, create a FAI, extract the Flow
 		//object from the CDAP message and call the FAI
 		try {
-			portId = rina::extendedIPCManager->allocatePortId(flow->get_destination_naming_info());
+			portId = rina::extendedIPCManager->allocatePortId(flow->destination_naming_info_);
 		}catch (Exception &e) {
 			LOG_ERR("Problems requesting an available port-id: %s. Ignoring the Flow allocation request",
 					e.what());
@@ -381,8 +261,8 @@ void FlowAllocator::createFlowRequestMessageReceived(const rina::CDAPMessage * c
 
 	//The address is not this IPC process, forward the CDAP message to that address increment the hop
 	//count of the Flow object extract the flow object from the CDAP message
-	flow->set_hop_count(flow->get_hop_count() - 1);
-	if (flow->get_hop_count() <= 0) {
+	flow->hop_count_ = flow->hop_count_ -1;
+	if (flow->hop_count_ <= 0) {
 		//TODO send negative create Flow response CDAP message to the source IPC process, specifying
 		//that the application process could not be found before the hop count expired
 		LOG_ERR("Missing code");
@@ -538,12 +418,12 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(const rina::FlowRequestEve
 	Flow* flow;
 
 	flow = new Flow();
-	flow->set_destination_naming_info(event.getRemoteApplicationName());
-	flow->set_source_naming_info(event.getLocalApplicationName());
-	flow->set_hop_count(3);
-	flow->set_max_create_flow_retries(1);
-	flow->set_source(true);
-	flow->set_state(Flow::ALLOCATION_IN_PROGRESS);
+	flow->destination_naming_info_ = event.getRemoteApplicationName();
+	flow->source_naming_info_ = event.getLocalApplicationName();
+	flow->hop_count_ = 3;
+	flow->max_create_flow_retries_ = 1;
+	flow->source_ = true;
+	flow->state_ = Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
 	rina::QoSCube qosCube = selectQoSCube(event.getFlowSpecification(), qosCubes);
@@ -560,9 +440,9 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(const rina::FlowRequestEve
 	connection->setPolicies(connectionPolicies);
 	connections.push_back(connection);
 
-	flow->set_connections(connections);
-	flow->set_current_connection_index(0);
-	flow->set_flow_specification(event.getFlowSpecification());
+	flow->connections_ = connections;
+	flow->current_connection_index_ = 0;
+	flow->flow_specification_ = event.getFlowSpecification();
 
 	return flow;
 }
@@ -694,7 +574,7 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
                 namespace_manager_->getDFTNextHop(event.getRemoteApplicationName());
 	LOG_DBG("The directory forwarding table returned address %ud",
                 destinationAddress);
-	flow_->set_destination_address(destinationAddress);
+	flow_->destination_address_ = destinationAddress;
 	if (destinationAddress == 0){
 		std::stringstream ss;
 		ss<<"Could not find entry in DFT for application ";
@@ -704,8 +584,8 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 
 	//2 Check if the destination address is this IPC process (then invoke degenerated form of IPC)
 	unsigned int sourceAddress = ipc_process_->get_address();
-	flow_->set_source_address(sourceAddress);
-	flow_->set_source_port_id(port_id_);
+	flow_->source_address_ = sourceAddress;
+	flow_->source_port_id_ = port_id_;
 	std::stringstream ss;
 	ss<<EncoderConstants::FLOW_SET_RIB_OBJECT_NAME;
 	ss<<EncoderConstants::SEPARATOR<<sourceAddress<<"-"<<port_id_;
@@ -787,7 +667,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 		request_message_ = cdapMessage;
 		state_ = MESSAGE_TO_PEER_FAI_SENT;
 
-		rib_daemon_->sendMessageToAddress(*request_message_, cdapSessionId, flow_->get_destination_address(), this);
+		rib_daemon_->sendMessageToAddress(*request_message_, cdapSessionId, flow_->destination_address_, this);
 		delete cdapMessage;
 		delete serializedObject;
 	} catch (Exception &e){
@@ -809,12 +689,12 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow, const 
 
 	LOG_DBG("Create flow request received: %s", flow->toString().c_str());
 	flow_ = flow;
-	if (flow_->get_destination_address() == 0) {
-		flow_->set_destination_address(ipc_process_->get_address());
+	if (flow_->destination_address_ == 0) {
+		flow_->destination_address_ = ipc_process_->get_address();
 	}
 	request_message_ = requestMessage;
 	underlying_port_id_ = underlyingPortId;
-	flow_->set_destination_port_id(port_id_);
+	flow_->destination_port_id_ = port_id_;
 
 	//1 Reverse connection source/dest addresses and CEP-ids
 	rina::Connection * connection = flow_->getActiveConnection();
@@ -823,7 +703,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow, const 
 	connection->setSourceAddress(connection->getDestAddress());
 	connection->setDestAddress(aux);
 	connection->setDestCepId(connection->getSourceCepId());
-	connection->setFlowUserIpcProcessId(namespace_manager_->getRegIPCProcessId(flow_->get_destination_naming_info()));
+	connection->setFlowUserIpcProcessId(namespace_manager_->getRegIPCProcessId(flow_->destination_naming_info_));
 	LOG_DBG("Target application IPC Process id is %d", connection->getFlowUserIpcProcessId());
 
 	//2 TODO Check if the source application process has access to the destination application process.
@@ -865,8 +745,8 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(const rina::Creat
 
 	try {
 		state_ = APP_NOTIFIED_OF_INCOMING_FLOW;
-		allocate_response_message_handle_  = rina::extendedIPCManager->allocateFlowRequestArrived(flow_->get_destination_naming_info(),
-				flow_->get_source_naming_info(), flow_->get_flow_specification(), port_id_);
+		allocate_response_message_handle_  = rina::extendedIPCManager->allocateFlowRequestArrived(flow_->destination_naming_info_,
+				flow_->source_naming_info_, flow_->flow_specification_, port_id_);
 		LOG_DBG("Informed IPC Manager about incoming flow allocation request, got handle: %ud"
 				, allocate_response_message_handle_);
 	} catch(Exception &e) {
@@ -901,7 +781,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 					request_message_->get_obj_name(), &objectValue, 0, 0, request_message_->get_invoke_id());
 
 			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
-					flow_->get_source_address(), 0);
+					flow_->source_address_, 0);
 			delete cdapMessage;
 			delete serializedObject;
 		} catch (Exception &e){
@@ -920,7 +800,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 		}
 
 		try {
-			flow_->set_state(Flow::ALLOCATED);
+			flow_->state_ = Flow::ALLOCATED;
 			rib_daemon_->createObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, this, 0);
 		} catch(Exception &e) {
 			LOG_WARN("Error creating Flow Rib object: %s", e.what());
@@ -941,7 +821,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 				request_message_->get_invoke_id());
 
 		rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
-				flow_->get_source_address(), 0);
+				flow_->source_address_, 0);
 		delete cdapMessage;
 		delete serializedObject;
 		cdapMessage = 0;
@@ -980,7 +860,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(const rina::Upd
 
 	//Update connection was successful
 	try {
-		flow_->set_state(Flow::ALLOCATED);
+		flow_->state_ = Flow::ALLOCATED;
 		rib_daemon_->createObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS, object_name_, this, 0);
 	} catch(Exception &e) {
 		LOG_WARN("Problems requesting the RIB Daemon to create a RIB object: %s", e.what());
@@ -1011,7 +891,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 
 	try {
 		//1 Update flow state
-		flow_->set_state(Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN);
+		flow_->state_ = Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
 		state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 		//2 Send M_DELETE
@@ -1025,10 +905,10 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 					&objectValue, 0, false);
 
 			unsigned int address = 0;
-			if (ipc_process_->get_address() == flow_->get_source_address()) {
-				address = flow_->get_destination_address();
+			if (ipc_process_->get_address() == flow_->source_address_) {
+				address = flow_->destination_address_;
 			} else {
-				address = flow_->get_source_address();
+				address = flow_->source_address_;
 			}
 
 			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_, address, 0);
@@ -1064,7 +944,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived(const rina::CDAPMes
 	}
 
 	//1 Update flow state
-	flow_->set_state(Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN);
+	flow_->state_ = Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
 	state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 	//3 Wait 2*MPL before tearing down the flow
@@ -1150,7 +1030,7 @@ void FlowAllocatorInstance::createResponse(const rina::CDAPMessage * cdapMessage
 			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
 			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 			Flow * receivedFlow = (Flow *) encoder_->decode(*serializedObject, EncoderConstants::FLOW_RIB_OBJECT_CLASS);
-			flow_->set_destination_port_id(receivedFlow->get_destination_port_id());
+			flow_->destination_port_id_ = receivedFlow->destination_port_id_;
 			flow_->getActiveConnection()->setDestCepId(receivedFlow->getActiveConnection()->getDestCepId());
 
 			delete receivedFlow;

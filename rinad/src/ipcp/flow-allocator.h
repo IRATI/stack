@@ -44,40 +44,9 @@ public:
 
 	Flow();
 	~Flow();
-	bool is_source() const;
-	void set_source(bool source);
-	const rina::ApplicationProcessNamingInformation& get_source_naming_info() const;
-	void set_source_naming_info(const rina::ApplicationProcessNamingInformation &source_naming_info);
-	const rina::ApplicationProcessNamingInformation& get_destination_naming_info() const;
-	void set_destination_naming_info(const rina::ApplicationProcessNamingInformation& destination_naming_info);
-	unsigned int get_source_port_id() const;
-	void set_source_port_id(unsigned int source_port_id);
-	unsigned int get_destination_port_id() const;
-	void set_destination_port_id(unsigned int destination_port_id);
-	unsigned int get_source_address() const;
-	void set_source_address(unsigned int source_address);
-	unsigned int get_destination_address() const;
-	void set_destination_address(unsigned int destination_address);
-	const std::list<rina::Connection*>& get_connections() const;
-	void set_connections(const std::list<rina::Connection*>& connections);
-	unsigned int get_current_connection_index() const;
-	void set_current_connection_index(unsigned int current_connection_index);
 	rina::Connection * getActiveConnection();
-	IPCPFlowState get_state() const;
-	void set_state(IPCPFlowState state);
-	const rina::FlowSpecification& get_flow_specification() const;
-	void set_flow_specification(const rina::FlowSpecification& flow_specification);
-	char* get_access_control() const;
-	void set_access_control(char* access_control);
-	unsigned int get_max_create_flow_retries() const;
-	void set_max_create_flow_retries(unsigned int max_create_flow_retries);
-	unsigned int get_create_flow_retries() const;
-	void set_create_flow_retries(unsigned int create_flow_retries);
-	unsigned int get_hop_count() const;
-	void set_hop_count(unsigned int hopCount);
 	std::string toString();
 
-private:
 	/// The application that requested the flow
 	rina::ApplicationProcessNamingInformation source_naming_info_;
 

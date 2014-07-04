@@ -93,14 +93,8 @@ class EnrollmentRequest
 public:
 	EnrollmentRequest(const rina::Neighbor &neighbor,
                           const rina::EnrollToDIFRequestEvent &event);
-	const rina::Neighbor& get_neighbor() const;
-	void set_neighbor(const rina::Neighbor &neighbor);
-	const rina::EnrollToDIFRequestEvent& get_event() const;
-	void set_event(const rina::EnrollToDIFRequestEvent &event);
-
-private:
-		rina::Neighbor neighbor_;
-		rina::EnrollToDIFRequestEvent event_;
+	rina::Neighbor neighbor_;
+	rina::EnrollToDIFRequestEvent event_;
 };
 
 /// Interface that must be implementing by classes that provide
@@ -378,17 +372,9 @@ public:
                       long object_instance,
                       const std::string& object_name);
 	rina::RIBObjectData get_data();
-	const std::string& get_name() const;
-	const std::string& get_class() const;
-	long get_instance() const;
 	virtual const void* get_value() const = 0;
-	IPCProcess* get_ipc_process();
-	IRIBDaemon* get_rib_daemon();
-	Encoder* get_encoder();
 
 	/// Parent-child management operations
-	BaseRIBObject * get_parent() const;
-	void set_parent(BaseRIBObject * parent);
 	const std::list<BaseRIBObject*>& get_children() const;
 	void add_child(BaseRIBObject * child);
 	void remove_child(const std::string& objectName);
@@ -419,15 +405,16 @@ public:
 	virtual void remoteStopObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
-private:
 	std::string class_;
 	std::string name_;
 	long instance_;
 	BaseRIBObject * parent_;
-	std::list<BaseRIBObject*> children_;
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
 	Encoder * encoder_;
+
+private:
+	std::list<BaseRIBObject*> children_;
 	void operation_not_supported();
 	void operation_not_supported(const void* object);
 	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
@@ -506,9 +493,6 @@ public:
 class NotificationPolicy {
 public:
 	NotificationPolicy(const std::list<int>& cdap_session_ids);
-	const std::list<int>& get_cdap_session_ids() const;
-
-private:
 	std::list<int> cdap_session_ids_;
 };
 
