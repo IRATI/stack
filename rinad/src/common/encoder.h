@@ -25,7 +25,8 @@
 
 #include <string>
 #include <map>
-#include "librina/common.h"
+
+#include <librina/common.h>
 
 namespace rinad {
 
