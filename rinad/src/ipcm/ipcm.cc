@@ -433,9 +433,25 @@ IPCManager::application_is_registered_to_ipcp(
 
 int
 IPCManager::unregister_app_from_ipcp(
-                const rina::ApplicationProcessNamingInformation& app_name,
+                const rina::ApplicationUnregistrationRequestEvent& req_event,
                 rina::IPCProcess *slave_ipcp)
 {
+        unsigned int seqnum;
+
+        try {
+                // Forward the unregistration request to the IPC process
+                // that the application is registered to
+                seqnum = slave_ipcp->unregisterApplication(req_event.
+                                                           applicationName);
+                pending_app_unregistrations[seqnum] =
+                                PendingAppUnregistration(slave_ipcp, req_event);
+        } catch (rina::IpcmUnregisterApplicationException) {
+                cerr << __func__ << ": Error while unregistering application "
+                        << req_event.applicationName.toString() << endl;
+                return -1;
+        }
+
+        return 0;
 }
 
 static void flow_allocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
@@ -661,7 +677,7 @@ static void application_unregistration_request_event_handler(
         // Select any IPC process in the DIF from which the application
         // wants to unregister from
         rina::IPCProcess *slave_ipcp = ipcm->select_ipcp_by_dif(event->DIFName);
-        unsigned int seqnum;
+        int err;
 
         if (!slave_ipcp) {
                 cerr << __func__ << ": Error: Application " <<
@@ -674,21 +690,11 @@ static void application_unregistration_request_event_handler(
                 return;
         }
 
-        try {
-                // Forward the unregistration request to the IPC process
-                // that the application is registered to
-                seqnum = slave_ipcp->unregisterApplication(event->
-                                                           applicationName);
-                ipcm->pending_app_unregistrations[seqnum] =
-                                PendingAppUnregistration(slave_ipcp, *event);
-        } catch (rina::IpcmUnregisterApplicationException) {
-                cerr << __func__ << ": Error while unregistering application "
-                        << event->applicationName.toString() << endl;
-
+        err = ipcm->unregister_app_from_ipcp(*event, slave_ipcp);
+        if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
                 application_manager_app_unregistered(*event, -1);
-                return;
         }
 }
 
