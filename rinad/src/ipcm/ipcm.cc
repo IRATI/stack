@@ -102,9 +102,9 @@ IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
 
 void IPCMConcurrency::notify_event(rina::IPCEvent *event)
 {
-        if (event_waiting && event_ty == event->getType()
+        if (event_waiting && event_ty == event->eventType
                         && (event_sn == 0 ||
-                            event_sn == event->getSequenceNumber())) {
+                            event_sn == event->sequenceNumber)) {
                 signal();
                 event_waiting = false;
         }
@@ -148,7 +148,7 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                          * initialized only when the corresponding
                          * IPC process daemon is initialized, so we
                          * defer the operation. */
-                        pending_normal_ipcp_inits[ipcp->getId()] = ipcp;
+                        pending_normal_ipcp_inits[ipcp->id] = ipcp;
                         wait = true;
                 }
         } catch (rina::CreateIPCProcessException) {
@@ -195,7 +195,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         }
 
         /* Fill in the DIFConfiguration object. */
-        if (ipcp->getType() == rina::NORMAL_IPC_PROCESS) {
+        if (ipcp->type == rina::NORMAL_IPC_PROCESS) {
                 rina::EFCPConfiguration efcp_config;
                 unsigned int address;
 
@@ -210,11 +210,11 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 }
 
                 found = dif_props.
-                        lookup_ipcp_address(ipcp->getName(),
+                        lookup_ipcp_address(ipcp->name,
                                         address);
                 if (!found) {
                         cerr << "No address for IPC process " <<
-                                ipcp->getName().toString() <<
+                                ipcp->name.toString() <<
                                 " in DIF " << dif_name.toString() <<
                                 endl;
                         goto out;
@@ -232,7 +232,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
 
         /* Fill in the DIFInformation object. */
         dif_info.set_dif_name(dif_name);
-        dif_info.set_dif_type(ipcp->getType());
+        dif_info.set_dif_type(ipcp->type);
         dif_info.set_dif_configuration(dif_config);
 
         /* Invoke librina to assign the IPC process to the
@@ -245,7 +245,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                                            seqnum);
         } catch (rina::AssignToDIFException) {
                 cerr << "Error while assigning " <<
-                        ipcp->getName().toString() <<
+                        ipcp->name.toString() <<
                         " to DIF " << dif_name.toString() << endl;
         }
 
@@ -269,7 +269,7 @@ IPCManager::select_ipcp_by_dif(const
         for (unsigned int i = 0; i < ipcps.size(); i++) {
                 rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
 
-                if (dif_info.get_dif_name() == dif_name) {
+                if (dif_info.dif_name_ == dif_name) {
                         return ipcps[i];
                 }
         }
@@ -286,7 +286,7 @@ IPCManager::select_ipcp()
                 rina::ipcProcessFactory->listIPCProcesses();
 
         for (unsigned int i = 0; i < ipcps.size(); i++) {
-                if (ipcps[i]->getType() == rina::NORMAL_IPC_PROCESS) {
+                if (ipcps[i]->type == rina::NORMAL_IPC_PROCESS) {
                         return ipcps[i];
                 }
         }
@@ -318,7 +318,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
         /* Try to register @ipcp to the slave IPC process. */
         try {
                 seqnum = slave_ipcp->registerApplication(
-                                ipcp->getName(), ipcp->getId());
+                                ipcp->name, ipcp->id);
 
                 pending_ipcp_registrations[seqnum] =
                         PendingIPCPRegistration(ipcp, slave_ipcp);
@@ -446,13 +446,13 @@ static void application_registration_request_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         const rina::ApplicationRegistrationInformation& info = event->
-                                getApplicationRegistrationInformation();
+                                applicationRegistrationInformation;
         const rina::ApplicationProcessNamingInformation app_name =
-                                info.getApplicationName();
+                                info.appName;
         rina::IPCProcess *slave_ipcp = NULL;
         unsigned int seqnum;
 
-        if (info.getRegistrationType() ==
+        if (info.applicationRegistrationType ==
                         rina::APPLICATION_REGISTRATION_ANY_DIF) {
                 rina::ApplicationProcessNamingInformation dif_name;
                 bool found;
@@ -469,14 +469,14 @@ static void application_registration_request_event_handler(rina::IPCEvent *e,
                         // Otherwise select any IPC process.
                         slave_ipcp = ipcm->select_ipcp();
                 }
-        } else if (info.getRegistrationType() ==
+        } else if (info.applicationRegistrationType ==
                         rina::APPLICATION_REGISTRATION_SINGLE_DIF) {
                 // Select an IPC process from the DIF specified in the
                 // registration request.
-                slave_ipcp = ipcm->select_ipcp_by_dif(info.getDIFName());
+                slave_ipcp = ipcm->select_ipcp_by_dif(info.difName);
         } else {
                 cerr << __func__ << ": Unsupported registration type: "
-                        << info.getRegistrationType() << endl;
+                        << info.applicationRegistrationType << endl;
                 return;
         }
 
@@ -488,7 +488,7 @@ static void application_registration_request_event_handler(rina::IPCEvent *e,
 
         try {
                 seqnum = slave_ipcp->registerApplication(app_name,
-                                                info.getIpcProcessId());
+                                                info.ipcProcessId);
                 ipcm->pending_app_registrations[seqnum] =
                         PendingAppRegistration(slave_ipcp, *event);
         } catch (rina::IpcmRegisterApplicationException) {
@@ -523,10 +523,10 @@ static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         map<unsigned int, rina::IPCProcess*>::iterator mit;
-        bool success = (event->getResult() == 0);
+        bool success = (event->result == 0);
 
         mit = ipcm->pending_ipcp_dif_assignments.find(
-                                        event->getSequenceNumber());
+                                        event->sequenceNumber);
         if (mit != ipcm->pending_ipcp_dif_assignments.end()) {
                 rina::IPCProcess *ipcp = mit->second;
 
@@ -535,7 +535,7 @@ static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
                 } catch (rina::AssignToDIFException) {
                         cerr <<  __func__ << ": Error while reporting DIF "
                                 "assignment result for IPC process "
-                                << ipcp->getName().toString() << endl;
+                                << ipcp->name.toString() << endl;
                 }
                 ipcm->pending_ipcp_dif_assignments.erase(mit);
         } else {
@@ -590,12 +590,12 @@ static bool ipcm_register_response_common(
         rina::IPCProcess *slave_ipcp,
         const rina::ApplicationProcessNamingInformation& slave_dif_name)
 {
-        bool success = (event->getResult() == 0);
+        bool success = (event->result == 0);
 
         try {
                 /* Notify the N-1 IPC process. */
                 slave_ipcp->registerApplicationResult(
-                                        event->getSequenceNumber(), success);
+                                        event->sequenceNumber, success);
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr <<  __func__ << ": Error while reporting DIF "
                         "assignment result of IPC process "
@@ -616,28 +616,28 @@ static void ipcm_register_response_ipcp(
         rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->
-                getDIFInformation().get_dif_name();
+                getDIFInformation().dif_name_;
         bool success;
 
-        success = ipcm_register_response_common(event, ipcp->getName(),
+        success = ipcm_register_response_common(event, ipcp->name,
                                         slave_ipcp, slave_dif_name);
         if (success) {
                 /* Notify the registered IPC process. */
                 try {
                         ipcp->notifyRegistrationToSupportingDIF(
-                                        slave_ipcp->getName(),
+                                        slave_ipcp->name,
                                         slave_dif_name
                                         );
                 } catch (rina::NotifyRegistrationToDIFException) {
                         cerr << __func__ << ": Error while notifying "
                                 "IPC process " <<
-                                ipcp->getName().toString() <<
+                                ipcp->name.toString() <<
                                 " about registration to N-1 DIF"
                                 << slave_dif_name.toString() << endl;
                 }
         } else {
                 cerr << __func__ << "Cannot register IPC process "
-                        << ipcp->getName().toString() <<
+                        << ipcp->name.toString() <<
                         " to DIF " << slave_dif_name.toString() << endl;
         }
 
@@ -653,11 +653,11 @@ static void ipcm_register_response_app(
         const rina::ApplicationRegistrationRequestEvent& req_event =
                         mit->second.req_event;
         const rina::ApplicationProcessNamingInformation& app_name =
-                req_event.getApplicationRegistrationInformation().
-                getApplicationName();
+                req_event.applicationRegistrationInformation.
+                appName;
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->
-                getDIFInformation().get_dif_name();
+                getDIFInformation().dif_name_;
         bool success;
 
         success = ipcm_register_response_common(event, app_name, slave_ipcp,
@@ -683,8 +683,8 @@ static void ipcm_register_app_response_event_handler(rina::IPCEvent *e,
         map<unsigned int, PendingIPCPRegistration>::iterator it;
         map<unsigned int, PendingAppRegistration>::iterator jt;
 
-        it = ipcm->pending_ipcp_registrations.find(event->getSequenceNumber());
-        jt = ipcm->pending_app_registrations.find(event->getSequenceNumber());
+        it = ipcm->pending_ipcp_registrations.find(event->sequenceNumber);
+        jt = ipcm->pending_app_registrations.find(event->sequenceNumber);
 
         if (it != ipcm->pending_ipcp_registrations.end()) {
                 ipcm_register_response_ipcp(event, ipcm, it);
@@ -721,7 +721,7 @@ static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
 
         /* Perform deferred "setInitiatialized()" of a normal IPC process, if
          * needed. */
-        mit = ipcm->pending_normal_ipcp_inits.find(event->getIPCProcessId());
+        mit = ipcm->pending_normal_ipcp_inits.find(event->ipcProcessId);
         if (mit != ipcm->pending_normal_ipcp_inits.end()) {
                 mit->second->setInitialized();
                 ipcm->pending_normal_ipcp_inits.erase(mit);

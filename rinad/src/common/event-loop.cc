@@ -58,7 +58,7 @@ EventLoop::run()
                 if (pre_function) {
                         pre_function(event, data_model);
                 }
-                ty = event->getType();
+                ty = event->eventType;
                 if (handlers.count(ty) && handlers[ty]) {
                         handlers[ty](event, data_model);
                 }
