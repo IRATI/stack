@@ -466,7 +466,8 @@ public:
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
 	 * unregistered from the N-1 DIF designed by difName
 	 *
-	 * @param ipcProcessName The name of the IPC Process being unregistered
+	 * @param ipcProcessName The name of the N-1 IPC Process where the IPC
+         * preocess has been unregistered (member of difName)
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * unregistered
 	 * @throws NotifyUnregistrationFromDIFException if the IPC Process was not registered to the DIF
