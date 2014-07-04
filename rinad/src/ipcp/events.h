@@ -25,8 +25,9 @@
 #ifdef __cplusplus
 
 #include <list>
-#include <librina/common.h>
+
 #include <librina/cdap.h>
+#include <librina/ipc-daemons.h>
 
 namespace rinad {
 
@@ -158,6 +159,16 @@ private:
 	rina::CDAPSessionDescriptor * cdap_session_descriptor_;
 };
 
+/// The connectivity to a neighbor has been lost
+class ConnectiviyToNeighborLostEvent: public BaseEvent {
+public:
+	ConnectiviyToNeighborLostEvent(rina::Neighbor * neighbor);
+	rina::Neighbor * get_neighbor();
+	const std::string toString();
+
+private:
+	rina::Neighbor * neighbor_;
+};
 
 }
 

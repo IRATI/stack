@@ -28,8 +28,8 @@
 #include "librina/logs.h"
 #include "config.h"
 #include "core.h"
-
 #include "librina/common.h"
+#include <unistd.h>
 
 namespace rina {
 
@@ -205,7 +205,7 @@ getProcessNamePlusInstance(){
 	return processName + "-" + processInstance;
 }
 
-std::string ApplicationProcessNamingInformation::getEncodedString() const {
+const std::string ApplicationProcessNamingInformation::getEncodedString() const {
         return processName + "-" + processInstance +
                         "-" + entityName + "-" + entityInstance;
 }
@@ -496,6 +496,13 @@ int BaseResponseEvent::getResult() const {
 }
 
 /* CLASS FLOW REQUEST EVENT */
+FlowRequestEvent::FlowRequestEvent(){
+	localRequest = false;
+	portId = 0;
+	ipcProcessId = 0;
+	flowRequestorIpcProcessId = 0;
+}
+
 FlowRequestEvent::FlowRequestEvent(
 		const FlowSpecification& flowSpecification,
 		bool localRequest,
@@ -932,14 +939,24 @@ void Parameter::setValue(const std::string& value) {
 	this->value = value;
 }
 
+// Class Sleep
+bool Sleep::sleep(int sec, int milisec) {
+	return usleep(sec * 1000000 + milisec * 1000);
+}
+bool Sleep::sleepForMili(int milisec) {
+	return usleep(milisec * 1000);
+}
+bool Sleep::sleepForSec(int sec) {
+	return usleep(sec * 1000000);
+}
+
 /* INITIALIZATION OPERATIONS */
 
 bool librinaInitialized = false;
 Lockable librinaInitializationLock;
 
 void initialize(unsigned int localPort, const std::string& logLevel,
-                const std::string& pathToLogFile)
-        throw(InitializationException) {
+                const std::string& pathToLogFile) {
 
         librinaInitializationLock.lock();
         if (librinaInitialized) {
@@ -959,8 +976,7 @@ void initialize(unsigned int localPort, const std::string& logLevel,
 }
 
 void initialize(const std::string& logLevel,
-                const std::string& pathToLogFile)
-throw (InitializationException){
+                const std::string& pathToLogFile) {
 
         librinaInitializationLock.lock();
         if (librinaInitialized) {

@@ -67,15 +67,14 @@ const std::string NetlinkException::error_waiting_for_response =
 
 /* CLASS NETLINK MANAGER */
 
-NetlinkManager::NetlinkManager() throw (NetlinkException) {
+NetlinkManager::NetlinkManager() {
 	this->localPort = getpid();
 	LOG_DBG("Netlink Manager constructor called, using local port = %d",
 			localPort);
 	initialize(false);
 }
 
-NetlinkManager::NetlinkManager(unsigned int localPort)
-		throw (NetlinkException) {
+NetlinkManager::NetlinkManager(unsigned int localPort) {
 	this->localPort = localPort;
 	LOG_DBG("Netlink Manager constructor called, with netlink pid = %d",
 			localPort);
@@ -87,7 +86,7 @@ NetlinkManager::~NetlinkManager() {
 	nl_socket_free(socket);
 }
 
-void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
+void NetlinkManager::initialize(bool ipcManager) {
         int result = 0;
 
 	socket = nl_socket_alloc();
@@ -126,8 +125,7 @@ void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
 	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
 
-void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)
-throw(NetlinkException) {
+void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage) {
         struct rinaHeader* myHeader;
 
         message->setSourcePortId(localPort);
@@ -195,8 +193,7 @@ unsigned int NetlinkManager::getSequenceNumber(){
 	return nl_socket_use_seq(socket);
 }
 
-void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
-throw (NetlinkException) {
+void NetlinkManager::sendMessage(BaseNetlinkMessage * message) {
         struct nl_msg* netlinkMessage;
 
         netlinkMessage = nlmsg_alloc();
@@ -207,8 +204,7 @@ throw (NetlinkException) {
         _sendMessage(message, netlinkMessage);
 }
 
-void NetlinkManager::sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize)
-throw(NetlinkException) {
+void NetlinkManager::sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize) {
         struct nl_msg* netlinkMessage;
 
         netlinkMessage = nlmsg_alloc_size(maxSize);
@@ -219,7 +215,7 @@ throw(NetlinkException) {
         _sendMessage(message, netlinkMessage);
 }
 
-BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
+BaseNetlinkMessage * NetlinkManager::getMessage() {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
 	struct genlmsghdr *nlhdr;

@@ -211,16 +211,19 @@ ObjectValueInterface::types BooleanObjectValue::isType() const {
 // CLASS CDAPException
 CDAPException::CDAPException() :
 		Exception("CDAP message caused an Exception") {
-	result_ = 0;
+	result_ = OTHER;
 }
 
 CDAPException::CDAPException(std::string arg0) :
 		Exception(arg0.c_str()) {
-	result_ = 0;
+	result_ = OTHER;
 }
-CDAPException::CDAPException(int arg0, std::string arg1) :
+CDAPException::CDAPException(ErrorCode result, std::string arg1) :
 		Exception(arg1.c_str()) {
-	result_ = arg0;
+	result_ = result;
+}
+CDAPException::ErrorCode CDAPException::get_result() const {
+	return result_;
 }
 
 /* CLASS CDAPMessageValidator */
@@ -276,10 +279,12 @@ void CDAPMessageValidator::validateAuthMech(const CDAPMessage *message) {
 }
 
 void CDAPMessageValidator::validateAuthValue(const CDAPMessage *message) {
-	if ((message->get_op_code() != CDAPMessage::M_CONNECT)
-			&& (message->get_op_code() != CDAPMessage::M_CONNECT_R)) {
-		throw CDAPException(
-				"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
+	if (!message->get_auth_value().is_empty())	{
+		if ((message->get_op_code() != CDAPMessage::M_CONNECT)
+				&& (message->get_op_code() != CDAPMessage::M_CONNECT_R)) {
+			throw CDAPException(
+					"AuthValue can only be set for M_CONNECT and M_CONNECT_R messages");
+		}
 	}
 }
 
@@ -509,17 +514,16 @@ void CDAPMessageValidator::validateSrcAEInst(const CDAPMessage *message) {
 
 void CDAPMessageValidator::validateSrcAEName(const CDAPMessage *message) {
 	if (!message->get_src_ae_name().empty()) {
-
-	}
-	if (message->get_op_code() != CDAPMessage::M_CONNECT
-			&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
-		throw CDAPException(
-				"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
+		if (message->get_op_code() != CDAPMessage::M_CONNECT
+				&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
+			throw CDAPException(
+					"SrcAEName can only be set for M_CONNECT and M_CONNECT_R messages");
+		}
 	}
 }
 
 void CDAPMessageValidator::validateSrcApInst(const CDAPMessage *message) {
-	if (message->get_src_ap_inst().empty()) {
+	if (!message->get_src_ap_inst().empty()) {
 		if (message->get_op_code() != CDAPMessage::M_CONNECT
 				&& message->get_op_code() != CDAPMessage::M_CONNECT_R) {
 			throw CDAPException(
@@ -558,7 +562,6 @@ void CDAPMessageValidator::validateVersion(const CDAPMessage *message) {
 /* CLASS CDAPMessage */
 const int CDAPMessage::ABSTRACT_SYNTAX_VERSION = 0x0073;
 CDAPMessage::CDAPMessage() {
-	LOG_DBG("CDAPMessage: Created");
 	abs_syntax_ = 0;
 	auth_mech_ = AUTH_NONE;
 	filter_ = 0;
@@ -572,7 +575,6 @@ CDAPMessage::CDAPMessage() {
 	version_ = 0;
 }
 CDAPMessage::~CDAPMessage() {
-	LOG_DBG("CDAPMessage: Destroyed");
 	delete obj_value_;
 	obj_value_ = 0;
 	delete filter_;
@@ -1075,7 +1077,6 @@ void CDAPMessage::set_version(long arg0) {
 
 /*	class CDAPSessionDescriptor	*/
 CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
-	LOG_DBG("CDAPSessionDescriptor: Created");
 	port_id_ = port_id;
 	version_ = 0;
 	auth_mech_ = CDAPMessage::AUTH_NONE;
@@ -1083,7 +1084,6 @@ CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
 }
 CDAPSessionDescriptor::CDAPSessionDescriptor(int abs_syntax,
 		CDAPMessage::AuthTypes auth_mech, AuthValue auth_value) {
-	LOG_DBG("CDAPSessionDescriptor: Created");
 	abs_syntax_ = abs_syntax;
 	auth_mech_ = auth_mech;
 	auth_value_ = auth_value;
@@ -1091,7 +1091,6 @@ CDAPSessionDescriptor::CDAPSessionDescriptor(int abs_syntax,
 	version_ = 0;
 }
 CDAPSessionDescriptor::~CDAPSessionDescriptor() {
-	LOG_DBG("CDAPSessionDescriptor: Destroyed");
 }
 const ApplicationProcessNamingInformation CDAPSessionDescriptor::get_source_application_process_naming_info() {
 	ap_naming_info_ = ApplicationProcessNamingInformation(src_ap_name_,src_ap_inst_);
@@ -1167,12 +1166,10 @@ const ApplicationProcessNamingInformation& CDAPSessionDescriptor::get_ap_naming_
 
 // CLASS SerializedMessage
 SerializedMessage::SerializedMessage(char* message, int size){
-	LOG_DBG("SerializedMessage: Created");
 	size_ = size;
 	message_ = message;
 }
 SerializedMessage::~SerializedMessage(){
-	LOG_DBG("SerializedMessage: Destroyed");
 	delete message_;
 	message_ = 0;
 }

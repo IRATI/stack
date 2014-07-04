@@ -27,13 +27,15 @@
 namespace rinad {
 
 //Class RIB
-RIB::RIB() {
-}
+RIB::RIB()
+{ }
 
-RIB::~RIB() throw() {
-}
+RIB::~RIB() throw()
+{ }
 
-BaseRIBObject* RIB::getRIBObject(const std::string& objectClass, const std::string& objectName) throw (Exception) {
+BaseRIBObject* RIB::getRIBObject(const std::string& objectClass,
+                                 const std::string& objectName)
+{
 	BaseRIBObject* ribObject;
 	std::map<std::string, BaseRIBObject*>::iterator it;
 
@@ -53,7 +55,8 @@ BaseRIBObject* RIB::getRIBObject(const std::string& objectClass, const std::stri
 	return ribObject;
 }
 
-void RIB::addRIBObject(BaseRIBObject* ribObject) throw (Exception) {
+void RIB::addRIBObject(BaseRIBObject* ribObject)
+{
 	lock();
 	if (rib_.find(ribObject->get_name()) != rib_.end()) {
 		throw Exception("Object already exists in the RIB");
@@ -62,7 +65,8 @@ void RIB::addRIBObject(BaseRIBObject* ribObject) throw (Exception) {
 	unlock();
 }
 
-BaseRIBObject * RIB::removeRIBObject(const std::string& objectName) throw (Exception) {
+BaseRIBObject * RIB::removeRIBObject(const std::string& objectName)
+{
 	std::map<std::string, BaseRIBObject*>::iterator it;
 	BaseRIBObject* ribObject;
 
@@ -79,10 +83,11 @@ BaseRIBObject * RIB::removeRIBObject(const std::string& objectName) throw (Excep
 	return ribObject;
 }
 
-std::list<BaseRIBObject*> RIB::getRIBObjects() {
+std::list<BaseRIBObject*> RIB::getRIBObjects()
+{
 	std::list<BaseRIBObject*> result;
 
-	for(std::map<std::string, BaseRIBObject*>::iterator it = rib_.begin();
+	for (std::map<std::string, BaseRIBObject*>::iterator it = rib_.begin();
 			it != rib_.end(); ++it) {
 		result.push_back(it->second);
 	}
@@ -92,20 +97,20 @@ std::list<BaseRIBObject*> RIB::getRIBObjects() {
 
 //Class ManagementSDUReader data
 ManagementSDUReaderData::ManagementSDUReaderData(IRIBDaemon * rib_daemon,
-		unsigned int max_sdu_size) {
+                                                 unsigned int max_sdu_size)
+{
 	rib_daemon_ = rib_daemon;
 	max_sdu_size_ = max_sdu_size;
 }
 
-IRIBDaemon * ManagementSDUReaderData::get_rib_daemon() {
-	return rib_daemon_;
-}
+IRIBDaemon * ManagementSDUReaderData::get_rib_daemon()
+{ return rib_daemon_; }
 
-unsigned int ManagementSDUReaderData::get_max_sdu_size() {
-	return max_sdu_size_;
-}
+unsigned int ManagementSDUReaderData::get_max_sdu_size()
+{ return max_sdu_size_; }
 
-void * doManagementSDUReaderWork(void* arg) {
+void * doManagementSDUReaderWork(void* arg)
+{
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
 	char* buffer = new char[data->get_max_sdu_size()];
 	char* sdu;
@@ -121,7 +126,7 @@ void * doManagementSDUReaderWork(void* arg) {
 		}
 
 		sdu = new char[result.getBytesRead()];
-		for(int i=0; i<result.getBytesRead(); i++) {
+		for (int i=0; i<result.getBytesRead(); i++) {
 			sdu[i] = buffer[i];
 		}
 
@@ -136,13 +141,14 @@ void * doManagementSDUReaderWork(void* arg) {
 }
 
 /// Class BaseRIBDaemon
-BaseRIBDaemon::BaseRIBDaemon(){
-}
+BaseRIBDaemon::BaseRIBDaemon()
+{ }
 
-void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId, EventListener * eventListener) {
-	if (!eventListener) {
+void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId,
+                                     EventListener * eventListener)
+{
+	if (!eventListener)
 		return;
-	}
 
 	events_lock_.lock();
 
@@ -153,7 +159,7 @@ void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId, EventLi
 		event_listeners_[eventId] = listenersList;
 	} else {
 		std::list<EventListener *>::iterator listIterator;
-		for(listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
+		for (listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
 			if (*listIterator == eventListener) {
 				events_lock_.unlock();
 				return;
@@ -167,10 +173,11 @@ void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId, EventLi
 	events_lock_.unlock();
 }
 
-void BaseRIBDaemon::unsubscribeFromEvent(const IPCProcessEventType& eventId, EventListener * eventListener) {
-	if (!eventListener) {
+void BaseRIBDaemon::unsubscribeFromEvent(const IPCProcessEventType& eventId,
+                                         EventListener *            eventListener)
+{
+	if (!eventListener)
 		return;
-	}
 
 	events_lock_.lock();
 	std::map<IPCProcessEventType, std::list<EventListener*> >::iterator it = event_listeners_.find(eventId);
@@ -188,10 +195,10 @@ void BaseRIBDaemon::unsubscribeFromEvent(const IPCProcessEventType& eventId, Eve
 	events_lock_.unlock();
 }
 
-void BaseRIBDaemon::deliverEvent(Event * event) {
-	if (!event) {
+void BaseRIBDaemon::deliverEvent(Event * event)
+{
+	if (!event)
 		return;
-	}
 
 	LOG_INFO("Event %d has just happened. Notifying event listeners.", event->get_id());
 
@@ -204,7 +211,7 @@ void BaseRIBDaemon::deliverEvent(Event * event) {
 	}
 
 	std::list<EventListener *>::iterator listIterator;
-	for(listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
+	for (listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
 		(*listIterator)->eventHappened(event);
 	}
 
@@ -216,7 +223,8 @@ void BaseRIBDaemon::deliverEvent(Event * event) {
 }
 
 ///Class RIBDaemon
-RIBDaemon::RIBDaemon() {
+RIBDaemon::RIBDaemon()
+{
 	ipc_process_ = 0;
 	management_sdu_reader_ = 0;
 	cdap_session_manager_ = 0;
@@ -224,7 +232,8 @@ RIBDaemon::RIBDaemon() {
 	n_minus_one_flow_manager_ = 0;
 }
 
-void RIBDaemon::set_ipc_process(IPCProcess * ipc_process){
+void RIBDaemon::set_ipc_process(IPCProcess * ipc_process)
+{
 	ipc_process_ = ipc_process;
 	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
 	encoder_ = ipc_process->get_encoder();
@@ -239,15 +248,16 @@ void RIBDaemon::set_ipc_process(IPCProcess * ipc_process){
 			&doManagementSDUReaderWork, (void *) data);
 }
 
-void RIBDaemon::subscribeToEvents() {
+void RIBDaemon::subscribeToEvents()
+{
 	subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
 	subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
 }
 
-void RIBDaemon::eventHappened(Event * event) {
-	if (!event) {
+void RIBDaemon::eventHappened(Event * event)
+{
+	if (!event)
 		return;
-	}
 
 	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
 		NMinusOneFlowDeallocatedEvent * flowEvent = (NMinusOneFlowDeallocatedEvent *) event;
@@ -262,65 +272,70 @@ void RIBDaemon::nMinusOneFlowDeallocated(int portId) {
 	cdap_session_manager_->removeCDAPSession(portId);
 }
 
-void RIBDaemon::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event) {
-	if (!event) {
+void RIBDaemon::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event)
+{
+	if (!event)
 		return;
-	}
 }
 
-void RIBDaemon::addRIBObject(BaseRIBObject * ribObject) throw (Exception) {
-	if (!ribObject) {
+void RIBDaemon::addRIBObject(BaseRIBObject * ribObject)
+{
+	if (!ribObject)
 		throw Exception("Object is null");
-	}
+
 	rib_.addRIBObject(ribObject);
 	LOG_INFO("Object with name %s, class %s, instance %ld added to the RIB",
 			ribObject->get_name().c_str(), ribObject->get_class().c_str(),
 			ribObject->get_instance());
 }
 
-void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject) throw (Exception) {
-	if (!ribObject) {
+void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject)
+{
+	if (!ribObject)
 		throw Exception("Object is null");
-	}
 
 	removeRIBObject(ribObject->get_name());
 }
 
-void RIBDaemon::removeRIBObject(const std::string& objectName) throw (Exception){
+void RIBDaemon::removeRIBObject(const std::string& objectName)
+{
 	BaseRIBObject * object = rib_.removeRIBObject(objectName);
 	LOG_INFO("Object with name %s, class %s, instance %ld removed from the RIB",
-			object->get_name().c_str(), object->get_class().c_str(),
-			object->get_instance());
-
+                 object->get_name().c_str(), object->get_class().c_str(),
+                 object->get_instance());
+        
 	delete object;
 }
 
-std::list<BaseRIBObject *> RIBDaemon::getRIBObjects() {
+std::list<BaseRIBObject *> RIBDaemon::getRIBObjects()
+{
 	return rib_.getRIBObjects();
 }
 
-bool RIBDaemon::isOnList(int candidate, std::list<int> list){
-	for(std::list<int>::iterator it = list.begin(); it != list.end(); ++it) {
-		if ((*it) == candidate) {
+bool RIBDaemon::isOnList(int candidate, std::list<int> list)
+{
+	for (std::list<int>::iterator it = list.begin(); it != list.end(); ++it) {
+		if ((*it) == candidate)
 			return true;
-		}
 	}
 
 	return false;
 }
 
-void RIBDaemon::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue, const NotificationPolicy * notificationPolicy) throw (Exception) {
+void RIBDaemon::createObject(const std::string& objectClass,
+                             const std::string& objectName,
+                             const void* objectValue,
+                             const NotificationPolicy * notificationPolicy) {
 	BaseRIBObject * ribObject;
 
 	try {
 		ribObject = rib_.getRIBObject(objectClass, objectName);
 	} catch (Exception &e) {
 		//Delegate creation to the parent if the object is not there
-		int position = objectName.rfind(RIBObjectNames::SEPARATOR);
-		if (position == std::string::npos) {
+                std::string::size_type position =
+                        objectName.rfind(RIBObjectNames::SEPARATOR);
+		if (position == std::string::npos)
 			throw e;
-		}
 		std::string parentObjectName = objectName.substr(0, position);
 		ribObject = rib_.getRIBObject(objectClass, parentObjectName);
 	}
@@ -346,20 +361,25 @@ void RIBDaemon::createObject(const std::string& objectClass, const std::string& 
 		return;
 	}
 
-	const rina::CDAPMessage * cdapMessage;
-	for(int i=0; i<peers.size(); i++) {
+	const rina::CDAPMessage * cdapMessage = 0;
+
+	for (std::vector<int>::size_type i = 0; i < peers.size(); i++) {
 		if (!isOnList(peers[i], peersToIgnore)) {
-			try{
-				cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(peers[i], 0,
-						rina::CDAPMessage::NONE_FLAGS, objectClass, 0, objectName, encodedObjectValue,
-						0, false);
+			try {
+				cdapMessage = cdap_session_manager_->
+                                        getCreateObjectRequestMessage(peers[i], 0,
+                                                                      rina::CDAPMessage::NONE_FLAGS,
+                                                                      objectClass,
+                                                                      0,
+                                                                      objectName,
+                                                                      encodedObjectValue,
+                                                                      0,
+                                                                      false);
 				sendMessage(*cdapMessage, peers[i], 0);
 				delete cdapMessage;
-			}catch(Exception & e){
+			} catch(Exception & e) {
 				LOG_ERR("Problems notifying neighbors: %s", e.what());
-				if (cdapMessage) {
-					delete cdapMessage;
-				}
+				delete cdapMessage;
 			}
 		}
 	}
@@ -367,33 +387,41 @@ void RIBDaemon::createObject(const std::string& objectClass, const std::string& 
 	delete encodedObjectValue;
 }
 
-void RIBDaemon::deleteObject(const std::string& objectClass, const std::string& objectName,
-		const NotificationPolicy * notificationPolicy) throw (Exception) {
+void RIBDaemon::deleteObject(const std::string& objectClass,
+                             const std::string& objectName,
+                             const void* objectValue,
+                             const NotificationPolicy * notificationPolicy)
+{
 	BaseRIBObject * ribObject;
 
 	ribObject = rib_.getRIBObject(objectClass, objectName);
-	ribObject->deleteObject();
+	ribObject->deleteObject(objectValue);
 
 	//Notify neighbors if needed
-	if (!notificationPolicy) {
+	if (!notificationPolicy)
 		return;
-	}
 
 	//We need to notify, find out to whom the notifications must be sent to, and do it
 	std::list<int> peersToIgnore = notificationPolicy->get_cdap_session_ids();
 	std::vector<int> peers;
 	cdap_session_manager_->getAllCDAPSessionIds(peers);
 
-	const rina::CDAPMessage * cdapMessage;
-	for(int i=0; i<peers.size(); i++) {
+	const rina::CDAPMessage * cdapMessage = 0;
+	for (std::vector<int>::size_type i = 0; i<peers.size(); i++) {
 		if (!isOnList(peers[i], peersToIgnore)) {
-			try{
-				cdapMessage = cdap_session_manager_->getDeleteObjectRequestMessage(peers[i], 0,
-						rina::CDAPMessage::NONE_FLAGS, objectClass, 0, objectName, 0,
-						0, false);
+			try {
+				cdapMessage =
+                                        cdap_session_manager_->
+                                        getDeleteObjectRequestMessage(peers[i], 0,
+                                                                      rina::CDAPMessage::NONE_FLAGS,
+                                                                      objectClass,
+                                                                      0,
+                                                                      objectName,
+                                                                      0,
+                                                                      0, false);
 				sendMessage(*cdapMessage, peers[i], 0);
 				delete cdapMessage;
-			}catch(Exception & e){
+			} catch(Exception & e) {
 				LOG_ERR("Problems notifying neighbors: %s", e.what());
 				if (cdapMessage) {
 					delete cdapMessage;
@@ -404,29 +432,35 @@ void RIBDaemon::deleteObject(const std::string& objectClass, const std::string& 
 }
 
 BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
-			const std::string& objectName) throw (Exception) {
-	return rib_.getRIBObject(objectClass, objectName);
-}
+                                      const std::string& objectName)
+{ return rib_.getRIBObject(objectClass, objectName); }
 
-void RIBDaemon::writeObject(const std::string& objectClass, const std::string& objectName,
-				const void* objectValue) throw (Exception) {
+void RIBDaemon::writeObject(const std::string& objectClass,
+                            const std::string& objectName,
+                            const void* objectValue)
+{
 	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
 	object->writeObject(objectValue);
 }
 
-void RIBDaemon::startObject(const std::string& objectClass, const std::string& objectName,
-			const void* objectValue) throw (Exception) {
+void RIBDaemon::startObject(const std::string& objectClass,
+                            const std::string& objectName,
+                            const void* objectValue)
+{
 	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
 	object->startObject(objectValue);
 }
 
-void RIBDaemon::stopObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) throw (Exception) {
+void RIBDaemon::stopObject(const std::string& objectClass,
+                           const std::string& objectName,
+                           const void* objectValue)
+{
 	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
 	object->stopObject(objectValue);
 }
 
-void RIBDaemon::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) {
+void RIBDaemon::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event)
+{
 	std::list<BaseRIBObject *> ribObjects = getRIBObjects();
 	std::list<rina::RIBObjectData> result;
 
@@ -443,51 +477,45 @@ void RIBDaemon::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& ev
 	}
 }
 
-ICDAPResponseMessageHandler * RIBDaemon::getCDAPMessageHandler(const rina::CDAPMessage * cdapMessage) {
+ICDAPResponseMessageHandler * RIBDaemon::getCDAPMessageHandler(const rina::CDAPMessage * cdapMessage)
+{
 	ICDAPResponseMessageHandler * handler;
-	std::map<int, ICDAPResponseMessageHandler *>::iterator it;
 
 	if (!cdapMessage) {
 		return 0;
 	}
 
-	handlers_lock_.lock();
-	it = handlers_waiting_for_reply_.find(cdapMessage->get_invoke_id());
-	if (it == handlers_waiting_for_reply_.end()) {
-		handlers_lock_.unlock();
-		return 0;
-	}
-
-	handler = it->second;
-
 	if (cdapMessage->get_flags() != rina::CDAPMessage::F_RD_INCOMPLETE) {
-		handlers_waiting_for_reply_.erase(it);
+		handler = handlers_waiting_for_reply_.erase(cdapMessage->get_invoke_id());
+	} else {
+		handler = handlers_waiting_for_reply_.find(cdapMessage->get_invoke_id());
 	}
-	handlers_lock_.unlock();
 
 	return handler;
 }
 
 void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                                              rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+{
 	BaseRIBObject * ribObject;
 
 	LOG_DBG("Remote operation %d called on object %s", cdapMessage->get_op_code(),
 			cdapMessage->get_obj_name().c_str());
 	try {
-		switch (cdapMessage->get_op_code()){
+		switch (cdapMessage->get_op_code()) {
 		case rina::CDAPMessage::M_CREATE:
 			// Creation is delegated to the parent objects if the object doesn't exist.
 			// Create semantics are CREATE or UPDATE. If the object exists it is an
 			// update, therefore the message is handled to the object. If the object
 			// doesn't exist it is a CREATE, therefore it is handled to the parent object
-			try{
+			try {
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 											cdapMessage->get_obj_name());
 				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
-			}catch (Exception &e) {
+			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
-				int position = cdapMessage->get_obj_name().rfind(RIBObjectNames::SEPARATOR);
+                                std::string::size_type position =
+                                        cdapMessage->get_obj_name().rfind(RIBObjectNames::SEPARATOR);
 				if (position == std::string::npos) {
 					throw e;
 				}
@@ -529,57 +557,59 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			break;
 		default:
 			LOG_ERR("Invalid operation code for a request message: %d", cdapMessage->get_op_code());
-			delete cdapMessage;
 		}
 	} catch(Exception &e) {
 		LOG_ERR("Problems processing incoming CDAP request message %s", e.what());
-		delete cdapMessage;
 	}
 
 	return;
 }
 
 void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+                                               rina::CDAPSessionDescriptor * cdapSessionDescriptor)
+{
 	ICDAPResponseMessageHandler * handler;
 
 	handler = getCDAPMessageHandler(cdapMessage);
 	if (!handler) {
 		LOG_ERR("Could not find a message handler for invoke-id %d",
 				cdapMessage->get_invoke_id());
-		delete cdapMessage;
 		return;
 	}
 
-	switch (cdapMessage->get_op_code()) {
-	case rina::CDAPMessage::M_CREATE_R:
-		handler->createResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_DELETE_R:
-		handler->deleteResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_START_R:
-		handler->startResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_STOP_R:
-		handler->stopResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_READ_R:
-		handler->readResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CANCELREAD_R:
-		handler->cancelReadResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_WRITE_R:
-		handler->writeResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	default:
-		LOG_ERR("Invalid operation code for a response message %d", cdapMessage->get_op_code());
-		delete cdapMessage;
+	try {
+		switch (cdapMessage->get_op_code()) {
+		case rina::CDAPMessage::M_CREATE_R:
+			handler->createResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_DELETE_R:
+			handler->deleteResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_START_R:
+			handler->startResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_STOP_R:
+			handler->stopResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_READ_R:
+			handler->readResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_CANCELREAD_R:
+			handler->cancelReadResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		case rina::CDAPMessage::M_WRITE_R:
+			handler->writeResponse(cdapMessage, cdapSessionDescriptor);
+			break;
+		default:
+			LOG_ERR("Invalid operation code for a response message %d", cdapMessage->get_op_code());
+		}
+	} catch (Exception &e) {
+		LOG_ERR("Problems processing CDAP response message: %s", e.what());
 	}
 }
 
-void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId) {
+void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
+{
 	const rina::CDAPMessage * cdapMessage;
 	const rina::CDAPSessionInterface * cdapSession;
 	rina::CDAPSessionDescriptor  * cdapSessionDescriptor;
@@ -587,7 +617,7 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId) {
 
 	//1 Decode the message and obtain the CDAP session descriptor
 	atomic_send_lock_.lock();
-	try{
+	try {
 		rina::SerializedMessage serializedMessage = rina::SerializedMessage(message, length);
 		cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
 	} catch (Exception &e) {
@@ -612,79 +642,110 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId) {
 	//2 Find the message recipient and call it
 	rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
 	enrollmentTask = ipc_process_->get_enrollment_task();
-	switch (opcode) {
-	case rina::CDAPMessage::M_CONNECT:
-		enrollmentTask->connect(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CONNECT_R:
-		enrollmentTask->connectResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_RELEASE:
-		enrollmentTask->release(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_RELEASE_R:
-		enrollmentTask->releaseResponse(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CREATE:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CREATE_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_DELETE:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_DELETE_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_START:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_START_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_STOP:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_STOP_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_READ:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_READ_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CANCELREAD:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_CANCELREAD_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_WRITE:
-		processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	case rina::CDAPMessage::M_WRITE_R:
-		processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-		break;
-	default:
-		LOG_ERR("Unrecognized CDAP operation code: %d", cdapMessage->get_op_code());
+	try {
+		switch (opcode) {
+		case rina::CDAPMessage::M_CONNECT:
+			enrollmentTask->connect(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CONNECT_R:
+			enrollmentTask->connectResponse(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_RELEASE:
+			enrollmentTask->release(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_RELEASE_R:
+			enrollmentTask->releaseResponse(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CREATE:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CREATE_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_DELETE:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_DELETE_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_START:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_START_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_STOP:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_STOP_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_READ:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_READ_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CANCELREAD:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_CANCELREAD_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_WRITE:
+			processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		case rina::CDAPMessage::M_WRITE_R:
+			processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
+			delete cdapMessage;
+			break;
+		default:
+			LOG_ERR("Unrecognized CDAP operation code: %d", cdapMessage->get_op_code());
+			delete cdapMessage;
+		}
+	} catch(Exception &e) {
+		LOG_ERR("Problems processing incoming CDAP message: %s", e.what());
 		delete cdapMessage;
 	}
 }
 
 void RIBDaemon::sendMessage(const rina::CDAPMessage& cdapMessage, int sessionId,
-				ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+                            ICDAPResponseMessageHandler * cdapMessageHandler)
+{
 	sendMessage(false, cdapMessage, sessionId, 0, cdapMessageHandler);
 }
 
-void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage, int sessionId,
-		unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage,
+                                     int sessionId,
+                                     unsigned int address,
+                                     ICDAPResponseMessageHandler * cdapMessageHandler)
+{
 	sendMessage(true, cdapMessage, sessionId, address, cdapMessageHandler);
 }
 
-void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+void RIBDaemon::sendMessage(bool useAddress,
+                            const rina::CDAPMessage& cdapMessage,
+                            int sessionId,
+                            unsigned int address,
+                            ICDAPResponseMessageHandler * cdapMessageHandler)
+{
 	const rina::SerializedMessage * sdu;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
@@ -703,6 +764,7 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 	}
 
 	atomic_send_lock_.lock();
+        sdu = 0;
 	try {
 		sdu = cdap_session_manager_->encodeNextMessageToBeSent(cdapMessage, sessionId);
 		if (useAddress) {
@@ -747,16 +809,19 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_DELETE_R
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_START_R
     		&& cdapMessage.get_op_code() != rina::CDAPMessage::M_STOP_R) {
-    	handlers_lock_.lock();
-    	handlers_waiting_for_reply_[cdapMessage.get_invoke_id()] = cdapMessageHandler;
-    	handlers_lock_.unlock();
+    	handlers_waiting_for_reply_.put(cdapMessage.get_invoke_id(), cdapMessageHandler);
     }
 
 	atomic_send_lock_.unlock();
 }
 
-void RIBDaemon::sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
-			const IUpdateStrategy& updateStrategy) {
+void
+RIBDaemon::sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
+			const IUpdateStrategy& updateStrategy)
+{
+        (void) cdapMessages; // Stop compiler barfs
+        (void) updateStrategy; // Stop compiler barfs
+
 	//TODO
 }
 

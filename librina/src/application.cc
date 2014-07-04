@@ -103,8 +103,7 @@ const FlowInformation& Flow::getFlowInformation() const {
    return flowInformation;
 }
 
-int Flow::readSDU(void * sdu, int maxBytes)
-		throw (FlowNotAllocatedException, ReadSDUException) {
+int Flow::readSDU(void * sdu, int maxBytes) {
 	if (flowState != FLOW_ALLOCATED) {
 		throw FlowNotAllocatedException();
 	}
@@ -123,8 +122,7 @@ int Flow::readSDU(void * sdu, int maxBytes)
 #endif
 }
 
-void Flow::writeSDU(void * sdu, int size)
-		throw (FlowNotAllocatedException, WriteSDUException) {
+void Flow::writeSDU(void * sdu, int size) {
 	if (flowState != FLOW_ALLOCATED) {
 		throw FlowNotAllocatedException();
 	}
@@ -229,7 +227,7 @@ Flow * IPCManager::getFlowToRemoteApp(
 }
 
 ApplicationRegistrationInformation IPCManager::getRegistrationInfo(
-                        unsigned int seqNumber) throw (IPCException) {
+                        unsigned int seqNumber) {
         std::map<unsigned int, ApplicationRegistrationInformation>::iterator iterator;
 
         iterator = registrationInformation.find(seqNumber);
@@ -268,7 +266,7 @@ unsigned int IPCManager::internalRequestFlowAllocation(
                 const ApplicationProcessNamingInformation& localAppName,
                 const ApplicationProcessNamingInformation& remoteAppName,
                 const FlowSpecification& flowSpec,
-                unsigned short sourceIPCProcessId) throw (FlowAllocationException) {
+                unsigned short sourceIPCProcessId) {
         Flow * flow;
 
 #if STUB_API
@@ -304,8 +302,7 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
                 const ApplicationProcessNamingInformation& remoteAppName,
                 const ApplicationProcessNamingInformation& difName,
                 unsigned short sourceIPCProcessId,
-                const FlowSpecification& flowSpec)
-throw (FlowAllocationException) {
+                const FlowSpecification& flowSpec) {
         Flow * flow;
 
 #if STUB_API
@@ -340,8 +337,7 @@ throw (FlowAllocationException) {
 
 Flow * IPCManager::internalAllocateFlowResponse(
                 const FlowRequestEvent& flowRequestEvent,
-                int result, bool notifySource, unsigned short ipcProcessId)
-throw (FlowAllocationException) {
+                int result, bool notifySource, unsigned short ipcProcessId) {
 #if STUB_API
         //Do nothing
         (void)notifySource;
@@ -376,8 +372,7 @@ throw (FlowAllocationException) {
 
 unsigned int IPCManager::getDIFProperties(
 		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
-throw (GetDIFPropertiesException) {
+		const ApplicationProcessNamingInformation& DIFName) {
 
 #if STUB_API
         (void)applicationName;
@@ -400,8 +395,7 @@ throw (GetDIFPropertiesException) {
 }
 
 unsigned int IPCManager::requestApplicationRegistration(
-                const ApplicationRegistrationInformation& appRegistrationInfo)
-throw (ApplicationRegistrationException) {
+                const ApplicationRegistrationInformation& appRegistrationInfo) {
 #if STUB_API
         registrationInformation[0] = appRegistrationInfo;
 	return 0;
@@ -426,8 +420,7 @@ throw (ApplicationRegistrationException) {
 
 ApplicationRegistration * IPCManager::commitPendingResitration(
                         unsigned int seqNumber,
-                        const ApplicationProcessNamingInformation& DIFName)
-throw (ApplicationRegistrationException) {
+                        const ApplicationProcessNamingInformation& DIFName) {
         ApplicationRegistrationInformation appRegInfo;
         ApplicationRegistration * applicationRegistration;
 
@@ -457,8 +450,7 @@ throw (ApplicationRegistrationException) {
         return applicationRegistration;
 }
 
-void IPCManager::withdrawPendingRegistration(unsigned int seqNumber)
-throw (ApplicationRegistrationException) {
+void IPCManager::withdrawPendingRegistration(unsigned int seqNumber) {
         ApplicationRegistrationInformation appRegInfo;
 
         lock();
@@ -475,8 +467,7 @@ throw (ApplicationRegistrationException) {
 
 unsigned int IPCManager::requestApplicationUnregistration(
 		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
-		throw (ApplicationUnregistrationException) {
+		const ApplicationProcessNamingInformation& DIFName) {
         ApplicationRegistration * applicationRegistration;
         bool found = false;
 
@@ -532,8 +523,7 @@ unsigned int IPCManager::requestApplicationUnregistration(
 
 }
 
-void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
-                                throw (ApplicationUnregistrationException) {
+void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success) {
         ApplicationRegistrationInformation appRegInfo;
 
         lock();
@@ -583,8 +573,7 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
 unsigned int IPCManager::requestFlowAllocation(
 		const ApplicationProcessNamingInformation& localAppName,
 		const ApplicationProcessNamingInformation& remoteAppName,
-		const FlowSpecification& flowSpec)
-throw (FlowAllocationException) {
+		const FlowSpecification& flowSpec) {
         return internalRequestFlowAllocation(
                         localAppName, remoteAppName, flowSpec, 0);
 }
@@ -593,15 +582,13 @@ unsigned int IPCManager::requestFlowAllocationInDIF(
                 const ApplicationProcessNamingInformation& localAppName,
                 const ApplicationProcessNamingInformation& remoteAppName,
                 const ApplicationProcessNamingInformation& difName,
-                const FlowSpecification& flowSpec)
-throw (FlowAllocationException) {
+                const FlowSpecification& flowSpec) {
         return internalRequestFlowAllocationInDIF(localAppName,
                         remoteAppName, difName, 0, flowSpec);
 }
 
 Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
-                        const ApplicationProcessNamingInformation& DIFName)
-                throw (FlowAllocationException) {
+                        const ApplicationProcessNamingInformation& DIFName) {
         Flow * flow;
 
         lock();
@@ -621,8 +608,7 @@ Flow * IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId,
         return flow;
 }
 
-FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
-                throw (FlowAllocationException) {
+FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber) {
         std::map<int, Flow*>::iterator iterator;
         Flow * flow;
         FlowInformation flowInformation;
@@ -644,13 +630,12 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
 
 Flow * IPCManager::allocateFlowResponse(
 		const FlowRequestEvent& flowRequestEvent, int result,
-		bool notifySource) throw (FlowAllocationException) {
+		bool notifySource) {
         return internalAllocateFlowResponse(
                         flowRequestEvent, result, notifySource, 0);
 }
 
-unsigned int IPCManager::requestFlowDeallocation(int portId)
-        throw (FlowDeallocationException) {
+unsigned int IPCManager::requestFlowDeallocation(int portId) {
         Flow * flow;
 
         lock();
@@ -695,8 +680,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
 #endif
 }
 
-void IPCManager::flowDeallocationResult(int portId, bool success)
-                        throw (FlowDeallocationException) {
+void IPCManager::flowDeallocationResult(int portId, bool success) {
         Flow * flow;
 
         lock();
@@ -724,8 +708,7 @@ void IPCManager::flowDeallocationResult(int portId, bool success)
         unlock();
 }
 
-void IPCManager::flowDeallocated(int portId)
-throw (FlowDeallocationException) {
+void IPCManager::flowDeallocated(int portId) {
 	lock();
 
 	Flow * flow = getAllocatedFlow(portId);

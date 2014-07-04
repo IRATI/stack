@@ -461,8 +461,7 @@ public:
 	 * an error occurs
 	 */
 	void notifyIPCProcessInitialized(
-	                const ApplicationProcessNamingInformation& name)
-	throw (IPCException);
+	                const ApplicationProcessNamingInformation& name);
 
 	/**
 	 * True if the IPC Process has been successfully initialized, false
@@ -479,8 +478,7 @@ public:
 	 */
 	ApplicationRegistration * appRegistered(
 	                        const ApplicationProcessNamingInformation& appName,
-	                        const ApplicationProcessNamingInformation& DIFName)
-	        throw (ApplicationRegistrationException);
+	                        const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * The IPC Process has been unregistered from the DIF called DIFName,
@@ -489,8 +487,7 @@ public:
 	 * @param DIFName
 	 */
 	void appUnregistered(const ApplicationProcessNamingInformation& appName,
-	                const ApplicationProcessNamingInformation& DIFName)
-	                                throw (ApplicationUnregistrationException);
+	                const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign
@@ -499,8 +496,7 @@ public:
 	 * @param result the result of the operation (0 successful)
 	 * @throws AssignToDIFResponseException
 	 */
-	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result)
-		throw (AssignToDIFResponseException);
+	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "enroll
@@ -514,8 +510,7 @@ public:
 	 */
 	void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
 	                int result, const std::list<Neighbor> & newNeighbors,
-	                const DIFInformation& difInformation)
-	throw (EnrollException);
+	                const DIFInformation& difInformation);
 
 	/**
 	 * Inform the IPC Manager about new neighbors being added or existing
@@ -526,8 +521,7 @@ public:
 	 * IPC Manager
 	 */
 	void notifyNeighborsModified(bool added,
-	                const std::list<Neighbor> & neighbors)
-	throw (EnrollException);
+	                const std::list<Neighbor> & neighbors);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
@@ -537,8 +531,7 @@ public:
 	 * @throws RegisterApplicationResponseException
 	 */
 	void registerApplicationResponse(
-			const ApplicationRegistrationRequestEvent& event, int result)
-		throw (RegisterApplicationResponseException);
+			const ApplicationRegistrationRequestEvent& event, int result);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "unregister
@@ -548,8 +541,7 @@ public:
 	 * @throws UnregisterApplicationResponseException
 	 */
 	void unregisterApplicationResponse(
-			const ApplicationUnregistrationRequestEvent& event, int result)
-		throw (UnregisterApplicationResponseException);
+			const ApplicationUnregistrationRequestEvent& event, int result);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "allocate
@@ -558,8 +550,7 @@ public:
 	 * @param result
 	 * @throws AllocateFlowResponseException
 	 */
-	void allocateFlowRequestResult(const FlowRequestEvent& event, int result)
-		throw (AllocateFlowResponseException);
+	void allocateFlowRequestResult(const FlowRequestEvent& event, int result);
 
 	/**
 	 * Tell the IPC Manager that an allocate flow request targeting a local
@@ -579,56 +570,54 @@ public:
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpecification,
-			int portId)
-		throw (AllocateFlowRequestArrivedException);
+			int portId);
 
-        /**
-         * Overrides IPCManager's operation
-         * Requests the allocation of a Flow
-         *
-         * @param localAppName The naming information of the local application
-         * @param remoteAppName The naming information of the remote application
-         * @param flowSpecifiction The characteristics required for the flow
-         * @return A handler to be able to identify the proper response event
-         * @throws FlowAllocationException if there are problems during the flow allocation
-         */
-        unsigned int requestFlowAllocation(
-                        const ApplicationProcessNamingInformation& localAppName,
-                        const ApplicationProcessNamingInformation& remoteAppName,
-                        const FlowSpecification& flow) throw (FlowAllocationException);
+	/**
+	 * Overrides IPCManager's operation
+	 * Requests the allocation of a Flow
+	 *
+	 * @param localAppName The naming information of the local application
+	 * @param remoteAppName The naming information of the remote application
+	 * @param flowSpecifiction The characteristics required for the flow
+	 * @return A handler to be able to identify the proper response event
+	 * @throws FlowAllocationException if there are problems during the flow allocation
+	 */
+	unsigned int requestFlowAllocation(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flow);
 
-        /**
-         * Overrides IPCManager's operation
-         * Requests the allocation of a flow using a speficif dIF
-         * @param localAppName The naming information of the local application
-         * @param remoteAppName The naming information of the remote application
-         * @param flowSpecifiction The characteristics required for the flow
-         * @param difName The DIF through which we want the flow allocated
-         * @return A handler to be able to identify the proper response event
-         * @throws FlowAllocationException if there are problems during the flow allocation
-         */
-        unsigned int requestFlowAllocationInDIF(
-                        const ApplicationProcessNamingInformation& localAppName,
-                        const ApplicationProcessNamingInformation& remoteAppName,
-                        const ApplicationProcessNamingInformation& difName,
-                        const FlowSpecification& flow) throw (FlowAllocationException);
+	/**
+	 * Overrides IPCManager's operation
+	 * Requests the allocation of a flow using a speficif dIF
+	 * @param localAppName The naming information of the local application
+	 * @param remoteAppName The naming information of the remote application
+	 * @param flowSpecifiction The characteristics required for the flow
+	 * @param difName The DIF through which we want the flow allocated
+	 * @return A handler to be able to identify the proper response event
+	 * @throws FlowAllocationException if there are problems during the flow allocation
+	 */
+	unsigned int requestFlowAllocationInDIF(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const ApplicationProcessNamingInformation& difName,
+			const FlowSpecification& flow);
 
-        /**
-         * Overrides IPCManager's operation
-         * Confirms or denies the request for a flow to this application.
-         *
-         * @param flowRequestEvent information of the flow request
-         * @param result 0 means the flow is accepted, a different number
-         * indicates the deny code
-         * @param notifySource if true the source IPC Process will get
-         * the allocate flow response message back, otherwise it will be ignored
-         * @return Flow If the flow is accepted, returns the flow object
-         * @throws FlowAllocationException If there are problems
-         * confirming/denying the flow
-         */
-        Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-                        int result, bool notifySource)
-        throw (FlowAllocationException);
+	/**
+	 * Overrides IPCManager's operation
+	 * Confirms or denies the request for a flow to this application.
+	 *
+	 * @param flowRequestEvent information of the flow request
+	 * @param result 0 means the flow is accepted, a different number
+	 * indicates the deny code
+	 * @param notifySource if true the source IPC Process will get
+	 * the allocate flow response message back, otherwise it will be ignored
+	 * @return Flow If the flow is accepted, returns the flow object
+	 * @throws FlowAllocationException If there are problems
+	 * confirming/denying the flow
+	 */
+	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+			int result, bool notifySource);
 
 	/**
 	 * Invoked by the IPC Process to respond to the Application Process that
@@ -640,8 +629,7 @@ public:
 	 * replying ot the application
 	 */
 	void notifyflowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result)
-		throw (DeallocateFlowResponseException);
+			int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely
@@ -650,8 +638,7 @@ public:
 	 * @param code
 	 * @throws DeallocateFlowResponseException
 	 */
-	void flowDeallocatedRemotely(int portId, int code)
-		throw (DeallocateFlowResponseException);
+	void flowDeallocatedRemotely(int portId, int code);
 
 	/**
 	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to
@@ -662,8 +649,7 @@ public:
 	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
-			const std::list<RIBObjectData>& ribObjects)
-		throw (QueryRIBResponseException);
+			const std::list<RIBObjectData>& ribObjects);
 
 	/**
 	 * Request an available portId to the kernel
@@ -674,15 +660,14 @@ public:
 	 * @return the port-id
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(const ApplicationProcessNamingInformation& appName)
-	        throw (PortAllocationException);
+	int allocatePortId(const ApplicationProcessNamingInformation& appName);
 
 	/**
 	 * Request the kernel to free a used port-id
 	 * @param portId the port-id to be freed
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	void deallocatePortId(int portId) throw (PortAllocationException);
+	void deallocatePortId(int portId);
 };
 
 /**
@@ -846,8 +831,7 @@ public:
          * @throws AssignToDIFException if an error happens during the process
          * @returns the handle to the response message
          */
-        unsigned int assignToDIF(const DIFInformation& difInformation)
-                throw (AssignToDIFException);
+        unsigned int assignToDIF(const DIFInformation& difInformation);
 
         /**
          * Invoked by the IPC Process Daemon to modify the configuration of
@@ -859,8 +843,7 @@ public:
          * @returns the handle to the response message
          */
         unsigned int updateDIFConfiguration(
-                        const DIFConfiguration& difConfiguration)
-        throw (UpdateDIFConfigurationException);
+                        const DIFConfiguration& difConfiguration);
 
         /**
          * Invoked by the IPC Process Daemon to request the creation of an
@@ -870,8 +853,7 @@ public:
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnection(const Connection& connection)
-        throw (CreateConnectionException);
+        unsigned int createConnection(const Connection& connection);
 
         /**
          * Invoked by the IPC Process Daemon to request an update of an
@@ -881,8 +863,7 @@ public:
          * @throws UpdateConnectionException
          * @return the handle to the response message
          */
-        unsigned int updateConnection(const Connection& connection)
-        throw (UpdateConnectionException);
+        unsigned int updateConnection(const Connection& connection);
 
         /**
          * Invoked by the IPC Process Daemon to request the creation of an
@@ -893,8 +874,7 @@ public:
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnectionArrived(const Connection& connection)
-        throw (CreateConnectionException);
+        unsigned int createConnectionArrived(const Connection& connection);
 
         /**
          * Invoked by the IPC Process Daemon to request the destruction of an
@@ -904,8 +884,7 @@ public:
          * @throws DestroyConnectionException
          * @return the handle to the response message
          */
-        unsigned int destroyConnection(const Connection& connection)
-        throw (DestroyConnectionException);
+        unsigned int destroyConnection(const Connection& connection);
 
         /**
          * Modify the entries of the PDU forwarding table
@@ -913,7 +892,7 @@ public:
          * @param mode 0 add, 1 remove, 2 flush and add
          */
         void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
-                        int mode) throw (PDUForwardingTableException);
+                        int mode);
 
         /**
          * Request the Kernel IPC Process to provide a list of
@@ -921,7 +900,7 @@ public:
          * @return a handle to the response event
          * @throws PDUForwardingTabeException if something goes wrong
          */
-        unsigned int dumptPDUFT() throw (PDUForwardingTableException);
+        unsigned int dumptPDUFT();
 
         /**
          * Requests the kernel to write a management SDU to the
@@ -932,8 +911,7 @@ public:
          * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
-        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId)
-                throw (WriteSDUException);
+        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
 
         /**
          * Requests the kernel to send a management SDU to the IPC Process
@@ -945,8 +923,7 @@ public:
          * destination of the SDU
          * @throws WriteSDUException
          */
-        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address)
-                throw (WriteSDUException);
+        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
 
         /**
          * Requests the kernel to get a management SDU from a peer
@@ -958,8 +935,7 @@ public:
          * been read from
          * @throws ReadSDUException
          */
-        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes)
-                throw (ReadSDUException);
+        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes);
 };
 
 /**
@@ -975,8 +951,8 @@ public:
 #ifndef LIBRINAFORSWIG
 	ApplicationProcessNamingInformation get_ap_naming_info() const;
 	void set_ap_naming_info(const ApplicationProcessNamingInformation& ap_naming_info);
-	long get_address() const;
-	void set_address(long address);
+	unsigned int get_address() const;
+	void set_address(unsigned int address);
 	long get_timestamp() const;
 	void set_timestamp(long timestamp);
 #endif
@@ -992,7 +968,7 @@ public:
 	ApplicationProcessNamingInformation ap_naming_info_;
 
 	/// The address of the IPC process it is currently attached to
-	long address_;
+	unsigned int address_;
 
 	/// A timestamp for this entry
 	long timestamp_;

@@ -24,30 +24,41 @@
 
 #ifdef __cplusplus
 
-#include <ctime>
 #include <map>
+#include <sys/time.h>
 
 #include "librina/concurrency.h"
 
 namespace rina {
 
 /// Interface for tasks to be scheduled in a timer
-class TimerTask {
+class TimerTask{
 public:
-	virtual ~TimerTask(){};
+	virtual ~TimerTask() throw() {};
 	virtual void run() = 0;
 };
 
-class LockableMap : public Lockable {
+/// Class to wrap timeval
+class Time {
 public:
-	LockableMap();
-	~LockableMap() throw();
-	void insert(std::pair<double, TimerTask*> pair);
-	void clear();
+	Time();
+	Time(timeval t);
+	int get_time_seconds() const;
+	int get_only_milliseconds() const;
+	bool operator<(const Time &other) const;
+	void set_timeval(timeval t);
+	timeval time_;
+};
+
+class TaskScheduler : public Lockable {
+public:
+	TaskScheduler();
+	~TaskScheduler() throw();
+	void insert(Time time, TimerTask* timer_task);
 	void runTasks();
 	void cancelTask(TimerTask *task);
 private:
-	std::map<double, TimerTask*> tasks_;
+	std::map<Time, TimerTask* > tasks_;
 };
 
 /// Class that implements a timer which contains a thread
@@ -55,12 +66,17 @@ class Timer {
 public:
 	Timer();
 	~Timer();
-	void scheduleTask(TimerTask* task, double delay_ms);
+	void scheduleTask(TimerTask* task, long delay_ms);
 	void cancelTask(TimerTask *task);
 	void clear();
+	TaskScheduler* get_task_scheduler() const;
+	bool is_continue();
 private:
+	void cancel();
 	Thread *thread_;
-	LockableMap lockableMap_;
+	TaskScheduler *task_scheduler;
+	bool continue_;
+	Lockable continue_lock_;
 };
 
 }

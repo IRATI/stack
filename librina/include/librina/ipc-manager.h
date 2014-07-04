@@ -280,8 +280,7 @@ void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
                 const std::string& libraryPath,
                 const std::string& logLevel,
-                const std::string& pathToLogFile)
-	throw (InitializationException);
+                const std::string& pathToLogFile);
 
 /**
  * Event informing that an application has requested the
@@ -369,11 +368,10 @@ public:
 
 	/** Return the information of a registration request */
 	ApplicationProcessNamingInformation getPendingRegistration(
-	                unsigned int seqNumber) throw (IPCException);
+	                unsigned int seqNumber);
 
 	/** Return the information of a flow operation */
-	FlowInformation getPendingFlowOperation(unsigned int seqNumber)
-	throw (IPCException);
+	FlowInformation getPendingFlowOperation(unsigned int seqNumber);
 
 	static const std::string error_assigning_to_dif;
 	static const std::string error_update_dif_config;
@@ -418,7 +416,7 @@ public:
 	 * @returns the handle to the response message
 	 */
 	unsigned int assignToDIF(
-			const DIFInformation& difInformation) throw (AssignToDIFException);
+			const DIFInformation& difInformation);
 
 	/**
 	 * Update the internal data structures based on the result of the assignToDIF
@@ -426,7 +424,7 @@ public:
 	 * @param success true if the operation was successful, false otherwise
 	 * @throws AssignToDIFException if there was not an assingment operation ongoing
 	 */
-	void assignToDIFResult(bool success) throw (AssignToDIFException);
+	void assignToDIFResult(bool success);
 
 	/**
 	 * Invoked by the IPC Manager to modify the configuration of an existing IPC
@@ -438,8 +436,7 @@ public:
 	 * @returns the handle to the response message
 	 */
 	unsigned int updateDIFConfiguration(
-	                const DIFConfiguration& difConfiguration)
-	throw (UpdateDIFConfigurationException);
+	                const DIFConfiguration& difConfiguration);
 
 	/**
 	 * Update the internal data structures based on the result of the updateConfig
@@ -448,8 +445,7 @@ public:
 	 * @throws  UpdateDIFConfigurationException if there was no update config
 	 * operation ongoing
 	 */
-	void updateDIFConfigurationResult(bool success)
-	throw (UpdateDIFConfigurationException);
+	void updateDIFConfigurationResult(bool success);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -464,8 +460,7 @@ public:
 	 */
 	void notifyRegistrationToSupportingDIF(
 			const ApplicationProcessNamingInformation& ipcProcessName,
-			const ApplicationProcessNamingInformation& difName)
-	throw (NotifyRegistrationToDIFException);
+			const ApplicationProcessNamingInformation& difName);
 
 	/**
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
@@ -478,8 +473,7 @@ public:
 	 */
 	void notifyUnregistrationFromSupportingDIF(
 			const ApplicationProcessNamingInformation& ipcProcessName,
-			const ApplicationProcessNamingInformation& difName)
-	throw (NotifyUnregistrationFromDIFException);
+			const ApplicationProcessNamingInformation& difName);
 
 	/**
 	 * Return the list of supporting DIFs where this IPC Process is registered at
@@ -502,8 +496,7 @@ public:
 	 */
 	unsigned int enroll(const ApplicationProcessNamingInformation& difName,
 			const ApplicationProcessNamingInformation& supportingDifName,
-			const ApplicationProcessNamingInformation& neighborName)
-	throw (EnrollException);
+			const ApplicationProcessNamingInformation& neighborName);
 
 	/**
 	 * Add new neighbors of the IPC Process
@@ -535,8 +528,7 @@ public:
 	 * @throws DisconnectFromNeighborException if an error occurs
 	 */
 	void disconnectFromNeighbor(
-			const ApplicationProcessNamingInformation& neighbor)
-	throw (DisconnectFromNeighborException);
+			const ApplicationProcessNamingInformation& neighbor);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
@@ -550,8 +542,7 @@ public:
 	 */
 	unsigned int registerApplication(
 			const ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId)
-	throw (IpcmRegisterApplicationException);
+			unsigned short regIpcProcessId);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a registration
@@ -561,8 +552,7 @@ public:
 	 * @throws IpcmRegisterApplicationException if the pending registration
 	 * is not found
 	 */
-	void registerApplicationResult(unsigned int sequenceNumber, bool success)
-	throw (IpcmRegisterApplicationException);
+	void registerApplicationResult(unsigned int sequenceNumber, bool success);
 
 	/**
 	 * Return the list of applications registered in this IPC Process
@@ -579,8 +569,7 @@ public:
 	 * @returns the handle to the response message
 	 */
 	unsigned int unregisterApplication(
-			const ApplicationProcessNamingInformation& applicationName)
-	throw (IpcmUnregisterApplicationException);
+			const ApplicationProcessNamingInformation& applicationName);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an unregistration
@@ -590,8 +579,7 @@ public:
 	 * @throws IpcmUnregisterApplicationException if the pending unregistration
 	 * is not found
 	 */
-	void unregisterApplicationResult(unsigned int sequenceNumber, bool success)
-	throw (IpcmUnregisterApplicationException);
+	void unregisterApplicationResult(unsigned int sequenceNumber, bool success);
 
 	/**
 	 * Invoked by the IPC Manager to request an IPC Process the allocation of a
@@ -607,8 +595,7 @@ public:
 	 * @returns the handle to the response message
 	 * @throws AllocateFlowException if an error occurs
 	 */
-	unsigned int allocateFlow(const FlowRequestEvent& flowRequest)
-		throw (AllocateFlowException);
+	unsigned int allocateFlow(const FlowRequestEvent& flowRequest);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an allocate
@@ -619,8 +606,7 @@ public:
 	 * @throws AllocateFlowException if the pending allocation
 	 * is not found
 	 */
-	void allocateFlowResult(unsigned int sequenceNumber, bool success, int portId)
-	throw (AllocateFlowException);
+	void allocateFlowResult(unsigned int sequenceNumber, bool success, int portId);
 
 	/**
 	 * Reply an IPC Process about the fate of a flow allocation request (wether
@@ -637,8 +623,7 @@ public:
 	 */
 	void allocateFlowResponse(const FlowRequestEvent& flowRequest,
 			int result, bool notifySource,
-			int flowAcceptorIpcProcessId)
-		throw(AllocateFlowException);
+			int flowAcceptorIpcProcessId);
 
 	/**
 	 * Return the list of flows allocated by this IPC Process
@@ -650,7 +635,7 @@ public:
 	 * Returns the information of the flow identified by portId
 	 * @throws IPCException if no flow with the requested portId is found
 	 */
-	FlowInformation getFlowInformation(int portId) throw(IPCException);
+	FlowInformation getFlowInformation(int portId);
 
 	/**
 	 * Tell the IPC Process to deallocate a flow
@@ -659,7 +644,7 @@ public:
 	 * the flow deallocation procedure
 	 * @returns the handle to the response message
 	 */
-	unsigned int deallocateFlow(int portId) throw (IpcmDeallocateFlowException);
+	unsigned int deallocateFlow(int portId);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a deallocate
@@ -669,8 +654,7 @@ public:
 	 * @throws IpcmDeallocateFlowException if the pending deallocation
 	 * is not found
 	 */
-	void deallocateFlowResult(unsigned int sequenceNumber, bool success)
-	throw (IpcmDeallocateFlowException);
+	void deallocateFlowResult(unsigned int sequenceNumber, bool success);
 
 	/**
 	 * Invoked by the IPC Manager to notify that a flow has been remotely
@@ -679,8 +663,7 @@ public:
 	 * @throws IpcmDeallocateFlowException if now flow with the given
 	 * portId is found
 	 */
-	FlowInformation flowDeallocated(int portId)
-	throw (IpcmDeallocateFlowException);
+	FlowInformation flowDeallocated(int portId);
 
 	/**
 	 * Invoked by the IPC Manager to query a subset of the RIB of the IPC
@@ -694,11 +677,11 @@ public:
 	 * @param filter An expression evaluated for each object, to determine
 	 * wether the object should be returned by the query
 	 * @returns the handle to the response message
+	 * @throws QueryRIBException
 	 */
 	unsigned int queryRIB(const std::string& objectClass,
 			const std::string& objectName, unsigned long objectInstance,
-			unsigned int scope, const std::string& filter)
-					throw (QueryRIBException);
+			unsigned int scope, const std::string& filter);
 };
 
 /**
@@ -739,8 +722,7 @@ public:
          */
         IPCProcess * create(
                         const ApplicationProcessNamingInformation& ipcProcessName,
-                        const std::string& difType)
-                throw (CreateIPCProcessException);
+                        const std::string& difType);
 
         /**
          * Invoked by the IPC Manager to delete an IPC Process from the system. The
@@ -750,8 +732,7 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(unsigned short ipcProcessId)
-        throw (DestroyIPCProcessException);
+        void destroy(unsigned short ipcProcessId);
 
         /**
          * Returns a list to all the IPC Processes that are currently running in
@@ -768,8 +749,7 @@ public:
          * @throws GetIPCProcessException if no IPC Process with the specified
          * id is found
          */
-        IPCProcess * getIPCProcess(unsigned short ipcProcessId)
-                throw (GetIPCProcessException);
+        IPCProcess * getIPCProcess(unsigned short ipcProcessId);
 };
 
 /**
@@ -791,8 +771,7 @@ public:
 	 * @throws NotifyApplicationRegisteredException If an error occurs during the operation
 	 */
 	void applicationRegistered(const ApplicationRegistrationRequestEvent & event,
-			const ApplicationProcessNamingInformation& difName, int result)
-				throw (NotifyApplicationRegisteredException);
+			const ApplicationProcessNamingInformation& difName, int result);
 
 	/**
 	 * Invoked by the IPC Manager to notify an application about the  result of
@@ -802,8 +781,7 @@ public:
 	 * @throws NotifyApplicationUnregisteredException If an error occurs during the operation
 	 */
 	void applicationUnregistered(const ApplicationUnregistrationRequestEvent & event,
-			int result)
-				throw (NotifyApplicationUnregisteredException);
+			int result);
 
 	/**
 	 * Invoked by the IPC Manager to respond to the Application Process that
@@ -813,8 +791,7 @@ public:
 	 * request
 	 * @throws NotifyFlowAllocatedException If an error occurs during the operation
 	 */
-	void flowAllocated(const FlowRequestEvent &flowRequestEvent)
-		throw (NotifyFlowAllocatedException);
+	void flowAllocated(const FlowRequestEvent &flowRequestEvent);
 
 	/**
 	 * Invoked by the IPC Manager to inform the Application Process that a remote
@@ -835,7 +812,7 @@ public:
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
 			const ApplicationProcessNamingInformation& difName,
-			int portId) throw (AppFlowArrivedException);
+			int portId);
 
 	/**
 	 * Inform the application about the result of a flow deallocation operation
@@ -843,8 +820,7 @@ public:
 	 * @param result
 	 * @throws NotifyFlowDeallocatedException
 	 */
-	void flowDeallocated(const FlowDeallocateRequestEvent& event, int result)
-		throw (NotifyFlowDeallocatedException);
+	void flowDeallocated(const FlowDeallocateRequestEvent& event, int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely
@@ -854,8 +830,7 @@ public:
 	 * @throws NotifyFlowDeallocatedException
 	 */
 	void flowDeallocatedRemotely(int portId, int code,
-			const ApplicationProcessNamingInformation& appName)
-	throw (NotifyFlowDeallocatedException);
+			const ApplicationProcessNamingInformation& appName);
 
 	/**
 	 * Return the properties of zero or more DIFs to the application
@@ -866,8 +841,7 @@ public:
 	 * @throws GetDIFPropertiesResponseException
 	 */
 	void getDIFPropertiesResponse(const GetDIFPropertiesRequestEvent& event,
-			int result, const std::list<DIFProperties>& difProperties)
-			throw (GetDIFPropertiesResponseException);
+			int result, const std::list<DIFProperties>& difProperties);
 };
 
 /**

@@ -82,10 +82,13 @@ AC_CONFIG_FILES([
 
     src/Makefile
     src/common/Makefile
+    src/common/tclap/Makefile
     src/ipcp/Makefile
     src/ipcm/Makefile
 
     doc/Makefile
+
+    etc/Makefile
 ])
 
 AC_OUTPUT
