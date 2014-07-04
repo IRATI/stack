@@ -61,7 +61,7 @@ public:
 class Encoder {
 public:
 	enum ObjectClass {
-
+		ApplicationRegistration
 	};
 	~Encoder();
 	/// Set the class that serializes/unserializes an object class
@@ -71,15 +71,16 @@ public:
 	/// Converts an object of the type specified by "className" to a byte array.
 	/// @param object
 	/// @return
-	const rina::SerializedObject* encode(const void* object, ObjectClass object_class);
+	const rina::SerializedObject* encode(const void* object, std::string object_class);
 	/// Converts a byte array to an object of the type specified by "className"
 	/// @param serializedObject
 	/// @param The type of object to be decoded
 	/// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
 	/// byte array value doesn't correspond to an object of the type "className"
 	/// @return
-	void* decode(const rina::SerializedObject &serialized_object, ObjectClass object_class);
+	void* decode(const rina::SerializedObject &serialized_object, std::string object_class);
 private:
+	ObjectClass getEnum(std::string object_class);
 	std::map<ObjectClass, EncoderInterface*> encoders_;
 };
 
