@@ -122,6 +122,13 @@ class IPCManager : public EventLoopData {
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const std::list<rinad::NeighborData>& neighbors);
 
+        bool application_is_registered_to_ipcp(
+                        const rina::ApplicationProcessNamingInformation&,
+                        rina::IPCProcess *slave_ipcp);
+
+        int unregister_app_from_ipcp(const
+                        rina::ApplicationProcessNamingInformation& app_name,
+                        rina::IPCProcess *slave_ipcp);
 
         rinad::RINAConfiguration config;
 

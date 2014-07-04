@@ -412,6 +412,32 @@ IPCManager::apply_configuration()
         return 0;
 }
 
+bool
+IPCManager::application_is_registered_to_ipcp(
+                const rina::ApplicationProcessNamingInformation& app_name,
+                rina::IPCProcess *slave_ipcp)
+{
+        const list<rina::ApplicationProcessNamingInformation>&
+                registered_apps = slave_ipcp->getRegisteredApplications();
+
+        for (list<rina::ApplicationProcessNamingInformation>::const_iterator
+                        it = registered_apps.begin();
+                                it != registered_apps.end(); it++) {
+                if (app_name == *it) {
+                        return true;
+                }
+        }
+
+        return false;
+}
+
+int
+IPCManager::unregister_app_from_ipcp(
+                const rina::ApplicationProcessNamingInformation& app_name,
+                rina::IPCProcess *slave_ipcp)
+{
+}
+
 static void flow_allocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
