@@ -609,15 +609,59 @@ static void ipcm_register_app_response_event_handler(rina::IPCEvent *e,
         }
 }
 
+static void application_unregistration_request_event_handler(
+                                                rina::IPCEvent *e,
+                                                EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        // Select any IPC process in the DIF from which the application
+        // wants to unregister from
+        rina::IPCProcess *ipcp = ipcm->select_ipcp_by_dif(event->DIFName);
+        unsigned int seqnum;
+
+        if (!ipcp) {
+                cerr << __func__ << ": Error: Application " <<
+                        event->applicationName.toString() <<
+                        " wants to unregister from DIF " <<
+                        event->DIFName.toString() << " but couldn't find "
+                        "any IPC process belonging to it" << endl;
+                goto app_unregistered;
+        }
+
+        // Try to forward the unregistration request to the IPC process
+        // that the application is registered to
+        try {
+                seqnum = ipcp->unregisterApplication(event->applicationName);
+                ipcm->pending_app_unregistrations[seqnum] =
+                                        PendingAppUnregistration(*event);
+        } catch (rina::IpcmUnregisterApplicationException) {
+                cerr << __func__ << ": Error while unregistering application "
+                        << event->applicationName.toString() << endl;
+                goto app_unregistered;
+        }
+
+        return;
+
+app_unregistered:
+        // Inform the unregistering application that the unregistration
+        // operation failed
+        try {
+                if (event->sequenceNumber > 0) {
+                        rina::applicationManager->applicationUnregistered(*event, -1);
+                }
+        } catch (rina::NotifyApplicationUnregisteredException) {
+                cerr << __func__ << ": Error while notifying application "
+                        << event->applicationName.toString() << " about "
+                        "failed unregistration" << endl;
+        }
+}
+
 static void ipcm_unregister_app_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
 static void register_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-}
-
-static void application_unregistration_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
 
