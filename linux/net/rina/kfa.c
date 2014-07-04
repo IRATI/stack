@@ -665,6 +665,7 @@ int kfa_sdu_post(struct kfa * instance,
 {
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
+        int                 retval = 0;
 
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
@@ -699,28 +700,22 @@ int kfa_sdu_post(struct kfa * instance,
         atomic_inc(&flow->posters);
 
         if (!flow->rmt) {
-
                 if (rfifo_push_ni(flow->sdu_ready, sdu)) {
                         LOG_ERR("Could not write %zd bytes into "
                                 "port-id %d fifo",
                                 sizeof(struct sdu *), id);
-                        mutex_unlock(&instance->lock);
-                        return -1;
+                        retval = -1;
+                        goto finish;
                 }
-                wq = &flow->wait_queue;
-                ASSERT(wq);
-
-                LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
-                        wq, wq->task_list.next, wq->task_list.prev);
-
+                goto finish;
         } else {
                 if (rmt_receive(flow->rmt, sdu, id)) {
                         LOG_ERR("Could not post SDU into the RMT");
-                        mutex_unlock(&instance->lock);
-                        return -1;
+                        retval = -1;
+                        goto finish;
                 }
         }
-
+finish:
         if (atomic_dec_and_test(&flow->posters) &&
            (atomic_read(&flow->writers) == 0)  &&
            (atomic_read(&flow->readers) == 0)  &&
@@ -732,14 +727,19 @@ int kfa_sdu_post(struct kfa * instance,
 
         mutex_unlock(&instance->lock);
 
-        if (flow && !flow->rmt) 
+        if (flow && !flow->rmt && (retval == 0)) {
+                wq = &flow->wait_queue;
+                ASSERT(wq);
+
+                LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
+                        wq, wq->task_list.next, wq->task_list.prev);
+
                 wake_up(wq);
-               
-        LOG_DBG("SDU posted");
+                LOG_DBG("SDU posted");
+                LOG_DBG("Sleeping read syscall should be working now");
+        }
 
-        LOG_DBG("Sleeping read syscall should be working now");
-
-        return 0;
+        return retval;
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 
