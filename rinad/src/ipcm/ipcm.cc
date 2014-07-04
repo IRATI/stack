@@ -666,35 +666,93 @@ static void application_unregistration_request_event_handler(
         }
 }
 
+static bool ipcm_unregister_response_common(
+                        rina::IpcmUnregisterApplicationResponseEvent *event,
+                        rina::IPCProcess *slave_ipcp,
+                        const rina::ApplicationProcessNamingInformation&
+                        app_name)
+{
+        bool success = (event->result == 0);
+
+        try {
+                // Inform the IPC process about the application unregistration
+                slave_ipcp->unregisterApplicationResult(event->
+                                sequenceNumber, success);
+        } catch (rina::IpcmRegisterApplicationException) {
+                cerr << __func__ << ": Error while reporing "
+                        "unregistration result for application "
+                        << app_name.toString() << endl;
+        }
+
+        return success;
+}
+
+static void ipcm_unregister_response_ipcp(
+                        rina::IpcmUnregisterApplicationResponseEvent *event,
+                        IPCManager *ipcm, map<unsigned int,
+                        PendingIPCPUnregistration>::iterator mit)
+{
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::IPCProcess *ipcp = mit->second.ipcp;
+        rina::ApplicationProcessNamingInformation slave_dif_name = slave_ipcp->
+                                                getDIFInformation().dif_name_;
+        bool success;
+
+        // Inform the supporting IPC process
+        success = ipcm_unregister_response_common(event, slave_ipcp,
+                                                  ipcp->name);
+
+        try {
+                if (success) {
+                        // Notify the IPCP process that it has been unregistered
+                        // from the DIF
+                        ipcp->notifyUnregistrationFromSupportingDIF(
+                                                        slave_ipcp->name,
+                                                        slave_dif_name);
+                } else {
+                        cerr << __func__ << ": Cannot unregister IPC Process "
+                                << ipcp->name.toString() << " from DIF " <<
+                                slave_dif_name.toString() << endl;
+                }
+        } catch (rina::NotifyRegistrationToDIFException) {
+                cerr << __func__ << ": Error while reporing "
+                        "unregistration result for IPC process "
+                        << ipcp->name.toString() << endl;
+        }
+
+        ipcm->pending_ipcp_unregistrations.erase(mit);
+}
+
+static void ipcm_unregister_response_app(
+                        rina::IpcmUnregisterApplicationResponseEvent *event,
+                        IPCManager *ipcm, map<unsigned int,
+                        PendingAppUnregistration>::iterator mit)
+{
+        // Inform the supporting IPC process
+        ipcm_unregister_response_common(event, mit->second.slave_ipcp,
+                                        mit->second.req_event.applicationName);
+
+        // Inform the application
+        application_manager_app_unregistered(mit->second.req_event,
+                        event->result);
+
+        ipcm->pending_app_unregistrations.erase(mit);
+}
+
 static void ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
                                                        EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         map<unsigned int, PendingAppUnregistration>::iterator it;
-        bool success = (event->result == 0);
+        map<unsigned int, PendingIPCPUnregistration>::iterator jt;
 
         it = ipcm->pending_app_unregistrations.find(event->sequenceNumber);
+        jt = ipcm->pending_ipcp_unregistrations.find(event->sequenceNumber);
         if (it != ipcm->pending_app_unregistrations.end()) {
-                rina::IPCProcess *slave_ipcp = it->second.slave_ipcp;
-                const rina::ApplicationProcessNamingInformation& app_name =
-                        it->second.req_event.applicationName;
-
-                // Inform the IPC process about the application unregistration
-                try {
-                        slave_ipcp->unregisterApplicationResult(event->
-                                                sequenceNumber, success);
-                } catch (rina::IpcmRegisterApplicationException) {
-                        cerr << __func__ << ": Error while reporing "
-                                "unregistration result for application "
-                                << app_name.toString() << endl;
-                }
-
-                // Inform the application about the unregistration result
-                application_manager_app_unregistered(it->second.req_event,
-                                                     event->result);
-
-                ipcm->pending_app_unregistrations.erase(it);
+                ipcm_unregister_response_app(event, ipcm, it);
+        } else if (jt != ipcm->pending_ipcp_unregistrations.end()) {
+                ipcm_unregister_response_ipcp(event, ipcm, jt);
         } else {
                 cerr <<  __func__ << ": Warning: Unregistration response "
                         "received, but no pending DIF assignment " << endl;
