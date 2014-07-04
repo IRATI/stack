@@ -278,7 +278,7 @@ private:
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	INamespaceManager * namespace_manager_;
 
 	/// Create initial RIB objects
@@ -358,7 +358,7 @@ private:
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	IRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;

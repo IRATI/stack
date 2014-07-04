@@ -30,6 +30,7 @@
 #include <librina/cdap.h>
 #include <librina/ipc-process.h>
 
+#include "common/encoder.h"
 #include "events.h"
 
 namespace rinad {
@@ -84,14 +85,6 @@ public:
   /// @param delimitedSdus
   /// @return
   virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
-};
-
-/// Interface that Encodes and Decodes an object to/from bytes
-class IEncoder {
-	public:
-		virtual char * encode(const void * object) = 0;
-		virtual void * decode(char * serializedObject) = 0;
-		virtual ~IEncoder(){};
 };
 
 /// Contains the objects needed to request the Enrollment
@@ -391,7 +384,7 @@ public:
 	virtual const void* get_value() const = 0;
 	IPCProcess* get_ipc_process();
 	IRIBDaemon* get_rib_daemon();
-	IEncoder* get_encoder();
+	Encoder* get_encoder();
 
 	/// Parent-child management operations
 	BaseRIBObject * get_parent() const;
@@ -434,7 +427,7 @@ private:
 	std::list<BaseRIBObject*> children_;
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	void operation_not_supported();
 	void operation_not_supported(const void* object);
 	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
@@ -658,7 +651,7 @@ public:
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
 	virtual IDelimiter* get_delimiter() = 0;
-	virtual IEncoder* get_encoder() = 0;
+	virtual Encoder* get_encoder() = 0;
 	virtual rina::CDAPSessionManagerInterface* get_cdap_session_manager() = 0;
 	virtual IEnrollmentTask* get_enrollment_task() = 0;
 	virtual IFlowAllocator* get_flow_allocator() = 0;

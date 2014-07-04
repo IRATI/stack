@@ -262,7 +262,7 @@ void RIBDaemon::eventHappened(Event * event)
 
 	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
 		NMinusOneFlowDeallocatedEvent * flowEvent = (NMinusOneFlowDeallocatedEvent *) event;
-		nMinusOneFlowDeallocated(flowEvent->get_port_id());
+		nMinusOneFlowDeallocated(flowEvent->port_id_);
 	} else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED) {
 		NMinusOneFlowAllocatedEvent * flowEvent = (NMinusOneFlowAllocatedEvent *) event;
 		nMinusOneFlowAllocated(flowEvent);
@@ -356,7 +356,8 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	rina::ObjectValueInterface * encodedObjectValue;
 
 	try {
-		encodedObjectValue = new rina::ByteArrayObjectValue(encoder_->encode(objectValue));
+		encodedObjectValue = new rina::ByteArrayObjectValue(
+				encoder_->encode(objectValue, objectClass));
 	} catch(Exception & e) {
 		LOG_ERR("Error encoding object value: %s", e.what());
 		return;
@@ -619,7 +620,7 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
 	//1 Decode the message and obtain the CDAP session descriptor
 	atomic_send_lock_.lock();
 	try {
-		rina::SerializedMessage serializedMessage = rina::SerializedMessage(message, length);
+		rina::SerializedObject serializedMessage = rina::SerializedObject(message, length);
 		cdapMessage = cdap_session_manager_->messageReceived(serializedMessage, portId);
 	} catch (Exception &e) {
 		atomic_send_lock_.unlock();

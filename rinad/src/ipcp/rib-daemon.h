@@ -115,7 +115,7 @@ private:
 	RIB rib_;
 	IPCProcess * ipc_process_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	rina::Thread * management_sdu_reader_;
 

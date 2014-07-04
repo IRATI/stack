@@ -41,16 +41,9 @@ public:
 	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
 	static const std::string DIF_NAME_WHATEVERCAST_RULE;
 
-	std::string get_name() const;
-	void set_name(std::string name);
-	std::string get_rule() const;
-	void set_rule(std::string rule);
-	const std::list<std::string>& get_set_members() const;
-	void set_set_members(const std::list<std::string>& set_members);
 	bool operator==(const WhatevercastName &other);
 	std::string toString();
 
-private:
 	/// The name
 	std::string name_;
 

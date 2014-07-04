@@ -37,32 +37,8 @@ const std::string WhatevercastName::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS = "wh
 const std::string WhatevercastName::WHATEVERCAST_NAME_RIB_OBJECT_CLASS = "whatname";
 const std::string WhatevercastName::DIF_NAME_WHATEVERCAST_RULE = "any";
 
-std::string WhatevercastName::get_name() const {
-	return name_;
-}
-
-void WhatevercastName::set_name(std::string name) {
-	name_ = name;
-}
-
-std::string WhatevercastName::get_rule() const {
-	return rule_;
-}
-
-void WhatevercastName::set_rule(std::string rule) {
-	rule_ = rule;
-}
-
-const std::list<std::string>& WhatevercastName::get_set_members() const {
-	return set_members_;
-}
-
-void WhatevercastName::set_set_members(const std::list<std::string>& set_members) {
-	set_members_ = set_members;
-}
-
 bool WhatevercastName::operator==(const WhatevercastName &other) {
-	if (name_ == other.get_name()) {
+	if (name_ == other.name_) {
 		return true;
 	}
 	return false;
@@ -190,7 +166,7 @@ void DirectoryForwardingTableEntrySetRIBObject::eventHappened(Event * event) {
 	std::list<BaseRIBObject *>::const_iterator iterator;
 	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
 		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
-		if (entry->get_address() == conEvent->get_neighbor()->get_address()) {
+		if (entry->get_address() == conEvent->neighbor_->get_address()) {
 			objectsToDelete.push_back((*iterator)->get_name());
 		}
 	}
