@@ -46,6 +46,17 @@ void* Encoder::decode(const rina::SerializedObject &serialized_object, ObjectCla
 	return encoder->decode(serialized_object);
 }
 
+Encoder::ObjectClass Encoder::getEnum(std::string object_class)
+{
+	switch(object_class) {
+	case "ApplicationRegistration":
+		return ApplicationRegistration;
+		break;
+	default:
+		throw new Exception("Class not found");
+	}
+}
+
 // CLASS ApplicationRegistrationEncoder
 const rina::SerializedObject* ApplicationRegistrationEncoder::encode(const void* object) const {
 	rina::ApplicationRegistration *app_reg = (rina::ApplicationRegistration*) object;
