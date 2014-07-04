@@ -36,11 +36,6 @@ namespace rinad {
 /// distinctions are unnecessary.
 class WhatevercastName {
 public:
-	static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME;
-	static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
-	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
-	static const std::string DIF_NAME_WHATEVERCAST_RULE;
-
 	bool operator==(const WhatevercastName &other);
 	std::string toString();
 
@@ -73,10 +68,6 @@ private:
 
 class DirectoryForwardingTableEntrySetRIBObject: public BaseRIBObject, public EventListener {
 public:
-	static const std::string DFT_ENTRY_SET_RIB_OBJECT_NAME;
-	static const std::string DFT_ENTRY_SET_RIB_OBJECT_CLASS;
-	static const std::string DFT_ENTRY_RIB_OBJECT_CLASS;
-
 	DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process);
 
 	/// Called when the connectivity to a neighbor has been lost. All the

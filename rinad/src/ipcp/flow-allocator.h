@@ -34,10 +34,6 @@ namespace rinad {
 /// Encapsulates all the information required to manage a Flow
 class Flow {
 public:
-	static const std::string FLOW_SET_RIB_OBJECT_NAME;
-	static const std::string FLOW_SET_RIB_OBJECT_CLASS ;
-	static const std::string FLOW_RIB_OBJECT_CLASS;
-
 	enum IPCPFlowState {
                 EMPTY,
                 ALLOCATION_IN_PROGRESS,
@@ -242,10 +238,6 @@ private:
 /// Representation of a set of QoS cubes in the RIB
 class QoSCubeSetRIBObject: public BaseRIBObject {
 public:
-	static const std::string QOS_CUBE_SET_RIB_OBJECT_NAME;
-	static const std::string QOS_CUBE_SET_RIB_OBJECT_CLASS ;
-	static const std::string QOS_CUBE_RIB_OBJECT_CLASS;
-
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);

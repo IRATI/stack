@@ -334,7 +334,7 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	} catch (Exception &e) {
 		//Delegate creation to the parent if the object is not there
                 std::string::size_type position =
-                        objectName.rfind(RIBObjectNames::SEPARATOR);
+                        objectName.rfind(EncoderConstants::SEPARATOR);
 		if (position == std::string::npos)
 			throw e;
 		std::string parentObjectName = objectName.substr(0, position);
@@ -355,11 +355,13 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	cdap_session_manager_->getAllCDAPSessionIds(peers);
 	rina::ObjectValueInterface * encodedObjectValue;
 
+	const rina::SerializedObject * serializedObject = 0;
 	try {
-		encodedObjectValue = new rina::ByteArrayObjectValue(
-				encoder_->encode(objectValue, objectClass));
+		serializedObject = encoder_->encode(objectValue, objectClass);
+		encodedObjectValue = new rina::ByteArrayObjectValue(*serializedObject);
 	} catch(Exception & e) {
 		LOG_ERR("Error encoding object value: %s", e.what());
+		delete serializedObject;
 		return;
 	}
 
@@ -386,6 +388,7 @@ void RIBDaemon::createObject(const std::string& objectClass,
 		}
 	}
 
+	delete serializedObject;
 	delete encodedObjectValue;
 }
 
@@ -517,7 +520,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
                                 std::string::size_type position =
-                                        cdapMessage->get_obj_name().rfind(RIBObjectNames::SEPARATOR);
+                                        cdapMessage->get_obj_name().rfind(EncoderConstants::SEPARATOR);
 				if (position == std::string::npos) {
 					throw e;
 				}
@@ -743,7 +746,7 @@ void RIBDaemon::sendMessageToAddress(const rina::CDAPMessage& cdapMessage,
 }
 
 void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
-			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) throw (Exception) {
+			unsigned int address, ICDAPResponseMessageHandler * cdapMessageHandler) {
 	const rina::SerializedObject * sdu;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0

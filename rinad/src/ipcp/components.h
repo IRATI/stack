@@ -669,48 +669,6 @@ public:
 	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
 };
 
-/// Contains the object names of the objects in the RIB
-class RIBObjectNames
-{
-public:
-	/// Partial names
-	static const std::string ADDRESS;
-	static const std::string APNAME;
-	static const std::string CONSTANTS;
-	static const std::string DATA_TRANSFER;
-	static const std::string DAF;
-	static const std::string DIF;
-	static const std::string DIF_REGISTRATIONS;
-	static const std::string DIRECTORY_FORWARDING_TABLE_ENTRIES;
-	static const std::string ENROLLMENT;
-	static const std::string FLOWS;
-	static const std::string FLOW_ALLOCATOR;
-	static const std::string IPC;
-	static const std::string MANAGEMENT;
-	static const std::string NEIGHBORS;
-	static const std::string NAMING;
-	static const std::string NMINUSONEFLOWMANAGER;
-	static const std::string NMINUSEONEFLOWS;
-	static const std::string OPERATIONAL_STATUS;
-	static const std::string PDU_FORWARDING_TABLE;
-	static const std::string QOS_CUBES;
-	static const std::string RESOURCE_ALLOCATION;
-	static const std::string ROOT;
-	static const std::string SEPARATOR;
-	static const std::string SYNONYMS;
-	static const std::string WHATEVERCAST_NAMES;
-	static const std::string ROUTING;
-	static const std::string FLOWSTATEOBJECTGROUP;
-
-	/* Full names */
-	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_NAME;
-	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_CLASS;
-	static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS;
-	static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_NAME;
-
-	virtual ~RIBObjectNames(){};
-};
-
 /// Generates unique object instances
 class ObjectInstanceGenerator: public rina::Lockable {
 public:

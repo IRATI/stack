@@ -28,33 +28,22 @@ namespace rinad {
 
 /// CLASS Encoder
 Encoder::~Encoder() {
-	for (std::map<ObjectClass,EncoderInterface*>::iterator it = encoders_.begin(); it != encoders_.end(); ++it) {
+	for (std::map<std::string,EncoderInterface*>::iterator it = encoders_.begin(); it != encoders_.end(); ++it) {
 		delete it->second;
 		it->second = 0;
 	}
 	encoders_.clear();
 }
-void Encoder::addEncoder(ObjectClass object_class, EncoderInterface *encoder) {
-	encoders_.insert(std::pair<ObjectClass,EncoderInterface*> (object_class, encoder));
+void Encoder::addEncoder(const std::string& object_class, EncoderInterface *encoder) {
+	encoders_.insert(std::pair<std::string,EncoderInterface*> (object_class, encoder));
 }
-const rina::SerializedObject* Encoder::encode(const void* object, ObjectClass object_class) {
+const rina::SerializedObject* Encoder::encode(const void* object, const std::string& object_class) {
 	EncoderInterface* encoder = encoders_[object_class];
 	return encoder->encode(object);
 }
-void* Encoder::decode(const rina::SerializedObject &serialized_object, ObjectClass object_class) {
+void* Encoder::decode(const rina::SerializedObject &serialized_object, const std::string& object_class) {
 	EncoderInterface* encoder = encoders_[object_class];
 	return encoder->decode(serialized_object);
-}
-
-Encoder::ObjectClass Encoder::getEnum(std::string object_class)
-{
-	switch(object_class) {
-	case "ApplicationRegistration":
-		return ApplicationRegistration;
-		break;
-	default:
-		throw new Exception("Class not found");
-	}
 }
 
 // CLASS ApplicationRegistrationEncoder
@@ -110,5 +99,68 @@ void* ApplicationRegistrationEncoder::decode(const rina::SerializedObject &seria
 
 	return (void*) app_reg;
 }
+
+//Class Encoder Constants
+const std::string EncoderConstants::ADDRESS = "address";
+const std::string EncoderConstants::APNAME = "applicationprocessname";
+const std::string EncoderConstants::CONSTANTS = "constants";
+const std::string EncoderConstants::DATA_TRANSFER = "datatransfer";
+const std::string EncoderConstants::DAF = "daf";
+const std::string EncoderConstants::DIF = "dif";
+const std::string EncoderConstants::DIF_REGISTRATIONS = "difregistrations";
+const std::string EncoderConstants::DIRECTORY_FORWARDING_TABLE_ENTRIES = "directoryforwardingtableentries";
+const std::string EncoderConstants::ENROLLMENT = "enrollment";
+const std::string EncoderConstants::FLOWS = "flows";
+const std::string EncoderConstants::FLOW_ALLOCATOR = "flowallocator";
+const std::string EncoderConstants::IPC = "ipc";
+const std::string EncoderConstants::MANAGEMENT = "management";
+const std::string EncoderConstants::NEIGHBORS = "neighbors";
+const std::string EncoderConstants::NAMING = "naming";
+const std::string EncoderConstants::NMINUSONEFLOWMANAGER = "nminusoneflowmanager";
+const std::string EncoderConstants::NMINUSEONEFLOWS = "nminusoneflows";
+const std::string EncoderConstants::OPERATIONAL_STATUS = "operationalStatus";
+const std::string EncoderConstants::PDU_FORWARDING_TABLE = "pduforwardingtable";
+const std::string EncoderConstants::QOS_CUBES = "qoscubes";
+const std::string EncoderConstants::RESOURCE_ALLOCATION = "resourceallocation";
+const std::string EncoderConstants::ROOT = "root";
+const std::string EncoderConstants::SEPARATOR = "/";
+const std::string EncoderConstants::SYNONYMS = "synonyms";
+const std::string EncoderConstants::WHATEVERCAST_NAMES = "whatevercastnames";
+const std::string EncoderConstants::ROUTING = "routing";
+const std::string EncoderConstants::FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
+const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME = SEPARATOR + DAF +
+		SEPARATOR + MANAGEMENT + SEPARATOR + OPERATIONAL_STATUS;
+const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "operationstatus";
+const std::string EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS = "pdu forwarding table";
+const std::string EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = SEPARATOR + DIF +
+		SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + PDU_FORWARDING_TABLE;
+const std::string EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS = "DIF registration set";
+const std::string EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS = "DIF registration";
+const std::string EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME = SEPARATOR + DIF +
+		SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + NMINUSONEFLOWMANAGER + SEPARATOR + DIF_REGISTRATIONS;
+const std::string EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS = "nminusone flow set";
+const std::string EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS = "nminusone flow";
+const std::string EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME = SEPARATOR + DIF +
+		SEPARATOR + RESOURCE_ALLOCATION + SEPARATOR + NMINUSONEFLOWMANAGER + SEPARATOR + NMINUSEONEFLOWS;
+const std::string EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME = SEPARATOR + DAF +
+		SEPARATOR + MANAGEMENT + SEPARATOR + NAMING + SEPARATOR + WHATEVERCAST_NAMES;
+const std::string EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS = "whatname set";
+const std::string EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS = "whatname";
+const std::string EncoderConstants::DIF_NAME_WHATEVERCAST_RULE = "any";
+const std::string EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME = SEPARATOR +
+		DIF + SEPARATOR + MANAGEMENT + SEPARATOR + FLOW_ALLOCATOR + SEPARATOR +
+		DIRECTORY_FORWARDING_TABLE_ENTRIES;
+const std::string EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS = "directoryforwardingtableentry set";
+const std::string EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS = "directoryforwardingtableentry";
+const std::string EncoderConstants::FLOW_SET_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR +
+	    RESOURCE_ALLOCATION + SEPARATOR + FLOW_ALLOCATOR + SEPARATOR + FLOWS;
+const std::string EncoderConstants::FLOW_SET_RIB_OBJECT_CLASS = "flow set";
+const std::string EncoderConstants::FLOW_RIB_OBJECT_CLASS = "flow";
+const std::string EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME = SEPARATOR + DIF + SEPARATOR + MANAGEMENT +
+		SEPARATOR + FLOW_ALLOCATOR + SEPARATOR + QOS_CUBES;
+const std::string EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS = "qoscube set";
+const std::string EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS = "qoscube";
+const std::string EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME = SEPARATOR + DAF +
+			SEPARATOR + MANAGEMENT + SEPARATOR + ENROLLMENT;
 
 }

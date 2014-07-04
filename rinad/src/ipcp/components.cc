@@ -25,43 +25,6 @@
 
 namespace rinad {
 
-//	CLASS RIBObjectNames
-const std::string RIBObjectNames::ADDRESS = "address";
-const std::string RIBObjectNames::APNAME = "applicationprocessname";
-const std::string RIBObjectNames::CONSTANTS = "constants";
-const std::string RIBObjectNames::DATA_TRANSFER = "datatransfer";
-const std::string RIBObjectNames::DAF = "daf";
-const std::string RIBObjectNames::DIF = "dif";
-const std::string RIBObjectNames::DIF_REGISTRATIONS = "difregistrations";
-const std::string RIBObjectNames::DIRECTORY_FORWARDING_TABLE_ENTRIES = "directoryforwardingtableentries";
-const std::string RIBObjectNames::ENROLLMENT = "enrollment";
-const std::string RIBObjectNames::FLOWS = "flows";
-const std::string RIBObjectNames::FLOW_ALLOCATOR = "flowallocator";
-const std::string RIBObjectNames::IPC = "ipc";
-const std::string RIBObjectNames::MANAGEMENT = "management";
-const std::string RIBObjectNames::NEIGHBORS = "neighbors";
-const std::string RIBObjectNames::NAMING = "naming";
-const std::string RIBObjectNames::NMINUSONEFLOWMANAGER = "nminusoneflowmanager";
-const std::string RIBObjectNames::NMINUSEONEFLOWS = "nminusoneflows";
-const std::string RIBObjectNames::OPERATIONAL_STATUS = "operationalStatus";
-const std::string RIBObjectNames::PDU_FORWARDING_TABLE = "pduforwardingtable";
-const std::string RIBObjectNames::QOS_CUBES = "qoscubes";
-const std::string RIBObjectNames::RESOURCE_ALLOCATION = "resourceallocation";
-const std::string RIBObjectNames::ROOT = "root";
-const std::string RIBObjectNames::SEPARATOR = "/";
-const std::string RIBObjectNames::SYNONYMS = "synonyms";
-const std::string RIBObjectNames::WHATEVERCAST_NAMES = "whatevercastnames";
-const std::string RIBObjectNames::ROUTING = "routing";
-const std::string RIBObjectNames::FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
-const std::string RIBObjectNames::OPERATIONAL_STATUS_RIB_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DAF +
-		RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT + RIBObjectNames::SEPARATOR + RIBObjectNames::OPERATIONAL_STATUS;
-
-const std::string RIBObjectNames::OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "operationstatus";
-
-const std::string RIBObjectNames::PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS = "pdu forwarding table";
-const std::string RIBObjectNames::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DIF +
-		RIBObjectNames::SEPARATOR + RIBObjectNames::RESOURCE_ALLOCATION + RIBObjectNames::SEPARATOR + RIBObjectNames::PDU_FORWARDING_TABLE;
-
 //	CLASS EnrollmentRequest
 EnrollmentRequest::EnrollmentRequest(
 		const rina::Neighbor& neighbor, const rina::EnrollToDIFRequestEvent& event) {
@@ -143,7 +106,7 @@ IRIBDaemon* BaseRIBObject::get_rib_daemon() {
 	return rib_daemon_;
 }
 
-IEncoder* BaseRIBObject::get_encoder() {
+Encoder* BaseRIBObject::get_encoder() {
 	return encoder_;
 }
 
