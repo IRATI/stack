@@ -573,16 +573,16 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
         dt = dtp->parent;
         ASSERT(dt);
 
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("No PDU to be pushed");
+                return -1;
+        }
+
         if (seqQ_pdu_is_duplicate(seqQ,
                           pci_sequence_number_get(pdu_pci_get_rw(pdu)))) {
                 pdu_destroy(pdu);
                 dropped_pdus_inc(dtp->sv);
                 return 0;
-        }
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("No PDU to be pushed");
-                return -1;
         }
 
         spin_lock(&seqQ->lock);
