@@ -66,12 +66,13 @@ struct PendingAppRegistration {
 };
 
 struct PendingAppUnregistration {
+        rina::IPCProcess *slave_ipcp;
         rina::ApplicationUnregistrationRequestEvent req_event;
 
-        PendingAppUnregistration() { }
-        PendingAppUnregistration(
+        PendingAppUnregistration() : slave_ipcp(NULL) { }
+        PendingAppUnregistration(rina::IPCProcess *p,
                         const rina::ApplicationUnregistrationRequestEvent& n)
-                                        : req_event(n) { }
+                                        : slave_ipcp(p), req_event(n) { }
 };
 
 class IPCManager : public EventLoopData {
