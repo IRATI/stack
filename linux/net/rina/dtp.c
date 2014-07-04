@@ -781,6 +781,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                         return 0;
                                 }
                                 pos->pdu = NULL;
+                                list_del(&pos->next);
                                 seq_q_entry_destroy(pos);
                                 spin_unlock(&seqQ->lock);
                                 if (pdu_post(dtp, pdu))
