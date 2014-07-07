@@ -1021,7 +1021,7 @@ destroyConnection(const Connection& connection) {
 }
 
 void KernelIPCProcess::
-modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
+modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entries,
                         int mode) {
 #if STUB_API
         //Do nothing

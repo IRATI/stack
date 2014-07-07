@@ -67,7 +67,7 @@ const std::string NMinusOneFlowAllocatedEvent::toString() {
 }
 
 //CLASS NMinusOneFlowDeallocated Event
-NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(unsigned int port_id,
+NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id,
 			rina::CDAPSessionDescriptor * cdap_session_descriptor):
 				BaseEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
 	port_id_ = port_id;
@@ -89,6 +89,20 @@ ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(rina::Neighbor* n
 const std::string ConnectiviyToNeighborLostEvent::toString() {
 	std::stringstream ss;
 	ss<<"Event id: "<<get_id()<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	return ss.str();
+}
+
+//CLASS NeighborAddedEvent
+NeighborAddedEvent::NeighborAddedEvent(rina::Neighbor * neighbor, bool enrollee):
+	BaseEvent(IPCP_EVENT_NEIGHBOR_ADDED) {
+	neighbor_ = neighbor;
+	enrollee_ = enrollee;
+}
+
+const std::string NeighborAddedEvent::toString() {
+	std::stringstream ss;
+	ss<<"Event id: "<<get_id()<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	ss<<"Enrollee: "<<enrollee_<<std::endl;
 	return ss.str();
 }
 

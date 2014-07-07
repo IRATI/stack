@@ -1677,18 +1677,18 @@ BaseNetlinkMessage(RINA_C_RMT_MODIFY_FTE_REQUEST){
         mode = 0;
 }
 
-const std::list<PDUForwardingTableEntry>&
+const std::list<PDUForwardingTableEntry *>&
 RmtModifyPDUFTEntriesRequestMessage::getEntries() const {
         return entries;
 }
 
 void RmtModifyPDUFTEntriesRequestMessage::
-setEntries(const std::list<PDUForwardingTableEntry>& entries) {
+setEntries(const std::list<PDUForwardingTableEntry *>& entries) {
         this->entries = entries;
 }
 
 void RmtModifyPDUFTEntriesRequestMessage::
-addEntry(const PDUForwardingTableEntry& entry) {
+addEntry(PDUForwardingTableEntry * entry) {
         entries.push_back(entry);
 }
 

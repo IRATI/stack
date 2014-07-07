@@ -891,7 +891,7 @@ public:
          * @param entries to be modified
          * @param mode 0 add, 1 remove, 2 flush and add
          */
-        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
+        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entries,
                         int mode);
 
         /**
