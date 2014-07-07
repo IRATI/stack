@@ -2,8 +2,6 @@
 // Test-CDAP
 //
 //	  Bernat Gaston			<bernat.gaston@i2cat.net>
-//    Eduard Grasa          <eduard.grasa@i2cat.net>
-//    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -31,7 +29,7 @@ bool m_Connect(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int &invoke_id) {
 	AuthValue auth_value;
 	const CDAPMessage *sent_message, *recevied_message;
-	const SerializedMessage *serialized_message;
+	const SerializedObject *serialized_message;
 	bool assert = false;
 
 	// M_CONNECT Message
@@ -60,7 +58,7 @@ int m_Connect_R(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int invoke_id) {
 	AuthValue auth_value;
 	const CDAPMessage *sent_message, *recevied_message;
-	const SerializedMessage *serialized_message;
+	const SerializedObject *serialized_message;
 	int assert = -1;
 
 	// M_CONNECT_R message
@@ -92,7 +90,7 @@ bool m_Release(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int invoke_id) {
 	AuthValue auth_value;
 	const CDAPMessage *sent_message, *recevied_message;
-	const SerializedMessage *serialized_message;
+	const SerializedObject *serialized_message;
 	bool assert = false;
 
 	// M_CONNECT Message
@@ -118,7 +116,7 @@ int m_Release_R(CDAPSessionManagerInterface &session_manager,
 		int port_A, int port_B, int invoke_id) {
 	AuthValue auth_value;
 	const CDAPMessage *sent_message, *recevied_message;
-	const SerializedMessage *serialized_message;
+	const SerializedObject *serialized_message;
 	int assert = -1;
 
 	// M_CONNECT_R message

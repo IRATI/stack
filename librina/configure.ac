@@ -124,16 +124,17 @@ AS_IF([test "$build_bindings_java" = "yes"],[
     JNI_CPPFLAGS=""
     for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
     do
-        JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR"
+        JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR" ;
     done
     AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
     AX_PROG_JAR
 ])
 AM_CONDITIONAL(BUILD_BINDINGS_JAVA, [test $build_bindings_java = yes])
 
-# FIXME: Maven support should be enabled if Java bindings are enabled, to avoid
-#        (unneeded) extra checks ...
 AC_PATH_PROG([MVN],[mvn],[])
+AS_IF([test x"$MVN" != x""],[
+    AC_MSG_WARN([Your system lacks of maven support, Java parts will not be built/installed])
+])
 AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
 
 AC_ARG_WITH([sysheaders],

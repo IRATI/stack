@@ -7,7 +7,11 @@
 bin_PROGRAMS = ipcp
 
 ipcp_CFLAGS   =
-ipcp_CPPFLAGS = $(CPPFLAGS_EXTRA) $(LIBRINA_CFLAGS) -I$(srcdir)/..
+ipcp_CPPFLAGS =					\
+	$(CPPFLAGS_EXTRA)			\
+	$(LIBRINA_CFLAGS)			\
+	-I$(srcdir)/..				\
+	-I$(srcdir)/../common
 ipcp_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 ipcp_SOURCES  =						\
 	main.cc						\
@@ -16,5 +20,6 @@ ipcp_SOURCES  =						\
 	rib-daemon.cc		rib-daemon.h		\
 	enrollment-task.cc	enrollment-task.h	\
 	namespace-manager.cc	namespace-manager.h	\
+	pduft-generator.cc      pduft-generator.h \
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h

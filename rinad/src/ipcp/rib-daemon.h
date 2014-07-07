@@ -55,10 +55,6 @@ private:
 class ManagementSDUReaderData {
 public:
 	ManagementSDUReaderData(IRIBDaemon * rib_daemon, unsigned int max_sdu_size);
-	IRIBDaemon * get_rib_daemon();
-	unsigned int get_max_sdu_size();
-
-private:
 	IRIBDaemon * rib_daemon_;
 	unsigned int max_sdu_size_;
 };
@@ -115,7 +111,7 @@ private:
 	RIB rib_;
 	IPCProcess * ipc_process_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	rina::Thread * management_sdu_reader_;
 

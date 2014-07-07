@@ -34,8 +34,6 @@ namespace rinad {
 /// message, as specified by the Enrollment spec)
 class EnrollmentInformationRequest {
 public:
-	static const std::string ENROLLMENT_INFO_OBJECT_NAME;
-
 	EnrollmentInformationRequest();
 	unsigned int get_address() const;
 	void set_address(unsigned int address);

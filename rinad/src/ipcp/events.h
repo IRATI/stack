@@ -109,12 +109,8 @@ public:
 	NMinusOneFlowAllocationFailedEvent(unsigned int handle,
 			const rina::FlowInformation& flow_information,
 			const std::string& result_reason);
-	unsigned int get_handle() const;
-	const rina::FlowInformation& get_flow_information() const;
-	const std::string& get_result_reason() const;
 	const std::string toString();
 
-private:
 	/// The portId of the flow denied
 	unsigned int handle_;
 
@@ -130,11 +126,8 @@ class NMinusOneFlowAllocatedEvent: public BaseEvent {
 public:
 	NMinusOneFlowAllocatedEvent(unsigned int handle,
 			const rina::FlowInformation& flow_information);
-	unsigned int get_handle() const;
-	const rina::FlowInformation& get_flow_information() const;
 	const std::string toString();
 
-private:
 	/// The portId of the flow denied
 	unsigned int handle_;
 
@@ -147,11 +140,8 @@ class NMinusOneFlowDeallocatedEvent: public BaseEvent {
 public:
 	NMinusOneFlowDeallocatedEvent(unsigned int port_id,
 			rina::CDAPSessionDescriptor * cdap_session_descriptor);
-	unsigned int get_port_id() const;
-	rina::CDAPSessionDescriptor * get_cdap_session_descriptor() const;
 	const std::string toString();
 
-private:
 	/// The portId of the flow deallocated
 	unsigned int port_id_;
 
@@ -163,10 +153,8 @@ private:
 class ConnectiviyToNeighborLostEvent: public BaseEvent {
 public:
 	ConnectiviyToNeighborLostEvent(rina::Neighbor * neighbor);
-	rina::Neighbor * get_neighbor();
 	const std::string toString();
 
-private:
 	rina::Neighbor * neighbor_;
 };
 

@@ -32,8 +32,8 @@
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
 
-#include "event-loop.h"
-#include "rina-configuration.h"
+#include "common/event-loop.h"
+#include "common/rina-configuration.h"
 #include "tclap/CmdLine.h"
 #include "ipcm.h"
 #include "configuration.h"

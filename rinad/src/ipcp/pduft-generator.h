@@ -1,0 +1,191 @@
+/*
+ * PDU Forwarding Table Generator
+ *
+ *    Bernat Gaston <bernat.gaston@i2cat.net>
+ *    Eduard Grasa <eduard.grasa@i2cat.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#ifndef IPCP_PDUFT_GENERATOR_HH
+#define IPCP_PDUFT_GENERATOR_HH
+
+#ifdef __cplusplus
+
+#include "ipcp/components.h"
+
+namespace rinad {
+
+class PDUForwardingTableGenerator : public IPDUForwardingTableGenerator {
+public:
+	static const std::string LINK_STATE_POLICY;
+
+	PDUForwardingTableGenerator();
+	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const;
+
+private:
+	IPCProcess * ipc_process_;
+	IPDUFTGeneratorPolicy * pduftg_policy_;
+};
+
+/// Captures the state of an N-1 flow
+class FlowStateObject {
+public:
+	FlowStateObject(unsigned int address, int port_id, unsigned int neighbor_address,
+			int neighbor_port_id, bool state, int sequence_number, int age);
+	const std::string toString();
+
+	// The address of the IPC Process
+	unsigned int address_;
+
+	// The port-id of the N-1 flow
+	int port_id_;
+
+	 // The address of the neighbor IPC Process
+	unsigned int neighbor_address_;
+
+	// The port_id assigned by the neighbor IPC Process to the N-1 flow
+	int neighbor_port_id_;
+
+	// Flow up (true) or down (false)
+	bool up_;
+
+	// A sequence number to be able to discard old information
+	int sequence_number_;
+
+	// Age of this FSO (in seconds)
+	int age_;
+
+	// The object has been marked for propagation
+	bool modified_;
+
+	// Avoid port in the next propagation
+	int avoid_port_;
+
+	// The object is being erased
+	bool being_erased_;
+
+	// The name of the object in the RIB
+	std::string object_name_;
+};
+
+class Edge {
+public:
+	Edge(unsigned int address1, int portV1, unsigned int address2, int portV2, int weight);
+	bool isVertexIn(unsigned int address) const;
+	unsigned int getOtherEndpoint(unsigned int address);
+	std::list<unsigned int> getEndpoints();
+	bool operator==(const Edge & other) const;
+	bool operator!=(const Edge & other) const;
+	const std::string toString() const;
+
+	unsigned int address1_;
+	unsigned int address2_;
+	int weight_;
+	int port_v1_;
+	int port_v2_;
+};
+
+class Graph {
+public:
+	Graph(const std::list<FlowStateObject *>& flow_state_objects);
+
+private:
+	std::list<FlowStateObject *> flow_state_objects_;
+	std::list<Edge *> edges_;
+	std::list<unsigned int> vertices_;
+
+	bool contains_vertex(unsigned int address) const;
+	void init_vertices();
+};
+
+class IRoutingAlgorithm {
+	virtual ~IRoutingAlgorithm(){};
+
+	//Compute the next hop to other addresses
+	virtual std::list<rina::PDUForwardingTableEntry>  computePDUTForwardingTable(const std::list<FlowStateObject>& fsoList,
+			unsigned int source_address) = 0;
+};
+
+class LinkStatePDUFTGeneratorPolicy;
+
+class FlowStateRIBObjectGroup: public BaseRIBObject {
+public:
+	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
+			LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
+	const void* get_value() const;
+	void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void createObject(const std::string& objectClass, const std::string& objectName,
+			const void* objectValue);
+
+private:
+	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+};
+
+class FlowStateDatabase {
+public:
+	static const int NO_AVOID_PORT;
+	static const int WAIT_UNTIL_REMOVE_OBJECT;
+
+	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
+			flow_state_rib_object_group, int maximumAge);
+	const std::list<FlowStateObject *>& get_flow_state_objects() const;
+	bool isEmpty() const;
+	const rina::SerializedObject * encode();
+	void setAvoidPort(int avoidPort);
+	void addObjectToGroup(unsigned int address, int portId,
+			unsigned int neighborAddress, int neighborPortId);
+	bool deprecateObject(int portId);
+	std::vector< std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
+	void incrementAge();
+	void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
+
+	//Signals a modification in the FlowStateDB
+	bool modified_;
+
+private:
+	std::list<FlowStateObject *> flow_state_objects_;
+	Encoder * encoder_;
+	FlowStateRIBObjectGroup * flow_state_rib_object_group_;
+	int maximum_age_;
+
+	FlowStateObject * getByPortId(int portId);
+	std::list<FlowStateObject*> getModifiedFSOs();
+};
+
+class LinkStatePDUFTCDAPMessageHandler: public BaseCDAPResponseMessageHandler {
+public:
+	LinkStatePDUFTCDAPMessageHandler(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
+	void readResponse(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+private:
+	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
+};
+
+class LinkStatePDUFTGeneratorPolicy: public IPDUFTGeneratorPolicy {
+public:
+	LinkStatePDUFTGeneratorPolicy();
+	void writeMessageReceived(const rina::CDAPMessage * cdapMessage, int portId);
+};
+
+}
+
+#endif
+
+#endif

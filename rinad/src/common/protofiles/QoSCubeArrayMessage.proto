@@ -1,0 +1,7 @@
+package rina.messages;
+option java_package="rina.encoding.impl.googleprotobuf.qoscube";
+import "QoSCubeMessage.proto";
+
+message qosCubes_t{   //carries information about all the QoS cubes supported by a DIF
+	repeated qosCube_t qosCube = 1;
+}

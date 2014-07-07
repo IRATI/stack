@@ -146,9 +146,9 @@ public:
 	~CDAPSessionImpl() throw ();
 	//const CDAPSessionInvokeIdManagerInterface* getInvokeIdManager();
 	//bool isConnected() const;
-	const SerializedMessage* encodeNextMessageToBeSent(const CDAPMessage &cdap_message);
+	const SerializedObject* encodeNextMessageToBeSent(const CDAPMessage &cdap_message);
 	void messageSent(const CDAPMessage &cdap_message);
-	const CDAPMessage* messageReceived(const SerializedMessage &message);
+	const CDAPMessage* messageReceived(const SerializedObject &message);
 	void messageReceived(const CDAPMessage &cdap_message);
 	void set_session_descriptor(CDAPSessionDescriptor *session_descriptor);
 	int get_port_id() const;
@@ -174,8 +174,8 @@ private:
 			CDAPMessage::Opcode op_code, bool sent);
 	void cancelReadResponseMessageSentOrReceived(
 			const CDAPMessage &cdap_message, bool sent);
-	const SerializedMessage* serializeMessage(const CDAPMessage &cdap_message) const;
-	const CDAPMessage* deserializeMessage(const SerializedMessage &message) const;
+	const SerializedObject* serializeMessage(const CDAPMessage &cdap_message) const;
+	const CDAPMessage* deserializeMessage(const SerializedObject &message) const;
 	void populateSessionDescriptor(const CDAPMessage &cdap_message, bool send);
 	void emptySessionDescriptor();
 	/// This map contains the invokeIds of the messages that
@@ -209,12 +209,12 @@ public:
 	void getAllCDAPSessionIds(std::vector<int> &vector);
 	void getAllCDAPSessions(std::vector<CDAPSessionInterface*> &vector);
 	CDAPSessionImpl* get_cdap_session(int port_id);
-	const SerializedMessage* encodeCDAPMessage(const CDAPMessage &cdap_message);
-	const CDAPMessage* decodeCDAPMessage(const SerializedMessage &cdap_message);
+	const SerializedObject* encodeCDAPMessage(const CDAPMessage &cdap_message);
+	const CDAPMessage* decodeCDAPMessage(const SerializedObject &cdap_message);
 	void removeCDAPSession(int portId);
-	const SerializedMessage* encodeNextMessageToBeSent(const CDAPMessage &cdap_message,
+	const SerializedObject* encodeNextMessageToBeSent(const CDAPMessage &cdap_message,
 			int port_id);
-	const CDAPMessage* messageReceived(const SerializedMessage &encodedCDAPMessage, int portId);
+	const CDAPMessage* messageReceived(const SerializedObject &encodedCDAPMessage, int portId);
 	void messageSent(const CDAPMessage &cdap_message, int port_id);
 	int get_port_id(std::string destination_application_process_name);
 	const CDAPMessage* getOpenConnectionRequestMessage(int port_id,
@@ -299,8 +299,8 @@ private:
 /// Google Protocol Buffers Wire Message Provider
 class GPBWireMessageProvider :  public WireMessageProviderInterface {
 public:
-	const CDAPMessage* deserializeMessage(const SerializedMessage &message);
-	const SerializedMessage* serializeMessage(const CDAPMessage &cdapMessage);
+	const CDAPMessage* deserializeMessage(const SerializedObject &message);
+	const SerializedObject* serializeMessage(const CDAPMessage &cdapMessage);
 };
 
 }
