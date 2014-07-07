@@ -904,7 +904,7 @@ static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         ipcm->pending_ipcp_enrollments.erase(mit);
 }
 
-static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *e,
+static void neighbors_modified_notification_event_handler(rina::IPCEvent *e,
                                                           EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::NeighborsModifiedNotificationEvent, event);
@@ -1106,8 +1106,8 @@ void register_handlers_all(EventLoop& loop)
                         enroll_to_dif_request_event_handler);
         loop.register_event(rina::ENROLL_TO_DIF_RESPONSE_EVENT,
                         enroll_to_dif_response_event_handler);
-        loop.register_event(rina::NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
-                        neighbors_modified_notificaiton_event_handler);
+        loop.register_event(rina::NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
+                        neighbors_modified_notification_event_handler);
         loop.register_event(rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
                         ipc_process_dif_registration_notification_handler);
         loop.register_event(rina::IPC_PROCESS_QUERY_RIB,
