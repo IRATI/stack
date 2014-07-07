@@ -187,14 +187,15 @@ ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
                 if (success) {
                         req_event.portId = event->portId;
                 } else {
-                        cerr << __func__ << ": Error: Flow allocation "
+                        cout << __func__ << ": Info: Flow allocation "
                                 "from application " <<
                                 req_event.localApplicationName.toString() <<
                                 " to application " <<
                                 req_event.remoteApplicationName.toString() <<
                                 " in DIF " << slave_ipcp->getDIFInformation().
                                 dif_name_.toString() <<
-                                " with port-id " << event->portId << endl;
+                                " with port-id " << event->portId <<
+                                " failed" << endl;
 
                         // TODO retry with other DIFs
                 }
@@ -221,19 +222,56 @@ ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
 }
 
 void
-allocate_flow_request_result_event_handler(rina::IPCEvent *event,
-					EventLoopData *opaque)
+allocate_flow_request_result_event_handler(rina::IPCEvent *e,
+					   EventLoopData *opaque)
 {
-        (void) event; // Stop compiler barfs
+        (void) e; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
 void
-allocate_flow_response_event_handler(rina::IPCEvent *event,
-					EventLoopData *opaque)
+allocate_flow_response_event_handler(rina::IPCEvent *e,
+				     EventLoopData *opaque)
 {
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
+        DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, PendingFlowAllocation>::iterator mit;
+        bool success = (event->result == 0);
+
+        mit = ipcm->pending_flow_allocations.find(event->sequenceNumber);
+        if (mit == ipcm->pending_flow_allocations.end()) {
+                return;
+        }
+
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::FlowRequestEvent& req_event = mit->second.req_event;
+
+        try {
+                // Inform the IPC process about the response of the flow
+                // allocation procedure
+                slave_ipcp->allocateFlowResponse(req_event, event->result,
+                                        event->notifySource,
+                                        event->flowAcceptorIpcProcessId);
+                if (success) {
+                        // TODO success info
+                } else {
+                        cout << __func__ << ": Info: Flow allocation "
+                                "from application " <<
+                                req_event.localApplicationName.toString() <<
+                                " to application " <<
+                                req_event.remoteApplicationName.toString() <<
+                                " in DIF " << slave_ipcp->getDIFInformation().
+                                dif_name_.toString() << " failed" << endl;
+                        req_event.portId = -1;
+                }
+        } catch (rina::AllocateFlowException) {
+                cerr << __func__ << ": Error while informing IPC "
+                        << "process " << slave_ipcp->name.toString() <<
+                        " about failed flow allocation" << endl;
+                req_event.portId = -1;
+        }
+
+        ipcm->pending_flow_allocations.erase(mit);
 }
 
 void
