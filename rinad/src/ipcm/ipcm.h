@@ -116,6 +116,10 @@ class IPCManager : public EventLoopData {
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
                 rina::IPCProcess *slave_ipcp);
 
+        int update_dif_configuration(
+                rina::IPCProcess *ipcp,
+                const rina::DIFConfiguration& dif_config);
+
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
@@ -125,6 +129,7 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
         std::map<unsigned int, PendingAppRegistration> pending_app_registrations;
         std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
+        std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
 
         IPCMConcurrency concurrency;
 

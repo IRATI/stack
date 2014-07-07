@@ -397,6 +397,28 @@ IPCManager::unregister_app_from_ipcp(
         return 0;
 }
 
+int
+IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
+                                     const rina::DIFConfiguration& dif_config)
+{
+        try {
+                unsigned int seqnum;
+
+                // Request a configuration update for the IPC process
+                /* XXX The meaning of this operation is unclear: what
+                 * configuration is modified? The configuration of the
+                 * IPC process only or the configuration of the whole DIF
+                 * (which possibly contains more IPC process, both on the same
+                 * processing systems and on different processing systems) ?
+                 */
+                seqnum = ipcp->updateDIFConfiguration(dif_config);
+                pending_dif_config_updates[seqnum] = ipcp;
+        } catch (rina::UpdateDIFConfigurationException) {
+                cerr << __func__ << ": Error while updating DIF configuration "
+                        " for IPC process " << ipcp->name.toString() << endl;
+        }
+}
+
 static void flow_allocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
 }
@@ -763,6 +785,8 @@ static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
         if (mit != ipcm->pending_ipcp_dif_assignments.end()) {
                 rina::IPCProcess *ipcp = mit->second;
 
+                // Inform the IPC process about the result of the
+                // DIF assignment operation
                 try {
                         ipcp->assignToDIFResult(success);
                 } catch (rina::AssignToDIFException) {
@@ -773,16 +797,43 @@ static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
                 ipcm->pending_ipcp_dif_assignments.erase(mit);
         } else {
                 cerr <<  __func__ << ": Warning: DIF assignment response "
-                        "received, but no pending DIF assignment " << endl;
+                        "received, but no pending DIF assignment" << endl;
         }
 }
 
-static void update_dif_config_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void update_dif_config_request_event_handler(rina::IPCEvent *e,
+                                                    EventLoopData *opaque)
 {
 }
 
-static void update_dif_config_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void update_dif_config_response_event_handler(rina::IPCEvent *e,
+                                                     EventLoopData *opaque)
 {
+        DOWNCAST_DECL(e, rina::UpdateDIFConfigurationResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess*>::iterator mit;
+        bool success = (event->result == 0);
+        rina::IPCProcess *ipcp = NULL;
+
+        mit = ipcm->pending_dif_config_updates.find(event->sequenceNumber);
+        if (mit == ipcm->pending_dif_config_updates.end()) {
+                cerr << __func__ << ": Warning: DIF configuration update "
+                        "response received, but no corresponding pending "
+                        "request" << endl;
+                return;
+        }
+
+        ipcp = mit->second;
+        try {
+
+                // Inform the requesting IPC process about the result of
+                // the configuration update operation
+                ipcp->updateDIFConfigurationResult(success);
+        } catch (rina::UpdateDIFConfigurationException) {
+                cerr << __func__ << ": Error while reporting DIF "
+                        "configuration update for process " <<
+                        ipcp->name.toString() << endl;
+        }
 }
 
 static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
