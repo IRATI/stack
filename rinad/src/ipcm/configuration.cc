@@ -333,14 +333,14 @@ void parse_dif_configs(const Json::Value   &root,
                 // TODO: rina::RMTConfiguration rmtConfiguration;
                 // TODO: std::map<std::string, std::string> policies;
                 // TODO: std::map<std::string, std::string> policyParameters;
-                // TODO: NMinusOneFlowsConfiguration 
+                // TODO: NMinusOneFlowsConfiguration
                 //       nMinusOneFlowsConfiguration;
-                // TODO: std::list<ExpectedApplicationRegistration> 
+                // TODO: std::list<ExpectedApplicationRegistration>
                 //       expectedApplicationRegistrations;
                 // TODO: std::list<DirectoryEntry> directory;
-                // TODO: std::list<KnownIPCProcessAddress> 
+                // TODO: std::list<KnownIPCProcessAddress>
                 //       knownIPCProcessAddresses;
-                // TODO: rina::PDUFTableGeneratorConfiguration 
+                // TODO: rina::PDUFTableGeneratorConfiguration
                 //       pdufTableGeneratorConfiguration;
                 // TODO: std::list<AddressPrefixConfiguration> addressPrefixes;
                 // TODO: std::list<rina::Parameter> configParameters;
@@ -490,7 +490,7 @@ void parse_app_to_dif(const Json::Value &root,
                                  string());
 
                         applicationToDIFMappings.insert
-                                (pair<string, 
+                                (pair<string,
                                  rina::ApplicationProcessNamingInformation>
                                  (encodedAppName, difName));
                 }
