@@ -45,4 +45,5 @@ ipcm_SOURCES  =					\
 	ipcm.cc ipcm.h				\
 	configuration.cc configuration.h	\
 	application-registration.cc		\
-	application-registration.h
+	application-registration.h		\
+	flow-allocation.cc flow-allocation.h

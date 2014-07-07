@@ -35,6 +35,7 @@
 #include "helpers.h"
 #include "ipcm.h"
 #include "application-registration.h"
+#include "flow-allocation.h"
 
 using namespace std;
 
@@ -396,43 +397,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
         return 0;
 }
 
-static void flow_allocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-static void allocate_flow_request_result_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-static void allocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-static void flow_deallocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-static void deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
 static void application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-static void flow_deallocated_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
@@ -633,18 +598,6 @@ static void os_process_finalized_handler(rina::IPCEvent *e,
                         ipcm->unregister_app_from_ipcp(req_event, ipcps[i]);
                 }
         }
-}
-
-static void ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-static void ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
 }
 
 static void query_rib_response_event_handler(rina::IPCEvent *e,
