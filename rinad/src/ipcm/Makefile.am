@@ -43,4 +43,6 @@ ipcm_LDADD    =					\
 ipcm_SOURCES  =					\
 	main.cc					\
 	ipcm.cc ipcm.h				\
-	configuration.cc configuration.h
+	configuration.cc configuration.h	\
+	application-registration.cc		\
+	application-registration.h

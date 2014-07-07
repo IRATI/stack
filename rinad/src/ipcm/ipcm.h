@@ -141,4 +141,9 @@ class IPCManager : public EventLoopData {
 void register_handlers_all(EventLoop& loop);
 
 }
+
+/* Macro useful to perform downcasts in declarations. */
+#define DOWNCAST_DECL(_var,_class,_name)        \
+        _class *_name = dynamic_cast<_class*>(_var);
+
 #endif  /* __IPCM_H__ */
