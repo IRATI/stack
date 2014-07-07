@@ -1732,7 +1732,7 @@ int testIpcmNeighborsModifiedNotificaiton() {
 
         int result = putBaseNetlinkMessage(netlinkMessage, &message);
         if (result < 0) {
-                std::cout << "Error constructing Ipcm Modify Neighbors notificaiton "
+                std::cout << "Error constructing Ipcm Modify Neighbors notification "
                                 << "Message \n";
                 nlmsg_free(netlinkMessage);
                 return result;

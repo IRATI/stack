@@ -1248,7 +1248,7 @@ NeighborsModifiedNotificationEvent::NeighborsModifiedNotificationEvent(
                         unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber) :
-                                IPCEvent(NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
+                                IPCEvent(NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
                                                 sequenceNumber) {
         this->ipcProcessId = ipcProcessId;
         this->neighbors = neighbors;
