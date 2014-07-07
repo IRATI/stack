@@ -138,12 +138,12 @@ public:
 /// Event that signals the deallocation of an N-1 flow
 class NMinusOneFlowDeallocatedEvent: public BaseEvent {
 public:
-	NMinusOneFlowDeallocatedEvent(unsigned int port_id,
+	NMinusOneFlowDeallocatedEvent(int port_id,
 			rina::CDAPSessionDescriptor * cdap_session_descriptor);
 	const std::string toString();
 
 	/// The portId of the flow deallocated
-	unsigned int port_id_;
+	int port_id_;
 
 	/// The descriptor of the CDAP session
 	rina::CDAPSessionDescriptor * cdap_session_descriptor_;
@@ -156,6 +156,19 @@ public:
 	const std::string toString();
 
 	rina::Neighbor * neighbor_;
+};
+
+/// The IPC Process has enrolled with a new neighbor
+class NeighborAddedEvent: public BaseEvent {
+public:
+	NeighborAddedEvent(rina::Neighbor * neighbor, bool enrollee);
+	const std::string toString();
+
+	rina::Neighbor * neighbor_;
+
+	/// True if this IPC Process requested the enrollment operation,
+	/// false if it was its neighbor.
+	bool enrollee_;
 };
 
 }

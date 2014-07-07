@@ -447,18 +447,14 @@ void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
 
 //Class FlowStateDatabase
 const int FlowStateDatabase::NO_AVOID_PORT = -1;
-const int FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
+const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
 FlowStateDatabase::FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
-		flow_state_rib_object_group, int maximum_age) {
+		flow_state_rib_object_group, rina::Timer * timer) {
 	encoder_ = encoder;
 	flow_state_rib_object_group_ = flow_state_rib_object_group;
-	maximum_age_ = maximum_age;
 	modified_ = false;
-}
-
-const std::list<FlowStateObject *>& FlowStateDatabase::get_flow_state_objects() const {
-	return flow_state_objects_;
+	timer_ = timer;
 }
 
 bool FlowStateDatabase::isEmpty() const {
@@ -498,14 +494,14 @@ FlowStateObject * FlowStateDatabase::getByPortId(int portId) {
 	return 0;
 }
 
-bool FlowStateDatabase::deprecateObject(int portId) {
+bool FlowStateDatabase::deprecateObject(int portId, int maximum_age) {
 	FlowStateObject * fso = getByPortId(portId);
 	if (!fso) {
 		return false;
 	}
 
 	fso->up_ = false;
-	fso->age_ = maximum_age_;
+	fso->age_ = maximum_age;
 	fso->sequence_number_ = fso->sequence_number_ + 1;
 	fso->avoid_port_ = NO_AVOID_PORT;
 	fso->modified_ = true;
@@ -563,19 +559,18 @@ std::vector< std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagat
 	return result;
 }
 
-void FlowStateDatabase::incrementAge() {
+void FlowStateDatabase::incrementAge(int maximum_age) {
 	std::list<FlowStateObject *>::iterator it;
 	for(it=flow_state_objects_.begin(); it!=flow_state_objects_.end(); ++it) {
 		(*it)->age_ = (*it)->age_ + 1;
-		if ((*it)->age_ >= maximum_age_ && !(*it)->being_erased_) {
+
+		if ((*it)->age_ >= maximum_age && !(*it)->being_erased_) {
 			LOG_DBG("Object to erase age: %d", (*it)->age_);
-			//TODO statrt Kill Flow Satte Object Timer
-			//Timer killFlowStateObjectTimer = new Timer();
-			//killFlowStateObjectTimer.schedule(new KillFlowStateObject(fsRIBGroup, flowStateObjectArray.get(i), this),
-					//WAIT_UNTIL_REMOVE_OBJECT);
+			KillFlowStateObjectTimerTask * ksttask = new KillFlowStateObjectTimerTask(
+					flow_state_rib_object_group_, (*it), this);
+			timer_->scheduleTask(ksttask, WAIT_UNTIL_REMOVE_OBJECT);
 			(*it)->being_erased_ = true;
 		}
-
 	}
 }
 
@@ -653,13 +648,312 @@ void LinkStatePDUFTCDAPMessageHandler::readResponse(const rina::CDAPMessage * cd
 	pduft_generator_policy_->writeMessageReceived(cdapMessage, cdapSessionDescriptor->get_port_id());
 }
 
+//Class ComputePDUFTTimerTask
+ComputePDUFTTimerTask::ComputePDUFTTimerTask(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy,
+		long delay) {
+	pduft_generator_policy_ = pduft_generator_policy;
+	delay_ = delay;
+}
+
+void ComputePDUFTTimerTask::run() {
+	pduft_generator_policy_->forwardingTableUpdate();
+
+	//Re-schedule
+	ComputePDUFTTimerTask * task = new ComputePDUFTTimerTask(pduft_generator_policy_, delay_);
+	pduft_generator_policy_->timer_->scheduleTask(task, delay_);
+}
+
+//Class KillFlowStateObjectTimerTask
+KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(FlowStateRIBObjectGroup * fs_rib_group,
+			FlowStateObject * fso, FlowStateDatabase * fs_db) {
+	fs_rib_group_ = fs_rib_group;
+	fso_ = fso;
+	fs_db_ = fs_db;
+}
+
+void KillFlowStateObjectTimerTask::run() {
+	std::list<FlowStateObject *>::iterator it;
+	for(it = fs_db_->flow_state_objects_.begin(); it != fs_db_->flow_state_objects_.end(); ++it) {
+		if ((*it)->address_ == fso_->address_ &&
+				(*it)->neighbor_address_ == fso_->neighbor_address_ &&
+				(*it)->port_id_ == fso_->port_id_) {
+			fs_db_->flow_state_objects_.erase(it);
+			break;
+		}
+	}
+
+	try {
+		fs_rib_group_->deleteObject(fso_);
+		fs_db_->modified_ = true;
+		LOG_DBG("Old object removed: %s", fso_->object_name_.c_str());
+	} catch (Exception &e) {
+		LOG_ERR("Object could not be removed from the RIB");
+	}
+
+	delete fso_;
+}
+
+//Class PropagateFSODBTimerTask
+PropagateFSODBTimerTask::PropagateFSODBTimerTask(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy,
+		long delay) {
+	pduft_generator_policy_ = pduft_generator_policy;
+	delay_ = delay;
+}
+
+void PropagateFSODBTimerTask::run() {
+	pduft_generator_policy_->propagateFSDB();
+
+	//Re-schedule
+	PropagateFSODBTimerTask * task = new PropagateFSODBTimerTask(pduft_generator_policy_, delay_);
+	pduft_generator_policy_->timer_->scheduleTask(task, delay_);
+}
+
+//Class UpdateAgeTimerTask
+UpdateAgeTimerTask::UpdateAgeTimerTask(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy,
+		long delay) {
+	pduft_generator_policy_ = pduft_generator_policy;
+	delay_ = delay;
+}
+
+void UpdateAgeTimerTask::run() {
+	pduft_generator_policy_->updateAge();
+
+	//Re-schedule
+	UpdateAgeTimerTask * task = new UpdateAgeTimerTask(pduft_generator_policy_, delay_);
+	pduft_generator_policy_->timer_->scheduleTask(task, delay_);
+}
+
 //Class LinkStatePDUFTGPolicy
+const int LinkStatePDUFTGeneratorPolicy::MAXIMUM_BUFFER_SIZE = 4096;
+
 LinkStatePDUFTGeneratorPolicy::LinkStatePDUFTGeneratorPolicy(){
+	test_ = false;
+	ipc_process_ = 0;
+	rib_daemon_ = 0;
+	encoder_ = 0;
+	cdap_session_manager_ = 0;
+	fs_rib_group_ = 0;
+	routing_algorithm_ = 0;
+	source_vertex_ = 0;
+	maximum_age_ = INT_MAX;
+	db_ = 0;
+	timer_ = new rina::Timer();
+	lock_ = new rina::Lockable();
+}
+
+LinkStatePDUFTGeneratorPolicy::~LinkStatePDUFTGeneratorPolicy() {
+	if (routing_algorithm_) {
+		delete routing_algorithm_;
+	}
+
+	if (db_) {
+		delete db_;
+	}
+
+	if (timer_) {
+		delete timer_;
+	}
+
+	if (lock_) {
+		delete lock_;
+	}
+}
+
+void LinkStatePDUFTGeneratorPolicy::set_ipc_process(IPCProcess * ipc_process) {
+	ipc_process_ = ipc_process;
+	rib_daemon_ = ipc_process_->get_rib_daemon();
+	encoder_ = ipc_process_->get_encoder();
+	cdap_session_manager_ = ipc_process_->get_cdap_session_manager();
+	populateRIB();
+	subscribeToEvents();
+	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_);
+}
+
+void LinkStatePDUFTGeneratorPolicy::populateRIB() {
+	try{
+		fs_rib_group_ = new FlowStateRIBObjectGroup(ipc_process_, this);
+		rib_daemon_->addRIBObject(fs_rib_group_);
+	} catch (Exception &e) {
+		LOG_ERR("Problems adding object to RIB: %s", e.what());
+	}
+}
+
+void LinkStatePDUFTGeneratorPolicy::subscribeToEvents() {
+	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED, this);
+	rib_daemon_->subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
+	rib_daemon_->subscribeToEvent(IPCP_EVENT_NEIGHBOR_ADDED, this);
+}
+
+void LinkStatePDUFTGeneratorPolicy::set_dif_configuration(
+		const rina::DIFConfiguration& dif_configuration) {
+	pduft_generator_config_ = dif_configuration.get_pduft_generator_configuration();
+	if (pduft_generator_config_.get_link_state_routing_configuration().get_routing_algorithm().compare("Dijkstra") != 0) {
+		LOG_WARN("Unsupported routing algorithm, using Dijkstra instead");
+	}
+
+	routing_algorithm_ = new DijkstraAlgorithm();
+	source_vertex_ = dif_configuration.get_address();
+
+	if (!test_) {
+		maximum_age_ = pduft_generator_config_.get_link_state_routing_configuration().get_object_maximum_age();
+		long delay = 0;
+
+		// Task to compute PDUFT
+		delay = pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_pduft_computation();
+		ComputePDUFTTimerTask * cttask = new ComputePDUFTTimerTask(this, delay);
+		timer_->scheduleTask(cttask, delay);
+
+		// Task to increment age
+		delay = pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_age_increment();
+		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
+		timer_->scheduleTask(uattask, delay);
+
+		// Task to propagate modified FSO
+		delay = pduft_generator_config_.get_link_state_routing_configuration().get_wait_until_fsodb_propagation();
+		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this, delay);
+		timer_->scheduleTask(pfttask, delay);
+	}
+}
+
+void LinkStatePDUFTGeneratorPolicy::eventHappened(Event * event) {
+	if (!event)
+		return;
+
+	rina::AccessGuard g(*lock_);
+
+	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
+		NMinusOneFlowDeallocatedEvent * flowEvent = (NMinusOneFlowDeallocatedEvent *) event;
+		processFlowDeallocatedEvent(flowEvent);
+	} else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED) {
+		NMinusOneFlowAllocatedEvent * flowEvent = (NMinusOneFlowAllocatedEvent *) event;
+		processFlowAllocatedEvent(flowEvent);
+	} else if (event->get_id() == IPCP_EVENT_NEIGHBOR_ADDED) {
+		NeighborAddedEvent * neighEvent = (NeighborAddedEvent *) event;
+		processNeighborAddedEvent(neighEvent);
+	}
+}
+
+void LinkStatePDUFTGeneratorPolicy::processFlowDeallocatedEvent(
+		NMinusOneFlowDeallocatedEvent * event) {
+	std::list<rina::FlowInformation>::iterator it;
+
+	for (it = allocated_flows_.begin(); it != allocated_flows_.end();
+			++it) {
+		if (it->getPortId() == event->port_id_) {
+			allocated_flows_.erase(it);
+			return;
+		}
+	}
+
+	db_->deprecateObject(event->port_id_, maximum_age_);
+}
+
+void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
+		NMinusOneFlowAllocatedEvent * event) {
+	try
+	{
+		db_->addObjectToGroup(ipc_process_->get_address(), event->flow_information_.getPortId(),
+				ipc_process_->getAdressByname(event->flow_information_.getRemoteAppName()), 1);
+	} catch (Exception &e) {
+		LOG_DBG("flow allocation waiting for enrollment");
+		allocated_flows_.push_back(event->flow_information_);
+	}
+}
+
+void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent * event) {
+	std::list<rina::FlowInformation>::iterator it;
+
+	for (it = allocated_flows_.begin(); it != allocated_flows_.end();
+				++it) {
+		if (it->getRemoteAppName().getProcessName().compare(
+				event->neighbor_->get_name().getProcessName()) == 0) {
+			LOG_INFO("There was an allocation flow event waiting for enrollment, launching it");
+			try {
+				db_->addObjectToGroup(ipc_process_->get_address(), it->getPortId(),
+								ipc_process_->getAdressByname(it->getRemoteAppName()), 1);
+				allocated_flows_.erase(it);
+				break;
+			} catch (Exception &e) {
+				LOG_ERR("Could not allocate the flow, no neighbor found");
+			}
+		}
+	}
+
+	enrollmentToNeighbor(event->neighbor_->get_underlying_port_id());
+}
+
+void LinkStatePDUFTGeneratorPolicy::enrollmentToNeighbor(int portId) {
+	if (db_->isEmpty()) {
+		return;
+	}
+
+	const rina::CDAPMessage * cdapMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+
+	try{
+		serializedObject = db_->encode();
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
+		cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(portId, 0,
+				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
+				&objectValue, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
+		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		db_->setAvoidPort(portId);
+		delete cdapMessage;
+		delete serializedObject;
+	}catch(Exception &e){
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		delete cdapMessage;
+		delete serializedObject;
+	}
+}
+
+bool LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
+	rina::AccessGuard g(*lock_);
+
+	//TODO Port this code
+
+	return false;
+}
+
+void LinkStatePDUFTGeneratorPolicy::updateAge() {
+	rina::AccessGuard g(*lock_);
+
+	db_->incrementAge(maximum_age_);
+}
+
+void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate() {
+	rina::AccessGuard g(*lock_);
+
+	if (!db_->modified_) {
+		return;
+	}
+
+	db_->modified_ = false;
+	std::list<rina::PDUForwardingTableEntry *> pduft = routing_algorithm_->computePDUTForwardingTable(
+			db_->getModifiedFSOs(), source_vertex_);
+	try {
+		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
+	} catch (Exception & e) {
+		LOG_ERR("Error setting PDU Forwarding Table in the kernel: %s", e.what());
+	}
 }
 
 void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 		const rina::CDAPMessage * cdapMessage, int portId){
+	rina::AccessGuard g(*lock_);
+
 	LOG_DBG("Called; %d, %d", cdapMessage->get_op_code(), portId);
+	//TODO port this code
+}
+
+bool LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
+		const rina::CDAPMessage * cdapMessage, int portId) const {
+	rina::AccessGuard g(*lock_);
+
+	LOG_DBG("Called; %d, %d", cdapMessage->get_op_code(), portId);
+	//TODO port this code
+
+	return false;
 }
 
 }
