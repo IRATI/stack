@@ -20,6 +20,9 @@ EXTRA_DIST =					\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
 	LICENSE					\
+	LICENSE-jsoncpp				\
+	LICENSE-protobuf			\
+	LICENSE-tclap				\
 	INSTALL					\
 	README
 
