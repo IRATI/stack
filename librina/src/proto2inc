@@ -8,6 +8,12 @@
 
 rm Makefile.inc
 
+cat > Makefile.inc <<EOF
+protoSOURCES =
+
+
+EOF
+
 for i in *.proto; do
     name=`echo $i|sed -e s,\.proto,,`
     cat >> Makefile.inc << EOF
@@ -31,6 +37,9 @@ MOSTLYCLEANFILES +=				\\
 EXTRA_DIST +=					\\
 	$name.proto				\\
 	$name.stamp
+
+protoSOURCES += $name.pb.cc $name.pb.h
+
 
 EOF
 

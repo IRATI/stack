@@ -1,3 +1,6 @@
+protoSOURCES =
+
+
 CDAP.stamp: CDAP.proto
 	rm -f CDAP.tmp
 	touch CDAP.tmp
@@ -18,4 +21,7 @@ MOSTLYCLEANFILES +=				\
 EXTRA_DIST +=					\
 	CDAP.proto				\
 	CDAP.stamp
+
+protoSOURCES += CDAP.pb.cc CDAP.pb.h
+
 
