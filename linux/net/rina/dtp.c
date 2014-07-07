@@ -626,6 +626,7 @@ static void seqQ_cleanup(struct dtp * dtp)
                 dt_sv_rcv_lft_win_set(dt, seq_num);
                 spin_unlock(&seqQ->lock);
                 pdu_post(dtp, pdu);
+                LOG_DBG("CLEANUP: PDU %d posted", seq_num);
 
                 spin_lock(&seqQ->lock);
                 pdu = seq_queue_pop(seqQ->queue);
@@ -721,6 +722,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         spin_unlock(&seqQ->lock);
                         if (pdu_post(dtp, pdu))
                                 return 0;
+                        LOG_DBG("Atimer: PDU %d posted", seq_num);
 
                         spin_lock(&seqQ->lock);
                         LWE = dt_sv_rcv_lft_win(dt);
@@ -1266,8 +1268,6 @@ int dtp_receive(struct dtp * instance,
         a       = dt_sv_a(dt);
         max_rcv = max_seq_nr_rcv(sv);
         LWE     = dt_sv_rcv_lft_win(dt);
-
-        LOG_DBG("A-timer timeout: %d", a);
 
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
