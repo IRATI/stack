@@ -41,11 +41,66 @@ using namespace std;
 namespace rinad {
 
 void
-flow_allocation_requested_event_handler(rina::IPCEvent *event,
+flow_allocation_requested_event_handler(rina::IPCEvent *e,
 					EventLoopData *opaque)
 {
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
+        DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        rina::ApplicationProcessNamingInformation dif_name;
+        rina::IPCProcess *ipcp = NULL;
+        bool dif_specified;
+        unsigned int seqnum;
+
+        // Find the name of the DIF that will provide the flow
+        dif_specified = ipcm->config.lookup_dif_by_application(event->
+                                        localApplicationName, dif_name);
+        if (!dif_specified) {
+                if (event->DIFName.toString().size()) {
+                        dif_name = event->DIFName;
+                        dif_specified = true;
+                }
+        }
+
+        // Select an IPC process to serve the flow request
+        if (!dif_specified) {
+                ipcp = select_ipcp();
+        } else {
+                ipcp = select_ipcp_by_dif(dif_name);
+        }
+
+        if (!ipcp) {
+                cerr << __func__ << " Error: Cannot find an IPC process to "
+                        "serve flow allocation request (local-app = " <<
+                        event->localApplicationName.toString() << ", " <<
+                        "remote-app = " << event->remoteApplicationName.
+                        toString() << endl;
+                return;
+        }
+
+        try {
+                // Ask the IPC process to allocate a flow
+                seqnum = ipcp->allocateFlow(*event);
+                ipcm->pending_flow_allocations[seqnum] =
+                                        PendingFlowAllocation(ipcp, *event,
+                                                              dif_specified);
+        } catch (rina::AllocateFlowException) {
+                cerr << __func__ << " Error while requesting IPC process "
+                        << ipcp->name.toString() << " to allocate a flow "
+                        "between " << event->localApplicationName.toString()
+                        << " and " << event->remoteApplicationName.toString()
+                        << endl;
+
+                // Inform the Application Manager about the flow allocation
+                // failure
+                event->portId = -1;
+                try {
+                        rina::applicationManager->flowAllocated(*event);
+                } catch (rina::NotifyFlowAllocatedException) {
+                        cerr << __func__ << "Error while notifying the "
+                                "Application Manager about flow allocation"
+                                << endl;
+                }
+        }
 }
 
 void
