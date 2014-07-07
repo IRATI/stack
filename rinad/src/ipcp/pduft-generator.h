@@ -25,6 +25,7 @@
 #ifdef __cplusplus
 
 #include <set>
+
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -142,6 +143,7 @@ private:
 };
 
 class IRoutingAlgorithm {
+public:
 	virtual ~IRoutingAlgorithm(){};
 
 	//Compute the next hop to other addresses. Ownership of

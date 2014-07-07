@@ -19,6 +19,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <climits>
 #include <sstream>
 
 #define RINA_PREFIX "pduft-generator"
@@ -246,7 +247,7 @@ void Graph::init_edges() {
 }
 
 Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const {
-	std::list<Graph::CheckedVertex *>::iterator it;
+	std::list<Graph::CheckedVertex *>::const_iterator it;
 	for (it = checked_vertices_.begin(); it != checked_vertices_.end(); ++it) {
 		if ((*it)->address_ == address) {
 			return (*it);
@@ -336,7 +337,7 @@ unsigned int DijkstraAlgorithm::getMinimum() const {
 }
 
 int DijkstraAlgorithm::getShortestDistance(unsigned int destination) const {
-	std::map<unsigned int, int>::iterator it;
+	std::map<unsigned int, int>::const_iterator it;
 	int distance = INT_MAX;
 
 	it = distances_.find(destination);
