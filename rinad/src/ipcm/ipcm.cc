@@ -904,10 +904,35 @@ static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         ipcm->pending_ipcp_enrollments.erase(mit);
 }
 
-static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *e,
+                                                          EventLoopData *opaque)
 {
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
+        DOWNCAST_DECL(e, rina::NeighborsModifiedNotificationEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        rina::IPCProcess *ipcp = rina::ipcProcessFactory->
+                                        getIPCProcess(event->ipcProcessId);
+
+        if (!event->neighbors.size()) {
+                cerr << __func__ << ": Warning: Empty neighbors-modified "
+                        "notification received" << endl;
+                return;
+        }
+
+        if (!ipcp) {
+                cerr << __func__ << ": Error: IPC process unexpectedly "
+                        "went away" << endl;
+                return;
+        }
+
+        if (event->added) {
+                // We have new neighbors
+                ipcp->addNeighbors(event->neighbors);
+        } else {
+                // We have lost some neighbors
+                ipcp->removeNeighbors(event->neighbors);
+        }
+
+        (void) ipcm;
 }
 
 static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
