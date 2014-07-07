@@ -27,6 +27,7 @@
 #include <librina/timer.h>
 
 #include "common/concurrency.h"
+#include "common/encoder.h"
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -400,6 +401,13 @@ private:
 	std::string             flow_object_name_;
 	bool                    requestor_;
 };
+
+/// Encoder of the Flow
+class FlowEncoder: public  EncoderInterface{
+	const rina::SerializedObject* encode(const void* object) const;
+	void* decode(const rina::SerializedObject &serialized_object) const;
+};
+
 
 }
 

@@ -24,8 +24,10 @@
 
 #define RINA_PREFIX "flow-allocator"
 
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include <librina/logs.h>
 #include "flow-allocator.h"
+#include "common/encoders/FlowMessage.pb.h"
 
 namespace rinad {
 
@@ -1188,5 +1190,124 @@ const std::string& flow_object_name, bool requestor) {
 void TearDownFlowTimerTask::run() {
 	flow_allocator_instance_->destroyFlowAllocatorInstance(flow_object_name_, requestor_);
 }
+
+// CLASS FlowEncoder
+const rina::SerializedObject* FlowEncoder::encode(const void* object) const {
+	Flow *flow = (Flow*) object;
+	rina::messages::Flow gpf_flow;
+
+	// SourceNamingInfo
+	rina::ApplicationProcessNamingInformation src_proc_nam_info =
+			flow->get_source_naming_info();
+	rina::messages::applicationProcessNamingInfo_t gpf_src_app_proc_nam_info;
+	gpf_src_app_proc_nam_info.set_applicationprocessname(
+			src_proc_nam_info.getProcessName().c_str());
+	gpf_src_app_proc_nam_info.set_applicationprocessinstance(
+			src_proc_nam_info.getProcessInstance());
+	gpf_src_app_proc_nam_info.set_applicationentityname(
+			src_proc_nam_info.getEntityName());
+	gpf_src_app_proc_nam_info.set_applicationentityinstance(
+			src_proc_nam_info.getEntityInstance());
+	gpf_flow.set_allocated_sourcenaminginfo(&gpf_src_app_proc_nam_info);
+
+	// DestinationNamingInfo
+	rina::ApplicationProcessNamingInformation dest_proc_nam_info =
+			flow->get_destination_naming_info();
+	rina::messages::applicationProcessNamingInfo_t gpf_dest_app_proc_nam_info;
+	gpf_dest_app_proc_nam_info.set_applicationprocessname(
+			dest_proc_nam_info.getProcessName().c_str());
+	gpf_dest_app_proc_nam_info.set_applicationprocessinstance(
+			dest_proc_nam_info.getProcessInstance());
+	gpf_dest_app_proc_nam_info.set_applicationentityname(
+			dest_proc_nam_info.getEntityName());
+	gpf_dest_app_proc_nam_info.set_applicationentityinstance(
+			dest_proc_nam_info.getEntityInstance());
+	gpf_flow.set_allocated_sourcenaminginfo(&gpf_dest_app_proc_nam_info);
+
+	// sourcePortId
+	gpf_flow.set_sourceportid(flow->get_source_port_id());
+
+	//destinationPortId
+	gpf_flow.set_destinationportid(flow->get_destination_port_id());
+
+	//sourceAddress
+	gpf_flow.set_sourceaddress(flow->get_source_address());
+
+	//destinationAddress
+	gpf_flow.set_destinationaddress(flow->get_source_address());
+
+	//connectionIds
+	int i = 0;
+	for (std::list<rina::Connection*>::const_iterator it =
+			flow->get_connections().begin();
+			it != flow->get_connections().end(); ++it) {
+		rina::messages::connectionId_t *gpf_connection = gpf_flow.add_connectionids();
+		//qosId
+		gpf_connection->set_qosid((*it)->getQosId());
+		//sourceCEPId
+		gpf_connection->set_sourcecepid((*it)->getSourceCepId());
+		//destinationCEPId
+		gpf_connection->set_destinationcepid((*it)->getDestCepId());
+
+		if (i == flow->get_current_connection_index()){
+			rina::ConnectionPolicies poli = (*it)->getPolicies();
+
+		}
+	}
+
+	//currentConnectionIdIndex
+	gpf_flow.set_currentconnectionidindex(flow->get_current_connection_index());
+
+	//state
+	gpf_flow.set_state(flow->get_state());
+
+	//qosParameters
+	rina::FlowSpecification flow_spec = flow->get_flow_specification();
+	rina::messages::qosSpecification_t *gpf_flow_spec = new rina::messages::qosSpecification_t;
+		//name
+	//gpf_flow_spec->set_allocated_name(flow_spec.get)
+		//qosid
+		//averageBandwidth
+	gpf_flow_spec->set_averagebandwidth(flow_spec.getAverageBandwidth());
+		//averageSDUBandwidth
+	gpf_flow_spec->set_averagesdubandwidth(flow_spec.getAverageSduBandwidth());
+		//peakBandwidthDuration
+	gpf_flow_spec->set_peakbandwidthduration(flow_spec.getPeakBandwidthDuration());
+		//peakSDUBandwidthDuration
+	gpf_flow_spec->set_peaksdubandwidthduration(flow_spec.getPeakSduBandwidthDuration());
+		//undetectedBitErrorRate
+	gpf_flow_spec->set_undetectedbiterrorrate(flow_spec.getUndetectedBitErrorRate());
+		//partialDelivery
+	gpf_flow_spec->set_partialdelivery(flow_spec.isPartialDelivery());
+		//order
+	gpf_flow_spec->set_order(flow_spec.isOrderedDelivery());
+		//maxAllowableGapSdu
+	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.getMaxAllowableGap());
+		//delay
+	gpf_flow_spec->set_delay(flow_spec.getDelay());
+		//jitter
+	gpf_flow_spec->set_jitter(flow_spec.getJitter());
+
+	gpf_flow.set_allocated_qosparameters(gpf_flow_spec);
+
+	//accessControl
+	gpf_flow.set_accesscontrol(flow->get_access_control());
+
+	//maxCreateFlowRetries
+	gpf_flow.set_maxcreateflowretries(flow->get_max_create_flow_retries());
+
+	//createFlowRetries
+	gpf_flow.set_createflowretries(flow->get_create_flow_retries());
+
+	//hopCount
+	gpf_flow.set_hopcount(flow->get_hop_count());
+
+}
+/*
+void* FlowEncoder::decode(
+		const rina::SerializedObject &serialized_object) const {
+
+}
+*/
 
 }

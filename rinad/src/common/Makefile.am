@@ -40,9 +40,8 @@ tclapSOURCES =					\
 	tclap/ZshCompletionOutput.h
 	
 encoderSOURCES =					\
-	encoders/ApplicationProcessNamingInfoMessage.pb.cc \
-	encoders/ApplicationRegistrationMessage.pb.cc  \
-	encoders/CommonMessages.pb.cc
+	encoders/CommonMessages.pb.cc	\
+	encoders/FlowMessage.pb.cc
 
 librinad_la_SOURCES  =					\
 	$(encoderSOURCES)			\
