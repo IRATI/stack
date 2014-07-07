@@ -864,6 +864,8 @@ static void update_dif_config_response_event_handler(rina::IPCEvent *e,
                         "configuration update for process " <<
                         ipcp->name.toString() << endl;
         }
+
+        ipcm->pending_dif_config_updates.erase(mit);
 }
 
 static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
