@@ -68,14 +68,6 @@ struct PendingAppRegistration {
 struct PendingIPCPUnregistration {
         rina::IPCProcess *slave_ipcp;
         rina::IPCProcess *ipcp;
-/*      TODO complete
-        rina::ApplicationUnregistrationRequestEvent req_event;
-
-        PendingIPCPUnregistration() : slave_ipcp(NULL) { }
-        PendingIPCPUnregistration(rina::IPCProcess *p,
-                        const rina::ApplicationUnregistrationRequestEvent& n)
-                                        : slave_ipcp(p), req_event(n) { }
-*/
 };
 
 struct PendingAppUnregistration {
@@ -87,6 +79,7 @@ struct PendingAppUnregistration {
                         const rina::ApplicationUnregistrationRequestEvent& n)
                                         : slave_ipcp(p), req_event(n) { }
 };
+
 
 class IPCManager : public EventLoopData {
  public:
@@ -111,20 +104,11 @@ class IPCManager : public EventLoopData {
                         std::list<rina::ApplicationProcessNamingInformation>&
                              difs);
 
-        rina::IPCProcess *select_ipcp_by_dif(const
-                        rina::ApplicationProcessNamingInformation& dif_name);
-
-        rina::IPCProcess *select_ipcp();
-
         int enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor);
 
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const std::list<rinad::NeighborData>& neighbors);
-
-        bool application_is_registered_to_ipcp(
-                        const rina::ApplicationProcessNamingInformation&,
-                        rina::IPCProcess *slave_ipcp);
 
         int unregister_app_from_ipcp(
                 const rina::ApplicationUnregistrationRequestEvent& req_event,

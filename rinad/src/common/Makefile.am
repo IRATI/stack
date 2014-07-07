@@ -14,4 +14,5 @@ librinad_la_SOURCES  =					\
 	rina-configuration.cc rina-configuration.h	\
 	event-loop.cc	      event-loop.h		\
                               concurrency.h		\
+	helpers.cc	      helpers.h			\
 	$(tclapSOURCES)

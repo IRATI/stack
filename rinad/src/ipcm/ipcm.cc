@@ -31,6 +31,7 @@
 
 #include "event-loop.h"
 #include "rina-configuration.h"
+#include "helpers.h"
 #include "ipcm.h"
 
 using namespace std;
@@ -256,48 +257,6 @@ out:
         return ret;
 }
 
-/* Returns an IPC process assigned to the DIF specified by @dif_name,
- * if any.
- */
-rina::IPCProcess *
-IPCManager::select_ipcp_by_dif(const
-                        rina::ApplicationProcessNamingInformation& dif_name)
-{
-        const vector<rina::IPCProcess *>& ipcps =
-                rina::ipcProcessFactory->listIPCProcesses();
-
-        for (unsigned int i = 0; i < ipcps.size(); i++) {
-                rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
-
-                if (dif_info.dif_name_ == dif_name) {
-                        return ipcps[i];
-                }
-        }
-
-        return NULL;
-}
-
-// Returns any IPC process in the system, giving priority to
-// normal IPC processes.
-rina::IPCProcess *
-IPCManager::select_ipcp()
-{
-        const vector<rina::IPCProcess *>& ipcps =
-                rina::ipcProcessFactory->listIPCProcesses();
-
-        for (unsigned int i = 0; i < ipcps.size(); i++) {
-                if (ipcps[i]->type == rina::NORMAL_IPC_PROCESS) {
-                        return ipcps[i];
-                }
-        }
-
-        for (unsigned int i = 0; i < ipcps.size(); i++) {
-                return ipcps[i];
-        }
-
-        return NULL;
-}
-
 int
 IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                             const rina::ApplicationProcessNamingInformation&
@@ -412,25 +371,6 @@ IPCManager::apply_configuration()
         return 0;
 }
 
-bool
-IPCManager::application_is_registered_to_ipcp(
-                const rina::ApplicationProcessNamingInformation& app_name,
-                rina::IPCProcess *slave_ipcp)
-{
-        const list<rina::ApplicationProcessNamingInformation>&
-                registered_apps = slave_ipcp->getRegisteredApplications();
-
-        for (list<rina::ApplicationProcessNamingInformation>::const_iterator
-                        it = registered_apps.begin();
-                                it != registered_apps.end(); it++) {
-                if (app_name == *it) {
-                        return true;
-                }
-        }
-
-        return false;
-}
-
 int
 IPCManager::unregister_app_from_ipcp(
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
@@ -507,16 +447,16 @@ static void application_registration_request_event_handler(rina::IPCEvent *e,
                 if (found) {
                         // If a mapping exists, select an IPC process
                         // from the specified DIF.
-                        slave_ipcp = ipcm->select_ipcp_by_dif(dif_name);
+                        slave_ipcp = select_ipcp_by_dif(dif_name);
                 } else {
                         // Otherwise select any IPC process.
-                        slave_ipcp = ipcm->select_ipcp();
+                        slave_ipcp = select_ipcp();
                 }
         } else if (info.applicationRegistrationType ==
                         rina::APPLICATION_REGISTRATION_SINGLE_DIF) {
                 // Select an IPC process from the DIF specified in the
                 // registration request.
-                slave_ipcp = ipcm->select_ipcp_by_dif(info.difName);
+                slave_ipcp = select_ipcp_by_dif(info.difName);
         } else {
                 cerr << __func__ << ": Unsupported registration type: "
                         << info.applicationRegistrationType << endl;
@@ -677,7 +617,7 @@ static void application_unregistration_request_event_handler(
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         // Select any IPC process in the DIF from which the application
         // wants to unregister from
-        rina::IPCProcess *slave_ipcp = ipcm->select_ipcp_by_dif(event->DIFName);
+        rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);
         int err;
 
         if (!slave_ipcp) {
@@ -886,7 +826,7 @@ static void os_process_finalized_handler(rina::IPCEvent *e,
         // Look if the terminating application has pending registrations
         // with some IPC process
         for (unsigned int i = 0; i < ipcps.size(); i++) {
-                if (ipcm->application_is_registered_to_ipcp(app_name,
+                if (application_is_registered_to_ipcp(app_name,
                                                             ipcps[i])) {
                         // Build a structure that will be used during
                         // the unregistration process. The last argument
