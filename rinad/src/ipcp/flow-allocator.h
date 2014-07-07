@@ -34,10 +34,6 @@ namespace rinad {
 /// Encapsulates all the information required to manage a Flow
 class Flow {
 public:
-	static const std::string FLOW_SET_RIB_OBJECT_NAME;
-	static const std::string FLOW_SET_RIB_OBJECT_CLASS ;
-	static const std::string FLOW_RIB_OBJECT_CLASS;
-
 	enum IPCPFlowState {
                 EMPTY,
                 ALLOCATION_IN_PROGRESS,
@@ -48,40 +44,9 @@ public:
 
 	Flow();
 	~Flow();
-	bool is_source() const;
-	void set_source(bool source);
-	const rina::ApplicationProcessNamingInformation& get_source_naming_info() const;
-	void set_source_naming_info(const rina::ApplicationProcessNamingInformation &source_naming_info);
-	const rina::ApplicationProcessNamingInformation& get_destination_naming_info() const;
-	void set_destination_naming_info(const rina::ApplicationProcessNamingInformation& destination_naming_info);
-	unsigned int get_source_port_id() const;
-	void set_source_port_id(unsigned int source_port_id);
-	unsigned int get_destination_port_id() const;
-	void set_destination_port_id(unsigned int destination_port_id);
-	unsigned int get_source_address() const;
-	void set_source_address(unsigned int source_address);
-	unsigned int get_destination_address() const;
-	void set_destination_address(unsigned int destination_address);
-	const std::list<rina::Connection*>& get_connections() const;
-	void set_connections(const std::list<rina::Connection*>& connections);
-	unsigned int get_current_connection_index() const;
-	void set_current_connection_index(unsigned int current_connection_index);
 	rina::Connection * getActiveConnection();
-	IPCPFlowState get_state() const;
-	void set_state(IPCPFlowState state);
-	const rina::FlowSpecification& get_flow_specification() const;
-	void set_flow_specification(const rina::FlowSpecification& flow_specification);
-	char* get_access_control() const;
-	void set_access_control(char* access_control);
-	unsigned int get_max_create_flow_retries() const;
-	void set_max_create_flow_retries(unsigned int max_create_flow_retries);
-	unsigned int get_create_flow_retries() const;
-	void set_create_flow_retries(unsigned int create_flow_retries);
-	unsigned int get_hop_count() const;
-	void set_hop_count(unsigned int hopCount);
 	std::string toString();
 
-private:
 	/// The application that requested the flow
 	rina::ApplicationProcessNamingInformation source_naming_info_;
 
@@ -242,10 +207,6 @@ private:
 /// Representation of a set of QoS cubes in the RIB
 class QoSCubeSetRIBObject: public BaseRIBObject {
 public:
-	static const std::string QOS_CUBE_SET_RIB_OBJECT_NAME;
-	static const std::string QOS_CUBE_SET_RIB_OBJECT_CLASS ;
-	static const std::string QOS_CUBE_RIB_OBJECT_CLASS;
-
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
 	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
@@ -278,7 +239,7 @@ private:
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	INamespaceManager * namespace_manager_;
 
 	/// Create initial RIB objects
@@ -358,7 +319,7 @@ private:
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
 	IRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;

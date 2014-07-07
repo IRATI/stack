@@ -24,9 +24,6 @@
 namespace rinad {
 
 //	CLASS EnrollmentInformationRequest
-const std::string EnrollmentInformationRequest::ENROLLMENT_INFO_OBJECT_NAME = RIBObjectNames::SEPARATOR + RIBObjectNames::DAF +
-			RIBObjectNames::SEPARATOR + RIBObjectNames::MANAGEMENT + RIBObjectNames::SEPARATOR + RIBObjectNames::ENROLLMENT;
-
 EnrollmentInformationRequest::EnrollmentInformationRequest() {
 	address_ = 0;
 }
