@@ -44,7 +44,7 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
 
         ASSERT(is_port_id_ok(port_id));
 
-        tmp = rkmalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkmalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
