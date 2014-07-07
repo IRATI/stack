@@ -77,11 +77,22 @@ PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
+AC_PATH_PROG([PROTOC], [protoc], [/bin/false])
+
+LIBPROTOBUF_MIN_VERSION=2.5.0
+AC_SUBST(LIBPROTOBUF_MIN_VERSION, $LIBPROTOBUF_MIN_VERSION)
+
+PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
+    AC_MSG_ERROR([Your system lacks of libprotobuf support (>= $LIBPROTOBUF_MIN_VERSION)])
+])
+
 AC_CONFIG_FILES([
     Makefile
 
     src/Makefile
     src/common/Makefile
+    src/common/encoders/Makefile
+    src/common/tclap/Makefile
     src/ipcp/Makefile
     src/ipcm/Makefile
 

@@ -153,6 +153,5 @@ public:
 
 }
 
-
 #endif
 #endif /// ENCODER_H_////

@@ -17,14 +17,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
-#include "encoder.h"
+
 #include <librina/application.h>
+
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+
+#include "encoder.h"
 #include "encoders/ApplicationProcessNamingInfoMessage.pb.h"
 #include "encoders/ApplicationRegistrationMessage.pb.h"
 
 namespace rinad {
-
 
 /// CLASS Encoder
 Encoder::~Encoder() {
