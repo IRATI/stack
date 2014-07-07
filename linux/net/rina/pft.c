@@ -233,7 +233,7 @@ static int pfte_ports_copy(struct pft_entry * entry,
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft {
-        spinlock_t       write_lock;
+        struct mutex     write_lock;
         struct list_head entries;
 };
 
@@ -245,7 +245,7 @@ static struct pft * pft_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
-        spin_lock_init(&tmp->write_lock);
+        mutex_init(&tmp->write_lock);
 
         INIT_LIST_HEAD(&tmp->entries);
 
@@ -300,11 +300,11 @@ int pft_flush(struct pft * instance)
         if (!__pft_is_ok(instance))
                 return -1;
 
-        spin_lock(&instance->write_lock);
+        mutex_lock(&instance->write_lock);
 
         __pft_flush(instance);
 
-        spin_unlock(&instance->write_lock);
+        mutex_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -314,11 +314,11 @@ int pft_destroy(struct pft * instance)
         if (!__pft_is_ok(instance))
                 return -1;
 
-        spin_lock(&instance->write_lock);
+        mutex_lock(&instance->write_lock);
 
         __pft_flush(instance);
 
-        spin_unlock(&instance->write_lock);
+        mutex_unlock(&instance->write_lock);
 
         rkfree(instance);
 
@@ -369,13 +369,13 @@ int pft_add(struct pft *      instance,
                 return -1;
         }
 
-        spin_lock(&instance->write_lock);
+        mutex_lock(&instance->write_lock);
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
                 tmp = pfte_create_ni(destination, qos_id);
                 if (!tmp) {
-                        spin_unlock(&instance->write_lock);
+                        mutex_unlock(&instance->write_lock);
                         return -1;
                 }
 
@@ -385,12 +385,12 @@ int pft_add(struct pft *      instance,
         for (i = 0; i < count; i++) {
                 if (pfte_port_add(tmp, ports[i])) {
                         pfte_destroy(tmp);
-                        spin_unlock(&instance->write_lock);
+                        mutex_unlock(&instance->write_lock);
                         return -1;
                 }
         }
 
-        spin_unlock(&instance->write_lock);
+        mutex_unlock(&instance->write_lock);
 
         return 0;
 }
@@ -420,11 +420,11 @@ int pft_remove(struct pft *      instance,
                 return -1;
         }
 
-        spin_lock(&instance->write_lock);
+        mutex_lock(&instance->write_lock);
 
         tmp = pft_find(instance, destination, qos_id);
         if (!tmp) {
-                spin_unlock(&instance->write_lock);
+                mutex_unlock(&instance->write_lock);
                 return -1;
         }
 
@@ -436,7 +436,7 @@ int pft_remove(struct pft *      instance,
                 pfte_destroy(tmp);
         }
 
-        spin_unlock(&instance->write_lock);
+        mutex_unlock(&instance->write_lock);
 
         return 0;
 }
