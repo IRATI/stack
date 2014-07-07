@@ -1003,10 +1003,15 @@ static void ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event, Eve
         (void) opaque;    // Stop compiler barfs
 }
 
-static void query_rib_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void query_rib_response_event_handler(rina::IPCEvent *e,
+                                             EventLoopData *opaque)
 {
+        DOWNCAST_DECL(e, rina::QueryRIBResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+
+        cout << "Query RIB response event arrived" << endl;
         (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
+        (void) ipcm;    // Stop compiler barfs
 }
 
 static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
