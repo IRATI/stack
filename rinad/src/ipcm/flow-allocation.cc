@@ -95,8 +95,8 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
                         rina::applicationManager->flowAllocated(*event);
                 } catch (rina::NotifyFlowAllocatedException) {
                         cerr << __func__ << ": Error while notifying the "
-                                "Application Manager about flow allocation"
-                                << endl;
+                                "Application Manager about flow allocation "
+                                "result" << endl;
                 }
         }
 }
@@ -160,6 +160,67 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
 }
 
 void
+ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
+					EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::IpcmAllocateFlowRequestResultEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, PendingFlowAllocation>::iterator mit;
+        bool success = (event->result == 0);
+
+        mit = ipcm->pending_flow_allocations.find(event->sequenceNumber);
+        if (mit == ipcm->pending_flow_allocations.end()) {
+                cerr << __func__ << ": Warning: Flow request result "
+                        "received but no corresponding request" << endl;
+                return;
+        }
+
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::FlowRequestEvent& req_event = mit->second.req_event;
+
+        req_event.portId = -1;
+        try {
+                // Inform the IPC process about the result of the
+                // flow allocation operation
+                slave_ipcp->allocateFlowResult(event->sequenceNumber,
+                                               success, event->portId);
+                if (success) {
+                        req_event.portId = event->portId;
+                } else {
+                        cerr << __func__ << ": Error: Flow allocation "
+                                "from application " <<
+                                req_event.localApplicationName.toString() <<
+                                " to application " <<
+                                req_event.remoteApplicationName.toString() <<
+                                " in DIF " << slave_ipcp->getDIFInformation().
+                                dif_name_.toString() <<
+                                " with port-id " << event->portId << endl;
+
+                        // TODO retry with other DIFs
+                }
+        } catch (rina::AllocateFlowException) {
+                cerr << __func__ << ": Error while informing the IPC process "
+                        << slave_ipcp->name.toString() << " about result of "
+                        "flow allocation between applications " <<
+                        req_event.localApplicationName.toString() <<
+                        " and " << req_event.remoteApplicationName.toString()
+                        << endl;
+        }
+
+        // Inform the Application Manager about the flow allocation
+        // result
+        try {
+                rina::applicationManager->flowAllocated(req_event);
+        } catch (rina::NotifyFlowAllocatedException) {
+                cerr << __func__ << ": Error while notifying the "
+                        "Application Manager about flow allocation result"
+                        << endl;
+        }
+
+        ipcm->pending_flow_allocations.erase(mit);
+}
+
+void
 allocate_flow_request_result_event_handler(rina::IPCEvent *event,
 					EventLoopData *opaque)
 {
@@ -201,14 +262,6 @@ flow_deallocated_event_handler(rina::IPCEvent *event,
 
 void
 ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event,
-					EventLoopData *opaque)
-{
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
-}
-
-void
-ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event,
 					EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
