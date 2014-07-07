@@ -41,17 +41,17 @@ namespace rinad {
 
 void parse_policy(const Json::Value  &root,
                   const string       &name,
-                  rina::PolicyConfig &pol) 
+                  rina::PolicyConfig &pol)
 {
         Json::Value p = root[name];
-        
+
         pol.name_ = p.get("name", string()).asString();
         pol.version_ = p.get("version", string()).asString();
 
         Json::Value par = p["parameters"];
         if (par != 0) {
                 for (unsigned int i = 0; i < par.size(); i++) {
-                        rina::PolicyParameter pp;       
+                        rina::PolicyParameter pp;
 
                         pp.name_ = par[i].get("name", string()).asString();
                         pp.value_ = par[i].get("value", string()).asString();
@@ -71,30 +71,30 @@ void parse_dif_configs(const Json::Value   &root,
                         rina::ApplicationProcessNamingInformation
                         (dif_configs[i].get("difName", string()).asString(),
                          string());
-                
-                props.difType = dif_configs[i].get("difType", 
+
+                props.difType = dif_configs[i].get("difType",
                                                    string()).asString();
-                
+
                 // Data transfer constants
                 Json::Value dt_const = dif_configs[i]["difProperties"];
                 if (dt_const != 0) {
-                        rina::DataTransferConstants dt; 
-                        
+                        rina::DataTransferConstants dt;
+
                         // There is no asShort()
-                        dt.address_length_ = static_cast<unsigned short> 
+                        dt.address_length_ = static_cast<unsigned short>
                                 (dt_const.get("addressLength", 0).asUInt());
-                        dt.cep_id_length_ = static_cast<unsigned short> 
+                        dt.cep_id_length_ = static_cast<unsigned short>
                                 (dt_const.get("cepIdLength", 0).asUInt());
                         dt.dif_integrity_ = dt_const.get("difIntegrity", false).asBool();
-                        dt.length_length_ = static_cast<unsigned short> 
+                        dt.length_length_ = static_cast<unsigned short>
                                 (dt_const.get("lengthLength", 0).asUInt());
                         dt.max_pdu_lifetime_ = dt_const.get("maxPduLifetime", 0).asUInt();
                         dt.max_pdu_size_ = dt_const.get("maxPduSize", 0).asUInt();
-                        dt.port_id_length_ = static_cast<unsigned short> 
+                        dt.port_id_length_ = static_cast<unsigned short>
                                 (dt_const.get("portIdLength", 0).asUInt());
-                        dt.qos_id_lenght_ = static_cast<unsigned short> 
+                        dt.qos_id_lenght_ = static_cast<unsigned short>
                                 (dt_const.get("qosIdLength", 0).asUInt());
-                        dt.sequence_number_length_ = static_cast<unsigned short> 
+                        dt.sequence_number_length_ = static_cast<unsigned short>
                                 (dt_const.get("sequenceNumberLength", 0).asUInt());
                         props.dataTransferConstants = dt;
                 }
@@ -108,27 +108,27 @@ void parse_dif_configs(const Json::Value   &root,
 
                         cube.id_ = cubes[j].get("id", 0).asUInt();
                         cube.name_ = cubes[j].get("name", string()).asString();
-                                               
+
                         Json::Value con_pol = cubes[j]["efcpPolicies"];
                         if (con_pol != 0) {
                                 rina::ConnectionPolicies cp;
-                                
-                                cp.dtcp_present_ = 
+
+                                cp.dtcp_present_ =
                                         con_pol.get("dtcpPresent", cp.dtcp_present_).asBool();
-                                
+
                                 // DTCPConfig
                                 Json::Value dtcp_conf = con_pol["dtcpConfiguration"];
                                 if (dtcp_conf != 0) {
                                         rina::DTCPConfig dc;
 
                                         dc.flow_control_ =
-                                                dtcp_conf.get("flowControl", 
+                                                dtcp_conf.get("flowControl",
                                                               dc.flow_control_).asBool();
                                         // flow_control_config_
                                         Json::Value flow_ctrl = dtcp_conf["flowControlConfig"];
                                         if (flow_ctrl != 0) {
                                                 rina::DTCPFlowControlConfig fc;
-                                                
+
                                                 fc.window_based_ =
                                                         flow_ctrl.get("windowBased",
                                                                       fc.window_based_).asBool();
@@ -137,25 +137,25 @@ void parse_dif_configs(const Json::Value   &root,
                                                 Json::Value w_flow_ctrl = flow_ctrl["windowBasedConfig"];
                                                 if (w_flow_ctrl != 0) {
                                                         rina::DTCPWindowBasedFlowControlConfig wfc;
-                                                
-                                                        wfc.max_closed_window_queue_length_ = 
+
+                                                        wfc.max_closed_window_queue_length_ =
                                                                 w_flow_ctrl.get("maxClosedWindowQueueLength",
                                                                                 wfc.max_closed_window_queue_length_)
                                                                 .asUInt();
 
-                                                        wfc.initial_credit_ = 
+                                                        wfc.initial_credit_ =
                                                                 w_flow_ctrl.get("initialCredit",
                                                                                 wfc.initial_credit_)
                                                                 .asUInt();
 
                                                         parse_policy(w_flow_ctrl,
                                                                      "rcvrFlowControlPolicy",
-                                                                     wfc.rcvr_flow_control_policy_); 
-                                                                
+                                                                     wfc.rcvr_flow_control_policy_);
+
                                                         parse_policy(w_flow_ctrl,
                                                                      "txControlPolicy",
                                                                      wfc.tx_control_policy_);
-                                                        
+
                                                         fc.window_based_config_ = wfc;
                                                 }
 
@@ -174,12 +174,12 @@ void parse_dif_configs(const Json::Value   &root,
                                                                       fc.sent_bytes_percent_threshold_)
                                                         .asInt();
 
-                                                fc.sent_buffers_threshold_ = 
+                                                fc.sent_buffers_threshold_ =
                                                         flow_ctrl.get("sentBuffersThreshold",
                                                                       fc.sent_buffers_threshold_)
                                                         .asInt();
 
-                                                fc.rcv_bytes_threshold_ = 
+                                                fc.rcv_bytes_threshold_ =
                                                         flow_ctrl.get("rcvBytesThreshold",
                                                                       fc.rcv_bytes_threshold_)
                                                         .asInt()
@@ -188,8 +188,8 @@ void parse_dif_configs(const Json::Value   &root,
                                                         flow_ctrl.get("rcvBytesThreshold",
                                                                       fc.rcv_bytes_percent_threshold_)
                                                         .asInt();
-                                                
-                                                fc.rcv_buffers_threshold_ = 
+
+                                                fc.rcv_buffers_threshold_ =
                                                         flow_ctrl.get("rcvBuffersThreshold",
                                                                       fc.rcv_buffers_threshold_)
                                                         .asInt();
@@ -205,7 +205,7 @@ void parse_dif_configs(const Json::Value   &root,
                                                 parse_policy(flow_ctrl,
                                                              "reconcileFlowControlPolicy",
                                                              fc.reconcile_flow_control_policy_);
-                                          
+
                                                 parse_policy(flow_ctrl,
                                                              "receivingFlowControlPolicy",
                                                              fc.receiving_flow_control_policy_);
@@ -213,24 +213,24 @@ void parse_dif_configs(const Json::Value   &root,
 
                                                 dc.flow_control_config_ = fc;
                                         }
-                                        
+
                                         dc.rtx_control_ =
                                                 dtcp_conf.get("rtxControl",
                                                               dc.rtx_control_).asBool();
-                                        
+
                                         //TODO: rtx_control_config_
-                                     
+
 
                                         dc.initial_sender_inactivity_time_ =
                                                 dtcp_conf.get("initialSenderInactivityTime",
                                                               dc.initial_sender_inactivity_time_)
                                                 .asUInt();
 
-                                        dc.initial_recvr_inactivity_time_ = 
+                                        dc.initial_recvr_inactivity_time_ =
                                                 dtcp_conf.get("initialRecvrInactivityTime",
                                                               dc.initial_recvr_inactivity_time_)
                                                 .asUInt();
-                      
+
                                         parse_policy(dtcp_conf,
                                                      "rcvrTimerInactivityPolicy",
                                                      dc.rcvr_timer_inactivity_policy_);
@@ -250,50 +250,50 @@ void parse_dif_configs(const Json::Value   &root,
 
                                 // TODO: PolicyConfig
 
-                                cp.seq_num_rollover_threshold_ = 
-                                        con_pol.get("seqNumRolloverThreshold", 
+                                cp.seq_num_rollover_threshold_ =
+                                        con_pol.get("seqNumRolloverThreshold",
                                                     cp.seq_num_rollover_threshold_).asUInt();
-                                cp.initial_a_timer_ = 
-                                        con_pol.get("initialATimer", 
+                                cp.initial_a_timer_ =
+                                        con_pol.get("initialATimer",
                                                     cp.initial_a_timer_).asUInt();
-                                cp.partial_delivery_ = 
-                                        con_pol.get("partialDelivery", 
+                                cp.partial_delivery_ =
+                                        con_pol.get("partialDelivery",
                                                     cp.partial_delivery_).asBool();
-                                cp.incomplete_delivery_ = 
-                                        con_pol.get("incompleteDelivery", 
+                                cp.incomplete_delivery_ =
+                                        con_pol.get("incompleteDelivery",
                                                     cp.incomplete_delivery_).asBool();
-                                cp.in_order_delivery_ = 
-                                        con_pol.get("inOrderDelivery", 
+                                cp.in_order_delivery_ =
+                                        con_pol.get("inOrderDelivery",
                                                     cp.in_order_delivery_).asBool();
-                                cp.max_sdu_gap_ = 
-                                        con_pol.get("maxSduGap", cp.max_sdu_gap_).asInt(); 
+                                cp.max_sdu_gap_ =
+                                        con_pol.get("maxSduGap", cp.max_sdu_gap_).asInt();
 
                                 cube.efcp_policies_ = cp;
                         }
 
-                        cube.average_bandwidth_ = 
-                                cubes[j].get("averageBandwidth", 
+                        cube.average_bandwidth_ =
+                                cubes[j].get("averageBandwidth",
                                              cube.average_bandwidth_).asUInt();
-                        cube.average_sdu_bandwidth_ = 
-                                cubes[j].get("averageSduBandwidth", 
+                        cube.average_sdu_bandwidth_ =
+                                cubes[j].get("averageSduBandwidth",
                                           cube.average_sdu_bandwidth_).asUInt();
                         cube.peak_bandwidth_duration_ =
-                                cubes[j].get("peakBandwidthDuration", 
+                                cubes[j].get("peakBandwidthDuration",
                                           cube.peak_bandwidth_duration_).asUInt();
                         cube.peak_sdu_bandwidth_duration_ =
-                                cubes[j].get("peakSduBandwidthDuration", 
+                                cubes[j].get("peakSduBandwidthDuration",
                                           cube.peak_sdu_bandwidth_duration_).asUInt();
-                        cube.undetected_bit_error_rate_ = 
-                                cubes[j].get("undetectedBitErrorRate", 
+                        cube.undetected_bit_error_rate_ =
+                                cubes[j].get("undetectedBitErrorRate",
                                           cube.undetected_bit_error_rate_).asDouble();
-                        cube.partial_delivery_ = 
-                                cubes[j].get("partialDelivery", 
+                        cube.partial_delivery_ =
+                                cubes[j].get("partialDelivery",
                                           cube.partial_delivery_).asBool();
-                        cube.ordered_delivery_ = 
-                                cubes[j].get("orderedDelivery", 
+                        cube.ordered_delivery_ =
+                                cubes[j].get("orderedDelivery",
                                           cube.ordered_delivery_).asBool();
-                        cube.max_allowable_gap_ = 
-                                cubes[j].get("maxAllowableGap", 
+                        cube.max_allowable_gap_ =
+                                cubes[j].get("maxAllowableGap",
                                           cube.max_allowable_gap_).asInt();
                         cube.delay_ = cubes[j].get("delay", cube.delay_).asUInt();
                         cube.jitter_ = cubes[j].get("jitter", cube.jitter_).asUInt();
@@ -430,14 +430,14 @@ void parse_ipc_to_create(const Json::Value         root,
 }
 
 void parse_app_to_dif(const Json::Value &root,
-                      std::map<std::string, 
+                      std::map<std::string,
                       rina::ApplicationProcessNamingInformation>
                       &applicationToDIFMappings)
 {
         Json::Value appToDIF = root["applicationToDIFMappings"];
         if (appToDIF != 0) {
                 for (unsigned int i = 0; i < appToDIF.size(); i++) {
-                      
+
                         string encodedAppName =
                                 appToDIF[i].get("encodedAppName", string()).asString();
                         rina::ApplicationProcessNamingInformation difName =
@@ -494,7 +494,7 @@ void parse_local_conf(const Json::Value &root,
         }
 }
 
-bool parse_configuration(string file_loc, 
+bool parse_configuration(string file_loc,
                          IPCManager *ipcm)
 {
         // General note: Params should be checked before they are used
