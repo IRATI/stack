@@ -127,15 +127,15 @@ bool RINAConfiguration::lookup_dif_by_application(
                 rina::ApplicationProcessNamingInformation& result)
 {
         string encoded_name = app_name.getEncodedString();
-        
-        map<string, rina::ApplicationProcessNamingInformation>::iterator it = 
+
+        map<string, rina::ApplicationProcessNamingInformation>::iterator it =
                 applicationToDIFMappings.find(encoded_name);
 
         if (it != applicationToDIFMappings.end()) {
                 result = it->second;
-                return true;               
+                return true;
         }
-        
+
         return false;
 }
 

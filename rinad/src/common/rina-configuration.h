@@ -272,8 +272,8 @@ class RINAConfiguration {
          *
          * rina::ApplicationProcessNamingInformation difName;
          */
-        std::map<std::string, 
-                rina::ApplicationProcessNamingInformation> 
+        std::map<std::string,
+                rina::ApplicationProcessNamingInformation>
                 applicationToDIFMappings;
 
         bool lookup_dif_properties(
