@@ -1,5 +1,5 @@
 /*
- * Event loop over librina
+ * Helpers for the RINA daemons
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
@@ -18,38 +18,23 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef __EVENT_LOOP_H__
-#define __EVENT_LOOP_H__
-
-#include <iostream>
-#include <map>
+#ifndef __RINAD_HELPERS_H__
+#define __RINAD_HELPERS_H__
 
 #include <librina/common.h>
+#include <librina/ipc-manager.h>
 
 
 namespace rinad {
 
-class EventLoopData {
- public:
-        virtual ~EventLoopData() { }
-};
+rina::IPCProcess *select_ipcp_by_dif(const
+                rina::ApplicationProcessNamingInformation& dif_name);
 
-class EventLoop {
- public:
-        typedef void (*EventHandler)(rina::IPCEvent *event, EventLoopData *);
+rina::IPCProcess *select_ipcp();
 
-        void register_pre_function(EventHandler func);
-        void register_post_function(EventHandler func);
-        void register_event(rina::IPCEventType type, EventHandler handler);
-        void run();
-
-        EventLoop(EventLoopData *dm);
- private:
-        std::map<rina::IPCEventType, EventHandler> handlers;
-        EventLoopData *data_model;
-        EventHandler pre_function;
-        EventHandler post_function;
-};
+bool application_is_registered_to_ipcp(
+                const rina::ApplicationProcessNamingInformation&,
+                rina::IPCProcess *slave_ipcp);
 
 }
-#endif   /* __EVENT_LOOP_H__ */
+#endif  /* __RINAD_HELPERS_H__ */

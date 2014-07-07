@@ -32,10 +32,13 @@
 
 #include "event-loop.h"
 #include "rina-configuration.h"
+#include "helpers.h"
 #include "ipcm.h"
 
 using namespace std;
 
+
+namespace rinad {
 
 /* Macro useful to perform downcasts in declarations. */
 #define DOWNCAST_DECL(_var,_class,_name)        \
@@ -116,6 +119,7 @@ ipcm_pre_function(rina::IPCEvent *event, EventLoopData *opaque)
 {
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
 
+        (void) event;
         ipcm->concurrency.lock();
 }
 
@@ -257,48 +261,6 @@ out:
         return ret;
 }
 
-/* Returns an IPC process assigned to the DIF specified by @dif_name,
- * if any.
- */
-rina::IPCProcess *
-IPCManager::select_ipcp_by_dif(const
-                        rina::ApplicationProcessNamingInformation& dif_name)
-{
-        const vector<rina::IPCProcess *>& ipcps =
-                rina::ipcProcessFactory->listIPCProcesses();
-
-        for (unsigned int i = 0; i < ipcps.size(); i++) {
-                rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
-
-                if (dif_info.dif_name_ == dif_name) {
-                        return ipcps[i];
-                }
-        }
-
-        return NULL;
-}
-
-// Returns any IPC process in the system, giving priority to
-// normal IPC processes.
-rina::IPCProcess *
-IPCManager::select_ipcp()
-{
-        const vector<rina::IPCProcess *>& ipcps =
-                rina::ipcProcessFactory->listIPCProcesses();
-
-        for (unsigned int i = 0; i < ipcps.size(); i++) {
-                if (ipcps[i]->type == rina::NORMAL_IPC_PROCESS) {
-                        return ipcps[i];
-                }
-        }
-
-        for (unsigned int i = 0; i < ipcps.size(); i++) {
-                return ipcps[i];
-        }
-
-        return NULL;
-}
-
 int
 IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                             const rina::ApplicationProcessNamingInformation&
@@ -413,211 +375,593 @@ IPCManager::apply_configuration()
         return 0;
 }
 
-static void FlowAllocationRequestedEventHandler(rina::IPCEvent * event,
-                                                EventLoopData *  dm)
+int
+IPCManager::unregister_app_from_ipcp(
+                const rina::ApplicationUnregistrationRequestEvent& req_event,
+                rina::IPCProcess *slave_ipcp)
 {
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        unsigned int seqnum;
+
+        try {
+                // Forward the unregistration request to the IPC process
+                // that the application is registered to
+                seqnum = slave_ipcp->unregisterApplication(req_event.
+                                                           applicationName);
+                pending_app_unregistrations[seqnum] =
+                                PendingAppUnregistration(slave_ipcp, req_event);
+        } catch (rina::IpcmUnregisterApplicationException) {
+                cerr << __func__ << ": Error while unregistering application "
+                        << req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->name.toString() << endl;
+                return -1;
+        }
+
+        return 0;
 }
 
-static void AllocateFlowRequestResultEventHandler(rina::IPCEvent * event,
-                                                  EventLoopData *  dm)
+int
+IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
+                                     const rina::DIFConfiguration& dif_config)
 {
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        try {
+                unsigned int seqnum;
+
+                // Request a configuration update for the IPC process
+                /* XXX The meaning of this operation is unclear: what
+                 * configuration is modified? The configuration of the
+                 * IPC process only or the configuration of the whole DIF
+                 * (which possibly contains more IPC process, both on the same
+                 * processing systems and on different processing systems) ?
+                 */
+                seqnum = ipcp->updateDIFConfiguration(dif_config);
+                pending_dif_config_updates[seqnum] = ipcp;
+        } catch (rina::UpdateDIFConfigurationException) {
+                cerr << __func__ << ": Error while updating DIF configuration "
+                        " for IPC process " << ipcp->name.toString() << endl;
+        }
+
+        return 0;
 }
 
-static void AllocateFlowResponseEventHandler(rina::IPCEvent * event,
-                                             EventLoopData *  dm)
+static void flow_allocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void FlowDeallocationRequestedEventHandler(rina::IPCEvent * event,
-                                                  EventLoopData *  dm)
+static void allocate_flow_request_result_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void DeallocateFlowResponseEventHandler(rina::IPCEvent * event,
-                                               EventLoopData *  dm)
+static void allocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void ApplicationUnregisteredEventHandler(rina::IPCEvent * event,
-                                                EventLoopData *  dm)
+static void flow_deallocation_requested_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void FlowDeallocatedEventHandler(rina::IPCEvent * event,
-                                        EventLoopData *  dm)
+static void deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent * event,
-                                                       EventLoopData *  dm)
+static void application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void RegisterApplicationResponseEventHandler(rina::IPCEvent * event,
-                                                    EventLoopData *  dm)
+static void flow_deallocated_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void ApplicationUnregistrationRequestEventHandler(rina::IPCEvent *event,
-                                                         EventLoopData * dm)
+static void application_registration_request_event_handler(rina::IPCEvent *e,
+                                                       EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        const rina::ApplicationRegistrationInformation& info = event->
+                                applicationRegistrationInformation;
+        const rina::ApplicationProcessNamingInformation app_name =
+                                info.appName;
+        rina::IPCProcess *slave_ipcp = NULL;
+        unsigned int seqnum;
+
+        if (info.applicationRegistrationType ==
+                        rina::APPLICATION_REGISTRATION_ANY_DIF) {
+                rina::ApplicationProcessNamingInformation dif_name;
+                bool found;
+
+                // See if the configuration specifies a mapping between
+                // the registering application and a DIF.
+                found = ipcm->config.lookup_dif_by_application(app_name,
+                                                               dif_name);
+                if (found) {
+                        // If a mapping exists, select an IPC process
+                        // from the specified DIF.
+                        slave_ipcp = select_ipcp_by_dif(dif_name);
+                } else {
+                        // Otherwise select any IPC process.
+                        slave_ipcp = select_ipcp();
+                }
+        } else if (info.applicationRegistrationType ==
+                        rina::APPLICATION_REGISTRATION_SINGLE_DIF) {
+                // Select an IPC process from the DIF specified in the
+                // registration request.
+                slave_ipcp = select_ipcp_by_dif(info.difName);
+        } else {
+                cerr << __func__ << ": Unsupported registration type: "
+                        << info.applicationRegistrationType << endl;
+                return;
+        }
+
+        if (!slave_ipcp) {
+                cerr << __func__ << ": Cannot find a suitable DIF to "
+                        "register application " << app_name.toString() << endl;
+                return;
+        }
+
+        try {
+                seqnum = slave_ipcp->registerApplication(app_name,
+                                                info.ipcProcessId);
+                ipcm->pending_app_registrations[seqnum] =
+                        PendingAppRegistration(slave_ipcp, *event);
+        } catch (rina::IpcmRegisterApplicationException) {
+                cerr << __func__ << ": Error while registering application "
+                        << app_name.toString() << endl;
+        }
+}
+
+static bool ipcm_register_response_common(
+        rina::IpcmRegisterApplicationResponseEvent *event,
+        const rina::ApplicationProcessNamingInformation& app_name,
+        rina::IPCProcess *slave_ipcp,
+        const rina::ApplicationProcessNamingInformation& slave_dif_name)
+{
+        bool success = (event->result == 0);
+
+        try {
+                /* Notify the N-1 IPC process. */
+                slave_ipcp->registerApplicationResult(
+                                        event->sequenceNumber, success);
+        } catch (rina::IpcmRegisterApplicationException) {
+                cerr <<  __func__ << ": Error while reporting DIF "
+                        "assignment result of IPC process "
+                        << app_name.toString() <<
+                        " to N-1 DIF " << slave_dif_name.toString()
+                        << endl;
+        }
+
+        return success;
+}
+
+static void ipcm_register_response_ipcp(
+        rina::IpcmRegisterApplicationResponseEvent *event,
+        IPCManager *ipcm,
+        map<unsigned int, PendingIPCPRegistration>::iterator mit)
+{
+        rina::IPCProcess *ipcp = mit->second.ipcp;
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        const rina::ApplicationProcessNamingInformation&
+                slave_dif_name = slave_ipcp->
+                getDIFInformation().dif_name_;
+        bool success;
+
+        success = ipcm_register_response_common(event, ipcp->name,
+                                        slave_ipcp, slave_dif_name);
+        if (success) {
+                /* Notify the registered IPC process. */
+                try {
+                        ipcp->notifyRegistrationToSupportingDIF(
+                                        slave_ipcp->name,
+                                        slave_dif_name
+                                        );
+                } catch (rina::NotifyRegistrationToDIFException) {
+                        cerr << __func__ << ": Error while notifying "
+                                "IPC process " <<
+                                ipcp->name.toString() <<
+                                " about registration to N-1 DIF"
+                                << slave_dif_name.toString() << endl;
+                }
+        } else {
+                cerr << __func__ << "Cannot register IPC process "
+                        << ipcp->name.toString() <<
+                        " to DIF " << slave_dif_name.toString() << endl;
+        }
+
+        ipcm->pending_ipcp_registrations.erase(mit);
+}
+
+static void ipcm_register_response_app(
+        rina::IpcmRegisterApplicationResponseEvent *event,
+        IPCManager *ipcm,
+        map<unsigned int, PendingAppRegistration>::iterator mit)
+{
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        const rina::ApplicationRegistrationRequestEvent& req_event =
+                        mit->second.req_event;
+        const rina::ApplicationProcessNamingInformation& app_name =
+                req_event.applicationRegistrationInformation.
+                appName;
+        const rina::ApplicationProcessNamingInformation&
+                slave_dif_name = slave_ipcp->
+                getDIFInformation().dif_name_;
+        bool success;
+
+        success = ipcm_register_response_common(event, app_name, slave_ipcp,
+                                           slave_dif_name);
+
+        /* Notify the application about the successful registration. */
+        try {
+                rina::applicationManager->applicationRegistered(req_event,
+                                slave_dif_name, success ? 0 : -1);
+        } catch (rina::NotifyApplicationRegisteredException) {
+                cerr << __func__ << "Error while notifying application "
+                        << app_name.toString() << " about registration "
+                        "to DIF " << slave_dif_name.toString() << endl;
+        }
+
+        ipcm->pending_app_registrations.erase(mit);
+}
+
+static void ipcm_register_app_response_event_handler(rina::IPCEvent *e,
+                                                EventLoopData *opaque)
+{
+
+        DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, PendingIPCPRegistration>::iterator it;
+        map<unsigned int, PendingAppRegistration>::iterator jt;
+
+        it = ipcm->pending_ipcp_registrations.find(event->sequenceNumber);
+        jt = ipcm->pending_app_registrations.find(event->sequenceNumber);
+
+        if (it != ipcm->pending_ipcp_registrations.end()) {
+                ipcm_register_response_ipcp(event, ipcm, it);
+        } else if (jt != ipcm->pending_app_registrations.end()) {
+                ipcm_register_response_app(event, ipcm, jt);
+        } else {
+                cerr <<  __func__ << ": Warning: DIF assignment response "
+                        "received, but no pending DIF assignment " << endl;
+        }
+}
+
+static void application_manager_app_unregistered(
+                rina::ApplicationUnregistrationRequestEvent event,
+                int result)
+{
+        // Inform the application about the unregistration result
+        try {
+                if (event.sequenceNumber > 0) {
+                        rina::applicationManager->
+                                        applicationUnregistered(event, result);
+                }
+        } catch (rina::NotifyApplicationUnregisteredException) {
+                cerr << __func__ << ": Error while notifying application "
+                        << event.applicationName.toString() << " about "
+                        "failed unregistration" << endl;
+        }
+}
+
+static void application_unregistration_request_event_handler(
+                                                rina::IPCEvent *e,
+                                                EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        // Select any IPC process in the DIF from which the application
+        // wants to unregister from
+        rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);
+        int err;
+
+        if (!slave_ipcp) {
+                cerr << __func__ << ": Error: Application " <<
+                        event->applicationName.toString() <<
+                        " wants to unregister from DIF " <<
+                        event->DIFName.toString() << " but couldn't find "
+                        "any IPC process belonging to it" << endl;
+
+                application_manager_app_unregistered(*event, -1);
+                return;
+        }
+
+        err = ipcm->unregister_app_from_ipcp(*event, slave_ipcp);
+        if (err) {
+                // Inform the unregistering application that the unregistration
+                // operation failed
+                application_manager_app_unregistered(*event, -1);
+        }
+}
+
+static bool ipcm_unregister_response_common(
+                        rina::IpcmUnregisterApplicationResponseEvent *event,
+                        rina::IPCProcess *slave_ipcp,
+                        const rina::ApplicationProcessNamingInformation&
+                        app_name)
+{
+        bool success = (event->result == 0);
+
+        try {
+                // Inform the IPC process about the application unregistration
+                slave_ipcp->unregisterApplicationResult(event->
+                                sequenceNumber, success);
+        } catch (rina::IpcmRegisterApplicationException) {
+                cerr << __func__ << ": Error while reporing "
+                        "unregistration result for application "
+                        << app_name.toString() << endl;
+        }
+
+        return success;
+}
+
+static void ipcm_unregister_response_ipcp(
+                        rina::IpcmUnregisterApplicationResponseEvent *event,
+                        IPCManager *ipcm, map<unsigned int,
+                        PendingIPCPUnregistration>::iterator mit)
+{
+        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::IPCProcess *ipcp = mit->second.ipcp;
+        rina::ApplicationProcessNamingInformation slave_dif_name = slave_ipcp->
+                                                getDIFInformation().dif_name_;
+        bool success;
+
+        // Inform the supporting IPC process
+        success = ipcm_unregister_response_common(event, slave_ipcp,
+                                                  ipcp->name);
+
+        try {
+                if (success) {
+                        // Notify the IPCP process that it has been unregistered
+                        // from the DIF
+                        ipcp->notifyUnregistrationFromSupportingDIF(
+                                                        slave_ipcp->name,
+                                                        slave_dif_name);
+                } else {
+                        cerr << __func__ << ": Cannot unregister IPC Process "
+                                << ipcp->name.toString() << " from DIF " <<
+                                slave_dif_name.toString() << endl;
+                }
+        } catch (rina::NotifyRegistrationToDIFException) {
+                cerr << __func__ << ": Error while reporing "
+                        "unregistration result for IPC process "
+                        << ipcp->name.toString() << endl;
+        }
+
+        ipcm->pending_ipcp_unregistrations.erase(mit);
+}
+
+static void ipcm_unregister_response_app(
+                        rina::IpcmUnregisterApplicationResponseEvent *event,
+                        IPCManager *ipcm, map<unsigned int,
+                        PendingAppUnregistration>::iterator mit)
+{
+        // Inform the supporting IPC process
+        ipcm_unregister_response_common(event, mit->second.slave_ipcp,
+                                        mit->second.req_event.applicationName);
+
+        // Inform the application
+        application_manager_app_unregistered(mit->second.req_event,
+                        event->result);
+
+        ipcm->pending_app_unregistrations.erase(mit);
+}
+
+static void ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
+                                                       EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, PendingAppUnregistration>::iterator it;
+        map<unsigned int, PendingIPCPUnregistration>::iterator jt;
+
+        it = ipcm->pending_app_unregistrations.find(event->sequenceNumber);
+        jt = ipcm->pending_ipcp_unregistrations.find(event->sequenceNumber);
+        if (it != ipcm->pending_app_unregistrations.end()) {
+                ipcm_unregister_response_app(event, ipcm, it);
+        } else if (jt != ipcm->pending_ipcp_unregistrations.end()) {
+                ipcm_unregister_response_ipcp(event, ipcm, jt);
+        } else {
+                cerr <<  __func__ << ": Warning: Unregistration response "
+                        "received, but no pending DIF assignment " << endl;
+        }
+}
+
+static void register_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void UnregisterApplicationResponseEventHandler(rina::IPCEvent * event,
-                                                      EventLoopData *  dm)
+static void unregister_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void ApplicationRegistrationCanceledEventHandler(rina::IPCEvent* event,
-                                                        EventLoopData * dm)
+static void application_registration_canceled_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void AssignToDifRequestEventHandler(rina::IPCEvent * event,
-                                           EventLoopData * dm)
+static void assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void AssignToDifResponseEventHandler(rina::IPCEvent * event,
-                                            EventLoopData *  dm)
+static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
+                                            EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess*>::iterator mit;
+        bool success = (event->result == 0);
+
+        mit = ipcm->pending_ipcp_dif_assignments.find(
+                                        event->sequenceNumber);
+        if (mit != ipcm->pending_ipcp_dif_assignments.end()) {
+                rina::IPCProcess *ipcp = mit->second;
+
+                // Inform the IPC process about the result of the
+                // DIF assignment operation
+                try {
+                        ipcp->assignToDIFResult(success);
+                } catch (rina::AssignToDIFException) {
+                        cerr <<  __func__ << ": Error while reporting DIF "
+                                "assignment result for IPC process "
+                                << ipcp->name.toString() << endl;
+                }
+                ipcm->pending_ipcp_dif_assignments.erase(mit);
+        } else {
+                cerr <<  __func__ << ": Warning: DIF assignment response "
+                        "received, but no pending DIF assignment" << endl;
+        }
+}
+
+static void update_dif_config_request_event_handler(rina::IPCEvent *event,
+                                                    EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void UpdateDifConfigRequestEventHandler(rina::IPCEvent * event,
-                                               EventLoopData *  dm)
+static void update_dif_config_response_event_handler(rina::IPCEvent *e,
+                                                     EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::UpdateDIFConfigurationResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess*>::iterator mit;
+        bool success = (event->result == 0);
+        rina::IPCProcess *ipcp = NULL;
+
+        mit = ipcm->pending_dif_config_updates.find(event->sequenceNumber);
+        if (mit == ipcm->pending_dif_config_updates.end()) {
+                cerr << __func__ << ": Warning: DIF configuration update "
+                        "response received, but no corresponding pending "
+                        "request" << endl;
+                return;
+        }
+
+        ipcp = mit->second;
+        try {
+
+                // Inform the requesting IPC process about the result of
+                // the configuration update operation
+                ipcp->updateDIFConfigurationResult(success);
+        } catch (rina::UpdateDIFConfigurationException) {
+                cerr << __func__ << ": Error while reporting DIF "
+                        "configuration update for process " <<
+                        ipcp->name.toString() << endl;
+        }
+
+        ipcm->pending_dif_config_updates.erase(mit);
+}
+
+static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void UpdateDifConfigResponseEventHandler(rina::IPCEvent * event,
-                                                EventLoopData *  dm)
+static void enroll_to_dif_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void EnrollToDifRequestEventHandler(rina::IPCEvent * event,
-                                           EventLoopData *  dm)
+static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void EnrollToDifResponseEventHandler(rina::IPCEvent * event,
-                                            EventLoopData *  dm)
+static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void NeighborsModifiedNotificaitonEventHandler(rina::IPCEvent * event,
-                                                      EventLoopData *  dm)
+static void ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessDifRegistrationNotificationHandler(rina::IPCEvent* event,
-                                                         EventLoopData * dm)
+static void get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessQueryRibHandler(rina::IPCEvent * event,
-                                      EventLoopData *  dm)
+static void get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void GetDifPropertiesHandler(rina::IPCEvent * event,
-                                    EventLoopData *  dm)
+static void os_process_finalized_handler(rina::IPCEvent *e,
+                                         EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+        const rina::ApplicationProcessNamingInformation& app_name =
+                                                event->applicationName;
+
+        // TODO clean pending flows
+
+        // Look if the terminating application has pending registrations
+        // with some IPC process
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                if (application_is_registered_to_ipcp(app_name,
+                                                            ipcps[i])) {
+                        // Build a structure that will be used during
+                        // the unregistration process. The last argument
+                        // is the request sequence number: 0 means that
+                        // the unregistration response does not match
+                        // an application request - this is indeed an
+                        // unregistration forced by the IPCM.
+                        rina::ApplicationUnregistrationRequestEvent
+                                req_event(app_name, ipcps[i]->
+                                        getDIFInformation().dif_name_, 0);
+
+                        ipcm->unregister_app_from_ipcp(req_event, ipcps[i]);
+                }
+        }
+}
+
+static void ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void GetDifPropertiesResponseEventHandler(rina::IPCEvent * event,
-                                                 EventLoopData *  dm)
+static void ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void OsProcessFinalizedHandler(rina::IPCEvent * event,
-                                      EventLoopData *  dm)
+static void query_rib_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcmRegisterAppResponseEventHandler(rina::IPCEvent * event,
-                                                EventLoopData *  dm)
-{
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
-}
-
-static void IpcmUnregisterAppResponseEventHandler(rina::IPCEvent * event,
-                                                  EventLoopData *  dm)
-{
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
-}
-
-static void IpcmDeallocateFlowResponseEventHandler(rina::IPCEvent * event,
-                                                   EventLoopData *  dm)
-{
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
-}
-
-static void IpcmAllocateFlowRequestResultHandler(rina::IPCEvent * event,
-                                                 EventLoopData *  dm)
-{
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
-}
-
-static void QueryRibResponseEventHandler(rina::IPCEvent * event,
-                                         EventLoopData *  dm)
-{
-        (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
-}
-
-static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent * e,
-                                                    EventLoopData *  dm)
+static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
+                                                    EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
@@ -636,46 +980,40 @@ static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent * e,
         }
 }
 
-static void TimerExpiredEventHandler(rina::IPCEvent * event,
-                                     EventLoopData *  dm)
+static void timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessCreateConnectionResponseHandler(rina::IPCEvent * event,
-                                                      EventLoopData *  dm)
+static void ipc_process_create_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessUpdateConnectionResponseHandler(rina::IPCEvent * event,
-                                                      EventLoopData *  dm)
+static void ipc_process_update_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessCreateConnectionResultHandler(rina::IPCEvent * event,
-                                                    EventLoopData *  dm)
+static void ipc_process_create_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessDestroyConnectionResultHandler(rina::IPCEvent * event,
-                                                     EventLoopData *  dm)
+static void ipc_process_destroy_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
-static void IpcProcessDumpFtResponseHandler(rina::IPCEvent * event,
-                                            EventLoopData *  dm)
+static void ipc_process_dump_ft_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
-        (void) dm;    // Stop compiler barfs
+        (void) opaque;    // Stop compiler barfs
 }
 
 void register_handlers_all(EventLoop& loop)
@@ -755,4 +1093,6 @@ void register_handlers_all(EventLoop& loop)
                         ipc_process_destroy_connection_result_handler);
         loop.register_event(rina::IPC_PROCESS_DUMP_FT_RESPONSE,
                         ipc_process_dump_ft_response_handler);
+}
+
 }
