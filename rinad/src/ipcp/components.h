@@ -318,14 +318,6 @@ public:
 	virtual ~IPDUFTGeneratorPolicy(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-	virtual void enrollmentToNeighbor(unsigned int address,
-                                          bool         newMember,
-                                          unsigned int portId) = 0;
-	virtual void flowAllocated(unsigned int address,
-                                   unsigned int portId,
-                                   unsigned int neighborAddress,
-                                   unsigned int neighborPortId) = 0;
-	virtual bool flowDeallocated(unsigned int portId) = 0;
 };
 
 /// Interface PDU Forwarding Table Generator

@@ -3101,24 +3101,25 @@ int testIpcpDestroyConnectionResult() {
 int testRmtModifyPDUFTEntriesRequestMessage() {
         std::cout << "TESTING RMT MODIFY PDU FTE REQUEST MESSAGE\n";
         int returnValue = 0;
-        std::list<PDUForwardingTableEntry>::const_iterator iterator;
-        std::list<PDUForwardingTableEntry> entriesList;
+        std::list<PDUForwardingTableEntry *>::const_iterator iterator;
+        std::list<PDUForwardingTableEntry *> entriesList;
         std::list<unsigned int>::const_iterator iterator2;
         std::list<unsigned int> portIdsList;
 
         RmtModifyPDUFTEntriesRequestMessage message;
-        PDUForwardingTableEntry entry1, entry2;
-        entry1.setAddress(23);
-        entry1.addPortId(34);
-        entry1.addPortId(24);
-        entry1.addPortId(39);
-        entry1.setQosId(1);
+        PDUForwardingTableEntry * entry1 = new PDUForwardingTableEntry();
+        entry1->setAddress(23);
+        entry1->addPortId(34);
+        entry1->addPortId(24);
+        entry1->addPortId(39);
+        entry1->setQosId(1);
         message.addEntry(entry1);
-        entry2.setAddress(20);
-        entry2.addPortId(28);
-        entry2.addPortId(35);
-        entry2.addPortId(54);
-        entry2.setQosId(2);
+        PDUForwardingTableEntry * entry2 = new PDUForwardingTableEntry();
+        entry2->setAddress(20);
+        entry2->addPortId(28);
+        entry2->addPortId(35);
+        entry2->addPortId(54);
+        entry2->setQosId(2);
         message.addEntry(entry2);
         message.setMode(1);
 
@@ -3162,7 +3163,7 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         for (iterator = entriesList.begin();
                         iterator != entriesList.end();
                         ++iterator) {
-                portIdsList = iterator->getPortIds();
+                portIdsList = (*iterator)->getPortIds();
                 if (portIdsList.size() != 3) {
                         std::cout << "Size of portids in original and recovered messages"
                                         << " are different\n";

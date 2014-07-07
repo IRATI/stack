@@ -1250,16 +1250,16 @@ public:
  */
 class RmtModifyPDUFTEntriesRequestMessage: public BaseNetlinkMessage {
         /** The entries to be added */
-        std::list<PDUForwardingTableEntry> entries;
+        std::list<PDUForwardingTableEntry *> entries;
 
         /** 0 add, 1 remove, 2 flush and add */
         int mode;
 
 public:
         RmtModifyPDUFTEntriesRequestMessage();
-        const std::list<PDUForwardingTableEntry>& getEntries() const;
-        void setEntries(const std::list<PDUForwardingTableEntry>& entries);
-        void addEntry(const PDUForwardingTableEntry& entry);
+        const std::list<PDUForwardingTableEntry *>& getEntries() const;
+        void setEntries(const std::list<PDUForwardingTableEntry *>& entries);
+        void addEntry(PDUForwardingTableEntry * entry);
         int getMode() const;
         void setMode(int mode);
         IPCEvent* toIPCEvent();

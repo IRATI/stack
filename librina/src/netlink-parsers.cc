@@ -4344,7 +4344,7 @@ int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
 }
 
 int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
-                const PDUForwardingTableEntry& object) {
+              const PDUForwardingTableEntry& object) {
         struct nlattr * portIds;
         std::list<unsigned int>::const_iterator iterator;
         const std::list<unsigned int> portIdsList = object.getPortIds();
@@ -4369,6 +4369,33 @@ int putPDUForwardingTableEntryObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building PDUForwardingTableEntry Netlink object");
+        return -1;
+}
+
+int putListOfPFTEntries(nl_msg* netlinkMessage,
+                const std::list<PDUForwardingTableEntry *>& entries){
+        std::list<PDUForwardingTableEntry *>::const_iterator iterator;
+        struct nlattr *entry;
+        int i = 0;
+
+        for (iterator = entries.begin();
+                        iterator != entries.end();
+                        ++iterator) {
+                if (!(entry = nla_nest_start(netlinkMessage, i))){
+                        goto nla_put_failure;
+                }
+                if (putPDUForwardingTableEntryObject(netlinkMessage,
+                                *(*iterator)) < 0) {
+                        goto nla_put_failure;
+                }
+                nla_nest_end(netlinkMessage, entry);
+                i++;
+        }
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building putPDUForwardingTableEntryObject Netlink object");
         return -1;
 }
 
@@ -7264,8 +7291,7 @@ int parseListOfPDUFTEntries(nlattr *nested,
                 if (pfte == 0){
                         return -1;
                 }
-                message->addEntry(*pfte);
-                delete pfte;
+                message->addEntry(pfte);
         }
 
         if (rem > 0){
