@@ -134,7 +134,7 @@ class BaseNetlinkMessage {
 	/** True if this is a response message */
 	bool responseMessage;
 
-	/** True if this is a notificaiton message */
+	/** True if this is a notification message */
 	bool notificationMessage;
 
 public:

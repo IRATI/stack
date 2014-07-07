@@ -587,6 +587,7 @@ public:
 	 * flow. Since all flow allocation requests go through the IPC Manager, and
 	 * port_ids have to be unique within the whole system, the IPC Manager is
 	 * the best candidate for managing the port-id space.
+         * TODO parameter description out-dated
 	 *
 	 * @param flowRequest contains the names of source and destination
 	 * applications, the portId as well as the characteristics required for the

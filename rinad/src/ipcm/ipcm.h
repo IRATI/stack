@@ -82,6 +82,18 @@ struct PendingAppUnregistration {
                                         : slave_ipcp(p), req_event(n) { }
 };
 
+struct PendingFlowAllocation {
+        rina::IPCProcess *slave_ipcp;
+        rina::FlowRequestEvent req_event;
+        bool try_only_a_dif;
+
+        PendingFlowAllocation(): slave_ipcp(NULL),
+                                 try_only_a_dif(true) { }
+        PendingFlowAllocation(rina::IPCProcess *p,
+                        const rina::FlowRequestEvent& e, bool once)
+                                : slave_ipcp(p), req_event(e),
+                                        try_only_a_dif(once) { }
+};
 
 class IPCManager : public EventLoopData {
  public:
@@ -130,6 +142,7 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, PendingAppRegistration> pending_app_registrations;
         std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
+        std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
 
         IPCMConcurrency concurrency;
 
@@ -141,4 +154,9 @@ class IPCManager : public EventLoopData {
 void register_handlers_all(EventLoop& loop);
 
 }
+
+/* Macro useful to perform downcasts in declarations. */
+#define DOWNCAST_DECL(_var,_class,_name)        \
+        _class *_name = dynamic_cast<_class*>(_var);
+
 #endif  /* __IPCM_H__ */

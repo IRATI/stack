@@ -279,7 +279,7 @@ enum IPCEventType {
 	UPDATE_DIF_CONFIG_RESPONSE_EVENT,
 	ENROLL_TO_DIF_REQUEST_EVENT,
 	ENROLL_TO_DIF_RESPONSE_EVENT,
-	NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
+	NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
 	IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
 	IPC_PROCESS_QUERY_RIB,
 	GET_DIF_PROPERTIES,
@@ -396,7 +396,6 @@ public:
 			unsigned int sequenceNumber);
 #ifndef SWIG
 	int getPortId() const;
-	bool isLocalRequest() const;
 	const FlowSpecification& getFlowSpecification() const;
 	void setPortId(int portId);
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
@@ -406,6 +405,7 @@ public:
 	int getFlowRequestorIPCProcessId() const;
 	unsigned short getIPCProcessId() const;
 #endif
+	bool isLocalRequest() const;
 };
 
 /**
