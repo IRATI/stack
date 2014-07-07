@@ -24,6 +24,7 @@
 
 #ifdef __cplusplus
 
+#include <set>
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -103,22 +104,83 @@ public:
 class Graph {
 public:
 	Graph(const std::list<FlowStateObject *>& flow_state_objects);
+	~Graph();
 
-private:
-	std::list<FlowStateObject *> flow_state_objects_;
 	std::list<Edge *> edges_;
 	std::list<unsigned int> vertices_;
 
+private:
+	struct CheckedVertex {
+		unsigned int address_;
+		int port_id_;
+		std::list<unsigned int> connections_;
+
+		CheckedVertex(unsigned int address) {
+			address_ = address;
+			port_id_ = 0;
+		}
+
+		bool connection_contains_address(unsigned int address) {
+			std::list<unsigned int>::iterator it;
+			for(it = connections_.begin(); it != connections_.end(); ++it) {
+				if ((*it) == address) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+	};
+
+	std::list<FlowStateObject *> flow_state_objects_;
+	std::list<CheckedVertex *> checked_vertices_;
+
 	bool contains_vertex(unsigned int address) const;
 	void init_vertices();
+	CheckedVertex * get_checked_vertex(unsigned int address) const;
+	void init_edges();
 };
 
 class IRoutingAlgorithm {
 	virtual ~IRoutingAlgorithm(){};
 
-	//Compute the next hop to other addresses
-	virtual std::list<rina::PDUForwardingTableEntry>  computePDUTForwardingTable(const std::list<FlowStateObject>& fsoList,
+	//Compute the next hop to other addresses. Ownership of
+	//PDUForwardingTableEntries in the list is passed to the
+	//caller
+	virtual std::list<rina::PDUForwardingTableEntry *> computePDUTForwardingTable(const std::list<FlowStateObject *>& fsoList,
 			unsigned int source_address) = 0;
+};
+
+/// Contains the information of a predecessor, needed by the Dijkstra Algorithm
+class PredecessorInfo {
+public:
+	PredecessorInfo(unsigned int nPredecessor, Edge * edge);
+	PredecessorInfo(unsigned int nPredecessor);
+
+	unsigned int predecessor_;
+	unsigned int port_id_;
+};
+
+/// Implementation of the Dijkstra shortes path algorithgm
+class DijkstraAlgorithm : public IRoutingAlgorithm {
+public:
+	DijkstraAlgorithm();
+	std::list<rina::PDUForwardingTableEntry *> computePDUTForwardingTable(
+			const std::list<FlowStateObject *>& fsoList, unsigned int source_address);
+private:
+	Graph * graph_;
+	std::set<unsigned int> settled_nodes_;
+	std::set<unsigned int> unsettled_nodes_;
+	std::map<unsigned int, PredecessorInfo *> predecessors_;
+	std::map<unsigned int, int> distances_;
+
+	void execute(unsigned int source);
+	unsigned int getMinimum() const;
+	void findMinimalDistances (unsigned int node);
+	int getShortestDistance(unsigned int destination) const;
+	bool isNeighbor(Edge * edge, unsigned int node) const;
+	bool isSettled(unsigned int node) const;
+	PredecessorInfo * getNextNode(unsigned int address, unsigned int sourceAddress);
 };
 
 class LinkStatePDUFTGeneratorPolicy;

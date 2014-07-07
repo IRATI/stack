@@ -161,6 +161,19 @@ const std::string Edge::toString() const {
 Graph::Graph(const std::list<FlowStateObject *>& flow_state_objects) {
 	flow_state_objects_ = flow_state_objects;
 	init_vertices();
+	init_edges();
+}
+
+Graph::~Graph() {
+	std::list<CheckedVertex *>::iterator it;
+	for(it = checked_vertices_.begin(); it != checked_vertices_.end(); ++it) {
+		delete (*it);
+	}
+
+	std::list<Edge *>::iterator edgeIt;
+	for(edgeIt = edges_.begin(); edgeIt != edges_.end(); ++edgeIt) {
+		delete (*edgeIt);
+	}
 }
 
 void Graph::init_vertices() {
@@ -185,6 +198,224 @@ bool Graph::contains_vertex(unsigned int address) const {
 	}
 
 	return false;
+}
+
+void Graph::init_edges() {
+	std::list<unsigned int>::const_iterator it;
+	std::list<FlowStateObject *>::const_iterator flowIt;
+
+	for(it = vertices_.begin(); it!= vertices_.end(); ++it) {
+		checked_vertices_.push_back(new CheckedVertex((*it)));
+	}
+
+	CheckedVertex * origin = 0;
+	CheckedVertex * dest = 0;
+	for(flowIt = flow_state_objects_.begin(); flowIt!= flow_state_objects_.end();
+			++flowIt) {
+		if (!(*flowIt)->up_) {
+			continue;
+		}
+
+		LOG_DBG("Processing flow state object: %s", (*flowIt)->object_name_.c_str());
+
+		origin = get_checked_vertex((*flowIt)->address_);
+		if (origin == 0) {
+			LOG_WARN("Could not find checked vertex for address %ud",
+					(*flowIt)->address_);
+			continue;
+		}
+
+		dest = get_checked_vertex((*flowIt)->neighbor_address_);
+		if (dest == 0) {
+			LOG_WARN("Could not find checked vertex for address %ud",
+					(*flowIt)->neighbor_address_);
+			continue;
+		}
+
+		if (origin->connection_contains_address(dest->address_) &&
+				dest->connection_contains_address(origin->address_)) {
+			edges_.push_back(new Edge(origin->address_, (*flowIt)->port_id_, dest->address_, dest->port_id_, 1));
+			origin->connections_.remove(dest->address_);
+			dest->connections_.remove(origin->address_);
+		} else {
+			origin->port_id_ = (*flowIt)->port_id_;
+			origin->connections_.push_back(dest->address_);
+			dest->connections_.push_back(origin->address_);
+		}
+	}
+}
+
+Graph::CheckedVertex * Graph::get_checked_vertex(unsigned int address) const {
+	std::list<Graph::CheckedVertex *>::iterator it;
+	for (it = checked_vertices_.begin(); it != checked_vertices_.end(); ++it) {
+		if ((*it)->address_ == address) {
+			return (*it);
+		}
+	}
+
+	return 0;
+}
+
+//Class Predecessor Info
+PredecessorInfo::PredecessorInfo(unsigned int nPredecessor, Edge * edge) {
+	predecessor_ = nPredecessor;
+	if (edge->address1_ == nPredecessor) {
+		port_id_ = edge->port_v1_;
+	} else {
+		port_id_ = edge->port_v2_;
+	}
+}
+
+PredecessorInfo::PredecessorInfo(unsigned int nPredecessor) {
+	predecessor_ = nPredecessor;
+	port_id_ = -1;
+}
+
+//Class DijsktraAlgorithm
+DijkstraAlgorithm::DijkstraAlgorithm(){
+	graph_ = 0;
+}
+
+std::list<rina::PDUForwardingTableEntry *> DijkstraAlgorithm::computePDUTForwardingTable(
+			const std::list<FlowStateObject *>& fsoList, unsigned int source_address) {
+	std::list<rina::PDUForwardingTableEntry *> result;
+	std::list<unsigned int>::iterator it;
+	PredecessorInfo * nextNode;
+	rina::PDUForwardingTableEntry * entry;
+
+	graph_ = new Graph(fsoList);
+
+	execute(source_address);
+
+	for(it = graph_->vertices_.begin(); it != graph_->vertices_.end(); ++it) {
+		if ((*it) != source_address) {
+			nextNode = getNextNode((*it), source_address);
+			if (nextNode) {
+				entry = new rina::PDUForwardingTableEntry();
+				entry->setAddress((*it));
+				entry->addPortId(nextNode->port_id_);
+				entry->setQosId(1);
+				result.push_back(entry);
+			}
+		}
+	}
+
+	delete graph_;
+
+	return result;
+}
+
+void DijkstraAlgorithm::execute(unsigned int source) {
+	distances_[source] = 0;
+	unsettled_nodes_.insert(source);
+
+	unsigned int node;
+	while(unsettled_nodes_.size() > 0) {
+		node = getMinimum();
+		settled_nodes_.insert(node);
+		unsettled_nodes_.erase(node);
+		findMinimalDistances(node);
+	}
+}
+
+unsigned int DijkstraAlgorithm::getMinimum() const {
+	unsigned int minimum = UINT_MAX;
+	std::set<unsigned int>::iterator it;
+
+	for (it = unsettled_nodes_.begin(); it != unsettled_nodes_.end(); ++it) {
+		if (minimum == UINT_MAX) {
+			minimum = (*it);
+		} else {
+			if (getShortestDistance((*it)) < getShortestDistance(minimum)) {
+				minimum = (*it);
+			}
+		}
+	}
+
+	return minimum;
+}
+
+int DijkstraAlgorithm::getShortestDistance(unsigned int destination) const {
+	std::map<unsigned int, int>::iterator it;
+	int distance = INT_MAX;
+
+	it = distances_.find(destination);
+	if (it != distances_.end()) {
+		distance = it->second;
+	}
+
+	return distance;
+}
+
+void DijkstraAlgorithm::findMinimalDistances (unsigned int node) {
+	std::list<unsigned int> adjacentNodes;
+	std::list<Edge *>::iterator edgeIt;
+
+	unsigned int target = 0;
+	int shortestDistance;
+	for (edgeIt = graph_->edges_.begin(); edgeIt != graph_->edges_.end();
+			++edgeIt) {
+		if (isNeighbor((*edgeIt), node)) {
+			target = (*edgeIt)->getOtherEndpoint(node);
+			shortestDistance = getShortestDistance(node) + (*edgeIt)->weight_;
+			if (getShortestDistance(target) > shortestDistance) {
+				distances_[target] = shortestDistance;
+				predecessors_[target] = new PredecessorInfo(node, (*edgeIt));
+				unsettled_nodes_.insert(target);
+			}
+		}
+	}
+}
+
+
+bool DijkstraAlgorithm::isNeighbor(Edge * edge, unsigned int node) const {
+	if (edge->isVertexIn(node)) {
+		if (!isSettled(edge->getOtherEndpoint(node))) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DijkstraAlgorithm::isSettled(unsigned int node) const {
+	std::set<unsigned int>::iterator it;
+
+	for(it = settled_nodes_.begin(); it!= settled_nodes_.end(); ++it) {
+		if ((*it) == node) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target, unsigned int source) {
+	std::map<unsigned int, PredecessorInfo *>::iterator it;
+	PredecessorInfo * step;
+
+	it = predecessors_.find(target);
+	if (it == predecessors_.end()) {
+		return 0;
+	} else {
+		step = it->second;
+	}
+
+	it = predecessors_.find(step->predecessor_);
+	while (it != predecessors_.end()) {
+		step = it->second;
+		if (step->predecessor_ == source) {
+			break;
+		}
+
+		it = predecessors_.find(step->predecessor_);
+	}
+
+	if (step->predecessor_ == target) {
+		return 0;
+	}
+
+	return step;
 }
 
 //Class FlowState RIB Object Group
