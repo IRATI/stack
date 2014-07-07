@@ -25,6 +25,8 @@
 #include <librina/ipc-manager.h>
 
 
+namespace rinad {
+
 rina::IPCProcess *select_ipcp_by_dif(const
                 rina::ApplicationProcessNamingInformation& dif_name);
 
@@ -34,4 +36,5 @@ bool application_is_registered_to_ipcp(
                 const rina::ApplicationProcessNamingInformation&,
                 rina::IPCProcess *slave_ipcp);
 
+}
 #endif  /* __RINAD_HELPERS_H__ */

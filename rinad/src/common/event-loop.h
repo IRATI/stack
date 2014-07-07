@@ -26,6 +26,9 @@
 
 #include <librina/common.h>
 
+
+namespace rinad {
+
 class EventLoopData {
  public:
         virtual ~EventLoopData() { }
@@ -48,4 +51,5 @@ class EventLoop {
         EventHandler post_function;
 };
 
+}
 #endif   /* __EVENT_LOOP_H__ */

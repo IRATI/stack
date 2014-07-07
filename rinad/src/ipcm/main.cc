@@ -75,15 +75,15 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        IPCManager ipcm;
-        EventLoop loop(&ipcm);
+        rinad::IPCManager ipcm;
+        rinad::EventLoop loop(&ipcm);
 
         if (!parse_configuration(conf, &ipcm)) {
                 LOG_ERR("Failed to load configuration");
                 return EXIT_FAILURE;
         }
 
-        register_handlers_all(loop);
+        rinad::register_handlers_all(loop);
 
         loop.run();
 

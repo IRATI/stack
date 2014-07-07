@@ -37,6 +37,8 @@
 using namespace std;
 
 
+namespace rinad {
+
 /* Macro useful to perform downcasts in declarations. */
 #define DOWNCAST_DECL(_var,_class,_name)        \
         _class *_name = dynamic_cast<_class*>(_var);
@@ -976,4 +978,6 @@ void register_handlers_all(EventLoop& loop)
                         ipc_process_destroy_connection_result_handler);
         loop.register_event(rina::IPC_PROCESS_DUMP_FT_RESPONSE,
                         ipc_process_dump_ft_response_handler);
+}
+
 }

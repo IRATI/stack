@@ -38,6 +38,8 @@
 using namespace std;
 
 
+namespace rinad {
+
 bool parse_configuration(string file_loc, IPCManager *ipcm)
 {
         // FIXME: General note: Params should be checked before they are used
@@ -257,4 +259,6 @@ bool parse_configuration(string file_loc, IPCManager *ipcm)
 
         ipcm->config = config;
         return true;
+}
+
 }

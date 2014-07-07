@@ -33,6 +33,8 @@
 using namespace std;
 
 
+namespace rinad {
+
 /* Returns an IPC process assigned to the DIF specified by @dif_name,
  * if any.
  */
@@ -91,4 +93,6 @@ application_is_registered_to_ipcp(
         }
 
         return false;
+}
+
 }

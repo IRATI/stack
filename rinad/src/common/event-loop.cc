@@ -25,6 +25,9 @@
 
 #include "event-loop.h"
 
+
+namespace rinad {
+
 EventLoop::EventLoop(EventLoopData *dm) : data_model(dm),
                                pre_function(NULL),
                                post_function(NULL)
@@ -66,4 +69,6 @@ EventLoop::run()
                         post_function(event, data_model);
                 }
         }
+}
+
 }

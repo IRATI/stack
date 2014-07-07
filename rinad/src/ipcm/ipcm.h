@@ -33,6 +33,8 @@
 #include "rina-configuration.h"
 
 
+namespace rinad {
+
 class IPCMConcurrency : public rina::ConditionVariable {
  public:
         void wait_for_event(rina::IPCEventType ty, unsigned int seqnum);
@@ -133,4 +135,5 @@ class IPCManager : public EventLoopData {
 
 void register_handlers_all(EventLoop& loop);
 
+}
 #endif  /* __IPCM_H__ */
