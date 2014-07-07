@@ -13,10 +13,5 @@ include $(srcdir)/Makefile.inc
 noinst_LTLIBRARIES =				\
 	libencoders.la
 
-libencoders_la_SOURCES =				\
-	ApplicationProcessNamingInfoMessage.pb.cc	\
-	ApplicationProcessNamingInfoMessage.pb.h	\
-	ApplicationRegistrationMessage.pb.cc		\
-	ApplicationRegistrationMessage.pb.h		\
-	CommonMessages.pb.cc				\
-	CommonMessages.pb.h
+libencoders_la_SOURCES =			\
+	$(protoSOURCES)

@@ -1,3 +1,6 @@
+protoSOURCES =
+
+
 ApplicationProcessNamingInfoMessage.stamp: ApplicationProcessNamingInfoMessage.proto
 	rm -f ApplicationProcessNamingInfoMessage.tmp
 	touch ApplicationProcessNamingInfoMessage.tmp
@@ -18,6 +21,9 @@ MOSTLYCLEANFILES +=				\
 EXTRA_DIST +=					\
 	ApplicationProcessNamingInfoMessage.proto				\
 	ApplicationProcessNamingInfoMessage.stamp
+
+protoSOURCES += ApplicationProcessNamingInfoMessage.pb.cc ApplicationProcessNamingInfoMessage.pb.h
+
 
 ApplicationRegistrationMessage.stamp: ApplicationRegistrationMessage.proto
 	rm -f ApplicationRegistrationMessage.tmp
@@ -40,6 +46,9 @@ EXTRA_DIST +=					\
 	ApplicationRegistrationMessage.proto				\
 	ApplicationRegistrationMessage.stamp
 
+protoSOURCES += ApplicationRegistrationMessage.pb.cc ApplicationRegistrationMessage.pb.h
+
+
 CommonMessages.stamp: CommonMessages.proto
 	rm -f CommonMessages.tmp
 	touch CommonMessages.tmp
@@ -60,4 +69,7 @@ MOSTLYCLEANFILES +=				\
 EXTRA_DIST +=					\
 	CommonMessages.proto				\
 	CommonMessages.stamp
+
+protoSOURCES += CommonMessages.pb.cc CommonMessages.pb.h
+
 
