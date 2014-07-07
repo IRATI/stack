@@ -30,6 +30,7 @@
 #include <librina/cdap.h>
 #include <librina/ipc-process.h>
 
+#include "common/encoder.h"
 #include "events.h"
 
 namespace rinad {
@@ -86,28 +87,14 @@ public:
   virtual std::list<char*>& getRawSdus(char delimitedSdus[]) = 0;
 };
 
-/// Interface that Encodes and Decodes an object to/from bytes
-class IEncoder {
-	public:
-		virtual char * encode(const void * object) = 0;
-		virtual void * decode(char * serializedObject) = 0;
-		virtual ~IEncoder(){};
-};
-
 /// Contains the objects needed to request the Enrollment
 class EnrollmentRequest
 {
 public:
 	EnrollmentRequest(const rina::Neighbor &neighbor,
                           const rina::EnrollToDIFRequestEvent &event);
-	const rina::Neighbor& get_neighbor() const;
-	void set_neighbor(const rina::Neighbor &neighbor);
-	const rina::EnrollToDIFRequestEvent& get_event() const;
-	void set_event(const rina::EnrollToDIFRequestEvent &event);
-
-private:
-		rina::Neighbor neighbor_;
-		rina::EnrollToDIFRequestEvent event_;
+	rina::Neighbor neighbor_;
+	rina::EnrollToDIFRequestEvent event_;
 };
 
 /// Interface that must be implementing by classes that provide
@@ -347,7 +334,7 @@ public:
 	virtual ~IPDUForwardingTableGenerator(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-	virtual const IPDUFTGeneratorPolicy& get_pdu_ft_generator_policy() const = 0;
+	virtual IPDUFTGeneratorPolicy * get_pdu_ft_generator_policy() const = 0;
 };
 
 /// Resource Allocator Interface
@@ -385,17 +372,9 @@ public:
                       long object_instance,
                       const std::string& object_name);
 	rina::RIBObjectData get_data();
-	const std::string& get_name() const;
-	const std::string& get_class() const;
-	long get_instance() const;
 	virtual const void* get_value() const = 0;
-	IPCProcess* get_ipc_process();
-	IRIBDaemon* get_rib_daemon();
-	IEncoder* get_encoder();
 
 	/// Parent-child management operations
-	BaseRIBObject * get_parent() const;
-	void set_parent(BaseRIBObject * parent);
 	const std::list<BaseRIBObject*>& get_children() const;
 	void add_child(BaseRIBObject * child);
 	void remove_child(const std::string& objectName);
@@ -426,15 +405,16 @@ public:
 	virtual void remoteStopObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
-private:
 	std::string class_;
 	std::string name_;
 	long instance_;
 	BaseRIBObject * parent_;
-	std::list<BaseRIBObject*> children_;
 	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
-	IEncoder * encoder_;
+	Encoder * encoder_;
+
+private:
+	std::list<BaseRIBObject*> children_;
 	void operation_not_supported();
 	void operation_not_supported(const void* object);
 	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
@@ -513,9 +493,6 @@ public:
 class NotificationPolicy {
 public:
 	NotificationPolicy(const std::list<int>& cdap_session_ids);
-	const std::list<int>& get_cdap_session_ids() const;
-
-private:
 	std::list<int> cdap_session_ids_;
 };
 
@@ -658,7 +635,7 @@ public:
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
 	virtual IDelimiter* get_delimiter() = 0;
-	virtual IEncoder* get_encoder() = 0;
+	virtual Encoder* get_encoder() = 0;
 	virtual rina::CDAPSessionManagerInterface* get_cdap_session_manager() = 0;
 	virtual IEnrollmentTask* get_enrollment_task() = 0;
 	virtual IFlowAllocator* get_flow_allocator() = 0;
@@ -674,48 +651,6 @@ public:
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
 	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
-};
-
-/// Contains the object names of the objects in the RIB
-class RIBObjectNames
-{
-public:
-	/// Partial names
-	static const std::string ADDRESS;
-	static const std::string APNAME;
-	static const std::string CONSTANTS;
-	static const std::string DATA_TRANSFER;
-	static const std::string DAF;
-	static const std::string DIF;
-	static const std::string DIF_REGISTRATIONS;
-	static const std::string DIRECTORY_FORWARDING_TABLE_ENTRIES;
-	static const std::string ENROLLMENT;
-	static const std::string FLOWS;
-	static const std::string FLOW_ALLOCATOR;
-	static const std::string IPC;
-	static const std::string MANAGEMENT;
-	static const std::string NEIGHBORS;
-	static const std::string NAMING;
-	static const std::string NMINUSONEFLOWMANAGER;
-	static const std::string NMINUSEONEFLOWS;
-	static const std::string OPERATIONAL_STATUS;
-	static const std::string PDU_FORWARDING_TABLE;
-	static const std::string QOS_CUBES;
-	static const std::string RESOURCE_ALLOCATION;
-	static const std::string ROOT;
-	static const std::string SEPARATOR;
-	static const std::string SYNONYMS;
-	static const std::string WHATEVERCAST_NAMES;
-	static const std::string ROUTING;
-	static const std::string FLOWSTATEOBJECTGROUP;
-
-	/* Full names */
-	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_NAME;
-	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_CLASS;
-	static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS;
-	static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_NAME;
-
-	virtual ~RIBObjectNames(){};
 };
 
 /// Generates unique object instances

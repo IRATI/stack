@@ -27,27 +27,11 @@
 
 #include "events.h"
 #include "resource-allocator.h"
+#include "pduft-generator.h"
 
 namespace rinad {
 
 //Class NMinusOneFlowManager
-const std::string NMinusOneFlowManager::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS
-	= "DIF registration set";
-const std::string NMinusOneFlowManager::DIF_REGISTRATION_RIB_OBJECT_CLASS
-	= "DIF registration";
-const std::string NMinusOneFlowManager::DIF_REGISTRATION_SET_RIB_OBJECT_NAME
-	= RIBObjectNames::SEPARATOR + RIBObjectNames::DIF + RIBObjectNames::SEPARATOR +
-	RIBObjectNames::RESOURCE_ALLOCATION + RIBObjectNames::SEPARATOR +
-	RIBObjectNames::NMINUSONEFLOWMANAGER + RIBObjectNames::SEPARATOR + RIBObjectNames::DIF_REGISTRATIONS;
-const std::string NMinusOneFlowManager::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS =
-		"nminusone flow set";
-const std::string NMinusOneFlowManager::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS =
-		"nminusone flow";
-const std::string NMinusOneFlowManager::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME =
-		RIBObjectNames::SEPARATOR + RIBObjectNames::DIF + RIBObjectNames::SEPARATOR +
-		RIBObjectNames::RESOURCE_ALLOCATION + RIBObjectNames::SEPARATOR + RIBObjectNames::NMINUSONEFLOWMANAGER +
-		RIBObjectNames::SEPARATOR + RIBObjectNames::NMINUSEONEFLOWS;
-
 NMinusOneFlowManager::NMinusOneFlowManager() {
 	rib_daemon_ = 0;
 	ipc_process_ = 0;
@@ -63,12 +47,14 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 void NMinusOneFlowManager::populateRIB(){
 	try {
 		BaseRIBObject * object = new SimpleSetRIBObject(ipc_process_,
-				DIF_REGISTRATION_SET_RIB_OBJECT_CLASS, DIF_REGISTRATION_RIB_OBJECT_CLASS,
-				DIF_REGISTRATION_SET_RIB_OBJECT_NAME);
+				EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
+				EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS,
+				EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME);
 		rib_daemon_->addRIBObject(object);
 		object = new SimpleSetRIBObject(ipc_process_,
-				N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS, N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-				N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME);
+				EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
+				EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
+				EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME);
 		rib_daemon_->addRIBObject(object);
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
@@ -118,9 +104,10 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 				event.getPortId(), event.getDIFName());
 	try {
 		std::stringstream ss;
-		ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getPortId();
-		rib_daemon_->createObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(),
-				&(flow->getFlowInformation()), 0);
+		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+		ss<<EncoderConstants::SEPARATOR<<event.getPortId();
+		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
+				ss.str(), &(flow->getFlowInformation()), 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
@@ -152,9 +139,10 @@ void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent&
 				event.getRemoteApplicationName().getProcessInstance().c_str());
 		try {
 			std::stringstream ss;
-			ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getPortId();
-			rib_daemon_->createObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(),
-					&(flow->getFlowInformation()), 0);
+			ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+			ss<<EncoderConstants::SEPARATOR<<event.getPortId();
+			rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
+					ss.str(), &(flow->getFlowInformation()), 0);
 		} catch (Exception &e){
 			LOG_ERR("Error creating RIB object: %s", e.what());
 		}
@@ -195,8 +183,9 @@ void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEv
 void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 	try{
 		std::stringstream ss;
-		ss<<N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<portId;
-		rib_daemon_->deleteObject(N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
+		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+		ss<<EncoderConstants::SEPARATOR<<portId;
+		rib_daemon_->deleteObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, ss.str(), 0, 0);
 	}catch(Exception &e) {
 		LOG_ERR("Problems deleting object from the RIB: %s", e.what());
 	}
@@ -220,8 +209,9 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 					event.getDIFName().getProcessName().c_str());
 		try{
 			std::stringstream ss;
-			ss<<DIF_REGISTRATION_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getDIFName().getProcessName();
-			rib_daemon_->createObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
+			ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+			ss<<EncoderConstants::SEPARATOR<<event.getDIFName().getProcessName();
+			rib_daemon_->createObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
 					&(event.getDIFName().getProcessName()), 0);
 		}catch(Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());;
@@ -236,8 +226,9 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 
 	try {
 		std::stringstream ss;
-		ss<<DIF_REGISTRATION_SET_RIB_OBJECT_NAME<<RIBObjectNames::SEPARATOR<<event.getDIFName().getProcessName();
-		rib_daemon_->deleteObject(DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0, 0);
+		ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
+		ss<<EncoderConstants::SEPARATOR<<event.getDIFName().getProcessName();
+		rib_daemon_->deleteObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(), 0, 0);
 	}catch (Exception &e) {
 		LOG_ERR("Problems deleting object from RIB: %s", e.what());
 	}
@@ -262,7 +253,7 @@ bool NMinusOneFlowManager::isSupportingDIF(const rina::ApplicationProcessNamingI
 //CLASS Resource Allocator
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
-	pdu_forwarding_table_generator_ = 0;
+	pdu_forwarding_table_generator_ = new PDUForwardingTableGenerator();
 	ipc_process_ = 0;
 }
 

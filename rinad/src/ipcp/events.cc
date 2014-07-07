@@ -43,18 +43,6 @@ NMinusOneFlowAllocationFailedEvent::NMinusOneFlowAllocationFailedEvent(unsigned 
 	result_reason_ = result_reason;
 }
 
-unsigned int NMinusOneFlowAllocationFailedEvent::get_handle() const {
-	return handle_;
-}
-
-const rina::FlowInformation& NMinusOneFlowAllocationFailedEvent::get_flow_information() const {
-	return flow_information_;
-}
-
-const std::string& NMinusOneFlowAllocationFailedEvent::get_result_reason() const {
-	return result_reason_;
-}
-
 const std::string NMinusOneFlowAllocationFailedEvent::toString() {
 	std::stringstream ss;
 	ss<<"Event id: "<<get_id()<<"; Handle: "<<handle_;
@@ -69,14 +57,6 @@ NMinusOneFlowAllocatedEvent::NMinusOneFlowAllocatedEvent(unsigned int handle,
 					BaseEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED) {
 	handle_ = handle;
 	flow_information_ = flow_information;
-}
-
-unsigned int NMinusOneFlowAllocatedEvent::get_handle() const {
-	return handle_;
-}
-
-const rina::FlowInformation& NMinusOneFlowAllocatedEvent::get_flow_information() const {
-	return flow_information_;
 }
 
 const std::string NMinusOneFlowAllocatedEvent::toString() {
@@ -94,14 +74,6 @@ NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(unsigned int port_i
 	cdap_session_descriptor_ = cdap_session_descriptor;
 }
 
-unsigned int NMinusOneFlowDeallocatedEvent::get_port_id() const {
-	return port_id_;
-}
-
-rina::CDAPSessionDescriptor * NMinusOneFlowDeallocatedEvent::get_cdap_session_descriptor() const {
-	return cdap_session_descriptor_;
-}
-
 const std::string NMinusOneFlowDeallocatedEvent::toString() {
 	std::stringstream ss;
 	ss<<"Event id: "<<get_id()<<"; Port-id: "<<port_id_<<std::endl;
@@ -112,10 +84,6 @@ const std::string NMinusOneFlowDeallocatedEvent::toString() {
 ConnectiviyToNeighborLostEvent::ConnectiviyToNeighborLostEvent(rina::Neighbor* neighbor):
 		BaseEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST) {
 	neighbor_ = neighbor;
-}
-
-rina::Neighbor * ConnectiviyToNeighborLostEvent::get_neighbor() {
-	return neighbor_;
 }
 
 const std::string ConnectiviyToNeighborLostEvent::toString() {

@@ -1,0 +1,7 @@
+package rina.messages;
+option java_package="rina.encoding.impl.googleprotobuf.whatevercast";
+import "WhatevercastNameMessage.proto";
+
+message whatevercastNames_t{   //carries information about all the whatevercast names
+	repeated whatevercastName_t whatevercastName = 1;
+}

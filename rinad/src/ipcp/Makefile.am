@@ -16,5 +16,6 @@ ipcp_SOURCES  =						\
 	rib-daemon.cc		rib-daemon.h		\
 	enrollment-task.cc	enrollment-task.h	\
 	namespace-manager.cc	namespace-manager.h	\
+	pduft-generator.cc      pduft-generator.h \
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h

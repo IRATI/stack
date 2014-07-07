@@ -30,13 +30,6 @@ namespace rinad {
 
 class NMinusOneFlowManager: public INMinusOneFlowManager {
 public:
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
-	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
-	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS;
-	static const std::string N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS;
-	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-
 	NMinusOneFlowManager();
 	void set_ipc_process(IPCProcess * ipc_process);
 	unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation);
