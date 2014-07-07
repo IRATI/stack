@@ -874,10 +874,34 @@ static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoop
         (void) opaque;    // Stop compiler barfs
 }
 
-static void enroll_to_dif_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
+                                                 EventLoopData *opaque)
 {
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
+        DOWNCAST_DECL(e, rina::EnrollToDIFResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        rina::IPCProcess *ipcp = NULL;
+        bool success = (event->result == 0);
+
+        mit = ipcm->pending_ipcp_enrollments.find(event->sequenceNumber);
+        if (mit == ipcm->pending_ipcp_enrollments.end()) {
+                cerr << __func__ << ": Warning: IPC process enrollment "
+                        "response received, but no corresponding pending "
+                        "request" << endl;
+                return;
+        }
+
+        ipcp = mit->second;
+        if (success) {
+                ipcp->addNeighbors(event->neighbors);
+                ipcp->setDIFInformation(event->difInformation);
+        } else {
+                cerr << __func__ << ": Error: Enrollment operation of "
+                        "process " << ipcp->name.toString() << " failed"
+                        << endl;
+        }
+
+        ipcm->pending_ipcp_enrollments.erase(mit);
 }
 
 static void neighbors_modified_notificaiton_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
