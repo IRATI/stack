@@ -8,6 +8,7 @@ CLEANFILES       =
 MOSTLYCLEANFILES =
 EXTRA_DIST       =
 
+
 ApplicationProcessNamingInfoMessage.stamp:		\
 	ApplicationProcessNamingInfoMessage.proto
 	rm -f ApplicationProcessNamingInfoMessage.tmp
@@ -81,7 +82,6 @@ MOSTLYCLEANFILES +=				\
 EXTRA_DIST +=					\
 	CommonMessages.proto			\
 	CommonMessages.stamp
-
 
 
 noinst_LTLIBRARIES =				\
