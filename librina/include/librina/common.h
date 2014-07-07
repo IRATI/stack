@@ -396,7 +396,6 @@ public:
 			unsigned int sequenceNumber);
 #ifndef SWIG
 	int getPortId() const;
-	bool isLocalRequest() const;
 	const FlowSpecification& getFlowSpecification() const;
 	void setPortId(int portId);
 	void setDIFName(const ApplicationProcessNamingInformation& difName);
@@ -406,6 +405,7 @@ public:
 	int getFlowRequestorIPCProcessId() const;
 	unsigned short getIPCProcessId() const;
 #endif
+	bool isLocalRequest() const;
 };
 
 /**

@@ -40,12 +40,10 @@ using namespace std;
 
 namespace rinad {
 
-void
-flow_allocation_requested_event_handler(rina::IPCEvent *e,
-					EventLoopData *opaque)
+static void
+flow_allocation_requested_local(rina::FlowRequestEvent *event,
+                                IPCManager *ipcm)
 {
-        DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager, ipcm);
         rina::ApplicationProcessNamingInformation dif_name;
         rina::IPCProcess *ipcp = NULL;
         bool dif_specified;
@@ -84,7 +82,7 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
                                         PendingFlowAllocation(ipcp, *event,
                                                               dif_specified);
         } catch (rina::AllocateFlowException) {
-                cerr << __func__ << " Error while requesting IPC process "
+                cerr << __func__ << ": Error while requesting IPC process "
                         << ipcp->name.toString() << " to allocate a flow "
                         "between " << event->localApplicationName.toString()
                         << " and " << event->remoteApplicationName.toString()
@@ -96,10 +94,68 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
                 try {
                         rina::applicationManager->flowAllocated(*event);
                 } catch (rina::NotifyFlowAllocatedException) {
-                        cerr << __func__ << "Error while notifying the "
+                        cerr << __func__ << ": Error while notifying the "
                                 "Application Manager about flow allocation"
                                 << endl;
                 }
+        }
+}
+
+static void
+flow_allocation_requested_remote(rina::FlowRequestEvent *event,
+                                 IPCManager *ipcm)
+{
+        // Retrieve the local IPC process involved in the flow allocation
+        // request coming from a remote application
+        rina::IPCProcess *ipcp = rina::ipcProcessFactory->
+                                        getIPCProcess(event->ipcProcessId);
+        unsigned int seqnum;
+
+        if (!ipcp) {
+                cerr << __func__ << ": Error: Could not retrieve IPC process "
+                        "with id " << event->ipcProcessId << ", to serve "
+                        "remote flow allocation request" << endl;
+                return;
+        }
+
+        try {
+                // Inform the local application that a remote application
+                // wants to allocate a flow
+                seqnum = rina::applicationManager->flowRequestArrived(
+                                        event->localApplicationName,
+                                        event->remoteApplicationName,
+                                        event->flowSpecification,
+                                        event->DIFName, event->portId);
+                ipcm->pending_flow_allocations[seqnum] =
+                                PendingFlowAllocation(ipcp, *event, true);
+        } catch (rina::AppFlowArrivedException) {
+                cerr << __func__ << ": Error while informing application "
+                        << event->localApplicationName.toString() <<
+                        " about a flow request coming from remote application "
+                        << event->remoteApplicationName.toString() << endl;
+                try {
+                        // Inform the IPC process that it was not possible
+                        // to allocate the flow
+                        ipcp->allocateFlowResponse(*event, -1, true, 0);
+                } catch (rina::AllocateFlowException) {
+                        cerr << __func__ << ": Error while informing IPC "
+                                << "process " << ipcp->name.toString() <<
+                                " about failed flow allocation" << endl;
+                }
+        }
+}
+
+void
+flow_allocation_requested_event_handler(rina::IPCEvent *e,
+					EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+
+        if (event->localRequest) {
+                flow_allocation_requested_local(event, ipcm);
+        } else {
+                flow_allocation_requested_remote(event, ipcm);
         }
 }
 
