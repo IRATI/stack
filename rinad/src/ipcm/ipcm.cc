@@ -1,7 +1,8 @@
 /*
  * IPC Manager
  *
- *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -303,124 +304,211 @@ IPCManager::apply_configuration()
         return 0;
 }
 
-static void FlowAllocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void FlowAllocationRequestedEventHandler(rina::IPCEvent * event,
+                                                EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void AllocateFlowRequestResultEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void AllocateFlowRequestResultEventHandler(rina::IPCEvent * event,
+                                                  EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void AllocateFlowResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void AllocateFlowResponseEventHandler(rina::IPCEvent * event,
+                                             EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void FlowDeallocationRequestedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void FlowDeallocationRequestedEventHandler(rina::IPCEvent * event,
+                                                  EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void DeallocateFlowResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void DeallocateFlowResponseEventHandler(rina::IPCEvent * event,
+                                               EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void ApplicationUnregisteredEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void ApplicationUnregisteredEventHandler(rina::IPCEvent * event,
+                                                EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void FlowDeallocatedEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void FlowDeallocatedEventHandler(rina::IPCEvent * event,
+                                        EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void ApplicationRegistrationRequestEventHandler(rina::IPCEvent * event,
+                                                       EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void RegisterApplicationResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void RegisterApplicationResponseEventHandler(rina::IPCEvent * event,
+                                                    EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void ApplicationUnregistrationRequestEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void ApplicationUnregistrationRequestEventHandler(rina::IPCEvent *event,
+                                                         EventLoopData * dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void UnregisterApplicationResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void UnregisterApplicationResponseEventHandler(rina::IPCEvent * event,
+                                                      EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void ApplicationRegistrationCanceledEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void ApplicationRegistrationCanceledEventHandler(rina::IPCEvent* event,
+                                                        EventLoopData * dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void AssignToDifRequestEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void AssignToDifRequestEventHandler(rina::IPCEvent * event,
+                                           EventLoopData * dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void AssignToDifResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void AssignToDifResponseEventHandler(rina::IPCEvent * event,
+                                            EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void UpdateDifConfigRequestEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void UpdateDifConfigRequestEventHandler(rina::IPCEvent * event,
+                                               EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void UpdateDifConfigResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void UpdateDifConfigResponseEventHandler(rina::IPCEvent * event,
+                                                EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void EnrollToDifRequestEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void EnrollToDifRequestEventHandler(rina::IPCEvent * event,
+                                           EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void EnrollToDifResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void EnrollToDifResponseEventHandler(rina::IPCEvent * event,
+                                            EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void NeighborsModifiedNotificaitonEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void NeighborsModifiedNotificaitonEventHandler(rina::IPCEvent * event,
+                                                      EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessDifRegistrationNotificationHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessDifRegistrationNotificationHandler(rina::IPCEvent* event,
+                                                         EventLoopData * dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessQueryRibHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessQueryRibHandler(rina::IPCEvent * event,
+                                      EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void GetDifPropertiesHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void GetDifPropertiesHandler(rina::IPCEvent * event,
+                                    EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void GetDifPropertiesResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void GetDifPropertiesResponseEventHandler(rina::IPCEvent * event,
+                                                 EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void OsProcessFinalizedHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void OsProcessFinalizedHandler(rina::IPCEvent * event,
+                                      EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcmRegisterAppResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcmRegisterAppResponseEventHandler(rina::IPCEvent * event,
+                                                EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcmUnregisterAppResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcmUnregisterAppResponseEventHandler(rina::IPCEvent * event,
+                                                  EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcmDeallocateFlowResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcmDeallocateFlowResponseEventHandler(rina::IPCEvent * event,
+                                                   EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcmAllocateFlowRequestResultHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcmAllocateFlowRequestResultHandler(rina::IPCEvent * event,
+                                                 EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void QueryRibResponseEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void QueryRibResponseEventHandler(rina::IPCEvent * event,
+                                         EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
-                                                    EventLoopData *dm)
+static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent * e,
+                                                    EventLoopData *  dm)
 {
         DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
         DOWNCAST_DECL(dm, IPCManager, ipcm);
@@ -439,28 +527,46 @@ static void IpcProcessDaemonInitializedEventHandler(rina::IPCEvent *e,
         }
 }
 
-static void TimerExpiredEventHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void TimerExpiredEventHandler(rina::IPCEvent * event,
+                                     EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessCreateConnectionResponseHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessCreateConnectionResponseHandler(rina::IPCEvent * event,
+                                                      EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessUpdateConnectionResponseHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessUpdateConnectionResponseHandler(rina::IPCEvent * event,
+                                                      EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessCreateConnectionResultHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessCreateConnectionResultHandler(rina::IPCEvent * event,
+                                                    EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessDestroyConnectionResultHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessDestroyConnectionResultHandler(rina::IPCEvent * event,
+                                                     EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
-static void IpcProcessDumpFtResponseHandler(rina::IPCEvent *event, EventLoopData *dm)
+static void IpcProcessDumpFtResponseHandler(rina::IPCEvent * event,
+                                            EventLoopData *  dm)
 {
+        (void) event; // Stop compiler barfs
+        (void) dm;    // Stop compiler barfs
 }
 
 void register_handlers_all(EventLoop& loop)
