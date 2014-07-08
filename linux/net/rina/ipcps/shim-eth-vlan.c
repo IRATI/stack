@@ -869,7 +869,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         return -1;
                 }
 
-                if (kfa_flow_create(data->kfa, data->id, flow->port_id)){
+                if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
                         LOG_DBG("Could not create flow in KFA");
                         flow->port_id_state = PORT_STATE_NULL;
                         kfa_port_id_release(data->kfa, flow->port_id);

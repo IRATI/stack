@@ -385,7 +385,7 @@ static int remove_all_cepid(struct ipcp_instance_data * data,
 
         ASSERT(data);
 
-        list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list){
+        list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list) {
                 efcp_connection_destroy(data->efcpc, pos->cep_id);
                 list_del(&pos->list);
                 rkfree(pos);
@@ -435,7 +435,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if(!efcp_config->dt_cons) {
+        if (!efcp_config->dt_cons) {
                 LOG_ERR("Configuration constants for the DIF are bogus...");
                 efcp_config_destroy(efcp_config);
                 return -1;

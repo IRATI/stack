@@ -797,7 +797,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                                 retval = -1;
                         }
 
-                if (dtcp_rate_based_fctrl(dtcp_cfg)){
+                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
                         LOG_DBG("Rate based fctrl invoked");
                         if (dtcp->policies->rate_reduction(dtcp)) {
                                 LOG_ERR("Failed Rate Reduction policy");
@@ -814,7 +814,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp_flow_ctrl(dtcp_cfg) && !dtcp_rtx_ctrl(dtcp_cfg)){
+        if (dtcp_flow_ctrl(dtcp_cfg) && !dtcp_rtx_ctrl(dtcp_cfg)) {
                 LOG_DBG("Receiving flow ctrl invoked");
                 if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
                         LOG_ERR("Failed Receiving Flow Control policy");

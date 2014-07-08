@@ -346,7 +346,7 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
           }
 
           tmp->rxctrl_cfg = dtcp_rxctrl_config_create_gfp(flags);
-          if (!tmp->rxctrl_cfg){
+          if (!tmp->rxctrl_cfg) {
           LOG_ERR("Could not create rxctrl_cfg in dtcp_config_create");
           goto clean;
           }
