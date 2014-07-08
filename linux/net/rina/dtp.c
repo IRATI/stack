@@ -344,32 +344,6 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
 }
 #endif
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
-#if 0
-static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
-{
-        seq_num_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_seq_nr_rcv;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
-
-static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
-{
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        sv->max_seq_nr_rcv = nr;
-        spin_unlock(&sv->lock);
-}
-#endif
-#endif
-
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
 {
