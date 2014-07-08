@@ -360,7 +360,7 @@ static int push_pdus_rmt(struct dtcp * dtcp)
         return 0;
 }
 
-static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp)
+static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 {
         struct pdu *    pdu;
         struct pci *    pci;
@@ -391,7 +391,7 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp)
                        dtcp->conn->destination_address,
                        seq,
                        dtcp->conn->qos_id,
-                       PDU_TYPE_ACK_AND_FC)) {
+                       type)) {
                 pdu_destroy(pdu);
                 pci_destroy(pci);
                 return NULL;
@@ -420,7 +420,7 @@ static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
         struct pdu * pdu;
         struct pci * pci;
 
-        pdu = pdu_ctrl_create_ni(dtcp);
+        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_ACK_AND_FC);
         if (!pdu)
                 return NULL;
 
@@ -448,7 +448,7 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
         seq_num_t    my_lf_win_edge;
         seq_num_t    my_rt_win_edge;
 
-        pdu = pdu_ctrl_create_ni(dtcp);
+        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_ACK_AND_FC);
         if (!pdu)
                 return NULL;
 
