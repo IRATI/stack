@@ -275,11 +275,43 @@ allocate_flow_response_event_handler(rina::IPCEvent *e,
 }
 
 void
-flow_deallocation_requested_event_handler(rina::IPCEvent *event,
-					EventLoopData *opaque)
+flow_deallocation_requested_event_handler(rina::IPCEvent *e,
+					  EventLoopData *opaque)
 {
-        (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
+        DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        rina::IPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
+        unsigned int seqnum;
+
+        if (!ipcp) {
+                cerr << __func__ << ": Cannot find the IPC process that "
+                        "provides the flow with port-id " << event->portId
+                        << endl;
+                return;
+        }
+
+        try {
+                // Ask the IPC process to deallocate the flow
+                // specified by the port-id
+                seqnum = ipcp->deallocateFlow(event->portId);
+                ipcm->pending_flow_deallocations[seqnum] = ipcp;
+        } catch (rina::IpcmDeallocateFlowException) {
+                cerr << __func__ << ": Error while asking IPC process "
+                        << ipcp->name.toString() << " to deallocate the flow "
+                        "with port-id " << event->portId << endl;
+
+                try {
+                        // Inform the application about the deallocation
+                        // failure
+                        rina::applicationManager->flowDeallocated(*event, -1);
+                } catch (rina::NotifyFlowDeallocatedException) {
+                        cerr << __func__ << ": Error while informing "
+                                "application " << event->applicationName.
+                                toString() << " about deallocation of flow "
+                                "identified by port-id " << event->portId
+                                << endl;
+                }
+        }
 }
 
 void

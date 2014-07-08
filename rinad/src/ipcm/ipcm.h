@@ -143,6 +143,7 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
         std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
+        std::map<unsigned int, rina::IPCProcess *> pending_flow_deallocations;
 
         IPCMConcurrency concurrency;
 
