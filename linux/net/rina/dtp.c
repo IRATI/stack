@@ -192,6 +192,7 @@ static struct dtp_sv default_sv = {
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
         /* FIXME: How to block further write API calls? */
+
         LOG_MISSING;
         LOG_DBG("Default Flow Control");
 
@@ -276,10 +277,10 @@ static int default_initial_seq_number(struct dtp * dtp)
 }
 
 static struct dtp_policies default_policies = {
-        .transmission_control      = default_transmission,
-        .closed_window             = default_closed_window,
-        .flow_control_overrun      = default_flow_control_overrun,
-        .initial_sequence_number   = default_initial_seq_number,
+        .transmission_control    = default_transmission,
+        .closed_window           = default_closed_window,
+        .flow_control_overrun    = default_flow_control_overrun,
+        .initial_sequence_number = default_initial_seq_number,
 };
 
 bool dtp_drf_flag(struct dtp * instance)
