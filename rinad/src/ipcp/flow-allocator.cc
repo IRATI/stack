@@ -19,6 +19,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <climits>
 #include <sstream>
 #include <vector>
 
@@ -436,7 +437,11 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(const rina::FlowRequestEve
 	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(qosCube.get_efcp_policies());
 	connectionPolicies.set_in_order_delivery(qosCube.is_ordered_delivery());
 	connectionPolicies.set_partial_delivery(qosCube.is_partial_delivery());
-	connectionPolicies.set_max_sdu_gap(qosCube.get_max_allowable_gap());
+	if (qosCube.get_max_allowable_gap() < 0) {
+		connectionPolicies.set_max_sdu_gap(INT_MAX);
+	} else {
+		connectionPolicies.set_max_sdu_gap(qosCube.get_max_allowable_gap());
+	}
 	connection->setPolicies(connectionPolicies);
 	connections.push_back(connection);
 
