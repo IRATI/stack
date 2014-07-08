@@ -628,8 +628,13 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 if (retval)
                         goto finish;
 
-                if (flow->state == PORT_STATE_DEALLOCATED)
+                if (flow->state == PORT_STATE_DEALLOCATED) {
+                        if (rfifo_is_empty(flow->sdu_ready)) {
+                                retval = 0;
+                                goto finish;
+                        }
                         break;
+                }
         }
 
         if (rfifo_is_empty(flow->sdu_ready)) {
