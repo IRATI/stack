@@ -66,7 +66,7 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 	private QoSCube selectQoSCube(FlowSpecification flowSpec, QoSCubeList qosCubes) throws IPCException { 
 		QoSCube result = null;
 		
-		if (flowSpec.getMaxAllowableGap() == 0) {
+		if (flowSpec.getMaxAllowableGap() >= 0) {
 			Iterator<QoSCube> cubesIterator = qosCubes.iterator();
 			while(cubesIterator.hasNext()) {
 				result = cubesIterator.next();
@@ -78,20 +78,6 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 			}
 			
 			throw new IPCException("Could not find a QoS Cube with Rtx control enabled!");
-		}
-
-		if (flowSpec.getMaxAllowableGap() > 0) {
-			Iterator<QoSCube> cubesIterator = qosCubes.iterator();
-			while(cubesIterator.hasNext()) {
-				result = cubesIterator.next();
-				if (result.getEfcpPolicies().isDtcpPresent()) {
-					if (!result.getEfcpPolicies().getDtcpConfiguration().isRtxcontrol()) {
-						return result;
-					}
-				}
-			}
-
-			throw new IPCException("Could not find a QoS Cube with Rtx control disabled!");
 		}
 
 		return qosCubes.getFirst();
