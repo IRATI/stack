@@ -54,15 +54,6 @@ struct AddressPrefixConfiguration {
         AddressPrefixConfiguration() : addressPrefix(0) { }
 };
 
-struct ApplicationToDIFMapping {
-        /*
-         * The application name encoded this way:
-         * APName-APInstance-AEName-AEInstance
-         */
-        std::string encodedAppName;
-        rina::ApplicationProcessNamingInformation difName;
-};
-
 struct NMinusOneFlowsConfiguration {
 
         /* The N-1 QoS id required by a management flow */
@@ -119,8 +110,8 @@ struct DIFProperties {
         rina::DataTransferConstants dataTransferConstants;
         std::list<rina::QoSCube> qosCubes;
         rina::RMTConfiguration rmtConfiguration;
-        std::list<rina::Parameter> policies;
-        std::list<rina::Parameter> policyParameters;
+        std::map<std::string, std::string> policies;
+        std::map<std::string, std::string> policyParameters;
 
         /* Only for normal DIFs */
         NMinusOneFlowsConfiguration nMinusOneFlowsConfiguration;
@@ -156,15 +147,6 @@ struct NeighborData {
         rina::ApplicationProcessNamingInformation difName;
 };
 
-/*
- * Specifies what SDU Protection Module should be used for each possible
- * N-1 DIF (being NULL the default one)
- */
-struct SDUProtectionOption {
-
-        std::string nMinus1DIFName;
-        std::string sduProtectionType;
-};
 
 /* The configuration required to create an IPC Process */
 struct IPCProcessToCreate {
@@ -175,7 +157,12 @@ struct IPCProcessToCreate {
         std::list<NeighborData> neighbors;
         std::list<rina::ApplicationProcessNamingInformation> difsToRegisterAt;
         std::string hostname;
-        std::list<SDUProtectionOption> sduProtectionOptions;
+        /*
+         * Specifies what SDU Protection Module should be used for each possible
+         * N-1 DIF (being NULL the default one)
+         * nMinus1DIFName: sduProtectionType
+         */
+        std::map<std::string, std::string> sduProtectionOptions;
         std::map<std::string, std::string> parameters;
 };
 
@@ -277,14 +264,25 @@ class RINAConfiguration {
         std::list<DIFProperties> difConfigurations;
 
         /*
-         * The list of application to DIF mappings
+         * Application to DIF mappings
+         *
+         * std::string encodedAppName:
+         *  The application name encoded this way:
+         *  APName-APInstance-AEName-AEInstance
+         *
+         * rina::ApplicationProcessNamingInformation difName;
          */
-        std::list<ApplicationToDIFMapping> applicationToDIFMappings;
-
+        std::map<std::string,
+                rina::ApplicationProcessNamingInformation>
+                applicationToDIFMappings;
 
         bool lookup_dif_properties(
                         const rina::ApplicationProcessNamingInformation& dif_name,
                         DIFProperties& result) const;
+
+        bool lookup_dif_by_application(
+                const rina::ApplicationProcessNamingInformation& app_name,
+                rina::ApplicationProcessNamingInformation& result);
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,

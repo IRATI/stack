@@ -55,10 +55,6 @@ private:
 class ManagementSDUReaderData {
 public:
 	ManagementSDUReaderData(IRIBDaemon * rib_daemon, unsigned int max_sdu_size);
-	IRIBDaemon * get_rib_daemon();
-	unsigned int get_max_sdu_size();
-
-private:
 	IRIBDaemon * rib_daemon_;
 	unsigned int max_sdu_size_;
 };

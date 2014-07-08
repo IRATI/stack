@@ -2,7 +2,8 @@
  * IPC Manager
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,19 +22,21 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <map>
 #include <vector>
 
-#define RINA_PREFIX     "ipcm"
+#define RINA_PREFIX "ipcm"
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
 
-#include "event-loop.h"
-#include "rina-configuration.h"
+#include "common/event-loop.h"
+#include "common/rina-configuration.h"
 #include "tclap/CmdLine.h"
 #include "ipcm.h"
+#include "configuration.h"
 
 using namespace std;
 using namespace TCLAP;
@@ -41,39 +44,46 @@ using namespace TCLAP;
 
 int main(int argc, char * argv[])
 {
-        // Wrap everything in a try block.  Do this every time, 
-        // because exceptions will be thrown for problems. 
+        std::string conf;
+
+        // Wrap everything in a try block.  Do this every time,
+        // because exceptions will be thrown for problems.
         try {
 
                 // Define the command line object.
-                TCLAP::CmdLine cmd("Command description message", ' ', "0.9");
+                TCLAP::CmdLine cmd("IPC Manager", ' ', "0.1");
 
-                // Define a value argument and add it to the command line.
-                TCLAP::ValueArg<string> nameArg("n",
-                                                     "name",
-                                                     "Name to print",
-                                                     true,
-                                                     "homer",
-                                                     "string");
-                cmd.add(nameArg);
+                TCLAP::ValueArg<std::string> conf_arg("c",
+                                                      "config",
+                                                      "Configuration file to load",
+                                                      true,
+                                                      "ipcmanager.conf",
+                                                      "string");
+
+                cmd.add(conf_arg);
 
                 // Parse the args.
                 cmd.parse(argc, argv);
 
-                // Get the value parsed by each arg. 
-                string name = nameArg.getValue();
+                // Get the value parsed by each arg.
+                conf = conf_arg.getValue();
 
-                cout << "My name is: " << name << endl;
+                LOG_DBG("Config file is: %s", conf.c_str());
 
         } catch (ArgException &e) {
-                cerr << "error: " << e.error() << " for arg "
-                          << e.argId() << endl;
+                LOG_ERR("Error: %s for arg %d", e.error().c_str(), e.argId().c_str());
+                return EXIT_FAILURE;
         }
 
-        IPCManager *ipcm = new IPCManager();
-        EventLoop loop(ipcm);
+        rinad::IPCManager ipcm;
+        rinad::EventLoop loop(&ipcm);
 
-        register_handlers_all(loop);
+        if (!parse_configuration(conf, &ipcm)) {
+                LOG_ERR("Failed to load configuration");
+                return EXIT_FAILURE;
+        }
+
+        rinad::register_handlers_all(loop);
 
         loop.run();
 

@@ -49,7 +49,7 @@ BaseRIBObject* RIB::getRIBObject(const std::string& objectClass,
 	}
 
 	ribObject = it->second;
-	if (ribObject->get_class().compare(objectClass) != 0) {
+	if (ribObject->class_.compare(objectClass) != 0) {
 		throw Exception("Object class does not match the user specified one");
 	}
 
@@ -59,10 +59,10 @@ BaseRIBObject* RIB::getRIBObject(const std::string& objectClass,
 void RIB::addRIBObject(BaseRIBObject* ribObject)
 {
 	lock();
-	if (rib_.find(ribObject->get_name()) != rib_.end()) {
+	if (rib_.find(ribObject->name_) != rib_.end()) {
 		throw Exception("Object already exists in the RIB");
 	}
-	rib_[ribObject->get_name()] = ribObject;
+	rib_[ribObject->name_] = ribObject;
 	unlock();
 }
 
@@ -104,23 +104,17 @@ ManagementSDUReaderData::ManagementSDUReaderData(IRIBDaemon * rib_daemon,
 	max_sdu_size_ = max_sdu_size;
 }
 
-IRIBDaemon * ManagementSDUReaderData::get_rib_daemon()
-{ return rib_daemon_; }
-
-unsigned int ManagementSDUReaderData::get_max_sdu_size()
-{ return max_sdu_size_; }
-
 void * doManagementSDUReaderWork(void* arg)
 {
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
-	char* buffer = new char[data->get_max_sdu_size()];
+	char* buffer = new char[data->max_sdu_size_];
 	char* sdu;
 
 	rina::ReadManagementSDUResult result;
 	LOG_INFO("Starting Management SDU reader ...");
 	while (true) {
 		try {
-		result = rina::kernelIPCProcess->readManagementSDU(buffer, data->get_max_sdu_size());
+		result = rina::kernelIPCProcess->readManagementSDU(buffer, data->max_sdu_size_);
 		} catch (Exception &e) {
 			LOG_ERR("Problems reading management SDU: %s", e.what());
 			continue;
@@ -131,7 +125,7 @@ void * doManagementSDUReaderWork(void* arg)
 			sdu[i] = buffer[i];
 		}
 
-		data->get_rib_daemon()->cdapMessageDelivered(sdu, result.getBytesRead(), result.getPortId());
+		data->rib_daemon_->cdapMessageDelivered(sdu, result.getBytesRead(), result.getPortId());
 
 		delete sdu;
 	}
@@ -286,8 +280,8 @@ void RIBDaemon::addRIBObject(BaseRIBObject * ribObject)
 
 	rib_.addRIBObject(ribObject);
 	LOG_INFO("Object with name %s, class %s, instance %ld added to the RIB",
-			ribObject->get_name().c_str(), ribObject->get_class().c_str(),
-			ribObject->get_instance());
+			ribObject->name_.c_str(), ribObject->class_.c_str(),
+			ribObject->instance_);
 }
 
 void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject)
@@ -295,15 +289,15 @@ void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject)
 	if (!ribObject)
 		throw Exception("Object is null");
 
-	removeRIBObject(ribObject->get_name());
+	removeRIBObject(ribObject->name_);
 }
 
 void RIBDaemon::removeRIBObject(const std::string& objectName)
 {
 	BaseRIBObject * object = rib_.removeRIBObject(objectName);
 	LOG_INFO("Object with name %s, class %s, instance %ld removed from the RIB",
-                 object->get_name().c_str(), object->get_class().c_str(),
-                 object->get_instance());
+                 object->name_.c_str(), object->class_.c_str(),
+                 object->instance_);
         
 	delete object;
 }
@@ -350,7 +344,7 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	}
 
 	//We need to notify, find out to whom the notifications must be sent to, and do it
-	std::list<int> peersToIgnore = notificationPolicy->get_cdap_session_ids();
+	std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
 	std::vector<int> peers;
 	cdap_session_manager_->getAllCDAPSessionIds(peers);
 	rina::ObjectValueInterface * encodedObjectValue;
@@ -407,7 +401,7 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
 		return;
 
 	//We need to notify, find out to whom the notifications must be sent to, and do it
-	std::list<int> peersToIgnore = notificationPolicy->get_cdap_session_ids();
+	std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
 	std::vector<int> peers;
 	cdap_session_manager_->getAllCDAPSessionIds(peers);
 

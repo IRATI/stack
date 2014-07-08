@@ -287,6 +287,7 @@ void initializeIPCManager(unsigned int localPort,
  * properties of one or more DIFs
  */
 class GetDIFPropertiesRequestEvent: public IPCEvent {
+public:
 	/** The application that wants to get the DIF properties */
 	ApplicationProcessNamingInformation applicationName;
 
@@ -297,13 +298,14 @@ class GetDIFPropertiesRequestEvent: public IPCEvent {
 	 */
 	ApplicationProcessNamingInformation DIFName;
 
-public:
 	GetDIFPropertiesRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
+#endif
 };
 
 /**
@@ -311,7 +313,10 @@ public:
  * a single IPC Process (besides creation/destruction)
  */
 class IPCProcess {
+	/** The current information of the DIF where the IPC Process is assigned*/
+	DIFInformation difInformation;
 
+public:
 	/** The identifier of the IPC Process, unique within the system */
 	unsigned short id;
 
@@ -326,9 +331,6 @@ class IPCProcess {
 
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
-
-	/** The current information of the DIF where the IPC Process is assigned*/
-	DIFInformation difInformation;
 
 	/** True if the IPC Process is initialized and can start processing operations*/
 	bool initialized;
@@ -371,7 +373,6 @@ class IPCProcess {
 	/** Return the information of a flow operation */
 	FlowInformation getPendingFlowOperation(unsigned int seqNumber);
 
-public:
 	static const std::string error_assigning_to_dif;
 	static const std::string error_update_dif_config;
 	static const std::string error_registering_app;
@@ -383,6 +384,7 @@ public:
 	IPCProcess();
 	IPCProcess(unsigned short id, unsigned int portId, pid_t pid, const std::string& type,
 			const ApplicationProcessNamingInformation& name);
+#ifndef SWIG
 	unsigned short getId() const;
 	const std::string& getType() const;
 	const ApplicationProcessNamingInformation& getName() const;
@@ -390,10 +392,11 @@ public:
 	void setPortId(unsigned int portId);
 	pid_t getPid() const;
 	void setPid(pid_t pid);
-	const DIFInformation& getDIFInformation() const;
-	void setDIFInformation(const DIFInformation& difInformation);
 	bool isDIFMember() const;
 	void setDIFMember(bool difMember);
+#endif
+	const DIFInformation& getDIFInformation() const;
+	void setDIFInformation(const DIFInformation& difInformation);
 
 	/**
 	 * Invoked by the IPC Manager to set the IPC Process as initialized.
@@ -463,7 +466,8 @@ public:
 	 * Invoked by the IPC Manager to notify an IPC Process that he has been
 	 * unregistered from the N-1 DIF designed by difName
 	 *
-	 * @param ipcProcessName The name of the IPC Process being unregistered
+	 * @param ipcProcessName The name of the N-1 IPC Process where the IPC
+         * preocess has been unregistered (member of difName)
 	 * @param difName The name of the N-1 DIF where the IPC Process has been
 	 * unregistered
 	 * @throws NotifyUnregistrationFromDIFException if the IPC Process was not registered to the DIF
@@ -583,6 +587,7 @@ public:
 	 * flow. Since all flow allocation requests go through the IPC Manager, and
 	 * port_ids have to be unique within the whole system, the IPC Manager is
 	 * the best candidate for managing the port-id space.
+         * TODO parameter description out-dated
 	 *
 	 * @param flowRequest contains the names of source and destination
 	 * applications, the portId as well as the characteristics required for the
@@ -878,24 +883,30 @@ public:
  */
 class IpcmAllocateFlowRequestResultEvent: public BaseResponseEvent {
 
+public:
         /** The port id assigned to the flow */
         int portId;
-public:
+
         IpcmAllocateFlowRequestResultEvent(
                         int result, int portId, unsigned int sequenceNumber);
+#ifndef SWIG
         int getPortId() const;
+#endif
 };
 
 /**
  * Event informing about the result of a query RIB operation
  */
 class QueryRIBResponseEvent: public BaseResponseEvent {
-        std::list<RIBObjectData> ribObjects;
 public:
+        std::list<RIBObjectData> ribObjects;
+
         QueryRIBResponseEvent(const std::list<RIBObjectData>& ribObjects,
                         int result,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         const std::list<RIBObjectData>& getRIBObject() const;
+#endif
 };
 
 /**
@@ -920,17 +931,19 @@ public:
  * Event informing about the result of an enroll to DIF operation
  */
 class EnrollToDIFResponseEvent: public BaseResponseEvent {
+public:
         std::list<Neighbor> neighbors;
 
         DIFInformation difInformation;
 
-public:
         EnrollToDIFResponseEvent(
                         const std::list<Neighbor> & neighbors,
                         const DIFInformation& difInformation,
                         int result, unsigned int sequenceNumber);
+#ifndef SWIG
         const std::list<Neighbor>& getNeighbors() const;
         const DIFInformation& getDIFInformation() const;
+#endif
 };
 
 /**
@@ -938,18 +951,20 @@ public:
  * neighbors being removed
  */
 class NeighborsModifiedNotificationEvent: public IPCEvent {
+public:
         unsigned short ipcProcessId;
         std::list<Neighbor> neighbors;
         bool added;
 
-public:
         NeighborsModifiedNotificationEvent(
                         unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber);
+#ifndef SWIG
         const std::list<Neighbor>& getNeighbors() const;
         bool isAdded() const;
         unsigned short getIpcProcessId() const;
+#endif
 };
 
 /**
@@ -957,14 +972,17 @@ public:
  * Daemon
  */
 class IPCProcessDaemonInitializedEvent: public IPCEvent {
+public:
         unsigned short ipcProcessId;
         ApplicationProcessNamingInformation name;
-public:
+
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
                         const ApplicationProcessNamingInformation& name,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         unsigned short getIPCProcessId() const;
         const ApplicationProcessNamingInformation& getName() const;
+#endif
 };
 
 /**

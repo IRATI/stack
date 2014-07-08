@@ -8,26 +8,7 @@ CLEANFILES       =
 MOSTLYCLEANFILES =
 EXTRA_DIST       =
 
-CDAP.stamp: CDAP.proto
-	rm -f CDAP.tmp
-	touch CDAP.tmp
-	$(PROTOC) -I$(builddir) -I$(srcdir)	\
-		--cpp_out=$(builddir)		\
-		$(srcdir)/CDAP.proto
-	mv -f CDAP.tmp $@
-
-CDAP.pb.h CDAP.pb.cc: CDAP.stamp
-	if test ! -f $@; then			\
-	  rm -f CDAP.stamp;			\
-	  $(MAKE) $(AM_MAKEFLAGS) CDAP.stamp;	\
-	fi
-
-MOSTLYCLEANFILES +=				\
-        CDAP.tmp
-
-EXTRA_DIST +=					\
-	CDAP.proto				\
-	CDAP.stamp
+include $(srcdir)/Makefile.inc
 
 allsources =							\
         logs.cc							\
@@ -50,7 +31,7 @@ allsources =							\
         netlink-parsers.cc   netlink-parsers.h			\
         netlink-manager.cc   netlink-manager.h			\
         syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
-        CDAP.pb.cc	     CDAP.pb.h				\
+	$(protoSOURCES)						\
         cdap-impl.cc         cdap-impl.h
 
 librina_la_SOURCES  = $(allsources)

@@ -27,6 +27,7 @@
 
 #include "events.h"
 #include "resource-allocator.h"
+#include "pduft-generator.h"
 
 namespace rinad {
 
@@ -252,7 +253,7 @@ bool NMinusOneFlowManager::isSupportingDIF(const rina::ApplicationProcessNamingI
 //CLASS Resource Allocator
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();
-	pdu_forwarding_table_generator_ = 0;
+	pdu_forwarding_table_generator_ = new PDUForwardingTableGenerator();
 	ipc_process_ = 0;
 }
 

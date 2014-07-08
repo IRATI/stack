@@ -25,9 +25,26 @@
 
 #include "event-loop.h"
 
+
+namespace rinad {
+
+EventLoop::EventLoop(EventLoopData *dm) : data_model(dm),
+                               pre_function(NULL),
+                               post_function(NULL)
+{
+}
+
 void
 EventLoop::register_event(rina::IPCEventType type, EventHandler handler)
 { handlers[type] = handler; }
+
+void
+EventLoop::register_pre_function(EventHandler func)
+{ pre_function = func; }
+
+void
+EventLoop::register_post_function(EventHandler func)
+{ post_function = func; }
 
 void
 EventLoop::run()
@@ -41,9 +58,17 @@ EventLoop::run()
                         break;
                 }
 
-                ty = event->getType();
+                if (pre_function) {
+                        pre_function(event, data_model);
+                }
+                ty = event->eventType;
                 if (handlers.count(ty) && handlers[ty]) {
                         handlers[ty](event, data_model);
                 }
+                if (post_function) {
+                        post_function(event, data_model);
+                }
         }
+}
+
 }

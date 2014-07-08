@@ -31,14 +31,18 @@ libjsoncpp_la_CPPFLAGS = -I$(srcdir)/jsoncpp
 
 ipcm_CFLAGS   =
 ipcm_CPPFLAGS =					\
+	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
-	-I$(builddir)/../common			\
+	-I$(srcdir)/../common			\
 	-I$(srcdir)/jsoncpp
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
 	$(LIBRINA_LIBS)
-ipcm_SOURCES  =					\
-	main.cc					\
-	ipcm.cc ipcm.h
+ipcm_SOURCES  =							\
+	main.cc							\
+	ipcm.cc                     ipcm.h			\
+	configuration.cc            configuration.h		\
+	application-registration.cc application-registration.h	\
+	flow-allocation.cc          flow-allocation.h

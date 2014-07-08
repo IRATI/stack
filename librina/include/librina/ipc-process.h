@@ -41,14 +41,15 @@ namespace rina {
  * DIF, and provides de related information
  */
 class AssignToDIFRequestEvent: public IPCEvent {
-
+public:
 	/** The information of the DIF the IPC Process is being assigned to*/
 	DIFInformation difInformation;
 
-public:
 	AssignToDIFRequestEvent(const DIFInformation& difInformation,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	const DIFInformation& getDIFInformation() const;
+#endif
 };
 
 /**
@@ -56,15 +57,16 @@ public:
  * of the DIF he is currently a member of
  */
 class UpdateDIFConfigurationRequestEvent: public IPCEvent {
-
+public:
         /** The new configuration of the DIF*/
         DIFConfiguration difConfiguration;
 
-public:
         UpdateDIFConfigurationRequestEvent(
                         const DIFConfiguration& difConfiguration,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         const DIFConfiguration& getDIFConfiguration() const;
+#endif
 };
 
 /**
@@ -73,7 +75,7 @@ public:
  * a flow through the supportingDIFName
  */
 class EnrollToDIFRequestEvent: public IPCEvent {
-
+public:
         /** The DIF to enroll to */
         ApplicationProcessNamingInformation difName;
 
@@ -83,23 +85,24 @@ class EnrollToDIFRequestEvent: public IPCEvent {
         /** The neighbor to contact */
         ApplicationProcessNamingInformation neighborName;
 
-public:
         EnrollToDIFRequestEvent() {}
         EnrollToDIFRequestEvent(
                 const ApplicationProcessNamingInformation& difName,
                 const ApplicationProcessNamingInformation& supportingDIFName,
                 const ApplicationProcessNamingInformation& neighbourName,
                 unsigned int sequenceNumber);
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getDifName() const;
         const ApplicationProcessNamingInformation& getNeighborName() const;
         const ApplicationProcessNamingInformation& getSupportingDifName() const;
+#endif
 };
 
 /**
  * Supporting class for IPC Process DIF Registration events
  */
 class IPCProcessDIFRegistrationEvent: public IPCEvent {
-
+public:
 	/** The name of the IPC Process registered to the N-1 DIF */
 	ApplicationProcessNamingInformation ipcProcessName;
 
@@ -109,22 +112,23 @@ class IPCProcessDIFRegistrationEvent: public IPCEvent {
 	/** True if the IPC Process has been registered in a DIF, false otherwise */
 	bool registered;
 
-public:
 	IPCProcessDIFRegistrationEvent(
 	                const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
 			bool registered,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	bool isRegistered() const;
+#endif
 };
 
 /**
  * The IPC Manager queries the RIB of the IPC Process
  */
 class QueryRIBRequestEvent: public IPCEvent {
-
+public:
 	/** The class of the object being queried*/
 	std::string objectClass;
 
@@ -146,15 +150,16 @@ class QueryRIBRequestEvent: public IPCEvent {
 	 */
 	std::string filter;
 
-public:
 	QueryRIBRequestEvent(const std::string& objectClass,
 			const std::string& objectName, long objectInstance, int scope,
 			const std::string& filter, unsigned int sequenceNumber);
+#ifndef SWIG
 	const std::string& getObjectClass() const;
 	const std::string& getObjectName() const;
 	long getObjectInstance() const;
 	int getScope() const;
 	const std::string& getFilter() const;
+#endif
 };
 
 /**
@@ -162,7 +167,7 @@ public:
  * create EFCP connection operation
  */
 class CreateConnectionResponseEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -173,11 +178,12 @@ class CreateConnectionResponseEvent: public IPCEvent {
          */
         int cepId;
 
-public:
         CreateConnectionResponseEvent(int portId, int cepId,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         int getCepId() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -185,7 +191,7 @@ public:
  * create EFCP connection operation
  */
 class UpdateConnectionResponseEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -194,11 +200,12 @@ class UpdateConnectionResponseEvent: public IPCEvent {
          */
         int result;
 
-public:
         UpdateConnectionResponseEvent(int portId, int result,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         int getResult() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -206,7 +213,7 @@ public:
  * create EFCP connection arrived operation
  */
 class CreateConnectionResultEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -220,27 +227,29 @@ class CreateConnectionResultEvent: public IPCEvent {
         /** The destination cep-id of the connection */
         int destCepId;
 
-public:
         CreateConnectionResultEvent(int portId, int sourceCepId,
                         int destCepId, unsigned int sequenceNumber);
+#ifndef SWIG
         int getSourceCepId() const;
         int getDestCepId() const;
         int getPortId() const;
+#endif
 };
 
 class DestroyConnectionResultEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
         /** The destination cep-id of the connection */
         int result;
 
-public:
         DestroyConnectionResultEvent(int portId, int result,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         int getResult() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -417,6 +426,7 @@ public:
  * functionality
  */
 class ExtendedIPCManager: public IPCManager {
+public:
 	/** The ID of the IPC Process */
 	unsigned short ipcProcessId;
 
@@ -432,15 +442,16 @@ class ExtendedIPCManager: public IPCManager {
 	/** The current configuration of the IPC Process */
 	DIFInformation currentDIFInformation;
 
-public:
 	static const std::string error_allocate_flow;
 	ExtendedIPCManager();
 	~ExtendedIPCManager() throw();
+#ifndef SWIG
 	const DIFInformation& getCurrentDIFInformation() const;
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
 	void setIPCManagerPort(unsigned int ipcManagerPort);
+#endif
 
 	/**
 	 * Notify the IPC Manager about the successful initialization of the
@@ -668,6 +679,7 @@ extern Singleton<ExtendedIPCManager> extendedIPCManager;
  * Represents the data to create an EFCP connection
  */
 class Connection {
+public:
         /** The port-id to which the connection is bound */
         int portId;
 
@@ -706,8 +718,8 @@ class Connection {
          */
         unsigned short flowUserIpcProcessId;
 
-public:
         Connection();
+#ifndef SWIG
         unsigned int getDestAddress() const;
         void setDestAddress(unsigned int destAddress);
         int getPortId() const;
@@ -724,6 +736,7 @@ public:
         void setSourceCepId(int sourceCepId);
         const ConnectionPolicies& getPolicies() const;
         void setPolicies(const ConnectionPolicies& policies);
+#endif
         const std::string toString();
 };
 
@@ -731,6 +744,7 @@ public:
  * Models an entry in the PDU Forwarding Table
  */
 class PDUForwardingTableEntry {
+public:
         /** The destination address */
         unsigned int address;
 
@@ -739,10 +753,11 @@ class PDUForwardingTableEntry {
 
         /** The N-1 portid */
         std::list<unsigned int> portIds;
-public:
+
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
         bool operator!=(const PDUForwardingTableEntry &other) const;
+#ifndef SWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
         const std::list<unsigned int> getPortIds() const;
@@ -750,6 +765,7 @@ public:
         void addPortId(unsigned int portId);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
+#endif
         const std::string toString();
 };
 
@@ -759,18 +775,19 @@ public:
  * IPC Process
  */
 class DumpFTResponseEvent: public IPCEvent {
-
+public:
         /** The PDU Forwarding Table entries*/
         std::list<PDUForwardingTableEntry> entries;
 
         /** Result of the operation, 0 success */
         int result;
 
-public:
         DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
                         int result, unsigned int sequenceNumber);
+#ifndef SWIG
         const std::list<PDUForwardingTableEntry>& getEntries() const;
         int getResult() const;
+#endif
 };
 
 
@@ -778,15 +795,17 @@ public:
  * FIXME: Quick hack to get multiple parameters back
  */
 class ReadManagementSDUResult {
+public:
         int bytesRead;
         int portId;
 
-public:
         ReadManagementSDUResult();
+#ifndef SWIG
         int getBytesRead() const;
         void setBytesRead(int bytesRead);
         int getPortId() const;
         void setPortId(int portId);
+#endif
 };
 
 /**
@@ -795,10 +814,10 @@ public:
  * IPC Process Daemon to communicate with its components in the kernel
  */
 class KernelIPCProcess {
+public:
         /** The ID of the IPC Process */
         unsigned short ipcProcessId;
 
-public:
         void setIPCProcessId(unsigned short ipcProcessId);
         unsigned short getIPCProcessId() const;
 
@@ -872,7 +891,7 @@ public:
          * @param entries to be modified
          * @param mode 0 add, 1 remove, 2 flush and add
          */
-        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
+        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entries,
                         int mode);
 
         /**
@@ -929,12 +948,14 @@ class DirectoryForwardingTableEntry {
 public:
 	DirectoryForwardingTableEntry();
 	bool operator==(const DirectoryForwardingTableEntry &object);
+#ifndef SWIG
 	ApplicationProcessNamingInformation get_ap_naming_info() const;
 	void set_ap_naming_info(const ApplicationProcessNamingInformation& ap_naming_info);
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	long get_timestamp() const;
 	void set_timestamp(long timestamp);
+#endif
 
 	/**
 	 * Returns a key identifying this entry
@@ -943,7 +964,6 @@ public:
 	std::string getKey();
 	std::string toString();
 
-private:
 	/// The name of the application process
 	ApplicationProcessNamingInformation ap_naming_info_;
 
