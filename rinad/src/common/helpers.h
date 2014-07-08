@@ -36,5 +36,7 @@ bool application_is_registered_to_ipcp(
                 const rina::ApplicationProcessNamingInformation&,
                 rina::IPCProcess *slave_ipcp);
 
+rina::IPCProcess *lookup_ipcp_by_port(unsigned int port_id);
+
 }
 #endif  /* __RINAD_HELPERS_H__ */
