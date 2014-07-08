@@ -503,10 +503,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                                               dtcp_cfg) * tr;
         }
 
-        LOG_DBG("DT SV initialized with:\n"
-                "MFPS: %d, MFSS: %d\n"
-                "A: %d, R: %d, TR: %d",
-                mfps, mfss, a, r, tr);
+        LOG_DBG("DT SV initialized with:");
+        LOG_DBG("  MFPS: %d, MFSS: %d"    mfps, mfss);
+        LOG_DBG("  A: %d, R: %d, TR: %d", a, r, tr);
 
         if (dt_sv_init(tmp->dt, mfps, mfss, mpl, a, r, tr)) {
                 LOG_ERR("Could not init dt_sv");

@@ -591,15 +591,19 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         seq_num_t tmp;
 
         LOG_MISSING;
-        /* FIXME: change this as it should be. It should return those PDUs with
-         * timestam < time - A plus those that with seq_num exactly consecutive
-         * to the last one */
+
+        /* FIXME:
+         *     change this as it should be. It should return those PDUs with
+         *     timestam < time - A plus those that with seq_num exactly
+         *     consecutive to the last one
+         */
         spin_lock(&seqQ->lock);
         tmp = seq_queue_last_to_ack(seqQ->queue, t);
         spin_unlock(&seqQ->lock);
 
         return tmp;
 }
+
 #if 0
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
@@ -667,7 +671,7 @@ static void seqQ_cleanup(struct dtp * dtp)
 static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
         struct dt *          dt;
-        //struct dtcp *        dtcp;
+        /* struct dtcp *        dtcp; */
         struct dtp_sv *      sv;
         struct sequencingQ * seqQ;
         seq_num_t            LWE;
@@ -692,18 +696,19 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seqQ = dtp->seqQ;
         ASSERT(seqQ);
 
-        //dtcp = dt_dtcp(dtp->parent);
+        /* dtcp = dt_dtcp(dtp->parent); */
 
         a              = dt_sv_a(dt);
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
+
         /* FIXME: This has to be fixed from user-space */
-        //max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+        /* max_sdu_gap    = sv->connection->policies_params->max_sdu_gap; */
         max_sdu_gap    = 0;
 
         /* FIXME: Invoke delimiting */
 
-        LOG_DBG("Processing A timer expiration\n\n");
+        LOG_DBG("Processing A timer expiration");
 
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %d", LWE);
@@ -936,7 +941,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 #if 0
-        LOG_DBG("Inactivity Timers created....\n\n");
+        LOG_DBG("Inactivity Timers created...");
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
