@@ -47,7 +47,11 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		ConnectionPolicies connectionPolicies = qosCube.getEfcpPolicies();
 		connectionPolicies.setInOrderDelivery(qosCube.isOrderedDelivery());
 		connectionPolicies.setPartialDelivery(qosCube.isPartialDelivery());
-		connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+		if (qosCube.getMaxAllowableGap() == -1) {
+			connectionPolicies.setMaxSduGap(Integer.MAX_VALUE);
+		} else {
+			connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+		}
 		
 		connection.setPolicies(connectionPolicies);
 		connections.add(connection);
