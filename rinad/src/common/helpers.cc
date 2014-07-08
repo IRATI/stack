@@ -119,4 +119,26 @@ lookup_ipcp_by_port(unsigned int port_id)
         return NULL;
 }
 
+void
+collect_flows_by_application(const rina::ApplicationProcessNamingInformation&
+                             app_name, list<rina::FlowInformation>& result)
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        result.clear();
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                const list<rina::FlowInformation>& flows =
+                        ipcps[i]->getAllocatedFlows();
+
+                for (list<rina::FlowInformation>::const_iterator it =
+                        flows.begin(); it != flows.end(); it++) {
+                        if (it->localAppName == app_name) {
+                                result.push_back(*it);
+                        }
+                }
+        }
+}
+
 }
