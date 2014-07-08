@@ -825,16 +825,6 @@ OSProcessFinalizedEvent::OSProcessFinalizedEvent(
 	this->ipcProcessId = ipcProcessId;
 }
 
-const ApplicationProcessNamingInformation&
-OSProcessFinalizedEvent::getApplicationName() const {
-	return applicationName;
-}
-
-unsigned int OSProcessFinalizedEvent::getIPCProcessId() const {
-	return ipcProcessId;
-}
-
-
 /* CLASS IPC EVENT PRODUCER */
 
 /* Auxiliar function called in case of using the stubbed version of the API */

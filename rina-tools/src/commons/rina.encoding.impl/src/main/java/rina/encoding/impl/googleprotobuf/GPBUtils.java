@@ -274,6 +274,7 @@ public class GPBUtils {
 		}
 		
 		result.setDatarxmsnmax(rtxControlConfig.getDatarxmsnmax());
+		result.setInitialRtxTime(rtxControlConfig.getInitialrtime());
 		
 		policyConfig = GPBUtils.getPolicyConfig(rtxControlConfig.getRcvrackpolicy());
 		if (policyConfig != null) {
@@ -502,7 +503,8 @@ public class GPBUtils {
 		}
 		
 		return ConnectionPoliciesMessage.dtcpRtxControlConfig_t.newBuilder().
-				setDatarxmsnmax(rtxControl.getDatarxmsnmax()).
+				setDatarxmsnmax((int)rtxControl.getDatarxmsnmax()).
+				setInitialrtime((int)rtxControl.getInitialRtxTime()).
 				setRcvrackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrackpolicy())).
 				setRcvrcontrolackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrcontrolackpolicy())).
 				setRecvingacklistpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRecvingacklistpolicy())).

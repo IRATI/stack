@@ -126,6 +126,7 @@ enum dtcp_fctrl_config_attrs_lists {
 
 enum dtcp_rctrl_config_attrs_list {
         DRCC_ATTR_DATA_RXMSN_MAX = 1,
+        DRCC_ATTR_INIT_TR,
         DRCC_ATTR_RTX_TIME_EXP_POLICY,
         DRCC_ATTR_SACK_POLICY,
         DRCC_ATTR_RACK_LIST_POLICY,
