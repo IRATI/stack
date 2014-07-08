@@ -192,6 +192,7 @@ static struct dtp_sv default_sv = {
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
         /* FIXME: How to block further write API calls? */
+
         LOG_MISSING;
         LOG_DBG("Default Flow Control");
 
@@ -202,9 +203,9 @@ static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 
 static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 {
-        struct cwq *    cwq;
-        struct dt *     dt;
-        uint_t          max_len;
+        struct cwq * cwq;
+        struct dt *  dt;
+        uint_t       max_len;
 
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
@@ -276,10 +277,10 @@ static int default_initial_seq_number(struct dtp * dtp)
 }
 
 static struct dtp_policies default_policies = {
-        .transmission_control      = default_transmission,
-        .closed_window             = default_closed_window,
-        .flow_control_overrun      = default_flow_control_overrun,
-        .initial_sequence_number   = default_initial_seq_number,
+        .transmission_control    = default_transmission,
+        .closed_window           = default_closed_window,
+        .flow_control_overrun    = default_flow_control_overrun,
+        .initial_sequence_number = default_initial_seq_number,
 };
 
 bool dtp_drf_flag(struct dtp * instance)
@@ -373,8 +374,8 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
 {
-        struct sdu *          sdu;
-        struct buffer *       buffer;
+        struct sdu *    sdu;
+        struct buffer * buffer;
 
         ASSERT(instance->sv);
 
@@ -537,6 +538,7 @@ int seqQ_deliver(struct sequencingQ * seqQ)
         return 0;
 }
 
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 {
         struct sequencingQ * seqQ;
@@ -567,10 +569,12 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 
         return 0;
 }
+#endif
 
 bool seqQ_is_empty(struct sequencingQ * seqQ)
 {
         bool empty;
+
         ASSERT(seqQ);
 
         spin_lock(&seqQ->lock);
@@ -591,15 +595,19 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         seq_num_t tmp;
 
         LOG_MISSING;
-        /* FIXME: change this as it should be. It should return those PDUs with
-         * timestam < time - A plus those that with seq_num exactly consecutive
-         * to the last one */
+
+        /* FIXME:
+         *   change this as it should be. It should return those PDUs with
+         *   timestam < time - A plus those that with seq_num exactly
+         *   consecutive to the last one
+         */
         spin_lock(&seqQ->lock);
         tmp = seq_queue_last_to_ack(seqQ->queue, t);
         spin_unlock(&seqQ->lock);
 
         return tmp;
 }
+
 #if 0
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
@@ -658,16 +666,17 @@ static void seqQ_cleanup(struct dtp * dtp)
 #define seqQ_for_each_entry_safe_end(seqQ)      \
         spin_unlock(&seqQ->lock)
 
-/* AF is the factor to which A is devided in order to obtain the
- * period of the A-timer:
- *      Ta = A / AF
+/*
+ * NOTE:
+ *   AF is the factor to which A is devided in order to obtain the
+ *   period of the A-timer: Ta = A / AF
  */
 #define AF 1
 
 static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
         struct dt *          dt;
-        //struct dtcp *        dtcp;
+        /* struct dtcp *        dtcp; */
         struct dtp_sv *      sv;
         struct sequencingQ * seqQ;
         seq_num_t            LWE;
@@ -692,18 +701,19 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seqQ = dtp->seqQ;
         ASSERT(seqQ);
 
-        //dtcp = dt_dtcp(dtp->parent);
+        /* dtcp = dt_dtcp(dtp->parent); */
 
         a              = dt_sv_a(dt);
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
+
         /* FIXME: This has to be fixed from user-space */
-        //max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+        /* max_sdu_gap    = sv->connection->policies_params->max_sdu_gap; */
         max_sdu_gap    = 0;
 
         /* FIXME: Invoke delimiting */
 
-        LOG_DBG("Processing A timer expiration\n\n");
+        LOG_DBG("Processing A timer expiration");
 
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %d", LWE);
@@ -740,10 +750,14 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         continue;
                 }
 
-                if (time_before_eq(jiffies, pos->time_stamp + msecs_to_jiffies(a))) {
+                if (time_before_eq(jiffies,
+                                   pos->time_stamp + msecs_to_jiffies(a))) {
                         LOG_DBG("Processing A timer expired");
-                        /* FIXME: this have to work differently when DTCP is
-                         * here */
+
+                        /* FIXME:
+                         *   this have to work differently when DTCP is
+                         *   here
+                         */
                         if (!dtcp) {
                                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                         LOG_ERR("Failed to set new "
@@ -936,7 +950,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 #if 0
-        LOG_DBG("Inactivity Timers created....\n\n");
+        LOG_DBG("Inactivity Timers created...");
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
@@ -1283,8 +1297,8 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-        a       = instance->sv->a;
-        LWE     = dt_sv_rcv_lft_win(dt);
+        a   = instance->sv->a;
+        LWE = dt_sv_rcv_lft_win(dt);
 #if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
@@ -1306,14 +1320,17 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                 }
+
                 return 0;
         }
 
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
+
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
                 dropped_pdus_inc(sv);
-                LOG_DBG("Dropped a PDU, total: %d", sv->dropped_pdus);
+#endif
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
@@ -1375,7 +1392,9 @@ int dtp_receive(struct dtp * instance,
 #if 0
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
-                                   3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+                                   3 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
