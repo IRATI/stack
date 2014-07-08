@@ -133,6 +133,9 @@ class IPCManager : public EventLoopData {
                 rina::IPCProcess *ipcp,
                 const rina::DIFConfiguration& dif_config);
 
+        int deallocate_flow(rina::IPCProcess *ipcp,
+                            const rina::FlowDeallocateRequestEvent& event);
+
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;

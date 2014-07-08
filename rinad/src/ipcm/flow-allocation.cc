@@ -41,6 +41,28 @@ using namespace std;
 
 namespace rinad {
 
+int
+IPCManager::deallocate_flow(rina::IPCProcess *ipcp,
+                            const rina::FlowDeallocateRequestEvent& event)
+{
+        unsigned int seqnum;
+
+        try {
+                // Ask the IPC process to deallocate the flow
+                // specified by the port-id
+                seqnum = ipcp->deallocateFlow(event.portId);
+                pending_flow_deallocations[seqnum] =
+                                        make_pair(ipcp, event);
+        } catch (rina::IpcmDeallocateFlowException) {
+                cerr << __func__ << ": Error while asking IPC process "
+                        << ipcp->name.toString() << " to deallocate the flow "
+                        "with port-id " << event.portId << endl;
+                return -1;
+        }
+
+        return 0;
+}
+
 static void
 flow_allocation_requested_local(rina::FlowRequestEvent *event,
                                 IPCManager *ipcm)
@@ -284,7 +306,7 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         rina::IPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
-        unsigned int seqnum;
+        int ret;
 
         if (!ipcp) {
                 cerr << __func__ << ": Cannot find the IPC process that "
@@ -293,17 +315,8 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
                 return;
         }
 
-        try {
-                // Ask the IPC process to deallocate the flow
-                // specified by the port-id
-                seqnum = ipcp->deallocateFlow(event->portId);
-                ipcm->pending_flow_deallocations[seqnum] =
-                                        make_pair(ipcp, *event);
-        } catch (rina::IpcmDeallocateFlowException) {
-                cerr << __func__ << ": Error while asking IPC process "
-                        << ipcp->name.toString() << " to deallocate the flow "
-                        "with port-id " << event->portId << endl;
-
+        ret = ipcm->deallocate_flow(ipcp, *event);
+        if (ret) {
                 try {
                         // Inform the application about the deallocation
                         // failure
