@@ -364,6 +364,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         struct dtcp * dtcp;
         struct cwq *  cwq;
         struct rtxq * rtxq;
+        uint_t        mfps, mfss;
+        timeout_t     mpl, a, r = 0, tr = 0;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -468,7 +470,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
-                rtxq = rtxq_create(tmp->dt);
+                rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
                         efcp_destroy(tmp);
@@ -480,6 +482,49 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         return cep_id_bad();
                 }
         }
+
+        /* FIXME: This is crap and have to be rethinked */
+
+        /* FIXME: max pdu and sdu sizes are not stored anywhere. Maybe add them
+         * in connection... For the time being are equal to max_pdu_size in
+         * dif configuration
+         */
+        mfps = container->config->dt_cons->max_pdu_size;
+        mfss = container->config->dt_cons->max_pdu_size;
+        mpl  = container->config->dt_cons->max_pdu_life; 
+        //a    = msecs_to_jiffies(connection->policies_params->initial_a_timer);
+        a    = connection->policies_params->initial_a_timer;
+        if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
+                tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
+                tr = msecs_to_jiffies(tr);
+                /* FIXME: r should be passed and must be a bound */
+                r  = dtcp_data_retransmit_max(connection->policies_params->dtcp_cfg)*tr;
+        }
+
+        LOG_DBG("DT SV initialized with:\n"
+                "MFPS: %d, MFSS: %d\n"
+                "A: %d, R: %d, TR: %d",
+                mfps, mfss, a, r, tr);
+
+        if (dt_sv_init(tmp->dt, mfps, mfss, mpl, a, r, tr)) {
+                LOG_ERR("Could not init dt_sv");
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+        
+        if (dtp_sv_init(dtp,
+                        dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg),
+                        dtcp_window_based_fctrl(connection->policies_params
+                                                ->dtcp_cfg),
+                        dtcp_rate_based_fctrl(connection->policies_params
+                                              ->dtcp_cfg),
+                                              a)) {
+                LOG_ERR("Could not init dtp_sv");
+                efcp_destroy(tmp);
+                return cep_id_bad();
+        }
+
+        /***/
 
         if (efcp_imap_add(container->instances,
                           connection->source_cep_id,

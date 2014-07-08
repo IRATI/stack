@@ -757,22 +757,14 @@ static int process_mgmt_pdu(struct rmt * rmt,
 
 static int process_dt_pdu(struct rmt * rmt,
                           port_id_t    port_id,
+                          pdu_type_t   pdu_type,
                           struct pdu * pdu)
 {
-        address_t    dst_addr;
         cep_id_t c;
-        pdu_type_t pdu_type;
 
+        ASSERT(pdu_type_is_ok(pdu_type));
         ASSERT(pdu_is_ok(pdu));
 
-        dst_addr = pci_destination(pdu_pci_get_ro(pdu));
-        if (!is_address_ok(dst_addr)) {
-                LOG_ERR("PDU has Wrong destination address");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        pdu_type = pci_type(pdu_pci_get_ro(pdu));
         if (pdu_type == PDU_TYPE_MGMT) {
                 LOG_ERR("MGMT should not be here");
                 pdu_destroy(pdu);
@@ -963,7 +955,7 @@ static int receive_worker(void * o)
                                  * enqueue PDU in pdus_dt[dest-addr, qos-id]
                                  * don't process it now ...
                                  */
-                                process_dt_pdu(tmp, port_id, pdu);
+                                process_dt_pdu(tmp, port_id, pdu_type, pdu);
                                 LOG_DBG("Finishing  process_dt_sdu");
                                 sdu_destroy(sdu);
                                 break;

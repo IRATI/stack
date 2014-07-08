@@ -31,27 +31,29 @@ struct dtcp_rctrl_config;
 struct connection;
 struct rmt;
 
-struct dtcp * dtcp_create(struct dt *         dt,
-                          struct connection * conn,
-                          struct rmt *        rmt);
+struct dtcp *        dtcp_create(struct dt *         dt,
+                                 struct connection * conn,
+                                 struct rmt *        rmt);
 
-int           dtcp_destroy(struct dtcp * instance);
+int                  dtcp_destroy(struct dtcp * instance);
 
-int           dtcp_send(struct dtcp * instance,
-                        struct sdu *  sdu);
+int                  dtcp_send(struct dtcp * instance,
+                               struct sdu *  sdu);
 
 /* Used by the DTP to notify the DTCP about events */
-int           dtcp_sv_update(struct dtcp * instance,
-                             seq_num_t     seq);
+int                  dtcp_sv_update(struct dtcp * instance,
+                                    seq_num_t     seq);
 
 /* Used by EFCP to send an incoming DTCP PDU */
-int           dtcp_common_rcv_control(struct dtcp * dtcp,
+int                  dtcp_common_rcv_control(struct dtcp * dtcp,
                                       struct pdu *  pdu);
 
 /* Used by DTP to have an ack-control PDU sent by DTCP */
-int           dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp);
+int                  dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp);
 
-seq_num_t     dtcp_rcv_rt_win(struct dtcp * instance);
-seq_num_t     dtcp_snd_rt_win(struct dtcp * instance);
+seq_num_t            dtcp_rcv_rt_win(struct dtcp * instance);
+seq_num_t            dtcp_snd_rt_win(struct dtcp * instance);
+
+struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 
 #endif

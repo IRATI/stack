@@ -32,17 +32,16 @@ struct dt_sv {
         timeout_t    MPL;
         timeout_t    R;
         timeout_t    A;
+        timeout_t    tr;
         seq_num_t    rcv_left_window_edge;
         bool         window_closed;
         seq_num_t    last_seq_num_sent;
-        unsigned int tr;
 };
 
 struct dt {
         struct dt_sv *      sv;
         struct dtp *        dtp;
         struct dtcp *       dtcp;
-        struct connection * connection;
 
         struct cwq *        cwq;
         struct rtxq *       rtxq;
@@ -56,10 +55,30 @@ static struct dt_sv default_sv = {
         .MPL                  = 1000,
         .R                    = 100,
         .A                    = 0,
+        .tr                   = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
-        .tr                   = 10,
 };
+
+int dt_sv_init(struct dt * instance,
+               uint_t      mfps,
+               uint_t      mfss,
+               u_int32_t   mpl,
+               timeout_t   a,
+               timeout_t   r,
+               timeout_t   tr)
+{
+        ASSERT(instance);
+
+        instance->sv->max_flow_pdu_size = mfps;
+        instance->sv->max_flow_sdu_size = mfss;
+        instance->sv->MPL               = mpl;
+        instance->sv->A                 = a;
+        instance->sv->R                 = r;
+        instance->sv->tr                = tr;
+
+        return 0;
+}
 
 struct dt * dt_create(void)
 {
@@ -76,9 +95,8 @@ struct dt * dt_create(void)
         }
 
         *tmp->sv = default_sv;
-
         spin_lock_init(&tmp->lock);
-
+        
         return tmp;
 }
 
@@ -436,7 +454,7 @@ timeout_t dt_sv_a(struct dt * dt)
 {
         uint_t tmp;
 
-        if (!dt || !dt->sv)
+        if (!dt || !dt->sv) 
                 return 0;
 
         spin_lock(&dt->lock);
@@ -512,30 +530,17 @@ seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
         return tmp;
 }
 
-unsigned int dt_sv_tr(struct dt * dt)
+timeout_t dt_sv_tr(struct dt * dt)
 {
-        unsigned int tmp;
-
+        timeout_t tmp;
+        
         ASSERT(dt);
         ASSERT(dt->sv);
-
+        
         spin_lock(&dt->lock);
         tmp = dt->sv->tr;
         spin_unlock(&dt->lock);
-
+        
         return tmp;
 }
-
-struct connection * dt_connection(struct dt * dt)
-{
-        struct connection * tmp;
-
-        if (!dt)
-                return NULL;
-
-        spin_lock(&dt->lock);
-        tmp = dt->connection;
-        spin_unlock(&dt->lock);
-
-        return tmp;
-}
+        
