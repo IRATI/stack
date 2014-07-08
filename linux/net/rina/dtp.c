@@ -538,6 +538,7 @@ int seqQ_deliver(struct sequencingQ * seqQ)
         return 0;
 }
 
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 {
         struct sequencingQ * seqQ;
@@ -568,10 +569,12 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 
         return 0;
 }
+#endif
 
 bool seqQ_is_empty(struct sequencingQ * seqQ)
 {
         bool empty;
+
         ASSERT(seqQ);
 
         spin_lock(&seqQ->lock);
@@ -1294,8 +1297,8 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-        a       = instance->sv->a;
-        LWE     = dt_sv_rcv_lft_win(dt);
+        a   = instance->sv->a;
+        LWE = dt_sv_rcv_lft_win(dt);
 #if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
@@ -1317,14 +1320,17 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                 }
+
                 return 0;
         }
 
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
+
+#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
                 dropped_pdus_inc(sv);
-                LOG_DBG("Dropped a PDU, total: %d", sv->dropped_pdus);
+#endif
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {

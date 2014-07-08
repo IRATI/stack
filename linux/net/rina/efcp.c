@@ -504,7 +504,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         LOG_DBG("DT SV initialized with:");
-        LOG_DBG("  MFPS: %d, MFSS: %d"    mfps, mfss);
+        LOG_DBG("  MFPS: %d, MFSS: %d",   mfps, mfss);
         LOG_DBG("  A: %d, R: %d, TR: %d", a, r, tr);
 
         if (dt_sv_init(tmp->dt, mfps, mfss, mpl, a, r, tr)) {
