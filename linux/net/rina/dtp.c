@@ -68,7 +68,7 @@ static struct seq_queue * seq_queue_create(void)
 static void seq_q_entry_destroy(struct seq_q_entry * seq_entry)
 {
         ASSERT(seq_entry);
-        
+
         if (seq_entry->pdu) pdu_destroy(seq_entry->pdu);
         rkfree(seq_entry);
 
@@ -420,7 +420,7 @@ static struct pdu * seq_queue_pop(struct seq_queue * q)
         list_del(&p->next);
         seq_q_entry_destroy(p);
 
-        return pdu;        
+        return pdu;
 }
 
 static bool seq_queue_is_empty(struct seq_queue * q)
@@ -484,7 +484,8 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
-                LOG_DBG("First PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                LOG_DBG("First PDU with seqnum: %d push to seqQ at: %pk",
+                        csn, q);
                 return 0;
         }
 
@@ -498,13 +499,15 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         pci  = pdu_pci_get_ro(last->pdu);
         psn  = pci_sequence_number_get((struct pci *) pci);
         if (csn == psn) {
-                LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                LOG_ERR("Another PDU with the same seq_num is in "
+                        "the rtx queue!");
                 seq_q_entry_destroy(tmp);
                 return -1;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
-                LOG_DBG("Last PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                LOG_DBG("Last PDU with seqnum: %d push to seqQ at: %pk",
+                        csn, q);
                 return 0;
         }
 
@@ -512,13 +515,15 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 pci = pdu_pci_get_ro(cur->pdu);
                 psn = pci_sequence_number_get((struct pci *) pci);
                 if (csn == psn) {
-                        LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                        LOG_ERR("Another PDU with the same seq_num is in "
+                                "the rtx queue!");
                         seq_q_entry_destroy(tmp);
                         return 0;
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
-                        LOG_DBG("Middle PDU with seqnum: %d push to seqQ at: %pk", csn, q);
+                        LOG_DBG("Middle PDU with seqnum: %d push to "
+                                "seqQ at: %pk", csn, q);
                         return 0;
                 }
         }
@@ -592,7 +597,7 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         spin_lock(&seqQ->lock);
         tmp = seq_queue_last_to_ack(seqQ->queue, t);
         spin_unlock(&seqQ->lock);
-        
+
         return tmp;
 }
 #if 0
@@ -646,12 +651,13 @@ static void seqQ_cleanup(struct dtp * dtp)
 
 }
 #endif
-#define seqQ_for_each_entry_safe(seqQ, pos, n)                                 \
-                spin_lock(&seqQ->lock);                                        \
-                list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
 
-#define seqQ_for_each_entry_safe_end(seqQ)                                     \
-                spin_unlock(&seqQ->lock)
+#define seqQ_for_each_entry_safe(seqQ, pos, n)                          \
+        spin_lock(&seqQ->lock);                                         \
+        list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
+
+#define seqQ_for_each_entry_safe_end(seqQ)      \
+        spin_unlock(&seqQ->lock)
 
 /* AF is the factor to which A is devided in order to obtain the
  * period of the A-timer:
@@ -761,10 +767,10 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 }
 
                 break;
-                
+
         }
         seqQ_for_each_entry_safe_end(seqQ);
-        
+
         return LWE;
 }
 
@@ -786,7 +792,7 @@ static int post_worker(void * o)
         dtcp = dt_dtcp(dtp->parent);
 
         /* Invoke delimiting and update left window edge */
-        
+
         seq_num_sv_update =  process_A_expiration(dtp, dtcp);
         if (dtcp) {
                 if (!seq_num_sv_update) {
@@ -802,7 +808,7 @@ static int post_worker(void * o)
         a = dt_sv_a(dtp->parent);
         LOG_DBG("Going to restart A timer with a = %d and a/AF = %d", a, a/AF);
         rtimer_start(dtp->timers.a, a/AF);
-        
+
         return 0;
 }
 
@@ -816,17 +822,17 @@ static void tf_a(void * data)
                 LOG_ERR("No dtp to work with");
                 return;
         }
-        
+
         item = rwq_work_create_ni(post_worker, dtp);
         if (!item) {
                 LOG_ERR("Could not create twq item");
                 return;
         }
 
-         if (rwq_work_post(dtp->twq, item)) {
+        if (rwq_work_post(dtp->twq, item)) {
                 LOG_ERR("Could not add twq item to the wq");
                 return;
-         }
+        }
 
         return;
 }
@@ -843,9 +849,9 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->window_based = window_based;
         dtp->sv->rate_based   = rate_based;
         dtp->sv->a            = a;
-       
+
         if (a) {
-                LOG_DBG("Going to start A timer with t = %d", a/AF); 
+                LOG_DBG("Going to start A timer with t = %d", a/AF);
                 rtimer_start(dtp->timers.a, a/AF);
         }
 
@@ -948,7 +954,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 dtp_destroy(tmp);
                 return NULL;
         }
-        
+
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -1335,7 +1341,8 @@ int dtp_receive(struct dtp * instance,
 
         if (!a) {
                 /* FIXME: delimiting goes here */
-                LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d", seq_num, LWE);
+                LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
+                        seq_num, LWE);
                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                         LOG_ERR("Failed to set new "
                                 "left window edge");
@@ -1371,7 +1378,7 @@ int dtp_receive(struct dtp * instance,
 #if 0
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
-                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+                                   3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }

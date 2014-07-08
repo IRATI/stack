@@ -250,7 +250,7 @@ static int entries_ack(struct rtxqueue * q,
                     seq_num) {
                         list_del(&cur->next);
                         rtxq_entry_destroy(cur);
-                } else 
+                } else
                         return 0;
         }
 
@@ -263,7 +263,7 @@ static int entries_nack(struct rtxqueue * q,
                         uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur, * p;
-        struct pdu *        tmp; 
+        struct pdu *        tmp;
 
         ASSERT(q);
 
@@ -334,7 +334,8 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
-                LOG_DBG("First PDU with seqnum: %d push to rtxq at: %pk", csn, q);
+                LOG_DBG("First PDU with seqnum: %d push to rtxq at: %pk",
+                        csn, q);
                 return 0;
         }
 
@@ -345,12 +346,14 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
         pci  = pdu_pci_get_ro(last->pdu);
         psn  = pci_sequence_number_get((struct pci *) pci);
         if (csn == psn) {
-                LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                LOG_ERR("Another PDU with the same seq_num is in "
+                        "the rtx queue!");
                 return -1;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
-                LOG_DBG("Last PDU with seqnum: %d push to rtxq at: %pk", csn, q);
+                LOG_DBG("Last PDU with seqnum: %d push to rtxq at: %pk",
+                        csn, q);
                 return 0;
         }
 
@@ -358,12 +361,14 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
                 pci = pdu_pci_get_ro(cur->pdu);
                 psn = pci_sequence_number_get((struct pci *) pci);
                 if (csn == psn) {
-                        LOG_ERR("Another PDU with the same seq_num is in the rtx queue!");
+                        LOG_ERR("Another PDU with the same seq_num is in "
+                                "the rtx queue!");
                         return -1;
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
-                        LOG_DBG("Middle PDU with seqnum: %d push to rtxq at: %pk", csn, q);
+                        LOG_DBG("Middle PDU with seqnum: %d push to "
+                                "rtxq at: %pk", csn, q);
                         return 0;
                 }
         }
@@ -373,8 +378,8 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
 
 
 static int rtxqueue_drop(struct rtxqueue * q,
-                        seq_num_t          from,
-                        seq_num_t          to)
+                         seq_num_t          from,
+                         seq_num_t          to)
 {
         struct rtxq_entry * cur, * n;
         seq_num_t           tsn;
@@ -387,7 +392,7 @@ static int rtxqueue_drop(struct rtxqueue * q,
 
                 pci = pdu_pci_get_ro(cur->pdu);
                 tsn = pci_sequence_number_get((struct pci *) pci);
-                
+
                 if (tsn < from && from !=0)
                         continue;
                 if (tsn > to && to !=0)
@@ -423,7 +428,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 LOG_ERR("Could not send rtxed PDU to RMT");
                                 continue;
                         }
-                } 
+                }
         }
 
         return 0;
@@ -499,7 +504,7 @@ struct rtxq * rtxq_create(struct dt *  dt,
                 rtxq_destroy(tmp);
                 return NULL;
         }
-        
+
         ASSERT(dt);
         ASSERT(rmt);
 

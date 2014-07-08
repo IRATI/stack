@@ -329,7 +329,8 @@ int efcp_container_receive(struct efcp_container * container,
 
         tmp = efcp_imap_find(container->instances, cep_id);
         if (!tmp) {
-                LOG_ERR("Cannot find the requested instance cep-id: %d", cep_id);
+                LOG_ERR("Cannot find the requested instance cep-id: %d",
+                        cep_id);
                 /* FIXME: It should call unknown_flow policy of EFCP */
                 pdu_destroy(pdu);
                 return -1;
@@ -491,14 +492,15 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
          */
         mfps = container->config->dt_cons->max_pdu_size;
         mfss = container->config->dt_cons->max_pdu_size;
-        mpl  = container->config->dt_cons->max_pdu_life; 
+        mpl  = container->config->dt_cons->max_pdu_life;
         //a    = msecs_to_jiffies(connection->policies_params->initial_a_timer);
         a    = connection->policies_params->initial_a_timer;
         if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
                 tr = msecs_to_jiffies(tr);
                 /* FIXME: r should be passed and must be a bound */
-                r  = dtcp_data_retransmit_max(connection->policies_params->dtcp_cfg)*tr;
+                r  = dtcp_data_retransmit_max(connection->policies_params->
+                                              dtcp_cfg) * tr;
         }
 
         LOG_DBG("DT SV initialized with:\n"
@@ -511,14 +513,14 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
-        
+
         if (dtp_sv_init(dtp,
                         dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg),
                         dtcp_window_based_fctrl(connection->policies_params
                                                 ->dtcp_cfg),
                         dtcp_rate_based_fctrl(connection->policies_params
                                               ->dtcp_cfg),
-                                              a)) {
+                        a)) {
                 LOG_ERR("Could not init dtp_sv");
                 efcp_destroy(tmp);
                 return cep_id_bad();

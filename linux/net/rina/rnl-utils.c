@@ -212,7 +212,7 @@ rnl_ipcp_conn_create_req_msg_attrs_create(void)
                 return NULL;
 
         tmp->cp_params = conn_policies_create();
-        if (!tmp->cp_params){
+        if (!tmp->cp_params) {
                 rkfree(tmp);
                 return NULL;
         }
@@ -961,7 +961,7 @@ static int parse_policy_param_list(struct nlattr * nested_attr,
                         continue;
                 }
 
-                if(!policy_param_bind(p, param)) {
+                if (!policy_param_bind(p, param)) {
                         policy_param_destroy(param);
                         entries_with_problems++;
                         continue;
@@ -1482,7 +1482,7 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
                                              nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
 
         if (attrs[DRCC_ATTR_INIT_TR])
-                dtcp_initial_tr_set(cfg, 
+                dtcp_initial_tr_set(cfg,
                                     nla_get_u32(attrs[DRCC_ATTR_INIT_TR]));
 
         if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY])
@@ -1720,7 +1720,7 @@ rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
                         goto parse_fail;
 
         msg_attrs->is_registered =
-                        nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
+                nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
 
         return 0;
 
@@ -1792,7 +1792,7 @@ rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
                         nla_get_u32(info->attrs[IAFRE_ATTR_RESULT]);
 
         msg_attrs->notify_src =
-                        nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
+                nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
 
         return 0;
 }

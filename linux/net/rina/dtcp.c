@@ -346,7 +346,8 @@ static int push_pdus_rmt(struct dtcp * dtcp)
                 if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                         rtxq = dt_rtxq(dtcp->parent);
                         if (!rtxq) {
-                                LOG_ERR("Couldn't find the Retransmission queue");
+                                LOG_ERR("Couldn't find the "
+                                        "Retransmission queue");
                                 return -1;
                         }
                         rtxq_push(rtxq, pdu);
@@ -496,7 +497,7 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
 static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 {
         struct rtxq * q;
-        
+
         if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                 q = dt_rtxq(dtcp->parent);
                 if (!q) {
@@ -512,7 +513,7 @@ static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
 {
         struct rtxq * q;
-        
+
         if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                 q = dt_rtxq(dtcp->parent);
                 if (!q) {
@@ -701,18 +702,18 @@ static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
                                             snd_rt);
         if (!pdu_ctrl)
                 return -1;
-        
+
         if (pdu_send(dtcp, pdu_ctrl))
                 return -1;
 
-        return 0;        
+        return 0;
 }
 
 static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
         ASSERT(dtcp);
 
-        if (!dt_sv_a(dtcp->parent)) 
+        if (!dt_sv_a(dtcp->parent))
                 return dtcp->policies->sending_ack(dtcp, seq);
 
         return 0;
@@ -796,7 +797,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                                 retval = -1;
                         }
 
-                if (dtcp_rate_based_fctrl(dtcp_cfg)){
+                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
                         LOG_DBG("Rate based fctrl invoked");
                         if (dtcp->policies->rate_reduction(dtcp)) {
                                 LOG_ERR("Failed Rate Reduction policy");
@@ -813,7 +814,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp_flow_ctrl(dtcp_cfg) && !dtcp_rtx_ctrl(dtcp_cfg)){
+        if (dtcp_flow_ctrl(dtcp_cfg) && !dtcp_rtx_ctrl(dtcp_cfg)) {
                 LOG_DBG("Receiving flow ctrl invoked");
                 if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
                         LOG_ERR("Failed Receiving Flow Control policy");
@@ -893,10 +894,10 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         spin_lock_init(&instance->sv->lock);
 
         if (dtcp_rtx_ctrl(cfg))
-                instance->sv->data_retransmit_max = 
-                                       dtcp_data_retransmit_max(cfg);
+                instance->sv->data_retransmit_max =
+                        dtcp_data_retransmit_max(cfg);
         instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
-        instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg); 
+        instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg);
         instance->sv->rcvr_credit         = dtcp_initial_credit(cfg);
         instance->sv->rcvr_rt_wind_edge   = dtcp_initial_credit(cfg);
 
