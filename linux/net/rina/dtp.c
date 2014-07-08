@@ -202,9 +202,9 @@ static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 
 static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 {
-        struct cwq *    cwq;
-        struct dt *     dt;
-        uint_t          max_len;
+        struct cwq * cwq;
+        struct dt *  dt;
+        uint_t       max_len;
 
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
@@ -373,8 +373,8 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
 {
-        struct sdu *          sdu;
-        struct buffer *       buffer;
+        struct sdu *    sdu;
+        struct buffer * buffer;
 
         ASSERT(instance->sv);
 
@@ -593,9 +593,9 @@ seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
         LOG_MISSING;
 
         /* FIXME:
-         *     change this as it should be. It should return those PDUs with
-         *     timestam < time - A plus those that with seq_num exactly
-         *     consecutive to the last one
+         *   change this as it should be. It should return those PDUs with
+         *   timestam < time - A plus those that with seq_num exactly
+         *   consecutive to the last one
          */
         spin_lock(&seqQ->lock);
         tmp = seq_queue_last_to_ack(seqQ->queue, t);
@@ -662,9 +662,10 @@ static void seqQ_cleanup(struct dtp * dtp)
 #define seqQ_for_each_entry_safe_end(seqQ)      \
         spin_unlock(&seqQ->lock)
 
-/* AF is the factor to which A is devided in order to obtain the
- * period of the A-timer:
- *      Ta = A / AF
+/*
+ * NOTE:
+ *   AF is the factor to which A is devided in order to obtain the
+ *   period of the A-timer: Ta = A / AF
  */
 #define AF 1
 
@@ -745,10 +746,14 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         continue;
                 }
 
-                if (time_before_eq(jiffies, pos->time_stamp + msecs_to_jiffies(a))) {
+                if (time_before_eq(jiffies,
+                                   pos->time_stamp + msecs_to_jiffies(a))) {
                         LOG_DBG("Processing A timer expired");
-                        /* FIXME: this have to work differently when DTCP is
-                         * here */
+
+                        /* FIXME:
+                         *   this have to work differently when DTCP is
+                         *   here
+                         */
                         if (!dtcp) {
                                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                         LOG_ERR("Failed to set new "
@@ -1380,7 +1385,9 @@ int dtp_receive(struct dtp * instance,
 #if 0
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
-                                   3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+                                   3 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
