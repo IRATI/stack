@@ -720,11 +720,11 @@ int kfa_sdu_post(struct kfa * instance,
                         goto finish;
                 }
         }
-finish:
+ finish:
         if (atomic_dec_and_test(&flow->posters) &&
-           (atomic_read(&flow->writers) == 0)  &&
-           (atomic_read(&flow->readers) == 0)  &&
-           (flow->state == PORT_STATE_DEALLOCATED)) {
+            (atomic_read(&flow->writers) == 0)  &&
+            (atomic_read(&flow->readers) == 0)  &&
+            (flow->state == PORT_STATE_DEALLOCATED)) {
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 flow = NULL;

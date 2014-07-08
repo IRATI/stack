@@ -46,7 +46,7 @@ struct dt;
 
 struct rtxq *   rtxq_create(struct dt *  dt,
                             struct rmt * rmt);
-struct rtxq *   rtxq_create_ni(struct dt *  dt, 
+struct rtxq *   rtxq_create_ni(struct dt *  dt,
                                struct rmt * rmt);
 int             rtxq_destroy(struct rtxq * q);
 

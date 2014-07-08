@@ -917,8 +917,8 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         }
 
         list_for_each_entry(elem,
-                        &(dif_information->configuration->ipcp_config_entries),
-                        next) {
+                            &(dif_information->configuration->ipcp_config_entries),
+                            next) {
                 const struct ipcp_config_entry *entry = elem->entry;
 
                 if (!strcmp(entry->name, "vmpi-id")) {
@@ -952,8 +952,8 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         }
 
         ret = priv->vmpi.ops.register_read_callback(&priv->vmpi.ops,
-                                                     shim_hv_recv_callback,
-                                                     priv);
+                                                    shim_hv_recv_callback,
+                                                    priv);
         if (ret) {
                 LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
                 return -1;
@@ -1134,8 +1134,8 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         /* Initialize the VMPI-related data structure. */
         bzero(&priv->vmpi, sizeof(priv->vmpi));
         priv->vmpi.channels = rkzalloc(
-                        sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
-                        GFP_KERNEL);
+                                       sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
+                                       GFP_KERNEL);
         if (priv->vmpi.channels == NULL) {
                 LOG_ERR("%s: channels allocation failed", __func__);
                 goto alloc_channels;
