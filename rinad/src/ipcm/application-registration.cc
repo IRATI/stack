@@ -51,7 +51,7 @@ IPCManager::unregister_app_from_ipcp(
                 seqnum = slave_ipcp->unregisterApplication(req_event.
                                                            applicationName);
                 pending_app_unregistrations[seqnum] =
-                                PendingAppUnregistration(slave_ipcp, req_event);
+                                make_pair(slave_ipcp, req_event);
         } catch (rina::IpcmUnregisterApplicationException) {
                 cerr << __func__ << ": Error while unregistering application "
                         << req_event.applicationName.toString() << " from IPC "
@@ -355,16 +355,23 @@ static void ipcm_unregister_response_ipcp(
 
 static void ipcm_unregister_response_app(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
-                        IPCManager *ipcm, map<unsigned int,
-                        PendingAppUnregistration>::iterator mit)
+                        IPCManager *ipcm,
+                        map<unsigned int,
+                            pair<rina::IPCProcess *,
+                                 rina::ApplicationUnregistrationRequestEvent
+                                >
+                           >::iterator mit)
 {
+        rina::ApplicationUnregistrationRequestEvent& req_event =
+                                        mit->second.second;
+
         // Inform the supporting IPC process
-        ipcm_unregister_response_common(event, mit->second.slave_ipcp,
-                                        mit->second.req_event.applicationName);
+        ipcm_unregister_response_common(event, mit->second.first,
+                                        req_event.applicationName);
 
         // Inform the application
-        application_manager_app_unregistered(mit->second.req_event,
-                        event->result);
+        application_manager_app_unregistered(req_event,
+                                             event->result);
 
         ipcm->pending_app_unregistrations.erase(mit);
 }
@@ -375,7 +382,10 @@ ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
 {
         DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
-        map<unsigned int, PendingAppUnregistration>::iterator it;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *,
+                      rina::ApplicationUnregistrationRequestEvent>
+           >::iterator it;
         map<unsigned int,
             std::pair<rina::IPCProcess *, rina::IPCProcess *>
            >::iterator jt;

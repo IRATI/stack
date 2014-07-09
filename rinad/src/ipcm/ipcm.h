@@ -49,16 +49,6 @@ class IPCMConcurrency : public rina::ConditionVariable {
         unsigned int event_sn;
 };
 
-struct PendingAppUnregistration {
-        rina::IPCProcess *slave_ipcp;
-        rina::ApplicationUnregistrationRequestEvent req_event;
-
-        PendingAppUnregistration() : slave_ipcp(NULL) { }
-        PendingAppUnregistration(rina::IPCProcess *p,
-                        const rina::ApplicationUnregistrationRequestEvent& n)
-                                        : slave_ipcp(p), req_event(n) { }
-};
-
 struct PendingFlowAllocation {
         rina::IPCProcess *slave_ipcp;
         rina::FlowRequestEvent req_event;
@@ -134,7 +124,11 @@ class IPCManager : public EventLoopData {
                           >
                 > pending_app_registrations;
 
-        std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess*,
+                           rina::ApplicationUnregistrationRequestEvent
+                          >
+                > pending_app_unregistrations;
 
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
 
