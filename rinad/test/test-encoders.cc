@@ -78,8 +78,8 @@ bool test_ApplicationProcessNamingInfoMessage () {
 
 bool test_Flow () {
 	rinad::Flow flow;
-	std::list<rina::Connection> connection_list;
-	rina::Connection connection;
+	std::list<rina::Connection*> connection_list;
+	rina::Connection *connection = new rina::Connection;
 	rina::ConnectionPolicies connection_policies;
 	rina::DTCPConfig dtcp_config;
 	rina::DTCPRtxControlConfig rtx_config;
@@ -88,8 +88,8 @@ bool test_Flow () {
 	rina::DTCPRateBasedFlowControlConfig rate;
 
 	// Set
-	flow.source_naming_info_(rina::ApplicationProcessNamingInformation("test", "1"));
-	flow.destination_naming_info_(rina::ApplicationProcessNamingInformation("test2", "1"));
+	flow.source_naming_info_ = rina::ApplicationProcessNamingInformation("test", "1");
+	flow.destination_naming_info_ = rina::ApplicationProcessNamingInformation("test2", "1");
 	connection_policies.set_dtcp_present(true);
 	connection_policies.set_seq_num_rollover_threshold(1234);
 	connection_policies.set_initial_a_timer(14561);
@@ -116,11 +116,13 @@ bool test_Flow () {
 	dtcp_config.set_initial_recvr_inactivity_time(34);
 	dtcp_config.set_initial_sender_inactivity_time(51245);
 	connection_policies.set_dtcp_configuration(dtcp_config);
-	connection.setPolicies(connection_policies);
+	connection->setPolicies(connection_policies);
 	connection_list.push_front(connection);
 	flow.connections_ = connection_list;
 
 	// Encode
+
+	delete connection;
 
 	return true;
 }
