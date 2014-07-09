@@ -728,7 +728,7 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
                 shim_hv_handle_deallocate(priv, msg, len);
                 break;
         default:
-                LOG_ERR("%s: unknown cmd %u\n", __func__, cmd);
+                LOG_ERR("%s: unknown cmd %u", __func__, cmd);
                 break;
         }
 }
@@ -810,12 +810,12 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
         /* Add the application to the list of registered applications. */
         cur = rkzalloc(sizeof(*cur), GFP_KERNEL);
         if (!cur) {
-                LOG_ERR("%s: Allocating list element\n", __func__);
+                LOG_ERR("%s: Allocating list element", __func__);
                 goto out;
         }
 
         if (name_cpy(application_name, &cur->application_name)) {
-                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                LOG_ERR("%s: name_cpy() failed", __func__);
                 goto name_alloc;
         }
 
@@ -912,7 +912,7 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         }
 
         if (name_cpy(dif_information->dif_name, &priv->dif_name)) {
-                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                LOG_ERR("%s: name_cpy() failed", __func__);
                 return -1;
         }
 
@@ -947,7 +947,7 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         ret = vmpi_provider_find_instance(VMPI_PROVIDER_AUTO, priv->vmpi.id,
                                           &priv->vmpi.ops);
         if (ret) {
-                LOG_ERR("%s: mpi instance %u not found\n", __func__, 0);
+                LOG_ERR("%s: mpi instance %u not found", __func__, 0);
                 return -1;
         }
 
@@ -1120,7 +1120,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         priv->fspec.max_allowable_gap = -1;
 
         if (name_cpy(name, &priv->name)) {
-                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                LOG_ERR("%s: name_cpy() failed", __func__);
                 goto alloc_name;
         }
 
@@ -1162,7 +1162,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
  alloc_data:
         rkfree(ipcp);
  alloc_ipcp:
-        LOG_ERR("%s: failed\n", __func__);
+        LOG_ERR("%s: failed", __func__);
 
         return NULL;
 }
@@ -1218,7 +1218,7 @@ static int __init shim_hv_init(void)
                                             &shim_hv_factory_ops);
 
         if (shim_hv_ipcp_factory == NULL) {
-                LOG_ERR("%s: factory registration failed\n", __func__);
+                LOG_ERR("%s: factory registration failed", __func__);
                 return -1;
         }
 
