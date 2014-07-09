@@ -122,8 +122,6 @@ bool test_Flow () {
 
 	// Encode
 
-	delete connection;
-
 	return true;
 }
 

@@ -52,6 +52,7 @@ Flow::~Flow() {
 	for (iterator = connections_.begin(); iterator != connections_.end();
 			++iterator) {
 		delete *iterator;
+		*iterator = 0;
 	}
 }
 
@@ -1232,9 +1233,15 @@ const rina::SerializedObject &serialized_object) const {
 	gpf_flow.ParseFromArray(serialized_object.message_, serialized_object.size_);
 
 	// SourceNamingInfo
-	//flow->source_naming_info_ = gpf_flow.sourcenaminginfo();
+	rina::ApplicationProcessNamingInformation *src_app = get_ApplicationProcessNamingInformation(gpf_flow.sourcenaminginfo());
+	flow->source_naming_info_ = *src_app;
+	delete src_app;
+	src_app = 0;
 	// DestinationNamingInfo
-	//flow->destination_naming_info_ = gpf_flow.destinationnaminginfo();
+	rina::ApplicationProcessNamingInformation *dest_app = get_ApplicationProcessNamingInformation(gpf_flow.destinationnaminginfo());
+	flow->destination_naming_info_ = *dest_app;
+	delete dest_app;
+	dest_app = 0;
 	// sourcePortId
 	flow->source_port_id_ = gpf_flow.sourceportid();
 	//destinationPortId
@@ -1255,6 +1262,7 @@ const rina::SerializedObject &serialized_object) const {
 	rina::ConnectionPolicies *conn_polc = get_ConnectionPolicies(gpf_flow.connectionpolicies());
 	flow->getActiveConnection()->setPolicies(*conn_polc);
 	delete conn_polc;
+	conn_polc = 0;
 	//accessControl
 	//flow->access_control_ = gpf_flow.accesscontrol();
 	//maxCreateFlowRetries
@@ -1480,6 +1488,18 @@ rina::ConnectionPolicies* FlowEncoder::get_ConnectionPolicies(const rina::messag
 	polc->set_initial_a_timer(gpf_polc.initialatimer());
 
 	return polc;
+}
+
+rina::ApplicationProcessNamingInformation* FlowEncoder::get_ApplicationProcessNamingInformation(
+		const rina::messages::applicationProcessNamingInfo_t &gpf_app) const {
+	rina::ApplicationProcessNamingInformation *app = new rina::ApplicationProcessNamingInformation;
+
+	app->setProcessName(gpf_app.applicationprocessname());
+	app->setProcessInstance(gpf_app.applicationprocessinstance());
+	app->setEntityName(gpf_app.applicationentityname());
+	app->setEntityInstance(gpf_app.applicationentityinstance());
+
+	return app;
 }
 
 
