@@ -31,12 +31,13 @@ struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct kfa *        kfa,
                         struct connection * connection);
+int          dtp_destroy(struct dtp * instance);
+
 int          dtp_sv_init(struct dtp * dtp,
                          bool         rexmsn_ctrl,
                          bool         window_based,
                          bool         rate_based,
                          timeout_t    a);
-int          dtp_destroy(struct dtp * instance);
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);

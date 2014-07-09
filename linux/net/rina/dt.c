@@ -96,7 +96,7 @@ struct dt * dt_create(void)
 
         *tmp->sv = default_sv;
         spin_lock_init(&tmp->lock);
-        
+
         return tmp;
 }
 
@@ -454,7 +454,7 @@ timeout_t dt_sv_a(struct dt * dt)
 {
         uint_t tmp;
 
-        if (!dt || !dt->sv) 
+        if (!dt || !dt->sv)
                 return 0;
 
         spin_lock(&dt->lock);
@@ -533,14 +533,14 @@ seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
 timeout_t dt_sv_tr(struct dt * dt)
 {
         timeout_t tmp;
-        
+
         ASSERT(dt);
         ASSERT(dt->sv);
-        
+
         spin_lock(&dt->lock);
         tmp = dt->sv->tr;
         spin_unlock(&dt->lock);
-        
+
         return tmp;
 }
-        
+

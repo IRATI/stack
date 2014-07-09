@@ -40,7 +40,7 @@
 #endif
 #else   /* !RINA_LOGS */
 #define __LOG(PFX, LVL, FMT, ARGS...)           \
-	do { } while (0)
+        do { } while (0)
 #endif  /* !RINA_LOGS */
 
 /* Sorted by "urgency" (high to low) */

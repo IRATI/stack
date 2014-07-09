@@ -338,19 +338,19 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
         tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
-/*
-        tmp->fctrl_cfg = dtcp_fctrl_config_create_gfp(flags);
-        if (!tmp->fctrl_cfg) {
-                LOG_ERR("Could not create fctrl_cfg in dtcp_config_create");
-                goto clean;
-        }
+        /*
+          tmp->fctrl_cfg = dtcp_fctrl_config_create_gfp(flags);
+          if (!tmp->fctrl_cfg) {
+          LOG_ERR("Could not create fctrl_cfg in dtcp_config_create");
+          goto clean;
+          }
 
-        tmp->rxctrl_cfg = dtcp_rxctrl_config_create_gfp(flags);
-        if (!tmp->rxctrl_cfg){
-                LOG_ERR("Could not create rxctrl_cfg in dtcp_config_create");
-                goto clean;
-        }
-*/
+          tmp->rxctrl_cfg = dtcp_rxctrl_config_create_gfp(flags);
+          if (!tmp->rxctrl_cfg) {
+          LOG_ERR("Could not create rxctrl_cfg in dtcp_config_create");
+          goto clean;
+          }
+        */
         tmp->receiver_inactivity_timer = policy_create_gfp(flags);
         if (!tmp->receiver_inactivity_timer) {
                 LOG_ERR("Could not create receiver_inactivity_timer"
