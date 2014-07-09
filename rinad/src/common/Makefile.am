@@ -24,5 +24,4 @@ librinad_la_SOURCES  =					\
 	event-loop.cc	      event-loop.h		\
 	helpers.cc	      helpers.h			\
 	encoder.cc	      encoder.h			\
-                      concurrency.h
-
+			      concurrency.h
