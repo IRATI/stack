@@ -149,6 +149,9 @@ void IPCMConsole::body()
                 }
 
                 for (;;) {
+                        outstream << "IPCM >>> ";
+                        flush_output(cfd);
+
                         n = read(cfd, cmdbuf, sizeof(cmdbuf));
                         if (n < 0) {
                                 cerr << __func__ << " Error [" << errno <<
@@ -215,6 +218,8 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 
         fun = mit->second;
         ret = (this->*fun)(args);
+
+        outstream << endl;
         flush_output(cfd);
 
         return ret;
