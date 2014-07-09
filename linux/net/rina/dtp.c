@@ -65,7 +65,7 @@ struct dtp_policies {
 };
 
 struct dtp {
-        struct dt *           parent;
+        struct dt *               parent;
         /*
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
@@ -657,7 +657,7 @@ static void squeue_cleanup(struct dtp * dtp)
         spin_lock(&seqq->lock);                                         \
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next)
 
-#define squeue_for_each_entry_safe_end(seqq)      \
+#define squeue_for_each_entry_safe_end(seqq)    \
         spin_unlock(&seqq->lock)
 
 /*
@@ -1322,7 +1322,7 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
-                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d", 
+                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d",
                         dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
