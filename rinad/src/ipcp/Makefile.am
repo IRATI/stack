@@ -23,3 +23,23 @@ ipcp_SOURCES  =						\
 	pduft-generator.cc      pduft-generator.h	\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h
+
+test_encoders_SOURCES  =			\
+	test-encoders.cc			\
+	components.cc	  components.h		\
+	rib-daemon.cc     rib-daemon.h		\
+	flow-allocator.cc flow-allocator.h
+test_encoders_CPPFLAGS =			\
+	$(CPPFLAGS_EXTRA)			\
+	$(LIBRINA_CFLAGS)			\
+	-I$(srcdir)/..				\
+	-I$(srcdir)/../common
+test_encoders_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
+
+check_PROGRAMS =				\
+	test-encoders
+
+XFAIL_TESTS =
+PASS_TESTS  = test-encoders
+
+TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
