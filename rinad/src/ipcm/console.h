@@ -49,22 +49,22 @@ namespace rinad {
 
 class IPCManager;
 
-typedef int (*command_function_t)(IPCManager *ipcm,
+typedef int (*console_function_t)(IPCManager *ipcm,
                                   std::vector<std::string>& args);
 
 class IPCMConsole : public rina::Thread {
                 static const unsigned int CMDBUFSIZE = 120;
 
-        public:
-                std::map<std::string, command_function_t> commands_map;
+                std::map<std::string, console_function_t> commands_map;
                 std::ostringstream outstream;
 
-                IPCMConsole();
                 int init();
-                void body();
                 int process_command(int cfd, char *cmdbuf, int size);
                 int flush_output(int cfd);
 
+        public:
+                IPCMConsole();
+                void body();
                 virtual ~IPCMConsole() throw();
 };
 

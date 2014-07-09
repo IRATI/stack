@@ -181,7 +181,7 @@ IPCMConsole::flush_output(int cfd)
 int
 IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 {
-        map<string, command_function_t>::iterator mit;
+        map<string, console_function_t>::iterator mit;
         istringstream iss(string(cmdbuf, size));
         vector<string> args;
         string token;
