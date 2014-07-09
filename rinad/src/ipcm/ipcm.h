@@ -49,11 +49,6 @@ class IPCMConcurrency : public rina::ConditionVariable {
         unsigned int event_sn;
 };
 
-struct PendingIPCPUnregistration {
-        rina::IPCProcess *slave_ipcp;
-        rina::IPCProcess *ipcp;
-};
-
 struct PendingAppUnregistration {
         rina::IPCProcess *slave_ipcp;
         rina::ApplicationUnregistrationRequestEvent req_event;
@@ -120,19 +115,29 @@ class IPCManager : public EventLoopData {
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
+
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
+
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*, rina::IPCProcess*>
                 > pending_ipcp_registrations;
-        std::map<unsigned int, PendingIPCPUnregistration> pending_ipcp_unregistrations;
+
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess*, rina::IPCProcess*>
+                > pending_ipcp_unregistrations;
+
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
+
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*,
                            rina::ApplicationRegistrationRequestEvent
                           >
                 > pending_app_registrations;
+
         std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
+
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
+
         std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
 
         std::map<unsigned int,

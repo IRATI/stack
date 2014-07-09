@@ -317,11 +317,13 @@ static bool ipcm_unregister_response_common(
 
 static void ipcm_unregister_response_ipcp(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
-                        IPCManager *ipcm, map<unsigned int,
-                        PendingIPCPUnregistration>::iterator mit)
+                        IPCManager *ipcm,
+                        map<unsigned int,
+                            pair<rina::IPCProcess *, rina::IPCProcess *>
+                           >::iterator mit)
 {
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
-        rina::IPCProcess *ipcp = mit->second.ipcp;
+        rina::IPCProcess *ipcp = mit->second.first;
+        rina::IPCProcess *slave_ipcp = mit->second.second;
         rina::ApplicationProcessNamingInformation slave_dif_name = slave_ipcp->
                                                 getDIFInformation().dif_name_;
         bool success;
@@ -374,7 +376,9 @@ ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         map<unsigned int, PendingAppUnregistration>::iterator it;
-        map<unsigned int, PendingIPCPUnregistration>::iterator jt;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *, rina::IPCProcess *>
+           >::iterator jt;
 
         it = ipcm->pending_app_unregistrations.find(event->sequenceNumber);
         jt = ipcm->pending_ipcp_unregistrations.find(event->sequenceNumber);
