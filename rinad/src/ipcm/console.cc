@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
+#include <sstream>
 
 #define RINA_PREFIX     "ipcm"
 
@@ -43,6 +44,11 @@ using namespace std;
 
 
 namespace rinad {
+
+typedef int (*command_function_t)(IPCManager *ipcm, vector<string>& args);
+
+static map<string, command_function_t> commands_map;
+static ostringstream outstream;
 
 static int
 console_init()
@@ -96,6 +102,53 @@ err:
         return sfd;
 }
 
+static int
+flush_output(int cfd)
+{
+        int n;
+        const string& str = outstream.str();
+
+        n = write(cfd, str.c_str(), str.size());
+        if (n < 0) {
+                cerr << __func__ << " Error [" << errno <<
+                        "] calling write() " << endl;
+                return -1;
+        }
+
+        outstream.clear();
+
+        return 0;
+}
+
+static int
+process_command(IPCManager *ipcm, int cfd, char *cmdbuf, int size)
+{
+        map<string, command_function_t>::iterator mit;
+        istringstream iss(string(cmdbuf, size));
+        vector<string> args;
+        string token;
+        int ret;
+
+        while (iss >> token) {
+                args.push_back(token);
+        }
+
+        if (args.size() < 1) {
+                return 0;
+        }
+
+        mit = commands_map.find(args[0]);
+        if (mit == commands_map.end()) {
+                outstream << "Unknown command '" << args[0] << "'" << endl;
+                flush_output(cfd);
+                return 0;
+        }
+
+        ret = mit->second(ipcm, args);
+
+        return ret;
+}
+
 void *
 console_function(void *opaque)
 {
@@ -112,7 +165,8 @@ console_function(void *opaque)
                 int cfd;
                 struct sockaddr_in client_address;
                 socklen_t address_len = sizeof(client_address);
-                char buf[100];
+#define CMDBUFSIZE 120
+                char cmdbuf[CMDBUFSIZE];
                 int n;
 
                 cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
@@ -123,7 +177,7 @@ console_function(void *opaque)
                         continue;
                 }
 
-                n = read(cfd, buf, sizeof(buf));
+                n = read(cfd, cmdbuf, sizeof(cmdbuf));
                 if (n < 0) {
                         cerr << __func__ << " Error [" << errno <<
                                 "] calling read() " << endl;
@@ -131,13 +185,7 @@ console_function(void *opaque)
                         continue;
                 }
 
-                n = write(cfd, buf, n);
-                if (n < 0) {
-                        cerr << __func__ << " Error [" << errno <<
-                                "] calling write() " << endl;
-                        close(cfd);
-                        continue;
-                }
+                process_command(ipcm, cfd, cmdbuf, n);
 
                 close(cfd);
         }
