@@ -27,7 +27,14 @@
 #include <librina/timer.h>
 
 #include "common/concurrency.h"
+#include "common/encoder.h"
 #include "ipcp/components.h"
+#include "common/encoders/FlowMessage.pb.h"
+#include "common/encoders/ApplicationProcessNamingInfoMessage.pb.h"
+#include "common/encoders/QoSSpecification.pb.h"
+#include "common/encoders/ConnectionPoliciesMessage.pb.h"
+#include "common/encoders/CommonMessages.pb.h"
+#include "common/encoders/PolicyDescriptorMessage.pb.h"
 
 namespace rinad {
 
@@ -35,12 +42,12 @@ namespace rinad {
 class Flow {
 public:
 	enum IPCPFlowState {
-                EMPTY,
-                ALLOCATION_IN_PROGRESS,
-                ALLOCATED,
-                WAITING_2_MPL_BEFORE_TEARING_DOWN,
-                DEALLOCATED
-        };
+		EMPTY,
+		ALLOCATION_IN_PROGRESS,
+		ALLOCATED,
+		WAITING_2_MPL_BEFORE_TEARING_DOWN,
+		DEALLOCATED
+	};
 
 	Flow();
 	~Flow();
@@ -54,7 +61,7 @@ public:
 	rina::ApplicationProcessNamingInformation destination_naming_info_;
 
 	/// The port-id returned to the Application process that requested the flow. This port-id is used for
-    /// the life of the flow.
+	/// the life of the flow.
 	unsigned int source_port_id_;
 
 	/// The port-id returned to the destination Application process. This port-id is used for
@@ -99,7 +106,9 @@ public:
 /// Flow Allocator Instance Interface
 class IFlowAllocatorInstance {
 public:
-	virtual ~IFlowAllocatorInstance(){};
+	virtual ~IFlowAllocatorInstance() {
+	}
+	;
 
 	/// Returns the portId associated to this Flow Allocator Instance
 	/// @return
@@ -119,10 +128,11 @@ public:
 	/// @throws Exception if there are not enough resources to fulfill the allocate request
 	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event) = 0;
 
-	virtual void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) = 0;
+	virtual void processCreateConnectionResponseEvent(
+			const rina::CreateConnectionResponseEvent& event) = 0;
 
 	/// When an FAI is created with a Create_Request(Flow) as input, it will inspect the parameters
-    /// first to determine if the requesting Application (Source_Naming_Info) has access to the requested
+	/// first to determine if the requesting Application (Source_Naming_Info) has access to the requested
 	/// Application (Destination_Naming_Info) by inspecting the Access Control parameter.  If not, a
 	/// negative Create_Response primitive will be returned to the requesting FAI. If it does have access,
 	/// the FAI will determine if the policies proposed are acceptable, invoking the NewFlowRequestPolicy.
@@ -134,8 +144,8 @@ public:
 	/// @param portId the destination portid as decided by the Flow allocator
 	/// @param requestMessate the CDAP request message
 	/// @param underlyingPortId the port id to reply later on
-	virtual void createFlowRequestMessageReceived(Flow * flow, const rina::CDAPMessage * requestMessage,
-			int underlyingPortId) = 0;
+	virtual void createFlowRequestMessageReceived(Flow * flow,
+			const rina::CDAPMessage * requestMessage, int underlyingPortId) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
 	/// it formulates a Create_Response on the flow object requested.If the
@@ -148,11 +158,14 @@ public:
 	/// necessary housekeeping and terminates.
 	/// @param AllocateFlowResponseEvent - the reply from the application
 	/// @throws IPCException
-	virtual void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event) = 0;
+	virtual void submitAllocateResponse(
+			const rina::AllocateFlowResponseEvent& event) = 0;
 
-	virtual void processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event) = 0;
+	virtual void processCreateConnectionResultEvent(
+			const rina::CreateConnectionResultEvent& event) = 0;
 
-	virtual void processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event) = 0;
+	virtual void processUpdateConnectionResponseEvent(
+			const rina::UpdateConnectionResponseEvent& event) = 0;
 
 	/// When a deallocate primitive is invoked, it is passed to the FAI responsible
 	/// for that port-id. The FAI sends an M_DELETE request CDAP PDU on the Flow
@@ -161,26 +174,30 @@ public:
 	/// the DTP and DTCP if it exists will be deleted automatically after 2MPL)
 	/// @param the flow deallocate request event
 	/// @throws IPCException
-	virtual void submitDeallocate(const rina::FlowDeallocateRequestEvent& event) = 0;
+	virtual void submitDeallocate(
+			const rina::FlowDeallocateRequestEvent& event) = 0;
 
 	/// When this PDU is received by the FAI with this port-id, the FAI invokes
 	/// a Deallocate.deliver to notify the local Application,
 	/// deletes the binding between the Application and the local DTP-instance,
 	/// and sends a Delete_Response indicating the result.
-	virtual void deleteFlowRequestMessageReceived(const rina::CDAPMessage * requestMessage,
-			int underlyingPortId) = 0;
+	virtual void deleteFlowRequestMessageReceived(
+			const rina::CDAPMessage * requestMessage, int underlyingPortId) = 0;
 
-	virtual void destroyFlowAllocatorInstance(const std::string& flowObjectName, bool requestor) = 0;
+	virtual void destroyFlowAllocatorInstance(const std::string& flowObjectName,
+			bool requestor) = 0;
 
 	virtual unsigned int get_allocate_response_message_handle() const = 0;
-	virtual void set_allocate_response_message_handle(unsigned int allocate_response_message_handle) = 0;
+	virtual void set_allocate_response_message_handle(
+			unsigned int allocate_response_message_handle) = 0;
 };
 
 /// Representation of a flow object in the RIB
-class FlowRIBObject : public SimpleSetMemberRIBObject {
+class FlowRIBObject: public SimpleSetMemberRIBObject {
 public:
 	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
-			const std::string& object_class, IFlowAllocatorInstance * flow_allocator_instance);
+			const std::string& object_class,
+			IFlowAllocatorInstance * flow_allocator_instance);
 	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
@@ -196,8 +213,7 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
-                          const std::string& objectName,
-                          IFlowAllocatorInstance* objectValue);
+			const std::string& objectName, IFlowAllocatorInstance* objectValue);
 	const void* get_value() const;
 
 private:
@@ -218,17 +234,21 @@ public:
 };
 
 /// Implementation of the Flow Allocator component
-class FlowAllocator : public IFlowAllocator {
+class FlowAllocator: public IFlowAllocator {
 public:
 	FlowAllocator();
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
-	void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage, int underlyingPortId);
+	void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
+			int underlyingPortId);
 	void submitAllocateRequest(rina::FlowRequestEvent * flowRequestEvent);
-	void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event);
+	void processCreateConnectionResponseEvent(
+			const rina::CreateConnectionResponseEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
-	void processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event);
-	void processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event);
+	void processCreateConnectionResultEvent(
+			const rina::CreateConnectionResultEvent& event);
+	void processUpdateConnectionResponseEvent(
+			const rina::UpdateConnectionResponseEvent& event);
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
 	void removeFlowAllocatorInstance(int portId);
 
@@ -254,17 +274,24 @@ private:
 /// and access control capabilities.
 class INewFlowRequetPolicy {
 public:
-	virtual ~INewFlowRequetPolicy(){};
-	virtual Flow * generateFlowObject(const rina::FlowRequestEvent& flowRequestEvent,
+	virtual ~INewFlowRequetPolicy() {
+	}
+	;
+	virtual Flow * generateFlowObject(
+			const rina::FlowRequestEvent& flowRequestEvent,
 			const std::list<rina::QoSCube>& qosCubes) = 0;
 };
 
 class SimpleNewFlowRequestPolicy: public INewFlowRequetPolicy {
 public:
-	SimpleNewFlowRequestPolicy(){};
-	~SimpleNewFlowRequestPolicy(){};
+	SimpleNewFlowRequestPolicy() {
+	}
+	;
+	~SimpleNewFlowRequestPolicy() {
+	}
+	;
 	Flow * generateFlowObject(const rina::FlowRequestEvent& flowRequestEvent,
-				const std::list<rina::QoSCube>& qosCubes);
+			const std::list<rina::QoSCube>& qosCubes);
 
 private:
 	rina::QoSCube selectQoSCube(const rina::FlowSpecification& flowSpec,
@@ -272,36 +299,52 @@ private:
 };
 
 ///Implementation of the FlowAllocatorInstance
-class FlowAllocatorInstance: public IFlowAllocatorInstance, public BaseCDAPResponseMessageHandler {
+class FlowAllocatorInstance: public IFlowAllocatorInstance,
+		public BaseCDAPResponseMessageHandler {
 public:
-	enum FAIState {NO_STATE, CONNECTION_CREATE_REQUESTED, MESSAGE_TO_PEER_FAI_SENT,
-		APP_NOTIFIED_OF_INCOMING_FLOW, CONNECTION_UPDATE_REQUESTED, FLOW_ALLOCATED,
-		CONNECTION_DESTROY_REQUESTED, WAITING_2_MPL_BEFORE_TEARING_DOWN, FINISHED};
+	enum FAIState {
+		NO_STATE,
+		CONNECTION_CREATE_REQUESTED,
+		MESSAGE_TO_PEER_FAI_SENT,
+		APP_NOTIFIED_OF_INCOMING_FLOW,
+		CONNECTION_UPDATE_REQUESTED,
+		FLOW_ALLOCATED,
+		CONNECTION_DESTROY_REQUESTED,
+		WAITING_2_MPL_BEFORE_TEARING_DOWN,
+		FINISHED
+	};
 
-	FlowAllocatorInstance(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
-			rina::CDAPSessionManagerInterface * cdap_session_manager, int port_id);
-	FlowAllocatorInstance(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
-				int port_id);
+	FlowAllocatorInstance(IPCProcess * ipc_process,
+			IFlowAllocator * flow_allocator,
+			rina::CDAPSessionManagerInterface * cdap_session_manager,
+			int port_id);
+	FlowAllocatorInstance(IPCProcess * ipc_process,
+			IFlowAllocator * flow_allocator, int port_id);
 	~FlowAllocatorInstance();
 	int get_port_id() const;
 	Flow * get_flow() const;
 	bool isFinished() const;
 	unsigned int get_allocate_response_message_handle() const;
-	void set_allocate_response_message_handle(unsigned int allocate_response_message_handle);
+	void set_allocate_response_message_handle(
+			unsigned int allocate_response_message_handle);
 	void submitAllocateRequest(const rina::FlowRequestEvent& event);
-	void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event);
-	void createFlowRequestMessageReceived(Flow * flow, const rina::CDAPMessage * requestMessage,
-				int underlyingPortId);
-	void processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event);
+	void processCreateConnectionResponseEvent(
+			const rina::CreateConnectionResponseEvent& event);
+	void createFlowRequestMessageReceived(Flow * flow,
+			const rina::CDAPMessage * requestMessage, int underlyingPortId);
+	void processCreateConnectionResultEvent(
+			const rina::CreateConnectionResultEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
-	void processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event);
+	void processUpdateConnectionResponseEvent(
+			const rina::UpdateConnectionResponseEvent& event);
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
-	void deleteFlowRequestMessageReceived(const rina::CDAPMessage * requestMessage,
-				int underlyingPortId);
-	void destroyFlowAllocatorInstance(const std::string& flowObjectName, bool requestor);
+	void deleteFlowRequestMessageReceived(
+			const rina::CDAPMessage * requestMessage, int underlyingPortId);
+	void destroyFlowAllocatorInstance(const std::string& flowObjectName,
+			bool requestor);
 
 	/// If the response to the allocate request is negative
-    /// the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a
+	/// the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a
 	/// positive result, a new Create_Flow Request is sent and the CreateFlowTimer is reset.
 	/// Otherwise, if the AllocateRetryPolicy returns a negative result or the MaxCreateRetries
 	/// has been exceeded, an Allocate_Request.deliver primitive to notify the Application that
@@ -345,7 +388,8 @@ private:
 	rina::Lockable * lock_;
 	rina::Timer * timer_;
 
-	void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator, int port_id);
+	void initialize(IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
+			int port_id);
 	void replyToIPCManager(rina::FlowRequestEvent & event, int result);
 	void releasePortId();
 
@@ -358,16 +402,36 @@ public:
 	static const long DELAY;
 
 	TearDownFlowTimerTask(FlowAllocatorInstance * flow_allocator_instance,
-                              const std::string& flow_object_name,
-                              bool requestor);
-	~TearDownFlowTimerTask() throw() {}
+			const std::string& flow_object_name, bool requestor);
+	~TearDownFlowTimerTask() throw () {
+	}
 
 	void run();
 
 private:
 	FlowAllocatorInstance * flow_allocator_instance_;
-	std::string             flow_object_name_;
-	bool                    requestor_;
+	std::string flow_object_name_;
+	bool requestor_;
+};
+
+/// Encoder of the Flow
+class FlowEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+private:
+	rina::messages::applicationProcessNamingInfo_t* get_applicationProcessNamingInfo_t(
+			const rina::ApplicationProcessNamingInformation &name) const;
+	rina::messages::qosSpecification_t* get_qosSpecification_t(const rina::FlowSpecification &flow_spec) const;
+	rina::messages::connectionPolicies_t* get_connectionPolicies_t(const rina::ConnectionPolicies &polc) const;
+	rina::messages::dtcpConfig_t* get_dtcpConfig_t(const rina::DTCPConfig &conf) const;
+	rina::messages::policyDescriptor_t* get_policyDescriptor_t(const rina::PolicyConfig &conf) const;
+	rina::messages::dtcpFlowControlConfig_t* get_dtcpFlowControlConfig_t(const rina::DTCPFlowControlConfig &conf) const;
+	rina::messages::dtcpRtxControlConfig_t* get_dtcpRtxControlConfig_t(const rina::DTCPRtxControlConfig &conf) const;
+	rina::messages::property_t* get_property_t(const rina::PolicyParameter &conf) const;
+	rina::messages::dtcpWindowBasedFlowControlConfig_t* get_dtcpWindowBasedFlowControlConfig_t(const rina::DTCPWindowBasedFlowControlConfig &conf) const;
+	rina::messages::dtcpRateBasedFlowControlConfig_t* get_dtcpRateBasedFlowControlConfig_t(const rina::DTCPRateBasedFlowControlConfig &conf) const;
+	rina::ConnectionPolicies* get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) const;
 };
 
 }

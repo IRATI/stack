@@ -23,8 +23,6 @@
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 #include "encoder.h"
-#include "encoders/ApplicationProcessNamingInfoMessage.pb.h"
-#include "encoders/ApplicationRegistrationMessage.pb.h"
 
 namespace rinad {
 
@@ -47,7 +45,7 @@ void* Encoder::decode(const rina::SerializedObject &serialized_object, const std
 	EncoderInterface* encoder = encoders_[object_class];
 	return encoder->decode(serialized_object);
 }
-
+/*
 // CLASS ApplicationRegistrationEncoder
 const rina::SerializedObject* ApplicationRegistrationEncoder::encode(const void* object) const {
 	rina::ApplicationRegistration *app_reg = (rina::ApplicationRegistration*) object;
@@ -101,7 +99,7 @@ void* ApplicationRegistrationEncoder::decode(const rina::SerializedObject &seria
 
 	return (void*) app_reg;
 }
-
+*/
 //Class Encoder Constants
 const std::string EncoderConstants::ADDRESS = "address";
 const std::string EncoderConstants::APNAME = "applicationprocessname";
