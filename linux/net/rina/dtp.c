@@ -319,8 +319,6 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         return tmp;
 }
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
-#if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
 {
         uint_t tmp;
@@ -333,7 +331,6 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
         return tmp;
 }
-#endif
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
@@ -343,9 +340,7 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         sv->dropped_pdus++;
         spin_unlock(&sv->lock);
 }
-#endif
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 #if 0
 static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
 {
@@ -368,7 +363,6 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
         sv->max_seq_nr_rcv = nr;
         spin_unlock(&sv->lock);
 }
-#endif
 #endif
 
 static int pdu_post(struct dtp * instance,
@@ -538,7 +532,6 @@ int seqQ_deliver(struct sequencingQ * seqQ)
         return 0;
 }
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
 int seqQ_push(struct dtp * dtp, struct pdu * pdu)
 {
         struct sequencingQ * seqQ;
@@ -562,14 +555,14 @@ int seqQ_push(struct dtp * dtp, struct pdu * pdu)
         if (seq_queue_push_ni(seqQ->queue, pdu)) {
                 spin_unlock(&seqQ->lock);
                 dropped_pdus_inc(dtp->sv);
-                LOG_ERR("Cannot push PDU into sequencing queue %pK", seqQ);
+                LOG_ERR("Could not push PDU into sequencing queue %pK. "
+                        "Dropped PDUs: %d", seqQ, dropped_pdus(dtp->sv));
                 return -1;
         }
         spin_unlock(&seqQ->lock);
 
         return 0;
 }
-#endif
 
 bool seqQ_is_empty(struct sequencingQ * seqQ)
 {
@@ -1021,14 +1014,12 @@ int dtp_write(struct dtp * instance,
                 return -1;
         }
 #if 0
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
                    return -1; */
         }
-#endif
 #endif
 
         sv = instance->sv;
@@ -1330,9 +1321,9 @@ int dtp_receive(struct dtp * instance,
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
 
-#ifdef CONFIG_RINA_RELIABLE_FLOW_SUPPORT
                 dropped_pdus_inc(sv);
-#endif
+                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d", 
+                        dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
