@@ -598,6 +598,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         }
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
