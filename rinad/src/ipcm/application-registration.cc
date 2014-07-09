@@ -113,7 +113,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                 seqnum = slave_ipcp->registerApplication(app_name,
                                                 info.ipcProcessId);
                 ipcm->pending_app_registrations[seqnum] =
-                        PendingAppRegistration(slave_ipcp, *event);
+                                        make_pair(slave_ipcp, *event);
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr << __func__ << ": Error while registering application "
                         << app_name.toString() << endl;
@@ -185,11 +185,15 @@ static void ipcm_register_response_ipcp(
 static void ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
         IPCManager *ipcm,
-        map<unsigned int, PendingAppRegistration>::iterator mit)
+        map<unsigned int,
+            std::pair<rina::IPCProcess *,
+                      rina::ApplicationRegistrationRequestEvent
+                     >
+           >::iterator mit)
 {
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::IPCProcess *slave_ipcp = mit->second.first;
         const rina::ApplicationRegistrationRequestEvent& req_event =
-                        mit->second.req_event;
+                        mit->second.second;
         const rina::ApplicationProcessNamingInformation& app_name =
                 req_event.applicationRegistrationInformation.
                 appName;
@@ -224,7 +228,11 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
         map<unsigned int,
             std::pair<rina::IPCProcess *, rina::IPCProcess*>
            >::iterator it;
-        map<unsigned int, PendingAppRegistration>::iterator jt;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *,
+                      rina::ApplicationRegistrationRequestEvent
+                     >
+           >::iterator jt;
 
         it = ipcm->pending_ipcp_registrations.find(event->sequenceNumber);
         jt = ipcm->pending_app_registrations.find(event->sequenceNumber);
