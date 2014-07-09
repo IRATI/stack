@@ -25,6 +25,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <utility>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -132,6 +133,9 @@ class IPCManager : public EventLoopData {
                 rina::IPCProcess *ipcp,
                 const rina::DIFConfiguration& dif_config);
 
+        int deallocate_flow(rina::IPCProcess *ipcp,
+                            const rina::FlowDeallocateRequestEvent& event);
+
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
@@ -143,6 +147,10 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
         std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
+
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess *, rina::FlowDeallocateRequestEvent>
+                > pending_flow_deallocations;
 
         IPCMConcurrency concurrency;
 

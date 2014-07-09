@@ -23,6 +23,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <list>
 
 
 namespace rinad {
@@ -36,5 +37,10 @@ bool application_is_registered_to_ipcp(
                 const rina::ApplicationProcessNamingInformation&,
                 rina::IPCProcess *slave_ipcp);
 
+rina::IPCProcess *lookup_ipcp_by_port(unsigned int port_id);
+
+void collect_flows_by_application(
+                const rina::ApplicationProcessNamingInformation& app_name,
+                std::list<rina::FlowInformation>& result);
 }
 #endif  /* __RINAD_HELPERS_H__ */

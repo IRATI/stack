@@ -95,4 +95,50 @@ application_is_registered_to_ipcp(
         return false;
 }
 
+rina::IPCProcess *
+lookup_ipcp_by_port(unsigned int port_id)
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                /* TODO This is **horrible** - librina needs another
+                 * way to lookup the IPC process from a port-id
+                 * without generating exceptions.
+                 * getFlowInformation should return a boolean, indicating
+                 * the success/failure, and the result should be passed
+                 * by a reference argument. */
+                try {
+                        ipcps[i]->getFlowInformation(port_id);
+                        return ipcps[i];
+                } catch (rina::IPCException) {
+                        continue;
+                }
+        }
+
+        return NULL;
+}
+
+void
+collect_flows_by_application(const rina::ApplicationProcessNamingInformation&
+                             app_name, list<rina::FlowInformation>& result)
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        result.clear();
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                const list<rina::FlowInformation>& flows =
+                        ipcps[i]->getAllocatedFlows();
+
+                for (list<rina::FlowInformation>::const_iterator it =
+                        flows.begin(); it != flows.end(); it++) {
+                        if (it->localAppName == app_name) {
+                                result.push_back(*it);
+                        }
+                }
+        }
+}
+
 }

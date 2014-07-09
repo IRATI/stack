@@ -419,6 +419,7 @@ public:
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
+        FlowDeallocateRequestEvent() : portId(-1) { }
 	FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& appName,
 			unsigned int sequenceNumber);
