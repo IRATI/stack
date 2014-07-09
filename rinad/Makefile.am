@@ -12,6 +12,7 @@ DISTCHECK_CONFIGURE_FLAGS =
 
 SUBDIRS =					\
 	src					\
+	test					\
 	doc					\
 	etc
 
