@@ -183,8 +183,9 @@ IPCMConsole::flush_output(int cfd)
 int
 IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 {
-        map<string, console_function_t>::iterator mit;
+        map<string, ConsoleCmdFunction>::iterator mit;
         istringstream iss(string(cmdbuf, size));
+        ConsoleCmdFunction fun;
         vector<string> args;
         string token;
         int ret;
@@ -204,7 +205,8 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
                 return 0;
         }
 
-        ret = mit->second(NULL, args);
+        fun = mit->second;
+        ret = (this->*fun)(args);
 
         return ret;
 }

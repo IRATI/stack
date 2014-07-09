@@ -49,15 +49,15 @@ namespace rinad {
 
 class IPCManager;
 
-typedef int (*console_function_t)(IPCManager *ipcm,
-                                  std::vector<std::string>& args);
-
 class IPCMConsole : public rina::Thread {
                 static const unsigned int CMDBUFSIZE = 120;
 
+                typedef int (IPCMConsole::*ConsoleCmdFunction)
+                            (std::vector<std::string>& args);
+
                 IPCManager& ipcm;
 
-                std::map<std::string, console_function_t> commands_map;
+                std::map<std::string, ConsoleCmdFunction> commands_map;
                 std::ostringstream outstream;
 
                 int init();
