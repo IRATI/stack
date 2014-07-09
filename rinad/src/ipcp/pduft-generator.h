@@ -357,18 +357,18 @@ public:
 
 	/// Invoked periodically by a timer. The age of every Flow State Object is incremented
 	/// with one. If an FSO reaches the maximum age - which is set by DIF policy -, it is
-	/// removed from the FSDB. The FSDB is marked as “modified” if it wasn’t already and one
+	/// removed from the FSDB. The FSDB is marked as √ímodified√ì if it wasn√ït already and one
 	/// or more FSOs are removed from the FSDB during the processing of this event.
 	void updateAge();
 
-	/// Invoked periodically by a timer. If the FSDB is marked as “modified”, the PDU
-	/// Forwarding Table Generator marks the FSDB as “not modified” and the PDU forwarding
+	/// Invoked periodically by a timer. If the FSDB is marked as √ímodified√ì, the PDU
+	/// Forwarding Table Generator marks the FSDB as √ínot modified√ì and the PDU forwarding
 	/// table computation procedure is initiated . An N-1 flow is only used in the calculation
 	/// of the forwarding table if there are two FSOs in the FSDB related to the flow (one
 	/// advertised by each IPC Process the N-1 flow connects together), and the state of the
-	/// flow is “up”. The forwarding table is computed according to the algorithm explained in
-	/// the “algorithm to compute the forwarding table” section. If the FSDB is not marked as
-	/// “modified” nothing happens.
+	/// flow is √íup√ì. The forwarding table is computed according to the algorithm explained in
+	/// the √íalgorithm to compute the forwarding table√ì section. If the FSDB is not marked as
+	/// √ímodified√ì nothing happens.
 	void forwardingTableUpdate();
 
 	/// All FSOs in the M_WRITE message are processed sequentially. If an FSO that matches
@@ -381,7 +381,7 @@ public:
 	/// it is added to the FSDB and marked to be propagated through all the N-1 management flows
 	/// except the one through which the FSO was received. If, while processing the event,
 	/// existing FSOs in the FSDB were modified, or new ones were created, the FSDB is marked as
-	/// “modified” - if it wasn’t already -.
+	/// √ímodified√ì - if it wasn√ït already -.
 	/// @param cdapMessage the M_WRITE message received from a neighbor IPC Process
 	/// @param portId the identifier of the N-1 flow through which the CDAP message was received
 	void writeMessageReceived(const rina::CDAPMessage * cdapMessage, int portId);
@@ -425,9 +425,9 @@ private:
 	/// be erased from the list of pending flow allocations. Otherwise, the Flow State
 	/// Object corresponding to this flow is retrieved. The state is set false, the age
 	/// is set to the maximum age and the sequence number pertaining to this FSO is
-	/// incremented by 1. The FSO is marked for propagation (‘propagate’ is set to true)
+	/// incremented by 1. The FSO is marked for propagation (√îpropagate√ï is set to true)
 	/// and the list of port-ids associated with this FSO is filled with the port-ids of
-	/// all N-1 management flows. The FSDB is marked as “modified” if it wasn’t already.
+	/// all N-1 management flows. The FSDB is marked as √ímodified√ì if it wasn√ït already.
 	void processFlowDeallocatedEvent(NMinusOneFlowDeallocatedEvent * event);
 
 	/// The Resource Allocator has allocated a new N-1 flow dedicated to data transfer.
@@ -437,7 +437,7 @@ private:
 	/// neighbour IPC process a flow is allocated to. The state is set, the age is set to
 	/// 0, and the sequence number is set to 1. The FSO is added to the FSDB, marked for
 	/// propagation, and associated with a new list of port-ids, which is filled with the
-	/// port-ids of all N-1 management flows. The FSDB is marked as “modified” if it wasn’t
+	/// port-ids of all N-1 management flows. The FSDB is marked as √ímodified√ì if it wasn√ït
 	/// already.
 	void processFlowAllocatedEvent(NMinusOneFlowAllocatedEvent * event);
 

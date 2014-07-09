@@ -216,5 +216,3 @@ EXTRA_DIST +=					\
 	QoSSpecification.stamp
 
 protoSOURCES += QoSSpecification.pb.cc QoSSpecification.pb.h
-
-
