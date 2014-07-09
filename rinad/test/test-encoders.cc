@@ -1,8 +1,8 @@
 //
 // test-encoders
 //
-//	  Bernat Gaston			<bernat.gaston@i2cat.net>
-//    Eduard Grasa 			<eduard.grasa@i2cat.net>
+//    Bernat Gaston <bernat.gaston@i2cat.net>
+//    Eduard Grasa  <eduard.grasa@i2cat.net>
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,10 +20,12 @@
 // MA  02110-1301  USA
 //
 
-#include "encoder.h"
-#include <librina/common.h>
-#include "ipcp/flow-allocator.h"
 #include <list>
+
+#include <librina/common.h>
+
+#include "encoder.h"
+#include "ipcp/flow-allocator.h"
 
 /*
 bool test_ApplicationProcessNamingInfoMessage () {
@@ -123,12 +125,9 @@ bool test_Flow () {
 	return true;
 }
 
-int main () {
+int main()
+{
 	test_Flow();
 
 	return 0;
 }
-
-
-
-
