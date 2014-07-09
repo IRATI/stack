@@ -282,7 +282,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                                 ipcp->name, ipcp->id);
 
                 pending_ipcp_registrations[seqnum] =
-                        PendingIPCPRegistration(ipcp, slave_ipcp);
+                        make_pair(ipcp, slave_ipcp);
 
                 concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);

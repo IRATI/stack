@@ -146,10 +146,12 @@ static bool ipcm_register_response_common(
 static void ipcm_register_response_ipcp(
         rina::IpcmRegisterApplicationResponseEvent *event,
         IPCManager *ipcm,
-        map<unsigned int, PendingIPCPRegistration>::iterator mit)
+        map<unsigned int,
+            std::pair<rina::IPCProcess *, rina::IPCProcess *>
+           >::iterator mit)
 {
-        rina::IPCProcess *ipcp = mit->second.ipcp;
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::IPCProcess *ipcp = mit->second.first;
+        rina::IPCProcess *slave_ipcp = mit->second.second;
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->
                 getDIFInformation().dif_name_;
@@ -219,7 +221,9 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
 
         DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
-        map<unsigned int, PendingIPCPRegistration>::iterator it;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *, rina::IPCProcess*>
+           >::iterator it;
         map<unsigned int, PendingAppRegistration>::iterator jt;
 
         it = ipcm->pending_ipcp_registrations.find(event->sequenceNumber);
