@@ -310,6 +310,8 @@ public:
 	/// @param difName
 	/// @return
 	virtual bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName) = 0;
+
+	virtual std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const = 0;
 };
 
 /// Interface PDU Forwarding Table Generator Policy

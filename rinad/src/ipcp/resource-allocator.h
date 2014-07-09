@@ -41,6 +41,7 @@ public:
 	const rina::FlowInformation& getNMinus1FlowInformation(int portId) const;
 	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);
 	bool isSupportingDIF(const rina::ApplicationProcessNamingInformation& difName);
+	std::list<rina::FlowInformation> getAllNMinusOneFlowInformation() const;
 
 private:
 	IPCProcess * ipc_process_;

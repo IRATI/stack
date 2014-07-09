@@ -25,3 +25,4 @@ librinad_la_SOURCES  =					\
 	helpers.cc	      helpers.h			\
 	encoder.cc	      encoder.h			\
                       concurrency.h
+
