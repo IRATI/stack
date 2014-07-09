@@ -34,6 +34,7 @@
 #include "rina-configuration.h"
 #include "helpers.h"
 #include "ipcm.h"
+#include "console.h"
 #include "application-registration.h"
 #include "flow-allocation.h"
 
@@ -43,8 +44,6 @@ using namespace std;
 namespace rinad {
 
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
-
-void *console_function(void *opaque);
 
 void *script_function(void *opaque)
 {
@@ -72,8 +71,7 @@ IPCManager::IPCManager()
         }
 
         /* Create and start the console thread. */
-        console = new rina::Thread(new rina::ThreadAttributes(),
-                                   console_function, this);
+        console = new IPCMConsole();
 
         script = new rina::Thread(new rina::ThreadAttributes(),
                                    script_function, this);

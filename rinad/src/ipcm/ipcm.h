@@ -32,6 +32,7 @@
 
 #include "event-loop.h"
 #include "rina-configuration.h"
+#include "console.h"
 
 
 namespace rinad {
@@ -146,7 +147,7 @@ class IPCManager : public EventLoopData {
         IPCMConcurrency concurrency;
 
  private:
-        rina::Thread *console;
+        IPCMConsole *console;
         rina::Thread *script;
 };
 

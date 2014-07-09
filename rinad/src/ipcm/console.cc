@@ -39,19 +39,34 @@
 #include "rina-configuration.h"
 #include "helpers.h"
 #include "ipcm.h"
+#include "console.h"
 
 using namespace std;
 
 
 namespace rinad {
 
-typedef int (*command_function_t)(IPCManager *ipcm, vector<string>& args);
+void *
+console_function(void *opaque)
+{
+        IPCMConsole *console = static_cast<IPCMConsole *>(opaque);
 
-static map<string, command_function_t> commands_map;
-static ostringstream outstream;
+        console->body();
 
-static int
-console_init()
+        return NULL;
+}
+
+IPCMConsole::IPCMConsole() : rina::Thread(new rina::ThreadAttributes(),
+                                          console_function, this)
+{
+}
+
+IPCMConsole::~IPCMConsole() throw()
+{
+}
+
+int
+IPCMConsole::init()
 {
         struct sockaddr_in server_address;
         int sfd = -1;
@@ -102,8 +117,50 @@ err:
         return sfd;
 }
 
-static int
-flush_output(int cfd)
+void IPCMConsole::body()
+{
+        int sfd = init();
+
+        if (sfd < 0) {
+                return;
+        }
+
+        cout << "Console starts: " << sfd << endl;
+
+        for (;;) {
+                int cfd;
+                struct sockaddr_in client_address;
+                socklen_t address_len = sizeof(client_address);
+                char cmdbuf[CMDBUFSIZE];
+                int n;
+
+                cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
+                             &client_address), &address_len);
+                if (cfd < 0) {
+                        cerr << __func__ << " Error [" << errno <<
+                                "] calling accept() " << endl;
+                        continue;
+                }
+
+                n = read(cfd, cmdbuf, sizeof(cmdbuf));
+                if (n < 0) {
+                        cerr << __func__ << " Error [" << errno <<
+                                "] calling read() " << endl;
+                        close(cfd);
+                        continue;
+                }
+
+                process_command(cfd, cmdbuf, n);
+
+                close(cfd);
+        }
+
+        cout << "Console stops" << endl;
+
+}
+
+int
+IPCMConsole::flush_output(int cfd)
 {
         int n;
         const string& str = outstream.str();
@@ -115,13 +172,14 @@ flush_output(int cfd)
                 return -1;
         }
 
-        outstream.clear();
+        // Make the stringstream empty
+        outstream.str(string());
 
         return 0;
 }
 
-static int
-process_command(IPCManager *ipcm, int cfd, char *cmdbuf, int size)
+int
+IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 {
         map<string, command_function_t>::iterator mit;
         istringstream iss(string(cmdbuf, size));
@@ -144,55 +202,9 @@ process_command(IPCManager *ipcm, int cfd, char *cmdbuf, int size)
                 return 0;
         }
 
-        ret = mit->second(ipcm, args);
+        ret = mit->second(NULL, args);
 
         return ret;
-}
-
-void *
-console_function(void *opaque)
-{
-        IPCManager *ipcm = static_cast<IPCManager *>(opaque);
-        int sfd = console_init();
-
-        if (sfd < 0) {
-                return NULL;
-        }
-
-        cout << "Console starts: " << ipcm << endl;
-
-        for (;;) {
-                int cfd;
-                struct sockaddr_in client_address;
-                socklen_t address_len = sizeof(client_address);
-#define CMDBUFSIZE 120
-                char cmdbuf[CMDBUFSIZE];
-                int n;
-
-                cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
-                             &client_address), &address_len);
-                if (cfd < 0) {
-                        cerr << __func__ << " Error [" << errno <<
-                                "] calling accept() " << endl;
-                        continue;
-                }
-
-                n = read(cfd, cmdbuf, sizeof(cmdbuf));
-                if (n < 0) {
-                        cerr << __func__ << " Error [" << errno <<
-                                "] calling read() " << endl;
-                        close(cfd);
-                        continue;
-                }
-
-                process_command(ipcm, cfd, cmdbuf, n);
-
-                close(cfd);
-        }
-
-        cout << "Console stops" << endl;
-
-        return NULL;
 }
 
 }

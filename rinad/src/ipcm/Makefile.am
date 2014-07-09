@@ -46,4 +46,4 @@ ipcm_SOURCES  =							\
 	configuration.cc            configuration.h		\
 	application-registration.cc application-registration.h	\
 	flow-allocation.cc          flow-allocation.h		\
-	console.cc
+	console.cc		    console.h
