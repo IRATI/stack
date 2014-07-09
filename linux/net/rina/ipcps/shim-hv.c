@@ -96,7 +96,7 @@ struct shim_hv_vmpi {
 
 /* Private data associated to a shim IPC process. */
 struct ipcp_instance_data {
-        struct list_head    list;
+        struct list_head    node;
         ipc_process_id_t    id;
         struct name         name;
         int                 assigned;
@@ -110,7 +110,7 @@ struct ipcp_instance_data {
 };
 
 struct name_list_element {
-        struct list_head list;
+        struct list_head node;
         struct name      application_name;
 };
 
@@ -136,7 +136,7 @@ find_instance(struct ipcp_factory_data *factory_data, ipc_process_id_t id)
 
         struct ipcp_instance_data *cur;
 
-        list_for_each_entry(cur, &(factory_data->instances), list) {
+        list_for_each_entry(cur, &(factory_data->instances), node) {
                 if (cur->id == id) {
                         return cur;
                 }
@@ -728,7 +728,7 @@ static void shim_hv_handle_control_msg(struct ipcp_instance_data *priv,
                 shim_hv_handle_deallocate(priv, msg, len);
                 break;
         default:
-                LOG_ERR("%s: unknown cmd %u\n", __func__, cmd);
+                LOG_ERR("%s: unknown cmd %u", __func__, cmd);
                 break;
         }
 }
@@ -799,7 +799,7 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
         mutex_lock(&priv->reg_lock);
 
         /* Is this application already registered? */
-        list_for_each_entry(cur, &priv->registered_applications, list) {
+        list_for_each_entry(cur, &priv->registered_applications, node) {
                 if (name_is_equal(application_name, &cur->application_name)) {
                         LOG_ERR("%s: Application %s already registered",
                                 __func__, tmpstr);
@@ -810,16 +810,16 @@ shim_hv_application_register(struct ipcp_instance_data *priv,
         /* Add the application to the list of registered applications. */
         cur = rkzalloc(sizeof(*cur), GFP_KERNEL);
         if (!cur) {
-                LOG_ERR("%s: Allocating list element\n", __func__);
+                LOG_ERR("%s: Allocating list element", __func__);
                 goto out;
         }
 
         if (name_cpy(application_name, &cur->application_name)) {
-                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                LOG_ERR("%s: name_cpy() failed", __func__);
                 goto name_alloc;
         }
 
-        list_add(&cur->list, &priv->registered_applications);
+        list_add(&cur->node, &priv->registered_applications);
 
         ret = 0;
         LOG_DBGF("Application %s registered", tmpstr);
@@ -849,7 +849,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
         mutex_lock(&priv->reg_lock);
 
         /* Is this application registered? */
-        list_for_each_entry(cur, &priv->registered_applications, list) {
+        list_for_each_entry(cur, &priv->registered_applications, node) {
                 if (name_is_equal(application_name, &cur->application_name)) {
                         found = cur;
                         break;
@@ -870,7 +870,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
 
         /* Remove the application from the list of registered applications. */
         name_fini(&found->application_name);
-        list_del(&found->list);
+        list_del(&found->node);
         rkfree(found);
 
         LOG_DBGF("Application %s unregistered", tmpstr);
@@ -912,13 +912,13 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         }
 
         if (name_cpy(dif_information->dif_name, &priv->dif_name)) {
-                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                LOG_ERR("%s: name_cpy() failed", __func__);
                 return -1;
         }
 
         list_for_each_entry(elem,
-                        &(dif_information->configuration->ipcp_config_entries),
-                        next) {
+                            &(dif_information->configuration->ipcp_config_entries),
+                            next) {
                 const struct ipcp_config_entry *entry = elem->entry;
 
                 if (!strcmp(entry->name, "vmpi-id")) {
@@ -947,13 +947,13 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
         ret = vmpi_provider_find_instance(VMPI_PROVIDER_AUTO, priv->vmpi.id,
                                           &priv->vmpi.ops);
         if (ret) {
-                LOG_ERR("%s: mpi instance %u not found\n", __func__, 0);
+                LOG_ERR("%s: mpi instance %u not found", __func__, 0);
                 return -1;
         }
 
         ret = priv->vmpi.ops.register_read_callback(&priv->vmpi.ops,
-                                                     shim_hv_recv_callback,
-                                                     priv);
+                                                    shim_hv_recv_callback,
+                                                    priv);
         if (ret) {
                 LOG_ERR("%s: vmpi_register_read_callback() failed", __func__);
                 return -1;
@@ -1100,18 +1100,6 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
                 goto alloc_ipcp;
         }
 
-        /*
-         * For now we only accept a single IPC process for DIF.
-         * This restriction will be removed when we are able to
-         * manage multiple VMPI devices per Virtual Machine, e.g.
-         * when we have a naming scheme for that.
-         */
-        if (!list_empty(&factory_data->instances)) {
-                LOG_ERR("%s: multiple IPC processes are not allowed",
-                        __func__);
-                goto alloc_ipcp;
-        }
-
         /* Allocate a new ipcp instance. */
         ipcp = rkzalloc(sizeof(*ipcp), GFP_KERNEL);
         if (!ipcp)
@@ -1132,7 +1120,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         priv->fspec.max_allowable_gap = -1;
 
         if (name_cpy(name, &priv->name)) {
-                LOG_ERR("%s: name_cpy() failed\n", __func__);
+                LOG_ERR("%s: name_cpy() failed", __func__);
                 goto alloc_name;
         }
 
@@ -1146,8 +1134,8 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         /* Initialize the VMPI-related data structure. */
         bzero(&priv->vmpi, sizeof(priv->vmpi));
         priv->vmpi.channels = rkzalloc(
-                        sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
-                        GFP_KERNEL);
+                                       sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
+                                       GFP_KERNEL);
         if (priv->vmpi.channels == NULL) {
                 LOG_ERR("%s: channels allocation failed", __func__);
                 goto alloc_channels;
@@ -1161,7 +1149,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         priv->vmpi.id = ~0U;
 
         /* Add this IPC process to the factory global list. */
-        list_add(&priv->list, &factory_data->instances);
+        list_add(&priv->node, &factory_data->instances);
 
         LOG_DBGF("ipcp created (id = %d)", id);
 
@@ -1174,7 +1162,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
  alloc_data:
         rkfree(ipcp);
  alloc_ipcp:
-        LOG_ERR("%s: failed\n", __func__);
+        LOG_ERR("%s: failed", __func__);
 
         return NULL;
 }
@@ -1190,9 +1178,9 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         ASSERT(ipcp);
 
         found = NULL;
-        list_for_each_entry_safe(cur, next, &factory_data->instances, list) {
+        list_for_each_entry_safe(cur, next, &factory_data->instances, node) {
                 if (cur == ipcp->data) {
-                        list_del(&cur->list);
+                        list_del(&cur->node);
                         found = cur;
                         break;
                 }
@@ -1203,7 +1191,7 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         }
 
         name_fini(&ipcp->data->name);
-        kfree(ipcp->data->vmpi.channels);
+        rkfree(ipcp->data->vmpi.channels);
         name_fini(&ipcp->data->dif_name);
         LOG_DBGF("ipcp destroyed (id = %d)", ipcp->data->id);
         rkfree(ipcp->data);
@@ -1230,7 +1218,7 @@ static int __init shim_hv_init(void)
                                             &shim_hv_factory_ops);
 
         if (shim_hv_ipcp_factory == NULL) {
-                LOG_ERR("%s: factory registration failed\n", __func__);
+                LOG_ERR("%s: factory registration failed", __func__);
                 return -1;
         }
 

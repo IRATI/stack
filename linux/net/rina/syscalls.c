@@ -387,13 +387,6 @@ SYSCALL_DEFINE4(management_sdu_read,
                 return -EFAULT;
         }
 
-        LOG_DBG("SDU_WPI in syscall\n"
-                "tmp: %pk\n"
-                "tmp->port_id: %d\n"
-                "tmp->sdu: %pk\n"
-                "tmp->sdu->buffer: %pk\n",
-                tmp, tmp->port_id, tmp->sdu, tmp->sdu->buffer);
-
         if (!sdu_wpi_is_ok(tmp)) {
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;

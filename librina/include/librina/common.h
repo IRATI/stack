@@ -495,7 +495,13 @@ class DTCPRtxControlConfig{
          * the number of times the retransmission of a PDU will be attempted
          * before some other action must be taken.
          */
-        int datarxmsnmax;
+        unsigned int datarxmsnmax;
+
+        /**
+         * The initial time a sender must wait before retransmitting a PDU in
+         * case the PDU has not been acknowledget yet. Value in miliseconds.
+         */
+        unsigned int initialRtxTime;
 
         /**
          * Executed by the sender when a Retransmission Timer Expires. If this
@@ -543,8 +549,10 @@ class DTCPRtxControlConfig{
 
 public:
         DTCPRtxControlConfig();
-        int getDatarxmsnmax() const;
-        void setDatarxmsnmax(int datarxmsnmax);
+        unsigned int getDatarxmsnmax() const;
+        void setDatarxmsnmax(unsigned int datarxmsnmax);
+        unsigned int getInitialRtxTime() const;
+        void setInitialRtxTime(unsigned int initialRtxTime);
         const PolicyConfig& getRcvrackpolicy() const;
         void setRcvrackpolicy(const PolicyConfig& rcvrackpolicy);
         const PolicyConfig& getRcvrcontrolackpolicy() const;

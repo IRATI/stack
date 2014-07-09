@@ -60,7 +60,7 @@ struct conn_policies * conn_policies_create(void)
         }
 
         tmp->initial_sequence_number = policy_create();
-        if (!tmp->initial_sequence_number){
+        if (!tmp->initial_sequence_number) {
                 LOG_ERR("Could not create initial_sequence_number");
                 dtcp_config_destroy(tmp->dtcp_cfg);
                 rkfree(tmp);

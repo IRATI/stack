@@ -85,7 +85,8 @@
            "dtcpConfiguration" : {
              "rtxcontrol" : true,
              "rtxcontrolconfig" : {
-               "datarxmsnmax" : 5
+               "datarxmsnmax" : 5,
+               "initialRtxTime" : 20
              },
              "flowcontrol" : true,
              "flowcontrolconfig" : {

@@ -62,6 +62,7 @@ struct ipcp_flow {
         wait_queue_head_t      wait_queue;
         atomic_t               readers;
         atomic_t               writers;
+        atomic_t               posters;
         struct rmt *           rmt;
 };
 
@@ -132,6 +133,7 @@ int kfa_flow_create(struct kfa *     instance,
         flow->state = PORT_STATE_PENDING;
         atomic_set(&flow->readers, 0);
         atomic_set(&flow->writers, 0);
+        atomic_set(&flow->posters, 0);
 
         init_waitqueue_head(&flow->wait_queue);
 
@@ -413,7 +415,8 @@ int kfa_flow_deallocate(struct kfa * instance,
         flow->state = PORT_STATE_DEALLOCATED;
 
         if ((atomic_read(&flow->readers) == 0) &&
-            (atomic_read(&flow->writers) == 0)) {
+            (atomic_read(&flow->writers) == 0) &&
+            (atomic_read(&flow->posters) == 0)) {
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 mutex_unlock(&instance->lock);
@@ -542,6 +545,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
         if (atomic_dec_and_test(&flow->writers) &&
             (atomic_read(&flow->readers) == 0)  &&
+            (atomic_read(&flow->posters) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
@@ -594,6 +598,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         }
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
+                mutex_unlock(&instance->lock);
                 return -1;
         }
 
@@ -624,8 +629,13 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 if (retval)
                         goto finish;
 
-                if (flow->state == PORT_STATE_DEALLOCATED)
+                if (flow->state == PORT_STATE_DEALLOCATED) {
+                        if (rfifo_is_empty(flow->sdu_ready)) {
+                                retval = 0;
+                                goto finish;
+                        }
                         break;
+                }
         }
 
         if (rfifo_is_empty(flow->sdu_ready)) {
@@ -645,6 +655,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         if (atomic_dec_and_test(&flow->readers) &&
             (atomic_read(&flow->writers) == 0)  &&
+            (atomic_read(&flow->posters) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
                 if (__kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
@@ -660,6 +671,7 @@ int kfa_sdu_post(struct kfa * instance,
 {
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
+        int                 retval = 0;
 
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
@@ -684,40 +696,56 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
+        if (flow->state == PORT_STATE_DEALLOCATED) {
+                LOG_ERR("Flow with port-id %d is already deallocated", id);
+                mutex_unlock(&instance->lock);
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        atomic_inc(&flow->posters);
+
         if (!flow->rmt) {
                 if (rfifo_push_ni(flow->sdu_ready, sdu)) {
                         LOG_ERR("Could not write %zd bytes into "
                                 "port-id %d fifo",
                                 sizeof(struct sdu *), id);
-                        mutex_unlock(&instance->lock);
-                        return -1;
+                        retval = -1;
+                        goto finish;
                 }
+                goto finish;
+        } else {
+                if (rmt_receive(flow->rmt, sdu, id)) {
+                        LOG_ERR("Could not post SDU into the RMT");
+                        retval = -1;
+                        goto finish;
+                }
+        }
+ finish:
+        if (atomic_dec_and_test(&flow->posters) &&
+            (atomic_read(&flow->writers) == 0)  &&
+            (atomic_read(&flow->readers) == 0)  &&
+            (flow->state == PORT_STATE_DEALLOCATED)) {
+                if (__kfa_flow_destroy(instance, flow, id))
+                        LOG_ERR("Could not destroy the flow correctly");
+                flow = NULL;
+        }
+
+        mutex_unlock(&instance->lock);
+
+        if (flow && !flow->rmt && (retval == 0)) {
                 wq = &flow->wait_queue;
                 ASSERT(wq);
 
                 LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
                         wq, wq->task_list.next, wq->task_list.prev);
 
-                mutex_unlock(&instance->lock);
-
-                LOG_DBG("SDU posted");
-
                 wake_up(wq);
-
+                LOG_DBG("SDU posted");
                 LOG_DBG("Sleeping read syscall should be working now");
-
-                return 0;
-        } else {
-                if (rmt_receive(flow->rmt, sdu, id)) {
-                        LOG_ERR("Could not post SDU into the RMT");
-                        mutex_unlock(&instance->lock);
-                        return -1;
-                }
-
-                LOG_DBG("SDU posted to RMT");
-                mutex_unlock(&instance->lock);
-                return 0;
         }
+
+        return retval;
 }
 EXPORT_SYMBOL(kfa_sdu_post);
 

@@ -722,7 +722,7 @@ int rmt_n1port_bind(struct rmt * instance,
         if (rmt_queue_send_add(instance, id))
                 return -1;
 
-        if (rmt_queue_recv_add(instance, id)){
+        if (rmt_queue_recv_add(instance, id)) {
                 rmt_queue_send_delete(instance, id);
                 return -1;
         }
@@ -787,13 +787,12 @@ static int process_mgmt_pdu(struct rmt * rmt,
         ASSERT(rmt->parent);
         ASSERT(rmt->parent->ops);
         ASSERT(rmt->parent->ops->mgmt_sdu_post);
-        
+
         return (rmt->parent->ops->mgmt_sdu_post(rmt->parent->data,
                                                 port_id,
                                                 sdu) ? -1 : 0);
 }
 
-/* FIXME: This function is a mess, we have to rearrange ASAP */
 static int process_dt_pdu(struct rmt *       rmt,
                           port_id_t          port_id,
                           struct pdu *       pdu)
@@ -816,6 +815,7 @@ static int process_dt_pdu(struct rmt *       rmt,
         }
 
         pdu_type = pci_type(pdu_pci_get_ro(pdu));
+
         if (pdu_type == PDU_TYPE_MGMT) {
                 LOG_ERR("MGMT should not be here");
                 pdu_destroy(pdu);
@@ -827,7 +827,7 @@ static int process_dt_pdu(struct rmt *       rmt,
                 pdu_destroy(pdu);
                 return -1;
         }
-                      
+
         if (efcp_container_receive(rmt->efcpc, c, pdu)) {
                 LOG_ERR("EFCP container problems");
                 return -1;
@@ -904,15 +904,15 @@ static int forward_pdu(struct rmt * rmt,
                      qos_id,
                      &(rmt->ingress.cache.pids),
                      &(rmt->ingress.cache.count))) {
-                     LOG_ERR("Cannot get NHOP");
+                LOG_ERR("Cannot get NHOP");
                 sdu_destroy(sdu);
                 return -1;
         }
 
         if (rmt->ingress.cache.count > 0) {
                 for (i = 1; i < rmt->ingress.cache.count; i++) {
-                        struct sdu *    tmp;
-                                
+                        struct sdu * tmp;
+
                         tmp = sdu_dup(sdu);
                         if (!tmp)
                                 continue;
@@ -925,8 +925,8 @@ static int forward_pdu(struct rmt * rmt,
                 }
 
                 if (kfa_flow_sdu_write(rmt->kfa,
-                                    rmt->ingress.cache.pids[0],
-                                    sdu))
+                                       rmt->ingress.cache.pids[0],
+                                       sdu))
                         LOG_ERR("Cannot write SDU to KFA port-id %d",
                                 rmt->ingress.cache.pids[0]);
         } else {

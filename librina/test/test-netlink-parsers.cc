@@ -2442,6 +2442,7 @@ int testIpcpCreateConnectionRequest() {
 
         DTCPRtxControlConfig dtcpRtxConfig;
         dtcpRtxConfig.setDatarxmsnmax(23424);
+        dtcpRtxConfig.setInitialRtxTime(20);
 
         DTCPConfig dtcpConfig;
         dtcpConfig.setFlowcontrol(true);
@@ -2580,6 +2581,12 @@ int testIpcpCreateConnectionRequest() {
                         recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
                         getRtxcontrolconfig().getDatarxmsnmax()){
                 std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.datarnmsnmax on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getRtxcontrolconfig().getInitialRtxTime() !=
+                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
+                        getRtxcontrolconfig().getInitialRtxTime()){
+                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.initialrxtime on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getConnection().getPolicies().getInitialATimer() !=
