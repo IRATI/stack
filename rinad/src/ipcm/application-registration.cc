@@ -62,6 +62,28 @@ IPCManager::unregister_app_from_ipcp(
         return 0;
 }
 
+int
+IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
+                                      rina::IPCProcess *slave_ipcp)
+{
+        unsigned int seqnum;
+
+        try {
+                // Forward the unregistration request to the IPC process
+                // that the client IPC process is registered to
+                seqnum = slave_ipcp->unregisterApplication(ipcp->name);
+                pending_ipcp_unregistrations[seqnum] =
+                                make_pair(ipcp, slave_ipcp);
+        } catch (rina::IpcmUnregisterApplicationException) {
+                cerr << __func__ << ": Error while unregistering IPC process "
+                        << ipcp->name.toString() << " from IPC "
+                        "process " << slave_ipcp->name.toString() << endl;
+                return -1;
+        }
+
+        return 0;
+}
+
 void
 application_registration_request_event_handler(rina::IPCEvent *e,
                                                EventLoopData *opaque)

@@ -95,6 +95,9 @@ class IPCManager : public EventLoopData {
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
                 rina::IPCProcess *slave_ipcp);
 
+        int unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
+                                      rina::IPCProcess *slave_ipcp);
+
         int update_dif_configuration(
                 rina::IPCProcess *ipcp,
                 const rina::DIFConfiguration& dif_config);
@@ -135,7 +138,9 @@ class IPCManager : public EventLoopData {
         std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
 
         std::map<unsigned int,
-                 std::pair<rina::IPCProcess *, rina::FlowDeallocateRequestEvent>
+                 std::pair<rina::IPCProcess *,
+                           rina::FlowDeallocateRequestEvent
+                          >
                 > pending_flow_deallocations;
 
         IPCMConcurrency concurrency;
