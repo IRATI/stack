@@ -71,7 +71,7 @@ IPCManager::IPCManager()
         }
 
         /* Create and start the console thread. */
-        console = new IPCMConsole();
+        console = new IPCMConsole(*this);
 
         script = new rina::Thread(new rina::ThreadAttributes(),
                                    script_function, this);

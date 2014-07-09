@@ -55,6 +55,8 @@ typedef int (*console_function_t)(IPCManager *ipcm,
 class IPCMConsole : public rina::Thread {
                 static const unsigned int CMDBUFSIZE = 120;
 
+                IPCManager& ipcm;
+
                 std::map<std::string, console_function_t> commands_map;
                 std::ostringstream outstream;
 
@@ -63,7 +65,7 @@ class IPCMConsole : public rina::Thread {
                 int flush_output(int cfd);
 
         public:
-                IPCMConsole();
+                IPCMConsole(IPCManager& r);
                 void body();
                 virtual ~IPCMConsole() throw();
 };

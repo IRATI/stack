@@ -56,8 +56,10 @@ console_function(void *opaque)
         return NULL;
 }
 
-IPCMConsole::IPCMConsole() : rina::Thread(new rina::ThreadAttributes(),
-                                          console_function, this)
+IPCMConsole::IPCMConsole(IPCManager& r) :
+                rina::Thread(new rina::ThreadAttributes(),
+                             console_function, this),
+                ipcm(r)
 {
 }
 
