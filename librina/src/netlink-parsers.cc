@@ -2230,7 +2230,7 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
         NLA_PUT_U32(netlinkMessage, DRCC_ATTR_DATA_RXMSN_MAX,
                         object.get_data_rxmsn_max());
 
-        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_INITITAL_RTX_TIME,
+        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_INITIAL_RTX_TIME,
                                 object.get_initial_rtx_time());
 
         if (!(rtxTimExpPolicy = nla_nest_start(netlinkMessage,
@@ -2317,9 +2317,9 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type = NLA_U32;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].minlen = 4;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].maxlen = 4;
-        attr_policy[DRCC_ATTR_INITITAL_RTX_TIME].type = NLA_U32;
-        attr_policy[DRCC_ATTR_INITITAL_RTX_TIME].minlen = 4;
-        attr_policy[DRCC_ATTR_INITITAL_RTX_TIME].maxlen = 4;
+        attr_policy[DRCC_ATTR_INITIAL_RTX_TIME].type = NLA_U32;
+        attr_policy[DRCC_ATTR_INITIAL_RTX_TIME].minlen = 4;
+        attr_policy[DRCC_ATTR_INITIAL_RTX_TIME].maxlen = 4;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].minlen = 0;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].maxlen = 0;
@@ -2360,9 +2360,9 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
                                 nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
         }
 
-        if (attrs[DRCC_ATTR_INITITAL_RTX_TIME]) {
+        if (attrs[DRCC_ATTR_INITIAL_RTX_TIME]) {
         	result->set_initial_rtx_time(
-        			nla_get_u32(attrs[DRCC_ATTR_INITITAL_RTX_TIME]));
+        			nla_get_u32(attrs[DRCC_ATTR_INITIAL_RTX_TIME]));
         }
 
         if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY]){

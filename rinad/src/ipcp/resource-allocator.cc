@@ -250,6 +250,16 @@ bool NMinusOneFlowManager::isSupportingDIF(const rina::ApplicationProcessNamingI
 	return false;
 }
 
+std::list<rina::FlowInformation> NMinusOneFlowManager::getAllNMinusOneFlowInformation() const {
+	std::vector<rina::Flow *> flows = rina::extendedIPCManager->getAllocatedFlows();
+	std::list<rina::FlowInformation> result;
+	for (unsigned int i=0; i<flows.size(); i++) {
+		result.push_back(flows[i]->getFlowInformation());
+	}
+
+	return result;
+}
+
 //CLASS Resource Allocator
 ResourceAllocator::ResourceAllocator() {
 	n_minus_one_flow_manager_ = new NMinusOneFlowManager();

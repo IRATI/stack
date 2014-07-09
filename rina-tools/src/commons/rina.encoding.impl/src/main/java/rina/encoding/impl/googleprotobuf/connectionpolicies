@@ -1982,43 +1982,50 @@ public final class ConnectionPoliciesMessage {
     public boolean hasDatarxmsnmax() { return hasDatarxmsnmax; }
     public int getDatarxmsnmax() { return datarxmsnmax_; }
     
-    // optional .rina.messages.policyDescriptor_t rtxtimerexpirypolicy = 2;
-    public static final int RTXTIMEREXPIRYPOLICY_FIELD_NUMBER = 2;
+    // optional uint32 initialrtime = 2;
+    public static final int INITIALRTIME_FIELD_NUMBER = 2;
+    private boolean hasInitialrtime;
+    private int initialrtime_ = 0;
+    public boolean hasInitialrtime() { return hasInitialrtime; }
+    public int getInitialrtime() { return initialrtime_; }
+    
+    // optional .rina.messages.policyDescriptor_t rtxtimerexpirypolicy = 3;
+    public static final int RTXTIMEREXPIRYPOLICY_FIELD_NUMBER = 3;
     private boolean hasRtxtimerexpirypolicy;
     private rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t rtxtimerexpirypolicy_;
     public boolean hasRtxtimerexpirypolicy() { return hasRtxtimerexpirypolicy; }
     public rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t getRtxtimerexpirypolicy() { return rtxtimerexpirypolicy_; }
     
-    // optional .rina.messages.policyDescriptor_t senderackpolicy = 3;
-    public static final int SENDERACKPOLICY_FIELD_NUMBER = 3;
+    // optional .rina.messages.policyDescriptor_t senderackpolicy = 4;
+    public static final int SENDERACKPOLICY_FIELD_NUMBER = 4;
     private boolean hasSenderackpolicy;
     private rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t senderackpolicy_;
     public boolean hasSenderackpolicy() { return hasSenderackpolicy; }
     public rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t getSenderackpolicy() { return senderackpolicy_; }
     
-    // optional .rina.messages.policyDescriptor_t recvingacklistpolicy = 4;
-    public static final int RECVINGACKLISTPOLICY_FIELD_NUMBER = 4;
+    // optional .rina.messages.policyDescriptor_t recvingacklistpolicy = 5;
+    public static final int RECVINGACKLISTPOLICY_FIELD_NUMBER = 5;
     private boolean hasRecvingacklistpolicy;
     private rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t recvingacklistpolicy_;
     public boolean hasRecvingacklistpolicy() { return hasRecvingacklistpolicy; }
     public rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t getRecvingacklistpolicy() { return recvingacklistpolicy_; }
     
-    // optional .rina.messages.policyDescriptor_t rcvrackpolicy = 5;
-    public static final int RCVRACKPOLICY_FIELD_NUMBER = 5;
+    // optional .rina.messages.policyDescriptor_t rcvrackpolicy = 6;
+    public static final int RCVRACKPOLICY_FIELD_NUMBER = 6;
     private boolean hasRcvrackpolicy;
     private rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t rcvrackpolicy_;
     public boolean hasRcvrackpolicy() { return hasRcvrackpolicy; }
     public rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t getRcvrackpolicy() { return rcvrackpolicy_; }
     
-    // optional .rina.messages.policyDescriptor_t sendingackpolicy = 6;
-    public static final int SENDINGACKPOLICY_FIELD_NUMBER = 6;
+    // optional .rina.messages.policyDescriptor_t sendingackpolicy = 7;
+    public static final int SENDINGACKPOLICY_FIELD_NUMBER = 7;
     private boolean hasSendingackpolicy;
     private rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t sendingackpolicy_;
     public boolean hasSendingackpolicy() { return hasSendingackpolicy; }
     public rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t getSendingackpolicy() { return sendingackpolicy_; }
     
-    // optional .rina.messages.policyDescriptor_t rcvrcontrolackpolicy = 7;
-    public static final int RCVRCONTROLACKPOLICY_FIELD_NUMBER = 7;
+    // optional .rina.messages.policyDescriptor_t rcvrcontrolackpolicy = 8;
+    public static final int RCVRCONTROLACKPOLICY_FIELD_NUMBER = 8;
     private boolean hasRcvrcontrolackpolicy;
     private rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t rcvrcontrolackpolicy_;
     public boolean hasRcvrcontrolackpolicy() { return hasRcvrcontrolackpolicy; }
@@ -2060,23 +2067,26 @@ public final class ConnectionPoliciesMessage {
       if (hasDatarxmsnmax()) {
         output.writeUInt32(1, getDatarxmsnmax());
       }
+      if (hasInitialrtime()) {
+        output.writeUInt32(2, getInitialrtime());
+      }
       if (hasRtxtimerexpirypolicy()) {
-        output.writeMessage(2, getRtxtimerexpirypolicy());
+        output.writeMessage(3, getRtxtimerexpirypolicy());
       }
       if (hasSenderackpolicy()) {
-        output.writeMessage(3, getSenderackpolicy());
+        output.writeMessage(4, getSenderackpolicy());
       }
       if (hasRecvingacklistpolicy()) {
-        output.writeMessage(4, getRecvingacklistpolicy());
+        output.writeMessage(5, getRecvingacklistpolicy());
       }
       if (hasRcvrackpolicy()) {
-        output.writeMessage(5, getRcvrackpolicy());
+        output.writeMessage(6, getRcvrackpolicy());
       }
       if (hasSendingackpolicy()) {
-        output.writeMessage(6, getSendingackpolicy());
+        output.writeMessage(7, getSendingackpolicy());
       }
       if (hasRcvrcontrolackpolicy()) {
-        output.writeMessage(7, getRcvrcontrolackpolicy());
+        output.writeMessage(8, getRcvrcontrolackpolicy());
       }
       getUnknownFields().writeTo(output);
     }
@@ -2091,29 +2101,33 @@ public final class ConnectionPoliciesMessage {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(1, getDatarxmsnmax());
       }
+      if (hasInitialrtime()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, getInitialrtime());
+      }
       if (hasRtxtimerexpirypolicy()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(2, getRtxtimerexpirypolicy());
+          .computeMessageSize(3, getRtxtimerexpirypolicy());
       }
       if (hasSenderackpolicy()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getSenderackpolicy());
+          .computeMessageSize(4, getSenderackpolicy());
       }
       if (hasRecvingacklistpolicy()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, getRecvingacklistpolicy());
+          .computeMessageSize(5, getRecvingacklistpolicy());
       }
       if (hasRcvrackpolicy()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, getRcvrackpolicy());
+          .computeMessageSize(6, getRcvrackpolicy());
       }
       if (hasSendingackpolicy()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(6, getSendingackpolicy());
+          .computeMessageSize(7, getSendingackpolicy());
       }
       if (hasRcvrcontrolackpolicy()) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(7, getRcvrcontrolackpolicy());
+          .computeMessageSize(8, getRcvrcontrolackpolicy());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2276,6 +2290,9 @@ public final class ConnectionPoliciesMessage {
         if (other.hasDatarxmsnmax()) {
           setDatarxmsnmax(other.getDatarxmsnmax());
         }
+        if (other.hasInitialrtime()) {
+          setInitialrtime(other.getInitialrtime());
+        }
         if (other.hasRtxtimerexpirypolicy()) {
           mergeRtxtimerexpirypolicy(other.getRtxtimerexpirypolicy());
         }
@@ -2323,7 +2340,11 @@ public final class ConnectionPoliciesMessage {
               setDatarxmsnmax(input.readUInt32());
               break;
             }
-            case 18: {
+            case 16: {
+              setInitialrtime(input.readUInt32());
+              break;
+            }
+            case 26: {
               rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.newBuilder();
               if (hasRtxtimerexpirypolicy()) {
                 subBuilder.mergeFrom(getRtxtimerexpirypolicy());
@@ -2332,7 +2353,7 @@ public final class ConnectionPoliciesMessage {
               setRtxtimerexpirypolicy(subBuilder.buildPartial());
               break;
             }
-            case 26: {
+            case 34: {
               rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.newBuilder();
               if (hasSenderackpolicy()) {
                 subBuilder.mergeFrom(getSenderackpolicy());
@@ -2341,7 +2362,7 @@ public final class ConnectionPoliciesMessage {
               setSenderackpolicy(subBuilder.buildPartial());
               break;
             }
-            case 34: {
+            case 42: {
               rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.newBuilder();
               if (hasRecvingacklistpolicy()) {
                 subBuilder.mergeFrom(getRecvingacklistpolicy());
@@ -2350,7 +2371,7 @@ public final class ConnectionPoliciesMessage {
               setRecvingacklistpolicy(subBuilder.buildPartial());
               break;
             }
-            case 42: {
+            case 50: {
               rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.newBuilder();
               if (hasRcvrackpolicy()) {
                 subBuilder.mergeFrom(getRcvrackpolicy());
@@ -2359,7 +2380,7 @@ public final class ConnectionPoliciesMessage {
               setRcvrackpolicy(subBuilder.buildPartial());
               break;
             }
-            case 50: {
+            case 58: {
               rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.newBuilder();
               if (hasSendingackpolicy()) {
                 subBuilder.mergeFrom(getSendingackpolicy());
@@ -2368,7 +2389,7 @@ public final class ConnectionPoliciesMessage {
               setSendingackpolicy(subBuilder.buildPartial());
               break;
             }
-            case 58: {
+            case 66: {
               rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.Builder subBuilder = rina.encoding.impl.googleprotobuf.policy.PolicyDescriptorMessage.policyDescriptor_t.newBuilder();
               if (hasRcvrcontrolackpolicy()) {
                 subBuilder.mergeFrom(getRcvrcontrolackpolicy());
@@ -2400,7 +2421,25 @@ public final class ConnectionPoliciesMessage {
         return this;
       }
       
-      // optional .rina.messages.policyDescriptor_t rtxtimerexpirypolicy = 2;
+      // optional uint32 initialrtime = 2;
+      public boolean hasInitialrtime() {
+        return result.hasInitialrtime();
+      }
+      public int getInitialrtime() {
+        return result.getInitialrtime();
+      }
+      public Builder setInitialrtime(int value) {
+        result.hasInitialrtime = true;
+        result.initialrtime_ = value;
+        return this;
+      }
+      public Builder clearInitialrtime() {
+        result.hasInitialrtime = false;
+        result.initialrtime_ = 0;
+        return this;
+      }
+      
+      // optional .rina.messages.policyDescriptor_t rtxtimerexpirypolicy = 3;
       public boolean hasRtxtimerexpirypolicy() {
         return result.hasRtxtimerexpirypolicy();
       }
@@ -2437,7 +2476,7 @@ public final class ConnectionPoliciesMessage {
         return this;
       }
       
-      // optional .rina.messages.policyDescriptor_t senderackpolicy = 3;
+      // optional .rina.messages.policyDescriptor_t senderackpolicy = 4;
       public boolean hasSenderackpolicy() {
         return result.hasSenderackpolicy();
       }
@@ -2474,7 +2513,7 @@ public final class ConnectionPoliciesMessage {
         return this;
       }
       
-      // optional .rina.messages.policyDescriptor_t recvingacklistpolicy = 4;
+      // optional .rina.messages.policyDescriptor_t recvingacklistpolicy = 5;
       public boolean hasRecvingacklistpolicy() {
         return result.hasRecvingacklistpolicy();
       }
@@ -2511,7 +2550,7 @@ public final class ConnectionPoliciesMessage {
         return this;
       }
       
-      // optional .rina.messages.policyDescriptor_t rcvrackpolicy = 5;
+      // optional .rina.messages.policyDescriptor_t rcvrackpolicy = 6;
       public boolean hasRcvrackpolicy() {
         return result.hasRcvrackpolicy();
       }
@@ -2548,7 +2587,7 @@ public final class ConnectionPoliciesMessage {
         return this;
       }
       
-      // optional .rina.messages.policyDescriptor_t sendingackpolicy = 6;
+      // optional .rina.messages.policyDescriptor_t sendingackpolicy = 7;
       public boolean hasSendingackpolicy() {
         return result.hasSendingackpolicy();
       }
@@ -2585,7 +2624,7 @@ public final class ConnectionPoliciesMessage {
         return this;
       }
       
-      // optional .rina.messages.policyDescriptor_t rcvrcontrolackpolicy = 7;
+      // optional .rina.messages.policyDescriptor_t rcvrcontrolackpolicy = 8;
       public boolean hasRcvrcontrolackpolicy() {
         return result.hasRcvrcontrolackpolicy();
       }
@@ -4004,37 +4043,38 @@ public final class ConnectionPoliciesMessage {
       "rolpolicy\030\r \001(\0132!.rina.messages.policyDe",
       "scriptor_t\022E\n\032receivingflowcontrolpolicy" +
       "\030\016 \001(\0132!.rina.messages.policyDescriptor_" +
-      "t\"\244\003\n\026dtcpRtxControlConfig_t\022\024\n\014datarxms" +
-      "nmax\030\001 \001(\r\022?\n\024rtxtimerexpirypolicy\030\002 \001(\013" +
-      "2!.rina.messages.policyDescriptor_t\022:\n\017s" +
-      "enderackpolicy\030\003 \001(\0132!.rina.messages.pol" +
-      "icyDescriptor_t\022?\n\024recvingacklistpolicy\030" +
-      "\004 \001(\0132!.rina.messages.policyDescriptor_t" +
-      "\0228\n\rrcvrackpolicy\030\005 \001(\0132!.rina.messages." +
-      "policyDescriptor_t\022;\n\020sendingackpolicy\030\006",
-      " \001(\0132!.rina.messages.policyDescriptor_t\022" +
-      "?\n\024rcvrcontrolackpolicy\030\007 \001(\0132!.rina.mes" +
-      "sages.policyDescriptor_t\"\221\004\n\014dtcpConfig_" +
-      "t\022\023\n\013flowControl\030\001 \001(\010\022A\n\021flowControlCon" +
-      "fig\030\002 \001(\0132&.rina.messages.dtcpFlowContro" +
-      "lConfig_t\022\022\n\nrtxControl\030\003 \001(\010\022?\n\020rtxCont" +
-      "rolConfig\030\004 \001(\0132%.rina.messages.dtcpRtxC" +
-      "ontrolConfig_t\022#\n\033initialsenderinactivit" +
-      "ytime\030\005 \001(\r\022\"\n\032initialrecvrinactivitytim" +
-      "e\030\006 \001(\r\022D\n\031rcvrtimerinactivitypolicy\030\007 \001",
-      "(\0132!.rina.messages.policyDescriptor_t\022E\n" +
-      "\032sendertimerinactiviypolicy\030\010 \001(\0132!.rina" +
-      ".messages.policyDescriptor_t\022?\n\024lostcont" +
-      "rolpdupolicy\030\t \001(\0132!.rina.messages.polic" +
-      "yDescriptor_t\022=\n\022rttestimatorpolicy\030\n \001(" +
-      "\0132!.rina.messages.policyDescriptor_t\"\333\001\n" +
-      "\024connectionPolicies_t\022\023\n\013dtcpPresent\030\001 \001" +
-      "(\010\0226\n\021dtcpConfiguration\030\002 \001(\0132\033.rina.mes" +
-      "sages.dtcpConfig_t\022>\n\023initialseqnumpolic" +
-      "y\030\003 \001(\0132!.rina.messages.policyDescriptor",
-      "_t\022\037\n\027seqnumrolloverthreshold\030\004 \001(\004\022\025\n\ri" +
-      "nitialATimer\030\005 \001(\rB6\n4rina.encoding.impl" +
-      ".googleprotobuf.connectionpolicies"
+      "t\"\272\003\n\026dtcpRtxControlConfig_t\022\024\n\014datarxms" +
+      "nmax\030\001 \001(\r\022\024\n\014initialrtime\030\002 \001(\r\022?\n\024rtxt" +
+      "imerexpirypolicy\030\003 \001(\0132!.rina.messages.p" +
+      "olicyDescriptor_t\022:\n\017senderackpolicy\030\004 \001" +
+      "(\0132!.rina.messages.policyDescriptor_t\022?\n" +
+      "\024recvingacklistpolicy\030\005 \001(\0132!.rina.messa" +
+      "ges.policyDescriptor_t\0228\n\rrcvrackpolicy\030" +
+      "\006 \001(\0132!.rina.messages.policyDescriptor_t",
+      "\022;\n\020sendingackpolicy\030\007 \001(\0132!.rina.messag" +
+      "es.policyDescriptor_t\022?\n\024rcvrcontrolackp" +
+      "olicy\030\010 \001(\0132!.rina.messages.policyDescri" +
+      "ptor_t\"\221\004\n\014dtcpConfig_t\022\023\n\013flowControl\030\001" +
+      " \001(\010\022A\n\021flowControlConfig\030\002 \001(\0132&.rina.m" +
+      "essages.dtcpFlowControlConfig_t\022\022\n\nrtxCo" +
+      "ntrol\030\003 \001(\010\022?\n\020rtxControlConfig\030\004 \001(\0132%." +
+      "rina.messages.dtcpRtxControlConfig_t\022#\n\033" +
+      "initialsenderinactivitytime\030\005 \001(\r\022\"\n\032ini" +
+      "tialrecvrinactivitytime\030\006 \001(\r\022D\n\031rcvrtim",
+      "erinactivitypolicy\030\007 \001(\0132!.rina.messages" +
+      ".policyDescriptor_t\022E\n\032sendertimerinacti" +
+      "viypolicy\030\010 \001(\0132!.rina.messages.policyDe" +
+      "scriptor_t\022?\n\024lostcontrolpdupolicy\030\t \001(\013" +
+      "2!.rina.messages.policyDescriptor_t\022=\n\022r" +
+      "ttestimatorpolicy\030\n \001(\0132!.rina.messages." +
+      "policyDescriptor_t\"\333\001\n\024connectionPolicie" +
+      "s_t\022\023\n\013dtcpPresent\030\001 \001(\010\0226\n\021dtcpConfigur" +
+      "ation\030\002 \001(\0132\033.rina.messages.dtcpConfig_t" +
+      "\022>\n\023initialseqnumpolicy\030\003 \001(\0132!.rina.mes",
+      "sages.policyDescriptor_t\022\037\n\027seqnumrollov" +
+      "erthreshold\030\004 \001(\004\022\025\n\rinitialATimer\030\005 \001(\r" +
+      "B6\n4rina.encoding.impl.googleprotobuf.co" +
+      "nnectionpolicies"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4070,7 +4110,7 @@ public final class ConnectionPoliciesMessage {
           internal_static_rina_messages_dtcpRtxControlConfig_t_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_rina_messages_dtcpRtxControlConfig_t_descriptor,
-              new java.lang.String[] { "Datarxmsnmax", "Rtxtimerexpirypolicy", "Senderackpolicy", "Recvingacklistpolicy", "Rcvrackpolicy", "Sendingackpolicy", "Rcvrcontrolackpolicy", },
+              new java.lang.String[] { "Datarxmsnmax", "Initialrtime", "Rtxtimerexpirypolicy", "Senderackpolicy", "Recvingacklistpolicy", "Rcvrackpolicy", "Sendingackpolicy", "Rcvrcontrolackpolicy", },
               rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.dtcpRtxControlConfig_t.class,
               rina.encoding.impl.googleprotobuf.connectionpolicies.ConnectionPoliciesMessage.dtcpRtxControlConfig_t.Builder.class);
           internal_static_rina_messages_dtcpConfig_t_descriptor =

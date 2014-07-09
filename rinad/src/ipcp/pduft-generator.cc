@@ -608,6 +608,7 @@ void FlowStateDatabase::updateObjects(const std::list<FlowStateObject*>& newObje
 				}
 
 				found = true;
+				delete (*newIt);
 				break;
 			}
 		}
@@ -879,14 +880,11 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 		}
 	}
 
-	enrollmentToNeighbor(event->neighbor_->get_underlying_port_id());
-}
-
-void LinkStatePDUFTGeneratorPolicy::enrollmentToNeighbor(int portId) {
 	if (db_->isEmpty()) {
 		return;
 	}
 
+	int portId = event->neighbor_->get_underlying_port_id();
 	const rina::CDAPMessage * cdapMessage = 0;
 	const rina::SerializedObject * serializedObject = 0;
 
@@ -907,12 +905,45 @@ void LinkStatePDUFTGeneratorPolicy::enrollmentToNeighbor(int portId) {
 	}
 }
 
-bool LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
+void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 	rina::AccessGuard g(*lock_);
 
-	//TODO Port this code
+	std::list<rina::FlowInformation> nMinusOneFlows = ipc_process_->get_resource_allocator()->
+			get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
 
-	return false;
+	std::vector< std::list<FlowStateObject *> > groupsToSend =
+			db_->prepareForPropagation(nMinusOneFlows);
+
+	if (groupsToSend.size() == 0) {
+		return;
+	}
+
+	std::list<FlowStateObject *> fsos;
+	std::list<rina::FlowInformation>::iterator it;
+	const rina::CDAPMessage * cdapMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+	int i = 0;
+	for (it = nMinusOneFlows.begin(); it != nMinusOneFlows.end(); ++it) {
+		fsos = groupsToSend[i];
+		if (fsos.size() > 0) {
+			try {
+				serializedObject = db_->encode();
+				rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
+				cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(it->getPortId(), 0,
+						rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
+						&objectValue, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
+				rib_daemon_->sendMessage(*cdapMessage, it->getPortId(), 0);
+				delete cdapMessage;
+				delete serializedObject;
+			} catch (Exception &e) {
+				LOG_ERR("Errors sending message: %s", e.what());
+				delete cdapMessage;
+				delete serializedObject;
+			}
+		}
+
+		i++;
+	}
 }
 
 void LinkStatePDUFTGeneratorPolicy::updateAge() {
@@ -942,18 +973,48 @@ void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 		const rina::CDAPMessage * cdapMessage, int portId){
 	rina::AccessGuard g(*lock_);
 
-	LOG_DBG("Called; %d, %d", cdapMessage->get_op_code(), portId);
-	//TODO port this code
+	if (cdapMessage->get_obj_class().compare(
+			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
+		return;
+	}
+
+	try {
+		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
+		std::list<FlowStateObject *> * objects = (std::list<FlowStateObject *> *) encoder_->decode(*serializedObject,
+				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+		db_->updateObjects(*objects, portId, ipc_process_->get_address());
+		delete objects;
+	} catch (Exception &e) {
+		LOG_ERR("Problems decoding Flow State Object Group: %s", e.what());
+	}
 }
 
-bool LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
+void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
 		const rina::CDAPMessage * cdapMessage, int portId) const {
 	rina::AccessGuard g(*lock_);
 
-	LOG_DBG("Called; %d, %d", cdapMessage->get_op_code(), portId);
-	//TODO port this code
+	if (cdapMessage->get_obj_class().compare(
+			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
+		return;
+	}
 
-	return false;
+	const rina::CDAPMessage * responseMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+	try {
+		serializedObject = db_->encode();
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
+		responseMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				fs_rib_group_->class_, fs_rib_group_->instance_, fs_rib_group_->name_, &objectValue,
+				0, "", cdapMessage->get_invoke_id());
+		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		delete responseMessage;
+		delete serializedObject;
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+		delete responseMessage;
+		delete serializedObject;
+	}
 }
 
 }
