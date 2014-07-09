@@ -10,6 +10,8 @@ EXTRA_DIST       =
 
 include $(srcdir)/Makefile.inc
 
+BUILT_SOURCES = $(protoSOURCES)
+
 allsources =							\
         logs.cc							\
         utils.cc             utils.h				\

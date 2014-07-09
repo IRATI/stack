@@ -608,10 +608,7 @@ void FlowStateDatabase::updateObjects(const std::list<FlowStateObject*>& newObje
 				}
 
 				found = true;
-<<<<<<< HEAD
-=======
 				delete (*newIt);
->>>>>>> 1e5198c29a3bbb674fd528f56c69dffc7a35387a
 				break;
 			}
 		}
@@ -883,21 +880,11 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 		}
 	}
 
-<<<<<<< HEAD
-	enrollmentToNeighbor(event->neighbor_->get_underlying_port_id());
-}
-
-void LinkStatePDUFTGeneratorPolicy::enrollmentToNeighbor(int portId) {
-=======
->>>>>>> 1e5198c29a3bbb674fd528f56c69dffc7a35387a
 	if (db_->isEmpty()) {
 		return;
 	}
 
-<<<<<<< HEAD
-=======
 	int portId = event->neighbor_->get_underlying_port_id();
->>>>>>> 1e5198c29a3bbb674fd528f56c69dffc7a35387a
 	const rina::CDAPMessage * cdapMessage = 0;
 	const rina::SerializedObject * serializedObject = 0;
 
@@ -918,14 +905,6 @@ void LinkStatePDUFTGeneratorPolicy::enrollmentToNeighbor(int portId) {
 	}
 }
 
-<<<<<<< HEAD
-bool LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
-	rina::AccessGuard g(*lock_);
-
-	//TODO Port this code
-
-	return false;
-=======
 void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 	rina::AccessGuard g(*lock_);
 
@@ -965,7 +944,6 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 
 		i++;
 	}
->>>>>>> 1e5198c29a3bbb674fd528f56c69dffc7a35387a
 }
 
 void LinkStatePDUFTGeneratorPolicy::updateAge() {
@@ -995,20 +973,6 @@ void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 		const rina::CDAPMessage * cdapMessage, int portId){
 	rina::AccessGuard g(*lock_);
 
-<<<<<<< HEAD
-	LOG_DBG("Called; %d, %d", cdapMessage->get_op_code(), portId);
-	//TODO port this code
-}
-
-bool LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
-		const rina::CDAPMessage * cdapMessage, int portId) const {
-	rina::AccessGuard g(*lock_);
-
-	LOG_DBG("Called; %d, %d", cdapMessage->get_op_code(), portId);
-	//TODO port this code
-
-	return false;
-=======
 	if (cdapMessage->get_obj_class().compare(
 			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
 		return;
@@ -1051,7 +1015,6 @@ void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
 		delete responseMessage;
 		delete serializedObject;
 	}
->>>>>>> 1e5198c29a3bbb674fd528f56c69dffc7a35387a
 }
 
 }

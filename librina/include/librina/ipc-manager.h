@@ -3,6 +3,7 @@
  *
  *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -825,7 +826,7 @@ public:
 	void flowDeallocated(const FlowDeallocateRequestEvent& event, int result);
 
 	/**
-	 * Invoked by the ipC Process to notify that a flow has been remotely
+	 * Invoked by the IPC Manager to notify that a flow has been remotely
 	 * unallocated
 	 * @param portId
 	 * @param code

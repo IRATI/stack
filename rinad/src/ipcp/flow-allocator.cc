@@ -1236,9 +1236,9 @@ const rina::SerializedObject &serialized_object) const {
 	gpf_flow.ParseFromArray(serialized_object.message_, serialized_object.size_);
 
 	// SourceNamingInfo
-	flow->source_naming_info_ = gpf_flow.sourcenaminginfo();
+	//flow->source_naming_info_ = gpf_flow.sourcenaminginfo();
 	// DestinationNamingInfo
-	flow->destination_naming_info_ = gpf_flow.destinationnaminginfo();
+	//flow->destination_naming_info_ = gpf_flow.destinationnaminginfo();
 	// sourcePortId
 	flow->source_port_id_ = gpf_flow.sourceportid();
 	//destinationPortId
@@ -1248,19 +1248,19 @@ const rina::SerializedObject &serialized_object) const {
 	//destinationAddress
 	flow->destination_address_ = gpf_flow.destinationaddress();
 	//connectionIds
-	flow->connections_ = gpf_flow.connectionids();
+	//flow->connections_ = gpf_flow.connectionids();
 	//currentConnectionIdIndex
 	flow->current_connection_index_ = gpf_flow.currentconnectionidindex();
 	//state
-	flow->state_ = gpf_flow.state();
+	//flow->state_ = gpf_flow.state();
 	//qosParameters
-	flow->flow_specification_ = gpf_flow.qosparameters();
+	//flow->flow_specification_ = gpf_flow.qosparameters();
 	//optional connectionPolicies_t connectionPolicies
 	rina::ConnectionPolicies *conn_polc = get_ConnectionPolicies(gpf_flow.connectionpolicies());
 	flow->getActiveConnection()->setPolicies(*conn_polc);
 	delete conn_polc;
 	//accessControl
-	flow->access_control_ = gpf_flow.accesscontrol();
+	//flow->access_control_ = gpf_flow.accesscontrol();
 	//maxCreateFlowRetries
 	flow->max_create_flow_retries_ = gpf_flow.maxcreateflowretries();
 	//createFlowRetries

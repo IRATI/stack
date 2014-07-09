@@ -577,11 +577,28 @@ static void os_process_finalized_handler(rina::IPCEvent *e,
                 rina::ipcProcessFactory->listIPCProcesses();
         const rina::ApplicationProcessNamingInformation& app_name =
                                                 event->applicationName;
+        list<rina::FlowInformation> involved_flows;
 
-        // TODO clean pending flows
+        // Look if the terminating application has allocated flows
+        // with some IPC processes
+        collect_flows_by_application(app_name, involved_flows);
+        for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
+                        fit != involved_flows.end(); fit++) {
+                rina::IPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
+                rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
+
+                if (!ipcp) {
+                        cerr << __func__ << ": Cannot find the IPC process "
+                                "that provides the flow with port-id " <<
+                                fit->portId << endl;
+                        continue;
+                }
+
+                ipcm->deallocate_flow(ipcp, req_event);
+        }
 
         // Look if the terminating application has pending registrations
-        // with some IPC process
+        // with some IPC processes
         for (unsigned int i = 0; i < ipcps.size(); i++) {
                 if (application_is_registered_to_ipcp(app_name,
                                                             ipcps[i])) {
@@ -597,6 +614,12 @@ static void os_process_finalized_handler(rina::IPCEvent *e,
 
                         ipcm->unregister_app_from_ipcp(req_event, ipcps[i]);
                 }
+        }
+
+        if (event->ipcProcessId != 0) {
+                // TODO The process that crashed was an IPC Process daemon
+                // Should we destroy the state in the kernel? Or try to
+                // create another IPC Process in user space to bring it back?
         }
 }
 
