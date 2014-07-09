@@ -7,7 +7,7 @@ ApplicationProcessNamingInfoMessage.stamp: ApplicationProcessNamingInfoMessage.p
 	$(PROTOC) -I$(builddir) -I$(srcdir)	\
 		--cpp_out=$(builddir)		\
 		$(srcdir)/ApplicationProcessNamingInfoMessage.proto
-	mv -f ApplicationProcessNamingInfoMessage.tmp 
+	mv -f ApplicationProcessNamingInfoMessage.tmp $@
 
 ApplicationProcessNamingInfoMessage.pb.h ApplicationProcessNamingInfoMessage.pb.cc: ApplicationProcessNamingInfoMessage.stamp
 	if test ! -f ; then                           \
@@ -31,7 +31,7 @@ ApplicationRegistrationMessage.stamp: ApplicationRegistrationMessage.proto
 	$(PROTOC) -I$(builddir) -I$(srcdir)	\
 		--cpp_out=$(builddir)		\
 		$(srcdir)/ApplicationRegistrationMessage.proto
-	mv -f ApplicationRegistrationMessage.tmp 
+	mv -f ApplicationRegistrationMessage.tmp $@
 
 ApplicationRegistrationMessage.pb.h ApplicationRegistrationMessage.pb.cc: ApplicationRegistrationMessage.stamp
 	if test ! -f ; then                           \
@@ -55,7 +55,7 @@ CommonMessages.stamp: CommonMessages.proto
 	$(PROTOC) -I$(builddir) -I$(srcdir)	\
 		--cpp_out=$(builddir)		\
 		$(srcdir)/CommonMessages.proto
-	mv -f CommonMessages.tmp 
+	mv -f CommonMessages.tmp $@
 
 CommonMessages.pb.h CommonMessages.pb.cc: CommonMessages.stamp
 	if test ! -f ; then                           \
