@@ -34,6 +34,7 @@
 #include "dtcp-utils.h"
 #include "dt.h"
 #include "dtp.h"
+#include "rmt.h"
 
 struct cwq {
         struct rqueue * q;
@@ -166,6 +167,64 @@ ssize_t cwq_size(struct cwq * queue)
         spin_unlock(&queue->lock);
 
         return tmp;
+}
+
+void cwq_deliver(struct cwq * queue,
+                 struct dt *  dt,
+                 struct rmt * rmt,
+                 address_t    address,
+                 qos_id_t     qos_id)
+{
+        struct rtxq * rtxq;
+        struct dtcp * dtcp;
+
+        if (!queue)
+                return;
+
+        if (!queue->q)
+                return;
+
+        if (!dt)
+                return;
+
+        dtcp = dt_dtcp(dt);
+        if (!dtcp)
+                return;
+
+        spin_lock(&queue->lock);
+        while (!rqueue_is_empty(queue->q) &&
+               (dtcp_snd_lf_win(dtcp) < dtcp_snd_rt_win(dtcp))) {
+                struct pdu * pdu;
+
+                pdu = (struct pdu *) rqueue_head_pop(queue->q);
+                if (!pdu) {
+                        spin_unlock(&queue->lock);
+                        return;
+                }
+
+                if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                        rtxq = dt_rtxq(dt);
+                        if (!rtxq) {
+                                spin_unlock(&queue->lock);
+                                LOG_ERR("Couldn't find the RTX queue");
+                                return;
+                        }
+                        rtxq_push(rtxq, pdu);
+                }
+                if (dtcp_snd_lf_win_set(
+                                dtcp,
+                                pci_sequence_number_get(pdu_pci_get_rw(pdu))))
+                        LOG_ERR("Problems setting sender left window edge");
+
+                if (rmt_send(rmt,
+                             address,
+                             qos_id,
+                             pdu))
+                        LOG_ERR("Problems sending PDU");
+
+        }
+        spin_unlock(&queue->lock);
+        return;
 }
 
 struct rtxq_entry {
