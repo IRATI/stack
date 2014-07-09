@@ -9,7 +9,7 @@ COMMONCPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common
-COMMONLDADD = $(builddir)/src/common/librinad.la $(LIBRINA_LIBS)
+COMMONLDADD = $(builddir)/../src/common/librinad.la $(LIBRINA_LIBS)
 
 test_encoders_SOURCES  = test-encoders.cc
 test_encoders_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src/common
