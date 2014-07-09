@@ -44,15 +44,7 @@ namespace rinad {
 
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
-void *console_function(void *opaque)
-{
-        IPCManager *ipcm = static_cast<IPCManager *>(opaque);
-
-        cout << "Console starts: " << ipcm << endl;
-        cout << "Console stops" << endl;
-
-        return NULL;
-}
+void *console_function(void *opaque);
 
 void *script_function(void *opaque)
 {
