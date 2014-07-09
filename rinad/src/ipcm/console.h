@@ -51,6 +51,8 @@ class IPCManager;
 
 class IPCMConsole : public rina::Thread {
                 static const unsigned int CMDBUFSIZE = 120;
+                static const int CMDRETCONT = 0;
+                static const int CMDRETSTOP = 1;
 
                 typedef int (IPCMConsole::*ConsoleCmdFunction)
                             (std::vector<std::string>& args);
@@ -63,6 +65,10 @@ class IPCMConsole : public rina::Thread {
                 int init();
                 int process_command(int cfd, char *cmdbuf, int size);
                 int flush_output(int cfd);
+
+                // Console commands functions
+                int quit(std::vector<std::string>& args);
+                int help(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r);

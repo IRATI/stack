@@ -61,6 +61,9 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                              console_function, this),
                 ipcm(r)
 {
+        commands_map["help"] = &IPCMConsole::help;
+        commands_map["quit"] = &IPCMConsole::quit;
+        commands_map["exit"] = &IPCMConsole::quit;
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -134,6 +137,7 @@ void IPCMConsole::body()
                 struct sockaddr_in client_address;
                 socklen_t address_len = sizeof(client_address);
                 char cmdbuf[CMDBUFSIZE];
+                int cmdret;
                 int n;
 
                 cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
@@ -144,17 +148,21 @@ void IPCMConsole::body()
                         continue;
                 }
 
-                n = read(cfd, cmdbuf, sizeof(cmdbuf));
-                if (n < 0) {
-                        cerr << __func__ << " Error [" << errno <<
-                                "] calling read() " << endl;
-                        close(cfd);
-                        continue;
+                for (;;) {
+                        n = read(cfd, cmdbuf, sizeof(cmdbuf));
+                        if (n < 0) {
+                                cerr << __func__ << " Error [" << errno <<
+                                        "] calling read() " << endl;
+                                close(cfd);
+                                continue;
+                        }
+
+                        cmdret = process_command(cfd, cmdbuf, n);
+                        if (cmdret == CMDRETSTOP) {
+                                close(cfd);
+                                break;
+                        }
                 }
-
-                process_command(cfd, cmdbuf, n);
-
-                close(cfd);
         }
 
         cout << "Console stops" << endl;
@@ -207,8 +215,30 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 
         fun = mit->second;
         ret = (this->*fun)(args);
+        flush_output(cfd);
 
         return ret;
+}
+
+int
+IPCMConsole::quit(vector<string>& args)
+{
+        (void) args;
+
+        return CMDRETSTOP;
+}
+
+int IPCMConsole::help(vector<string>& args)
+{
+        (void) args;
+
+        outstream << "Available commands:" << endl;
+        for (map<string, ConsoleCmdFunction>::iterator mit =
+                commands_map.begin(); mit != commands_map.end(); mit++) {
+                outstream << "    " << mit->first << endl;
+        }
+
+        return CMDRETCONT;
 }
 
 }
