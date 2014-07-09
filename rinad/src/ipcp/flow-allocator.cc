@@ -300,6 +300,7 @@ void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent * event) {
 	try {
 		flowAllocatorInstance->submitAllocateRequest(*event);
 	} catch (Exception &e) {
+		LOG_ERR("Problems allocating flow: %s", e.what());
 		flow_allocator_instances_.erase(portId);
 		delete flowAllocatorInstance;
 
@@ -463,12 +464,7 @@ rina::QoSCube SimpleNewFlowRequestPolicy::selectQoSCube(const rina::FlowSpecific
 	for(iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		cube = *iterator;
 		if (cube.get_efcp_policies().is_dtcp_present()) {
-			if (flowSpec.getMaxAllowableGap() > 0 &&
-					!cube.get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
-				return cube;
-			}
-
-			if (flowSpec.getMaxAllowableGap() == 0 &&
+			if (flowSpec.getMaxAllowableGap() >= 0 &&
 					cube.get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
 				return cube;
 			}
