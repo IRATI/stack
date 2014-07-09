@@ -7,7 +7,7 @@ CDAP.stamp: CDAP.proto
 	$(PROTOC) -I$(builddir) -I$(srcdir)	\
 		--cpp_out=$(builddir)		\
 		$(srcdir)/CDAP.proto
-	mv -f CDAP.tmp 
+	mv -f CDAP.tmp $@
 
 CDAP.pb.h CDAP.pb.cc: CDAP.stamp
 	if test ! -f ; then                           \

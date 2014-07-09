@@ -1179,23 +1179,17 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 	// SourceNamingInfo
 	gpf_flow.set_allocated_sourcenaminginfo(
 			get_applicationProcessNamingInfo_t(flow->source_naming_info_));
-
 	// DestinationNamingInfo
 	gpf_flow.set_allocated_destinationnaminginfo(
 			get_applicationProcessNamingInfo_t(flow->destination_naming_info_));
-
 	// sourcePortId
 	gpf_flow.set_sourceportid(flow->source_port_id_);
-
 	//destinationPortId
 	gpf_flow.set_destinationportid(flow->destination_port_id_);
-
 	//sourceAddress
 	gpf_flow.set_sourceaddress(flow->source_address_);
-
 	//destinationAddress
 	gpf_flow.set_destinationaddress(flow->destination_address_);
-
 	//connectionIds
 	for (std::list<rina::Connection*>::const_iterator it =
 			flow->connections_.begin();
@@ -1209,28 +1203,20 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 		//destinationCEPId
 		gpf_connection->set_destinationcepid((*it)->getDestCepId());
 	}
-
 	//currentConnectionIdIndex
 	gpf_flow.set_currentconnectionidindex(flow->current_connection_index_);
-
 	//state
 	gpf_flow.set_state(flow->state_);
-
 	//qosParameters
 	gpf_flow.set_allocated_qosparameters(get_qosSpecification_t(flow->flow_specification_));
-
 	//optional connectionPolicies_t connectionPolicies
 	get_connectionPolicies_t(flow->getActiveConnection()->getPolicies());
-
 	//accessControl
 	gpf_flow.set_accesscontrol(flow->access_control_);
-
 	//maxCreateFlowRetries
 	gpf_flow.set_maxcreateflowretries(flow->max_create_flow_retries_);
-
 	//createFlowRetries
 	gpf_flow.set_createflowretries(flow->create_flow_retries_);
-
 	//hopCount
 	gpf_flow.set_hopcount(flow->hop_count_);
 
@@ -1248,6 +1234,39 @@ const rina::SerializedObject &serialized_object) const {
 	rina::messages::Flow gpf_flow;
 
 	gpf_flow.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	// SourceNamingInfo
+	flow->source_naming_info_ = gpf_flow.sourcenaminginfo();
+	// DestinationNamingInfo
+	flow->destination_naming_info_ = gpf_flow.destinationnaminginfo();
+	// sourcePortId
+	flow->source_port_id_ = gpf_flow.sourceportid();
+	//destinationPortId
+	flow->destination_port_id_ = gpf_flow.destinationportid();
+	//sourceAddress
+	flow->source_address_ = gpf_flow.sourceaddress();
+	//destinationAddress
+	flow->destination_address_ = gpf_flow.destinationaddress();
+	//connectionIds
+	flow->connections_ = gpf_flow.connectionids();
+	//currentConnectionIdIndex
+	flow->current_connection_index_ = gpf_flow.currentconnectionidindex();
+	//state
+	flow->state_ = gpf_flow.state();
+	//qosParameters
+	flow->flow_specification_ = gpf_flow.qosparameters();
+	//optional connectionPolicies_t connectionPolicies
+	rina::ConnectionPolicies *conn_polc = get_ConnectionPolicies(gpf_flow.connectionpolicies());
+	flow->getActiveConnection()->setPolicies(*conn_polc);
+	delete conn_polc;
+	//accessControl
+	flow->access_control_ = gpf_flow.accesscontrol();
+	//maxCreateFlowRetries
+	flow->max_create_flow_retries_ = gpf_flow.maxcreateflowretries();
+	//createFlowRetries
+	flow->create_flow_retries_ = gpf_flow.createflowretries();
+	//hopCount
+	flow->hop_count_ = gpf_flow.hopcount();
 
 	return (void*) flow;
 }
@@ -1449,6 +1468,22 @@ rina::messages::dtcpRateBasedFlowControlConfig_t* FlowEncoder::get_dtcpRateBased
 	gpf_conf->set_allocated_ratereductionpolicy(get_policyDescriptor_t(conf.get_rate_reduction_policy()));
 
 	return gpf_conf;
+}
+
+rina::ConnectionPolicies* FlowEncoder::get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) const {
+	rina::ConnectionPolicies *polc = new rina::ConnectionPolicies;
+	//optional bool dtcpPresent
+	polc->set_dtcp_present(gpf_polc.dtcppresent());
+	//optional dtcpConfig_t dtcpConfiguration
+	//polc->set_dtcp_configuration(get_DTCPConfig(gpf_polc.dtcpconfiguration()));
+	//optional policyDescriptor_t initialseqnumpolicy
+	//polc->set_initialseqnumpolicy(get_policyDescriptor_t(gpf_polc.initialseqnumpolicy()));
+	//optional uint64 seqnumrolloverthreshold
+	polc->set_seq_num_rollover_threshold(gpf_polc.seqnumrolloverthreshold());
+	//optional uint32 initialATimer
+	polc->set_initial_a_timer(gpf_polc.initialatimer());
+
+	return polc;
 }
 
 

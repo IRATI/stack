@@ -431,6 +431,7 @@ private:
 	rina::messages::property_t* get_property_t(const rina::PolicyParameter &conf) const;
 	rina::messages::dtcpWindowBasedFlowControlConfig_t* get_dtcpWindowBasedFlowControlConfig_t(const rina::DTCPWindowBasedFlowControlConfig &conf) const;
 	rina::messages::dtcpRateBasedFlowControlConfig_t* get_dtcpRateBasedFlowControlConfig_t(const rina::DTCPRateBasedFlowControlConfig &conf) const;
+	rina::ConnectionPolicies* get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) const;
 };
 
 }

@@ -23,7 +23,7 @@ $name.stamp: $name.proto
 	\$(PROTOC) -I\$(builddir) -I\$(srcdir)	\\
 		--cpp_out=\$(builddir)		\\
 		\$(srcdir)/$name.proto
-	mv -f $name.tmp $@
+	mv -f $name.tmp \$@
 
 $name.pb.h $name.pb.cc: $name.stamp
 	if test ! -f $@; then                           \\
