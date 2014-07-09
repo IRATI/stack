@@ -34,96 +34,6 @@
 #include "dtcp.h"
 #include "dtcp-utils.h"
 
-/* Sequencing/reassembly queue */
-
-struct seq_queue {
-        struct list_head head;
-};
-
-struct seq_q_entry {
-        unsigned long    time_stamp;
-        struct pdu *     pdu;
-        struct list_head next;
-};
-
-struct sequencingQ {
-        struct dtp *       dtp;
-        struct seq_queue * queue;
-        spinlock_t         lock;
-};
-
-static struct seq_queue * seq_queue_create(void)
-{
-        struct seq_queue * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        INIT_LIST_HEAD(&tmp->head);
-
-        return tmp;
-}
-
-static void seq_q_entry_destroy(struct seq_q_entry * seq_entry)
-{
-        ASSERT(seq_entry);
-
-        if (seq_entry->pdu) pdu_destroy(seq_entry->pdu);
-        rkfree(seq_entry);
-
-        return;
-}
-
-static int seq_queue_destroy(struct seq_queue * seq_queue)
-{
-        struct seq_q_entry * cur, * n;
-
-        ASSERT(seq_queue);
-
-        list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
-                list_del(&cur->next);
-                seq_q_entry_destroy(cur);
-        }
-
-        rkfree(seq_queue);
-
-        return 0;
-}
-
-int seqQ_destroy(struct sequencingQ * seqQ)
-{
-        if (!seqQ)
-                return -1;
-
-        if (seqQ->queue) seq_queue_destroy(seqQ->queue);
-
-        rkfree(seqQ);
-
-        return 0;
-}
-
-struct sequencingQ * seqQ_create(struct dtp * dtp)
-{
-        struct sequencingQ * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->queue = seq_queue_create();
-        if (!tmp->queue) {
-                seqQ_destroy(tmp);
-                return NULL;
-        }
-
-        tmp->dtp = dtp;
-
-        spin_lock_init(&tmp->lock);
-
-        return tmp;
-}
-
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t lock;
@@ -165,7 +75,7 @@ struct dtp {
         struct dtp_policies *     policies;
         struct rmt *              rmt;
         struct kfa *              kfa;
-        struct sequencingQ *      seqQ;
+        struct squeue *           seqq;
         struct workqueue_struct * twq;
         struct {
 #if 0
@@ -365,6 +275,302 @@ static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
 }
 #endif
 
+/* Sequencing/reassembly queue */
+
+struct seq_queue {
+        struct list_head head;
+};
+
+struct seq_queue_entry {
+        unsigned long    time_stamp;
+        struct pdu *     pdu;
+        struct list_head next;
+};
+
+struct squeue {
+        struct dtp *       dtp;
+        struct seq_queue * queue;
+        spinlock_t         lock;
+};
+
+static struct seq_queue * seq_queue_create(void)
+{
+        struct seq_queue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
+
+static struct seq_queue_entry * seq_queue_entry_create_gfp(struct pdu * pdu,
+                                                           gfp_t        flags)
+{
+        struct seq_queue_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        tmp->pdu = pdu;
+        tmp->time_stamp = jiffies;
+
+        return tmp;
+}
+
+static void seq_queue_entry_destroy(struct seq_queue_entry * seq_entry)
+{
+        ASSERT(seq_entry);
+
+        if (seq_entry->pdu) pdu_destroy(seq_entry->pdu);
+        rkfree(seq_entry);
+
+        return;
+}
+
+static int seq_queue_destroy(struct seq_queue * seq_queue)
+{
+        struct seq_queue_entry * cur, * n;
+
+        ASSERT(seq_queue);
+
+        list_for_each_entry_safe(cur, n, &seq_queue->head, next) {
+                list_del(&cur->next);
+                seq_queue_entry_destroy(cur);
+        }
+
+        rkfree(seq_queue);
+
+        return 0;
+}
+
+static struct pdu * seq_queue_pop(struct seq_queue * q)
+{
+        struct seq_queue_entry * p;
+        struct pdu * pdu;
+
+        if (list_empty(&q->head)) {
+                LOG_WARN("Seq Queue is empty!");
+                return NULL;
+        }
+
+        p = list_first_entry(&q->head, struct seq_queue_entry, next);
+        if (!p)
+                return NULL;
+
+        pdu = p->pdu;
+        p->pdu = NULL;
+
+        list_del(&p->next);
+        seq_queue_entry_destroy(p);
+
+        return pdu;
+}
+
+static bool seq_queue_is_empty(struct seq_queue * q)
+{
+        ASSERT(q);
+        return list_empty(&q->head);
+}
+
+static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
+{
+        static struct seq_queue_entry * tmp, * cur, * last = NULL;
+        seq_num_t                   csn, psn;
+        const struct pci *          pci;
+
+        ASSERT(pdu);
+        ASSERT(q);
+
+        tmp = seq_queue_entry_create_gfp(pdu, GFP_ATOMIC);
+        if (!tmp) {
+                LOG_ERR("Could not create sequencing queue entry");
+                return -1;
+        }
+
+        pci  = pdu_pci_get_ro(pdu);
+        csn  = pci_sequence_number_get((struct pci *) pci);
+
+        if (list_empty(&q->head)) {
+                list_add(&tmp->next, &q->head);
+                LOG_DBG("First PDU with seqnum: %d push to seqq at: %pk",
+                        csn, q);
+                return 0;
+        }
+
+        last = list_last_entry(&q->head, struct seq_queue_entry, next);
+        if (!last) {
+                LOG_ERR("Could not retrieve last pdu from seqq");
+                seq_queue_entry_destroy(tmp);
+                return 0;
+        }
+
+        pci  = pdu_pci_get_ro(last->pdu);
+        psn  = pci_sequence_number_get((struct pci *) pci);
+        if (csn == psn) {
+                LOG_ERR("Another PDU with the same seq_num is in "
+                        "the rtx queue!");
+                seq_queue_entry_destroy(tmp);
+                return -1;
+        }
+        if (csn > psn) {
+                list_add_tail(&tmp->next, &q->head);
+                LOG_DBG("Last PDU with seqnum: %d push to seqq at: %pk",
+                        csn, q);
+                return 0;
+        }
+
+        list_for_each_entry(cur, &q->head, next) {
+                pci = pdu_pci_get_ro(cur->pdu);
+                psn = pci_sequence_number_get((struct pci *) pci);
+                if (csn == psn) {
+                        LOG_ERR("Another PDU with the same seq_num is in "
+                                "the rtx queue!");
+                        seq_queue_entry_destroy(tmp);
+                        return 0;
+                }
+                if (csn > psn) {
+                        list_add(&tmp->next, &cur->next);
+                        LOG_DBG("Middle PDU with seqnum: %d push to "
+                                "seqq at: %pk", csn, q);
+                        return 0;
+                }
+        }
+
+        return 0;
+}
+
+static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+int squeue_destroy(struct squeue * seqq)
+{
+        if (!seqq)
+                return -1;
+
+        if (seqq->queue) seq_queue_destroy(seqq->queue);
+
+        rkfree(seqq);
+
+        return 0;
+}
+
+struct squeue * squeue_create(struct dtp * dtp)
+{
+        struct squeue * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->queue = seq_queue_create();
+        if (!tmp->queue) {
+                squeue_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->dtp = dtp;
+
+        spin_lock_init(&tmp->lock);
+
+        return tmp;
+}
+
+int squeue_deliver(struct squeue * seqq)
+{
+        LOG_MISSING;
+        return 0;
+}
+
+struct pdu * squeue_pop(struct squeue * seqq)
+{
+        struct pdu * pdu;
+
+        ASSERT(seqq);
+
+        spin_lock(&seqq->lock);
+        pdu = seq_queue_pop(seqq->queue);
+        if (!pdu) {
+                spin_unlock(&seqq->lock);
+                LOG_ERR("Cannot pop PDU from sequencing queue %pK", seqq);
+                return NULL;
+        }
+        spin_unlock(&seqq->lock);
+
+        return pdu;
+}
+
+int squeue_push(struct dtp * dtp, struct pdu * pdu)
+{
+        struct squeue * seqq;
+        struct dt *          dt;
+
+        ASSERT(dtp);
+        ASSERT(pdu);
+
+        seqq = dtp->seqq;
+        ASSERT(seqq);
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("No PDU to be pushed");
+                return -1;
+        }
+
+        spin_lock(&seqq->lock);
+        if (seq_queue_push_ni(seqq->queue, pdu)) {
+                spin_unlock(&seqq->lock);
+                dropped_pdus_inc(dtp->sv);
+                LOG_ERR("Could not push PDU into sequencing queue %pK. "
+                        "Dropped PDUs: %d", seqq, dropped_pdus(dtp->sv));
+                return -1;
+        }
+        spin_unlock(&seqq->lock);
+
+        return 0;
+}
+
+bool squeue_is_empty(struct squeue * seqq)
+{
+        bool empty;
+
+        ASSERT(seqq);
+
+        spin_lock(&seqq->lock);
+        empty = seq_queue_is_empty(seqq->queue);
+        spin_unlock(&seqq->lock);
+
+        return empty;
+}
+
+seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
+{
+        seq_num_t tmp;
+
+        LOG_MISSING;
+
+        /* FIXME:
+         *   change this as it should be. It should return those PDUs with
+         *   timestam < time - A plus those that with seq_num exactly
+         *   consecutive to the last one
+         */
+        spin_lock(&seqq->lock);
+        tmp = seq_queue_last_to_ack(seqq->queue, t);
+        spin_unlock(&seqq->lock);
+
+        return tmp;
+}
+
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
 {
@@ -395,212 +601,6 @@ static int pdu_post(struct dtp * instance,
         return 0;
 }
 
-static struct pdu * seq_queue_pop(struct seq_queue * q)
-{
-        struct seq_q_entry * p;
-        struct pdu * pdu;
-
-        if (list_empty(&q->head)) {
-                LOG_WARN("Seq Queue is empty!");
-                return NULL;
-        }
-
-        p = list_first_entry(&q->head, struct seq_q_entry, next);
-        if (!p)
-                return NULL;
-
-        pdu = p->pdu;
-        p->pdu = NULL;
-
-        list_del(&p->next);
-        seq_q_entry_destroy(p);
-
-        return pdu;
-}
-
-static bool seq_queue_is_empty(struct seq_queue * q)
-{
-        ASSERT(q);
-        return list_empty(&q->head);
-}
-
-struct pdu * seqQ_pop(struct sequencingQ * seqQ)
-{
-        struct pdu * pdu;
-
-        ASSERT(seqQ);
-
-        spin_lock(&seqQ->lock);
-        pdu = seq_queue_pop(seqQ->queue);
-        if (!pdu) {
-                spin_unlock(&seqQ->lock);
-                LOG_ERR("Cannot pop PDU from sequencing queue %pK", seqQ);
-                return NULL;
-        }
-        spin_unlock(&seqQ->lock);
-
-        return pdu;
-}
-
-static struct seq_q_entry * seq_q_entry_create_gfp(struct pdu * pdu,
-                                                   gfp_t        flags)
-{
-        struct seq_q_entry * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        INIT_LIST_HEAD(&tmp->next);
-
-        tmp->pdu = pdu;
-        tmp->time_stamp = jiffies;
-
-        return tmp;
-}
-
-static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
-{
-        static struct seq_q_entry * tmp, * cur, * last = NULL;
-        seq_num_t                   csn, psn;
-        const struct pci *          pci;
-
-        ASSERT(pdu);
-        ASSERT(q);
-
-        tmp = seq_q_entry_create_gfp(pdu, GFP_ATOMIC);
-        if (!tmp) {
-                LOG_ERR("Could not create sequencing queue entry");
-                return -1;
-        }
-
-        pci  = pdu_pci_get_ro(pdu);
-        csn  = pci_sequence_number_get((struct pci *) pci);
-
-        if (list_empty(&q->head)) {
-                list_add(&tmp->next, &q->head);
-                LOG_DBG("First PDU with seqnum: %d push to seqQ at: %pk",
-                        csn, q);
-                return 0;
-        }
-
-        last = list_last_entry(&q->head, struct seq_q_entry, next);
-        if (!last) {
-                LOG_ERR("Could not retrieve last pdu from seqQ");
-                seq_q_entry_destroy(tmp);
-                return 0;
-        }
-
-        pci  = pdu_pci_get_ro(last->pdu);
-        psn  = pci_sequence_number_get((struct pci *) pci);
-        if (csn == psn) {
-                LOG_ERR("Another PDU with the same seq_num is in "
-                        "the rtx queue!");
-                seq_q_entry_destroy(tmp);
-                return -1;
-        }
-        if (csn > psn) {
-                list_add_tail(&tmp->next, &q->head);
-                LOG_DBG("Last PDU with seqnum: %d push to seqQ at: %pk",
-                        csn, q);
-                return 0;
-        }
-
-        list_for_each_entry(cur, &q->head, next) {
-                pci = pdu_pci_get_ro(cur->pdu);
-                psn = pci_sequence_number_get((struct pci *) pci);
-                if (csn == psn) {
-                        LOG_ERR("Another PDU with the same seq_num is in "
-                                "the rtx queue!");
-                        seq_q_entry_destroy(tmp);
-                        return 0;
-                }
-                if (csn > psn) {
-                        list_add(&tmp->next, &cur->next);
-                        LOG_DBG("Middle PDU with seqnum: %d push to "
-                                "seqQ at: %pk", csn, q);
-                        return 0;
-                }
-        }
-
-        return 0;
-}
-
-int seqQ_deliver(struct sequencingQ * seqQ)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-int seqQ_push(struct dtp * dtp, struct pdu * pdu)
-{
-        struct sequencingQ * seqQ;
-        struct dt *          dt;
-
-        ASSERT(dtp);
-        ASSERT(pdu);
-
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
-
-        dt = dtp->parent;
-        ASSERT(dt);
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("No PDU to be pushed");
-                return -1;
-        }
-
-        spin_lock(&seqQ->lock);
-        if (seq_queue_push_ni(seqQ->queue, pdu)) {
-                spin_unlock(&seqQ->lock);
-                dropped_pdus_inc(dtp->sv);
-                LOG_ERR("Could not push PDU into sequencing queue %pK. "
-                        "Dropped PDUs: %d", seqQ, dropped_pdus(dtp->sv));
-                return -1;
-        }
-        spin_unlock(&seqQ->lock);
-
-        return 0;
-}
-
-bool seqQ_is_empty(struct sequencingQ * seqQ)
-{
-        bool empty;
-
-        ASSERT(seqQ);
-
-        spin_lock(&seqQ->lock);
-        empty = seq_queue_is_empty(seqQ->queue);
-        spin_unlock(&seqQ->lock);
-
-        return empty;
-}
-
-static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
-{
-        LOG_MISSING;
-        return 0;
-}
-
-seq_num_t seqQ_last_to_ack(struct sequencingQ * seqQ, timeout_t t)
-{
-        seq_num_t tmp;
-
-        LOG_MISSING;
-
-        /* FIXME:
-         *   change this as it should be. It should return those PDUs with
-         *   timestam < time - A plus those that with seq_num exactly
-         *   consecutive to the last one
-         */
-        spin_lock(&seqQ->lock);
-        tmp = seq_queue_last_to_ack(seqQ->queue, t);
-        spin_unlock(&seqQ->lock);
-
-        return tmp;
-}
-
 #if 0
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
@@ -608,9 +608,9 @@ static void tf_sender_inactivity(void * data)
 static void tf_receiver_inactivity(void * data)
 { /* Runs the ReceiverInactivityTimerPolicy */ }
 
-static void seqQ_cleanup(struct dtp * dtp)
+static void squeue_cleanup(struct dtp * dtp)
 {
-        struct sequencingQ * seqQ;
+        struct squeue * seqq;
         seq_num_t            seq_num;
         seq_num_t            LWE;
         seq_num_t            max_sdu_gap;
@@ -620,8 +620,8 @@ static void seqQ_cleanup(struct dtp * dtp)
 
         ASSERT(dtp);
 
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
+        seqq = dtp->seqq;
+        ASSERT(seqq);
 
         sv = dtp->sv;
         ASSERT(sv);
@@ -631,34 +631,34 @@ static void seqQ_cleanup(struct dtp * dtp)
 
         max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
 
-        spin_lock(&seqQ->lock);
-        pdu = seq_queue_pop(seqQ->queue);
+        spin_lock(&seqq->lock);
+        pdu = seq_queue_pop(seqq->queue);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
         LWE = dt_sv_rcv_lft_win(dt);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
-                spin_unlock(&seqQ->lock);
+                spin_unlock(&seqq->lock);
                 pdu_post(dtp, pdu);
                 LOG_DBG("CLEANUP: PDU %d posted", seq_num);
 
-                spin_lock(&seqQ->lock);
-                pdu = seq_queue_pop(seqQ->queue);
+                spin_lock(&seqq->lock);
+                pdu = seq_queue_pop(seqq->queue);
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
                 LWE = dt_sv_rcv_lft_win(dt);
         }
-        if (pdu) seq_queue_push_ni(seqQ->queue, pdu);
+        if (pdu) seq_queue_push_ni(seqq->queue, pdu);
 
-        spin_unlock(&seqQ->lock);
+        spin_unlock(&seqq->lock);
 
 }
 #endif
 
-#define seqQ_for_each_entry_safe(seqQ, pos, n)                          \
-        spin_lock(&seqQ->lock);                                         \
-        list_for_each_entry_safe(pos, n, &seqQ->queue->head, next)
+#define squeue_for_each_entry_safe(seqq, pos, n)                        \
+        spin_lock(&seqq->lock);                                         \
+        list_for_each_entry_safe(pos, n, &seqq->queue->head, next)
 
-#define seqQ_for_each_entry_safe_end(seqQ)      \
-        spin_unlock(&seqQ->lock)
+#define squeue_for_each_entry_safe_end(seqq)      \
+        spin_unlock(&seqq->lock)
 
 /*
  * NOTE:
@@ -669,19 +669,19 @@ static void seqQ_cleanup(struct dtp * dtp)
 
 static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
-        struct dt *          dt;
-        /* struct dtcp *        dtcp; */
-        struct dtp_sv *      sv;
-        struct sequencingQ * seqQ;
-        seq_num_t            LWE;
-        seq_num_t            seq_num;
-        struct pdu *         pdu;
-        bool                 in_order_del;
-        bool                 incomplete_del;
-        seq_num_t            max_sdu_gap;
-        timeout_t            a;
+        struct dt *     dt;
+        /* struct dtcp * dtcp; */
+        struct dtp_sv * sv;
+        struct squeue * seqq;
+        seq_num_t       LWE;
+        seq_num_t       seq_num;
+        struct pdu *    pdu;
+        bool            in_order_del;
+        bool            incomplete_del;
+        seq_num_t       max_sdu_gap;
+        timeout_t       a;
 
-        struct seq_q_entry * pos, * n;
+        struct seq_queue_entry * pos, * n;
 
 
         ASSERT(dtp);
@@ -692,8 +692,8 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         dt = dtp->parent;
         ASSERT(dt);
 
-        seqQ = dtp->seqQ;
-        ASSERT(seqQ);
+        seqq = dtp->seqq;
+        ASSERT(seqq);
 
         /* dtcp = dt_dtcp(dtp->parent); */
 
@@ -713,7 +713,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         LOG_DBG("LWEU: Original LWE = %d", LWE);
         LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
 
-        seqQ_for_each_entry_safe(seqQ, pos, n) {
+        squeue_for_each_entry_safe(seqq, pos, n) {
                 LOG_DBG("LWEU: Loop LWE = %d", LWE);
 
                 pdu = pos->pdu;
@@ -728,19 +728,19 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-                                spin_unlock(&seqQ->lock);
+                                spin_unlock(&seqq->lock);
                                 return 0;
                         }
                         pos->pdu = NULL;
                         list_del(&pos->next);
-                        seq_q_entry_destroy(pos);
+                        seq_queue_entry_destroy(pos);
 
-                        spin_unlock(&seqQ->lock);
+                        spin_unlock(&seqq->lock);
                         if (pdu_post(dtp, pdu))
                                 return 0;
                         LOG_DBG("Atimer: PDU %d posted", seq_num);
 
-                        spin_lock(&seqQ->lock);
+                        spin_lock(&seqq->lock);
                         LWE = dt_sv_rcv_lft_win(dt);
                         continue;
                 }
@@ -757,17 +757,17 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                         LOG_ERR("Failed to set new "
                                                 "left window edge");
-                                        spin_unlock(&seqQ->lock);
+                                        spin_unlock(&seqq->lock);
                                         return 0;
                                 }
                                 pos->pdu = NULL;
                                 list_del(&pos->next);
-                                seq_q_entry_destroy(pos);
-                                spin_unlock(&seqQ->lock);
+                                seq_queue_entry_destroy(pos);
+                                spin_unlock(&seqq->lock);
                                 if (pdu_post(dtp, pdu))
                                         return 0;
 
-                                spin_lock(&seqQ->lock);
+                                spin_lock(&seqq->lock);
                                 LWE = dt_sv_rcv_lft_win(dt);
                         }
                         continue;
@@ -776,7 +776,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 break;
 
         }
-        seqQ_for_each_entry_safe_end(seqQ);
+        squeue_for_each_entry_safe_end(seqq);
 
         return LWE;
 }
@@ -927,8 +927,8 @@ struct dtp * dtp_create(struct dt *         dt,
 
         tmp->rmt            = rmt;
         tmp->kfa            = kfa;
-        tmp->seqQ           = seqQ_create(tmp);
-        if (!tmp->seqQ) {
+        tmp->seqq           = squeue_create(tmp);
+        if (!tmp->seqq) {
                 LOG_ERR("Could not create Sequencing queue");
                 dtp_destroy(tmp);
                 return NULL;
@@ -983,7 +983,7 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.a);
 
         if (instance->twq)  rwq_destroy(instance->twq);
-        if (instance->seqQ) seqQ_destroy(instance->seqQ);
+        if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)
                 rkfree(instance->sv);
         rkfree(instance);
@@ -1367,21 +1367,21 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-        spin_lock(&instance->seqQ->lock);
+        spin_lock(&instance->seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
-                spin_unlock(&instance->seqQ->lock);
+                spin_unlock(&instance->seqq->lock);
                 pdu_post(instance, pdu);
 
-                spin_lock(&instance->seqQ->lock);
-                pdu = seq_queue_pop(instance->seqQ->queue);
+                spin_lock(&instance->seqq->lock);
+                pdu = seq_queue_pop(instance->seqq->queue);
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
                 LWE = dt_sv_rcv_lft_win(dt);
         }
-        if (pdu) seq_queue_push_ni(instance->seqQ->queue, pdu);
+        if (pdu) seq_queue_push_ni(instance->seqq->queue, pdu);
 
-        spin_unlock(&instance->seqQ->lock);
+        spin_unlock(&instance->seqq->lock);
 #if 0
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
