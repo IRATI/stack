@@ -371,6 +371,7 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
         try {
                 ipcp = rina::ipcProcessFactory->getIPCProcess(ipcp_id);
                 ipcm.assign_to_dif(ipcp, dif_name);
+                outstream << "DIF assignment completed successfully" << endl;
         } catch (rina::GetIPCProcessException) {
                 outstream << "No such IPC process id" << endl;
         }
