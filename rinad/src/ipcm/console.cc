@@ -80,6 +80,10 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
         commands_map["list-ipcp-types"] =
                         ConsoleCmdInfo(&IPCMConsole::list_ipcp_types,
                                 "USAGE: list-ipcp-types");
+        commands_map["assign-to-dif"] =
+                        ConsoleCmdInfo(&IPCMConsole::assign_to_dif,
+                                "USAGE: assign-to-dif <ipcp-id> "
+                                "<dif-name>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -340,6 +344,36 @@ IPCMConsole::list_ipcp_types(std::vector<std::string>& args)
         (void) args;
 
         ipcm.list_ipcp_types(outstream);
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::assign_to_dif(std::vector<string>& args)
+{
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 3) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        rina::ApplicationProcessNamingInformation dif_name(args[2], string());
+        rina::IPCProcess *ipcp = NULL;
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        try {
+                ipcp = rina::ipcProcessFactory->getIPCProcess(ipcp_id);
+                ipcm.assign_to_dif(ipcp, dif_name);
+        } catch (rina::GetIPCProcessException) {
+                outstream << "No such IPC process id" << endl;
+        }
 
         return CMDRETCONT;
 }

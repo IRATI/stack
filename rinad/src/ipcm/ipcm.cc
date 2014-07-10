@@ -210,7 +210,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                           dif_name)
 {
         if (!ipcp) {
-                return 0;
+                return -1;
         }
 
         rinad::DIFProperties dif_props;
@@ -284,6 +284,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 cerr << "Error while assigning " <<
                         ipcp->name.toString() <<
                         " to DIF " << dif_name.toString() << endl;
+                goto out;
         }
 
         ret = 0;
