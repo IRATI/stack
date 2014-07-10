@@ -138,7 +138,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 
         ASSERT(dtp->sv);
         ASSERT(dtp->sv->connection);
-        ASSERT(dtp->sv->connection->dtcp_cfg);
+        ASSERT(dtp->sv->connection->policies_params);
 
         max_len = dtcp_max_closed_winq_length(dtp->
                                               sv->
