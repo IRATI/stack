@@ -77,6 +77,9 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
         commands_map["list-ipcps"] =
                         ConsoleCmdInfo(&IPCMConsole::list_ipcps,
                                 "USAGE: list-ipcps");
+        commands_map["list-ipcp-types"] =
+                        ConsoleCmdInfo(&IPCMConsole::list_ipcp_types,
+                                "USAGE: list-ipcp-types");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -321,11 +324,22 @@ IPCMConsole::destroy_ipcp(vector<string>& args)
         return CMDRETCONT;
 }
 
-int IPCMConsole::list_ipcps(vector<string>&args)
+int
+IPCMConsole::list_ipcps(vector<string>&args)
 {
         (void) args;
 
         ipcm.list_ipcps(outstream);
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::list_ipcp_types(std::vector<std::string>& args)
+{
+        (void) args;
+
+        ipcm.list_ipcp_types(outstream);
 
         return CMDRETCONT;
 }

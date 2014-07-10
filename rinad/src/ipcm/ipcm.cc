@@ -180,9 +180,25 @@ IPCManager::list_ipcps(std::ostream& os)
         const vector<rina::IPCProcess *>& ipcps =
                 rina::ipcProcessFactory->listIPCProcesses();
 
+        os << "Current IPC processes:" << endl;
         for (unsigned int i = 0; i < ipcps.size(); i++) {
                 os << "    " << ipcps[i]->id << ": " <<
                         ipcps[i]->name.toString() << "\n";
+        }
+
+        return 0;
+}
+
+int
+IPCManager::list_ipcp_types(std::ostream& os)
+{
+        const list<string>& types = rina::ipcProcessFactory->
+                                        getSupportedIPCProcessTypes();
+
+        os << "Supported IPC process types:" << endl;
+        for (list<string>::const_iterator it = types.begin();
+                                        it != types.end(); it++) {
+                os << "    " << *it << endl;
         }
 
         return 0;

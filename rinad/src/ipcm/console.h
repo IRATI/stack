@@ -81,6 +81,7 @@ class IPCMConsole : public rina::Thread {
                 int create_ipcp(std::vector<std::string>& args);
                 int destroy_ipcp(std::vector<std::string>& args);
                 int list_ipcps(std::vector<std::string>& args);
+                int list_ipcp_types(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r);
