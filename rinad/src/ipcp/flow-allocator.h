@@ -431,9 +431,19 @@ private:
 	rina::messages::property_t* get_property_t(const rina::PolicyParameter &conf) const;
 	rina::messages::dtcpWindowBasedFlowControlConfig_t* get_dtcpWindowBasedFlowControlConfig_t(const rina::DTCPWindowBasedFlowControlConfig &conf) const;
 	rina::messages::dtcpRateBasedFlowControlConfig_t* get_dtcpRateBasedFlowControlConfig_t(const rina::DTCPRateBasedFlowControlConfig &conf) const;
-	rina::ConnectionPolicies* get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) const;
+
 	rina::ApplicationProcessNamingInformation* get_ApplicationProcessNamingInformation(
 			const rina::messages::applicationProcessNamingInfo_t &gpf_app) const;
+	rina::FlowSpecification* get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos) const;
+	rina::ConnectionPolicies* get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) const;
+	rina::Connection* get_Connection(const rina::messages::connectionId_t &gpf_conn) const;
+	rina::DTCPConfig* get_DTCPConfig(const rina::messages::dtcpConfig_t &gpf_conf) const;
+	rina::PolicyConfig* get_PolicyConfig(const rina::messages::policyDescriptor_t &gpf_conf) const;
+	rina::DTCPFlowControlConfig* get_DTCPFlowControlConfig(const rina::messages::dtcpFlowControlConfig_t &gpf_conf) const;
+	rina::DTCPRtxControlConfig* get_DTCPRtxControlConfig(const rina::messages::dtcpRtxControlConfig_t &gpf_conf) const;
+	rina::PolicyParameter* get_PolicyParameter(const rina::messages::property_t &gpf_conf) const;
+	rina::DTCPWindowBasedFlowControlConfig* get_DTCPWindowBasedFlowControlConfig(const rina::messages::dtcpWindowBasedFlowControlConfig_t &gpf_conf) const;
+	rina::DTCPRateBasedFlowControlConfig* get_DTCPRateBasedFlowControlConfig(const rina::messages::dtcpRateBasedFlowControlConfig_t &gpf_conf) const;
 };
 
 }
