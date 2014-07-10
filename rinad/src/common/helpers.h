@@ -43,6 +43,8 @@ void collect_flows_by_application(
                 const rina::ApplicationProcessNamingInformation& app_name,
                 std::list<rina::FlowInformation>& result);
 
+rina::IPCProcess *lookup_ipcp_by_id(unsigned int id);
+
 int string2int(const std::string& s, int& ret);
 }
 #endif  /* __RINAD_HELPERS_H__ */
