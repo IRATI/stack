@@ -466,7 +466,7 @@ static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
 }
 #endif
 
-int squeue_destroy(struct squeue * seqq)
+static int squeue_destroy(struct squeue * seqq)
 {
         if (!seqq)
                 return -1;
@@ -478,7 +478,7 @@ int squeue_destroy(struct squeue * seqq)
         return 0;
 }
 
-struct squeue * squeue_create(struct dtp * dtp)
+static struct squeue * squeue_create(struct dtp * dtp)
 {
         struct squeue * tmp;
 
@@ -499,14 +499,15 @@ struct squeue * squeue_create(struct dtp * dtp)
         return tmp;
 }
 
-int squeue_deliver(struct squeue * seqq)
+#if 0
+static int squeue_deliver(struct squeue * seqq)
 {
         LOG_MISSING;
 
         return 0;
 }
 
-struct pdu * squeue_pop(struct squeue * seqq)
+static struct pdu * squeue_pop(struct squeue * seqq)
 {
         struct pdu * pdu;
 
@@ -524,14 +525,12 @@ struct pdu * squeue_pop(struct squeue * seqq)
         return pdu;
 }
 
-#if 0
-int squeue_push(struct dtp * dtp, struct pdu * pdu)
+static int squeue_push(struct dtp * dtp, struct pdu * pdu)
 {
         struct squeue * seqq;
         struct dt *     dt;
 
         ASSERT(dtp);
-        ASSERT(pdu);
 
         seqq = dtp->seqq;
         ASSERT(seqq);
@@ -557,7 +556,7 @@ int squeue_push(struct dtp * dtp, struct pdu * pdu)
         return 0;
 }
 
-bool squeue_is_empty(struct squeue * seqq)
+static bool squeue_is_empty(struct squeue * seqq)
 {
         bool empty;
 
@@ -570,7 +569,7 @@ bool squeue_is_empty(struct squeue * seqq)
         return empty;
 }
 
-seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
+static seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
 {
         seq_num_t tmp;
 
