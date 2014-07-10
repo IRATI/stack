@@ -336,7 +336,7 @@ IPCMConsole::destroy_ipcp(vector<string>& args)
 
         ret = ipcm.destroy_ipcp(ipcp_id);
         if (ret) {
-                outstream << "Cannot destroy IPC process" << endl;
+                outstream << "Destroy operation failed" << endl;
         } else {
                 outstream << "IPC process successfully destroyed" << endl;
         }
@@ -388,8 +388,13 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ipcm.assign_to_dif(ipcp, dif_name);
-                outstream << "DIF assignment completed successfully" << endl;
+                ret = ipcm.assign_to_dif(ipcp, dif_name);
+                if (ret) {
+                        outstream << "DIF assignment failed" << endl;
+                } else {
+                        outstream << "DIF assignment completed successfully"
+                                        << endl;
+                }
         }
 
         return CMDRETCONT;
@@ -419,9 +424,13 @@ IPCMConsole::register_at_dif(vector<string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ipcm.register_at_dif(ipcp, dif_name);
-                outstream << "IPC process registration completed "
-                                "successfully" << endl;
+                ret = ipcm.register_at_dif(ipcp, dif_name);
+                if (ret) {
+                        outstream << "Registration failed" << endl;
+                } else {
+                        outstream << "IPC process registration completed "
+                                        "successfully" << endl;
+                }
         }
 
         return CMDRETCONT;
@@ -459,9 +468,13 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
                         outstream << "No IPC process in that DIF" << endl;
                 }
         } else {
-                ipcm.unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
-                outstream << "IPC process unregistration completed "
+                ret = ipcm.unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
+                if (ret) {
+                        outstream << "Unregistration failed" << endl;
+                } else {
+                        outstream << "IPC process unregistration completed "
                                 "successfully" << endl;
+                }
         }
 
         return CMDRETCONT;
@@ -490,8 +503,13 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ipcm.update_dif_configuration(ipcp, dif_config);
-                outstream << "NULL configuration updated successfully" << endl;
+                ret = ipcm.update_dif_configuration(ipcp, dif_config);
+                if (ret) {
+                        outstream << "Configuration update failed" << endl;
+                } else {
+                        outstream << "NULL configuration updated successfully"
+                                        << endl;
+                }
         }
 
         return CMDRETCONT;
@@ -527,8 +545,12 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ipcm.enroll_to_dif(ipcp, neighbor_data, true);
-                outstream << "DIF enrollment succesfully completed" << endl;
+                ret = ipcm.enroll_to_dif(ipcp, neighbor_data, true);
+                if (ret) {
+                        outstream << "Enrollment operation failed" << endl;
+                } else {
+                        outstream << "DIF enrollment succesfully completed" << endl;
+                }
         }
 
         return CMDRETCONT;
