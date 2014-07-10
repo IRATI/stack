@@ -1280,6 +1280,7 @@ int dtp_receive(struct dtp * instance,
         seq_num_t             seq_num;
         timeout_t             a;
         timeout_t             LWE;
+        bool                  in_order;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1313,8 +1314,9 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-        a   = instance->sv->a;
-        LWE = dt_sv_rcv_lft_win(dt);
+        a        = instance->sv->a;
+        LWE      = dt_sv_rcv_lft_win(dt);
+        in_order = sv->connection->policies_params->in_order_delivery;
 #if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
@@ -1339,7 +1341,9 @@ int dtp_receive(struct dtp * instance,
 
                 return 0;
         }
-
+        
+        /* NOTE: no need to check presence of in_order or dtcp because in case
+         * they are not, LWE is not updated and always 0 */ 
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
@@ -1367,19 +1371,15 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-        /*
-         * NOTE:
-         *     This op puts the PDU in seq number order and duplicates
-         *     considered
-         */
-
         if (!a) {
                 /* FIXME: delimiting goes here */
-                LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
-                        seq_num, LWE);
-                if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                        LOG_ERR("Failed to set new left window edge");
-                        return -1;
+                if (!in_order && !dtcp) {
+                        LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
+                                seq_num, LWE);
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new left window edge");
+                                return -1;
+                        }
                 }
                 if (pdu_post(instance, pdu))
                         return -1;
