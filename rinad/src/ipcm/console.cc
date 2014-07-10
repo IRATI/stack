@@ -74,6 +74,9 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
         commands_map["destroy-ipcp"] =
                         ConsoleCmdInfo(&IPCMConsole::destroy_ipcp,
                                 "USAGE: destroy-ipcp <ipcp-id>");
+        commands_map["list-ipcps"] =
+                        ConsoleCmdInfo(&IPCMConsole::list_ipcps,
+                                "USAGE: list-ipcps");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -314,6 +317,15 @@ IPCMConsole::destroy_ipcp(vector<string>& args)
         } else {
                 outstream << "IPC process successfully destroyed" << endl;
         }
+
+        return CMDRETCONT;
+}
+
+int IPCMConsole::list_ipcps(vector<string>&args)
+{
+        (void) args;
+
+        ipcm.list_ipcps(outstream);
 
         return CMDRETCONT;
 }

@@ -175,6 +175,20 @@ IPCManager::destroy_ipcp(unsigned int ipcp_id)
 }
 
 int
+IPCManager::list_ipcps(std::ostream& os)
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                os << "    " << ipcps[i]->id << ": " <<
+                        ipcps[i]->name.toString() << "\n";
+        }
+
+        return 0;
+}
+
+int
 IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
                           dif_name)

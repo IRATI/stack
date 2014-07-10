@@ -76,6 +76,8 @@ class IPCManager : public EventLoopData {
 
         int destroy_ipcp(unsigned int ipcp_id);
 
+        int list_ipcps(std::ostream& os);
+
         int assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
                           difName);
