@@ -86,7 +86,11 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                                 "<dif-name>");
         commands_map["register-at-dif"] =
                         ConsoleCmdInfo(&IPCMConsole::register_at_dif,
-                                "USAGE: assign-to-dif <ipcp-id> "
+                                "USAGE: register-at-dif <ipcp-id> "
+                                "<dif-name>");
+        commands_map["unregister-from-dif"] =
+                        ConsoleCmdInfo(&IPCMConsole::unregister_from_dif,
+                                "USAGE: unregister-from-dif <ipcp-id> "
                                 "<dif-name>");
 }
 
@@ -408,7 +412,48 @@ IPCMConsole::register_at_dif(vector<string>& args)
                 outstream << "No such IPC process id" << endl;
         } else {
                 ipcm.register_at_dif(ipcp, dif_name);
-                outstream << "DIF assignment completed successfully" << endl;
+                outstream << "IPC process registration completed "
+                                "successfully" << endl;
+        }
+
+        return CMDRETCONT;
+}
+
+
+int
+IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
+{
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 3) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        rina::ApplicationProcessNamingInformation dif_name(args[2], string());
+        rina::IPCProcess *ipcp = NULL;
+        rina::IPCProcess *slave_ipcp = NULL;
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+        slave_ipcp = select_ipcp_by_dif(dif_name);
+        if (!ipcp || !slave_ipcp) {
+                if (!ipcp) {
+                        outstream << "No such IPC process id" << endl;
+                }
+                if (!slave_ipcp) {
+                        outstream << "No IPC process in that DIF" << endl;
+                }
+        } else {
+                ipcm.unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
+                outstream << "IPC process unregistration completed "
+                                "successfully" << endl;
         }
 
         return CMDRETCONT;
