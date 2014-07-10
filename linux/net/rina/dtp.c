@@ -1376,13 +1376,18 @@ int dtp_receive(struct dtp * instance,
                 if (!in_order && !dtcp) {
                         LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
                                 seq_num, LWE);
-                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                LOG_ERR("Failed to set new left window edge");
+                        if (pdu_post(instance, pdu))
                                 return -1;
-                        }
+
+                        return 0;
+                }
+                if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                        LOG_ERR("Failed to set new left window edge");
+                        return -1;
                 }
                 if (pdu_post(instance, pdu))
                         return -1;
+
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
