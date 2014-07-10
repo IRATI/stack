@@ -95,6 +95,11 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
         commands_map["update-dif-config"] =
                         ConsoleCmdInfo(&IPCMConsole::update_dif_config,
                                 "USAGE: update-dif-config <ipcp-id>");
+        commands_map["enroll-to-dif"] =
+                        ConsoleCmdInfo(&IPCMConsole::enroll_to_dif,
+                                "USAGE: enroll-to-dif <ipcp-id> <dif-name> "
+                                "<supporting-dif-name> <neighbor-process-name>"
+                                "<neighbor-process-instance>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -487,6 +492,43 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
         } else {
                 ipcm.update_dif_configuration(ipcp, dif_config);
                 outstream << "NULL configuration updated successfully" << endl;
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
+{
+        NeighborData neighbor_data;
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 6) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+        neighbor_data.difName = rina::ApplicationProcessNamingInformation(
+                                args[2], string());
+        neighbor_data.supportingDifName =
+                rina::ApplicationProcessNamingInformation(args[3], string());
+        neighbor_data.apName =
+                rina::ApplicationProcessNamingInformation(args[4], args[5]);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                ipcm.enroll_to_dif(ipcp, neighbor_data, true);
+                outstream << "DIF enrollment succesfully completed" << endl;
         }
 
         return CMDRETCONT;

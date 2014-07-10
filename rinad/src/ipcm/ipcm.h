@@ -93,7 +93,7 @@ class IPCManager : public EventLoopData {
                              difs);
 
         int enroll_to_dif(rina::IPCProcess *ipcp,
-                          const rinad::NeighborData& neighbor);
+                          const rinad::NeighborData& neighbor, bool sync);
 
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const std::list<rinad::NeighborData>& neighbors);

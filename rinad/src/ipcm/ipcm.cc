@@ -344,7 +344,8 @@ int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
 
 int
 IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
-                          const rinad::NeighborData& neighbor)
+                          const rinad::NeighborData& neighbor,
+                          bool sync)
 {
         concurrency.lock();
 
@@ -355,6 +356,10 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                                 neighbor.supportingDifName,
                                 neighbor.apName);
                 pending_ipcp_enrollments[seqnum] = ipcp;
+                if (sync) {
+                        concurrency.wait_for_event(
+                                rina::ENROLL_TO_DIF_RESPONSE_EVENT, seqnum);
+                }
         } catch (rina::EnrollException) {
                 cerr << __func__ << ": Error while enrolling "
                         << "to DIF " << neighbor.difName.toString()
@@ -372,7 +377,7 @@ int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
         for (list<rinad::NeighborData>::const_iterator
                         nit = neighbors.begin();
                                 nit != neighbors.end(); nit++) {
-                enroll_to_dif(ipcp, *nit);
+                enroll_to_dif(ipcp, *nit, false);
         }
 
         return 0;
