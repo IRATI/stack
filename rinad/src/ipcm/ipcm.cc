@@ -424,6 +424,8 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                  */
                 seqnum = ipcp->updateDIFConfiguration(dif_config);
                 pending_dif_config_updates[seqnum] = ipcp;
+                concurrency.wait_for_event(
+                        rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum);
         } catch (rina::UpdateDIFConfigurationException) {
                 cerr << __func__ << ": Error while updating DIF configuration "
                         " for IPC process " << ipcp->name.toString() << endl;
