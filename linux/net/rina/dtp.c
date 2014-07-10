@@ -23,9 +23,6 @@
 
 #define RINA_PREFIX "dtp"
 
-/* FIXME remove these defines */
-#define TEMP_MAX_CWQ_LEN 100
-
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -383,12 +380,14 @@ static struct pdu * seq_queue_pop(struct seq_queue * q)
         return pdu;
 }
 
+#if 0
 static bool seq_queue_is_empty(struct seq_queue * q)
 {
         ASSERT(q);
 
         return list_empty(&q->head);
 }
+#endif
 
 static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 {
@@ -458,12 +457,14 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         return 0;
 }
 
+#if 0
 static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
 {
         LOG_MISSING;
 
         return 0;
 }
+#endif
 
 int squeue_destroy(struct squeue * seqq)
 {
@@ -523,6 +524,7 @@ struct pdu * squeue_pop(struct squeue * seqq)
         return pdu;
 }
 
+#if 0
 int squeue_push(struct dtp * dtp, struct pdu * pdu)
 {
         struct squeue * seqq;
@@ -572,6 +574,8 @@ seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
 {
         seq_num_t tmp;
 
+        ASSERT(seqq);
+
         LOG_MISSING;
 
         /* FIXME:
@@ -585,6 +589,7 @@ seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
 
         return tmp;
 }
+#endif
 
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
