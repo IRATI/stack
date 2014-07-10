@@ -83,6 +83,7 @@ class IPCMConsole : public rina::Thread {
                 int list_ipcps(std::vector<std::string>& args);
                 int list_ipcp_types(std::vector<std::string>& args);
                 int assign_to_dif(std::vector<std::string>& args);
+                int register_at_dif(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r);

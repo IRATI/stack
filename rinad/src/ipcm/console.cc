@@ -84,6 +84,10 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                         ConsoleCmdInfo(&IPCMConsole::assign_to_dif,
                                 "USAGE: assign-to-dif <ipcp-id> "
                                 "<dif-name>");
+        commands_map["register-at-dif"] =
+                        ConsoleCmdInfo(&IPCMConsole::register_at_dif,
+                                "USAGE: assign-to-dif <ipcp-id> "
+                                "<dif-name>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -368,12 +372,43 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
                 return CMDRETCONT;
         }
 
-        try {
-                ipcp = rina::ipcProcessFactory->getIPCProcess(ipcp_id);
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
                 ipcm.assign_to_dif(ipcp, dif_name);
                 outstream << "DIF assignment completed successfully" << endl;
-        } catch (rina::GetIPCProcessException) {
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::register_at_dif(vector<string>& args)
+{
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 3) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        rina::ApplicationProcessNamingInformation dif_name(args[2], string());
+        rina::IPCProcess *ipcp = NULL;
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+        if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
+        } else {
+                ipcm.register_at_dif(ipcp, dif_name);
+                outstream << "DIF assignment completed successfully" << endl;
         }
 
         return CMDRETCONT;
