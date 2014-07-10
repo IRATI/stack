@@ -47,3 +47,21 @@ ipcm_SOURCES  =							\
 	application-registration.cc application-registration.h	\
 	flow-allocation.cc          flow-allocation.h		\
 	console.cc		    console.h
+
+
+test_empty_SOURCES  =				\
+	test-empty.cc
+test_empty_CPPFLAGS =				\
+	$(CPPFLAGS_EXTRA)			\
+	$(LIBRINA_CFLAGS)			\
+	-I$(srcdir)/..				\
+	-I$(srcdir)/../common
+test_empty_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
+
+check_PROGRAMS =				\
+	test-empty
+
+XFAIL_TESTS =
+PASS_TESTS  = test-empty
+
+TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
