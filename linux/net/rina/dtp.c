@@ -34,7 +34,7 @@
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
-        spinlock_t lock;
+        spinlock_t          lock;
 
         /* Configuration values */
         struct connection * connection; /* FIXME: Are we really sure ??? */
