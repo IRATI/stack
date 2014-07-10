@@ -85,6 +85,7 @@ class IPCMConsole : public rina::Thread {
                 int assign_to_dif(std::vector<std::string>& args);
                 int register_at_dif(std::vector<std::string>& args);
                 int unregister_from_dif(std::vector<std::string>& args);
+                int update_dif_config(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r);

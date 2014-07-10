@@ -92,6 +92,9 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                         ConsoleCmdInfo(&IPCMConsole::unregister_from_dif,
                                 "USAGE: unregister-from-dif <ipcp-id> "
                                 "<dif-name>");
+        commands_map["update-dif-config"] =
+                        ConsoleCmdInfo(&IPCMConsole::update_dif_config,
+                                "USAGE: update-dif-config <ipcp-id>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -454,6 +457,36 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
                 ipcm.unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
                 outstream << "IPC process unregistration completed "
                                 "successfully" << endl;
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::update_dif_config(std::vector<std::string>& args)
+{
+        rina::DIFConfiguration dif_config;
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 2) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                ipcm.update_dif_configuration(ipcp, dif_config);
+                outstream << "NULL configuration updated successfully" << endl;
         }
 
         return CMDRETCONT;
