@@ -61,10 +61,15 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                              console_function, this),
                 ipcm(r)
 {
-        commands_map["help"] = &IPCMConsole::help;
-        commands_map["quit"] = &IPCMConsole::quit;
-        commands_map["exit"] = &IPCMConsole::quit;
-        commands_map["create-ipcp"] = &IPCMConsole::create_ipcp;
+        commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,
+                                "USAGE: help [<command>]");
+        commands_map["quit"] = ConsoleCmdInfo(&IPCMConsole::quit,
+                                              "USAGE: quit");
+        commands_map["exit"] = ConsoleCmdInfo(&IPCMConsole::quit,
+                                              "USAGE: exit");
+        commands_map["create-ipcp"] = ConsoleCmdInfo(&IPCMConsole::create_ipcp,
+                                "USAGE: create-ipcp <process-name> "
+                                "<process-instance> <ipcp-type>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -195,7 +200,7 @@ IPCMConsole::flush_output(int cfd)
 int
 IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 {
-        map<string, ConsoleCmdFunction>::iterator mit;
+        map<string, ConsoleCmdInfo>::iterator mit;
         istringstream iss(string(cmdbuf, size));
         ConsoleCmdFunction fun;
         vector<string> args;
@@ -217,7 +222,7 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
                 return 0;
         }
 
-        fun = mit->second;
+        fun = mit->second.fun;
         ret = (this->*fun)(args);
 
         outstream << endl;
@@ -238,10 +243,23 @@ int IPCMConsole::help(vector<string>& args)
 {
         (void) args;
 
-        outstream << "Available commands:" << endl;
-        for (map<string, ConsoleCmdFunction>::iterator mit =
-                commands_map.begin(); mit != commands_map.end(); mit++) {
-                outstream << "    " << mit->first << endl;
+        if (args.size() < 2) {
+                outstream << "Available commands:" << endl;
+                for (map<string, ConsoleCmdInfo>::iterator mit =
+                                commands_map.begin();
+                                        mit != commands_map.end(); mit++) {
+                        outstream << "    " << mit->first << endl;
+                }
+        } else {
+                map<string, ConsoleCmdInfo>::iterator mit =
+                                commands_map.find(args[1]);
+
+                if (mit == commands_map.end()) {
+                        outstream << "Unknown command '" << args[1]
+                                        << "'" << endl;
+                } else {
+                        outstream << mit->second.usage << endl;
+                }
         }
 
         return CMDRETCONT;
@@ -251,8 +269,7 @@ int
 IPCMConsole::create_ipcp(vector<string>& args)
 {
         if (args.size() < 4) {
-                outstream << "USAGE: create-ipcp <process-name> "
-                                "<process-instance> <ipcp-type>" << endl;
+                outstream << commands_map[args[0]].usage << endl;
                 return CMDRETCONT;
         }
 

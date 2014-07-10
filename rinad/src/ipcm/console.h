@@ -57,9 +57,18 @@ class IPCMConsole : public rina::Thread {
                 typedef int (IPCMConsole::*ConsoleCmdFunction)
                             (std::vector<std::string>& args);
 
+                struct ConsoleCmdInfo {
+                        ConsoleCmdFunction fun;
+                        const char *usage;
+
+                        ConsoleCmdInfo() : fun(NULL), usage(NULL) { }
+                        ConsoleCmdInfo(ConsoleCmdFunction f, const char *u)
+                                                        : fun(f), usage(u) { }
+                };
+
                 IPCManager& ipcm;
 
-                std::map<std::string, ConsoleCmdFunction> commands_map;
+                std::map<std::string, ConsoleCmdInfo> commands_map;
                 std::ostringstream outstream;
 
                 int init();
