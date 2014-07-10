@@ -141,4 +141,18 @@ collect_flows_by_application(const rina::ApplicationProcessNamingInformation&
         }
 }
 
+int string2int(const string& s, int& ret)
+{
+        char *dummy;
+        const char *cstr = s.c_str();
+
+        ret = strtoul(cstr, &dummy, 10);
+        if (!s.size() || *dummy != '\0') {
+                ret = ~0U;
+                return -1;
+        }
+
+        return 0;
+}
+
 }

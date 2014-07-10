@@ -42,5 +42,7 @@ rina::IPCProcess *lookup_ipcp_by_port(unsigned int port_id);
 void collect_flows_by_application(
                 const rina::ApplicationProcessNamingInformation& app_name,
                 std::list<rina::FlowInformation>& result);
+
+int string2int(const std::string& s, int& ret);
 }
 #endif  /* __RINAD_HELPERS_H__ */
