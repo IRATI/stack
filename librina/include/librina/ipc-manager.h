@@ -750,6 +750,7 @@ public:
          * @param ipcProcessId
          * @return a pointer to an IPC Process
          * @throws GetIPCProcessException if no IPC Process with the specified
+         * XXX Why exception? Just return NULL
          * id is found
          */
         IPCProcess * getIPCProcess(unsigned short ipcProcessId);
