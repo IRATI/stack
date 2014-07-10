@@ -64,6 +64,7 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
         commands_map["help"] = &IPCMConsole::help;
         commands_map["quit"] = &IPCMConsole::quit;
         commands_map["exit"] = &IPCMConsole::quit;
+        commands_map["create-ipcp"] = &IPCMConsole::create_ipcp;
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -241,6 +242,29 @@ int IPCMConsole::help(vector<string>& args)
         for (map<string, ConsoleCmdFunction>::iterator mit =
                 commands_map.begin(); mit != commands_map.end(); mit++) {
                 outstream << "    " << mit->first << endl;
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::create_ipcp(vector<string>& args)
+{
+        if (args.size() < 4) {
+                outstream << "USAGE: create-ipcp <process-name> "
+                                "<process-instance> <ipcp-type>" << endl;
+                return CMDRETCONT;
+        }
+
+        rina::ApplicationProcessNamingInformation ipcp_name(args[1], args[2]);
+        rina::IPCProcess *ipcp = NULL;
+
+        ipcp = ipcm.create_ipcp(ipcp_name, args[3]);
+        if (!ipcp) {
+                outstream << "Error while creating IPC process" << endl;
+        } else {
+                outstream << "IPC process created successfully [id = "
+                                << ipcp->id << "]" << endl;
         }
 
         return CMDRETCONT;

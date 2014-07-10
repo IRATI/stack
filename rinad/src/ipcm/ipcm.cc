@@ -131,7 +131,7 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 
         try {
                 ipcp = rina::ipcProcessFactory->create(name,
-                                type);
+                                                       type);
                 if (type != rina::NORMAL_IPC_PROCESS) {
                         /* Shim IPC processes are set as initialized
                          * immediately. */
