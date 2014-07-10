@@ -47,7 +47,11 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		ConnectionPolicies connectionPolicies = qosCube.getEfcpPolicies();
 		connectionPolicies.setInOrderDelivery(qosCube.isOrderedDelivery());
 		connectionPolicies.setPartialDelivery(qosCube.isPartialDelivery());
-		connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+		if (qosCube.getMaxAllowableGap() == -1) {
+			connectionPolicies.setMaxSduGap(Integer.MAX_VALUE);
+		} else {
+			connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+		}
 		
 		connection.setPolicies(connectionPolicies);
 		connections.add(connection);
@@ -62,7 +66,7 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 	private QoSCube selectQoSCube(FlowSpecification flowSpec, QoSCubeList qosCubes) throws IPCException { 
 		QoSCube result = null;
 		
-		if (flowSpec.getMaxAllowableGap() == 0) {
+		if (flowSpec.getMaxAllowableGap() >= 0) {
 			Iterator<QoSCube> cubesIterator = qosCubes.iterator();
 			while(cubesIterator.hasNext()) {
 				result = cubesIterator.next();
@@ -74,20 +78,6 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 			}
 			
 			throw new IPCException("Could not find a QoS Cube with Rtx control enabled!");
-		}
-
-		if (flowSpec.getMaxAllowableGap() > 0) {
-			Iterator<QoSCube> cubesIterator = qosCubes.iterator();
-			while(cubesIterator.hasNext()) {
-				result = cubesIterator.next();
-				if (result.getEfcpPolicies().isDtcpPresent()) {
-					if (!result.getEfcpPolicies().getDtcpConfiguration().isRtxcontrol()) {
-						return result;
-					}
-				}
-			}
-
-			throw new IPCException("Could not find a QoS Cube with Rtx control disabled!");
 		}
 
 		return qosCubes.getFirst();
