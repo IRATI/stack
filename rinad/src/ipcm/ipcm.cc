@@ -417,6 +417,8 @@ int
 IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                                      const rina::DIFConfiguration& dif_config)
 {
+        concurrency.lock();
+
         try {
                 unsigned int seqnum;
 
@@ -435,6 +437,8 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                 cerr << __func__ << ": Error while updating DIF configuration "
                         " for IPC process " << ipcp->name.toString() << endl;
         }
+
+        concurrency.unlock();
 
         return 0;
 }
