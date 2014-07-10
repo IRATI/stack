@@ -2,7 +2,8 @@
  * DTCP (Data Transfer Control Protocol)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -863,7 +864,7 @@ static struct dtcp_policies default_policies = {
         .sender_inactivity_timer     = NULL,
 };
 
-/*FIXME: this should be completed with other parameters from the config */
+/* FIXME: this should be completed with other parameters from the config */
 static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 {
         struct dtcp_config * cfg;
@@ -895,11 +896,16 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         instance->sv->rcvr_rt_wind_edge   = dtcp_initial_credit(cfg);
 
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
-        LOG_DBG("  data_retransmit_max: %d", instance->sv->data_retransmit_max);
-        LOG_DBG("  sndr_credit:         %d", instance->sv->sndr_credit);
-        LOG_DBG("  snd_rt_wind_edge:    %d", instance->sv->snd_rt_wind_edge);
-        LOG_DBG("  rcvr_credit:         %d", instance->sv->rcvr_credit);
-        LOG_DBG("  rcvr_rt_wind_edge:   %d", instance->sv->rcvr_rt_wind_edge);
+        LOG_DBG("  data_retransmit_max: %d",
+                instance->sv->data_retransmit_max);
+        LOG_DBG("  sndr_credit:         %d",
+                instance->sv->sndr_credit);
+        LOG_DBG("  snd_rt_wind_edge:    %d",
+                instance->sv->snd_rt_wind_edge);
+        LOG_DBG("  rcvr_credit:         %d",
+                instance->sv->rcvr_credit);
+        LOG_DBG("  rcvr_rt_wind_edge:   %d",
+                instance->sv->rcvr_rt_wind_edge);
 
         return 0;
 }
@@ -995,6 +1001,9 @@ int dtcp_sv_update(struct dtcp * instance,
                 LOG_ERR("Bogus instance passed");
                 return -1;
         }
+
+        ASSERT(instance->policies);
+        ASSERT(instance->policies->sv_update);
 
         if (instance->policies->sv_update(instance, seq))
                 return -1;
