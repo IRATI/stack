@@ -51,10 +51,32 @@ IPCManager::unregister_app_from_ipcp(
                 seqnum = slave_ipcp->unregisterApplication(req_event.
                                                            applicationName);
                 pending_app_unregistrations[seqnum] =
-                                PendingAppUnregistration(slave_ipcp, req_event);
+                                make_pair(slave_ipcp, req_event);
         } catch (rina::IpcmUnregisterApplicationException) {
                 cerr << __func__ << ": Error while unregistering application "
                         << req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->name.toString() << endl;
+                return -1;
+        }
+
+        return 0;
+}
+
+int
+IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
+                                      rina::IPCProcess *slave_ipcp)
+{
+        unsigned int seqnum;
+
+        try {
+                // Forward the unregistration request to the IPC process
+                // that the client IPC process is registered to
+                seqnum = slave_ipcp->unregisterApplication(ipcp->name);
+                pending_ipcp_unregistrations[seqnum] =
+                                make_pair(ipcp, slave_ipcp);
+        } catch (rina::IpcmUnregisterApplicationException) {
+                cerr << __func__ << ": Error while unregistering IPC process "
+                        << ipcp->name.toString() << " from IPC "
                         "process " << slave_ipcp->name.toString() << endl;
                 return -1;
         }
@@ -113,7 +135,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                 seqnum = slave_ipcp->registerApplication(app_name,
                                                 info.ipcProcessId);
                 ipcm->pending_app_registrations[seqnum] =
-                        PendingAppRegistration(slave_ipcp, *event);
+                                        make_pair(slave_ipcp, *event);
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr << __func__ << ": Error while registering application "
                         << app_name.toString() << endl;
@@ -146,10 +168,12 @@ static bool ipcm_register_response_common(
 static void ipcm_register_response_ipcp(
         rina::IpcmRegisterApplicationResponseEvent *event,
         IPCManager *ipcm,
-        map<unsigned int, PendingIPCPRegistration>::iterator mit)
+        map<unsigned int,
+            std::pair<rina::IPCProcess *, rina::IPCProcess *>
+           >::iterator mit)
 {
-        rina::IPCProcess *ipcp = mit->second.ipcp;
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::IPCProcess *ipcp = mit->second.first;
+        rina::IPCProcess *slave_ipcp = mit->second.second;
         const rina::ApplicationProcessNamingInformation&
                 slave_dif_name = slave_ipcp->
                 getDIFInformation().dif_name_;
@@ -183,11 +207,15 @@ static void ipcm_register_response_ipcp(
 static void ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
         IPCManager *ipcm,
-        map<unsigned int, PendingAppRegistration>::iterator mit)
+        map<unsigned int,
+            std::pair<rina::IPCProcess *,
+                      rina::ApplicationRegistrationRequestEvent
+                     >
+           >::iterator mit)
 {
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
+        rina::IPCProcess *slave_ipcp = mit->second.first;
         const rina::ApplicationRegistrationRequestEvent& req_event =
-                        mit->second.req_event;
+                        mit->second.second;
         const rina::ApplicationProcessNamingInformation& app_name =
                 req_event.applicationRegistrationInformation.
                 appName;
@@ -219,8 +247,14 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
 
         DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
-        map<unsigned int, PendingIPCPRegistration>::iterator it;
-        map<unsigned int, PendingAppRegistration>::iterator jt;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *, rina::IPCProcess*>
+           >::iterator it;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *,
+                      rina::ApplicationRegistrationRequestEvent
+                     >
+           >::iterator jt;
 
         it = ipcm->pending_ipcp_registrations.find(event->sequenceNumber);
         jt = ipcm->pending_app_registrations.find(event->sequenceNumber);
@@ -305,11 +339,13 @@ static bool ipcm_unregister_response_common(
 
 static void ipcm_unregister_response_ipcp(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
-                        IPCManager *ipcm, map<unsigned int,
-                        PendingIPCPUnregistration>::iterator mit)
+                        IPCManager *ipcm,
+                        map<unsigned int,
+                            pair<rina::IPCProcess *, rina::IPCProcess *>
+                           >::iterator mit)
 {
-        rina::IPCProcess *slave_ipcp = mit->second.slave_ipcp;
-        rina::IPCProcess *ipcp = mit->second.ipcp;
+        rina::IPCProcess *ipcp = mit->second.first;
+        rina::IPCProcess *slave_ipcp = mit->second.second;
         rina::ApplicationProcessNamingInformation slave_dif_name = slave_ipcp->
                                                 getDIFInformation().dif_name_;
         bool success;
@@ -341,16 +377,23 @@ static void ipcm_unregister_response_ipcp(
 
 static void ipcm_unregister_response_app(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
-                        IPCManager *ipcm, map<unsigned int,
-                        PendingAppUnregistration>::iterator mit)
+                        IPCManager *ipcm,
+                        map<unsigned int,
+                            pair<rina::IPCProcess *,
+                                 rina::ApplicationUnregistrationRequestEvent
+                                >
+                           >::iterator mit)
 {
+        rina::ApplicationUnregistrationRequestEvent& req_event =
+                                        mit->second.second;
+
         // Inform the supporting IPC process
-        ipcm_unregister_response_common(event, mit->second.slave_ipcp,
-                                        mit->second.req_event.applicationName);
+        ipcm_unregister_response_common(event, mit->second.first,
+                                        req_event.applicationName);
 
         // Inform the application
-        application_manager_app_unregistered(mit->second.req_event,
-                        event->result);
+        application_manager_app_unregistered(req_event,
+                                             event->result);
 
         ipcm->pending_app_unregistrations.erase(mit);
 }
@@ -361,8 +404,13 @@ ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
 {
         DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
-        map<unsigned int, PendingAppUnregistration>::iterator it;
-        map<unsigned int, PendingIPCPUnregistration>::iterator jt;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *,
+                      rina::ApplicationUnregistrationRequestEvent>
+           >::iterator it;
+        map<unsigned int,
+            std::pair<rina::IPCProcess *, rina::IPCProcess *>
+           >::iterator jt;
 
         it = ipcm->pending_app_unregistrations.find(event->sequenceNumber);
         jt = ipcm->pending_ipcp_unregistrations.find(event->sequenceNumber);

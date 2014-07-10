@@ -34,6 +34,7 @@
 #include "rina-configuration.h"
 #include "helpers.h"
 #include "ipcm.h"
+#include "console.h"
 #include "application-registration.h"
 #include "flow-allocation.h"
 
@@ -43,16 +44,6 @@ using namespace std;
 namespace rinad {
 
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
-
-void *console_function(void *opaque)
-{
-        IPCManager *ipcm = static_cast<IPCManager *>(opaque);
-
-        cout << "Console starts: " << ipcm << endl;
-        cout << "Console stops" << endl;
-
-        return NULL;
-}
 
 void *script_function(void *opaque)
 {
@@ -80,8 +71,7 @@ IPCManager::IPCManager()
         }
 
         /* Create and start the console thread. */
-        console = new rina::Thread(new rina::ThreadAttributes(),
-                                   console_function, this);
+        console = new IPCMConsole(*this);
 
         script = new rina::Thread(new rina::ThreadAttributes(),
                                    script_function, this);
@@ -282,7 +272,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                                 ipcp->name, ipcp->id);
 
                 pending_ipcp_registrations[seqnum] =
-                        PendingIPCPRegistration(ipcp, slave_ipcp);
+                        make_pair(ipcp, slave_ipcp);
 
                 concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);

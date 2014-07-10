@@ -42,7 +42,7 @@ cdap_la_SOURCES = \
 	$(SRC_FILES)	\
 	$(HEADER_FILES)
 
-cdap_la_LDFLAGS = -module -avoid-version -lprotobuf-c
+cdap_la_LDFLAGS = -module -avoid-version
 cdap_la_LIBADD = @PLUGIN_LIBS@
 
 # Libs must be cleared, or else libtool won't create a shared module.
