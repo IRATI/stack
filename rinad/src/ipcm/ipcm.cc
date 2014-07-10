@@ -45,7 +45,8 @@ namespace rinad {
 
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
-void *script_function(void *opaque)
+void *
+script_function(void *opaque)
 {
         IPCManager *ipcm = static_cast<IPCManager *>(opaque);
 
@@ -92,7 +93,8 @@ IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
         doWait();
 }
 
-void IPCMConcurrency::notify_event(rina::IPCEvent *event)
+void
+IPCMConcurrency::notify_event(rina::IPCEvent *event)
 {
         if (event_waiting && event_ty == event->eventType
                         && (event_sn == 0 ||
@@ -443,19 +445,22 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
         return 0;
 }
 
-static void application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
+static void
+assign_to_dif_response_event_handler(rina::IPCEvent *e,
                                             EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
@@ -484,14 +489,16 @@ static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
         }
 }
 
-static void update_dif_config_request_event_handler(rina::IPCEvent *event,
+static void
+update_dif_config_request_event_handler(rina::IPCEvent *event,
                                                     EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void update_dif_config_response_event_handler(rina::IPCEvent *e,
+static void
+update_dif_config_response_event_handler(rina::IPCEvent *e,
                                                      EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::UpdateDIFConfigurationResponseEvent, event);
@@ -523,13 +530,15 @@ static void update_dif_config_response_event_handler(rina::IPCEvent *e,
         ipcm->pending_dif_config_updates.erase(mit);
 }
 
-static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
+static void
+enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                                                  EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::EnrollToDIFResponseEvent, event);
@@ -559,7 +568,8 @@ static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         ipcm->pending_ipcp_enrollments.erase(mit);
 }
 
-static void neighbors_modified_notification_event_handler(rina::IPCEvent *e,
+static void
+neighbors_modified_notification_event_handler(rina::IPCEvent *e,
                                                           EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::NeighborsModifiedNotificationEvent, event);
@@ -590,31 +600,36 @@ static void neighbors_modified_notification_event_handler(rina::IPCEvent *e,
         (void) ipcm;
 }
 
-static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void os_process_finalized_handler(rina::IPCEvent *e,
+static void
+os_process_finalized_handler(rina::IPCEvent *e,
                                          EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
@@ -669,7 +684,8 @@ static void os_process_finalized_handler(rina::IPCEvent *e,
         }
 }
 
-static void query_rib_response_event_handler(rina::IPCEvent *e,
+static void
+query_rib_response_event_handler(rina::IPCEvent *e,
                                              EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::QueryRIBResponseEvent, event);
@@ -680,7 +696,8 @@ static void query_rib_response_event_handler(rina::IPCEvent *e,
         (void) ipcm;    // Stop compiler barfs
 }
 
-static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
+static void
+ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
                                                     EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
@@ -700,44 +717,51 @@ static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
         }
 }
 
-static void timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_create_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_create_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_update_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_update_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_create_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_create_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_destroy_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_destroy_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_dump_ft_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_dump_ft_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
 
-void register_handlers_all(EventLoop& loop)
+void
+register_handlers_all(EventLoop& loop)
 {
         loop.register_pre_function(ipcm_pre_function);
         loop.register_post_function(ipcm_post_function);
