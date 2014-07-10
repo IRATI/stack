@@ -32,6 +32,7 @@
 
 #include "event-loop.h"
 #include "rina-configuration.h"
+#include "console.h"
 
 
 namespace rinad {
@@ -47,40 +48,6 @@ class IPCMConcurrency : public rina::ConditionVariable {
         bool event_waiting;
         rina::IPCEventType event_ty;
         unsigned int event_sn;
-};
-
-struct PendingIPCPRegistration {
-        rina::IPCProcess *ipcp;
-        rina::IPCProcess *slave_ipcp;
-
-        PendingIPCPRegistration() : ipcp(NULL), slave_ipcp(NULL) { }
-        PendingIPCPRegistration(rina::IPCProcess *p, rina::IPCProcess *s)
-                                : ipcp(p), slave_ipcp(s) { }
-};
-
-struct PendingAppRegistration {
-        rina::IPCProcess *slave_ipcp;
-        rina::ApplicationRegistrationRequestEvent req_event;
-
-        PendingAppRegistration() : slave_ipcp(NULL) { }
-        PendingAppRegistration(rina::IPCProcess *p,
-                        const rina::ApplicationRegistrationRequestEvent& n)
-                                        : slave_ipcp(p), req_event(n) { }
-};
-
-struct PendingIPCPUnregistration {
-        rina::IPCProcess *slave_ipcp;
-        rina::IPCProcess *ipcp;
-};
-
-struct PendingAppUnregistration {
-        rina::IPCProcess *slave_ipcp;
-        rina::ApplicationUnregistrationRequestEvent req_event;
-
-        PendingAppUnregistration() : slave_ipcp(NULL) { }
-        PendingAppUnregistration(rina::IPCProcess *p,
-                        const rina::ApplicationUnregistrationRequestEvent& n)
-                                        : slave_ipcp(p), req_event(n) { }
 };
 
 struct PendingFlowAllocation {
@@ -129,6 +96,9 @@ class IPCManager : public EventLoopData {
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
                 rina::IPCProcess *slave_ipcp);
 
+        int unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
+                                      rina::IPCProcess *slave_ipcp);
+
         int update_dif_configuration(
                 rina::IPCProcess *ipcp,
                 const rina::DIFConfiguration& dif_config);
@@ -139,23 +109,45 @@ class IPCManager : public EventLoopData {
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
+
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
-        std::map<unsigned int, PendingIPCPRegistration> pending_ipcp_registrations;
-        std::map<unsigned int, PendingIPCPUnregistration> pending_ipcp_unregistrations;
+
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess*, rina::IPCProcess*>
+                > pending_ipcp_registrations;
+
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess*, rina::IPCProcess*>
+                > pending_ipcp_unregistrations;
+
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
-        std::map<unsigned int, PendingAppRegistration> pending_app_registrations;
-        std::map<unsigned int, PendingAppUnregistration> pending_app_unregistrations;
+
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess*,
+                           rina::ApplicationRegistrationRequestEvent
+                          >
+                > pending_app_registrations;
+
+        std::map<unsigned int,
+                 std::pair<rina::IPCProcess*,
+                           rina::ApplicationUnregistrationRequestEvent
+                          >
+                > pending_app_unregistrations;
+
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
+
         std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
 
         std::map<unsigned int,
-                 std::pair<rina::IPCProcess *, rina::FlowDeallocateRequestEvent>
+                 std::pair<rina::IPCProcess *,
+                           rina::FlowDeallocateRequestEvent
+                          >
                 > pending_flow_deallocations;
 
         IPCMConcurrency concurrency;
 
  private:
-        rina::Thread *console;
+        IPCMConsole *console;
         rina::Thread *script;
 };
 
