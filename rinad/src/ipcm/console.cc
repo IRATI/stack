@@ -81,7 +81,7 @@ IPCMConsole::init()
         memset(&server_address, 0, sizeof(server_address));
         server_address.sin_family = AF_INET;
         inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr);
-        server_address.sin_port = htons(32766);
+        server_address.sin_port = htons(ipcm.config.local.consolePort);
 
         sfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sfd < 0) {
