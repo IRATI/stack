@@ -21,6 +21,7 @@
 #include <librina/common.h>
 #include "rina-configuration.h"
 
+#include <iostream>
 #include <string>
 #include <list>
 #include <map>
@@ -58,7 +59,7 @@ bool RINAConfiguration::lookup_dif_properties(
  * @param ipcp_name
  * @return
  */
-bool RINAConfiguration::lookup_ipcp_address(const std::string dif_name,
+bool RINAConfiguration::lookup_ipcp_address(const string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
                 unsigned int& result)
 {
@@ -83,27 +84,61 @@ bool RINAConfiguration::lookup_ipcp_address(const std::string dif_name,
 }
 #endif
 
-std::string LocalConfiguration::toString() const
+string LocalConfiguration::toString() const
 {
-        std::ostringstream ss;
+        ostringstream ss;
 
-        ss <<  "Local Configuration\n";
-        ss << "   Installation path: " << installationPath << std::endl;
-        ss << "   Library path: " << libraryPath << std::endl;
-        ss << "   Console port: " << consolePort << std::endl;
-        ss << "   CDAP timeout in ms: " << cdapTimeoutInMs << std::endl;
-        ss << "   Enrollment timeout in ms: " << enrollmentTimeoutInMs << std::endl;
-        ss << "   Flow allocator timeout in ms:  " << flowAllocatorTimeoutInMs << std::endl;
-        ss << "   Watchdog period in ms: " << watchdogPeriodInMs << std::endl;
-        ss << "   Declared dead interval in ms: " << declaredDeadIntervalInMs << std::endl;
-        ss << "   Neighbors enroller period in ms: " << neighborsEnrollerPeriodInMs << std::endl;
+        ss << "Local Configuration" << endl;
+        ss << "\tInstallation path: " << installationPath << endl;
+        ss << "\tLibrary path: " << libraryPath << endl;
+        ss << "\tConsole port: " << consolePort << endl;
+        ss << "\tCDAP timeout in ms: " << cdapTimeoutInMs << endl;
+        ss << "\tEnrollment timeout in ms: " <<
+                        enrollmentTimeoutInMs << endl;
+        ss << "\tFlow allocator timeout in ms:  " <<
+                        flowAllocatorTimeoutInMs << endl;
+        ss << "\tWatchdog period in ms: " << watchdogPeriodInMs << endl;
+        ss << "\tDeclared dead interval in ms: " <<
+                        declaredDeadIntervalInMs << endl;
+        ss << "\tNeighbors enroller period in ms: " <<
+                        neighborsEnrollerPeriodInMs << endl;
 
         return ss.str();
 }
 
-std::string RINAConfiguration::toString() const
+string RINAConfiguration::toString() const
 {
-        return local.toString();
+        stringstream ss;
+
+        for (list<IPCProcessToCreate>::const_iterator it =
+                        ipcProcessesToCreate.begin();
+                                it != ipcProcessesToCreate.end(); it++) {
+                ss << "IPC process to create:" << endl;
+
+                ss << "\tType: " << it->type << endl;
+                ss << "\tName: " << it->name.toString() << endl;
+                ss << "\tDIF Name: " << it->difName.toString() << endl;
+
+                for (list<NeighborData>::const_iterator nit =
+                                it->neighbors.begin();
+                                        nit != it->neighbors.end(); nit++) {
+                        ss << "\tNeighbor:" << endl;
+                        ss << "\t\tName: " << nit->apName.toString() << endl;
+                        ss << "\t\tDIF: " << nit->difName.toString() << endl;
+                        ss << "\t\tSupporting DIF: " <<
+                                nit->supportingDifName.toString() << endl;
+                }
+
+                ss << "\tDIFs to register at:" << endl;
+                for (list<rina::ApplicationProcessNamingInformation>::
+                        const_iterator nit = it->difsToRegisterAt.begin();
+                                nit != it->difsToRegisterAt.end(); nit++) {
+                        ss << "\t\t" << nit->toString() << endl;
+                }
+                ss << "\tHost name: " << it->hostname << endl;
+        }
+
+        return local.toString() + ss.str();
 }
 
 bool DIFProperties::lookup_ipcp_address(
