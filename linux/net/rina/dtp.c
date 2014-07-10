@@ -22,8 +22,6 @@
  */
 
 #define RINA_PREFIX "dtp"
-/* FIXME remove these defines */
-#define TEMP_MAX_CWQ_LEN 100
 
 #include "logs.h"
 #include "utils.h"
@@ -65,7 +63,7 @@ struct dtp_policies {
 };
 
 struct dtp {
-        struct dt *           parent;
+        struct dt *               parent;
         /*
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
@@ -104,6 +102,7 @@ static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
         /* FIXME: How to block further write API calls? */
 
         LOG_MISSING;
+
         LOG_DBG("Default Flow Control");
 
         pdu_destroy(pdu);
@@ -132,13 +131,18 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 
         LOG_DBG("Closed Window Queue");
 
-        /* FIXME: Please add ASSERTs here ... */
+        ASSERT(dtp);
+
+        ASSERT(dtp->sv);
+        ASSERT(dtp->sv->connection);
+        ASSERT(dtp->sv->connection->policies_params);
+
         max_len = dtcp_max_closed_winq_length(dtp->
                                               sv->
                                               connection->
                                               policies_params->
                                               dtcp_cfg);
-        if (cwq_size(cwq) < max_len -1) {
+        if (cwq_size(cwq) < max_len - 1) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push to cwq");
                         pdu_destroy(pdu);
@@ -147,6 +151,9 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 
                 return 0;
         }
+
+        ASSERT(dtp->policies);
+        ASSERT(dtp->policies->flow_control_overrun);
 
         if (dtp->policies->flow_control_overrun(dtp, pdu)) {
                 LOG_ERR("Failed Flow Control Overrun");
@@ -160,10 +167,12 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
         struct dt * dt;
+
         ASSERT(dtp);
         ASSERT(pdu_is_ok(pdu));
 
         dt = dtp->parent;
+
         ASSERT(dt);
 #if 0
         /* Start SenderInactivityTimer */
@@ -175,6 +184,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 #endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
+
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
                         pci_qos_id(pdu_pci_get_ro(pdu)),
@@ -182,9 +192,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 }
 
 static int default_initial_seq_number(struct dtp * dtp)
-{
-        return 0;
-}
+{ return 0; }
 
 static struct dtp_policies default_policies = {
         .transmission_control    = default_transmission,
@@ -352,7 +360,7 @@ static int seq_queue_destroy(struct seq_queue * seq_queue)
 static struct pdu * seq_queue_pop(struct seq_queue * q)
 {
         struct seq_queue_entry * p;
-        struct pdu * pdu;
+        struct pdu *             pdu;
 
         if (list_empty(&q->head)) {
                 LOG_WARN("Seq Queue is empty!");
@@ -372,20 +380,23 @@ static struct pdu * seq_queue_pop(struct seq_queue * q)
         return pdu;
 }
 
+#if 0
 static bool seq_queue_is_empty(struct seq_queue * q)
 {
         ASSERT(q);
+
         return list_empty(&q->head);
 }
+#endif
 
 static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 {
         static struct seq_queue_entry * tmp, * cur, * last = NULL;
-        seq_num_t                   csn, psn;
-        const struct pci *          pci;
+        seq_num_t                       csn, psn;
+        const struct pci *              pci;
 
-        ASSERT(pdu);
         ASSERT(q);
+        ASSERT(pdu);
 
         tmp = seq_queue_entry_create_gfp(pdu, GFP_ATOMIC);
         if (!tmp) {
@@ -393,8 +404,8 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 return -1;
         }
 
-        pci  = pdu_pci_get_ro(pdu);
-        csn  = pci_sequence_number_get((struct pci *) pci);
+        pci = pdu_pci_get_ro(pdu);
+        csn = pci_sequence_number_get((struct pci *) pci);
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
@@ -418,6 +429,7 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
                 seq_queue_entry_destroy(tmp);
                 return -1;
         }
+
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
                 LOG_DBG("Last PDU with seqnum: %d push to seqq at: %pk",
@@ -445,13 +457,16 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         return 0;
 }
 
+#if 0
 static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
 {
         LOG_MISSING;
+
         return 0;
 }
+#endif
 
-int squeue_destroy(struct squeue * seqq)
+static int squeue_destroy(struct squeue * seqq)
 {
         if (!seqq)
                 return -1;
@@ -463,7 +478,7 @@ int squeue_destroy(struct squeue * seqq)
         return 0;
 }
 
-struct squeue * squeue_create(struct dtp * dtp)
+static struct squeue * squeue_create(struct dtp * dtp)
 {
         struct squeue * tmp;
 
@@ -484,13 +499,15 @@ struct squeue * squeue_create(struct dtp * dtp)
         return tmp;
 }
 
-int squeue_deliver(struct squeue * seqq)
+#if 0
+static int squeue_deliver(struct squeue * seqq)
 {
         LOG_MISSING;
+
         return 0;
 }
 
-struct pdu * squeue_pop(struct squeue * seqq)
+static struct pdu * squeue_pop(struct squeue * seqq)
 {
         struct pdu * pdu;
 
@@ -508,13 +525,12 @@ struct pdu * squeue_pop(struct squeue * seqq)
         return pdu;
 }
 
-int squeue_push(struct dtp * dtp, struct pdu * pdu)
+static int squeue_push(struct dtp * dtp, struct pdu * pdu)
 {
         struct squeue * seqq;
-        struct dt *          dt;
+        struct dt *     dt;
 
         ASSERT(dtp);
-        ASSERT(pdu);
 
         seqq = dtp->seqq;
         ASSERT(seqq);
@@ -540,7 +556,7 @@ int squeue_push(struct dtp * dtp, struct pdu * pdu)
         return 0;
 }
 
-bool squeue_is_empty(struct squeue * seqq)
+static bool squeue_is_empty(struct squeue * seqq)
 {
         bool empty;
 
@@ -553,9 +569,11 @@ bool squeue_is_empty(struct squeue * seqq)
         return empty;
 }
 
-seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
+static seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
 {
         seq_num_t tmp;
+
+        ASSERT(seqq);
 
         LOG_MISSING;
 
@@ -570,6 +588,7 @@ seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
 
         return tmp;
 }
+#endif
 
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
@@ -587,6 +606,8 @@ static int pdu_post(struct dtp * instance,
         }
 
         pdu_buffer_disown(pdu);
+
+        ASSERT(instance->sv->connection);
 
         if (kfa_sdu_post(instance->kfa,
                          instance->sv->connection->port_id,
@@ -657,7 +678,7 @@ static void squeue_cleanup(struct dtp * dtp)
         spin_lock(&seqq->lock);                                         \
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next)
 
-#define squeue_for_each_entry_safe_end(seqq)      \
+#define squeue_for_each_entry_safe_end(seqq)    \
         spin_unlock(&seqq->lock)
 
 /*
@@ -851,6 +872,7 @@ int dtp_sv_init(struct dtp * dtp,
                 timeout_t    a)
 {
         ASSERT(dtp);
+        ASSERT(dtp->sv);
 
         dtp->sv->rexmsn_ctrl  = rexmsn_ctrl;
         dtp->sv->window_based = window_based;
@@ -866,6 +888,7 @@ int dtp_sv_init(struct dtp * dtp,
 }
 
 #define MAX_NAME_SIZE 128
+
 static const char * create_twq_name(const char *       prefix,
                                     const struct dtp * instance)
 {
@@ -874,8 +897,8 @@ static const char * create_twq_name(const char *       prefix,
         ASSERT(prefix);
         ASSERT(instance);
 
-        if (snprintf(name, sizeof(name),
-                     RINA_PREFIX "-%s-%pK", prefix, instance) >=
+        if (snprintf(name, sizeof(name), RINA_PREFIX "-%s-%pK",
+                     prefix, instance) >=
             sizeof(name))
                 return NULL;
 
@@ -915,7 +938,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 dtp_destroy(tmp);
                 return NULL;
         }
-        *tmp->sv            = default_sv;
+        *tmp->sv = default_sv;
         /* FIXME: fixups to the state-vector should be placed here */
 
         spin_lock_init(&tmp->sv->lock);
@@ -984,8 +1007,7 @@ int dtp_destroy(struct dtp * instance)
 
         if (instance->twq)  rwq_destroy(instance->twq);
         if (instance->seqq) squeue_destroy(instance->seqq);
-        if (instance->sv)
-                rkfree(instance->sv);
+        if (instance->sv)   rkfree(instance->sv);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -1058,6 +1080,8 @@ int dtp_write(struct dtp * instance,
          */
         /* Probably needs to be revised */
 
+        ASSERT(sv->connection);
+
         if (pci_format(pci,
                        sv->connection->source_cep_id,
                        sv->connection->destination_cep_id,
@@ -1123,13 +1147,12 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
+
                 if (sv->window_based) {
                         if (!dt_sv_window_closed(dt) &&
                             pci_sequence_number_get(pci) <
                             dtcp_snd_rt_win(dtcp)) {
-                                /*
-                                 * Might close window
-                                 */
+                                /* NOTE: Might close window */
                                 if (policies->transmission_control(instance,
                                                                    pdu)) {
                                         LOG_ERR("Problems with transmission "
@@ -1322,7 +1345,7 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
-                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d", 
+                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d",
                         dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
@@ -1343,16 +1366,19 @@ int dtp_receive(struct dtp * instance,
 #endif
                 return 0;
         }
-        /* This op puts the PDU in seq number order  and duplicates
-         * considered */
+
+        /*
+         * NOTE:
+         *     This op puts the PDU in seq number order and duplicates
+         *     considered
+         */
 
         if (!a) {
                 /* FIXME: delimiting goes here */
                 LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
                         seq_num, LWE);
                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                        LOG_ERR("Failed to set new "
-                                "left window edge");
+                        LOG_ERR("Failed to set new left window edge");
                         return -1;
                 }
                 if (pdu_post(instance, pdu))
@@ -1372,16 +1398,18 @@ int dtp_receive(struct dtp * instance,
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
                 spin_unlock(&instance->seqq->lock);
+
                 pdu_post(instance, pdu);
 
                 spin_lock(&instance->seqq->lock);
-                pdu = seq_queue_pop(instance->seqq->queue);
+                pdu     = seq_queue_pop(instance->seqq->queue);
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-                LWE = dt_sv_rcv_lft_win(dt);
+                LWE     = dt_sv_rcv_lft_win(dt);
         }
-        if (pdu) seq_queue_push_ni(instance->seqq->queue, pdu);
-
+        if (pdu)
+                seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
+
 #if 0
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
