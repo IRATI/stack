@@ -67,9 +67,13 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                                               "USAGE: quit");
         commands_map["exit"] = ConsoleCmdInfo(&IPCMConsole::quit,
                                               "USAGE: exit");
-        commands_map["create-ipcp"] = ConsoleCmdInfo(&IPCMConsole::create_ipcp,
+        commands_map["create-ipcp"] =
+                        ConsoleCmdInfo(&IPCMConsole::create_ipcp,
                                 "USAGE: create-ipcp <process-name> "
                                 "<process-instance> <ipcp-type>");
+        commands_map["destroy-ipcp"] =
+                        ConsoleCmdInfo(&IPCMConsole::destroy_ipcp,
+                                "USAGE: destroy-ipcp <ipcp-id>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -282,6 +286,33 @@ IPCMConsole::create_ipcp(vector<string>& args)
         } else {
                 outstream << "IPC process created successfully [id = "
                                 << ipcp->id << "]" << endl;
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::destroy_ipcp(vector<string>& args)
+{
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 2) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ret = ipcm.destroy_ipcp(ipcp_id);
+        if (ret) {
+                outstream << "Cannot destroy IPC process" << endl;
+        } else {
+                outstream << "IPC process successfully destroyed" << endl;
         }
 
         return CMDRETCONT;

@@ -161,6 +161,20 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 }
 
 int
+IPCManager::destroy_ipcp(unsigned int ipcp_id)
+{
+        try {
+                rina::ipcProcessFactory->destroy(ipcp_id);
+        } catch (rina::DestroyIPCProcessException) {
+                cerr << __func__ << ": Error while destroying IPC "
+                        "process with id " << ipcp_id << endl;
+                return -1;
+        }
+
+        return 0;
+}
+
+int
 IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
                           dif_name)
