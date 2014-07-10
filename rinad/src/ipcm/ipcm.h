@@ -68,6 +68,9 @@ class IPCManager : public EventLoopData {
         IPCManager();
         ~IPCManager();
 
+        int start_script_worker();
+        int start_console_worker();
+
         int apply_configuration();
 
         rina::IPCProcess *create_ipcp(
@@ -153,8 +156,8 @@ class IPCManager : public EventLoopData {
         IPCMConcurrency concurrency;
 
  private:
-        IPCMConsole *console;
         rina::Thread *script;
+        IPCMConsole *console;
 };
 
 void register_handlers_all(EventLoop& loop);

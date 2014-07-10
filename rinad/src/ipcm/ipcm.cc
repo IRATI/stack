@@ -59,7 +59,7 @@ script_function(void *opaque)
         return NULL;
 }
 
-IPCManager::IPCManager()
+IPCManager::IPCManager() : script(NULL), console(NULL)
 {
         /* Initialize the IPC manager infrastructure in librina. */
         try {
@@ -70,18 +70,42 @@ IPCManager::IPCManager()
                 cerr << "Cannot initialize librina-ipc-manager" << endl;
                 exit(EXIT_FAILURE);
         }
-
-        /* Create and start the console thread. */
-        console = new IPCMConsole(*this);
-
-        script = new rina::Thread(new rina::ThreadAttributes(),
-                                   script_function, this);
 }
 
 IPCManager::~IPCManager()
 {
-        delete console;
-        delete script;
+        if (console) {
+                delete console;
+        }
+        if (script) {
+                // Maybe we should join here
+                delete script;
+        }
+}
+
+int
+IPCManager::start_script_worker()
+{
+        if (script) {
+                return -1;
+        }
+
+        script = new rina::Thread(new rina::ThreadAttributes(),
+                                   script_function, this);
+
+        return 0;
+}
+
+int
+IPCManager::start_console_worker()
+{
+        if (console) {
+                return -1;
+        }
+
+        console = new IPCMConsole(*this);
+
+        return 0;
 }
 
 void
