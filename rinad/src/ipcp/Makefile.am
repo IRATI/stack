@@ -39,6 +39,7 @@ test_encoders_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 test_pduftg_SOURCES  =			\
 	test-pduftg.cc			\
 	components.cc	  components.h		\
+	events.cc         events.h          \
 	pduft-generator.cc pduft-generator.h
 test_pduftg_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\

@@ -816,6 +816,10 @@ void LinkStatePDUFTGeneratorPolicy::set_dif_configuration(
 	}
 }
 
+const std::list<rina::FlowInformation>& LinkStatePDUFTGeneratorPolicy::get_allocated_flows() const {
+	return allocated_flows_;
+}
+
 void LinkStatePDUFTGeneratorPolicy::eventHappened(Event * event) {
 	if (!event)
 		return;
