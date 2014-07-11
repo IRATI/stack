@@ -1045,6 +1045,31 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
+static bool cwq_is_closed(struct dtp_sv * sv,
+                          struct dt *     dt,
+                          struct dtcp *   dtcp,
+                          seq_num_t       seq_num)
+{
+        bool retval = false;
+
+        ASSERT(sv);
+        ASSERT(dt);
+        ASSERT(dtcp);
+
+        if (dt_sv_window_closed(dt))
+                return true;
+
+        if (sv->window_based && seq_num >= dtcp_snd_rt_win(dtcp)) {
+                dt_sv_window_closed_set(dt, true);
+                retval = true;
+        }
+
+        if (sv->rate_based)
+                LOG_MISSING;
+
+        return retval;
+}
+
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
@@ -1152,6 +1177,20 @@ int dtp_write(struct dtp * instance,
         sdu_destroy(sdu);
 
         if (dtcp) {
+                if (sv->window_based || sv->rate_based) {
+                        /* NOTE: Might close window */
+                        if (cwq_is_closed(sv,
+                                          dt,
+                                          dtcp,
+                                          pci_sequence_number_get(pci))) {
+                                if (policies->closed_window(instance, pdu)) {
+                                        LOG_ERR("Problems with the "
+                                                "closed window policy");
+                                        return -1;
+                                }
+                                return 0;
+                        }
+                }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
                         rtxq = dt_rtxq(dt);
@@ -1177,31 +1216,13 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-
-                if (sv->window_based) {
-                        if (!dt_sv_window_closed(dt) &&
-                            pci_sequence_number_get(pci) <
-                            dtcp_snd_rt_win(dtcp)) {
-                                /* NOTE: Might close window */
-                                if (policies->transmission_control(instance,
-                                                                   pdu)) {
-                                        LOG_ERR("Problems with transmission "
-                                                "control");
-                                        return -1;
-                                }
-                        } else {
-                                dt_sv_window_closed_set(dt, true);
-                                if (policies->closed_window(instance, pdu)) {
-                                        LOG_ERR("Problems with the "
-                                                "closed window policy");
-                                        return -1;
-                                }
-                        }
+                if (policies->transmission_control(instance,
+                                                   pdu)) {
+                        LOG_ERR("Problems with transmission "
+                                "control");
+                        return -1;
                 }
 
-                if (sv->rate_based) {
-                        LOG_MISSING;
-                }
 #if 0
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
