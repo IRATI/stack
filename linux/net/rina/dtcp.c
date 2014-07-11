@@ -479,9 +479,14 @@ static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
 
 static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 {
-        struct rtxq * q;
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
 
         if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                struct rtxq * q;
+
                 q = dt_rtxq(dtcp->parent);
                 if (!q) {
                         LOG_ERR("Couldn't find the Retransmission queue");
@@ -489,6 +494,7 @@ static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
                 }
                 rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
         }
+
         return 0;
 }
 
@@ -646,6 +652,11 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
 static int default_lost_control_pdu(struct dtcp * dtcp)
 {
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
 #if 0
         struct pdu * pdu_ctrl;
         seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
@@ -667,6 +678,7 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
 #endif
 
         LOG_DBG("Default lost control pdu policy");
+
         return 0;
 
 }
@@ -674,9 +686,12 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
 static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu_ctrl;
-        seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
+        seq_num_t    last_rcv_ctrl, snd_lft, snd_rt;
 
-        ASSERT(dtcp);
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
 
         last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
         snd_lft       = snd_lft_win(dtcp);
@@ -696,7 +711,10 @@ static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
 
 static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
-        ASSERT(dtcp);
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
 
         if (!dt_sv_a(dtcp->parent))
                 return dtcp->policies->sending_ack(dtcp, seq);
@@ -706,6 +724,11 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 
 static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
         LOG_MISSING;
 
         return 0;
@@ -733,6 +756,11 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
         seq_num_t    rt_wind_edge;
         seq_num_t    lf_wind_edge;
 
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
         /* FIXME: Missing update of right window edge */
 
         seq_ctl = next_snd_ctl_seq(dtcp);
@@ -758,6 +786,11 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 
 static int default_rate_reduction(struct dtcp * instance)
 {
+        if (!instance) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
         LOG_MISSING;
 
         return 0;
@@ -773,11 +806,13 @@ static int default_flow_control_overrun(struct dtcp * instance,
 
 static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 {
-        int retval = 0;
+        int                  retval = 0;
         struct dtcp_config * dtcp_cfg;
 
-        if (!dtcp || !dtcp->conn)
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
                 return -1;
+        }
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg)
@@ -857,7 +892,7 @@ static struct dtcp_policies default_policies = {
         .rcvr_ack                    = default_rcvr_ack,
         .rcvr_flow_control           = default_rcvr_flow_control,
         .rate_reduction              = default_rate_reduction,
-        .rcvr_control_ack             = NULL,
+        .rcvr_control_ack            = NULL,
         .no_rate_slow_down           = NULL,
         .no_override_default_peak    = NULL,
         .receiver_inactivity_timer   = NULL,

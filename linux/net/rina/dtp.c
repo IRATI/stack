@@ -99,12 +99,24 @@ static struct dtp_sv default_sv = {
 
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
         /* FIXME: How to block further write API calls? */
 
         LOG_MISSING;
 
         LOG_DBG("Default Flow Control");
 
+#if 0
+        /* FIXME: Re-enable or remove depending on the missing code */
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok, cannot run policy");
+                return -1;
+        }
+#endif
         pdu_destroy(pdu);
 
         return 0;
@@ -116,8 +128,14 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
         struct dt *  dt;
         uint_t       max_len;
 
-        ASSERT(dtp);
-        ASSERT(pdu_is_ok(pdu));
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok, cannot run policy");
+                return -1;
+        }
 
         dt = dtp->parent;
         ASSERT(dt);
@@ -167,13 +185,18 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
         struct dt * dt;
-
-        ASSERT(dtp);
-        ASSERT(pdu_is_ok(pdu));
+        
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
 
         dt = dtp->parent;
+        if (!dt) {
+                LOG_ERR("Passed instance has no parent, cannot run policy");
+                return -1;
+        }
 
-        ASSERT(dt);
 #if 0
         /* Start SenderInactivityTimer */
         if (rtimer_restart(dtp->timers.sender_inactivity,
@@ -192,7 +215,14 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 }
 
 static int default_initial_seq_number(struct dtp * dtp)
-{ return 0; }
+{
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        return 0;
+}
 
 static struct dtp_policies default_policies = {
         .transmission_control    = default_transmission,
