@@ -36,10 +36,23 @@ test_encoders_CPPFLAGS =			\
 	-I$(srcdir)/../common
 test_encoders_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 
+test_pduftg_SOURCES  =			\
+	test-pduftg.cc			\
+	components.cc	  components.h		\
+	pduft-generator.cc pduft-generator.h
+test_pduftg_CPPFLAGS =			\
+	$(CPPFLAGS_EXTRA)			\
+	$(LIBRINA_CFLAGS)			\
+	-I$(srcdir)/..				\
+	-I$(srcdir)/../common
+test_pduftg_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
+
 check_PROGRAMS =				\
-	test-encoders
+	test-encoders               \
+	test-pduftg
 
 XFAIL_TESTS =
-PASS_TESTS  = test-encoders
+PASS_TESTS  = test-encoders   \
+              test-pduftg
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
