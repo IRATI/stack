@@ -1211,9 +1211,10 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 	//qosParameters
 	gpf_flow.set_allocated_qosparameters(get_qosSpecification_t(flow->flow_specification_));
 	//optional connectionPolicies_t connectionPolicies
-	get_connectionPolicies_t(flow->getActiveConnection()->getPolicies());
+	gpf_flow.set_allocated_connectionpolicies(get_connectionPolicies_t(flow->getActiveConnection()->getPolicies()));
 	//accessControl
-	gpf_flow.set_accesscontrol(flow->access_control_);
+	if (flow->access_control_ != 0)
+		gpf_flow.set_accesscontrol(flow->access_control_);
 	//maxCreateFlowRetries
 	gpf_flow.set_maxcreateflowretries(flow->max_create_flow_retries_);
 	//createFlowRetries

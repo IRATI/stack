@@ -21,113 +21,143 @@
 //
 
 #include <list>
+#include <iostream>
 
 #include <librina/common.h>
 
 #include "encoder.h"
 #include "ipcp/flow-allocator.h"
 
-/*
-bool test_ApplicationProcessNamingInfoMessage () {
-	rina::ApplicationProcessNamingInformation ap_info;
-	rinad::Encoder encoder;
-	rinad::ApplicationRegistrationEncoder app_reg_encoder;
-	encoder.addEncoder(rinad::Encoder::ApplicationRegistration, &app_reg_encoder);
-	bool assert = true;
-
-	ap_info.setEntityInstance("1");
-	ap_info.setEntityName("A");
-	ap_info.setProcessInstance("1");
-	ap_info.setProcessName("A proc");
-	rina::ApplicationRegistration app_reg(ap_info);
-	for(int i=0; i < 3; i++)
-	{
-		rina::ApplicationProcessNamingInformation ap_aux;
-		std::stringstream ss;
-		ss << "DIF name "<< i<< std::endl;
-		ap_aux.setProcessName(ss.str());
-		app_reg.addDIFName(ap_aux);
-	}
-	rina::SerializedObject *encoded_object = encoder.encode((void*) &app_reg, rinad::Encoder::ApplicationRegistration);
-
-	rina::ApplicationRegistration *decoded_object = (rina::ApplicationRegistration*)encoder.decode(*encoded_object, rinad::Encoder::ApplicationRegistration);
-
-	if (app_reg.getApplicationName() != *decoded_object->getApplicationName())
-		assert = false;
-	else {
-		if (app_reg.getDIFNames().size() != decoded_object->getDIFNames().size())
-			assert = false;
-		else {
-			std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2 = decoded_object->getDIFNames().begin();
-			for (std::list<rina::ApplicationProcessNamingInformation>::const_iterator it = app_reg.getDIFNames().begin(); it != app_reg.getDIFNames().end(); ++it)
-			{
-				if (it->getProcessName() !=  it2->getProcessName())
-					assert = false;
-				++it2;
-			}
-		}
-
-	}
-
-	delete encoded_object;
-	delete decoded_object;
-
-	return true;
-}
-*/
-
 bool test_Flow () {
-	rinad::Flow flow;
+	rinad::Flow flow_to_encode;
+	rinad::Flow *pflow_to_encode;
 	std::list<rina::Connection*> connection_list;
-	rina::Connection *connection = new rina::Connection;
-	rina::ConnectionPolicies connection_policies;
-	rina::DTCPConfig dtcp_config;
+	rina::Connection *pconnection_to_encode = new rina::Connection;
+	rina::ConnectionPolicies connection_policies_to_encode;
+	rina::DTCPConfig dtcp_config_to_encode;
 	rina::DTCPRtxControlConfig rtx_config;
-	rina::DTCPFlowControlConfig flow_config;
-	rina::DTCPWindowBasedFlowControlConfig window;
-	rina::DTCPRateBasedFlowControlConfig rate;
+	rina::DTCPFlowControlConfig flow_config_to_encode;
+	rina::DTCPWindowBasedFlowControlConfig window_to_encode;
+	rina::DTCPRateBasedFlowControlConfig rate_to_encode;
+	rinad::FlowEncoder encoder;
+	bool ret = true;
 
 	// Set
-	flow.source_naming_info_ = rina::ApplicationProcessNamingInformation("test", "1");
-	flow.destination_naming_info_ = rina::ApplicationProcessNamingInformation("test2", "1");
-	connection_policies.set_dtcp_present(true);
-	connection_policies.set_seq_num_rollover_threshold(1234);
-	connection_policies.set_initial_a_timer(14561);
-	connection_policies.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
-	dtcp_config.set_rtx_control(true);
+	flow_to_encode.source_naming_info_ = rina::ApplicationProcessNamingInformation("test", "1");
+	flow_to_encode.destination_naming_info_ = rina::ApplicationProcessNamingInformation("test2", "1");
+	connection_policies_to_encode.set_dtcp_present(true);
+	connection_policies_to_encode.set_seq_num_rollover_threshold(1234);
+	connection_policies_to_encode.set_initial_a_timer(14561);
+	connection_policies_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
+	dtcp_config_to_encode.set_rtx_control(true);
 	rtx_config.set_data_rxmsn_max(25423);
-	dtcp_config.set_rtx_control_config(rtx_config);
-	dtcp_config.set_flow_control(true);
-	flow_config.set_rcv_buffers_threshold(412431);
-	flow_config.set_rcv_bytes_percent_threshold(134);
-	flow_config.set_rcv_bytes_threshold(46236);
-	flow_config.set_sent_buffers_threshold(94);
-	flow_config.set_sent_bytes_percent_threshold(2562);
-	flow_config.set_sent_bytes_threshold(26236);
-	flow_config.set_window_based(true);
-	window.set_initial_credit(62556);
-	window.set_max_closed_window_queue_length(5612623);
-	flow_config.set_window_based_config(window);
-	flow_config.set_rate_based(true);
-	rate.set_sending_rate(45125);
-	rate.set_time_period(1451234);
-	flow_config.set_rate_based_config(rate);
-	dtcp_config.set_flow_control_config(flow_config);
-	dtcp_config.set_initial_recvr_inactivity_time(34);
-	dtcp_config.set_initial_sender_inactivity_time(51245);
-	connection_policies.set_dtcp_configuration(dtcp_config);
-	connection->setPolicies(connection_policies);
-	connection_list.push_front(connection);
-	flow.connections_ = connection_list;
+	dtcp_config_to_encode.set_rtx_control_config(rtx_config);
+	dtcp_config_to_encode.set_flow_control(true);
+	flow_config_to_encode.set_rcv_buffers_threshold(412431);
+	flow_config_to_encode.set_rcv_bytes_percent_threshold(134);
+	flow_config_to_encode.set_rcv_bytes_threshold(46236);
+	flow_config_to_encode.set_sent_buffers_threshold(94);
+	flow_config_to_encode.set_sent_bytes_percent_threshold(2562);
+	flow_config_to_encode.set_sent_bytes_threshold(26236);
+	flow_config_to_encode.set_window_based(true);
+	window_to_encode.set_initial_credit(62556);
+	window_to_encode.set_max_closed_window_queue_length(5612623);
+	flow_config_to_encode.set_window_based_config(window_to_encode);
+	flow_config_to_encode.set_rate_based(true);
+	rate_to_encode.set_sending_rate(45125);
+	rate_to_encode.set_time_period(1451234);
+	flow_config_to_encode.set_rate_based_config(rate_to_encode);
+	dtcp_config_to_encode.set_flow_control_config(flow_config_to_encode);
+	dtcp_config_to_encode.set_initial_recvr_inactivity_time(34);
+	dtcp_config_to_encode.set_initial_sender_inactivity_time(51245);
+	connection_policies_to_encode.set_dtcp_configuration(dtcp_config_to_encode);
+	pconnection_to_encode->setPolicies(connection_policies_to_encode);
+	connection_list.push_front(pconnection_to_encode);
+	flow_to_encode.connections_ = connection_list;
 
 	// Encode
+	pflow_to_encode = &flow_to_encode;
+	const rina::SerializedObject *serialized_object = encoder.encode((void*)pflow_to_encode);
+	// Decode
+	rinad::Flow *pflow_decoded = (rinad::Flow*)encoder.decode(*serialized_object);
 
-	return true;
+	// Assert
+	if (pflow_to_encode->source_naming_info_.processName != pflow_decoded->source_naming_info_.processName)
+		ret = false;
+	if (pflow_to_encode->source_naming_info_.processInstance != pflow_decoded->source_naming_info_.processInstance)
+		ret = false;
+
+	rina::Connection *pconnection_decoded = pflow_decoded->connections_.front();
+	rina::ConnectionPolicies connection_policies_decoded = pconnection_decoded->getPolicies();
+	if ( connection_policies_to_encode.get_seq_num_rollover_threshold() != connection_policies_decoded.get_seq_num_rollover_threshold())
+		ret = false;
+	if ( connection_policies_to_encode.get_initial_a_timer() != connection_policies_decoded.get_initial_a_timer())
+		ret = false;
+	if ( connection_policies_to_encode.get_initial_seq_num_policy() != connection_policies_decoded.get_initial_seq_num_policy())
+		ret = false;
+
+	if ( connection_policies_to_encode.is_dtcp_present() != connection_policies_decoded.is_dtcp_present())
+		ret = false;
+	else {
+
+		rina::DTCPConfig dtcp_config_decoded = connection_policies_decoded.get_dtcp_configuration();
+		if(dtcp_config_to_encode.is_rtx_control() != dtcp_config_decoded.is_rtx_control())
+			ret = false;
+		if(dtcp_config_to_encode.get_rtx_control_config().get_data_rxmsn_max() != dtcp_config_decoded.get_rtx_control_config().get_data_rxmsn_max())
+			ret = false;
+		if(dtcp_config_to_encode.get_initial_recvr_inactivity_time() != dtcp_config_decoded.get_initial_recvr_inactivity_time())
+			ret = false;
+		if(dtcp_config_to_encode.get_initial_sender_inactivity_time() != dtcp_config_decoded.get_initial_sender_inactivity_time())
+			ret = false;
+
+		if(dtcp_config_to_encode.is_flow_control() != dtcp_config_decoded.is_flow_control())
+			ret = false;
+		else {
+			rina::DTCPFlowControlConfig flow_config_decoded = dtcp_config_decoded.get_flow_control_config();
+			if (flow_config_to_encode.get_rcv_buffers_threshold() != flow_config_decoded.get_rcv_buffers_threshold())
+				ret = false;
+			if (flow_config_to_encode.get_rcv_bytes_percent_threshold() != flow_config_decoded.get_rcv_bytes_percent_threshold())
+				ret = false;
+			if (flow_config_to_encode.get_rcv_bytes_threshold() != flow_config_decoded.get_rcv_bytes_threshold())
+				ret = false;
+			if (flow_config_to_encode.get_sent_buffers_threshold() != flow_config_decoded.get_sent_buffers_threshold())
+				ret = false;
+			if (flow_config_to_encode.get_sent_bytes_percent_threshold() != flow_config_decoded.get_sent_bytes_percent_threshold())
+				ret = false;
+			if (flow_config_to_encode.get_sent_bytes_threshold() != flow_config_decoded.get_sent_bytes_threshold())
+				ret = false;
+
+			if (flow_config_to_encode.is_window_based() != flow_config_decoded.is_window_based())
+				ret = false;
+			else{
+				rina::DTCPWindowBasedFlowControlConfig window_decoded = flow_config_decoded.get_window_based_config();
+				if (window_to_encode.get_initial_credit() != window_decoded.get_initial_credit())
+					ret = false;
+				if (window_to_encode.get_maxclosed_window_queue_length() != window_decoded.get_maxclosed_window_queue_length())
+					ret = false;
+			}
+
+			if (flow_config_to_encode.is_rate_based() != flow_config_decoded.is_rate_based())
+				ret = false;
+			else {
+				rina::DTCPRateBasedFlowControlConfig rate_decoded = flow_config_decoded.get_rate_based_config();
+				if (rate_to_encode.get_sending_rate() != rate_decoded.get_sending_rate())
+					ret = false;
+				if (rate_to_encode.get_time_period() != rate_decoded.get_time_period())
+					ret = false;
+			}
+		}
+	}
+
+	return ret;
 }
 
 int main()
 {
-	test_Flow();
+	bool result = test_Flow();
 
-	return 0;
+	if (result)
+		return 0;
+	else
+		return -1;
 }
