@@ -106,6 +106,19 @@ string LocalConfiguration::toString() const
         return ss.str();
 }
 
+static void
+dump_map(stringstream& ss, const map<string, string>& m,
+         unsigned int level)
+{
+        for (map<string, string>::const_iterator mit = m.begin();
+                                mit != m.end(); mit++) {
+                for (unsigned int i = 0; i < level; i++) {
+                        ss << "\t";
+                }
+                ss << mit->first << ": " << mit->second << endl;
+        }
+}
+
 string RINAConfiguration::toString() const
 {
         stringstream ss;
@@ -136,6 +149,32 @@ string RINAConfiguration::toString() const
                         ss << "\t\t" << nit->toString() << endl;
                 }
                 ss << "\tHost name: " << it->hostname << endl;
+                ss << "\tSDU protection options:" << endl;
+                dump_map(ss, it->sduProtectionOptions, 2);
+                ss << "\tParameters:" << endl;
+                dump_map(ss, it->parameters, 2);
+        }
+
+        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
+                                it != difConfigurations.end(); it++) {
+                ss << "DIF configuration/properties:" << endl;
+                ss << "\tDIF name: " << it->difName.toString() << endl;
+                ss << "\tDIF type: " << it->difType << endl;
+                // TODO complete
+                ss << "\tParameters: " << endl;
+                for (list<rina::Parameter>::const_iterator pit =
+                        it->configParameters.begin();
+                                pit != it->configParameters.end(); pit++) {
+                        ss << "\t\t" << pit->name << ":" << pit->value << endl;
+                }
+        }
+
+        ss << "Application --> DIF mappings:" << endl;
+        for (map<string, rina::ApplicationProcessNamingInformation>::
+                        const_iterator mit = applicationToDIFMappings.begin();
+                                mit != applicationToDIFMappings.end(); mit++) {
+                ss << "\t" << mit->first << ": " << mit->second.toString()
+                        << endl;
         }
 
         return local.toString() + ss.str();
