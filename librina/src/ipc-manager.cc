@@ -661,24 +661,26 @@ std::list<FlowInformation> IPCProcess::getAllocatedFlows() {
 	return allocatedFlows;
 }
 
-FlowInformation IPCProcess::getFlowInformation(int flowPortId) {
+bool IPCProcess::getFlowInformation(int flowPortId, FlowInformation& result) {
 	std::list<FlowInformation>::const_iterator iterator;
+
 	for (iterator = allocatedFlows.begin();
 			iterator != allocatedFlows.end(); ++iterator) {
-	    if (iterator->getPortId() == flowPortId)
-	    	return *iterator;
+                if (iterator->getPortId() == flowPortId)
+                        result = *iterator;
+                return true;
 	}
 
-	throw IPCException("Unknown flow");
+        return false;
 }
 
 unsigned int IPCProcess::deallocateFlow(int flowPortId) {
 	unsigned int seqNum = 0;
 	FlowInformation flowInformation;
+        bool success;
 
-	try{
-		flowInformation = getFlowInformation(flowPortId);
-	}catch (IPCException &e) {
+	success = getFlowInformation(flowPortId, flowInformation);
+        if (!success) {
 		LOG_ERR("Could not find flow with port-id %d", flowPortId);
 		throw IpcmDeallocateFlowException("Unknown flow");
 	}
@@ -722,14 +724,15 @@ void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
 
 FlowInformation IPCProcess::flowDeallocated(int flowPortId) {
 	FlowInformation flowInformation;
+        bool success;
 
-	try {
-		flowInformation = getFlowInformation(flowPortId);
-		allocatedFlows.remove(flowInformation);
-		return flowInformation;
-	} catch (IPCException &e) {
-		throw IpcmDeallocateFlowException(e.what());
-	}
+        success = getFlowInformation(flowPortId, flowInformation);
+        if (!success) {
+                throw IpcmDeallocateFlowException("No flow for such port-id");
+        }
+        allocatedFlows.remove(flowInformation);
+
+        return flowInformation;
 }
 
 unsigned int IPCProcess::queryRIB(const std::string& objectClass,

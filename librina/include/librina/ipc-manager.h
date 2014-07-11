@@ -621,10 +621,11 @@ public:
 	std::list<FlowInformation> getAllocatedFlows();
 
 	/**
-	 * Returns the information of the flow identified by portId
-	 * @throws IPCException if no flow with the requested portId is found
+	 * Get the information of the flow identified by portId
+         * @result will contain the flow identified by portId, if any
+	 * @return true if the flow is found, false otherwise
 	 */
-	FlowInformation getFlowInformation(int portId);
+	bool getFlowInformation(int portId, FlowInformation& result);
 
 	/**
 	 * Tell the IPC Process to deallocate a flow
