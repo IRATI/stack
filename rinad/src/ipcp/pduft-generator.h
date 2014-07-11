@@ -340,6 +340,7 @@ public:
 	~LinkStatePDUFTGeneratorPolicy();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	const std::list<rina::FlowInformation>& get_allocated_flows() const;
 
 	/// N-1 Flow allocated, N-1 Flow deallocated or enrollment to neighbor completed
 	void eventHappened(Event * event);
