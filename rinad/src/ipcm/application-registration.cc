@@ -52,6 +52,10 @@ IPCManager::unregister_app_from_ipcp(
                                                            applicationName);
                 pending_app_unregistrations[seqnum] =
                                 make_pair(slave_ipcp, req_event);
+
+                cout << "Requested unregistration of application " <<
+                        req_event.applicationName.toString() << " from IPC "
+                        "process " << slave_ipcp->name.toString() << endl;
         } catch (rina::IpcmUnregisterApplicationException) {
                 cerr << __func__ << ": Error while unregistering application "
                         << req_event.applicationName.toString() << " from IPC "
@@ -74,6 +78,11 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
                 seqnum = slave_ipcp->unregisterApplication(ipcp->name);
                 pending_ipcp_unregistrations[seqnum] =
                                 make_pair(ipcp, slave_ipcp);
+
+                cout << "Requested unregistration of IPC process " <<
+                        ipcp->name.toString() << " from IPC "
+                        "process " << slave_ipcp->name.toString() << endl;
+
                 concurrency.wait_for_event(
                                 rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
                                 seqnum);
@@ -139,6 +148,10 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                                                 info.ipcProcessId);
                 ipcm->pending_app_registrations[seqnum] =
                                         make_pair(slave_ipcp, *event);
+
+                cout << "Requested registration of application " <<
+                        app_name.toString() << " to IPC process " <<
+                        slave_ipcp->name.toString() << endl;
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr << __func__ << ": Error while registering application "
                         << app_name.toString() << endl;
@@ -157,9 +170,14 @@ static bool ipcm_register_response_common(
                 /* Notify the N-1 IPC process. */
                 slave_ipcp->registerApplicationResult(
                                         event->sequenceNumber, success);
+
+                cout << "IPC process " << slave_ipcp->name.toString() <<
+                        " informed about registration of application " <<
+                        app_name.toString() << " to N-1 DIF " <<
+                        slave_dif_name.toString() << endl;
         } catch (rina::IpcmRegisterApplicationException) {
-                cerr <<  __func__ << ": Error while reporting DIF "
-                        "assignment result of IPC process "
+                cerr <<  __func__ << ": Error while reporting "
+                        "registration result of application "
                         << app_name.toString() <<
                         " to N-1 DIF " << slave_dif_name.toString()
                         << endl;
@@ -191,6 +209,10 @@ static void ipcm_register_response_ipcp(
                                         slave_ipcp->name,
                                         slave_dif_name
                                         );
+                        cout << "IPC process " << ipcp->name.toString() <<
+                                " informed about its registration "
+                                "to N-1 DIF " <<
+                                slave_dif_name.toString() << endl;
                 } catch (rina::NotifyRegistrationToDIFException) {
                         cerr << __func__ << ": Error while notifying "
                                 "IPC process " <<
@@ -234,6 +256,10 @@ static void ipcm_register_response_app(
         try {
                 rina::applicationManager->applicationRegistered(req_event,
                                 slave_dif_name, success ? 0 : -1);
+                cout << "Application " << app_name.toString() <<
+                        " informed about its registration "
+                        "to N-1 DIF " << slave_dif_name.toString() <<
+                        " [success = " << success << "]" << endl;
         } catch (rina::NotifyApplicationRegisteredException) {
                 cerr << __func__ << "Error while notifying application "
                         << app_name.toString() << " about registration "
@@ -272,7 +298,8 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
         }
 }
 
-static void application_manager_app_unregistered(
+static void
+application_manager_app_unregistered(
                 rina::ApplicationUnregistrationRequestEvent event,
                 int result)
 {
@@ -281,6 +308,10 @@ static void application_manager_app_unregistered(
                 if (event.sequenceNumber > 0) {
                         rina::applicationManager->
                                         applicationUnregistered(event, result);
+                        cout << "Application " << event.applicationName.
+                                toString() << " informed about its "
+                                "unregistration [success = " << (!result) <<
+                                "]" << endl;
                 }
         } catch (rina::NotifyApplicationUnregisteredException) {
                 cerr << __func__ << ": Error while notifying application "
@@ -331,6 +362,10 @@ static bool ipcm_unregister_response_common(
                 // Inform the IPC process about the application unregistration
                 slave_ipcp->unregisterApplicationResult(event->
                                 sequenceNumber, success);
+                cout << "IPC process " << slave_ipcp->name.toString() <<
+                        " informed about unregistration of application "
+                        << app_name.toString() << " [success = " << success
+                        << "]" << endl;
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr << __func__ << ": Error while reporing "
                         "unregistration result for application "
@@ -364,6 +399,9 @@ static void ipcm_unregister_response_ipcp(
                         ipcp->notifyUnregistrationFromSupportingDIF(
                                                         slave_ipcp->name,
                                                         slave_dif_name);
+                        cout << "IPC process " << ipcp->name.toString() <<
+                                " informed about its unregistration from DIF "
+                                << slave_dif_name.toString() << endl;
                 } else {
                         cerr << __func__ << ": Cannot unregister IPC Process "
                                 << ipcp->name.toString() << " from DIF " <<
