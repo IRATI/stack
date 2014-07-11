@@ -951,7 +951,7 @@ IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId) {
         unlock();
 
         if (iterator == ipcProcesses.end())
-                throw GetIPCProcessException();
+                return NULL;
 
         return iterator->second;
 }

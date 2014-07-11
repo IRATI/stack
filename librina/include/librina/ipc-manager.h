@@ -144,20 +144,6 @@ public:
 };
 
 /**
- * Thrown when there are problems looking for an IPC Process
- */
-class GetIPCProcessException: public IPCException {
-public:
-        GetIPCProcessException():
-                IPCException("Problems while searching an IPC Process"){
-        }
-        GetIPCProcessException(const std::string& description):
-                IPCException(description){
-        }
-};
-
-
-/**
  * Thrown when there are problems destroying an IPC Process
  */
 class DestroyIPCProcessException: public IPCException {
@@ -748,10 +734,8 @@ public:
         /**
          * Returns a pointer to the IPCProcess identified by ipcProcessId
          * @param ipcProcessId
-         * @return a pointer to an IPC Process
-         * @throws GetIPCProcessException if no IPC Process with the specified
-         * XXX Why exception? Just return NULL
-         * id is found
+         * @return a pointer to an IPC Process or NULL if no IPC Process
+         * with the specified id is found
          */
         IPCProcess * getIPCProcess(unsigned short ipcProcessId);
 };
