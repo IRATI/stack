@@ -74,6 +74,9 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
                 seqnum = slave_ipcp->unregisterApplication(ipcp->name);
                 pending_ipcp_unregistrations[seqnum] =
                                 make_pair(ipcp, slave_ipcp);
+                concurrency.wait_for_event(
+                                rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
+                                seqnum);
         } catch (rina::IpcmUnregisterApplicationException) {
                 cerr << __func__ << ": Error while unregistering IPC process "
                         << ipcp->name.toString() << " from IPC "

@@ -68,11 +68,20 @@ class IPCManager : public EventLoopData {
         IPCManager();
         ~IPCManager();
 
+        int start_script_worker();
+        int start_console_worker();
+
         int apply_configuration();
 
         rina::IPCProcess *create_ipcp(
                         const rina::ApplicationProcessNamingInformation& name,
                         const std::string& type);
+
+        int destroy_ipcp(unsigned int ipcp_id);
+
+        int list_ipcps(std::ostream& os);
+
+        int list_ipcp_types(std::ostream& os);
 
         int assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
@@ -87,7 +96,7 @@ class IPCManager : public EventLoopData {
                              difs);
 
         int enroll_to_dif(rina::IPCProcess *ipcp,
-                          const rinad::NeighborData& neighbor);
+                          const rinad::NeighborData& neighbor, bool sync);
 
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const std::list<rinad::NeighborData>& neighbors);
@@ -147,8 +156,8 @@ class IPCManager : public EventLoopData {
         IPCMConcurrency concurrency;
 
  private:
-        IPCMConsole *console;
         rina::Thread *script;
+        IPCMConsole *console;
 };
 
 void register_handlers_all(EventLoop& loop);
