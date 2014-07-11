@@ -35,7 +35,7 @@
 #include "helpers.h"
 #include "ipcm.h"
 #include "console.h"
-#include "application-registration.h"
+#include "registration.h"
 #include "flow-allocation.h"
 
 using namespace std;
