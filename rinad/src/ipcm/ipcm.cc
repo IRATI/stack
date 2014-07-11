@@ -45,7 +45,8 @@ namespace rinad {
 
 #define IPCM_LOG_FILE "/tmp/ipcm-log-file"
 
-void *script_function(void *opaque)
+void *
+script_function(void *opaque)
 {
         IPCManager *ipcm = static_cast<IPCManager *>(opaque);
 
@@ -58,7 +59,7 @@ void *script_function(void *opaque)
         return NULL;
 }
 
-IPCManager::IPCManager()
+IPCManager::IPCManager() : script(NULL), console(NULL)
 {
         /* Initialize the IPC manager infrastructure in librina. */
         try {
@@ -69,18 +70,42 @@ IPCManager::IPCManager()
                 cerr << "Cannot initialize librina-ipc-manager" << endl;
                 exit(EXIT_FAILURE);
         }
-
-        /* Create and start the console thread. */
-        console = new IPCMConsole(*this);
-
-        script = new rina::Thread(new rina::ThreadAttributes(),
-                                   script_function, this);
 }
 
 IPCManager::~IPCManager()
 {
-        delete console;
-        delete script;
+        if (console) {
+                delete console;
+        }
+        if (script) {
+                // Maybe we should join here
+                delete script;
+        }
+}
+
+int
+IPCManager::start_script_worker()
+{
+        if (script) {
+                return -1;
+        }
+
+        script = new rina::Thread(new rina::ThreadAttributes(),
+                                   script_function, this);
+
+        return 0;
+}
+
+int
+IPCManager::start_console_worker()
+{
+        if (console) {
+                return -1;
+        }
+
+        console = new IPCMConsole(*this);
+
+        return 0;
 }
 
 void
@@ -92,7 +117,8 @@ IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
         doWait();
 }
 
-void IPCMConcurrency::notify_event(rina::IPCEvent *event)
+void
+IPCMConcurrency::notify_event(rina::IPCEvent *event)
 {
         if (event_waiting && event_ty == event->eventType
                         && (event_sn == 0 ||
@@ -131,7 +157,7 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 
         try {
                 ipcp = rina::ipcProcessFactory->create(name,
-                                type);
+                                                       type);
                 if (type != rina::NORMAL_IPC_PROCESS) {
                         /* Shim IPC processes are set as initialized
                          * immediately. */
@@ -161,12 +187,56 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 }
 
 int
+IPCManager::destroy_ipcp(unsigned int ipcp_id)
+{
+        try {
+                rina::ipcProcessFactory->destroy(ipcp_id);
+        } catch (rina::DestroyIPCProcessException) {
+                cerr << __func__ << ": Error while destroying IPC "
+                        "process with id " << ipcp_id << endl;
+                return -1;
+        }
+
+        return 0;
+}
+
+int
+IPCManager::list_ipcps(std::ostream& os)
+{
+        const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+        os << "Current IPC processes:" << endl;
+        for (unsigned int i = 0; i < ipcps.size(); i++) {
+                os << "    " << ipcps[i]->id << ": " <<
+                        ipcps[i]->name.toString() << "\n";
+        }
+
+        return 0;
+}
+
+int
+IPCManager::list_ipcp_types(std::ostream& os)
+{
+        const list<string>& types = rina::ipcProcessFactory->
+                                        getSupportedIPCProcessTypes();
+
+        os << "Supported IPC process types:" << endl;
+        for (list<string>::const_iterator it = types.begin();
+                                        it != types.end(); it++) {
+                os << "    " << *it << endl;
+        }
+
+        return 0;
+}
+
+int
 IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
                           dif_name)
 {
         if (!ipcp) {
-                return 0;
+                return -1;
         }
 
         rinad::DIFProperties dif_props;
@@ -240,6 +310,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 cerr << "Error while assigning " <<
                         ipcp->name.toString() <<
                         " to DIF " << dif_name.toString() << endl;
+                goto out;
         }
 
         ret = 0;
@@ -299,7 +370,8 @@ int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
 
 int
 IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
-                          const rinad::NeighborData& neighbor)
+                          const rinad::NeighborData& neighbor,
+                          bool sync)
 {
         concurrency.lock();
 
@@ -310,6 +382,10 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                                 neighbor.supportingDifName,
                                 neighbor.apName);
                 pending_ipcp_enrollments[seqnum] = ipcp;
+                if (sync) {
+                        concurrency.wait_for_event(
+                                rina::ENROLL_TO_DIF_RESPONSE_EVENT, seqnum);
+                }
         } catch (rina::EnrollException) {
                 cerr << __func__ << ": Error while enrolling "
                         << "to DIF " << neighbor.difName.toString()
@@ -327,7 +403,7 @@ int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
         for (list<rinad::NeighborData>::const_iterator
                         nit = neighbors.begin();
                                 nit != neighbors.end(); nit++) {
-                enroll_to_dif(ipcp, *nit);
+                enroll_to_dif(ipcp, *nit, false);
         }
 
         return 0;
@@ -367,6 +443,8 @@ int
 IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                                      const rina::DIFConfiguration& dif_config)
 {
+        concurrency.lock();
+
         try {
                 unsigned int seqnum;
 
@@ -379,27 +457,34 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                  */
                 seqnum = ipcp->updateDIFConfiguration(dif_config);
                 pending_dif_config_updates[seqnum] = ipcp;
+                concurrency.wait_for_event(
+                        rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum);
         } catch (rina::UpdateDIFConfigurationException) {
                 cerr << __func__ << ": Error while updating DIF configuration "
                         " for IPC process " << ipcp->name.toString() << endl;
         }
 
+        concurrency.unlock();
+
         return 0;
 }
 
-static void application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+assign_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
+static void
+assign_to_dif_response_event_handler(rina::IPCEvent *e,
                                             EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
@@ -428,14 +513,16 @@ static void assign_to_dif_response_event_handler(rina::IPCEvent *e,
         }
 }
 
-static void update_dif_config_request_event_handler(rina::IPCEvent *event,
+static void
+update_dif_config_request_event_handler(rina::IPCEvent *event,
                                                     EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void update_dif_config_response_event_handler(rina::IPCEvent *e,
+static void
+update_dif_config_response_event_handler(rina::IPCEvent *e,
                                                      EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::UpdateDIFConfigurationResponseEvent, event);
@@ -467,13 +554,15 @@ static void update_dif_config_response_event_handler(rina::IPCEvent *e,
         ipcm->pending_dif_config_updates.erase(mit);
 }
 
-static void enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+enroll_to_dif_request_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
+static void
+enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                                                  EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::EnrollToDIFResponseEvent, event);
@@ -503,7 +592,8 @@ static void enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         ipcm->pending_ipcp_enrollments.erase(mit);
 }
 
-static void neighbors_modified_notification_event_handler(rina::IPCEvent *e,
+static void
+neighbors_modified_notification_event_handler(rina::IPCEvent *e,
                                                           EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::NeighborsModifiedNotificationEvent, event);
@@ -534,31 +624,36 @@ static void neighbors_modified_notification_event_handler(rina::IPCEvent *e,
         (void) ipcm;
 }
 
-static void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_dif_registration_notification_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_query_rib_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+get_dif_properties_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+get_dif_properties_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void os_process_finalized_handler(rina::IPCEvent *e,
+static void
+os_process_finalized_handler(rina::IPCEvent *e,
                                          EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
@@ -613,7 +708,8 @@ static void os_process_finalized_handler(rina::IPCEvent *e,
         }
 }
 
-static void query_rib_response_event_handler(rina::IPCEvent *e,
+static void
+query_rib_response_event_handler(rina::IPCEvent *e,
                                              EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::QueryRIBResponseEvent, event);
@@ -624,7 +720,8 @@ static void query_rib_response_event_handler(rina::IPCEvent *e,
         (void) ipcm;    // Stop compiler barfs
 }
 
-static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
+static void
+ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
                                                     EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
@@ -644,44 +741,51 @@ static void ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
         }
 }
 
-static void timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_create_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_create_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_update_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_update_connection_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_create_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_create_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_destroy_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_destroy_connection_result_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
-static void ipc_process_dump_ft_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
+static void
+ipc_process_dump_ft_response_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
         (void) opaque;    // Stop compiler barfs
 }
 
 
-void register_handlers_all(EventLoop& loop)
+void
+register_handlers_all(EventLoop& loop)
 {
         loop.register_pre_function(ipcm_pre_function);
         loop.register_post_function(ipcm_post_function);

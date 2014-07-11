@@ -39,6 +39,23 @@ using namespace std;
 
 namespace rinad {
 
+void parse_name(const Json::Value &root,
+                rina::ApplicationProcessNamingInformation &name)
+{
+        name.processName =
+                root.get("applicationProcessName",
+                         string()).asString();
+        name.processInstance =
+                root.get("applicationProcessInstance",
+                         string()).asString();
+        name.entityName =
+                root.get("applicationEntityName",
+                         string()).asString();
+        name.entityInstance =
+                root.get("applicationEntityInstance",
+                         string()).asString();
+}
+
 void parse_policy(const Json::Value  &root,
                   const string       &name,
                   rina::PolicyConfig &pol)
@@ -103,6 +120,33 @@ void parse_flow_ctrl(const Json::Value root,
                         flow_ctrl.get("rateBased",
                                       fc.rate_based_).asBool();
                 // TODO: rate_based_config_
+                Json::Value r_flow_ctrl = flow_ctrl["rateBasedConfig"];
+                if (r_flow_ctrl != 0) {
+                        rina::DTCPRateBasedFlowControlConfig rfc;
+
+                        rfc.sending_rate_ =
+                                r_flow_ctrl.get("sendingRate",
+                                                rfc.sending_rate_)
+                                .asUInt();
+
+                        rfc.time_period_ =
+                                r_flow_ctrl.get("timePeriod",
+                                                rfc.time_period_)
+                                .asUInt();
+
+                        parse_policy(r_flow_ctrl,
+                                     "noRateSlowDownPolicy",
+                                     rfc.no_rate_slow_down_policy_);
+
+                        parse_policy(r_flow_ctrl,
+                                     "noOverrideDefaultPeakPolicy",
+                                     rfc.no_override_default_peak_policy_);
+
+                        parse_policy(r_flow_ctrl,
+                                     "rateReductionPolicy",
+                                     rfc.rate_reduction_policy_);
+
+                }
 
                 fc.sent_bytes_threshold_ =
                         flow_ctrl.get("sentBytesThreshold",
@@ -155,6 +199,52 @@ void parse_flow_ctrl(const Json::Value root,
         }
 }
 
+void parse_rtx_flow_ctrl(const Json::Value root,
+                         rina::DTCPConfig &dc)
+{
+        Json::Value rtx_ctrl = root["rtxControlConfig"];
+        if (rtx_ctrl != 0) {
+                rina::DTCPRtxControlConfig rfc;
+
+                rfc.data_rxms_nmax_ =
+                        rtx_ctrl.get("dataRxmsNmax",
+                                     rfc.data_rxms_nmax_)
+                        .asUInt();
+
+                rfc.initial_rtx_time_ =
+                        rtx_ctrl.get("initialRtxTime",
+                                     rfc.initial_rtx_time_)
+                        .asUInt();
+
+                parse_policy(rtx_ctrl,
+                             "rtxTimerExpiryPolicy",
+                             rfc.rtx_timer_expiry_policy_);
+
+                parse_policy(rtx_ctrl,
+                             "senderAckPolicy",
+                             rfc.sender_ack_policy_);
+
+                parse_policy(rtx_ctrl,
+                             "recvingAckListPolicy",
+                             rfc.recving_ack_list_policy_);
+
+                parse_policy(rtx_ctrl,
+                             "rcvrAckPolicy",
+                             rfc.rcvr_ack_policy_);
+
+                parse_policy(rtx_ctrl,
+                             "sendingAckPolicy",
+                             rfc.sending_ack_policy_);
+
+                parse_policy(rtx_ctrl,
+                             "rcvrControlAckPolicy",
+                             rfc.rcvr_control_ack_policy_);
+
+                dc.rtx_control_config_ = rfc;
+        }
+}
+
+
 void parse_efcp_policies(const Json::Value root,
                          rina::QoSCube    &cube)
 {
@@ -180,8 +270,8 @@ void parse_efcp_policies(const Json::Value root,
                                 dtcp_conf.get("rtxControl",
                                               dc.rtx_control_).asBool();
 
-                        //TODO: rtx_control_config_
-
+                        // rtx_control_config_
+                        parse_rtx_flow_ctrl(dtcp_conf, dc);
 
                         dc.initial_sender_inactivity_time_ =
                                 dtcp_conf.get
@@ -211,7 +301,9 @@ void parse_efcp_policies(const Json::Value root,
                                      dc.rtt_estimator_policy_);
                 }
 
-                // TODO: PolicyConfig
+                parse_policy(con_pol,
+                             "initialSeqNumPolicy",
+                             cp.initial_seq_num_policy_);
 
                 cp.seq_num_rollover_threshold_ =
                         con_pol.get("seqNumRolloverThreshold",
@@ -330,16 +422,167 @@ void parse_dif_configs(const Json::Value   &root,
                         props.qosCubes.push_back(cube);
                 }
 
-                // TODO: rina::RMTConfiguration rmtConfiguration;
-                // TODO: std::map<std::string, std::string> policies;
-                // TODO: std::map<std::string, std::string> policyParameters;
-                // TODO: NMinusOneFlowsConfiguration
+                // rmtConfiguration;
+                Json::Value rmt_conf = dif_configs[i]["rmtConfiguration"];
+                if (rmt_conf != 0) {
+                        rina::RMTConfiguration rc;
+
+                        parse_policy(rmt_conf,
+                                     "rmtQueueMonitorPolicy",
+                                     rc.rmt_queue_monitor_policy_);
+                        
+                        parse_policy(rmt_conf,
+                                     "rmtSchedulingPolicy",
+                                     rc.rmt_scheduling_policy_);
+
+                        parse_policy(rmt_conf,
+                                     "maxQueuePolicy",
+                                     rc.max_queue_policy_);
+
+                        props.rmtConfiguration = rc;
+                }
+
+
+                // std::map<std::string, std::string> policies;
+                Json::Value policies = dif_configs[i]["policies"];
+                if (policies != 0) {
+                        Json::Value::Members members = 
+                                policies.getMemberNames();
+                        for (unsigned int j = 0; j < members.size(); j++) {
+                                string value = policies.get
+                                        (members[i], string()).asString();
+                                props.policies.insert
+                                        (pair<string, string>
+                                         (members[i], value));
+                        }
+                }
+
+                // std::map<std::string, std::string> policyParameters;
+                Json::Value policyParams = dif_configs[i]["policyParameters"];
+                if (policyParams != 0) {
+                        Json::Value::Members members = 
+                                policyParams.getMemberNames();
+                        for (unsigned int j = 0; j < members.size(); j++) {
+                                string value = policyParams.get
+                                        (members[i], string()).asString();
+                                props.policyParameters.insert
+                                        (pair<string, string>
+                                         (members[i], value));
+                        }
+                }
+
+                // NMinusOneFlowsConfiguration
                 //       nMinusOneFlowsConfiguration;
-                // TODO: std::list<ExpectedApplicationRegistration>
-                //       expectedApplicationRegistrations;
-                // TODO: std::list<DirectoryEntry> directory;
-                // TODO: std::list<KnownIPCProcessAddress>
-                //       knownIPCProcessAddresses;
+
+                Json::Value flow_conf = 
+                        dif_configs[i]["nMinusOneFlowsConfiguration"];
+                if (flow_conf != 0) {
+                        rinad::NMinusOneFlowsConfiguration fc;
+
+                        fc.managementFlowQoSId = 
+                                flow_conf.get("managementFlowQosId",
+                                              fc.managementFlowQoSId)
+                                .asInt();
+                        
+                        Json::Value data_flow = flow_conf["dataFlowsQosIds"];
+                        for (unsigned int j = 0; j < data_flow.size(); j++) {
+                                fc.dataFlowsQoSIds.push_back
+                                        (data_flow[j].asInt());
+                        }
+
+                        props.nMinusOneFlowsConfiguration = fc;
+                }
+
+                // std::list<ExpectedApplicationRegistration>
+                // expectedApplicationRegistrations;
+                Json::Value exp_app =
+                        dif_configs[i]["expectedApplicationRegistrations"];
+                if (exp_app != 0) {
+                        for (unsigned int j = 0; j < exp_app.size(); j++) {
+                                rinad::ExpectedApplicationRegistration exp;
+                        
+                                exp.applicationProcessName = 
+                                        exp_app[j]
+                                        .get("applicationProcessName",
+                                             string())
+                                        .asString();
+
+                                exp.applicationProcessInstance =
+                                        exp_app[j]
+                                        .get("applicationProcessInstance",
+                                             string())
+                                        .asString();
+
+                                exp.applicationEntityName =
+                                        exp_app[j]
+                                        .get("applicationEntityName",
+                                             string())
+                                        .asString();
+
+                                exp.socketPortNumber =
+                                        exp_app[j]
+                                        .get("socketPortNumber",
+                                             exp.socketPortNumber)
+                                        .asInt();
+
+                                props.expectedApplicationRegistrations
+                                        .push_back(exp);
+                        }
+                }
+
+                // std::list<DirectoryEntry> directory;
+                Json::Value dir = dif_configs[i]["directory"];
+                if (dir != 0) {
+                        for (unsigned int j = 0; j < dir.size(); j++) {
+                                rinad::DirectoryEntry de;
+                                
+                                de.applicationProcessName =
+                                        dir[j].get("applicationProcessName",
+                                                string())
+                                        .asString();
+
+                                de.applicationProcessInstance =
+                                        dir[j].get("applicationProcessInstance",
+                                                   string())
+                                        .asString();
+
+                                de.applicationEntityName = 
+                                        dir[j].get("applicationEntityName",
+                                                   string())
+                                        .asString();
+
+                                de.hostname = 
+                                        dir[j].get("hostname",
+                                                   string())
+                                        .asString();
+
+                                de.socketPortNumber = 
+                                        dir[j].get("socketPortNumber",
+                                                   de.socketPortNumber)
+                                        .asInt();
+                        
+                                props.directory.push_back(de);
+                        }
+                }
+
+                // std::list<KnownIPCProcessAddress>
+                // knownIPCProcessAddresses;
+
+                Json::Value known = dif_configs[i]["knownIPCProcessAddresses"];
+                if (known != 0) {
+                        for (unsigned int j = 0; j < known.size(); j++) {
+                                rinad::KnownIPCProcessAddress kn;
+                                
+                                parse_name(known[j], kn.name);
+
+                                kn.address = 
+                                        known[j].get("address",
+                                                     kn.address).asUInt();
+
+                                props.knownIPCProcessAddresses.push_back(kn);
+                        }
+                }
+
                 // TODO: rina::PDUFTableGeneratorConfiguration
                 //       pdufTableGeneratorConfiguration;
                 // TODO: std::list<AddressPrefixConfiguration> addressPrefixes;
@@ -361,21 +604,8 @@ void parse_ipc_to_create(const Json::Value         root,
 
                 // IPC process Names
                 // Might want to move this to another function
-                rina::ApplicationProcessNamingInformation name;
-                name.processName =
-                        ipc_processes[i].get("applicationProcessName",
-                                             string()).asString();
-                name.processInstance =
-                        ipc_processes[i].get("applicationProcessInstance",
-                                             string()).asString();
-                name.entityName =
-                        ipc_processes[i].get("applicationEntityName",
-                                             string()).asString();
-                name.entityInstance =
-                        ipc_processes[i].get("applicationEntityInstance",
-                                             string()).asString();
-                ipc.name = name;
-
+                parse_name(ipc_processes[i], ipc.name);
+                
                 ipc.difName = rina::ApplicationProcessNamingInformation
                         (ipc_processes[i].get
                          ("difName", string()).asString(),
@@ -387,24 +617,7 @@ void parse_ipc_to_create(const Json::Value         root,
                         for (unsigned int j = 0; j < neigh.size(); j++) {
                                 rinad::NeighborData neigh_data;
 
-                                rina::ApplicationProcessNamingInformation name2;
-                                name2.processName =
-                                        neigh[j].get
-                                        ("applicationProcessName",
-                                         string()).asString();
-                                name2.processInstance =
-                                        neigh[j].get
-                                        ("applicationProcessInstance",
-                                         string()).asString();
-                                name2.entityName =
-                                        neigh[j].get
-                                        ("applicationEntityName",
-                                         string()).asString();
-                                name2.entityInstance =
-                                        neigh[j].get
-                                        ("applicationEntityInstance",
-                                         string()).asString();
-                                neigh_data.apName = name2;
+                                parse_name(neigh[j], neigh_data.apName);
 
                                 neigh_data.difName =
                                         rina::ApplicationProcessNamingInformation

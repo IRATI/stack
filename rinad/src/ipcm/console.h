@@ -57,9 +57,18 @@ class IPCMConsole : public rina::Thread {
                 typedef int (IPCMConsole::*ConsoleCmdFunction)
                             (std::vector<std::string>& args);
 
+                struct ConsoleCmdInfo {
+                        ConsoleCmdFunction fun;
+                        const char *usage;
+
+                        ConsoleCmdInfo() : fun(NULL), usage(NULL) { }
+                        ConsoleCmdInfo(ConsoleCmdFunction f, const char *u)
+                                                        : fun(f), usage(u) { }
+                };
+
                 IPCManager& ipcm;
 
-                std::map<std::string, ConsoleCmdFunction> commands_map;
+                std::map<std::string, ConsoleCmdInfo> commands_map;
                 std::ostringstream outstream;
 
                 int init();
@@ -69,6 +78,15 @@ class IPCMConsole : public rina::Thread {
                 // Console commands functions
                 int quit(std::vector<std::string>& args);
                 int help(std::vector<std::string>& args);
+                int create_ipcp(std::vector<std::string>& args);
+                int destroy_ipcp(std::vector<std::string>& args);
+                int list_ipcps(std::vector<std::string>& args);
+                int list_ipcp_types(std::vector<std::string>& args);
+                int assign_to_dif(std::vector<std::string>& args);
+                int register_at_dif(std::vector<std::string>& args);
+                int unregister_from_dif(std::vector<std::string>& args);
+                int update_dif_config(std::vector<std::string>& args);
+                int enroll_to_dif(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r);

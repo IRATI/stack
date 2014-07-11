@@ -83,7 +83,12 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
+        cout << ipcm.config.toString() << endl;
+
         rinad::register_handlers_all(loop);
+
+        ipcm.start_console_worker();
+        //ipcm.start_script_worker();
 
         loop.run();
 

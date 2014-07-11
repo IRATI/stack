@@ -213,10 +213,8 @@ const std::string ApplicationProcessNamingInformation::getEncodedString() const 
 const std::string ApplicationProcessNamingInformation::toString() const{
         std::stringstream ss;
 
-        ss<<"Process name: "<<processName;
-        ss<<"; Process instance: "<<processInstance<<std::endl;
-        ss<<"Entity name: "<<entityName;
-        ss<<"; Entity instance: "<<entityInstance;
+        ss << processName << ":" << processInstance << ":"
+                << entityName << ":" << entityInstance;
 
         return ss.str();
 }
