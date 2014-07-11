@@ -144,15 +144,7 @@ collect_flows_by_application(const rina::ApplicationProcessNamingInformation&
 rina::IPCProcess *
 lookup_ipcp_by_id(unsigned int id)
 {
-        rina::IPCProcess *ipcp = NULL;
-
-        try {
-                ipcp = rina::ipcProcessFactory->getIPCProcess(id);
-        } catch (rina::GetIPCProcessException) {
-                ipcp = NULL;
-        }
-
-        return ipcp;
+        return rina::ipcProcessFactory->getIPCProcess(id);
 }
 
 int string2int(const string& s, int& ret)
