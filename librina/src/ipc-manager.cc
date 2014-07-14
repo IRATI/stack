@@ -666,9 +666,10 @@ bool IPCProcess::getFlowInformation(int flowPortId, FlowInformation& result) {
 
 	for (iterator = allocatedFlows.begin();
 			iterator != allocatedFlows.end(); ++iterator) {
-                if (iterator->getPortId() == flowPortId)
+                if (iterator->getPortId() == flowPortId) {
                         result = *iterator;
-                return true;
+                        return true;
+                }
 	}
 
         return false;
