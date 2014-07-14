@@ -791,14 +791,14 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 
         /* FIXME: Missing update of right window edge */
 
-        seq_ctl = next_snd_ctl_seq(dtcp);
+        seq_ctl      = next_snd_ctl_seq(dtcp);
         rt_wind_edge = update_rt_wind_edge(dtcp);
         lf_wind_edge = dt_sv_rcv_lft_win(dtcp->parent);
-        pdu_ctrl = pdu_ctrl_ack_flow(dtcp,
-                                     seq_ctl,
-                                     seq,
-                                     rt_wind_edge,
-                                     lf_wind_edge);
+        pdu_ctrl     = pdu_ctrl_ack_flow(dtcp,
+                                         seq_ctl,
+                                         seq,
+                                         rt_wind_edge,
+                                         lf_wind_edge);
         if (!pdu_ctrl) {
                 LOG_ERR("ERROR creating PDU for default rcvr flow control");
                 return -1;

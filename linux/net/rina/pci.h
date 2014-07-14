@@ -101,7 +101,7 @@ int                   pci_source_set(struct pci * pci,
 int                   pci_sequence_number_set(struct pci * pci,
                                               seq_num_t    sequence_number);
 /* FIXME: if pci is NULL, it should return and error (-1) ... */
-seq_num_t             pci_sequence_number_get(struct pci * pci);
+seq_num_t             pci_sequence_number_get(const struct pci * pci);
 
 int                   pci_qos_id_set(struct pci * pci,
                                      qos_id_t     qos_id);
