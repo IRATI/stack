@@ -35,9 +35,8 @@ using namespace std;
 
 namespace rinad {
 
-/* Returns an IPC process assigned to the DIF specified by @dif_name,
- * if any.
- */
+// Returns an IPC process assigned to the DIF specified by @dif_name,
+// if any.
 rina::IPCProcess *
 select_ipcp_by_dif(const rina::ApplicationProcessNamingInformation& dif_name)
 {

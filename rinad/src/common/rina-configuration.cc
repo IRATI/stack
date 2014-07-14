@@ -31,11 +31,9 @@ using namespace std;
 
 namespace rinad {
 
-/*
- * Return the configuration of the DIF named "difName" if it is known
- * @param difName
- * @result
- */
+// Return the configuration of the DIF named "difName" if it is known
+// @param difName
+// @result
 bool RINAConfiguration::lookup_dif_properties(
                 const rina::ApplicationProcessNamingInformation& dif_name,
                 DIFProperties& result) const
@@ -52,13 +50,11 @@ bool RINAConfiguration::lookup_dif_properties(
 }
 
 #if 0
-/*
- * Return the address of the IPC process named "name" if it is known,
- * 0 otherwise
- * @param dif_name
- * @param ipcp_name
- * @return
- */
+// Return the address of the IPC process named "name" if it is known,
+// 0 otherwise
+// @param dif_name
+// @param ipcp_name
+// @return
 bool RINAConfiguration::lookup_ipcp_address(const string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
                 unsigned int& result)
