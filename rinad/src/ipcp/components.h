@@ -51,6 +51,7 @@ class IPCProcessComponent {
 public:
 	virtual ~IPCProcessComponent(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 };
 
 /// Interface
@@ -264,6 +265,8 @@ public:
 	virtual ~INMinusOneFlowManager(){};
 
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
+
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
 	/// Allocate an N-1 Flow with the requested QoS to the destination
 	/// IPC Process
@@ -636,14 +639,14 @@ public:
 	virtual INamespaceManager* get_namespace_manager() = 0;
 	virtual IResourceAllocator* get_resource_allocator() = 0;
 	virtual IRIBDaemon* get_rib_daemon() = 0;
-	virtual unsigned int get_address() = 0;
+	virtual unsigned int get_address() const = 0;
 	virtual void set_address(unsigned int address) = 0;
 	virtual const rina::ApplicationProcessNamingInformation& get_name() const = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
-	virtual const rina::DIFInformation& get_dif_information() const = 0;
+	virtual rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
-	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
+	virtual const std::list<rina::Neighbor*>& get_neighbors() const = 0;
 	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
 };
 

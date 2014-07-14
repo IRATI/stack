@@ -43,6 +43,7 @@ class Time {
 public:
 	Time();
 	Time(timeval t);
+	int get_current_time_in_ms() const;
 	int get_time_seconds() const;
 	int get_only_milliseconds() const;
 	bool operator<(const Time &other) const;

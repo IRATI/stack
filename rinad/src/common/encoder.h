@@ -64,8 +64,11 @@ public:
 	static const std::string FLOWSTATEOBJECTGROUP;
 	static const std::string LINKSTATE;
 	static const std::string DIF_NAME_WHATEVERCAST_RULE;
+	static const std::string WATCHDOG;
 
 	/* Full names */
+	static const std::string ADDRESS_RIB_OBJECT_CLASS;
+	static const std::string ADDRESS_RIB_OBJECT_NAME;
 	static const std::string DFT_ENTRY_SET_RIB_OBJECT_NAME;
 	static const std::string DFT_ENTRY_SET_RIB_OBJECT_CLASS;
 	static const std::string DFT_ENTRY_RIB_OBJECT_CLASS;
@@ -82,6 +85,9 @@ public:
 	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS;
 	static const std::string N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS;
 	static const std::string N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+	static const std::string NEIGHBOR_SET_RIB_OBJECT_CLASS;
+	static const std::string NEIGHBOR_RIB_OBJECT_CLASS;
+	static const std::string NEIGHBOR_SET_RIB_OBJECT_NAME;
 	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_NAME;
 	static const std::string OPERATIONAL_STATUS_RIB_OBJECT_CLASS;
 	static const std::string PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS;
@@ -89,6 +95,8 @@ public:
 	static const std::string QOS_CUBE_SET_RIB_OBJECT_NAME;
 	static const std::string QOS_CUBE_SET_RIB_OBJECT_CLASS ;
 	static const std::string QOS_CUBE_RIB_OBJECT_CLASS;
+	static const std::string WATCHDOG_RIB_OBJECT_NAME;
+	static const std::string WATCHDOG_RIB_OBJECT_CLASS;
 	static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME;
 	static const std::string WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
 	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;

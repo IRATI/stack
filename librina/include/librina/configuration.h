@@ -767,6 +767,18 @@ public:
         LinkStateRoutingConfiguration link_state_routing_configuration_;
 };
 
+/// Configuration of the resource allocator
+class EnrollmentTaskConfiguration {
+public:
+	EnrollmentTaskConfiguration();
+
+	// The period of the watchdog in ms (monitors status of neighbors)
+	int watchdog_period_in_ms_;
+
+	//The time to declare a neighbor dead (in ms)
+	int declared_dead_interval_in_ms_;
+};
+
 /// Contains the data about a DIF Configuration
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
@@ -807,6 +819,9 @@ public:
 
 	/// Flow Allocator configuration parameters of the DIF
 	FlowAllocatorConfiguration fa_configuration_;
+
+	/// Configuration of the enrollment Task
+	EnrollmentTaskConfiguration et_configuration_;
 
 	/// Other configuration parameters of the DIF
 	std::list<Parameter> parameters_;

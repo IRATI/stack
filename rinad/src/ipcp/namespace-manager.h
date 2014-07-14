@@ -109,6 +109,7 @@ class NamespaceManager: public INamespaceManager {
 public:
 	NamespaceManager();
 	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void addDFTEntry(rina::DirectoryForwardingTableEntry * entry);
 	rina::DirectoryForwardingTableEntry * getDFTEntry(

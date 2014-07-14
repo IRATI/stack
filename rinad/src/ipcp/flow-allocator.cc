@@ -218,6 +218,10 @@ void FlowAllocator::set_ipc_process(IPCProcess * ipc_process) {
 	populateRIB();
 }
 
+void FlowAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	LOG_DBG("DIF configuration set: %u", dif_configuration.get_address());
+}
+
 void FlowAllocator::populateRIB() {
 	try {
 		BaseRIBObject * object = new FlowSetRIBObject(ipc_process_, this);

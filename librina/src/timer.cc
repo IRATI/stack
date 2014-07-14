@@ -36,11 +36,14 @@ Time::Time() {
 Time::Time(timeval t) {
 	time_ = t;
 }
+int Time::get_current_time_in_ms() const {
+	return get_time_seconds()*1000 + get_only_milliseconds();
+}
 int Time::get_time_seconds() const {
 	return (int)time_.tv_sec;
 }
 int Time::get_only_milliseconds() const {
-	return (int)time_.tv_usec;
+	return (int)(time_.tv_usec/1000);
 }
 bool Time::operator<(const Time &other) const {
 	if ((int)time_.tv_sec != (int)other.get_time_seconds())

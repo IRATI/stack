@@ -171,6 +171,15 @@ public:
 	bool enrollee_;
 };
 
+/// A connectivity to a neighbor has been lost
+class NeighborDeclaredDeadEvent: public BaseEvent {
+public:
+	NeighborDeclaredDeadEvent(rina::Neighbor * neighbor);
+	const std::string toString();
+
+	rina::Neighbor * neighbor_;
+};
+
 }
 
 #endif

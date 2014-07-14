@@ -44,6 +44,10 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
 }
 
+void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	LOG_DBG("DIF configuration set %u", dif_configuration.get_address());
+}
+
 void NMinusOneFlowManager::populateRIB(){
 	try {
 		BaseRIBObject * object = new SimpleSetRIBObject(ipc_process_,
@@ -289,6 +293,16 @@ void ResourceAllocator::set_ipc_process(IPCProcess * ipc_process) {
 
 	if (pdu_forwarding_table_generator_) {
 		pdu_forwarding_table_generator_->set_ipc_process(ipc_process);
+	}
+}
+
+void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	if (n_minus_one_flow_manager_) {
+		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
+	}
+
+	if (pdu_forwarding_table_generator_) {
+		pdu_forwarding_table_generator_->set_dif_configuration(dif_configuration);
 	}
 }
 

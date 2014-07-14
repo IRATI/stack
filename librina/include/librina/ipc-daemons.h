@@ -52,8 +52,8 @@ public:
         void set_average_rtt_in_ms(unsigned int average_rtt_in_ms);
         bool is_enrolled() const;
         void set_enrolled(bool enrolled);
-        long get_last_heard_from_time_in_ms() const;
-        void set_last_heard_from_time_in_ms(long last_heard_from_time_in_ms_);
+        int get_last_heard_from_time_in_ms() const;
+        void set_last_heard_from_time_in_ms(int last_heard_from_time_in_ms_);
         int get_underlying_port_id() const;
         void set_underlying_port_id(int underlying_port_id);
         unsigned int get_number_of_enrollment_attempts() const;
@@ -85,7 +85,7 @@ public:
 
         /// The last time a KeepAlive message was received from
         /// that neighbor, in ms
-        long last_heard_from_time_in_ms_;
+        int last_heard_from_time_in_ms_;
 
         /// The number of times we have tried to re-enroll with the
         /// neighbor after the connectivity has been lost

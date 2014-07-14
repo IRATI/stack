@@ -105,11 +105,11 @@ void Neighbor::set_enrolled(bool enrolled){
 	enrolled_ = enrolled;
 }
 
-long Neighbor::get_last_heard_from_time_in_ms() const {
+int Neighbor::get_last_heard_from_time_in_ms() const {
 	return last_heard_from_time_in_ms_;
 }
 
-void Neighbor::set_last_heard_from_time_in_ms(long last_heard_from_time_in_ms) {
+void Neighbor::set_last_heard_from_time_in_ms(int last_heard_from_time_in_ms) {
 	last_heard_from_time_in_ms_ = last_heard_from_time_in_ms;
 }
 

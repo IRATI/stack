@@ -106,4 +106,16 @@ const std::string NeighborAddedEvent::toString() {
 	return ss.str();
 }
 
+/// A connectivity to a neighbor has been lost
+NeighborDeclaredDeadEvent::NeighborDeclaredDeadEvent(rina::Neighbor * neighbor):
+	BaseEvent(IPCP_EVENT_NEIGHBOR_DECLARED_DEAD) {
+	neighbor_ = neighbor;
+}
+
+const std::string NeighborDeclaredDeadEvent::toString() {
+	std::stringstream ss;
+	ss<<"Event id: "<<get_id()<<"; Neighbor: "<<neighbor_->toString()<<std::endl;
+	return ss.str();
+}
+
 }

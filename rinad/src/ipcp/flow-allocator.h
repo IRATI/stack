@@ -239,6 +239,7 @@ public:
 	FlowAllocator();
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
 			int underlyingPortId);
 	void submitAllocateRequest(rina::FlowRequestEvent * flowRequestEvent);

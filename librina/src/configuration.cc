@@ -1197,6 +1197,12 @@ void PDUFTableGeneratorConfiguration::set_pduft_generator_policy(
 	pduft_generator_policy_ = pduft_generator_policy;
 }
 
+// Class Enrollment Task Configuration
+EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
+	watchdog_period_in_ms_ = 60000;
+	declared_dead_interval_in_ms_ = 120000;
+}
+
 // CLASS DIF CONFIGURATION
 unsigned int DIFConfiguration::get_address() const {
 	return address_;

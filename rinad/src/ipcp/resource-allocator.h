@@ -32,6 +32,7 @@ class NMinusOneFlowManager: public INMinusOneFlowManager {
 public:
 	NMinusOneFlowManager();
 	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	unsigned int allocateNMinus1Flow(const rina::FlowInformation& flowInformation);
 	void allocateRequestResult(const rina::AllocateFlowRequestResultEvent& event);
 	void flowAllocationRequested(const rina::FlowRequestEvent& event);
@@ -60,6 +61,7 @@ public:
 	ResourceAllocator();
 	~ResourceAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	INMinusOneFlowManager * get_n_minus_one_flow_manager() const;
 	IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const;
 

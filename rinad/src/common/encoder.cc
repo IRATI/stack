@@ -129,6 +129,7 @@ const std::string EncoderConstants::WHATEVERCAST_NAMES = "whatevercastnames";
 const std::string EncoderConstants::ROUTING = "routing";
 const std::string EncoderConstants::FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
 const std::string EncoderConstants::LINKSTATE = "linkstate";
+const std::string EncoderConstants::WATCHDOG = "watchdog";
 const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME = SEPARATOR + DAF +
 		SEPARATOR + MANAGEMENT + SEPARATOR + OPERATIONAL_STATUS;
 const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "operationstatus";
@@ -168,5 +169,15 @@ const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS = "
 const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME = SEPARATOR +
 		DIF + SEPARATOR + MANAGEMENT + SEPARATOR + PDU_FORWARDING_TABLE + SEPARATOR
 		+ LINKSTATE + SEPARATOR + FLOWSTATEOBJECTGROUP;
+const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_NAME = SEPARATOR + DIF + MANAGEMENT +
+		SEPARATOR + WATCHDOG;
+const std::string EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS = "watchdog timer";
+const std::string EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS = "neighbor set";
+const std::string EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS = "neighbor";
+const std::string EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME = SEPARATOR + DAF +
+        SEPARATOR + MANAGEMENT + SEPARATOR + NEIGHBORS;
+const std::string EncoderConstants::ADDRESS_RIB_OBJECT_CLASS = "address";
+const std::string EncoderConstants::ADDRESS_RIB_OBJECT_NAME = SEPARATOR + DAF +
+		SEPARATOR + MANAGEMENT + SEPARATOR + NAMING + SEPARATOR + ADDRESS;
 
 }

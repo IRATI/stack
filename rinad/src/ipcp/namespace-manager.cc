@@ -367,6 +367,10 @@ void NamespaceManager::set_ipc_process(IPCProcess * ipc_process) {
 	populateRIB();
 }
 
+void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	LOG_DBG("DIF configuration set: %u", dif_configuration.get_address());
+}
+
 void NamespaceManager::populateRIB() {
 	try {
 		BaseRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipc_process_);
