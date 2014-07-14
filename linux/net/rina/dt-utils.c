@@ -29,11 +29,12 @@
 #include "utils.h"
 #include "debug.h"
 #include "dt-utils.h"
-/* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this*/
+/* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this */
 #include "dtcp.h"
 #include "dtcp-utils.h"
 #include "dt.h"
 #include "dtp.h"
+#include "rmt.h"
 
 struct cwq {
         struct rqueue * q;
@@ -87,8 +88,7 @@ int cwq_destroy(struct cwq * queue)
 
         ASSERT(queue->q);
 
-        if (rqueue_destroy(queue->q,
-                           (void (*)(void *)) pdu_destroy)) {
+        if (rqueue_destroy(queue->q, (void (*)(void *)) pdu_destroy)) {
                 LOG_ERR("Failed to destroy closed window queue");
                 return -1;
         }
@@ -110,6 +110,7 @@ int cwq_push(struct cwq * queue,
         }
 
         LOG_DBG("Pushing in the Closed Window Queue");
+
         spin_lock(&queue->lock);
         if (rqueue_tail_push_ni(queue->q, pdu)) {
                 pdu_destroy(pdu);
@@ -161,11 +162,77 @@ ssize_t cwq_size(struct cwq * queue)
 
         if (!queue)
                 return -1;
+
         spin_lock(&queue->lock);
         tmp = rqueue_length(queue->q);
         spin_unlock(&queue->lock);
 
         return tmp;
+}
+
+void cwq_deliver(struct cwq * queue,
+                 struct dt *  dt,
+                 struct rmt * rmt,
+                 address_t    address,
+                 qos_id_t     qos_id)
+{
+        struct rtxq * rtxq;
+        struct dtcp * dtcp;
+
+        if (!queue)
+                return;
+
+        if (!queue->q)
+                return;
+
+        if (!dt)
+                return;
+
+        dtcp = dt_dtcp(dt);
+        if (!dtcp)
+                return;
+
+        spin_lock(&queue->lock);
+        while (!rqueue_is_empty(queue->q) &&
+               (dtcp_snd_lf_win(dtcp) < dtcp_snd_rt_win(dtcp))) {
+                struct pdu *       pdu;
+                const struct pci * pci;
+
+                pdu = (struct pdu *) rqueue_head_pop(queue->q);
+                if (!pdu) {
+                        spin_unlock(&queue->lock);
+                        return;
+                }
+
+                if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                        rtxq = dt_rtxq(dt);
+                        if (!rtxq) {
+                                spin_unlock(&queue->lock);
+                                LOG_ERR("Couldn't find the RTX queue");
+                                return;
+                        }
+                        rtxq_push(rtxq, pdu);
+                }
+                pci = pdu_pci_get_ro(pdu);
+                if (dtcp_snd_lf_win_set(dtcp,
+                                        pci_sequence_number_get(pci)))
+                        LOG_ERR("Problems setting sender left window edge");
+
+                if (rmt_send(rmt,
+                             address,
+                             qos_id,
+                             pdu))
+                        LOG_ERR("Problems sending PDU");
+        }
+        spin_unlock(&queue->lock);
+
+        if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
+                dt_sv_window_closed_set(dt, true);
+                return;
+        }
+        dt_sv_window_closed_set(dt, false);
+
+        return;
 }
 
 struct rtxq_entry {
@@ -194,38 +261,13 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
         return tmp;
 }
 
+#if 0
+static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
+{ return rtxq_entry_create_gfp(pdu, GFP_KERNEL); }
+#endif
+
 static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
 { return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
-
-struct rtxqueue {
-        struct list_head head;
-};
-
-static struct rtxqueue * rtxqueue_create(void)
-{
-        struct rtxqueue * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        INIT_LIST_HEAD(&tmp->head);
-
-        return tmp;
-}
-
-static struct rtxqueue * rtxqueue_create_ni(void)
-{
-        struct rtxqueue * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-        if (!tmp)
-                return NULL;
-
-        INIT_LIST_HEAD(&tmp->head);
-
-        return tmp;
-}
 
 static int rtxq_entry_destroy(struct rtxq_entry * entry)
 {
@@ -238,60 +280,28 @@ static int rtxq_entry_destroy(struct rtxq_entry * entry)
         return 0;
 }
 
-static int entries_ack(struct rtxqueue * q,
-                       seq_num_t         seq_num)
+struct rtxqueue {
+        struct list_head head;
+};
+
+static struct rtxqueue * rtxqueue_create_gfp(gfp_t flags)
 {
-        struct rtxq_entry * cur, * n;
+        struct rtxqueue * tmp;
 
-        ASSERT(q);
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
 
-        list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
-                    seq_num) {
-                        list_del(&cur->next);
-                        rtxq_entry_destroy(cur);
-                } else
-                        return 0;
-        }
+        INIT_LIST_HEAD(&tmp->head);
 
-        return 0;
+        return tmp;
 }
 
-static int entries_nack(struct rtxqueue * q,
-                        struct rmt *      rmt,
-                        seq_num_t         seq_num,
-                        uint_t            data_rtx_max)
-{
-        struct rtxq_entry * cur, * p;
-        struct pdu *        tmp;
+static struct rtxqueue * rtxqueue_create(void)
+{ return rtxqueue_create_gfp(GFP_KERNEL); }
 
-        ASSERT(q);
-
-        list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >
-                    seq_num) {
-                        cur->retries++;
-                        if (cur->retries >= data_rtx_max) {
-                                LOG_ERR("Maximum number of rtx has been "
-                                        "achieved. Can't maintain QoS");
-                                rtxq_entry_destroy(cur);
-                                continue;
-                        }
-                        tmp = pdu_dup_ni(cur->pdu);
-                        if (rmt_send(rmt,
-                                     pci_destination(pdu_pci_get_ro(tmp)),
-                                     pci_qos_id(pdu_pci_get_ro(tmp)),
-                                     tmp)) {
-                                LOG_ERR("Could not send NACKed PDU to RMT");
-                                pdu_destroy(tmp);
-                                continue;
-                        }
-                } else
-                        return 0;
-        }
-
-        return 0;
-}
+static struct rtxqueue * rtxqueue_create_ni(void)
+{ return rtxqueue_create_gfp(GFP_ATOMIC); }
 
 static int rtxqueue_destroy(struct rtxqueue * q)
 {
@@ -311,13 +321,68 @@ static int rtxqueue_destroy(struct rtxqueue * q)
 
 }
 
+static int rtxqueue_entries_ack(struct rtxqueue * q,
+                                seq_num_t         seq_num)
+{
+        struct rtxq_entry * cur, * n;
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
+                    seq_num) {
+                        list_del(&cur->next);
+                        rtxq_entry_destroy(cur);
+                } else
+                        return 0;
+        }
+
+        return 0;
+}
+
+static int rtxqueue_entries_nack(struct rtxqueue * q,
+                                 struct rmt *      rmt,
+                                 seq_num_t         seq_num,
+                                 uint_t            data_rtx_max)
+{
+        struct rtxq_entry * cur, * p;
+        struct pdu *        tmp;
+
+        ASSERT(q);
+
+        list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >
+                    seq_num) {
+                        cur->retries++;
+                        if (cur->retries >= data_rtx_max) {
+                                LOG_ERR("Maximum number of rtx has been "
+                                        "achieved. Can't maintain QoS");
+                                rtxq_entry_destroy(cur);
+                                continue;
+                        }
+
+                        tmp = pdu_dup_ni(cur->pdu);
+                        if (rmt_send(rmt,
+                                     pci_destination(pdu_pci_get_ro(tmp)),
+                                     pci_qos_id(pdu_pci_get_ro(tmp)),
+                                     tmp)) {
+                                LOG_ERR("Could not send NACKed PDU to RMT");
+                                pdu_destroy(tmp);
+                                continue;
+                        }
+                } else
+                        return 0;
+        }
+
+        return 0;
+}
+
 /* push in seq_num order */
 static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
 {
         struct rtxq_entry * tmp, * cur, * last = NULL;
         seq_num_t           csn, psn;
         const struct pci *  pci;
-
 
         if (!q)
                 return -1;
@@ -376,7 +441,6 @@ static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
         return 0;
 }
 
-
 static int rtxqueue_drop(struct rtxqueue * q,
                          seq_num_t          from,
                          seq_num_t          to)
@@ -404,11 +468,10 @@ static int rtxqueue_drop(struct rtxqueue * q,
         return 0;
 }
 
-
 static int rtxqueue_rtx(struct rtxqueue * q,
-                        unsigned int tr,
-                        struct rmt * rmt,
-                        uint_t data_rtx_max)
+                        unsigned int      tr,
+                        struct rmt *      rmt,
+                        uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur, * n;
 
@@ -474,7 +537,7 @@ int rtxq_destroy(struct rtxq * q)
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
 
-        if (q->queue  && rtxqueue_destroy(q->queue))
+        if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
         rkfree(q);
@@ -583,7 +646,6 @@ int rtxq_drop(struct rtxq * q,
 
 }
 
-
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
              unsigned int  tr)
@@ -592,7 +654,7 @@ int rtxq_ack(struct rtxq * q,
                 return -1;
 
         spin_lock(&q->lock);
-        entries_ack(q->queue, seq_num);
+        rtxqueue_entries_ack(q->queue, seq_num);
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
@@ -616,11 +678,10 @@ int rtxq_nack(struct rtxq * q,
                 return -1;
 
         spin_lock(&q->lock);
-
-        entries_nack(q->queue,
-                     q->rmt,
-                     seq_num,
-                     dtcp_data_retransmit_max(dtcp_cfg));
+        rtxqueue_entries_nack(q->queue,
+                              q->rmt,
+                              seq_num,
+                              dtcp_data_retransmit_max(dtcp_cfg));
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
