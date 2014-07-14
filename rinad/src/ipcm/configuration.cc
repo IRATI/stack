@@ -583,10 +583,78 @@ void parse_dif_configs(const Json::Value   &root,
                         }
                 }
 
-                // TODO: rina::PDUFTableGeneratorConfiguration
-                //       pdufTableGeneratorConfiguration;
-                // TODO: std::list<AddressPrefixConfiguration> addressPrefixes;
+                // rina::PDUFTableGeneratorConfiguration
+                // pdufTableGeneratorConfiguration;
+                Json::Value pft = 
+                        dif_configs[i]["pdufTableGeneratorConfiguration"];
+                if (pft != 0) {
+                        rina::PDUFTableGeneratorConfiguration pf;
+                        
+                        parse_policy(pft, "pduftGeneratorPolicy", 
+                                     pf.pduft_generator_policy_);
 
+                        rina::LinkStateRoutingConfiguration lsr;
+
+                        lsr.object_maximum_age_ = 
+                                pft.get("objectMaximumAge",
+                                        lsr.object_maximum_age_)
+                                .asInt();
+
+                        lsr.wait_until_read_cdap_ =
+                                pft.get("waitUntilReadCdap",
+                                        lsr.wait_until_read_cdap_)
+                                .asInt();
+                      
+                        lsr.wait_until_error_ =
+                                pft.get("waitUntilError",
+                                        lsr.wait_until_error_)
+                                .asInt();
+
+                        lsr.wait_until_pduft_computation_ =
+                                pft.get("waitUntilPduftComputation",
+                                        lsr.wait_until_pduft_computation_)
+                                .asInt();
+
+                        lsr.wait_until_fsodb_propagation_ =
+                                pft.get("waitUntilFsodbPropagation",
+                                        lsr.wait_until_fsodb_propagation_)
+                                .asInt();
+
+                        lsr.wait_until_age_increment_ =
+                                pft.get("waitUntilAgeIncrement",
+                                        lsr.wait_until_age_increment_)
+                                .asInt();
+
+                        lsr.routing_algorithm_ =
+                                pft.get("routingAlgorithm",
+                                        string())
+                                .asString();
+
+                        pf.link_state_routing_configuration_ = lsr;
+
+                        props.pdufTableGeneratorConfiguration = pf;
+                }
+
+
+                // std::list<AddressPrefixConfiguration> addressPrefixes;
+                Json::Value addrp = dif_configs[i]["addressPrefixes"];
+                if (addrp != 0) {
+                        for (unsigned int j = 0; j < addrp.size(); j++) {
+                                AddressPrefixConfiguration apc;
+                                
+                                apc.addressPrefix =
+                                        addrp[j].get("addressPrefix",
+                                                     apc.addressPrefix)
+                                        .asUInt();
+
+                                apc.organization =
+                                        addrp[j].get("organization",
+                                                     string())
+                                        .asString();
+
+                                props.addressPrefixes.push_back(apc);
+                        }
+                }
 
                 // configParameters;
                 Json::Value confParams = dif_configs[i]["configParameters"];
