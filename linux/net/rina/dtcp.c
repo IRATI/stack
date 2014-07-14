@@ -525,6 +525,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         ASSERT(pdu);
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        pdu_destroy(pdu);
         push_pdus_rmt(dtcp);
 
         q = dt_cwq(dtcp->parent);
@@ -542,18 +543,30 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 
 static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct pci *  pci,
-                                seq_num_t     seq_num,
                                 struct pdu *  pdu)
 {
+        struct cwq * q;
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);
 
         LOG_DBG("Updating Window Edges");
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        snd_lft_win_set(dtcp, seq_num);
+        snd_lft_win_set(dtcp, pci_control_new_left_wind_edge(pci));
         LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
         LOG_DBG("Left Window Edge: %d", snd_lft_win(dtcp));
+        pdu_destroy(pdu);
+
+        push_pdus_rmt(dtcp);
+        q = dt_cwq(dtcp->parent);
+        if (!q) {
+                LOG_ERR("No Closed Window Queue");
+                return -1;
+        }
+        if (cwq_is_empty(q) &&
+            (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
+                dt_sv_window_closed_set(dtcp->parent, false);
+        }
 
         /* FIXME: Verify values for the receiver side */
 
@@ -644,7 +657,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         case PDU_TYPE_FC:
                 return rcv_flow_ctl(dtcp, pci, pdu);
         case PDU_TYPE_ACK_AND_FC:
-                return rcv_ack_and_flow_ctl(dtcp, pci, seq_num, pdu);
+                return rcv_ack_and_flow_ctl(dtcp, pci, pdu);
         default:
                 return -1;
         }
