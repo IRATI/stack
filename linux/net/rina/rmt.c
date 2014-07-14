@@ -973,6 +973,10 @@ static int receive_worker(void * o)
                 ASSERT(entry);
 
                 pdu_ser = (struct pdu_ser *) rfifo_pop(entry->queue);
+                if (!pdu_ser) {
+                        LOG_DBG("No ser PDU to work with in this queue");
+                        continue;
+                }
                 ASSERT(pdu_ser);
 
                 port_id = entry->port_id;
