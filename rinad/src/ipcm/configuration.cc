@@ -119,7 +119,7 @@ void parse_flow_ctrl(const Json::Value root,
                 fc.rate_based_ =
                         flow_ctrl.get("rateBased",
                                       fc.rate_based_).asBool();
-                // TODO: rate_based_config_
+                // rate_based_config_
                 Json::Value r_flow_ctrl = flow_ctrl["rateBasedConfig"];
                 if (r_flow_ctrl != 0) {
                         rina::DTCPRateBasedFlowControlConfig rfc;
@@ -430,7 +430,7 @@ void parse_dif_configs(const Json::Value   &root,
                         parse_policy(rmt_conf,
                                      "rmtQueueMonitorPolicy",
                                      rc.rmt_queue_monitor_policy_);
-                        
+
                         parse_policy(rmt_conf,
                                      "rmtSchedulingPolicy",
                                      rc.rmt_scheduling_policy_);
@@ -446,7 +446,7 @@ void parse_dif_configs(const Json::Value   &root,
                 // std::map<std::string, std::string> policies;
                 Json::Value policies = dif_configs[i]["policies"];
                 if (policies != 0) {
-                        Json::Value::Members members = 
+                        Json::Value::Members members =
                                 policies.getMemberNames();
                         for (unsigned int j = 0; j < members.size(); j++) {
                                 string value = policies.get
@@ -460,7 +460,7 @@ void parse_dif_configs(const Json::Value   &root,
                 // std::map<std::string, std::string> policyParameters;
                 Json::Value policyParams = dif_configs[i]["policyParameters"];
                 if (policyParams != 0) {
-                        Json::Value::Members members = 
+                        Json::Value::Members members =
                                 policyParams.getMemberNames();
                         for (unsigned int j = 0; j < members.size(); j++) {
                                 string value = policyParams.get
@@ -474,16 +474,16 @@ void parse_dif_configs(const Json::Value   &root,
                 // NMinusOneFlowsConfiguration
                 //       nMinusOneFlowsConfiguration;
 
-                Json::Value flow_conf = 
+                Json::Value flow_conf =
                         dif_configs[i]["nMinusOneFlowsConfiguration"];
                 if (flow_conf != 0) {
                         rinad::NMinusOneFlowsConfiguration fc;
 
-                        fc.managementFlowQoSId = 
+                        fc.managementFlowQoSId =
                                 flow_conf.get("managementFlowQosId",
                                               fc.managementFlowQoSId)
                                 .asInt();
-                        
+
                         Json::Value data_flow = flow_conf["dataFlowsQosIds"];
                         for (unsigned int j = 0; j < data_flow.size(); j++) {
                                 fc.dataFlowsQoSIds.push_back
@@ -500,8 +500,8 @@ void parse_dif_configs(const Json::Value   &root,
                 if (exp_app != 0) {
                         for (unsigned int j = 0; j < exp_app.size(); j++) {
                                 rinad::ExpectedApplicationRegistration exp;
-                        
-                                exp.applicationProcessName = 
+
+                                exp.applicationProcessName =
                                         exp_app[j]
                                         .get("applicationProcessName",
                                              string())
@@ -535,7 +535,7 @@ void parse_dif_configs(const Json::Value   &root,
                 if (dir != 0) {
                         for (unsigned int j = 0; j < dir.size(); j++) {
                                 rinad::DirectoryEntry de;
-                                
+
                                 de.applicationProcessName =
                                         dir[j].get("applicationProcessName",
                                                 string())
@@ -546,21 +546,21 @@ void parse_dif_configs(const Json::Value   &root,
                                                    string())
                                         .asString();
 
-                                de.applicationEntityName = 
+                                de.applicationEntityName =
                                         dir[j].get("applicationEntityName",
                                                    string())
                                         .asString();
 
-                                de.hostname = 
+                                de.hostname =
                                         dir[j].get("hostname",
                                                    string())
                                         .asString();
 
-                                de.socketPortNumber = 
+                                de.socketPortNumber =
                                         dir[j].get("socketPortNumber",
                                                    de.socketPortNumber)
                                         .asInt();
-                        
+
                                 props.directory.push_back(de);
                         }
                 }
@@ -572,10 +572,10 @@ void parse_dif_configs(const Json::Value   &root,
                 if (known != 0) {
                         for (unsigned int j = 0; j < known.size(); j++) {
                                 rinad::KnownIPCProcessAddress kn;
-                                
+
                                 parse_name(known[j], kn.name);
 
-                                kn.address = 
+                                kn.address =
                                         known[j].get("address",
                                                      kn.address).asUInt();
 
@@ -586,7 +586,21 @@ void parse_dif_configs(const Json::Value   &root,
                 // TODO: rina::PDUFTableGeneratorConfiguration
                 //       pdufTableGeneratorConfiguration;
                 // TODO: std::list<AddressPrefixConfiguration> addressPrefixes;
-                // TODO: std::list<rina::Parameter> configParameters;
+
+
+                // configParameters;
+                Json::Value confParams = dif_configs[i]["configParameters"];
+                if (confParams != 0) {
+                        Json::Value::Members members =
+                                confParams.getMemberNames();
+                        for (unsigned int j = 0; j < members.size(); j++) {
+                                string value = confParams.get
+                                        (members[i], string()).asString();
+                                props.configParameters.insert
+                                        (pair<string, string>
+                                         (members[i], value));
+                        }
+                }
 
                 difConfigurations.push_back(props);
         }
@@ -605,7 +619,7 @@ void parse_ipc_to_create(const Json::Value         root,
                 // IPC process Names
                 // Might want to move this to another function
                 parse_name(ipc_processes[i], ipc.name);
-                
+
                 ipc.difName = rina::ApplicationProcessNamingInformation
                         (ipc_processes[i].get
                          ("difName", string()).asString(),
