@@ -1,5 +1,5 @@
 /*
- * PDU Serialization/Deserialization 
+ * PDU Serialization/Deserialization
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -29,11 +29,11 @@ struct pdu_ser;
 
 struct pdu_ser * serdes_pdu_ser(const struct dt_cons * dt_cons,
                                 struct pdu *           pdu);
-/* FIXME: Change to read-write and/or read-only */
-struct buffer *  serdes_pdu_buffer(struct pdu_ser * pdu);
-int              serdes_pdu_destroy(struct pdu_ser * pdu);
-
 struct pdu *     serdes_pdu_deser(const struct dt_cons * dt_cons,
-                                  struct pdu_ser * pdu);
+                                  struct pdu_ser *       pdu);
+
+struct buffer *  serdes_pdu_buffer_rw(struct pdu_ser * pdu);
+int              serdes_buffer_disown(struct pdu_ser * pdu);
+int              serdes_pdu_destroy(struct pdu_ser * pdu);
 
 #endif

@@ -369,6 +369,7 @@ static int send_worker(void * o)
                 struct efcp_container * efcpc;
                 struct efcp_config *    conf;
                 struct dt_cons *        dt_cons;
+                struct buffer *         buffer;
 
                 ASSERT(entry);
 
@@ -417,12 +418,28 @@ static int send_worker(void * o)
                         continue;
                 }
 
-                sdu = sdu_create_buffer_with(serdes_pdu_buffer(pdu_ser));
+                buffer = serdes_pdu_buffer_rw(pdu_ser);
+                if (!buffer_is_ok(buffer)) {
+                        LOG_ERR("Buffer is not okay");
+                        serdes_pdu_destroy(pdu_ser);
+                        spin_lock(&tmp->egress.queues->lock);
+                        continue;
+                }
+
+                if (!serdes_buffer_disown(pdu_ser)) {
+                        LOG_ERR("Could not disown buffer");
+                        serdes_pdu_destroy(pdu_ser);
+                        spin_lock(&tmp->egress.queues->lock);
+                        continue;
+                }
+                serdes_pdu_destroy(pdu_ser);
+
+                sdu = sdu_create_buffer_with(buffer);
                 if (!sdu) {
                         LOG_ERR("Error creating SDU from serialized PDU, "
                                 "dropping PDU!");
-                        spin_lock(&tmp->egress.queues->lock);
                         serdes_pdu_destroy(pdu_ser);
+                        spin_lock(&tmp->egress.queues->lock);
                         continue;
                 }
 
@@ -848,6 +865,7 @@ static int forward_pdu(struct rmt * rmt,
         struct efcp_container * efcpc;
         struct efcp_config *    conf;
         struct dt_cons *        dt_cons;
+        struct buffer *         buffer;
 
         if (!is_address_ok(dst_addr)) {
                 LOG_ERR("PDU has Wrong destination address");
@@ -886,14 +904,27 @@ static int forward_pdu(struct rmt * rmt,
         if (!pdu_ser) {
                 LOG_ERR("Error creating serialized PDU");
                 pdu_destroy(pdu);
-                return -1; 
+                return -1;
         }
-   
-        sdu = sdu_create_buffer_with(serdes_pdu_buffer(pdu_ser));
+
+        buffer = serdes_pdu_buffer_rw(pdu_ser);
+        if (!buffer_is_ok(buffer)) {
+                LOG_ERR("Buffer is not okay");
+                serdes_pdu_destroy(pdu_ser);
+                return -1;
+        }
+
+        if (!serdes_buffer_disown(pdu_ser)) {
+                LOG_ERR("Could not disown buffer");
+                serdes_pdu_destroy(pdu_ser);
+                return -1;
+        }
+        serdes_pdu_destroy(pdu_ser);
+
+        sdu = sdu_create_buffer_with(buffer);
         if (!sdu) {
                 LOG_ERR("Error creating SDU from serialized PDU, "
                         "dropping PDU!");
-                serdes_pdu_destroy(pdu_ser);
                 return -1;
         }
 
@@ -985,6 +1016,7 @@ static int receive_worker(void * o)
                 efcpc = tmp->efcpc;
                 if (!efcpc) {
                         LOG_ERR("Not bound to an EFCP container");
+                        serdes_pdu_destroy(pdu_ser);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
@@ -992,6 +1024,7 @@ static int receive_worker(void * o)
                 conf = efcp_container_config(efcpc);
                 if (!conf) {
                         LOG_ERR("No config found for EFCP");
+                        serdes_pdu_destroy(pdu_ser);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
@@ -999,6 +1032,7 @@ static int receive_worker(void * o)
                 dt_cons = conf->dt_cons;
                 if (!dt_cons) {
                         LOG_ERR("No constants in the config");
+                        serdes_pdu_destroy(pdu_ser);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
@@ -1006,6 +1040,7 @@ static int receive_worker(void * o)
                 pdu = serdes_pdu_deser(dt_cons, pdu_ser);
                 if (!pdu) {
                         LOG_ERR("Failed to deserialize PDU!");
+                        serdes_pdu_destroy(pdu_ser);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
