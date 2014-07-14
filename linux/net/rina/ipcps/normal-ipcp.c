@@ -605,9 +605,10 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
         LOG_DBG("dst_address: %d", pci_destination(pci));
         LOG_DBG("port: %d", port_id);
 
-
-        /* Decide on how to deliver to the RMT depending on
-         * port_id or dst_addr
+        /*
+         * NOTE:
+         *   Decide on how to deliver to the RMT depending on
+         *   port_id or dst_addr
          */
         if (dst_addr) {
                 if (rmt_send(data->rmt,

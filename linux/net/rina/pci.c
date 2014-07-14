@@ -166,7 +166,7 @@ int pci_sequence_number_set(struct pci * pci,
 }
 EXPORT_SYMBOL(pci_sequence_number_set);
 
-seq_num_t pci_sequence_number_get(struct pci * pci)
+seq_num_t pci_sequence_number_get(const struct pci * pci)
 {
         if (!pci)
                 return -1;
