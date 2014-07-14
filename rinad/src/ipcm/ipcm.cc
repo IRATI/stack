@@ -170,7 +170,7 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                         pending_normal_ipcp_inits[ipcp->id] = ipcp;
                         wait = true;
                 }
-                cout << "IPC process " << name.toString() << "created "
+                cout << "IPC process " << name.toString() << " created "
                         "[id = " << ipcp->id << "]" << endl;
         } catch (rina::CreateIPCProcessException) {
                 cerr << "Failed to create  IPC process '" <<
