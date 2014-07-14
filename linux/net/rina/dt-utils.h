@@ -30,6 +30,7 @@
 
 struct cwq;
 struct dtp;
+struct dt;
 
 struct cwq *    cwq_create(void);
 struct cwq *    cwq_create_ni(void);
@@ -40,9 +41,13 @@ int             cwq_push(struct cwq * q,
 struct pdu *    cwq_pop(struct cwq * q);
 bool            cwq_is_empty(struct cwq * q);
 ssize_t         cwq_size(struct cwq * q);
+void            cwq_deliver(struct cwq * queue,
+                            struct dt *  dt,
+                            struct rmt * rmt,
+                            address_t    address,
+                            qos_id_t     qos_id);
 
 struct rtxq;
-struct dt;
 
 struct rtxq *   rtxq_create(struct dt *  dt,
                             struct rmt * rmt);
