@@ -224,6 +224,13 @@ void cwq_deliver(struct cwq * queue,
 
         }
         spin_unlock(&queue->lock);
+
+        if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
+                dt_sv_window_closed_set(dt, true);
+                return;
+        }
+        dt_sv_window_closed_set(dt, false);
+
         return;
 }
 
