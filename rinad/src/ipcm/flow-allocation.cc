@@ -53,6 +53,10 @@ IPCManager::deallocate_flow(rina::IPCProcess *ipcp,
                 seqnum = ipcp->deallocateFlow(event.portId);
                 pending_flow_deallocations[seqnum] =
                                         make_pair(ipcp, event);
+
+                cout << "IPC process " << ipcp->name.toString() <<
+                        " requested to deallocate flow [port-id = "
+                        << event.portId << "]" << endl;
         } catch (rina::IpcmDeallocateFlowException) {
                 cerr << __func__ << ": Error while asking IPC process "
                         << ipcp->name.toString() << " to deallocate the flow "
@@ -104,6 +108,12 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
                 ipcm->pending_flow_allocations[seqnum] =
                                         PendingFlowAllocation(ipcp, *event,
                                                               dif_specified);
+
+                cout << "IPC process " << ipcp->name.toString() <<
+                        " requested to allocate flow between " <<
+                        event->localApplicationName.toString()
+                        << " and " << event->remoteApplicationName.toString()
+                        << endl;
         } catch (rina::AllocateFlowException) {
                 cerr << __func__ << ": Error while requesting IPC process "
                         << ipcp->name.toString() << " to allocate a flow "
@@ -116,6 +126,10 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
                 event->portId = -1;
                 try {
                         rina::applicationManager->flowAllocated(*event);
+                        cout << "Flow allocation between " <<
+                                event->localApplicationName.toString()
+                                << " and " << event->remoteApplicationName.toString()
+                                << " failed: applications informed" << endl;
                 } catch (rina::NotifyFlowAllocatedException) {
                         cerr << __func__ << ": Error while notifying the "
                                 "Application Manager about flow allocation "
@@ -151,6 +165,11 @@ flow_allocation_requested_remote(rina::FlowRequestEvent *event,
                                         event->DIFName, event->portId);
                 ipcm->pending_flow_allocations[seqnum] =
                                 PendingFlowAllocation(ipcp, *event, true);
+
+                cout << "Arrived request for flow allocation between " <<
+                        event->localApplicationName.toString()
+                        << " and " << event->remoteApplicationName.toString()
+                        << endl;
         } catch (rina::AppFlowArrivedException) {
                 cerr << __func__ << ": Error while informing application "
                         << event->localApplicationName.toString() <<
@@ -160,6 +179,13 @@ flow_allocation_requested_remote(rina::FlowRequestEvent *event,
                         // Inform the IPC process that it was not possible
                         // to allocate the flow
                         ipcp->allocateFlowResponse(*event, -1, true, 0);
+
+                        cout << "IPC process " << ipcp->name.toString() <<
+                                " informed that it was not possible to "
+                                "allocate flow between" <<
+                                event->localApplicationName.toString()
+                                << " and " << event->remoteApplicationName.
+                                toString() << endl;
                 } catch (rina::AllocateFlowException) {
                         cerr << __func__ << ": Error while informing IPC "
                                 << "process " << ipcp->name.toString() <<
@@ -210,18 +236,18 @@ ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
                 if (success) {
                         req_event.portId = event->portId;
                 } else {
-                        cout << __func__ << ": Info: Flow allocation "
-                                "from application " <<
-                                req_event.localApplicationName.toString() <<
-                                " to application " <<
-                                req_event.remoteApplicationName.toString() <<
-                                " in DIF " << slave_ipcp->getDIFInformation().
-                                dif_name_.toString() <<
-                                " with port-id " << event->portId <<
-                                " failed" << endl;
-
                         // TODO retry with other DIFs
                 }
+
+                cout << __func__ << " :Informing IPC process " <<
+                        slave_ipcp->name.toString()
+                        << " about flow allocation from application " <<
+                        req_event.localApplicationName.toString() <<
+                        " to application " <<
+                        req_event.remoteApplicationName.toString() <<
+                        " in DIF " << slave_ipcp->getDIFInformation().
+                        dif_name_.toString() << " [success = " << success
+                        << ", port-id = " << event->portId << "]" << endl;
         } catch (rina::AllocateFlowException) {
                 cerr << __func__ << ": Error while informing the IPC process "
                         << slave_ipcp->name.toString() << " about result of "
@@ -235,6 +261,10 @@ ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
         // result
         try {
                 rina::applicationManager->flowAllocated(req_event);
+                cout << "Applications " <<
+                        req_event.localApplicationName.toString() << " and "
+                        << req_event.remoteApplicationName.toString()
+                        << " informed about flow allocation result" << endl;
         } catch (rina::NotifyFlowAllocatedException) {
                 cerr << __func__ << ": Error while notifying the "
                         "Application Manager about flow allocation result"
@@ -277,18 +307,19 @@ allocate_flow_response_event_handler(rina::IPCEvent *e,
                 slave_ipcp->allocateFlowResponse(req_event, event->result,
                                         event->notifySource,
                                         event->flowAcceptorIpcProcessId);
-                if (success) {
-                        // TODO success info
-                } else {
-                        cout << __func__ << ": Info: Flow allocation "
-                                "from application " <<
-                                req_event.localApplicationName.toString() <<
-                                " to application " <<
-                                req_event.remoteApplicationName.toString() <<
-                                " in DIF " << slave_ipcp->getDIFInformation().
-                                dif_name_.toString() << " failed" << endl;
+                if (!success) {
                         req_event.portId = -1;
                 }
+
+                cout << __func__ << " :Informing IPC process " <<
+                        slave_ipcp->name.toString()
+                        << " about flow allocation from application " <<
+                        req_event.localApplicationName.toString() <<
+                        " to application " <<
+                        req_event.remoteApplicationName.toString() <<
+                        " in DIF " << slave_ipcp->getDIFInformation().
+                        dif_name_.toString() << " [success = " << success
+                        << ", port-id = " << req_event.portId << "]" << endl;
         } catch (rina::AllocateFlowException) {
                 cerr << __func__ << ": Error while informing IPC "
                         << "process " << slave_ipcp->name.toString() <<
@@ -321,6 +352,11 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
                         // Inform the application about the deallocation
                         // failure
                         rina::applicationManager->flowDeallocated(*event, -1);
+
+                        cout << "Application " << event->applicationName.
+                                toString() << " informed about deallocation "
+                                "failure of flow identified by port-id " <<
+                                event->portId << endl;
                 } catch (rina::NotifyFlowDeallocatedException) {
                         cerr << __func__ << ": Error while informing "
                                 "application " << event->applicationName.
@@ -356,14 +392,12 @@ ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e,
         try {
                 // Inform the IPC process about the deallocation result
                 ipcp->deallocateFlowResult(event->sequenceNumber, success);
-                if (success) {
-                        // TODO success print
-                } else {
-                        cout << __func__ << ": Cannot deallocate flow "
-                                << "identified by port-id " <<
-                                req_event.portId << " from IPC process " <<
-                                ipcp->name.toString() << endl;
-                }
+
+                cout << __func__ << ": Deallocating flow "
+                        << "identified by port-id " <<
+                        req_event.portId << " from IPC process " <<
+                        ipcp->name.toString() << " [success = " <<
+                        success << "]" << endl;
         } catch (rina::IpcmDeallocateFlowException) {
                 cerr << __func__ << ": Error while informing IPC process "
                         << ipcp->name.toString() << " about deallocation "
@@ -377,6 +411,12 @@ ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e,
                 if (req_event.sequenceNumber > 0) {
                         rina::applicationManager->
                                 flowDeallocated(req_event, result);
+
+                        cout << "Application " << req_event.applicationName.
+                                toString() << " informed about deallocation "
+                                "of flow identified by port-id " <<
+                                req_event.portId << "[success = " <<
+                                (!result) << "]" << endl;
                 }
         } catch (rina::NotifyFlowDeallocatedException) {
                 cerr << __func__ << ": Error while informing "
@@ -414,6 +454,12 @@ flow_deallocated_event_handler(rina::IPCEvent *e,
                 rina::applicationManager->
                         flowDeallocatedRemotely(event->portId, event->code,
                                                 info.localAppName);
+
+                cout << "IPC process " << ipcp->name.toString() <<
+                        " and local application " << info.localAppName.
+                        toString() << " informed that flow with port-id "
+                        << event->portId << " has been deallocated remotely "
+                        << endl;
         } catch (rina::IpcmDeallocateFlowException) {
                 cerr << __func__ << ": Cannot find a flow with port-id "
                         << event->portId << endl;

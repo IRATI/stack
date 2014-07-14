@@ -35,7 +35,7 @@
 #include "helpers.h"
 #include "ipcm.h"
 #include "console.h"
-#include "application-registration.h"
+#include "registration.h"
 #include "flow-allocation.h"
 
 using namespace std;
@@ -170,6 +170,8 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                         pending_normal_ipcp_inits[ipcp->id] = ipcp;
                         wait = true;
                 }
+                cout << "IPC process " << name.toString() << " created "
+                        "[id = " << ipcp->id << "]" << endl;
         } catch (rina::CreateIPCProcessException) {
                 cerr << "Failed to create  IPC process '" <<
                         name.toString() << "' of type '" <<
@@ -191,6 +193,8 @@ IPCManager::destroy_ipcp(unsigned int ipcp_id)
 {
         try {
                 rina::ipcProcessFactory->destroy(ipcp_id);
+                cout << "IPC process destroyed [id = " << ipcp_id
+                        << "]" << endl;
         } catch (rina::DestroyIPCProcessException) {
                 cerr << __func__ << ": Error while destroying IPC "
                         "process with id " << ipcp_id << endl;
@@ -304,6 +308,9 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 unsigned int seqnum = ipcp->assignToDIF(dif_info);
 
                 pending_ipcp_dif_assignments[seqnum] = ipcp;
+                cout << "Requested DIF assignment of IPC process " <<
+                        ipcp->name.toString() << " to DIF " <<
+                        dif_name.toString() << endl;
                 concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
                                            seqnum);
         } catch (rina::AssignToDIFException) {
@@ -345,6 +352,11 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 pending_ipcp_registrations[seqnum] =
                         make_pair(ipcp, slave_ipcp);
 
+                cout << "Requested DIF registration of IPC process " <<
+                        ipcp->name.toString() << " at DIF " <<
+                        dif_name.toString() << " through IPC process "
+                        << slave_ipcp->name.toString() << endl;
+
                 concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);
         } catch (Exception) {
@@ -382,6 +394,12 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                                 neighbor.supportingDifName,
                                 neighbor.apName);
                 pending_ipcp_enrollments[seqnum] = ipcp;
+                cout << "Requested enrollment of IPC process " <<
+                        ipcp->name.toString() << " to DIF " <<
+                        neighbor.difName.toString() << " through DIF "
+                        << neighbor.supportingDifName.toString() <<
+                        " and neighbor IPC process " <<
+                        neighbor.apName.toString() << endl;
                 if (sync) {
                         concurrency.wait_for_event(
                                 rina::ENROLL_TO_DIF_RESPONSE_EVENT, seqnum);
@@ -457,6 +475,10 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                  */
                 seqnum = ipcp->updateDIFConfiguration(dif_config);
                 pending_dif_config_updates[seqnum] = ipcp;
+
+                cout << "Requested configuration update for IPC process " <<
+                        ipcp->name.toString() << endl;
+
                 concurrency.wait_for_event(
                         rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum);
         } catch (rina::UpdateDIFConfigurationException) {
@@ -501,6 +523,9 @@ assign_to_dif_response_event_handler(rina::IPCEvent *e,
                 // DIF assignment operation
                 try {
                         ipcp->assignToDIFResult(success);
+                        cout << "DIF assignment operation completed for IPC "
+                                << "process " << ipcp->name.toString() <<
+                                " [success=" << success << "]" << endl;
                 } catch (rina::AssignToDIFException) {
                         cerr <<  __func__ << ": Error while reporting DIF "
                                 "assignment result for IPC process "
@@ -545,6 +570,9 @@ update_dif_config_response_event_handler(rina::IPCEvent *e,
                 // Inform the requesting IPC process about the result of
                 // the configuration update operation
                 ipcp->updateDIFConfigurationResult(success);
+                cout << "Configuration update operation completed for IPC "
+                        << "process " << ipcp->name.toString() <<
+                        " [success=" << success << "]" << endl;
         } catch (rina::UpdateDIFConfigurationException) {
                 cerr << __func__ << ": Error while reporting DIF "
                         "configuration update for process " <<
@@ -583,6 +611,8 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         if (success) {
                 ipcp->addNeighbors(event->neighbors);
                 ipcp->setDIFInformation(event->difInformation);
+                cout << "Enrollment operation completed for IPC "
+                        << "process " << ipcp->name.toString() <<  endl;
         } else {
                 cerr << __func__ << ": Error: Enrollment operation of "
                         "process " << ipcp->name.toString() << " failed"
@@ -620,6 +650,9 @@ neighbors_modified_notification_event_handler(rina::IPCEvent *e,
                 // We have lost some neighbors
                 ipcp->removeNeighbors(event->neighbors);
         }
+        cout << "Neighbors update [" << (event->added ? "+" : "-") <<
+                "#" << event->neighbors.size() << "]for IPC process " <<
+                ipcp->name.toString() <<  endl;
 
         (void) ipcm;
 }
@@ -663,6 +696,9 @@ os_process_finalized_handler(rina::IPCEvent *e,
         const rina::ApplicationProcessNamingInformation& app_name =
                                                 event->applicationName;
         list<rina::FlowInformation> involved_flows;
+
+        cout << __func__ << "Application " << app_name.toString()
+                        << "terminated" << endl;
 
         // Look if the terminating application has allocated flows
         // with some IPC processes
@@ -734,6 +770,8 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
         if (mit != ipcm->pending_normal_ipcp_inits.end()) {
                 mit->second->setInitialized();
                 ipcm->pending_normal_ipcp_inits.erase(mit);
+                cout << "IPC process daemon initialized [id = " <<
+                        event->ipcProcessId<< "]" << endl;
         } else {
                 cerr <<  __func__ << ": Warning: IPCP daemon initialized, "
                         "but no pending normal IPC process initialization"

@@ -4755,7 +4755,7 @@ AppAllocateFlowResponseMessage * parseAppAllocateFlowResponseMessage(
 	 * attribute in the attrs[] array accessable by attribute type.
 	 */
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			AAFRA_ATTR_MAX, attr_policy);
+			AAFRE_ATTR_MAX, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
 				"Error parsing AppAllocateFlowResponseMessage information from Netlink message: %d",

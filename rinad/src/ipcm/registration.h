@@ -1,5 +1,5 @@
 /*
- * IPC Manager - Application registration/unregistration
+ * IPC Manager - Registration and unregistration
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *

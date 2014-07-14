@@ -88,7 +88,7 @@ int main(int argc, char * argv[])
         rinad::register_handlers_all(loop);
 
         ipcm.start_console_worker();
-        //ipcm.start_script_worker();
+        ipcm.start_script_worker();
 
         loop.run();
 
