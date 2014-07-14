@@ -99,12 +99,24 @@ static struct dtp_sv default_sv = {
 
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
         /* FIXME: How to block further write API calls? */
 
         LOG_MISSING;
 
         LOG_DBG("Default Flow Control");
 
+#if 0
+        /* FIXME: Re-enable or remove depending on the missing code */
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok, cannot run policy");
+                return -1;
+        }
+#endif
         pdu_destroy(pdu);
 
         return 0;
@@ -116,8 +128,14 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
         struct dt *  dt;
         uint_t       max_len;
 
-        ASSERT(dtp);
-        ASSERT(pdu_is_ok(pdu));
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok, cannot run policy");
+                return -1;
+        }
 
         dt = dtp->parent;
         ASSERT(dt);
@@ -167,13 +185,18 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
         struct dt * dt;
-
-        ASSERT(dtp);
-        ASSERT(pdu_is_ok(pdu));
+        
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
 
         dt = dtp->parent;
+        if (!dt) {
+                LOG_ERR("Passed instance has no parent, cannot run policy");
+                return -1;
+        }
 
-        ASSERT(dt);
 #if 0
         /* Start SenderInactivityTimer */
         if (rtimer_restart(dtp->timers.sender_inactivity,
@@ -192,7 +215,14 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 }
 
 static int default_initial_seq_number(struct dtp * dtp)
-{ return 0; }
+{
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        return 0;
+}
 
 static struct dtp_policies default_policies = {
         .transmission_control    = default_transmission,
@@ -1015,6 +1045,31 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
+static bool cwq_is_closed(struct dtp_sv * sv,
+                          struct dt *     dt,
+                          struct dtcp *   dtcp,
+                          seq_num_t       seq_num)
+{
+        bool retval = false;
+
+        ASSERT(sv);
+        ASSERT(dt);
+        ASSERT(dtcp);
+
+        if (dt_sv_window_closed(dt))
+                return true;
+
+        if (sv->window_based && seq_num >= dtcp_snd_rt_win(dtcp)) {
+                dt_sv_window_closed_set(dt, true);
+                retval = true;
+        }
+
+        if (sv->rate_based)
+                LOG_MISSING;
+
+        return retval;
+}
+
 int dtp_write(struct dtp * instance,
               struct sdu * sdu)
 {
@@ -1122,6 +1177,20 @@ int dtp_write(struct dtp * instance,
         sdu_destroy(sdu);
 
         if (dtcp) {
+                if (sv->window_based || sv->rate_based) {
+                        /* NOTE: Might close window */
+                        if (cwq_is_closed(sv,
+                                          dt,
+                                          dtcp,
+                                          pci_sequence_number_get(pci))) {
+                                if (policies->closed_window(instance, pdu)) {
+                                        LOG_ERR("Problems with the "
+                                                "closed window policy");
+                                        return -1;
+                                }
+                                return 0;
+                        }
+                }
                 if (sv->rexmsn_ctrl) {
                         /* FIXME: Add timer for PDU */
                         rtxq = dt_rtxq(dt);
@@ -1147,31 +1216,13 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
                 }
-
-                if (sv->window_based) {
-                        if (!dt_sv_window_closed(dt) &&
-                            pci_sequence_number_get(pci) <
-                            dtcp_snd_rt_win(dtcp)) {
-                                /* NOTE: Might close window */
-                                if (policies->transmission_control(instance,
-                                                                   pdu)) {
-                                        LOG_ERR("Problems with transmission "
-                                                "control");
-                                        return -1;
-                                }
-                        } else {
-                                dt_sv_window_closed_set(dt, true);
-                                if (policies->closed_window(instance, pdu)) {
-                                        LOG_ERR("Problems with the "
-                                                "closed window policy");
-                                        return -1;
-                                }
-                        }
+                if (policies->transmission_control(instance,
+                                                   pdu)) {
+                        LOG_ERR("Problems with transmission "
+                                "control");
+                        return -1;
                 }
 
-                if (sv->rate_based) {
-                        LOG_MISSING;
-                }
 #if 0
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
@@ -1280,6 +1331,7 @@ int dtp_receive(struct dtp * instance,
         seq_num_t             seq_num;
         timeout_t             a;
         timeout_t             LWE;
+        bool                  in_order;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1313,8 +1365,9 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-        a   = instance->sv->a;
-        LWE = dt_sv_rcv_lft_win(dt);
+        a        = instance->sv->a;
+        LWE      = dt_sv_rcv_lft_win(dt);
+        in_order = sv->connection->policies_params->in_order_delivery;
 #if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
@@ -1339,7 +1392,9 @@ int dtp_receive(struct dtp * instance,
 
                 return 0;
         }
-
+        
+        /* NOTE: no need to check presence of in_order or dtcp because in case
+         * they are not, LWE is not updated and always 0 */ 
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
@@ -1367,22 +1422,23 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-        /*
-         * NOTE:
-         *     This op puts the PDU in seq number order and duplicates
-         *     considered
-         */
-
         if (!a) {
                 /* FIXME: delimiting goes here */
-                LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
-                        seq_num, LWE);
+                if (!in_order && !dtcp) {
+                        LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
+                                seq_num, LWE);
+                        if (pdu_post(instance, pdu))
+                                return -1;
+
+                        return 0;
+                }
                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                         LOG_ERR("Failed to set new left window edge");
                         return -1;
                 }
                 if (pdu_post(instance, pdu))
                         return -1;
+
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
