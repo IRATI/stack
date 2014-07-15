@@ -186,6 +186,11 @@ void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
 	throw Exception(ss.str().c_str());
 }
 
+// CLASS IPC Process
+const std::string IPCProcess::MANAGEMENT_AE = "Management";
+const std::string IPCProcess::DATA_TRANSFER_AE = "Data Transfer";
+const int IPCProcess::DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
+
 // Class ObjectInstanceGenerator
 ObjectInstanceGenerator::ObjectInstanceGenerator() : rina::Lockable() {
 	instance_ = 0;

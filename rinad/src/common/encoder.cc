@@ -164,6 +164,7 @@ const std::string EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS = "qoscube set
 const std::string EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS = "qoscube";
 const std::string EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME = SEPARATOR + DAF +
 			SEPARATOR + MANAGEMENT + SEPARATOR + ENROLLMENT;
+const std::string EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS = "enrollment information";
 const std::string EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS = "flowstateobject";
 const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS = "flowstateobject set";
 const std::string EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME = SEPARATOR +
@@ -179,5 +180,8 @@ const std::string EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME = SEPARATOR + D
 const std::string EncoderConstants::ADDRESS_RIB_OBJECT_CLASS = "address";
 const std::string EncoderConstants::ADDRESS_RIB_OBJECT_NAME = SEPARATOR + DAF +
 		SEPARATOR + MANAGEMENT + SEPARATOR + NAMING + SEPARATOR + ADDRESS;
+const std::string EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS = "datatransfercons";
+const std::string EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME = SEPARATOR + DIF +
+		SEPARATOR + IPC + SEPARATOR + DATA_TRANSFER + SEPARATOR + CONSTANTS;
 
 }

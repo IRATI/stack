@@ -629,6 +629,10 @@ public:
 /// IPC Process interface
 class IPCProcess {
 public:
+	static const std::string MANAGEMENT_AE;
+	static const std::string DATA_TRANSFER_AE;
+	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
+
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
 	virtual IDelimiter* get_delimiter() = 0;
