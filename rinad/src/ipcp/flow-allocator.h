@@ -38,71 +38,6 @@
 
 namespace rinad {
 
-/// Encapsulates all the information required to manage a Flow
-class Flow {
-public:
-	enum IPCPFlowState {
-		EMPTY,
-		ALLOCATION_IN_PROGRESS,
-		ALLOCATED,
-		WAITING_2_MPL_BEFORE_TEARING_DOWN,
-		DEALLOCATED
-	};
-
-	Flow();
-	~Flow();
-	rina::Connection * getActiveConnection();
-	std::string toString();
-
-	/// The application that requested the flow
-	rina::ApplicationProcessNamingInformation source_naming_info_;
-
-	/// The destination application of the flow
-	rina::ApplicationProcessNamingInformation destination_naming_info_;
-
-	/// The port-id returned to the Application process that requested the flow. This port-id is used for
-	/// the life of the flow.
-	unsigned int source_port_id_;
-
-	/// The port-id returned to the destination Application process. This port-id is used for
-	// the life of the flow
-	unsigned int destination_port_id_;
-
-	/// The address of the IPC process that is the source of this flow
-	unsigned int source_address_;
-
-	/// The address of the IPC process that is the destination of this flow
-	unsigned int destination_address_;
-
-	/// All the possible connections of this flow
-	std::list<rina::Connection*> connections_;
-
-	/// The index of the connection that is currently Active in this flow
-	unsigned int current_connection_index_;
-
-	/// The status of this flow
-	IPCPFlowState state_;
-
-	/// The list of parameters from the AllocateRequest that generated this flow
-	rina::FlowSpecification flow_specification_;
-
-	/// TODO this is just a placeHolder for this piece of data
-	char* access_control_;
-
-	/// Maximum number of retries to create the flow before giving up.
-	unsigned int max_create_flow_retries_;
-
-	/// The current number of retries
-	unsigned int create_flow_retries_;
-
-	/// While the search rules that generate the forwarding table should allow for a
-	/// natural termination condition, it seems wise to have the means to enforce termination.
-	unsigned int hop_count_;
-
-	///True if this IPC process is the source of the flow, false otherwise
-	bool source_;
-};
-
 /// Flow Allocator Instance Interface
 class IFlowAllocatorInstance {
 public:
@@ -366,6 +301,7 @@ private:
 	Encoder * encoder_;
 	IRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
+	ISecurityManager * security_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;
 	FAIState state_;
 

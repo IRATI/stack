@@ -67,6 +67,9 @@ public:
 	void set_ipc_process(rinad::IPCProcess * ipc_process){
 		ipc_process_ = ipc_process;
 	}
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
+	}
 	void addRIBObject(rinad::BaseRIBObject * ribObject){
 		if (!ribObject) {
 			return;
@@ -203,10 +206,13 @@ public:
 	rinad::IResourceAllocator* get_resource_allocator() {
 		return 0;
 	}
+	rinad::ISecurityManager* get_security_manager() {
+		return 0;
+	}
 	rinad::IRIBDaemon* get_rib_daemon() {
 		return rib_daemon_;
 	}
-	unsigned int get_address() {
+	unsigned int get_address() const{
 		return address_;
 	}
 	void set_address(unsigned int address){
@@ -221,13 +227,13 @@ public:
 	void set_operational_state(const rinad::IPCProcessOperationalState& operational_state){
 		state_ = operational_state;
 	}
-	const rina::DIFInformation& get_dif_information() const {
-		return dif_information_;
+	rina::DIFInformation& get_dif_information() const {
+		throw Exception();
 	}
 	void set_dif_information(const rina::DIFInformation& dif_information) {
 		dif_information_ = dif_information;
 	}
-	const std::list<rina::Neighbor>& get_neighbors() const {
+	const std::list<rina::Neighbor *>& get_neighbors() const {
 		return neighbors_;
 	}
 	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
@@ -243,7 +249,7 @@ private:
 	rina::ApplicationProcessNamingInformation name_;
 	rinad::IPCProcessOperationalState state_;
 	rina::DIFInformation dif_information_;
-	std::list<rina::Neighbor> neighbors_;
+	std::list<rina::Neighbor*> neighbors_;
 	unsigned int address_;
 	rina::WireMessageProviderFactory wire_factory_;
 	rina::CDAPSessionManagerFactory cdap_manager_factory_;

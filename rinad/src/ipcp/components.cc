@@ -32,6 +32,80 @@ EnrollmentRequest::EnrollmentRequest(
 	event_ = event;
 }
 
+//	CLASS Flow
+Flow::Flow() {
+	source_port_id_ = 0;
+	destination_port_id_ = 0;
+	source_address_ = 0;
+	destination_address_ = 0;
+	current_connection_index_ = 0;
+	max_create_flow_retries_ = 0;
+	create_flow_retries_ = 0;
+	hop_count_ = 0;
+	source_ = false;
+	state_ = EMPTY;
+	access_control_ = 0;
+}
+
+Flow::~Flow() {
+	std::list<rina::Connection*>::iterator iterator;
+
+	for (iterator = connections_.begin(); iterator != connections_.end();
+			++iterator) {
+		delete *iterator;
+		*iterator = 0;
+	}
+}
+
+rina::Connection * Flow::getActiveConnection() {
+	rina::Connection result;
+	std::list<rina::Connection*>::iterator iterator;
+
+	unsigned int i = 0;
+	for (iterator = connections_.begin(); iterator != connections_.end();
+			++iterator) {
+		if (i == current_connection_index_) {
+			return *iterator;
+		} else {
+			i++;
+		}
+	}
+
+	throw Exception("No active connection is currently defined");
+}
+
+std::string Flow::toString() {
+	std::stringstream ss;
+	ss << "* State: " << state_ << std::endl;
+	ss << "* Is this IPC Process the requestor of the flow? " << source_
+			<< std::endl;
+	ss << "* Max create flow retries: " << max_create_flow_retries_
+			<< std::endl;
+	ss << "* Hop count: " << hop_count_ << std::endl;
+	ss << "* Source AP Naming Info: " << source_naming_info_.toString()
+			<< std::endl;
+	;
+	ss << "* Source address: " << source_address_ << std::endl;
+	ss << "* Source port id: " << source_port_id_ << std::endl;
+	ss << "* Destination AP Naming Info: "
+			<< destination_naming_info_.toString();
+	ss << "* Destination addres: " + destination_address_ << std::endl;
+	ss << "* Destination port id: " + destination_port_id_ << std::endl;
+	if (connections_.size() > 0) {
+		ss << "* Connection ids of the connection supporting this flow: +\n";
+		for (std::list<rina::Connection*>::const_iterator iterator =
+				connections_.begin(), end = connections_.end(); iterator != end;
+				++iterator) {
+			ss << "Src CEP-id " << (*iterator)->getSourceCepId()
+					<< "; Dest CEP-id " << (*iterator)->getDestCepId()
+					<< "; Qos-id " << (*iterator)->getQosId() << std::endl;
+		}
+	}
+	ss << "* Index of the current active connection for this flow: "
+			<< current_connection_index_ << std::endl;
+	return ss.str();
+}
+
 // CLASS NotificationPolicy
 NotificationPolicy::NotificationPolicy(const std::list<int>& cdap_session_ids) {
 	cdap_session_ids_ = cdap_session_ids;

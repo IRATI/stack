@@ -33,7 +33,7 @@ public:
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
-	bool acceptFlow(const rina::Flow& newFlow);
+	bool acceptFlow(const Flow& newFlow);
 
 private:
 	IPCProcess * ipc_process_;

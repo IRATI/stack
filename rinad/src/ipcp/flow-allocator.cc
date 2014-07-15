@@ -31,80 +31,6 @@
 
 namespace rinad {
 
-//	CLASS Flow
-Flow::Flow() {
-	source_port_id_ = 0;
-	destination_port_id_ = 0;
-	source_address_ = 0;
-	destination_address_ = 0;
-	current_connection_index_ = 0;
-	max_create_flow_retries_ = 0;
-	create_flow_retries_ = 0;
-	hop_count_ = 0;
-	source_ = false;
-	state_ = EMPTY;
-	access_control_ = 0;
-}
-
-Flow::~Flow() {
-	std::list<rina::Connection*>::iterator iterator;
-
-	for (iterator = connections_.begin(); iterator != connections_.end();
-			++iterator) {
-		delete *iterator;
-		*iterator = 0;
-	}
-}
-
-rina::Connection * Flow::getActiveConnection() {
-	rina::Connection result;
-	std::list<rina::Connection*>::iterator iterator;
-
-	unsigned int i = 0;
-	for (iterator = connections_.begin(); iterator != connections_.end();
-			++iterator) {
-		if (i == current_connection_index_) {
-			return *iterator;
-		} else {
-			i++;
-		}
-	}
-
-	throw Exception("No active connection is currently defined");
-}
-
-std::string Flow::toString() {
-	std::stringstream ss;
-	ss << "* State: " << state_ << std::endl;
-	ss << "* Is this IPC Process the requestor of the flow? " << source_
-			<< std::endl;
-	ss << "* Max create flow retries: " << max_create_flow_retries_
-			<< std::endl;
-	ss << "* Hop count: " << hop_count_ << std::endl;
-	ss << "* Source AP Naming Info: " << source_naming_info_.toString()
-			<< std::endl;
-	;
-	ss << "* Source address: " << source_address_ << std::endl;
-	ss << "* Source port id: " << source_port_id_ << std::endl;
-	ss << "* Destination AP Naming Info: "
-			<< destination_naming_info_.toString();
-	ss << "* Destination addres: " + destination_address_ << std::endl;
-	ss << "* Destination port id: " + destination_port_id_ << std::endl;
-	if (connections_.size() > 0) {
-		ss << "* Connection ids of the connection supporting this flow: +\n";
-		for (std::list<rina::Connection*>::const_iterator iterator =
-				connections_.begin(), end = connections_.end(); iterator != end;
-				++iterator) {
-			ss << "Src CEP-id " << (*iterator)->getSourceCepId()
-					<< "; Dest CEP-id " << (*iterator)->getDestCepId()
-					<< "; Qos-id " << (*iterator)->getQosId() << std::endl;
-		}
-	}
-	ss << "* Index of the current active connection for this flow: "
-			<< current_connection_index_ << std::endl;
-	return ss.str();
-}
-
 //Class Flow RIB Object
 FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process,
 		const std::string& object_name, const std::string& object_class,
@@ -571,6 +497,7 @@ void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
 	rib_daemon_ = ipc_process->get_rib_daemon();
 	encoder_ = ipc_process->get_encoder();
 	namespace_manager_ = ipc_process->get_namespace_manager();
+	security_manager_ = ipc_process->get_security_manager();
 	state_ = NO_STATE;
 	allocate_response_message_handle_ = 0;
 	request_message_ = 0;
@@ -764,9 +691,38 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 	connection->setFlowUserIpcProcessId(namespace_manager_->getRegIPCProcessId(flow_->destination_naming_info_));
 	LOG_DBG("Target application IPC Process id is %d", connection->getFlowUserIpcProcessId());
 
-	//2 TODO Check if the source application process has access to the destination application process.
-	// If not send negative M_CREATE_R back to the sender IPC process, and housekeeping.
-	// Not done in this version, this decision is left to the application
+	//2 Check if the source application process has access to the destination application process.
+	// If not send negative M_CREATE_R back to the sender IPC process, and do housekeeping.
+	if (!security_manager_->acceptFlow(*flow_)) {
+		LOG_WARN("Security Manager denied incoming flow request from application %s",
+				flow_->source_naming_info_.getEncodedString().c_str());
+
+		const rina::CDAPMessage * responseMessage = 0;
+		const rina::SerializedObject * serializedObject = 0;
+		try {
+			serializedObject = encoder_->encode(flow_,
+					EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
+					*serializedObject);
+			responseMessage = cdap_session_manager_->getCreateObjectResponseMessage(
+					rina::CDAPMessage::NONE_FLAGS,
+					request_message_->get_obj_class(), 0,
+					request_message_->get_obj_name(), &objectValue, -1,
+					"IPC Process rejected the flow",
+					request_message_->get_invoke_id());
+
+			rib_daemon_->sendMessageToAddress(*responseMessage, underlying_port_id_,
+					flow_->source_address_, 0);
+		} catch (Exception &e){
+			LOG_ERR("Problems sending CDAP message: %s", e.what());
+		}
+
+		delete responseMessage;
+		delete serializedObject;
+		releaseUnlockRemove();
+		return;
+	}
+
 	//3 TODO If it has, determine if the proposed policies for the flow are acceptable (invoke NewFlowREquestPolicy)
 	//Not done in this version, it is assumed that the proposed policies for the flow are acceptable.
 
