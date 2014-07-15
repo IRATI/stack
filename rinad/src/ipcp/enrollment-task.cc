@@ -19,6 +19,9 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <sstream>
+#include <vector>
+
 #define RINA_PREFIX "enrollment-task"
 
 #include <librina/logs.h>
@@ -340,6 +343,247 @@ void AddressRIBObject::writeObject(const void* object_value) {
 	int * address = (int *) object_value;
 	address_ = *address;
 	ipc_process_->get_dif_information().dif_configuration_.address_ = *address;
+}
+
+//Class EnrollmentFailedTimerTask
+EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(BaseEnrollmentStateMachine * state_machine,
+		const std::string& reason, bool enrollee) {
+	state_machine_ = state_machine;
+	reason_ = reason;
+	enrollee_ = enrollee;
+}
+
+void EnrollmentFailedTimerTask::run() {
+	try {
+		state_machine_->abortEnrollment(state_machine_->remote_peer_->name_, state_machine_->port_id_,
+				reason_, enrollee_, true);
+	} catch(Exception &e) {
+		LOG_ERR("Problems aborting enrollment: %s", e.what());
+	}
+}
+
+//Class BaseEnrollmentStateMachine
+BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IRIBDaemon * rib_daemon,
+		rina::CDAPSessionManagerInterface * cdap_session_manager, Encoder * encoder,
+		const rina::ApplicationProcessNamingInformation& remote_naming_info, IEnrollmentTask * enrollment_task,
+		int timeout, const rina::ApplicationProcessNamingInformation& supporting_dif_name) {
+	rib_daemon_ = rib_daemon;
+	cdap_session_manager_ = cdap_session_manager;
+	encoder_ = encoder;
+	enrollment_task_ = enrollment_task;
+	timeout_ = timeout;
+	timer_ = new rina::Timer();
+	lock_ = new rina::Lockable();
+	remote_peer_ = new rina::Neighbor();
+	remote_peer_->name_ = remote_naming_info;
+	remote_peer_->supporting_dif_name_ = supporting_dif_name;
+	port_id_ = 0;
+	state_ = STATE_NULL;
+}
+
+BaseEnrollmentStateMachine::~BaseEnrollmentStateMachine() {
+	if (timer_) {
+		delete timer_;
+	}
+
+	if (lock_) {
+		delete lock_;
+	}
+}
+
+void BaseEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+			int portId, const std::string& reason, bool enrollee, bool sendReleaseMessage) {
+	rina::AccessGuard g(*lock_);
+
+	if (timer_) {
+		delete timer_;
+		timer_ = 0;
+	}
+
+	state_ = STATE_NULL;
+
+	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, enrollee, sendReleaseMessage);
+}
+
+bool BaseEnrollmentStateMachine::isValidPortId(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	if (cdapSessionDescriptor->port_id_ != port_id_) {
+		LOG_ERR("Received a CDAP message form port-id %d, but was expecting it form port-id %d",
+				cdapSessionDescriptor->port_id_, port_id_);
+		return false;
+	}
+
+	return true;
+}
+
+void BaseEnrollmentStateMachine::release(rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	LOG_DBG("Releasing the CDAP connection");
+
+	if (!isValidPortId(cdapSessionDescriptor)) {
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	createOrUpdateNeighborInformation(false);
+
+	state_ = STATE_NULL;
+	if (timer_) {
+		delete timer_;
+		timer_ = 0;
+	}
+
+	if (cdapMessage->get_invoke_id() == 0) {
+		return;
+	}
+
+	const rina::CDAPMessage * responseMessage = 0;
+	try {
+		responseMessage = cdap_session_manager_->getReleaseConnectionResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				0, "", cdapMessage->invoke_id_);
+		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
+		delete responseMessage;
+	} catch (Exception &e) {
+		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
+		delete responseMessage;
+	}
+}
+
+void BaseEnrollmentStateMachine::releaseResponse(rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	if (!cdapMessage) {
+		return;
+	}
+
+	if (!isValidPortId(cdapSessionDescriptor)) {
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	if (state_ != STATE_NULL) {
+		state_ = STATE_NULL;
+	}
+}
+
+void BaseEnrollmentStateMachine::flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
+			cdapSessionDescriptor->port_id_);
+
+	if (!isValidPortId(cdapSessionDescriptor)){
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	createOrUpdateNeighborInformation(false);
+
+	state_ = STATE_NULL;
+	if (timer_) {
+		delete timer_;
+		timer_ = 0;
+	}
+}
+
+void BaseEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled) {
+	remote_peer_->enrolled_ = enrolled;
+	remote_peer_->number_of_enrollment_attempts_ = 0;
+	rina::Time currentTime;
+	remote_peer_->last_heard_from_time_in_ms_ = currentTime.get_current_time_in_ms();
+	if (enrolled) {
+		remote_peer_->underlying_port_id_ = port_id_;
+	} else {
+		remote_peer_->underlying_port_id_ = 0;
+	}
+
+	try {
+		std::stringstream ss;
+		ss<<EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
+		ss<<remote_peer_->name_.processName;
+		rib_daemon_->createObject(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS, ss.str(),
+				remote_peer_, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems creating RIB object: %s", e.what());
+	}
+}
+
+void BaseEnrollmentStateMachine::sendDIFDynamicInformation(IPCProcess * ipcProcess) {
+	//Send DirectoryForwardingTableEntries
+	sendCreateInformation(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+			EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME);
+
+	//Send neighbors (including myself)
+	BaseRIBObject * neighborSet;
+	std::list<BaseRIBObject *>::const_iterator it;
+	std::list<rina::Neighbor *> neighbors;
+	rina::Neighbor * myself = 0;
+	std::vector<rina::ApplicationRegistration *> registrations;
+	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
+	const rina::CDAPMessage * cdapMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+	try {
+		neighborSet = rib_daemon_->readObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME);
+		for (it = neighborSet->get_children().begin();
+				it != neighborSet->get_children().end(); ++it) {
+			neighbors.push_back((rina::Neighbor*) (*it)->get_value());
+		}
+
+		myself = new rina::Neighbor();
+		myself->address_ = ipcProcess->get_address();
+		myself->name_ = ipcProcess->get_name();
+		registrations = rina::extendedIPCManager->getRegisteredApplications();
+		for (unsigned int i=0; i<registrations.size(); i++) {
+			for(it2 = registrations[i]->DIFNames.begin();
+					it2 != registrations[i]->DIFNames.end(); ++it2) {
+				myself->add_supporting_dif((*it2));
+			}
+		}
+
+		serializedObject = encoder_->encode(&neighbors, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
+				*serializedObject);
+		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(
+				port_id_, 0, rina::CDAPMessage::NONE_FLAGS, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+				0, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, &objectValue, 0, false);
+		rib_daemon_->sendMessage(*cdapMessage, port_id_, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems sending neighbors: %s", e.what());
+	}
+
+	delete myself;
+	delete cdapMessage;
+	delete serializedObject;
+}
+
+void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& objectClass,
+		const std::string& objectName) {
+	BaseRIBObject * ribObject = 0;
+	const rina::CDAPMessage * cdapMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+
+	try {
+		ribObject = rib_daemon_->readObject(objectClass, objectName);
+	} catch (Exception &e) {
+		LOG_ERR("Problems reading object from RIB: %s", e.what());
+		return;
+	}
+
+	try {
+		serializedObject = encoder_->encode(ribObject->get_value(), objectClass);
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
+				*serializedObject);
+		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(
+				port_id_, 0, rina::CDAPMessage::NONE_FLAGS, objectClass, 0, objectName,
+				&objectValue, 0, false);
+		rib_daemon_->sendMessage(*cdapMessage, port_id_, 0);
+		delete cdapMessage;
+		delete serializedObject;
+	} catch (Exception &e) {
+		LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
+		delete cdapMessage;
+		delete serializedObject;
+	}
 }
 
 }
