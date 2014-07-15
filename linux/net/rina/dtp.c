@@ -185,7 +185,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
         struct dt * dt;
-        
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -1210,7 +1210,7 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
 
-                        if (rtxq_push(rtxq, cpdu)) {
+                        if (rtxq_push_ni(rtxq, cpdu)) {
                                 LOG_ERR("Couldn't push to rtxq");
                                 pdu_destroy(pdu);
                                 return -1;
@@ -1332,6 +1332,7 @@ int dtp_receive(struct dtp * instance,
         timeout_t             a;
         timeout_t             LWE;
         bool                  in_order;
+        seq_num_t             max_sdu_gap;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1365,9 +1366,10 @@ int dtp_receive(struct dtp * instance,
         }
         pci = pdu_pci_get_rw(pdu);
 
-        a        = instance->sv->a;
-        LWE      = dt_sv_rcv_lft_win(dt);
-        in_order = sv->connection->policies_params->in_order_delivery;
+        a           = instance->sv->a;
+        LWE         = dt_sv_rcv_lft_win(dt);
+        in_order    = sv->connection->policies_params->in_order_delivery;
+        max_sdu_gap = sv->connection->policies_params->max_sdu_gap;
 #if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
@@ -1392,9 +1394,12 @@ int dtp_receive(struct dtp * instance,
 
                 return 0;
         }
-        
-        /* NOTE: no need to check presence of in_order or dtcp because in case
-         * they are not, LWE is not updated and always 0 */ 
+
+        /*
+         * NOTE:
+         *   no need to check presence of in_order or dtcp because in case
+         *   they are not, LWE is not updated and always 0
+         */
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
@@ -1429,6 +1434,35 @@ int dtp_receive(struct dtp * instance,
                                 seq_num, LWE);
                         if (pdu_post(instance, pdu))
                                 return -1;
+
+                        return 0;
+                }
+                if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                        if ((seq_num - LWE) <= max_sdu_gap) {
+                                if (dt_sv_rcv_lft_win_set(dt,
+                                                          seq_num)) {
+                                        LOG_ERR("Failed to set new "
+                                                "left window edge");
+                                        pdu_destroy(pdu);
+                                        return -1;
+                                }
+                                if (dtcp_sv_update(dtcp, seq_num)) {
+                                        LOG_ERR("Failed to "
+                                                "update dtcp sv");
+                                        pdu_destroy(pdu);
+                                        return -1;
+                                }
+                                if (pdu_post(instance, pdu))
+                                        return -1;
+
+                                return 0;
+                        }
+                        if (dtcp_sv_update(dtcp, seq_num)) {
+                                LOG_ERR("Failed to update dtcp sv");
+                                pdu_destroy(pdu);
+                                return -1;
+                        }
+                        pdu_destroy(pdu);
 
                         return 0;
                 }
