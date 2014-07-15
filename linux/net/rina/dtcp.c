@@ -737,12 +737,27 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 
 static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
+        /* FIXME: this is the same as default_sending_ack */
+        struct pdu * pdu_ctrl;
+        seq_num_t    last_rcv_ctrl, snd_lft, snd_rt;
+
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
 
-        LOG_MISSING;
+        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+        snd_lft       = snd_lft_win(dtcp);
+        snd_rt        = snd_rt_wind_edge(dtcp);
+        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                            last_rcv_ctrl,
+                                            snd_lft,
+                                            snd_rt);
+        if (!pdu_ctrl)
+                return -1;
+
+        if (pdu_send(dtcp, pdu_ctrl))
+                return -1;
 
         return 0;
 }
@@ -822,6 +837,11 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         int                  retval = 0;
         struct dtcp_config * dtcp_cfg;
 
+        bool                 flow_ctrl;
+        bool                 win_based;
+        bool                 rate_based;
+        bool                 rtx_ctrl;
+
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -831,14 +851,19 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         if (!dtcp_cfg)
                 return -1;
 
-        if (dtcp_flow_ctrl(dtcp_cfg)) {
-                if (dtcp_window_based_fctrl(dtcp_cfg))
+        flow_ctrl  = dtcp_flow_ctrl(dtcp_cfg);
+        win_based  = dtcp_window_based_fctrl(dtcp_cfg);
+        rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
+        rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
+
+        if (flow_ctrl) {
+                if (win_based)
                         if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
                         }
 
-                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
+                if (rate_based) {
                         LOG_DBG("Rate based fctrl invoked");
                         if (dtcp->policies->rate_reduction(dtcp)) {
                                 LOG_ERR("Failed Rate Reduction policy");
@@ -847,7 +872,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp_rtx_ctrl(dtcp_cfg)) {
+        if (rtx_ctrl) {
                 LOG_DBG("Retransmission ctrl invoked");
                 if (dtcp->policies->rcvr_ack(dtcp, seq)) {
                         LOG_ERR("Failed Rcvr Ack policy");
@@ -855,7 +880,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                 }
         }
 
-        if (dtcp_flow_ctrl(dtcp_cfg) && !dtcp_rtx_ctrl(dtcp_cfg)) {
+        if (flow_ctrl && !rtx_ctrl) {
                 LOG_DBG("Receiving flow ctrl invoked");
                 if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
                         LOG_ERR("Failed Receiving Flow Control policy");
