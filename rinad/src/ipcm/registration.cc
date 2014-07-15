@@ -167,7 +167,7 @@ static bool ipcm_register_response_common(
         bool success = (event->result == 0);
 
         try {
-                /* Notify the N-1 IPC process. */
+                // Notify the N-1 IPC process.
                 slave_ipcp->registerApplicationResult(
                                         event->sequenceNumber, success);
 
@@ -203,7 +203,7 @@ static void ipcm_register_response_ipcp(
         success = ipcm_register_response_common(event, ipcp->name,
                                         slave_ipcp, slave_dif_name);
         if (success) {
-                /* Notify the registered IPC process. */
+                // Notify the registered IPC process.
                 try {
                         ipcp->notifyRegistrationToSupportingDIF(
                                         slave_ipcp->name,
@@ -252,7 +252,7 @@ static void ipcm_register_response_app(
         success = ipcm_register_response_common(event, app_name, slave_ipcp,
                                            slave_dif_name);
 
-        /* Notify the application about the successful registration. */
+        // Notify the application about the successful registration.
         try {
                 rina::applicationManager->applicationRegistered(req_event,
                                 slave_dif_name, success ? 0 : -1);
