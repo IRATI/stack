@@ -426,7 +426,7 @@ static int send_worker(void * o)
                         continue;
                 }
 
-                if (!serdes_buffer_disown(pdu_ser)) {
+                if (serdes_buffer_disown(pdu_ser)) {
                         LOG_ERR("Could not disown buffer");
                         serdes_pdu_destroy(pdu_ser);
                         spin_lock(&tmp->egress.queues->lock);
@@ -914,7 +914,7 @@ static int forward_pdu(struct rmt * rmt,
                 return -1;
         }
 
-        if (!serdes_buffer_disown(pdu_ser)) {
+        if (serdes_buffer_disown(pdu_ser)) {
                 LOG_ERR("Could not disown buffer");
                 serdes_pdu_destroy(pdu_ser);
                 return -1;
