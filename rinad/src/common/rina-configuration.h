@@ -133,7 +133,7 @@ struct DIFProperties {
         std::list<AddressPrefixConfiguration> addressPrefixes;
 
         /* Extra configuration parameters (name/value pairs) */
-        std::list<rina::Parameter> configParameters;
+        std::map<std::string, std::string> configParameters;
 
         bool lookup_ipcp_address(
                         const rina::ApplicationProcessNamingInformation&,

@@ -61,7 +61,7 @@ script_function(void *opaque)
 
 IPCManager::IPCManager() : script(NULL), console(NULL)
 {
-        /* Initialize the IPC manager infrastructure in librina. */
+        // Initialize the IPC manager infrastructure in librina.
         try {
                 rina::initializeIPCManager(1, config.local.installationPath,
                                            config.local.libraryPath,
@@ -159,14 +159,14 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                 ipcp = rina::ipcProcessFactory->create(name,
                                                        type);
                 if (type != rina::NORMAL_IPC_PROCESS) {
-                        /* Shim IPC processes are set as initialized
-                         * immediately. */
+                        // Shim IPC processes are set as initialized
+                        // immediately.
                         ipcp->setInitialized();
                 } else {
-                        /* Normal IPC processes can be set as
-                         * initialized only when the corresponding
-                         * IPC process daemon is initialized, so we
-                         * defer the operation. */
+                        // Normal IPC processes can be set as
+                        // initialized only when the corresponding
+                        // IPC process daemon is initialized, so we
+                        // defer the operation.
                         pending_normal_ipcp_inits[ipcp->id] = ipcp;
                         wait = true;
                 }
@@ -251,8 +251,8 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
 
         concurrency.lock();
 
-        /* Try to extract the DIF properties from the
-         * configuration. */
+        // Try to extract the DIF properties from the
+        // configuration.
         found = config.lookup_dif_properties(dif_name,
                         dif_props);
         if (!found) {
@@ -261,12 +261,12 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 goto out;
         }
 
-        /* Fill in the DIFConfiguration object. */
+        // Fill in the DIFConfiguration object.
         if (ipcp->type == rina::NORMAL_IPC_PROCESS) {
                 rina::EFCPConfiguration efcp_config;
                 unsigned int address;
 
-                /* FIll in the EFCPConfiguration object. */
+                // FIll in the EFCPConfiguration object.
                 efcp_config.set_data_transfer_constants(
                                 dif_props.dataTransferConstants);
                 for (list<rina::QoSCube>::iterator
@@ -290,20 +290,21 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 dif_config.set_address(address);
         }
 
-        for (list<rina::Parameter>::const_iterator
-                        pit = dif_props.configParameters.begin();
-                        pit != dif_props.configParameters.end();
-                        pit++) {
-                dif_config.add_parameter(*pit);
+        for (map<string, string>::const_iterator
+                     pit = dif_props.configParameters.begin();
+             pit != dif_props.configParameters.end();
+             pit++) {
+                dif_config.add_parameter
+                        (rina::Parameter(pit->first, pit->second));
         }
 
-        /* Fill in the DIFInformation object. */
+        // Fill in the DIFInformation object.
         dif_info.set_dif_name(dif_name);
         dif_info.set_dif_type(ipcp->type);
         dif_info.set_dif_configuration(dif_config);
 
-        /* Invoke librina to assign the IPC process to the
-         * DIF specified by dif_info. */
+        // Invoke librina to assign the IPC process to the
+        // DIF specified by dif_info.
         try {
                 unsigned int seqnum = ipcp->assignToDIF(dif_info);
 
@@ -332,7 +333,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                             const rina::ApplicationProcessNamingInformation&
                             dif_name)
 {
-        /* Select a slave (N-1) IPC process. */
+        // Select a slave (N-1) IPC process.
         rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
         unsigned int seqnum;
 
@@ -344,7 +345,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
 
         concurrency.lock();
 
-        /* Try to register @ipcp to the slave IPC process. */
+        // Try to register @ipcp to the slave IPC process.
         try {
                 seqnum = slave_ipcp->registerApplication(
                                 ipcp->name, ipcp->id);
@@ -434,9 +435,8 @@ IPCManager::apply_configuration()
         list<rinad::IPCProcessToCreate>::iterator cit;
         list<rina::IPCProcess *>::iterator pit;
 
-        /* Examine all the IPCProcesses that are going to be created
-         * according to the configuration file.
-         */
+        // Examine all the IPCProcesses that are going to be created
+        // according to the configuration file.
         for (cit = config.ipcProcessesToCreate.begin();
                         cit != config.ipcProcessesToCreate.end(); cit++) {
                 rina::IPCProcess *ipcp;
@@ -448,7 +448,7 @@ IPCManager::apply_configuration()
                 ipcps.push_back(ipcp);
         }
 
-        /* Perform all the enrollments specified by the configuration file. */
+        // Perform all the enrollments specified by the configuration file.
         for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
                                         pit != ipcps.end(); pit++, cit++) {
                 enroll_to_difs(*pit, cit->neighbors);
@@ -467,7 +467,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                 unsigned int seqnum;
 
                 // Request a configuration update for the IPC process
-                /* XXX The meaning of this operation is unclear: what
+                /* FIXME The meaning of this operation is unclear: what
                  * configuration is modified? The configuration of the
                  * IPC process only or the configuration of the whole DIF
                  * (which possibly contains more IPC process, both on the same
@@ -764,8 +764,8 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         map<unsigned short, rina::IPCProcess *>::iterator mit;
 
-        /* Perform deferred "setInitiatialized()" of a normal IPC process, if
-         * needed. */
+        // Perform deferred "setInitiatialized()" of a normal IPC process, if
+        // needed.
         mit = ipcm->pending_normal_ipcp_inits.find(event->ipcProcessId);
         if (mit != ipcm->pending_normal_ipcp_inits.end()) {
                 mit->second->setInitialized();

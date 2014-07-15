@@ -31,11 +31,9 @@ using namespace std;
 
 namespace rinad {
 
-/*
- * Return the configuration of the DIF named "difName" if it is known
- * @param difName
- * @result
- */
+// Return the configuration of the DIF named "difName" if it is known
+// @param difName
+// @result
 bool RINAConfiguration::lookup_dif_properties(
                 const rina::ApplicationProcessNamingInformation& dif_name,
                 DIFProperties& result) const
@@ -52,13 +50,11 @@ bool RINAConfiguration::lookup_dif_properties(
 }
 
 #if 0
-/*
- * Return the address of the IPC process named "name" if it is known,
- * 0 otherwise
- * @param dif_name
- * @param ipcp_name
- * @return
- */
+// Return the address of the IPC process named "name" if it is known,
+// 0 otherwise
+// @param dif_name
+// @param ipcp_name
+// @return
 bool RINAConfiguration::lookup_ipcp_address(const string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
                 unsigned int& result)
@@ -162,10 +158,10 @@ string RINAConfiguration::toString() const
                 ss << "\tDIF type: " << it->difType << endl;
                 // TODO complete
                 ss << "\tParameters: " << endl;
-                for (list<rina::Parameter>::const_iterator pit =
+                for (map<string, string>::const_iterator pit =
                         it->configParameters.begin();
                                 pit != it->configParameters.end(); pit++) {
-                        ss << "\t\t" << pit->name << ":" << pit->value << endl;
+                        ss << "\t\t" << pit->first << ":" << pit->second << endl;
                 }
         }
 
