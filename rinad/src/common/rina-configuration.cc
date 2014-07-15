@@ -158,10 +158,10 @@ string RINAConfiguration::toString() const
                 ss << "\tDIF type: " << it->difType << endl;
                 // TODO complete
                 ss << "\tParameters: " << endl;
-                for (list<rina::Parameter>::const_iterator pit =
+                for (map<string, string>::const_iterator pit =
                         it->configParameters.begin();
                                 pit != it->configParameters.end(); pit++) {
-                        ss << "\t\t" << pit->name << ":" << pit->value << endl;
+                        ss << "\t\t" << pit->first << ":" << pit->second << endl;
                 }
         }
 
