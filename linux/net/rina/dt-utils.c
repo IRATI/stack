@@ -211,7 +211,7 @@ void cwq_deliver(struct cwq * queue,
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        rtxq_push(rtxq, pdu);
+                        rtxq_push_ni(rtxq, pdu);
                 }
                 pci = pdu_pci_get_ro(pdu);
                 if (dtcp_snd_lf_win_set(dtcp,
@@ -378,7 +378,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 }
 
 /* push in seq_num order */
-static int rtxqueue_push(struct rtxqueue * q, struct pdu * pdu)
+static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
 {
         struct rtxq_entry * tmp, * cur, * last = NULL;
         seq_num_t           csn, psn;
@@ -517,8 +517,10 @@ static void Rtimer_handler(void * data)
         }
 
         dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
-        if (!dtcp_cfg)
+        if (!dtcp_cfg) {
                 LOG_ERR("RTX failed");
+                return;
+        }
 
         if (rtxqueue_rtx(q->queue,
                          dt_sv_tr(q->parent),
@@ -613,8 +615,8 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         return tmp;
 }
 
-int rtxq_push(struct rtxq * q,
-              struct pdu *  pdu)
+int rtxq_push_ni(struct rtxq * q,
+                 struct pdu *  pdu)
 {
 
         if (!q || !pdu_is_ok(pdu))
@@ -625,7 +627,7 @@ int rtxq_push(struct rtxq * q,
                 rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 
         spin_lock(&q->lock);
-        rtxqueue_push(q->queue, pdu);
+        rtxqueue_push_ni(q->queue, pdu);
         spin_unlock(&q->lock);
         return 0;
 }
