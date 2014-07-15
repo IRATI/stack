@@ -1425,6 +1425,8 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (!a) {
+                bool set_lft_win_edge;
+
                 /* FIXME: delimiting goes here */
                 if (!in_order && !dtcp) {
                         LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
@@ -1434,50 +1436,37 @@ int dtp_receive(struct dtp * instance,
 
                         return 0;
                 }
-                if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
-                        if ((seq_num - LWE) <= max_sdu_gap) {
-                                if (dt_sv_rcv_lft_win_set(dt,
-                                                          seq_num)) {
-                                        LOG_ERR("Failed to set new "
-                                                "left window edge");
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
-                                if (dtcp_sv_update(dtcp, seq_num)) {
-                                        LOG_ERR("Failed to "
-                                                "update dtcp sv");
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
-                                if (pdu_post(instance, pdu))
-                                        return -1;
 
-                                return 0;
+                set_lft_win_edge = !(dtcp                                 && 
+                                     dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
+                                     ((seq_num -LWE) > max_sdu_gap));
+                
+                if (set_lft_win_edge) {
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new left window edge");
+                                goto fail;
                         }
-                        if (dtcp_sv_update(dtcp, seq_num)) {
-                                LOG_ERR("Failed to update dtcp sv");
-                                pdu_destroy(pdu);
-                                return -1;
-                        }
-                        pdu_destroy(pdu);
-
-                        return 0;
                 }
-                if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                        LOG_ERR("Failed to set new left window edge");
-                        return -1;
-                }
-                if (pdu_post(instance, pdu))
-                        return -1;
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
-                                return -1;
+                                goto fail;
+                        }
+                        if (!set_lft_win_edge) {
+                                pdu_destroy(pdu);
+                                return 0;
                         }
                 }
 
+                if (pdu_post(instance, pdu))
+                        return -1;
+
                 return 0;
+
+                fail:
+                pdu_destroy(pdu);
+                return -1;
         }
 
         spin_lock(&instance->seqq->lock);
