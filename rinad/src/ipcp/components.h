@@ -357,6 +357,29 @@ public:
 	virtual IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const = 0;
 };
 
+/// Security Management Ð A DIF requires three security functions:
+///  1) Authentication to ensure that an IPC-Process wishing to join the DIF is who it
+///  says it is and is an allowable member of the DIF (Enrollment);
+///  2) Confidentiality and integrity of all PDUs; and
+///  3) Access control to determine whether application processes requesting an IPC flow
+///  with a remote application has the necessary permissions to establish
+///  communication.
+/// DAF Management performs authentication of new members, as well as key management
+/// and other security management functions required for the security measures. Access
+/// Control is performed by the Flow Allocator. The particular security procedures used for
+/// these security functions are a matter of policy. SDU Protection provides confidentiality
+/// and integrity
+class ISecurityManager: public IPCProcessComponent {
+public:
+	virtual ~ISecurityManager(){};
+
+	/// Decide if an IPC Process is allowed to join a DIF
+	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
+
+	/// Decide if a new flow to the IPC process should be accepted
+	virtual bool acceptFlow(const rina::Flow& newFlow) = 0;
+};
+
 class IRIBDaemon;
 
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
@@ -635,14 +658,15 @@ public:
 
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
-	virtual IDelimiter* get_delimiter() = 0;
-	virtual Encoder* get_encoder() = 0;
+	virtual IDelimiter * get_delimiter() = 0;
+	virtual Encoder * get_encoder() = 0;
 	virtual rina::CDAPSessionManagerInterface* get_cdap_session_manager() = 0;
-	virtual IEnrollmentTask* get_enrollment_task() = 0;
-	virtual IFlowAllocator* get_flow_allocator() = 0;
-	virtual INamespaceManager* get_namespace_manager() = 0;
-	virtual IResourceAllocator* get_resource_allocator() = 0;
-	virtual IRIBDaemon* get_rib_daemon() = 0;
+	virtual IEnrollmentTask * get_enrollment_task() = 0;
+	virtual IFlowAllocator * get_flow_allocator() = 0;
+	virtual INamespaceManager * get_namespace_manager() = 0;
+	virtual IResourceAllocator * get_resource_allocator() = 0;
+	virtual ISecurityManager * get_security_manager() = 0;
+	virtual IRIBDaemon * get_rib_daemon() = 0;
 	virtual unsigned int get_address() const = 0;
 	virtual void set_address(unsigned int address) = 0;
 	virtual const rina::ApplicationProcessNamingInformation& get_name() const = 0;
