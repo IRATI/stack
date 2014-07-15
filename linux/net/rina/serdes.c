@@ -879,6 +879,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         }
 
         if (deconstruct_base_pci(new_pci, dt_cons, &offset, ptr, &pdu_len)) {
+                pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
         }
@@ -901,6 +902,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                        dt_cons->seq_num_length);
                 offset += dt_cons->seq_num_length;
                 if (pci_sequence_number_set(new_pci, seq)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
@@ -909,22 +911,21 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                                                   ptr + offset,
                                                   pdu_len - offset);
                 if (!new_buff) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
-                }
-
-                if (!buffer_is_ok(new_buff)) {
-                        LOG_ERR("Buffer is NOT okay");
                 }
 
                 break;
         case PDU_TYPE_FC:
                 if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 if (deconstruct_fc_pci(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
@@ -943,6 +944,7 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                  */
                 new_buff = buffer_create_gfp(flags, 1);
                 if (!new_buff) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
@@ -950,17 +952,20 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
                 break;
         case PDU_TYPE_ACK:
                 if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 if (deconstruct_ack_pci(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 new_buff = buffer_create_gfp(flags, 1);
                 if (!new_buff) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
@@ -968,22 +973,26 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         case PDU_TYPE_ACK_AND_FC:
                 LOG_DBG("OMGWTFBBQ, it is an ACK/FC PDU");
                 if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 if (deconstruct_ack_pci(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 if (deconstruct_fc_pci(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 new_buff = buffer_create_gfp(flags, 1);
                 if (!new_buff) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
@@ -991,29 +1000,35 @@ struct pdu * serdes_pdu_deser_gfp(gfp_t                  flags,
         case PDU_TYPE_CC:
                 LOG_DBG("OMGWTFBBQ, it is a CC PDU");
                 if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 if (deconstruct_cc_pci(new_pci, dt_cons, &offset, ptr)) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
 
                 new_buff = buffer_create_gfp(flags, 1);
                 if (!new_buff) {
+                        pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
                 break;
         default:
                 LOG_ERR("Unknown PDU type %02X", pci_type(new_pci));
+                pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
         }
 
         if (pdu_pci_set(new_pdu, new_pci)) {
                 LOG_ERR("Failed to set PCI in PDU");
+                buffer_destroy(new_buff);
+                pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
         }
