@@ -290,11 +290,12 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 dif_config.set_address(address);
         }
 
-        for (list<rina::Parameter>::const_iterator
-                        pit = dif_props.configParameters.begin();
-                        pit != dif_props.configParameters.end();
-                        pit++) {
-                dif_config.add_parameter(*pit);
+        for (map<string, string>::const_iterator
+                     pit = dif_props.configParameters.begin();
+             pit != dif_props.configParameters.end();
+             pit++) {
+                dif_config.add_parameter
+                        (rina::Parameter(pit->first, pit->second));
         }
 
         // Fill in the DIFInformation object.
