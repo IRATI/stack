@@ -69,6 +69,8 @@ public:
 	/* Full names */
 	static const std::string ADDRESS_RIB_OBJECT_CLASS;
 	static const std::string ADDRESS_RIB_OBJECT_NAME;
+	static const std::string DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS;
+	static const std::string DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME;
 	static const std::string DFT_ENTRY_SET_RIB_OBJECT_NAME;
 	static const std::string DFT_ENTRY_SET_RIB_OBJECT_CLASS;
 	static const std::string DFT_ENTRY_RIB_OBJECT_CLASS;
@@ -76,6 +78,7 @@ public:
 	static const std::string DIF_REGISTRATION_RIB_OBJECT_CLASS;
 	static const std::string DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
 	static const std::string ENROLLMENT_INFO_OBJECT_NAME;
+	static const std::string ENROLLMENT_INFO_OBJECT_CLASS;
 	static const std::string FLOW_SET_RIB_OBJECT_NAME;
 	static const std::string FLOW_SET_RIB_OBJECT_CLASS ;
 	static const std::string FLOW_RIB_OBJECT_CLASS;

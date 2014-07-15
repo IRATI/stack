@@ -363,10 +363,24 @@ void EnrollmentFailedTimerTask::run() {
 }
 
 //Class BaseEnrollmentStateMachine
+const std::string BaseEnrollmentStateMachine::CONNECT_RESPONSE_TIMEOUT = "Timeout waiting for connect response";
+const std::string BaseEnrollmentStateMachine::START_RESPONSE_TIMEOUT = "Timeout waiting for start response";
+const std::string BaseEnrollmentStateMachine::START_IN_BAD_STATE = "Received a START message in a wrong state";
+const std::string BaseEnrollmentStateMachine::STOP_ENROLLMENT_TIMEOUT = "Timeout waiting for stop enrolment response";
+const std::string BaseEnrollmentStateMachine::STOP_IN_BAD_STATE = "Received a STOP message in a wrong state";
+const std::string BaseEnrollmentStateMachine::STOP_WITH_NO_OBJECT_VALUE = "Received STOP message with null object value";
+const std::string BaseEnrollmentStateMachine::READ_RESPONSE_TIMEOUT = "Timeout waiting for read response";
+const std::string BaseEnrollmentStateMachine::PROBLEMS_COMMITTING_ENROLLMENT_INFO = "Problems commiting enrollment information";
+const std::string BaseEnrollmentStateMachine::START_TIMEOUT = "Timeout waiting for start";
+const std::string BaseEnrollmentStateMachine::READ_RESPONSE_IN_BAD_STATE = "Received a READ_RESPONSE message in a wrong state";
+const std::string BaseEnrollmentStateMachine::UNSUCCESSFULL_READ_RESPONSE =
+		"Received an unsuccessful read response or a read response with a null object value";
+const std::string BaseEnrollmentStateMachine::UNSUCCESSFULL_START = "Received unsuccessful start request";
+
 BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IRIBDaemon * rib_daemon,
 		rina::CDAPSessionManagerInterface * cdap_session_manager, Encoder * encoder,
 		const rina::ApplicationProcessNamingInformation& remote_naming_info, IEnrollmentTask * enrollment_task,
-		int timeout, const rina::ApplicationProcessNamingInformation& supporting_dif_name) {
+		int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name) {
 	rib_daemon_ = rib_daemon;
 	cdap_session_manager_ = cdap_session_manager;
 	encoder_ = encoder;
@@ -376,7 +390,9 @@ BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IRIBDaemon * rib_daemon,
 	lock_ = new rina::Lockable();
 	remote_peer_ = new rina::Neighbor();
 	remote_peer_->name_ = remote_naming_info;
-	remote_peer_->supporting_dif_name_ = supporting_dif_name;
+	if (supporting_dif_name) {
+		remote_peer_->supporting_dif_name_ = *supporting_dif_name;
+	}
 	port_id_ = 0;
 	state_ = STATE_NULL;
 }
@@ -583,6 +599,454 @@ void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& object
 		LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
 		delete cdapMessage;
 		delete serializedObject;
+	}
+}
+
+// Class EnrolleeStateMachine
+EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
+		const rina::ApplicationProcessNamingInformation& remote_naming_info,
+		int timeout): BaseEnrollmentStateMachine(ipc_process->get_rib_daemon(),
+				ipc_process->get_cdap_session_manager(), ipc_process->get_encoder(),
+				remote_naming_info, ipc_process->get_enrollment_task(), timeout, 0) {
+	ipc_process_ = ipc_process;
+	was_dif_member_before_enrollment_ = false;
+	enrollment_request_ = 0;
+	lock_ = new rina::Lockable();
+	last_scheduled_task_ = 0;
+	allowed_to_start_early_ = false;
+	stop_enrollment_request_message_ = 0;
+}
+
+EnrolleeStateMachine::~EnrolleeStateMachine() {
+	if (lock_) {
+		delete lock_;
+	}
+
+	if (stop_enrollment_request_message_) {
+		delete stop_enrollment_request_message_;
+	}
+}
+
+void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId) {
+	rina::AccessGuard g(*lock_);
+
+	enrollment_request_ = enrollmentRequest;
+	remote_peer_->address_ = enrollment_request_->neighbor_.address_;
+	remote_peer_->name_ = enrollment_request_->neighbor_.name_;
+	remote_peer_->supporting_dif_name_ = enrollment_request_->neighbor_.supporting_dif_name_;
+	remote_peer_->underlying_port_id_ = enrollment_request_->neighbor_.underlying_port_id_;
+	remote_peer_->supporting_difs_ = enrollment_request_->neighbor_.supporting_difs_;
+
+	if (state_ != STATE_NULL) {
+		throw Exception("Enrollee state machine not in NULL state");
+	}
+
+	const rina::CDAPMessage * cdapMessage = 0;
+	try{
+		cdapMessage = cdap_session_manager_->getOpenConnectionRequestMessage(portId,
+				rina::CDAPMessage::AUTH_NONE, rina::AuthValue(), "", IPCProcess::MANAGEMENT_AE,
+				remote_peer_->name_.processInstance, remote_peer_->name_.processName, "",
+				IPCProcess::MANAGEMENT_AE, ipc_process_->get_name().processInstance,
+				ipc_process_->get_name().processName);
+
+		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		delete cdapMessage;
+		port_id_ = portId;
+
+		//Set timer
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, CONNECT_RESPONSE_TIMEOUT, true);
+		timer_->scheduleTask(last_scheduled_task_, timeout_);
+
+		//Update state
+		state_ = STATE_WAIT_CONNECT_RESPONSE;
+	}catch(Exception &e){
+		LOG_ERR("Problems sending M_CONNECT message: %s", e.what());
+		delete cdapMessage;
+		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true, false);
+	}
+}
+
+void EnrolleeStateMachine::connectResponse(rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	(void) cdapSessionDescriptor; // Stop compiler barfs
+
+	rina::AccessGuard g(*lock_);
+
+	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				"Message received in wroing order", true, true);
+		return;
+	}
+
+	timer_->cancelTask(last_scheduled_task_);
+	if (cdapMessage->result_ != 0) {
+		state_ = STATE_NULL;
+		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
+				cdapMessage->result_reason_, true, true);
+		return;
+	}
+
+	//Send M_START with EnrollmentInformation object
+	const rina::CDAPMessage * requestMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+	try{
+		EnrollmentInformationRequest eiRequest;
+		std::list<rina::ApplicationProcessNamingInformation> supportingDifs;
+		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+		std::vector<rina::ApplicationRegistration *> registrations =
+				rina::extendedIPCManager->getRegisteredApplications();
+		for(unsigned int i=0; i<registrations.size(); i++) {
+			for(it = registrations[i]->DIFNames.begin();
+					it != registrations[i]->DIFNames.end(); ++it) {
+				supportingDifs.push_back(*it);
+			}
+		}
+		eiRequest.set_supporting_difs(supportingDifs);
+
+		if (ipc_process_->get_address() != 0) {
+			was_dif_member_before_enrollment_ = true;
+			eiRequest.set_address(ipc_process_->get_address());
+		} else {
+			rina::DIFInformation difInformation;
+			difInformation.dif_name_ = enrollment_request_->event_.difName;
+			ipc_process_->set_dif_information(difInformation);
+		}
+
+		serializedObject = encoder_->encode(&eiRequest, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
+				*serializedObject);
+		requestMessage = cdap_session_manager_->getStartObjectRequestMessage(port_id_, 0,
+				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
+				&objectValue, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
+		rib_daemon_->sendMessage(*requestMessage, port_id_, this);
+
+		//Set timer
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT, true);
+		timer_->scheduleTask(last_scheduled_task_, timeout_);
+
+		//Update state
+		state_ = STATE_WAIT_START_ENROLLMENT_RESPONSE;
+	}catch(Exception &e){
+		LOG_ERR("Problems sending M_START request message: %s", e.what());
+		//TODO what to do?
+	}
+
+	delete requestMessage;
+	delete serializedObject;
+}
+
+void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	if (!isValidPortId(cdapSessionDescriptor)){
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	if (state_ != STATE_WAIT_START_ENROLLMENT_RESPONSE) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				START_IN_BAD_STATE, true, true);
+		return;
+	}
+
+	timer_->cancelTask(last_scheduled_task_);
+	if (cdapMessage->result_ != 0) {
+		state_ = STATE_NULL;
+		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
+				cdapMessage->result_reason_, true, true);
+		return;
+	}
+
+	//Update address
+	if (cdapMessage->obj_value_) {
+		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
+		EnrollmentInformationRequest * response = (EnrollmentInformationRequest *)
+						encoder_->decode(*serializedObject, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+
+		unsigned int address = response->get_address();
+		delete response;
+
+		try {
+			rib_daemon_->writeObject(EncoderConstants::ADDRESS_RIB_OBJECT_CLASS,
+					EncoderConstants::ADDRESS_RIB_OBJECT_NAME, &address);
+		} catch (Exception &e) {
+			LOG_ERR("Problems writing RIB object: %s", e.what());
+		}
+	}
+
+	//Set timer
+	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, STOP_ENROLLMENT_TIMEOUT, true);
+	timer_->scheduleTask(last_scheduled_task_, timeout_);
+
+	//Update state
+	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
+}
+
+void EnrolleeStateMachine::stop(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	if (!isValidPortId(cdapSessionDescriptor)){
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	if (state_ != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				STOP_IN_BAD_STATE, true, true);
+		return;
+	}
+
+	timer_->cancelTask(last_scheduled_task_);
+	//Check if I'm allowed to start early
+	if (!cdapMessage->obj_value_){
+		abortEnrollment(remote_peer_->name_, port_id_, STOP_WITH_NO_OBJECT_VALUE, true, true);
+		return;
+	}
+
+	rina::BooleanObjectValue * value = (rina::BooleanObjectValue*) cdapMessage->get_obj_value();
+	allowed_to_start_early_ = *((bool*)value->get_value());
+	stop_enrollment_request_message_ = cdapMessage;
+
+	//Request more information or start
+	try{
+		requestMoreInformationOrStart();
+	}catch(Exception &e){
+		LOG_ERR("Problems requesting more information or starting: %s", e.what());
+		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true, true);
+	}
+}
+
+void EnrolleeStateMachine::requestMoreInformationOrStart() {
+	//Check if more information is required
+	const rina::CDAPMessage * readMessage = nextObjectRequired();
+
+	if (readMessage){
+		//Request information
+		try {
+			rib_daemon_->sendMessage(*readMessage, port_id_, this);
+		} catch (Exception &e){
+			LOG_ERR("Problems sending CDAP message: %s", e.what());
+		}
+
+		delete readMessage;
+
+		//Set timer
+		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, READ_RESPONSE_TIMEOUT, true);
+		timer_->scheduleTask(last_scheduled_task_, timeout_);
+
+		//Update state
+		state_ = STATE_WAIT_READ_RESPONSE;
+		return;
+	}
+
+	//No more information is required, if I'm allowed to start early,
+	//commit the enrollment information, set operational status to true
+	//and send M_STOP_R. If not, just send M_STOP_R
+	const rina::CDAPMessage * stopResponseMessage = 0;
+	if (allowed_to_start_early_){
+		try{
+			commitEnrollment();
+			stopResponseMessage = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+					0, "", stop_enrollment_request_message_->invoke_id_);
+			rib_daemon_->sendMessage(*stopResponseMessage, port_id_, 0);
+			enrollmentCompleted();
+		}catch(Exception &e){
+			LOG_ERR("Problems sending CDAP message: %s", e.what());
+			delete stopResponseMessage;
+			stopResponseMessage = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+					-1,PROBLEMS_COMMITTING_ENROLLMENT_INFO, stop_enrollment_request_message_->invoke_id_);
+			rib_daemon_->sendMessage(*stopResponseMessage, port_id_, 0);
+			abortEnrollment(remote_peer_->name_, port_id_, PROBLEMS_COMMITTING_ENROLLMENT_INFO, true, true);
+		}
+
+		delete stopResponseMessage;
+		delete stop_enrollment_request_message_;
+		return;
+	}
+
+	try {
+		stopResponseMessage = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				0, "", stop_enrollment_request_message_->invoke_id_);
+		rib_daemon_->sendMessage(*stopResponseMessage, port_id_, 0);
+	}catch(Exception &e){
+		LOG_ERR("Problems sending CDAP message: %s", e.what());
+	}
+
+	delete stopResponseMessage;
+	delete stop_enrollment_request_message_;
+
+	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_TIMEOUT, true);
+	timer_->scheduleTask(last_scheduled_task_, timeout_);
+	state_ = STATE_WAIT_START;
+}
+
+const rina::CDAPMessage * EnrolleeStateMachine::nextObjectRequired() const {
+	const rina::CDAPMessage * response = 0;
+	rina::DIFInformation difInformation = ipc_process_->get_dif_information();
+
+	if (!difInformation.dif_configuration_.efcp_configuration_.data_transfer_constants_.isInitialized()) {
+		response = cdap_session_manager_->getReadObjectRequestMessage(port_id_, 0, rina::CDAPMessage::NONE_FLAGS,
+				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS, 0,
+				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, 0, true);
+	} else if (difInformation.dif_configuration_.efcp_configuration_.qos_cubes_.size() == 0){
+		response = cdap_session_manager_->getReadObjectRequestMessage(port_id_, 0, rina::CDAPMessage::NONE_FLAGS,
+				EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS, 0,
+				EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME, 0, true);
+	}else if (ipc_process_->get_neighbors().size() == 0){
+		response = cdap_session_manager_->getReadObjectRequestMessage(port_id_, 0, rina::CDAPMessage::NONE_FLAGS,
+				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS, 0,
+				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, 0, true);
+	}
+
+	return response;
+}
+
+void EnrolleeStateMachine::commitEnrollment() {
+	try {
+		rib_daemon_->startObject(EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
+				EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems starting RIB object: %s", e.what());
+	}
+}
+
+void EnrolleeStateMachine::enrollmentCompleted() {
+	delete timer_;
+	timer_ = 0;
+	state_ = STATE_ENROLLED;
+
+	//Create or update the neighbor information in the RIB
+	createOrUpdateNeighborInformation(true);
+
+	//Send DirectoryForwardingTableEntries
+	sendCreateInformation(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+			EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME);
+
+	enrollment_task_->enrollmentCompleted(*remote_peer_, true);
+
+	//Notify the kernel
+	if (!was_dif_member_before_enrollment_) {
+		try {
+			rina::kernelIPCProcess->assignToDIF(ipc_process_->get_dif_information());
+		} catch(Exception &e) {
+			LOG_ERR("Problems communicating with the Kernel components of the IPC Processs: %s",
+					e.what());
+		}
+	}
+
+	//Notify the IPC Manager
+	if (enrollment_request_){
+		try {
+			std::list<rina::Neighbor> neighbors;
+			neighbors.push_back(enrollment_request_->neighbor_);
+			rina::extendedIPCManager->enrollToDIFResponse(enrollment_request_->event_,
+					0, neighbors, ipc_process_->get_dif_information());
+		} catch (Exception &e) {
+			LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
+		}
+	}
+
+	LOG_INFO("Remote IPC Process enrolled!");
+}
+
+void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	if (!isValidPortId(cdapSessionDescriptor)){
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	if (state_ != STATE_WAIT_READ_RESPONSE) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				READ_RESPONSE_IN_BAD_STATE, true, true);
+		return;
+	}
+
+	timer_->cancelTask(last_scheduled_task_);
+
+	if (cdapMessage->result_ != 0 || cdapMessage->obj_value_== 0){
+		abortEnrollment(remote_peer_->name_, port_id_,
+				UNSUCCESSFULL_READ_RESPONSE, true, true);
+		return;
+	}
+
+	if (cdapMessage->obj_name_.compare(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME) == 0){
+		try{
+			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
+			rina::DataTransferConstants * constants = (rina::DataTransferConstants *)
+					encoder_->decode(*serializedObject, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+			rib_daemon_->createObject(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+					EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, constants, 0);
+		}catch(Exception &e){
+			LOG_ERR("Problems creating RIB object: %s", e.what());
+		}
+	}else if (cdapMessage->obj_name_.compare(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME) == 0){
+		try{
+			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
+			std::list<rina::QoSCube *> * cubes = (std::list<rina::QoSCube *> *)
+					encoder_->decode(*serializedObject, EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
+			rib_daemon_->createObject(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+					EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME, cubes, 0);
+		}catch(Exception &e){
+			LOG_ERR("Problems creating RIB object: %s", e.what());
+		}
+	}else if (cdapMessage->obj_name_.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0){
+		try{
+			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
+			std::list<rina::Neighbor *> * neighbors = (std::list<rina::Neighbor *> *)
+					encoder_->decode(*serializedObject, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+			rib_daemon_->createObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+					EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, neighbors, 0);
+		}catch(Exception &e){
+			LOG_ERR("Problems creating RIB object: %s", e.what());
+		}
+	}else{
+		LOG_WARN("The object to be created is not required for enrollment: %s",
+				cdapMessage->to_string().c_str());
+	}
+
+	//Request more information or proceed with the enrollment program
+	requestMoreInformationOrStart();
+}
+
+void EnrolleeStateMachine::start(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	if (!isValidPortId(cdapSessionDescriptor)){
+		return;
+	}
+
+	rina::AccessGuard g(*lock_);
+
+	if (state_ == STATE_ENROLLED) {
+		return;
+	}
+
+	if (state_ != STATE_WAIT_START) {
+		abortEnrollment(remote_peer_->name_, port_id_,
+				START_IN_BAD_STATE, true, true);
+		return;
+	}
+
+	timer_->cancelTask(last_scheduled_task_);
+
+	if (cdapMessage->result_ != 0){
+		abortEnrollment(remote_peer_->name_, port_id_,
+				UNSUCCESSFULL_START, true, true);
+		return;
+	}
+
+	try{
+		commitEnrollment();
+		enrollmentCompleted();
+	}catch(Exception &e){
+		LOG_ERR("Problems commiting enrollment: %s", e.what());
+		abortEnrollment(remote_peer_->name_, port_id_,
+				PROBLEMS_COMMITTING_ENROLLMENT_INFO, true, true);
 	}
 }
 

@@ -142,6 +142,19 @@ public:
 class BaseEnrollmentStateMachine : public BaseCDAPResponseMessageHandler {
 	friend class EnrollmentFailedTimerTask;
 public:
+	static const std::string CONNECT_RESPONSE_TIMEOUT;
+	static const std::string START_RESPONSE_TIMEOUT;
+	static const std::string START_IN_BAD_STATE;
+	static const std::string STOP_ENROLLMENT_TIMEOUT;
+	static const std::string STOP_IN_BAD_STATE;
+	static const std::string STOP_WITH_NO_OBJECT_VALUE;
+	static const std::string READ_RESPONSE_TIMEOUT;
+	static const std::string PROBLEMS_COMMITTING_ENROLLMENT_INFO;
+	static const std::string START_TIMEOUT;
+	static const std::string READ_RESPONSE_IN_BAD_STATE;
+	static const std::string UNSUCCESSFULL_READ_RESPONSE;
+	static const std::string UNSUCCESSFULL_START;
+
 	enum State {
 		STATE_NULL,
 		STATE_WAIT_CONNECT_RESPONSE,
@@ -174,7 +187,7 @@ protected:
 	BaseEnrollmentStateMachine(IRIBDaemon * rib_daemon, rina::CDAPSessionManagerInterface * cdap_session_manager,
 			Encoder * encoder, const rina::ApplicationProcessNamingInformation& remote_naming_info,
 			IEnrollmentTask * enrollment_task, int timeout,
-			const rina::ApplicationProcessNamingInformation& supporting_dif_name);
+			rina::ApplicationProcessNamingInformation * supporting_dif_name);
 	~BaseEnrollmentStateMachine();
 	bool isValidPortId(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
@@ -205,6 +218,72 @@ protected:
 	rina::Lockable * lock_;
 	int port_id_;
 	rina::Neighbor * remote_peer_;
+};
+
+/// The state machine of the party that wants to
+/// become a new member of the DIF.
+class EnrolleeStateMachine: public BaseEnrollmentStateMachine {
+public:
+	EnrolleeStateMachine(IPCProcess * ipc_process,
+			const rina::ApplicationProcessNamingInformation& remote_naming_info,
+			int timeout);
+	~EnrolleeStateMachine();
+
+	/// Called by the DIFMembersSetObject to initiate the enrollment sequence
+	/// with a remote IPC Process
+	/// @param enrollment request contains information on the neighbor and on the
+	/// enrollment request event
+	/// @param portId
+	void initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId);
+
+	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
+	/// @param cdapMessage
+	/// @param cdapSessionDescriptor
+	void connectResponse(rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	void startResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// Stop enrollment request received. Check if I have enough information, if not
+	/// ask for more with M_READs.
+	/// Have to check if I can start operating (if not wait
+	/// until M_START operationStatus). If I can start and have enough information,
+	/// create or update all the objects received during the enrollment phase.
+	void stop(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	/// See if the response is valid and contains an object. See if more objects
+	/// are required. If not, start
+	void readResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+	void start(const rina::CDAPMessage * cdapMessage,
+				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+private:
+	/// See if more information is required for enrollment, or if we can
+	/// start or if we have to wait for the start message
+	void requestMoreInformationOrStart();
+
+	/// Checks if more information is required for enrollment
+	/// (At least there must be DataTransferConstants, a QoS cube and a DAF Member). If there is,
+	/// it returns a CDAP READ message requesting the next object to be read. If not, it returns null
+	/// @return A CDAP READ message requesting the next object to be read. If not, it returns null
+	const rina::CDAPMessage * nextObjectRequired() const;
+
+	/// Create the objects in the RIB
+	void commitEnrollment();
+
+	void enrollmentCompleted();
+
+	IPCProcess * ipc_process_;
+	EnrollmentRequest * enrollment_request_;
+	bool was_dif_member_before_enrollment_;
+	rina::Lockable * lock_;
+	rina::TimerTask * last_scheduled_task_;
+	bool allowed_to_start_early_;
+	const rina::CDAPMessage * stop_enrollment_request_message_;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object
