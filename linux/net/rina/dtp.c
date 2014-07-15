@@ -185,7 +185,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
         struct dt * dt;
-        
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -1394,9 +1394,12 @@ int dtp_receive(struct dtp * instance,
 
                 return 0;
         }
-        
-        /* NOTE: no need to check presence of in_order or dtcp because in case
-         * they are not, LWE is not updated and always 0 */ 
+
+        /*
+         * NOTE:
+         *   no need to check presence of in_order or dtcp because in case
+         *   they are not, LWE is not updated and always 0
+         */
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
