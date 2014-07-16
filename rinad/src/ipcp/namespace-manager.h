@@ -119,6 +119,10 @@ public:
 				const rina::ApplicationRegistrationRequestEvent& event);
 	void processApplicationUnregistrationRequestEvent(
 				const rina::ApplicationUnregistrationRequestEvent& event);
+	bool isValidAddress(unsigned int address, const std::string& ipcp_name,
+			const std::string& ipcp_instance);
+	unsigned int getValidAddress(const std::string& ipcp_name,
+					const std::string& ipcp_instance);
 
 private:
 	/// The directory forwarding table
@@ -135,6 +139,12 @@ private:
 			int result);
 	int replyToIPCManagerUnregister(const rina::ApplicationUnregistrationRequestEvent& event,
 			int result);
+	unsigned int getIPCProcessAddress(const std::string& process_name,
+			const std::string& process_instance,
+			const rina::AddressingConfiguration& address_conf);
+	unsigned int getAddressPrefix(const std::string& process_name,
+				const rina::AddressingConfiguration& address_conf);
+	bool isAddressInUse(unsigned int address, const std::string& ipcp_name);
 };
 
 }

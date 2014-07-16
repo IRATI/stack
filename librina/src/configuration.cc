@@ -1203,6 +1203,16 @@ EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
 	declared_dead_interval_in_ms_ = 120000;
 }
 
+// Class Static IPC Process Address
+StaticIPCProcessAddress::StaticIPCProcessAddress() {
+	address_ = 0;
+}
+
+//Class AddressPrefixConfiguration
+AddressPrefixConfiguration::AddressPrefixConfiguration() {
+	address_prefix_ = 0;
+}
+
 // CLASS DIF CONFIGURATION
 unsigned int DIFConfiguration::get_address() const {
 	return address_;

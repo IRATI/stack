@@ -779,6 +779,58 @@ public:
 	int declared_dead_interval_in_ms_;
 };
 
+/// Configuration of a static IPC Process address
+class StaticIPCProcessAddress {
+public:
+	StaticIPCProcessAddress();
+
+	std::string ap_name_;
+	std::string ap_instance_;
+	unsigned int address_;
+};
+
+/// Assigns an address prefix to a certain substring (the organization)
+/// that is part of the application process name
+class AddressPrefixConfiguration {
+public:
+	static const int MAX_ADDRESSES_PER_PREFIX = 16;
+
+	AddressPrefixConfiguration();
+
+	/// The address prefix (it is the first valid address
+	/// for the given subdomain)
+	unsigned int address_prefix_;
+
+	/// The organization whose addresses start by the prefix
+	std::string organization_;
+};
+
+/// Configuration of the assignment of addresses to IPC Processes
+class AddressingConfiguration {
+public:
+	std::list<StaticIPCProcessAddress> static_address_;
+	std::list<AddressPrefixConfiguration> address_prefixes_;
+};
+
+/// Configuration of the namespace manager
+class NamespaceManagerConfiguration {
+public:
+	AddressingConfiguration addressing_configuration_;
+};
+
+/// Configuration of the Security Manager
+class SecurityManagerConfiguration {
+public:
+	/// Access control policy for allowing new members into a DIF
+	PolicyConfig difMemberAccessControlPolicy;
+
+	/// Access control policy for accepting flows
+	PolicyConfig newFlowAccessControlPolicy;
+
+	/// The authentication policy for new members of the DIF
+	PolicyConfig authenticationPolicy;
+};
+
 /// Contains the data about a DIF Configuration
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
@@ -822,6 +874,12 @@ public:
 
 	/// Configuration of the enrollment Task
 	EnrollmentTaskConfiguration et_configuration_;
+
+	/// Configuration of the NamespaceManager
+	NamespaceManagerConfiguration nsm_configuration_;
+
+	/// Configuration of the security manager
+	SecurityManagerConfiguration sm_configuration_;
 
 	/// Other configuration parameters of the DIF
 	std::list<Parameter> parameters_;

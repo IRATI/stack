@@ -322,6 +322,17 @@ public:
 	/// @param event
 	virtual void processApplicationUnregistrationRequestEvent(
 			const rina::ApplicationUnregistrationRequestEvent& event) = 0;
+
+	/// Decides if a given address is valid or not
+	/// @param address
+	///	@return true if valid, false otherwise
+	virtual bool isValidAddress(unsigned int address, const std::string& ipcp_name,
+			const std::string& ipcp_instance) = 0;
+
+	/// Return a valid address for the IPC process that
+	/// wants to join the DIF
+	virtual unsigned int getValidAddress(const std::string& ipcp_name,
+				const std::string& ipcp_instance) = 0;
 };
 
 ///N-1 Flow Manager interface

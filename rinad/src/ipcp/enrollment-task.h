@@ -154,6 +154,11 @@ public:
 	static const std::string READ_RESPONSE_IN_BAD_STATE;
 	static const std::string UNSUCCESSFULL_READ_RESPONSE;
 	static const std::string UNSUCCESSFULL_START;
+	static const std::string CONNECT_IN_NOT_NULL;
+	static const std::string ENROLLMENT_NOT_ALLOWED;
+	static const std::string START_ENROLLMENT_TIMEOUT;
+	static const std::string STOP_ENROLLMENT_RESPONSE_TIMEOUT;
+	static const std::string STOP_RESPONSE_IN_BAD_STATE;
 
 	enum State {
 		STATE_NULL,
@@ -184,12 +189,11 @@ public:
 	void flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 protected:
-	BaseEnrollmentStateMachine(IRIBDaemon * rib_daemon, rina::CDAPSessionManagerInterface * cdap_session_manager,
-			Encoder * encoder, const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			IEnrollmentTask * enrollment_task, int timeout,
-			rina::ApplicationProcessNamingInformation * supporting_dif_name);
+	BaseEnrollmentStateMachine(IPCProcess * ipc_process,
+			const rina::ApplicationProcessNamingInformation& remote_naming_info,
+			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
 	~BaseEnrollmentStateMachine();
-	bool isValidPortId(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	bool isValidPortId(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
@@ -200,8 +204,7 @@ protected:
 	void createOrUpdateNeighborInformation(bool enrolled);
 
 	/// Sends all the DIF dynamic information
-	/// @param IPC Process
-	void sendDIFDynamicInformation(IPCProcess * ipcProcess);
+	void sendDIFDynamicInformation();
 
 	/// Gets the object value from the RIB and send it as a CDAP Mesage
 	/// @param objectClass the class of the object to be send
@@ -209,6 +212,7 @@ protected:
 	void sendCreateInformation(const std::string& objectClass, const std::string& objectName);
 
 	State state_;
+	IPCProcess * ipc_process_;
 	IRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	Encoder * encoder_;
@@ -218,6 +222,7 @@ protected:
 	rina::Lockable * lock_;
 	int port_id_;
 	rina::Neighbor * remote_peer_;
+	rina::TimerTask * last_scheduled_task_;
 };
 
 /// The state machine of the party that wants to
@@ -277,13 +282,63 @@ private:
 
 	void enrollmentCompleted();
 
-	IPCProcess * ipc_process_;
 	EnrollmentRequest * enrollment_request_;
 	bool was_dif_member_before_enrollment_;
-	rina::Lockable * lock_;
-	rina::TimerTask * last_scheduled_task_;
 	bool allowed_to_start_early_;
 	const rina::CDAPMessage * stop_enrollment_request_message_;
+};
+
+/// The state machine of the party that is a member of the DIF
+/// and will help the joining party (enrollee) to join the DIF
+class EnrollerStateMachine: public BaseEnrollmentStateMachine {
+public:
+	EnrollerStateMachine(IPCProcess * ipc_process,
+		const rina::ApplicationProcessNamingInformation& remote_naming_info, int timeout,
+		rina::ApplicationProcessNamingInformation * supporting_dif_name);
+	~EnrollerStateMachine();
+
+	/// An M_CONNECT message has been received.  Handle the transition from the
+	/// NULL to the WAIT_START_ENROLLMENT state.
+	/// Authenticate the remote peer and issue a connect response
+	/// @param cdapMessage
+    /// @param portId
+	void connect(const rina::CDAPMessage * cdapMessage, int portId);
+
+	/// Called by the Enrollment object when it receives an M_START message from
+	/// the enrolling member. Have to look at the enrollment information request,
+	/// from that deduce if the IPC process requesting to enroll with me is already
+	/// a member of the DIF and if its address is valid. If it is not a member of
+	/// the DIF, send a new address with the M_START_R, send the M_CREATEs to provide
+	/// the DIF initialization information and state, and send M_STOP_R. If it is a
+	/// valid member, just send M_START_R with no address and M_STOP_R
+	/// @param cdapMessage
+    /// @param cdapSessionDescriptor
+    void start(const rina::CDAPMessage * cdapMessage,
+			const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+    /// The response of the stop operation has been received, send M_START operation without
+    /// waiting for an answer and consider the process enrolled
+    /// @param cdapMessage
+    /// @param cdapSessionDescriptor
+	void stopResponse(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+
+private:
+    /// Send a negative response to the M_START enrollment message
+    /// @param result the error code
+    /// @param resultReason the reason of the bad result
+    /// @param requestMessage the received M_START enrollment message
+    void sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
+    		resultReason, const rina::CDAPMessage * requestMessage);
+
+    /// Send all the information required to start operation to
+    /// the IPC process that is enrolling to me
+    void sendDIFStaticInformation();
+
+    void enrollmentCompleted();
+
+	ISecurityManager * security_manager_;
+	INamespaceManager * namespace_manager_;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object

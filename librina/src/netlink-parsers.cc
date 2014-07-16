@@ -3407,7 +3407,6 @@ int putListOfDIFProperties(
 	return -1;
 }
 
-
 int putAppGetDIFPropertiesResponseMessageObject(nl_msg* netlinkMessage,
 		const AppGetDIFPropertiesResponseMessage& object){
 	struct nlattr *appName, *difProperties;
@@ -3640,10 +3639,309 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putLinkStateRoutingConfigurationObject(nl_msg* netlinkMessage,
+		const LinkStateRoutingConfiguration& object) {
+	NLA_PUT_U32(netlinkMessage, LSRC_OBJECT_MAX_AGE,
+			object.object_maximum_age_);
+	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_AGE_INC,
+			object.wait_until_age_increment_);
+	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_ERROR,
+			object.wait_until_error_);
+	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_FSDB_PROP,
+			object.wait_until_fsodb_propagation_);
+	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_PDUFT_COM,
+			object.wait_until_pduft_computation_);
+	NLA_PUT_U32(netlinkMessage, LSRC_WAIT_UNTIL_READ,
+			object.wait_until_read_cdap_);
+	NLA_PUT_STRING(netlinkMessage, LSRC_ROUTING_ALG,
+			object.routing_algorithm_.c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building LinkStateRoutingConfiguration Netlink object");
+	return -1;
+}
+
+int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
+		const PDUFTableGeneratorConfiguration& object) {
+	struct nlattr *pduftgPolicy, *linkState;
+
+	if (!(pduftgPolicy = nla_nest_start(
+			netlinkMessage, PDUFTC_PDU_FTG_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.pduft_generator_policy_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, pduftgPolicy);
+
+	if (!(linkState = nla_nest_start(
+			netlinkMessage, PDUFTC_LINK_STATE_CONFIG))) {
+		goto nla_put_failure;
+	}
+	if (putLinkStateRoutingConfigurationObject(netlinkMessage,
+			object.link_state_routing_configuration_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, linkState);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building PDUFTableGeneratorConfiguration Netlink object");
+	return -1;
+}
+
+int putFlowAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const FlowAllocatorConfiguration& object) {
+	struct nlattr *farPolicy, *fanPolicy, *nfPolicy, *seqPolicy;
+
+	NLA_PUT_U32(netlinkMessage, FLAC_MAX_CREATE_FLOW_RETRIES,
+				object.max_create_flow_retries_);
+
+	if (!(fanPolicy = nla_nest_start(
+			netlinkMessage, FLAC_ALLOC_NOTIFY_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.allocate_notify_policy_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, fanPolicy);
+
+	if (!(farPolicy = nla_nest_start(
+			netlinkMessage, FLAC_ALLOC_RETRY_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.allocate_retry_policy_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, farPolicy);
+
+	if (!(nfPolicy = nla_nest_start(
+			netlinkMessage, FLAC_NEW_FLOW_REQ_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.new_flow_request_policy_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, nfPolicy);
+
+	if (!(seqPolicy = nla_nest_start(
+			netlinkMessage, FLAC_SEQ_ROLL_OVER_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.seq_rollover_policy_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, seqPolicy);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building FlowAllocatorConfiguration Netlink object");
+	return -1;
+}
+
+int putEnrollmentTaskConfigurationObject(nl_msg* netlinkMessage,
+		const EnrollmentTaskConfiguration& object) {
+	NLA_PUT_U32(netlinkMessage, ENTC_WHATCHDOG_PERIOD_MS,
+			object.watchdog_period_in_ms_);
+	NLA_PUT_U32(netlinkMessage, ENTC_NEIGH_DECLARED_DEAD_INT_MS,
+			object.declared_dead_interval_in_ms_);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building EnrollmentTaskConfiguration Netlink object");
+	return -1;
+}
+
+int putStaticIPCProcessAddressObject(nl_msg* netlinkMessage,
+		const StaticIPCProcessAddress& object) {
+	NLA_PUT_STRING(netlinkMessage, SIPCA_AP_NAME,
+			object.ap_name_.c_str());
+	NLA_PUT_STRING(netlinkMessage, SIPCA_AP_INSTANCE,
+			object.ap_instance_.c_str());
+	NLA_PUT_U32(netlinkMessage, SIPCA_ADDRESS,
+			object.address_);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building StaticIPCProcessAddress Netlink object");
+	return -1;
+}
+
+int putListOfStaticIPCProcessAddress(
+		nl_msg* netlinkMessage, const std::list<StaticIPCProcessAddress>& addresses){
+	std::list<StaticIPCProcessAddress>::const_iterator iterator;
+	struct nlattr *ribObject;
+	int i = 0;
+
+	for (iterator = addresses.begin();
+			iterator != addresses.end();
+			++iterator) {
+		if (!(ribObject = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putStaticIPCProcessAddressObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ribObject);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building StaticIPCProcessAddress List Netlink object");
+	return -1;
+}
+
+int putAddressPrefixConfigurationObject(nl_msg* netlinkMessage,
+		const AddressPrefixConfiguration& object) {
+	NLA_PUT_U32(netlinkMessage, ADDRPC_ADDRESS_PREFIX,
+			object.address_prefix_);
+	NLA_PUT_STRING(netlinkMessage, ADDRPC_ORGANIZATION,
+			object.organization_.c_str());
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AddressPrefixConfiguration Netlink object");
+	return -1;
+}
+
+int putListOfAddressPrefixConfiguration(
+		nl_msg* netlinkMessage, const std::list<AddressPrefixConfiguration>& prefixes){
+	std::list<AddressPrefixConfiguration>::const_iterator iterator;
+	struct nlattr *ribObject;
+	int i = 0;
+
+	for (iterator = prefixes.begin();
+			iterator != prefixes.end();
+			++iterator) {
+		if (!(ribObject = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putAddressPrefixConfigurationObject(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, ribObject);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AddressPrefixConfiguration List Netlink object");
+	return -1;
+}
+
+int putAddressingConfigurationObject(nl_msg* netlinkMessage,
+		const AddressingConfiguration& object) {
+	struct nlattr *addresses, *prefixes;
+
+	if (!(addresses = nla_nest_start(
+			netlinkMessage, ADDRC_STATIC_ADDRESSES))) {
+		goto nla_put_failure;
+	}
+	if (putListOfStaticIPCProcessAddress(netlinkMessage,
+			object.static_address_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, addresses);
+
+	if (!(prefixes = nla_nest_start(
+			netlinkMessage, ADDRC_ADDRESS_PREFIXES))) {
+		goto nla_put_failure;
+	}
+	if (putListOfAddressPrefixConfiguration(netlinkMessage,
+			object.address_prefixes_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, prefixes);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building AddressingConfiguration Netlink object");
+	return -1;
+}
+
+int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
+		const NamespaceManagerConfiguration& object) {
+	struct nlattr *addConf;
+
+	if (!(addConf = nla_nest_start(
+			netlinkMessage, NSMC_ADDRESSING_CONF))) {
+		goto nla_put_failure;
+	}
+	if (putAddressingConfigurationObject(netlinkMessage,
+			object.addressing_configuration_) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, addConf);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building NamespaceManagerConfiguration Netlink object");
+	return -1;
+}
+
+int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
+		const SecurityManagerConfiguration& object){
+	struct nlattr *nmPolicy, *nfPolicy, *aPolicy;
+
+	if (!(nmPolicy = nla_nest_start(
+			netlinkMessage, SECMANC_DIF_MEM_ACC_CON_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.difMemberAccessControlPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, nmPolicy);
+
+	if (!(nfPolicy = nla_nest_start(
+			netlinkMessage, SECMANC_NEW_FLOW_ACC_CON_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.newFlowAccessControlPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, nfPolicy);
+
+	if (!(aPolicy = nla_nest_start(
+			netlinkMessage, SECMANC_AUTH_POLICY))) {
+		goto nla_put_failure;
+	}
+	if (putPolicyConfigObject(netlinkMessage,
+			object.authenticationPolicy) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, aPolicy);
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building SecurityManagementConfiguration Netlink object");
+	return -1;
+}
+
 int putDIFConfigurationObject(nl_msg* netlinkMessage,
                 const DIFConfiguration& object,
                 bool normalIPCProcess){
-	struct nlattr *parameters, *efcpConfig, *rmtConfig;
+	struct nlattr *parameters, *efcpConfig, *rmtConfig, *smConfig,
+		*etConfig, *faConfig, *nsmConfig, *pduftConfig;
 
 	if  (object.get_parameters().size() > 0) {
 	        if (!(parameters = nla_nest_start(
@@ -3677,6 +3975,56 @@ int putDIFConfigurationObject(nl_msg* netlinkMessage,
 	                goto nla_put_failure;
 	        }
 	        nla_nest_end(netlinkMessage, rmtConfig);
+
+	        if (!(pduftConfig = nla_nest_start(
+	                        netlinkMessage, DCONF_ATTR_PDUFT_CONF))) {
+	                goto nla_put_failure;
+	        }
+	        if (putPDUFTableGeneratorConfigurationObject(netlinkMessage,
+	                        object.pduft_generator_configuration_) < 0) {
+	                goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, pduftConfig);
+
+	        if (!(faConfig = nla_nest_start(
+	        		netlinkMessage, DCONF_ATTR_FA_CONF))) {
+	        	goto nla_put_failure;
+	        }
+	        if (putFlowAllocatorConfigurationObject(netlinkMessage,
+	        		object.fa_configuration_) < 0) {
+	        	goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, faConfig);
+
+	        if (!(etConfig = nla_nest_start(
+	        		netlinkMessage, DCONF_ATTR_ET_CONF))) {
+	        	goto nla_put_failure;
+	        }
+	        if (putEnrollmentTaskConfigurationObject(netlinkMessage,
+	        		object.et_configuration_) < 0) {
+	        	goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, etConfig);
+
+	        if (!(nsmConfig = nla_nest_start(
+	        		netlinkMessage, DCONF_ATTR_NSM_CONF))) {
+	        	goto nla_put_failure;
+	        }
+	        if (putNamespaceManagerConfigurationObject(netlinkMessage,
+	        		object.nsm_configuration_) < 0) {
+	        	goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, nsmConfig);
+
+	        if (!(smConfig = nla_nest_start(
+	        		netlinkMessage, DCONF_ATTR_SM_CONF))) {
+	        	goto nla_put_failure;
+	        }
+	        if (putSecurityManagerConfigurationObject(netlinkMessage,
+	        		object.sm_configuration_) < 0) {
+	        	goto nla_put_failure;
+	        }
+	        nla_nest_end(netlinkMessage, smConfig);
 	}
 
 	NLA_PUT_U32(netlinkMessage, DCONF_ATTR_ADDRESS,
@@ -5769,6 +6117,517 @@ RMTConfiguration * parseRMTConfigurationObject(nlattr *nested) {
         return result;
 }
 
+LinkStateRoutingConfiguration * parseLinkStateRoutingConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[LSRC_ATTR_MAX + 1];
+	attr_policy[LSRC_OBJECT_MAX_AGE].type = NLA_U32;
+	attr_policy[LSRC_OBJECT_MAX_AGE].minlen = 4;
+	attr_policy[LSRC_OBJECT_MAX_AGE].maxlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_READ].type = NLA_U32;
+	attr_policy[LSRC_WAIT_UNTIL_READ].minlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_READ].maxlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_ERROR].type = NLA_U32;
+	attr_policy[LSRC_WAIT_UNTIL_ERROR].minlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_ERROR].maxlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_PDUFT_COM].type = NLA_U32;
+	attr_policy[LSRC_WAIT_UNTIL_PDUFT_COM].minlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_PDUFT_COM].maxlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_FSDB_PROP].type = NLA_U32;
+	attr_policy[LSRC_WAIT_UNTIL_FSDB_PROP].minlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_FSDB_PROP].maxlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_AGE_INC].type = NLA_U32;
+	attr_policy[LSRC_WAIT_UNTIL_AGE_INC].minlen = 4;
+	attr_policy[LSRC_WAIT_UNTIL_AGE_INC].maxlen = 4;
+	attr_policy[LSRC_ROUTING_ALG].type = NLA_STRING;
+	attr_policy[LSRC_ROUTING_ALG].minlen = 0;
+	attr_policy[LSRC_ROUTING_ALG].maxlen = 65535;
+	struct nlattr *attrs[LSRC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, LSRC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing LinkStateRoutingConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	LinkStateRoutingConfiguration * result = new LinkStateRoutingConfiguration();
+
+	if (attrs[LSRC_OBJECT_MAX_AGE]) {
+		result->object_maximum_age_ =
+				nla_get_u32(attrs[LSRC_OBJECT_MAX_AGE]);
+	}
+
+	if (attrs[LSRC_WAIT_UNTIL_READ]) {
+		result->wait_until_read_cdap_ =
+				nla_get_u32(attrs[LSRC_WAIT_UNTIL_READ]);
+	}
+
+	if (attrs[LSRC_WAIT_UNTIL_ERROR]) {
+		result->wait_until_error_ =
+				nla_get_u32(attrs[LSRC_WAIT_UNTIL_ERROR]);
+	}
+
+	if (attrs[LSRC_WAIT_UNTIL_PDUFT_COM]) {
+		result->wait_until_pduft_computation_ =
+				nla_get_u32(attrs[LSRC_WAIT_UNTIL_PDUFT_COM]);
+	}
+
+	if (attrs[LSRC_WAIT_UNTIL_FSDB_PROP]) {
+		result->wait_until_fsodb_propagation_ =
+				nla_get_u32(attrs[LSRC_WAIT_UNTIL_FSDB_PROP]);
+	}
+
+	if (attrs[LSRC_WAIT_UNTIL_AGE_INC]) {
+		result->wait_until_age_increment_ =
+				nla_get_u32(attrs[LSRC_WAIT_UNTIL_AGE_INC]);
+	}
+
+	if (attrs[LSRC_ROUTING_ALG]) {
+		result->routing_algorithm_ =
+				nla_get_string(attrs[LSRC_ROUTING_ALG]);
+	}
+
+	return result;
+}
+
+PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[PDUFTC_ATTR_MAX + 1];
+	attr_policy[PDUFTC_PDU_FTG_POLICY].type = NLA_NESTED;
+	attr_policy[PDUFTC_PDU_FTG_POLICY].minlen = 0;
+	attr_policy[PDUFTC_PDU_FTG_POLICY].maxlen = 0;
+	attr_policy[PDUFTC_LINK_STATE_CONFIG].type = NLA_NESTED;
+	attr_policy[PDUFTC_LINK_STATE_CONFIG].minlen = 0;
+	attr_policy[PDUFTC_LINK_STATE_CONFIG].maxlen = 0;
+	struct nlattr *attrs[PDUFTC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, PDUFTC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing PDUFTableGeneratorConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	PDUFTableGeneratorConfiguration * result = new PDUFTableGeneratorConfiguration();
+	PolicyConfig * pduftg;
+	LinkStateRoutingConfiguration * linkState;
+
+	if (attrs[PDUFTC_PDU_FTG_POLICY]) {
+		pduftg = parsePolicyConfigObject(
+				attrs[PDUFTC_PDU_FTG_POLICY]);
+		if (pduftg == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->pduft_generator_policy_ = *pduftg;
+			delete pduftg;
+		}
+	}
+
+	if (attrs[PDUFTC_LINK_STATE_CONFIG]) {
+		linkState = parseLinkStateRoutingConfigurationObject(
+				attrs[PDUFTC_LINK_STATE_CONFIG]);
+		if (linkState == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->link_state_routing_configuration_ = *linkState;
+			delete linkState;
+		}
+	}
+
+	return result;
+}
+
+FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[FLAC_ATTR_MAX + 1];
+	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].type = NLA_U32;
+	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].minlen = 4;
+	attr_policy[FLAC_MAX_CREATE_FLOW_RETRIES].maxlen = 4;
+	attr_policy[FLAC_ALLOC_NOTIFY_POLICY].type = NLA_NESTED;
+	attr_policy[FLAC_ALLOC_NOTIFY_POLICY].minlen = 0;
+	attr_policy[FLAC_ALLOC_NOTIFY_POLICY].maxlen = 0;
+	attr_policy[FLAC_ALLOC_RETRY_POLICY].type = NLA_NESTED;
+	attr_policy[FLAC_ALLOC_RETRY_POLICY].minlen = 0;
+	attr_policy[FLAC_ALLOC_RETRY_POLICY].maxlen = 0;
+	attr_policy[FLAC_NEW_FLOW_REQ_POLICY].type = NLA_NESTED;
+	attr_policy[FLAC_NEW_FLOW_REQ_POLICY].minlen = 0;
+	attr_policy[FLAC_NEW_FLOW_REQ_POLICY].maxlen = 0;
+	attr_policy[FLAC_SEQ_ROLL_OVER_POLICY].type = NLA_NESTED;
+	attr_policy[FLAC_SEQ_ROLL_OVER_POLICY].minlen = 0;
+	attr_policy[FLAC_SEQ_ROLL_OVER_POLICY].maxlen = 0;
+	struct nlattr *attrs[FLAC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, FLAC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing FlowAllocatorConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	FlowAllocatorConfiguration * result = new FlowAllocatorConfiguration();
+	PolicyConfig * fan;
+	PolicyConfig * far;
+	PolicyConfig * fnf;
+	PolicyConfig * fsr;
+
+	if (attrs[FLAC_MAX_CREATE_FLOW_RETRIES]) {
+		result->max_create_flow_retries_ =
+				nla_get_u32(attrs[FLAC_MAX_CREATE_FLOW_RETRIES]);
+	}
+
+	if (attrs[FLAC_ALLOC_NOTIFY_POLICY]) {
+		fan = parsePolicyConfigObject(
+				attrs[FLAC_ALLOC_NOTIFY_POLICY]);
+		if (fan == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->allocate_notify_policy_ = *fan;
+			delete fan;
+		}
+	}
+
+	if (attrs[FLAC_ALLOC_RETRY_POLICY]) {
+		far = parsePolicyConfigObject(
+				attrs[FLAC_ALLOC_RETRY_POLICY]);
+		if (far == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->allocate_retry_policy_ = *far;
+			delete far;
+		}
+	}
+
+	if (attrs[FLAC_NEW_FLOW_REQ_POLICY]) {
+		fnf = parsePolicyConfigObject(
+				attrs[FLAC_NEW_FLOW_REQ_POLICY]);
+		if (fnf == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->new_flow_request_policy_ = *fnf;
+			delete fnf;
+		}
+	}
+
+	if (attrs[FLAC_SEQ_ROLL_OVER_POLICY]) {
+		fsr = parsePolicyConfigObject(
+				attrs[FLAC_SEQ_ROLL_OVER_POLICY]);
+		if (fsr == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->seq_rollover_policy_ = *fsr;
+			delete fsr;
+		}
+	}
+
+	return result;
+}
+
+EnrollmentTaskConfiguration * parseEnrollmentTaskConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[ENTC_ATTR_MAX + 1];
+	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].type = NLA_U32;
+	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].minlen = 4;
+	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].maxlen = 4;
+	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].type = NLA_U32;
+	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].minlen = 4;
+	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].maxlen = 4;
+	struct nlattr *attrs[ENTC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, ENTC_ATTR_MAX, nested, attr_policy);
+
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing EnrollmentTaskConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	EnrollmentTaskConfiguration * result = new EnrollmentTaskConfiguration();
+
+	if (attrs[ENTC_WHATCHDOG_PERIOD_MS]) {
+		result->watchdog_period_in_ms_ =
+				nla_get_u32(attrs[ENTC_WHATCHDOG_PERIOD_MS]);
+	}
+
+	if (attrs[ENTC_NEIGH_DECLARED_DEAD_INT_MS]) {
+		result->declared_dead_interval_in_ms_ =
+				nla_get_u32(attrs[ENTC_NEIGH_DECLARED_DEAD_INT_MS]);
+	}
+
+	return result;
+}
+
+AddressPrefixConfiguration * parseAddressPrefixConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[ADDRPC_ATTR_MAX + 1];
+	attr_policy[ADDRPC_ADDRESS_PREFIX].type = NLA_U32;
+	attr_policy[ADDRPC_ADDRESS_PREFIX].minlen = 4;
+	attr_policy[ADDRPC_ADDRESS_PREFIX].maxlen = 4;
+	attr_policy[ADDRPC_ORGANIZATION].type = NLA_STRING;
+	attr_policy[ADDRPC_ORGANIZATION].minlen = 0;
+	attr_policy[ADDRPC_ORGANIZATION].maxlen = 65535;
+	struct nlattr *attrs[ADDRPC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, ADDRPC_ATTR_MAX, nested, attr_policy);
+
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AddressPrefixConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	AddressPrefixConfiguration * result = new AddressPrefixConfiguration();
+
+	if (attrs[ADDRPC_ADDRESS_PREFIX]) {
+		result->address_prefix_ =
+				nla_get_u32(attrs[ADDRPC_ADDRESS_PREFIX]);
+	}
+
+	if (attrs[ADDRPC_ORGANIZATION]) {
+		result->organization_ =
+				nla_get_string(attrs[ADDRPC_ORGANIZATION]);
+	}
+
+	return result;
+}
+
+int parseListOfAddressPrefixConfigurations(nlattr *nested,
+		AddressingConfiguration * message){
+	nlattr * nla;
+	int rem;
+	AddressPrefixConfiguration * prefix;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		prefix = parseAddressPrefixConfigurationObject(nla);
+		if (prefix == 0){
+			return -1;
+		}
+		message->address_prefixes_.push_back(*prefix);
+		delete prefix;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+StaticIPCProcessAddress * parseStaticIPCProcessAddressObject(nlattr *nested) {
+	struct nla_policy attr_policy[SIPCA_ATTR_MAX + 1];
+	attr_policy[SIPCA_AP_NAME].type = NLA_STRING;
+	attr_policy[SIPCA_AP_NAME].minlen = 0;
+	attr_policy[SIPCA_AP_NAME].maxlen = 65535;
+	attr_policy[SIPCA_AP_INSTANCE].type = NLA_STRING;
+	attr_policy[SIPCA_AP_INSTANCE].minlen = 0;
+	attr_policy[SIPCA_AP_INSTANCE].maxlen = 65535;
+	attr_policy[SIPCA_ADDRESS].type = NLA_U32;
+	attr_policy[SIPCA_ADDRESS].minlen = 4;
+	attr_policy[SIPCA_ADDRESS].maxlen = 4;
+	struct nlattr *attrs[SIPCA_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, SIPCA_ATTR_MAX, nested, attr_policy);
+
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing StaticIPCProcessAddress information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	StaticIPCProcessAddress * result = new StaticIPCProcessAddress();
+
+	if (attrs[SIPCA_AP_NAME]) {
+		result->ap_name_ =
+				nla_get_string(attrs[SIPCA_AP_NAME]);
+	}
+
+	if (attrs[SIPCA_AP_INSTANCE]) {
+		result->ap_instance_ =
+				nla_get_string(attrs[SIPCA_AP_INSTANCE]);
+	}
+
+	if (attrs[SIPCA_ADDRESS]) {
+		result->address_ =
+				nla_get_u32(attrs[SIPCA_ADDRESS]);
+	}
+
+	return result;
+}
+
+int parseListOfStaticIPCProcessAddresses(nlattr *nested,
+		AddressingConfiguration * message){
+	nlattr * nla;
+	int rem;
+	StaticIPCProcessAddress * address;
+
+	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+		     nla_ok(nla, rem);
+		     nla = nla_next(nla, &(rem))){
+		/* validate & parse attribute */
+		address = parseStaticIPCProcessAddressObject(nla);
+		if (address == 0){
+			return -1;
+		}
+		message->static_address_.push_back(*address);
+		delete address;
+	}
+
+	if (rem > 0){
+		LOG_WARN("Missing bits to parse");
+	}
+
+	return 0;
+}
+
+AddressingConfiguration * parseAddressingConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[ADDRC_ATTR_MAX + 1];
+	attr_policy[ADDRC_STATIC_ADDRESSES].type = NLA_NESTED;
+	attr_policy[ADDRC_STATIC_ADDRESSES].minlen = 0;
+	attr_policy[ADDRC_STATIC_ADDRESSES].maxlen = 0;
+	attr_policy[ADDRC_ADDRESS_PREFIXES].type = NLA_NESTED;
+	attr_policy[ADDRC_ADDRESS_PREFIXES].minlen = 0;
+	attr_policy[ADDRC_ADDRESS_PREFIXES].maxlen = 0;
+	struct nlattr *attrs[ADDRC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, ADDRC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing AddressingConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	AddressingConfiguration * result = new AddressingConfiguration();
+
+	int status = 0;
+	if (attrs[ADDRC_STATIC_ADDRESSES]) {
+		status = parseListOfStaticIPCProcessAddresses(
+				attrs[ADDRC_STATIC_ADDRESSES], result);
+		if (status != 0){
+			delete result;
+			return 0;
+		}
+	}
+
+	if (attrs[ADDRC_ADDRESS_PREFIXES]) {
+		status = parseListOfAddressPrefixConfigurations(
+				attrs[ADDRC_ADDRESS_PREFIXES], result);
+		if (status != 0){
+			delete result;
+			return 0;
+		}
+	}
+
+	return result;
+}
+
+NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[NSMC_ATTR_MAX + 1];
+	attr_policy[NSMC_ADDRESSING_CONF].type = NLA_NESTED;
+	attr_policy[NSMC_ADDRESSING_CONF].minlen = 0;
+	attr_policy[NSMC_ADDRESSING_CONF].maxlen = 0;
+	struct nlattr *attrs[NSMC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, NSMC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing NamespaceManagerConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	NamespaceManagerConfiguration * result = new NamespaceManagerConfiguration();
+	AddressingConfiguration * addrc;
+
+	if (attrs[NSMC_ADDRESSING_CONF]) {
+		addrc = parseAddressingConfigurationObject(
+				attrs[NSMC_ADDRESSING_CONF]);
+		if (addrc == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->addressing_configuration_ = *addrc;
+			delete addrc;
+		}
+	}
+
+	return result;
+}
+
+SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested) {
+	struct nla_policy attr_policy[SECMANC_ATTR_MAX + 1];
+	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].minlen = 0;
+	attr_policy[SECMANC_DIF_MEM_ACC_CON_POLICY].maxlen = 0;
+	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].minlen = 0;
+	attr_policy[SECMANC_NEW_FLOW_ACC_CON_POLICY].maxlen = 0;
+	attr_policy[SECMANC_AUTH_POLICY].type = NLA_NESTED;
+	attr_policy[SECMANC_AUTH_POLICY].minlen = 0;
+	attr_policy[SECMANC_AUTH_POLICY].maxlen = 0;
+	struct nlattr *attrs[SECMANC_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, SECMANC_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR(
+				"Error parsing SecurityManagerConfiguration information from Netlink message: %d",
+				err);
+		return 0;
+	}
+
+	SecurityManagerConfiguration * result = new SecurityManagerConfiguration();
+	PolicyConfig * difAc;
+	PolicyConfig * flowAc;
+	PolicyConfig * auth;
+
+	if (attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]) {
+		difAc = parsePolicyConfigObject(
+				attrs[SECMANC_DIF_MEM_ACC_CON_POLICY]);
+		if (difAc == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->difMemberAccessControlPolicy = *difAc;
+			delete difAc;
+		}
+	}
+
+	if (attrs[SECMANC_NEW_FLOW_ACC_CON_POLICY]) {
+		flowAc = parsePolicyConfigObject(
+				attrs[SECMANC_NEW_FLOW_ACC_CON_POLICY]);
+		if (flowAc == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->newFlowAccessControlPolicy = *flowAc;
+			delete flowAc;
+		}
+	}
+
+	if (attrs[SECMANC_AUTH_POLICY]) {
+		auth = parsePolicyConfigObject(
+				attrs[SECMANC_AUTH_POLICY]);
+		if (auth == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->authenticationPolicy = *auth;
+			delete auth;
+		}
+	}
+
+	return result;
+}
+
 DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	struct nla_policy attr_policy[DCONF_ATTR_MAX + 1];
 	attr_policy[DCONF_ATTR_PARAMETERS].type = NLA_NESTED;
@@ -5783,19 +6642,39 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 	attr_policy[DCONF_ATTR_RMT_CONF].type = NLA_NESTED;
 	attr_policy[DCONF_ATTR_RMT_CONF].minlen = 0;
 	attr_policy[DCONF_ATTR_RMT_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_PDUFT_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_PDUFT_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_PDUFT_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_FA_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_FA_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_FA_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_ET_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_ET_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_ET_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_NSM_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_NSM_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_NSM_CONF].maxlen = 0;
+	attr_policy[DCONF_ATTR_SM_CONF].type = NLA_NESTED;
+	attr_policy[DCONF_ATTR_SM_CONF].minlen = 0;
+	attr_policy[DCONF_ATTR_SM_CONF].maxlen = 0;
 	struct nlattr *attrs[DCONF_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, DCONF_ATTR_MAX, nested, attr_policy);
 	if (err < 0) {
 		LOG_ERR(
-			"Error parsing DIFConfiguration information from Netlink message: %d",
-			err);
+				"Error parsing DIFConfiguration information from Netlink message: %d",
+				err);
 		return 0;
 	}
 
 	DIFConfiguration * result = new DIFConfiguration();
 	EFCPConfiguration * efcpConfig;
 	RMTConfiguration * rmtConfig;
+	PDUFTableGeneratorConfiguration * pduftConfig;
+	FlowAllocatorConfiguration * faConfig;
+	EnrollmentTaskConfiguration * etConfig;
+	NamespaceManagerConfiguration * nsmConfig;
+	SecurityManagerConfiguration * smConfig;
 
 	int status = 0;
 	if (attrs[DCONF_ATTR_PARAMETERS]) {
@@ -5807,35 +6686,96 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 		}
 	}
 
-        if (attrs[DCONF_ATTR_EFCP_CONF]) {
-                efcpConfig = parseEFCPConfigurationObject(
-                                attrs[DCONF_ATTR_EFCP_CONF]);
-                if (efcpConfig == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_efcp_configuration(
-                                        *efcpConfig);
-                        delete efcpConfig;
-                }
-        }
+	if (attrs[DCONF_ATTR_EFCP_CONF]) {
+		efcpConfig = parseEFCPConfigurationObject(
+				attrs[DCONF_ATTR_EFCP_CONF]);
+		if (efcpConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->set_efcp_configuration(
+					*efcpConfig);
+			delete efcpConfig;
+		}
+	}
 
-        if (attrs[DCONF_ATTR_ADDRESS]) {
-                result->set_address(nla_get_u32(attrs[DCONF_ATTR_ADDRESS]));
-        }
+	if (attrs[DCONF_ATTR_ADDRESS]) {
+		result->set_address(nla_get_u32(attrs[DCONF_ATTR_ADDRESS]));
+	}
 
-        if (attrs[DCONF_ATTR_RMT_CONF]) {
-                rmtConfig = parseRMTConfigurationObject(
-                                attrs[DCONF_ATTR_RMT_CONF]);
-                if (rmtConfig == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_rmt_configuration(
-                                        *rmtConfig);
-                        delete rmtConfig;
-                }
-        }
+	if (attrs[DCONF_ATTR_RMT_CONF]) {
+		rmtConfig = parseRMTConfigurationObject(
+				attrs[DCONF_ATTR_RMT_CONF]);
+		if (rmtConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->set_rmt_configuration(
+					*rmtConfig);
+			delete rmtConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_PDUFT_CONF]) {
+		pduftConfig = parsePDUFTableGeneratorConfigurationObject(
+				attrs[DCONF_ATTR_PDUFT_CONF]);
+		if (pduftConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->pduft_generator_configuration_ =
+					*pduftConfig;
+			delete pduftConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_FA_CONF]) {
+		faConfig = parseFlowAllocatorConfigurationObject(
+				attrs[DCONF_ATTR_FA_CONF]);
+		if (faConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->fa_configuration_ = *faConfig;
+			delete faConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_ET_CONF]) {
+		etConfig = parseEnrollmentTaskConfigurationObject(
+				attrs[DCONF_ATTR_ET_CONF]);
+		if (etConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->et_configuration_ = *etConfig;
+			delete etConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_NSM_CONF]) {
+		nsmConfig = parseNamespaceManagerConfigurationObject(
+				attrs[DCONF_ATTR_NSM_CONF]);
+		if (nsmConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->nsm_configuration_ = *nsmConfig;
+			delete nsmConfig;
+		}
+	}
+
+	if (attrs[DCONF_ATTR_SM_CONF]) {
+		smConfig = parseSecurityManagerConfigurationObject(
+				attrs[DCONF_ATTR_SM_CONF]);
+		if (smConfig == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->sm_configuration_ = *smConfig;
+			delete smConfig;
+		}
+	}
 
 	return result;
 }
@@ -5903,7 +6843,7 @@ parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr){
 	attr_policy[IATDR_ATTR_DIF_INFORMATION].type = NLA_NESTED;
 	attr_policy[IATDR_ATTR_DIF_INFORMATION].minlen = 0;
 	attr_policy[IATDR_ATTR_DIF_INFORMATION].maxlen = 0;
-	struct nlattr *attrs[IRARE_ATTR_MAX + 1];
+	struct nlattr *attrs[IATDR_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			IATDR_ATTR_MAX, attr_policy);

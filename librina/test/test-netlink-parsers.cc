@@ -1301,6 +1301,15 @@ int testIpcmAssignToDIFRequestMessage() {
 	qosCube->set_efcp_policies(ConnectionPolicies());
 	delete qosCube;
 	difConfiguration.set_efcp_configuration(efcpConfiguration);
+	difConfiguration.rmt_configuration_.rmt_scheduling_policy_.name_ = "FancySchedulingPolicy";
+	difConfiguration.pduft_generator_configuration_.pduft_generator_policy_.name_ = "LinkStateRouting";
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.object_maximum_age_ = 4;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.routing_algorithm_ = "FancyAlgorithm";
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_age_increment_ = 23;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_error_ = 11;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_fsodb_propagation_ = 10;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_pduft_computation_ = 2;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_read_cdap_ = 3;
 	difInformation.set_dif_configuration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
@@ -1419,6 +1428,18 @@ int testIpcmAssignToDIFRequestMessage() {
                 std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
+        				rmt_scheduling_policy_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.pduft_generator_configuration_.
+        				pduft_generator_policy_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
         }
 
 
