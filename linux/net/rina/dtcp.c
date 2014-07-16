@@ -460,6 +460,7 @@ static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
                         return -1;
                 }
                 rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
+                snd_lft_win_set(dtcp, seq_num);
         }
 
         return 0;
@@ -577,6 +578,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
+
+        if (seq_num > (last_ctrl + 1))
+                return dtcp->policies->lost_control_pdu(dtcp)
+
         if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
@@ -598,10 +603,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         }
 
-        if (seq_num > (last_ctrl + 1)) {
-                if (dtcp->policies->lost_control_pdu(dtcp))
-                        LOG_ERR("Failed lost control PDU policy");
-        }
+        /* We are in seq_num == last_ctrl + 1 */
+
         last_rcv_ctrl_seq_set(dtcp, seq_num);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 

@@ -185,7 +185,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
         struct dt * dt;
-        
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -683,19 +683,20 @@ static void squeue_cleanup(struct dtp * dtp)
         max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
 
         spin_lock(&seqq->lock);
-        pdu = seq_queue_pop(seqq->queue);
+        pdu     = seq_queue_pop(seqq->queue);
         seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-        LWE = dt_sv_rcv_lft_win(dt);
+        LWE     = dt_sv_rcv_lft_win(dt);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
                 spin_unlock(&seqq->lock);
+                
                 pdu_post(dtp, pdu);
                 LOG_DBG("CLEANUP: PDU %d posted", seq_num);
 
                 spin_lock(&seqq->lock);
-                pdu = seq_queue_pop(seqq->queue);
+                pdu     = seq_queue_pop(seqq->queue);
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-                LWE = dt_sv_rcv_lft_win(dt);
+                LWE     = dt_sv_rcv_lft_win(dt);
         }
         if (pdu) seq_queue_push_ni(seqq->queue, pdu);
 
@@ -703,13 +704,6 @@ static void squeue_cleanup(struct dtp * dtp)
 
 }
 #endif
-
-#define squeue_for_each_entry_safe(seqq, pos, n)                        \
-        spin_lock(&seqq->lock);                                         \
-        list_for_each_entry_safe(pos, n, &seqq->queue->head, next)
-
-#define squeue_for_each_entry_safe_end(seqq)    \
-        spin_unlock(&seqq->lock)
 
 /*
  * NOTE:
@@ -720,20 +714,17 @@ static void squeue_cleanup(struct dtp * dtp)
 
 static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
-        struct dt *     dt;
-        /* struct dtcp * dtcp; */
-        struct dtp_sv * sv;
-        struct squeue * seqq;
-        seq_num_t       LWE;
-        seq_num_t       seq_num;
-        struct pdu *    pdu;
-        bool            in_order_del;
-        bool            incomplete_del;
-        seq_num_t       max_sdu_gap;
-        timeout_t       a;
-
+        struct dt *              dt;
+        struct dtp_sv *          sv;
+        struct squeue *          seqq;
+        seq_num_t                LWE;
+        seq_num_t                seq_num;
+        struct pdu *             pdu;
+        bool                     in_order_del;
+        bool                     incomplete_del;
+        seq_num_t                max_sdu_gap;
+        timeout_t                a;
         struct seq_queue_entry * pos, * n;
-
 
         ASSERT(dtp);
 
@@ -749,6 +740,10 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         /* dtcp = dt_dtcp(dtp->parent); */
 
         a              = dt_sv_a(dt);
+
+        ASSERT(sv->connection);
+        ASSERT(sv->connection->policies_params);
+
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
 
@@ -762,24 +757,28 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %d", LWE);
-        LOG_DBG("LWEU: MAX GAPS = %d", max_sdu_gap);
+        LOG_DBG("LWEU: MAX GAPS     = %d", max_sdu_gap);
 
-        squeue_for_each_entry_safe(seqq, pos, n) {
+        spin_lock(&seqq->lock);
+        list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
                 LOG_DBG("LWEU: Loop LWE = %d", LWE);
 
                 pdu = pos->pdu;
                 if (!pdu_is_ok(pdu)) {
+                        spin_unlock(&seqq->lock);
+
                         LOG_ERR("Bogus data, bailing out");
                         return -1;
                 }
+
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
                         LOG_DBG("Processing A timer order or in gap");
+
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                LOG_ERR("Failed to set new "
-                                        "left window edge");
                                 spin_unlock(&seqq->lock);
+
                                 return 0;
                         }
                         pos->pdu = NULL;
@@ -787,8 +786,10 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         seq_queue_entry_destroy(pos);
 
                         spin_unlock(&seqq->lock);
-                        if (pdu_post(dtp, pdu))
+                        if (pdu_post(dtp, pdu)) {
                                 return 0;
+                        }
+
                         LOG_DBG("Atimer: PDU %d posted", seq_num);
 
                         spin_lock(&seqq->lock);
@@ -800,34 +801,38 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                    pos->time_stamp + msecs_to_jiffies(a))) {
                         LOG_DBG("Processing A timer expired");
 
-                        /* FIXME:
-                         *   this have to work differently when DTCP is
-                         *   here
+                        /*
+                         * FIXME:
+                         *   this has to work differently when DTCP is
+                         *   here ...
                          */
                         if (!dtcp) {
                                 if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                        spin_unlock(&seqq->lock);
+
                                         LOG_ERR("Failed to set new "
                                                 "left window edge");
-                                        spin_unlock(&seqq->lock);
                                         return 0;
                                 }
                                 pos->pdu = NULL;
                                 list_del(&pos->next);
                                 seq_queue_entry_destroy(pos);
+
                                 spin_unlock(&seqq->lock);
                                 if (pdu_post(dtp, pdu))
                                         return 0;
-
                                 spin_lock(&seqq->lock);
+
                                 LWE = dt_sv_rcv_lft_win(dt);
                         }
+
                         continue;
                 }
 
                 break;
 
         }
-        squeue_for_each_entry_safe_end(seqq);
+        spin_unlock(&seqq->lock);
 
         return LWE;
 }
@@ -1394,9 +1399,12 @@ int dtp_receive(struct dtp * instance,
 
                 return 0;
         }
-        
-        /* NOTE: no need to check presence of in_order or dtcp because in case
-         * they are not, LWE is not updated and always 0 */ 
+
+        /*
+         * NOTE:
+         *   no need to check presence of in_order or dtcp because in case
+         *   they are not, LWE is not updated and always 0
+         */
         if (seq_num <= LWE) {
                 LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
@@ -1425,6 +1433,8 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (!a) {
+                bool set_lft_win_edge;
+
                 /* FIXME: delimiting goes here */
                 if (!in_order && !dtcp) {
                         LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
@@ -1434,50 +1444,37 @@ int dtp_receive(struct dtp * instance,
 
                         return 0;
                 }
-                if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
-                        if ((seq_num - LWE) <= max_sdu_gap) {
-                                if (dt_sv_rcv_lft_win_set(dt,
-                                                          seq_num)) {
-                                        LOG_ERR("Failed to set new "
-                                                "left window edge");
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
-                                if (dtcp_sv_update(dtcp, seq_num)) {
-                                        LOG_ERR("Failed to "
-                                                "update dtcp sv");
-                                        pdu_destroy(pdu);
-                                        return -1;
-                                }
-                                if (pdu_post(instance, pdu))
-                                        return -1;
 
-                                return 0;
+                set_lft_win_edge = !(dtcp                                 && 
+                                     dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
+                                     ((seq_num -LWE) > max_sdu_gap));
+                
+                if (set_lft_win_edge) {
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                LOG_ERR("Failed to set new left window edge");
+                                goto fail;
                         }
-                        if (dtcp_sv_update(dtcp, seq_num)) {
-                                LOG_ERR("Failed to update dtcp sv");
-                                pdu_destroy(pdu);
-                                return -1;
-                        }
-                        pdu_destroy(pdu);
-
-                        return 0;
                 }
-                if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                        LOG_ERR("Failed to set new left window edge");
-                        return -1;
-                }
-                if (pdu_post(instance, pdu))
-                        return -1;
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
                                 LOG_ERR("Failed to update dtcp sv");
-                                return -1;
+                                goto fail;
+                        }
+                        if (!set_lft_win_edge) {
+                                pdu_destroy(pdu);
+                                return 0;
                         }
                 }
 
+                if (pdu_post(instance, pdu))
+                        return -1;
+
                 return 0;
+
+                fail:
+                pdu_destroy(pdu);
+                return -1;
         }
 
         spin_lock(&instance->seqq->lock);
