@@ -351,7 +351,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
                     seq_num) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
