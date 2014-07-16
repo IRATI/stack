@@ -707,9 +707,9 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         a = dt_sv_a(dtcp->parent);
 
         LWE = dt_sv_rcv_lft_win(dtcp->parent);
-        if (!a) {
-                if (last_snd_data_ack(dtcp) < LWE) {
-                        last_snd_data_ack_set(dtcp, LWE);
+        if (last_snd_data_ack(dtcp) < LWE) {
+                last_snd_data_ack_set(dtcp, LWE);
+                if (!a) {
                         if (seq > LWE) {
                                 LOG_DBG("This is a NACK, "
                                         "LWE couldn't be updated");
@@ -718,35 +718,26 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                                 }
                                 return PDU_TYPE_NACK;
                         }
-                        if (seq == LWE) {
-                                LOG_DBG("This is an ACK");
-                                if (dtcp_flow_ctrl(dtcp_cfg)) {
-                                        return PDU_TYPE_ACK_AND_FC;
-                                }
-                                return PDU_TYPE_ACK;
+                        LOG_DBG("This is an ACK");
+                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                return PDU_TYPE_ACK_AND_FC;
                         }
+                        return PDU_TYPE_ACK;
                 }
-        }
-        if (a) {
-                if (last_snd_data_ack(dtcp) < LWE) {
-                        last_snd_data_ack_set(dtcp, LWE);
-                        if (seq > LWE) {
-                                /* FIXME: This should be a SEL ACK */
-                                LOG_DBG("This is a NACK, "
-                                        "LWE couldn't be updated");
-                                if (dtcp_flow_ctrl(dtcp_cfg)) {
-                                        return PDU_TYPE_NACK_AND_FC;
-                                }
-                                return PDU_TYPE_NACK;
+                if (seq > LWE) {
+                        /* FIXME: This should be a SEL ACK */
+                        LOG_DBG("This is a NACK, "
+                                "LWE couldn't be updated");
+                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                return PDU_TYPE_NACK_AND_FC;
                         }
-                        if (seq == LWE) {
-                                LOG_DBG("This is an ACK");
-                                if (dtcp_flow_ctrl(dtcp_cfg)) {
-                                        return PDU_TYPE_ACK_AND_FC;
-                                }
-                                return PDU_TYPE_ACK;
-                        }
+                        return PDU_TYPE_NACK;
                 }
+                LOG_DBG("This is an ACK");
+                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                        return PDU_TYPE_ACK_AND_FC;
+                }
+                return PDU_TYPE_ACK;
         }
 
         return 0;
