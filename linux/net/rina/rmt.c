@@ -38,6 +38,7 @@
 #include "pft.h"
 #include "efcp-utils.h"
 #include "serdes.h"
+#include "pdu-ser.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
@@ -189,6 +190,7 @@ struct rmt {
         struct pft *            pft;
         struct kfa *            kfa;
         struct efcp_container * efcpc;
+        struct serdes *         serdes;
 
         struct {
                 struct workqueue_struct * wq;
@@ -225,8 +227,10 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
-        struct rmt * tmp;
-        const char * name;
+        struct rmt *         tmp;
+        const char *         name;
+        struct efcp_config * conf;
+        struct dt_cons *     dt_cons;
 
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
@@ -243,6 +247,25 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         tmp->efcpc   = efcpc;
         tmp->pft     = pft_create();
         if (!tmp->pft) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
+        conf = efcp_container_config(efcpc);
+        if (!conf) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
+        dt_cons = dt_cons_dup(conf->dt_cons);
+        if (!dt_cons) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
+        tmp->serdes = serdes_create(dt_cons);
+        if (!tmp->serdes) {
+                rkfree(dt_cons);
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -313,6 +336,7 @@ int rmt_destroy(struct rmt * instance)
         pft_cache_fini(&instance->egress.cache);
 
         if (instance->pft)            pft_destroy(instance->pft);
+        if (instance->serdes)         serdes_destroy(instance->serdes);
 
         rkfree(instance);
 
@@ -366,10 +390,8 @@ static int send_worker(void * o)
                 struct pdu *            pdu;
                 struct pdu_ser *        pdu_ser;
                 port_id_t               port_id;
-                struct efcp_container * efcpc;
-                struct efcp_config *    conf;
-                struct dt_cons *        dt_cons;
                 struct buffer *         buffer;
+                struct serdes *         serdes;
 
                 ASSERT(entry);
 
@@ -386,31 +408,10 @@ static int send_worker(void * o)
 
                 ASSERT(pdu);
 
-                efcpc = tmp->efcpc;
-                if (!efcpc) {
-                        LOG_ERR("Not bound to an EFCP container");
-                        spin_lock(&tmp->egress.queues->lock);
-                        pdu_destroy(pdu);
-                        continue;
-                }
+                serdes = tmp->serdes;
+                ASSERT(serdes);
 
-                conf = efcp_container_config(efcpc);
-                if (!conf) {
-                        LOG_ERR("No config found for EFCP");
-                        spin_lock(&tmp->egress.queues->lock);
-                        pdu_destroy(pdu);
-                        continue;
-                }
-
-                dt_cons = conf->dt_cons;
-                if (!dt_cons) {
-                        LOG_ERR("No constants in the config");
-                        spin_lock(&tmp->egress.queues->lock);
-                        pdu_destroy(pdu);
-                        continue;
-                }
-
-                pdu_ser = serdes_pdu_ser(dt_cons, pdu);
+                pdu_ser = pdu_serialize(serdes, pdu);
                 if (!pdu_ser) {
                         LOG_ERR("Error creating serialized PDU");
                         spin_lock(&tmp->egress.queues->lock);
@@ -418,27 +419,27 @@ static int send_worker(void * o)
                         continue;
                 }
 
-                buffer = serdes_pdu_buffer_rw(pdu_ser);
+                buffer = pdu_ser_buffer(pdu_ser);
                 if (!buffer_is_ok(buffer)) {
                         LOG_ERR("Buffer is not okay");
-                        serdes_pdu_destroy(pdu_ser);
+                        pdu_ser_destroy(pdu_ser);
                         spin_lock(&tmp->egress.queues->lock);
                         continue;
                 }
 
-                if (serdes_buffer_disown(pdu_ser)) {
+                if (pdu_ser_buffer_disown(pdu_ser)) {
                         LOG_ERR("Could not disown buffer");
-                        serdes_pdu_destroy(pdu_ser);
+                        pdu_ser_destroy(pdu_ser);
                         spin_lock(&tmp->egress.queues->lock);
                         continue;
                 }
-                serdes_pdu_destroy(pdu_ser);
+
+                pdu_ser_destroy(pdu_ser);
 
                 sdu = sdu_create_buffer_with(buffer);
                 if (!sdu) {
                         LOG_ERR("Error creating SDU from serialized PDU, "
                                 "dropping PDU!");
-                        serdes_pdu_destroy(pdu_ser);
                         spin_lock(&tmp->egress.queues->lock);
                         continue;
                 }
@@ -862,10 +863,8 @@ static int forward_pdu(struct rmt * rmt,
         int                     i;
         struct sdu *            sdu;
         struct pdu_ser *        pdu_ser;
-        struct efcp_container * efcpc;
-        struct efcp_config *    conf;
-        struct dt_cons *        dt_cons;
         struct buffer *         buffer;
+        struct serdes *         serdes;
 
         if (!is_address_ok(dst_addr)) {
                 LOG_ERR("PDU has Wrong destination address");
@@ -879,47 +878,30 @@ static int forward_pdu(struct rmt * rmt,
                 return -1;
         }
 
-        efcpc = rmt->efcpc;
-        if (!efcpc) {
-                LOG_ERR("Not bound to an EFCP container");
-                pdu_destroy(pdu);
-                return -1;
-        }
+        serdes = rmt->serdes;
+        ASSERT(serdes);
 
-        conf = efcp_container_config(efcpc);
-        if (!conf) {
-                LOG_ERR("No config found for EFCP");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        dt_cons = conf->dt_cons;
-        if (!dt_cons) {
-                LOG_ERR("No constants in the config");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        pdu_ser = serdes_pdu_ser(dt_cons, pdu);
+        pdu_ser = pdu_serialize(serdes, pdu);
         if (!pdu_ser) {
                 LOG_ERR("Error creating serialized PDU");
                 pdu_destroy(pdu);
                 return -1;
         }
 
-        buffer = serdes_pdu_buffer_rw(pdu_ser);
+        buffer = pdu_ser_buffer(pdu_ser);
         if (!buffer_is_ok(buffer)) {
                 LOG_ERR("Buffer is not okay");
-                serdes_pdu_destroy(pdu_ser);
+                pdu_ser_destroy(pdu_ser);
                 return -1;
         }
 
-        if (serdes_buffer_disown(pdu_ser)) {
+        if (pdu_ser_buffer_disown(pdu_ser)) {
                 LOG_ERR("Could not disown buffer");
-                serdes_pdu_destroy(pdu_ser);
+                pdu_ser_destroy(pdu_ser);
                 return -1;
         }
-        serdes_pdu_destroy(pdu_ser);
+
+        pdu_ser_destroy(pdu_ser);
 
         sdu = sdu_create_buffer_with(buffer);
         if (!sdu) {
@@ -997,50 +979,53 @@ static int receive_worker(void * o)
                 struct pdu *            pdu;
                 address_t               dst_addr;
                 qos_id_t                qos_id;
-                struct efcp_container * efcpc;
-                struct efcp_config *    conf;
-                struct dt_cons *        dt_cons;
+                struct serdes *         serdes;
+                struct buffer *         buf;
+                struct sdu *            sdu;
 
                 ASSERT(entry);
 
-                pdu_ser = (struct pdu_ser *) rfifo_pop(entry->queue);
-                if (!pdu_ser) {
-                        LOG_DBG("No ser PDU to work with in this queue");
+                sdu = (struct sdu *) rfifo_pop(entry->queue);
+                if (!sdu) {
+                        LOG_DBG("No SDU to work with in this queue");
                         continue;
                 }
-                ASSERT(pdu_ser);
 
                 port_id = entry->port_id;
                 spin_unlock(&tmp->ingress.queues->lock);
 
-                efcpc = tmp->efcpc;
-                if (!efcpc) {
-                        LOG_ERR("Not bound to an EFCP container");
-                        serdes_pdu_destroy(pdu_ser);
+                buf = sdu_buffer_rw(sdu);
+                if (!buf) {
+                        LOG_DBG("No buffer present");
+                        sdu_destroy(sdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
-                conf = efcp_container_config(efcpc);
-                if (!conf) {
-                        LOG_ERR("No config found for EFCP");
-                        serdes_pdu_destroy(pdu_ser);
+                if (sdu_buffer_disown(sdu)) {
+                        LOG_DBG("Could not disown SDU");
+                        sdu_destroy(sdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
-                dt_cons = conf->dt_cons;
-                if (!dt_cons) {
-                        LOG_ERR("No constants in the config");
-                        serdes_pdu_destroy(pdu_ser);
+                sdu_destroy(sdu);
+
+                pdu_ser = pdu_ser_create_buffer_with(buf);
+                if (!pdu_ser) {
+                        LOG_DBG("No ser PDU to work with");
+                        buffer_destroy(buf);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
-                pdu = serdes_pdu_deser(dt_cons, pdu_ser);
+                serdes = tmp->serdes;
+                ASSERT(serdes);
+
+                pdu = pdu_deserialize(serdes, pdu_ser);
                 if (!pdu) {
                         LOG_ERR("Failed to deserialize PDU!");
-                        serdes_pdu_destroy(pdu_ser);
+                        pdu_ser_destroy(pdu_ser);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }

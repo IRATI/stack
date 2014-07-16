@@ -1,5 +1,5 @@
 /*
- * PDU Serialization/Deserialization
+ * Serialized PDU
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -19,22 +19,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SERDES_H
-#define RINA_SERDES_H
+#ifndef RINA_PDU_SER_H
+#define RINA_PDU_SER_H
 
+#include <linux/export.h>
 #include <linux/types.h>
 
-#include "pdu.h"
-#include "ipcp-instances.h"
-#include "pdu-ser.h"
+#include "buffer.h"
+#include "common.h"
 
-struct serdes;
+struct pdu_ser;
 
-struct serdes *  serdes_create(struct dt_cons * dt_cons);
-int              serdes_destroy(struct serdes * instance);
+struct pdu_ser * pdu_ser_create_buffer_with(struct buffer * buffer);
+int              pdu_ser_destroy(struct pdu_ser * pdu);
 
-struct pdu_ser * pdu_serialize(struct serdes * instance,
-                               struct pdu *    pdu);
-struct pdu *     pdu_deserialize(struct serdes *  instance,
-                                 struct pdu_ser * pdu);
+bool             pdu_ser_is_ok(const struct pdu_ser * s);
+struct buffer *  pdu_ser_buffer(struct pdu_ser * pdu);
+int              pdu_ser_buffer_disown(struct pdu_ser * pdu);
+
 #endif
