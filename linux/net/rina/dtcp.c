@@ -613,7 +613,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
         if (seq_num > (last_ctrl + 1))
-                return dtcp->policies->lost_control_pdu(dtcp)
+                return dtcp->policies->lost_control_pdu(dtcp);
 
         if (seq_num <= last_ctrl) {
                 switch (type) {
