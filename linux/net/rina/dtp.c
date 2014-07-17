@@ -45,7 +45,6 @@ struct dtp_sv {
         uint_t              dropped_pdus;
         seq_num_t           max_seq_nr_rcv;
         seq_num_t           nxt_seq;
-        bool                drf_flag;
 
         bool                window_based;
         bool                rexmsn_ctrl;
@@ -92,35 +91,11 @@ static struct dtp_sv default_sv = {
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
-        .drf_flag                      = false,
         .rexmsn_ctrl                   = false,
         .rate_based                    = false,
         .window_based                  = false,
         .a                             = 0,
 };
-
-bool dtp_drf_flag(struct dtp * instance)
-{
-        bool flag;
-
-        if (!instance || !instance->sv)
-                return false;
-
-        spin_lock(&instance->sv->lock);
-        flag = instance->sv->drf_flag;
-        spin_unlock(&instance->sv->lock);
-
-        return flag;
-}
-
-static void drf_flag_set(struct dtp_sv * sv, bool value)
-{
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        sv->drf_flag = value;
-        spin_unlock(&sv->lock);
-}
 
 static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
@@ -330,6 +305,21 @@ static struct dtp_policies default_policies = {
         .flow_control_overrun    = default_flow_control_overrun,
         .initial_sequence_number = default_initial_seq_number,
 };
+
+int dtp_initial_sequence_number(struct dtp * instance) {
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        ASSERT(instance->policies);
+        ASSERT(instance->policies->initial_sequence_number);
+
+        if (instance->policies->initial_sequence_number(instance))
+                return -1;
+
+        return 0;
+}
 
 /* Sequencing/reassembly queue */
 
@@ -680,8 +670,6 @@ static void tf_receiver_inactivity(void * data)
         struct dt *          dt;
         struct dtp *         dtp;
         struct dtcp *        dtcp;
-        struct dtcp_config * cfg;
-        struct dtp_sv *      sv;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
@@ -689,42 +677,15 @@ static void tf_receiver_inactivity(void * data)
                 return;
         }
 
-        sv = dtp->sv;
-        ASSERT(sv); 
-
         dt = dtp->parent;
         ASSERT(dt); 
         
         dtcp = dt_dtcp(dt);
 
-        drf_flag_set(sv, true); 
-        dtp->policies->initial_sequence_number(dtp);        
-        if (dtcp) {
-                cfg = dtcp_config_get(dtcp);
-                ASSERT(cfg);
-                if (dtcp_rtx_ctrl(cfg)) {
-                        struct rtxq * q;
-
-                        q = dt_rtxq(dt);
-                        if (!q) {
-                                LOG_ERR("Couldn't find the Retransmission queue");
-                                return;
-                        }
-                        rtxq_drop(q, 0, 0);
-                }
-                if (dtcp_flow_ctrl(cfg)) {
-                        struct cwq * cwq;
-
-                        cwq = dt_cwq(dt);
-                        ASSERT(cwq);
-                        if (cwq_flush(cwq)) {
-                                LOG_ERR("Coudln't flush cwq");
-                                return;
-                        }
-                }
-        }
-
-        /*FIXME: Missing sending the control ack pdu */
+        if (dtcp)
+                if (dtcp_rcvr_inactivity_timer(dtcp))
+                        LOG_ERR("Problems executing "
+                                "dtcp_receiver_inactivity_timer policy");
         return;
 }
 
@@ -1399,16 +1360,16 @@ int dtp_receive(struct dtp * instance,
         in_order    = sv->connection->policies_params->in_order_delivery;
         max_sdu_gap = sv->connection->policies_params->max_sdu_gap;
         /* Stop ReceiverInactivityTimer */
-        if (rtimer_stop(instance->timers.receiver_inactivity)) {
+        if (dtcp && rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
-                  return -1;*/
+                return -1;*/
         }
         seq_num = pci_sequence_number_get(pci);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
-                drf_flag_set(sv, true);
+                dt_sv_drf_flag_set(dt, true);
                 policies->initial_sequence_number(instance);
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
@@ -1441,14 +1402,13 @@ int dtp_receive(struct dtp * instance,
                                         "control pdu");
                                 return -1;
                         }
+                        /* Start ReceiverInactivityTimer */
+                        if (rtimer_restart(instance->timers.receiver_inactivity,
+                                           3 * (dt_sv_mpl(dt) +
+                                                dt_sv_r(dt)   +
+                                                dt_sv_a(dt))))
+                                LOG_ERR("Failed restart RcvrInactivity timer");
                 }
-                /* Start ReceiverInactivityTimer */
-                if (rtimer_restart(instance->timers.receiver_inactivity,
-                                   3 * (dt_sv_mpl(dt) +
-                                        dt_sv_r(dt)   +
-                                        dt_sv_a(dt))))
-                        LOG_ERR("Failed to restart RcvrInactivity timer");
-
                 return 0;
         }
 
