@@ -30,8 +30,9 @@
 
 struct serdes;
 
-struct serdes *  serdes_create(struct dt_cons * dt_cons);
-int              serdes_destroy(struct serdes * instance);
+struct serdes *        serdes_create(struct dt_cons * dt_cons);
+const struct dt_cons * serdes_dt_cons(struct serdes * instance);
+int                    serdes_destroy(struct serdes * instance);
 
 struct pdu_ser * pdu_serialize(struct serdes * instance,
                                struct pdu *    pdu);

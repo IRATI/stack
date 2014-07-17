@@ -230,7 +230,6 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         struct rmt *         tmp;
         const char *         name;
         struct efcp_config * conf;
-        struct dt_cons *     dt_cons;
 
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
@@ -257,15 +256,8 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
-        dt_cons = dt_cons_dup(conf->dt_cons);
-        if (!dt_cons) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        tmp->serdes = serdes_create(dt_cons);
+        tmp->serdes = serdes_create(dt_cons_dup(conf->dt_cons));
         if (!tmp->serdes) {
-                rkfree(dt_cons);
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -438,9 +430,9 @@ static int send_worker(void * o)
 
                 sdu = sdu_create_buffer_with(buffer);
                 if (!sdu) {
+                        spin_lock(&tmp->egress.queues->lock);
                         LOG_ERR("Error creating SDU from serialized PDU, "
                                 "dropping PDU!");
-                        spin_lock(&tmp->egress.queues->lock);
                         continue;
                 }
 
@@ -907,6 +899,7 @@ static int forward_pdu(struct rmt * rmt,
         if (!sdu) {
                 LOG_ERR("Error creating SDU from serialized PDU, "
                         "dropping PDU!");
+                buffer_destroy(buffer);
                 return -1;
         }
 

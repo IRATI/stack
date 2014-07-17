@@ -24,8 +24,6 @@
 
 #define RINA_PREFIX "serdes"
 
-
-
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -91,6 +89,11 @@ struct serdes * serdes_create(struct dt_cons * dt_cons)
 { return serdes_create_gfp(GFP_KERNEL, dt_cons); }
 EXPORT_SYMBOL(serdes_create);
 
+const struct dt_cons * serdes_dt_cons(struct serdes * instance)
+{ return instance ? instance->dt_cons : NULL; }
+EXPORT_SYMBOL(serdes_dt_cons);
+
+
 int serdes_destroy(struct serdes * instance)
 {
         if (!instance)
@@ -123,22 +126,26 @@ static int fc_pci_size(const struct dt_cons * dt_cons)
                 TIME_LEN;
 }
 
-static int construct_base_pci(char *                 data,
-                              const struct dt_cons * dt_cons,
+static int serialize_base_pci(struct serdes *        instance,
+                              char *                 data,
                               const struct pci *     pci,
                               size_t                 pdu_len)
 {
-        int         offset;
-        address_t   addr;
-        cep_id_t    cep;
-        qos_id_t    qos;
-        pdu_type_t  type;
-        pdu_flags_t flags;
+        int              offset;
+        address_t        addr;
+        cep_id_t         cep;
+        qos_id_t         qos;
+        pdu_type_t       type;
+        pdu_flags_t      flags;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(data);
-        ASSERT(dt_cons);
         ASSERT(pci_is_ok(pci));
         ASSERT(pdu_len);
+
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
 
         /*
          * Putting 1 as version number for now
@@ -183,17 +190,21 @@ static int construct_base_pci(char *                 data,
         return 0;
 }
 
-static int construct_ack_pci(char *                 data,
-                             const struct dt_cons * dt_cons,
+static int serialize_ack_pci(struct serdes *        instance,
+                             char *                 data,
                              const struct pci *     pci,
                              int                    offset)
 {
-        seq_num_t ack_seq;
+        seq_num_t        ack_seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(data);
-        ASSERT(dt_cons);
         ASSERT(pci);
         ASSERT(offset);
+
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
 
         ack_seq = pci_control_ack_seq_num(pci);
         memcpy(data + offset, &ack_seq, dt_cons->seq_num_length);
@@ -202,17 +213,21 @@ static int construct_ack_pci(char *                 data,
 }
 
 /* Passing dt_cons already, for future work */
-static int construct_ctrl_seq(char *                 data,
-                              const struct dt_cons * dt_cons,
+static int serialize_ctrl_seq(struct serdes *        instance,
+                              char *                 data,
                               const struct pci *     pci,
                               int                    offset)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(data);
-        ASSERT(dt_cons);
         ASSERT(pci);
         ASSERT(offset);
+
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
 
         seq = pci_sequence_number_get(pci);
         memcpy(data + offset, &seq, CTRL_SEQ_NR);
@@ -220,17 +235,21 @@ static int construct_ctrl_seq(char *                 data,
         return 0;
 }
 
-static int construct_cc_pci(char *                 data,
-                            const struct dt_cons * dt_cons,
+static int serialize_cc_pci(struct serdes *        instance,
+                            char *                 data,
                             const struct pci *     pci,
                             int                    offset)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(data);
-        ASSERT(dt_cons);
         ASSERT(pci);
         ASSERT(offset);
+
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
 
         seq = pci_control_last_seq_num_rcvd(pci);
         memcpy(data + offset, &seq, CTRL_SEQ_NR);
@@ -256,17 +275,21 @@ static int construct_cc_pci(char *                 data,
         return 0;
 }
 
-static int construct_fc_pci(char *                 data,
-                            const struct dt_cons * dt_cons,
+static int serialize_fc_pci(struct serdes *        instance,
+                            char *                 data,
                             const struct pci *     pci,
                             int                    offset)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(data);
-        ASSERT(dt_cons);
         ASSERT(pci);
         ASSERT(offset);
+
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
 
         /*
          * Not filling in rate-based fields for now
@@ -287,22 +310,26 @@ static int construct_fc_pci(char *                 data,
         return 0;
 }
 
-static int deconstruct_base_pci(struct pci *           new_pci,
-                                const struct dt_cons * dt_cons,
+static int deserialize_base_pci(struct serdes *        instance,
+                                struct pci *           new_pci,
                                 int *                  offset,
                                 const uint8_t *        ptr,
                                 ssize_t *              pdu_len)
 {
-        int         vers;
-        address_t   addr;
-        cep_id_t    cep;
-        qos_id_t    qos;
-        pdu_type_t  pdu_type;
-        pdu_flags_t pdu_flags;
+        int              vers;
+        address_t        addr;
+        cep_id_t         cep;
+        qos_id_t         qos;
+        pdu_type_t       pdu_type;
+        pdu_flags_t      pdu_flags;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(new_pci);
-        ASSERT(dt_cons);
         ASSERT(ptr);
+
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
 
         *offset = 0;
         memcpy(&vers, ptr + *offset, VERSION_SIZE);
@@ -315,45 +342,38 @@ static int deconstruct_base_pci(struct pci *           new_pci,
 
         memcpy(&addr, ptr + *offset, dt_cons->address_length);
         *offset += dt_cons->address_length;
-        if (pci_destination_set(new_pci, addr)) {
+        if (pci_destination_set(new_pci, addr))
                 return -1;
-        }
 
         memcpy(&addr, ptr + *offset, dt_cons->address_length);
         *offset += dt_cons->address_length;
-        if (pci_source_set(new_pci, addr)) {
+        if (pci_source_set(new_pci, addr))
                 return -1;
-        }
 
         memcpy(&qos, ptr + *offset, dt_cons->qos_id_length);
         *offset += dt_cons->qos_id_length;
-        if (pci_qos_id_set(new_pci, qos)) {
+        if (pci_qos_id_set(new_pci, qos))
                 return -1;
-        }
 
         memcpy(&cep, ptr + *offset, dt_cons->cep_id_length);
         *offset += dt_cons->cep_id_length;
-        if (pci_cep_source_set(new_pci, cep)) {
+        if (pci_cep_source_set(new_pci, cep))
                 return -1;
-        }
 
         memcpy(&cep, ptr + *offset, dt_cons->cep_id_length);
         *offset += dt_cons->cep_id_length;
-        if (pci_cep_destination_set(new_pci, cep)) {
+        if (pci_cep_destination_set(new_pci, cep))
                 return -1;
-        }
 
         memcpy(&pdu_type, ptr + *offset, PDU_TYPE_SIZE);
         *offset += PDU_TYPE_SIZE;
-        if (pci_type_set(new_pci, pdu_type)) {
+        if (pci_type_set(new_pci, pdu_type))
                 return -1;
-        }
 
         memcpy(&pdu_flags, ptr + *offset, FLAGS_SIZE);
         *offset += FLAGS_SIZE;
-        if (pci_flags_set(new_pci, pdu_flags)) {
+        if (pci_flags_set(new_pci, pdu_flags))
                 return -1;
-        }
 
         memcpy(pdu_len, ptr + *offset, dt_cons->length_length);
         *offset += dt_cons->length_length;
@@ -361,23 +381,26 @@ static int deconstruct_base_pci(struct pci *           new_pci,
         return 0;
 }
 
-static int deconstruct_fc_pci(struct pci *           new_pci,
-                              const struct dt_cons * dt_cons,
+static int deserialize_fc_pci(struct serdes *        instance,
+                              struct pci *           new_pci,
                               int *                  offset,
                               const uint8_t *        ptr)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(new_pci);
-        ASSERT(dt_cons);
         ASSERT(offset);
         ASSERT(ptr);
 
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
+
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_new_rt_wind_edge_set(new_pci, seq)) {
+        if (pci_control_new_rt_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         /*
          * Note that the same applies here as before
@@ -386,81 +409,81 @@ static int deconstruct_fc_pci(struct pci *           new_pci,
 
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_my_left_wind_edge_set(new_pci, seq)) {
+        if (pci_control_my_left_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_my_rt_wind_edge_set(new_pci, seq)) {
+        if (pci_control_my_rt_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         return 0;
 }
 
-static int deconstruct_ack_pci(struct pci *           new_pci,
-                               const struct dt_cons * dt_cons,
+static int deserialize_ack_pci(struct serdes *        instance,
+                               struct pci *           new_pci,
                                int *                  offset,
                                const uint8_t *        ptr)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(new_pci);
-        ASSERT(dt_cons);
         ASSERT(offset);
         ASSERT(ptr);
 
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
+
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_ack_seq_num_set(new_pci, seq)) {
+        if (pci_control_ack_seq_num_set(new_pci, seq))
                 return -1;
-        }
 
         return 0;
 }
 
-static int deconstruct_cc_pci(struct pci *           new_pci,
-                              const struct dt_cons * dt_cons,
+static int deserialize_cc_pci(struct serdes *        instance,
+                              struct pci *           new_pci,
                               int *                  offset,
                               const uint8_t *        ptr)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(new_pci);
-        ASSERT(dt_cons);
         ASSERT(offset);
         ASSERT(ptr);
 
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
+
         memcpy(&seq, ptr + *offset, CTRL_SEQ_NR);
         *offset += CTRL_SEQ_NR;
-        if (pci_control_last_seq_num_rcvd_set(new_pci, seq)) {
+        if (pci_control_last_seq_num_rcvd_set(new_pci, seq))
                 return -1;
-        }
 
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_new_left_wind_edge_set(new_pci, seq)) {
+        if (pci_control_new_left_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_new_rt_wind_edge_set(new_pci, seq)) {
+        if (pci_control_new_rt_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_my_left_wind_edge_set(new_pci, seq)) {
+        if (pci_control_my_left_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
-        if (pci_control_my_rt_wind_edge_set(new_pci, seq)) {
+        if (pci_control_my_rt_wind_edge_set(new_pci, seq))
                 return -1;
-        }
 
         /*
          * Note that the same applies here as before
@@ -471,23 +494,26 @@ static int deconstruct_cc_pci(struct pci *           new_pci,
 }
 
 /* Note: Already passing dt_cons here for future work */
-static int deconstruct_ctrl_seq(struct pci *           new_pci,
-                                const struct dt_cons * dt_cons,
+static int deserialize_ctrl_seq(struct serdes *        instance,
+                                struct pci *           new_pci,
                                 int *                  offset,
                                 const uint8_t *        ptr)
 {
-        seq_num_t seq;
+        seq_num_t        seq;
+        struct dt_cons * dt_cons;
 
+        ASSERT(instance);
         ASSERT(new_pci);
-        ASSERT(dt_cons);
         ASSERT(offset);
         ASSERT(ptr);
 
+        dt_cons = instance->dt_cons;
+        ASSERT(dt_cons);
+
         memcpy(&seq, ptr + *offset, CTRL_SEQ_NR);
         *offset += CTRL_SEQ_NR;
-        if (pci_sequence_number_set(new_pci, seq)) {
+        if (pci_sequence_number_set(new_pci, seq))
                 return -1;
-        }
 
         return 0;
 }
@@ -519,24 +545,22 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
         ASSERT(dt_cons);
 
         buffer = pdu_buffer_get_ro(pdu);
-        if (!buffer) {
+        if (!buffer)
                 return NULL;
-        }
 
         buffer_data = buffer_data_ro(buffer);
-        if (!buffer_data) {
+        if (!buffer_data)
                 return NULL;
-        }
 
         buffer_size = buffer_length(buffer);
-        if (buffer_size <= 0) {
+        if (buffer_size <= 0)
                 return NULL;
-        }
+
 
         pci = pdu_pci_get_ro(pdu);
-        if (!pci) {
+        if (!pci)
                 return NULL;
-        }
+
 
         pdu_type = pci_type(pci);
         if (!pdu_type_is_ok(pdu_type)) {
@@ -556,23 +580,20 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
         case PDU_TYPE_MGMT:
         case PDU_TYPE_DT:
                 size = pci_size + dt_cons->seq_num_length + buffer_size;
-                if (size <= 0) {
+                if (size <= 0)
                         return NULL;
-                }
 
                 break;
         case PDU_TYPE_FC:
                 size = pci_size + CTRL_SEQ_NR + fc_pci_size(dt_cons);
-                if (size <= 0) {
+                if (size <= 0)
                         return NULL;
-                }
 
                 break;
         case PDU_TYPE_ACK:
                 size = pci_size + CTRL_SEQ_NR + dt_cons->seq_num_length;
-                if (size <= 0) {
+                if (size <= 0)
                         return NULL;
-                }
 
                 break;
         case PDU_TYPE_ACK_AND_FC:
@@ -580,9 +601,8 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
                         CTRL_SEQ_NR +
                         fc_pci_size(dt_cons) +
                         dt_cons->seq_num_length;
-                if (size <= 0) {
+                if (size <= 0)
                         return NULL;
-                }
 
                 break;
         case PDU_TYPE_CC:
@@ -590,9 +610,9 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
                         2 * CTRL_SEQ_NR +
                         4 * dt_cons->seq_num_length +
                         RATE_LEN;
-                if (size <= 0) {
+                if (size <= 0)
                         return NULL;
-                }
+
                 break;
         default:
                 LOG_ERR("Unknown PDU type %02X", pdu_type);
@@ -600,13 +620,12 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
         }
 
         data = rkmalloc(size, flags);
-        if (!data) {
+        if (!data)
                 return NULL;
-        }
 
         /* Needed for all PDUs */
-        if (construct_base_pci(data, dt_cons, pci, size)) {
-                LOG_ERR("Failed to construct base PCI");
+        if (serialize_base_pci(instance, data, pci, size)) {
+                LOG_ERR("Failed to serialize base PCI");
                 rkfree(data);
                 return NULL;
         }
@@ -616,19 +635,15 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
         case PDU_TYPE_MGMT:
         case PDU_TYPE_DT:
                 seq = pci_sequence_number_get(pci);
-                memcpy(data + pci_size,
-                       &seq,
-                       dt_cons->seq_num_length);
+                memcpy(data + pci_size, &seq, dt_cons->seq_num_length);
 
-                memcpy(data + pci_size +
-                       dt_cons->seq_num_length,
-                       buffer_data,
-                       buffer_size);
+                memcpy(data + pci_size + dt_cons->seq_num_length,
+                       buffer_data, buffer_size);
 
                 break;
         case PDU_TYPE_FC:
-                if (construct_ctrl_seq(data, dt_cons, pci, pci_size) ||
-                    construct_fc_pci(data, dt_cons, pci,
+                if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
+                    serialize_fc_pci(instance, data, pci,
                                      pci_size + CTRL_SEQ_NR)) {
                         rkfree(data);
                         return NULL;
@@ -636,8 +651,8 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
 
                 break;
         case PDU_TYPE_ACK:
-                if (construct_ctrl_seq(data, dt_cons, pci, pci_size) ||
-                    construct_ack_pci(data, dt_cons, pci,
+                if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
+                    serialize_ack_pci(instance, data, pci,
                                       pci_size + CTRL_SEQ_NR)) {
                         rkfree(data);
                         return NULL;
@@ -645,10 +660,10 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
 
                 break;
         case PDU_TYPE_ACK_AND_FC:
-                if (construct_ctrl_seq(data, dt_cons, pci, pci_size) ||
-                    construct_ack_pci(data, dt_cons, pci,
+                if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
+                    serialize_ack_pci(instance, data, pci,
                                       pci_size + CTRL_SEQ_NR) ||
-                    construct_fc_pci(data, dt_cons, pci,
+                    serialize_fc_pci(instance, data, pci,
                                      pci_size +
                                      CTRL_SEQ_NR +
                                      dt_cons->seq_num_length)) {
@@ -658,8 +673,8 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
 
                 break;
         case PDU_TYPE_CC:
-                if (construct_ctrl_seq(data, dt_cons, pci, pci_size) ||
-                    construct_cc_pci(data, dt_cons, pci,
+                if (serialize_ctrl_seq(instance, data, pci, pci_size) ||
+                    serialize_cc_pci(instance, data, pci,
                                      pci_size + CTRL_SEQ_NR)) {
                         rkfree(data);
                         return NULL;
@@ -735,7 +750,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
                 return NULL;
         }
 
-        if (deconstruct_base_pci(new_pci, dt_cons, &offset, ptr, &pdu_len)) {
+        if (deserialize_base_pci(instance, new_pci, &offset, ptr, &pdu_len)) {
                 pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
@@ -766,8 +781,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
 
                 break;
         case PDU_TYPE_FC:
-                if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr) ||
-                    deconstruct_fc_pci(new_pci, dt_cons, &offset, ptr)) {
+                if (deserialize_ctrl_seq(instance, new_pci, &offset, ptr) ||
+                    deserialize_fc_pci(instance, new_pci, &offset, ptr)) {
                         pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
@@ -794,8 +809,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
 
                 break;
         case PDU_TYPE_ACK:
-                if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr) ||
-                    deconstruct_ack_pci(new_pci, dt_cons, &offset, ptr)) {
+                if (deserialize_ctrl_seq(instance, new_pci, &offset, ptr) ||
+                    deserialize_ack_pci(instance, new_pci, &offset, ptr)) {
                         pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
@@ -810,9 +825,9 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
 
                 break;
         case PDU_TYPE_ACK_AND_FC:
-                if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr) ||
-                    deconstruct_ack_pci(new_pci, dt_cons, &offset, ptr) ||
-                    deconstruct_fc_pci(new_pci, dt_cons, &offset, ptr)) {
+                if (deserialize_ctrl_seq(instance, new_pci, &offset, ptr) ||
+                    deserialize_ack_pci(instance, new_pci, &offset, ptr) ||
+                    deserialize_fc_pci(instance, new_pci, &offset, ptr)) {
                         pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
@@ -827,8 +842,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
 
                 break;
         case PDU_TYPE_CC:
-                if (deconstruct_ctrl_seq(new_pci, dt_cons, &offset, ptr) ||
-                    deconstruct_cc_pci(new_pci, dt_cons, &offset, ptr)) {
+                if (deserialize_ctrl_seq(instance, new_pci, &offset, ptr) ||
+                    deserialize_cc_pci(instance, new_pci, &offset, ptr)) {
                         pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;
