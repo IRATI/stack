@@ -304,6 +304,14 @@ private:
         std::list<T*> queue;
 };
 
+/// Wrapper to sleep a thread
+class Sleep{
+public:
+	bool sleep(int sec, int milisec);
+	bool sleepForMili(int milisec);
+	bool sleepForSec(int sec);
+};
+
 }
 
 #endif

@@ -772,11 +772,21 @@ class EnrollmentTaskConfiguration {
 public:
 	EnrollmentTaskConfiguration();
 
+	// The maximum time to wait between steps of the enrollment program,
+	// before considering enrollment failed
+	int enrollment_timeout_in_ms_;
+
 	// The period of the watchdog in ms (monitors status of neighbors)
 	int watchdog_period_in_ms_;
 
 	//The time to declare a neighbor dead (in ms)
 	int declared_dead_interval_in_ms_;
+
+	//The period of the neighbor enroller (in ms)
+	int neighbor_enroller_period_in_ms_;
+
+	//The maximum number of enrollment attempts
+	unsigned int max_number_of_enrollment_attempts_;
 };
 
 /// Configuration of a static IPC Process address

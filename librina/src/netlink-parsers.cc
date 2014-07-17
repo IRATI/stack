@@ -3750,10 +3750,16 @@ int putFlowAllocatorConfigurationObject(nl_msg* netlinkMessage,
 
 int putEnrollmentTaskConfigurationObject(nl_msg* netlinkMessage,
 		const EnrollmentTaskConfiguration& object) {
+	NLA_PUT_U32(netlinkMessage, ENTC_ENROLLMENT_TIMEOUT_MS,
+			object.enrollment_timeout_in_ms_);
 	NLA_PUT_U32(netlinkMessage, ENTC_WHATCHDOG_PERIOD_MS,
 			object.watchdog_period_in_ms_);
 	NLA_PUT_U32(netlinkMessage, ENTC_NEIGH_DECLARED_DEAD_INT_MS,
 			object.declared_dead_interval_in_ms_);
+	NLA_PUT_U32(netlinkMessage, ENTC_MAX_NUM_ENROLL_ATTEMPTS,
+			object.max_number_of_enrollment_attempts_);
+	NLA_PUT_U32(netlinkMessage, ENTC_NEIGH_ENROLLER_PERIOD_MS,
+			object.neighbor_enroller_period_in_ms_);
 
 	return 0;
 
@@ -6330,12 +6336,21 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 
 EnrollmentTaskConfiguration * parseEnrollmentTaskConfigurationObject(nlattr *nested) {
 	struct nla_policy attr_policy[ENTC_ATTR_MAX + 1];
+	attr_policy[ENTC_ENROLLMENT_TIMEOUT_MS].type = NLA_U32;
+	attr_policy[ENTC_ENROLLMENT_TIMEOUT_MS].minlen = 4;
+	attr_policy[ENTC_ENROLLMENT_TIMEOUT_MS].maxlen = 4;
 	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].type = NLA_U32;
 	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].minlen = 4;
 	attr_policy[ENTC_WHATCHDOG_PERIOD_MS].maxlen = 4;
 	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].type = NLA_U32;
 	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].minlen = 4;
 	attr_policy[ENTC_NEIGH_DECLARED_DEAD_INT_MS].maxlen = 4;
+	attr_policy[ENTC_MAX_NUM_ENROLL_ATTEMPTS].type = NLA_U32;
+	attr_policy[ENTC_MAX_NUM_ENROLL_ATTEMPTS].minlen = 4;
+	attr_policy[ENTC_MAX_NUM_ENROLL_ATTEMPTS].maxlen = 4;
+	attr_policy[ENTC_NEIGH_ENROLLER_PERIOD_MS].type = NLA_U32;
+	attr_policy[ENTC_NEIGH_ENROLLER_PERIOD_MS].minlen = 4;
+	attr_policy[ENTC_NEIGH_ENROLLER_PERIOD_MS].maxlen = 4;
 	struct nlattr *attrs[ENTC_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, ENTC_ATTR_MAX, nested, attr_policy);
@@ -6349,6 +6364,11 @@ EnrollmentTaskConfiguration * parseEnrollmentTaskConfigurationObject(nlattr *nes
 
 	EnrollmentTaskConfiguration * result = new EnrollmentTaskConfiguration();
 
+	if (attrs[ENTC_ENROLLMENT_TIMEOUT_MS]) {
+		result->enrollment_timeout_in_ms_ =
+				nla_get_u32(attrs[ENTC_ENROLLMENT_TIMEOUT_MS]);
+	}
+
 	if (attrs[ENTC_WHATCHDOG_PERIOD_MS]) {
 		result->watchdog_period_in_ms_ =
 				nla_get_u32(attrs[ENTC_WHATCHDOG_PERIOD_MS]);
@@ -6357,6 +6377,16 @@ EnrollmentTaskConfiguration * parseEnrollmentTaskConfigurationObject(nlattr *nes
 	if (attrs[ENTC_NEIGH_DECLARED_DEAD_INT_MS]) {
 		result->declared_dead_interval_in_ms_ =
 				nla_get_u32(attrs[ENTC_NEIGH_DECLARED_DEAD_INT_MS]);
+	}
+
+	if (attrs[ENTC_MAX_NUM_ENROLL_ATTEMPTS]) {
+		result->max_number_of_enrollment_attempts_ =
+				nla_get_u32(attrs[ENTC_MAX_NUM_ENROLL_ATTEMPTS]);
+	}
+
+	if (attrs[ENTC_NEIGH_ENROLLER_PERIOD_MS]) {
+		result->neighbor_enroller_period_in_ms_ =
+				nla_get_u32(attrs[ENTC_NEIGH_ENROLLER_PERIOD_MS]);
 	}
 
 	return result;

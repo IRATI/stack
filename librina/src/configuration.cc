@@ -1199,8 +1199,11 @@ void PDUFTableGeneratorConfiguration::set_pduft_generator_policy(
 
 // Class Enrollment Task Configuration
 EnrollmentTaskConfiguration::EnrollmentTaskConfiguration() {
+	enrollment_timeout_in_ms_ = 10000;
 	watchdog_period_in_ms_ = 60000;
 	declared_dead_interval_in_ms_ = 120000;
+	neighbor_enroller_period_in_ms_ = 10000;
+	max_number_of_enrollment_attempts_ = 3;
 }
 
 // Class Static IPC Process Address

@@ -553,8 +553,11 @@ FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *neste
 
 /* EnrollmentTaskConfiguration CLASS */
 enum EnrollmentTaskConfigurationAttributes {
-	ENTC_WHATCHDOG_PERIOD_MS = 1,
+	ENTC_ENROLLMENT_TIMEOUT_MS = 1,
+	ENTC_WHATCHDOG_PERIOD_MS,
 	ENTC_NEIGH_DECLARED_DEAD_INT_MS,
+	ENTC_MAX_NUM_ENROLL_ATTEMPTS,
+	ENTC_NEIGH_ENROLLER_PERIOD_MS,
 	__ENTC_ATTR_MAX,
 };
 

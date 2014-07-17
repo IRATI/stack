@@ -21,6 +21,7 @@
 //
 
 #include <cerrno>
+#include <unistd.h>
 
 #define RINA_PREFIX "concurrency"
 
@@ -592,6 +593,17 @@ void ConditionVariable::timedwait(long seconds, long nanoseconds){
 	LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
 	throw ConcurrentException(
 			ConcurrentException::error_wait_cond);
+}
+
+// Class Sleep
+bool Sleep::sleep(int sec, int milisec) {
+	return usleep(sec * 1000000 + milisec * 1000);
+}
+bool Sleep::sleepForMili(int milisec) {
+	return usleep(milisec * 1000);
+}
+bool Sleep::sleepForSec(int sec) {
+	return usleep(sec * 1000000);
 }
 
 }

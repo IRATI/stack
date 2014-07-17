@@ -92,10 +92,10 @@ public:
 class EnrollmentRequest
 {
 public:
-	EnrollmentRequest(const rina::Neighbor &neighbor,
-                          const rina::EnrollToDIFRequestEvent &event);
-	rina::Neighbor neighbor_;
-	rina::EnrollToDIFRequestEvent event_;
+	EnrollmentRequest(rina::Neighbor * neighbor,
+                          rina::EnrollToDIFRequestEvent * event);
+	rina::Neighbor * neighbor_;
+	rina::EnrollToDIFRequestEvent * event_;
 };
 
 /// Interface that must be implementing by classes that provide
@@ -103,8 +103,8 @@ public:
 class IEnrollmentTask : public IPCProcessComponent {
 public:
 	virtual ~IEnrollmentTask(){};
-	virtual const std::list<rina::Neighbor>& get_neighbors() const = 0;
-	virtual const std::list<std::string>& get_enrolled_ipc_process_names() const = 0;
+	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
+	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
 
 	/// A remote IPC process Connect request has been received.
 	/// @param cdapMessage
@@ -132,14 +132,12 @@ public:
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
-	/// @param flowInformation
-	virtual void processEnrollmentRequestEvent(const rina::EnrollToDIFRequestEvent& event,
-			const rina::DIFInformation& difInformation) = 0;
+	virtual void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event) = 0;
 
 	/// Starts the enrollment program
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor
-	virtual void initiateEnrollment(EnrollmentRequest request) = 0;
+	virtual void initiateEnrollment(EnrollmentRequest * request) = 0;
 
 	/// Called by the enrollment state machine when the enrollment request has been completed,
 	/// either successfully or unsuccessfully
@@ -147,7 +145,7 @@ public:
 	/// @param enrollee true if this IPC process is the one that initiated the
 	/// enrollment sequence (i.e. it is the application process that wants to
 	/// join the DIF)
-	virtual void enrollmentCompleted(const rina::Neighbor& candidate,
+	virtual void enrollmentCompleted(rina::Neighbor * neighbor,
                                          bool enrollee) = 0;
 
 	/// Called by the enrollment state machine when the enrollment sequence fails

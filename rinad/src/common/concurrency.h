@@ -29,16 +29,22 @@
 #include <librina/concurrency.h>
 
 /// A map of pointers that provides thread-safe put, find and erase operations
-template <class K, class T> class ThreadSafeMapOfPointers: public rina::Lockable {
+template <class K, class T> class ThreadSafeMapOfPointers {
 public:
-	ThreadSafeMapOfPointers():rina::Lockable() {};
-	~ThreadSafeMapOfPointers() throw() {};
+	ThreadSafeMapOfPointers() {
+		lock_ = new rina::Lockable();
+	};
+	~ThreadSafeMapOfPointers() throw() {
+		if (lock_) {
+			delete lock_;
+		}
+	};
 
 	/// Insert element T* at position K
 	/// @param key
 	/// @param value
 	void put(K key, T* element) {
-		rina::AccessGuard(*this);
+		rina::AccessGuard g(*lock_);
 		map[key] = element;
 	}
 
@@ -50,7 +56,7 @@ public:
 		typename std::map<K, T*>::iterator iterator;
 		T* result;
 
-		rina::AccessGuard(*this);
+		rina::AccessGuard g(*lock_);
 		iterator = map.find(key);
 		if (iterator == map.end()) {
 			result = 0;
@@ -69,7 +75,7 @@ public:
 		typename std::map<K, T*>::iterator iterator;
 		T* result;
 
-		rina::AccessGuard(*this);
+		rina::AccessGuard g(*lock_);
 		iterator = map.find(key);
 		if (iterator == map.end()) {
 			result = 0;
@@ -82,11 +88,11 @@ public:
 	}
 
 	/// Returns the list of entries in the map
-	std::list<T*> getEntries() {
-		typename std::map<K, T*>::iterator iterator;
+	std::list<T*> getEntries() const {
+		typename std::map<K, T*>::const_iterator iterator;
 		std::list<T*> result;
 
-		rina::AccessGuard(*this);
+		rina::AccessGuard g(*lock_);
 		for(iterator = map.begin();
 				iterator != map.end(); ++iterator){
 			result.push_back(iterator->second);
@@ -97,9 +103,9 @@ public:
 
 	/// Delete all the values of the map
 	void deleteValues() {
-		typename std::map<K, T*>::iterator iterator;
+		typename std::map<K, T*>::const_iterator iterator;
 
-		rina::AccessGuard(*this);
+		rina::AccessGuard g(*lock_);
 		for(iterator = map.begin();
 				iterator != map.end(); ++iterator){
 			delete iterator->second;
@@ -108,6 +114,7 @@ public:
 
 private:
 	std::map<K, T*> map;
+	rina::Lockable * lock_;
 };
 
 

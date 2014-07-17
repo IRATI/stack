@@ -27,7 +27,7 @@ namespace rinad {
 
 //	CLASS EnrollmentRequest
 EnrollmentRequest::EnrollmentRequest(
-		const rina::Neighbor& neighbor, const rina::EnrollToDIFRequestEvent& event) {
+		rina::Neighbor * neighbor, rina::EnrollToDIFRequestEvent * event) {
 	neighbor_ = neighbor;
 	event_ = event;
 }
