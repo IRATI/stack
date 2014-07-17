@@ -40,6 +40,7 @@ int             cwq_push(struct cwq * q,
                          struct pdu * pdu);
 struct pdu *    cwq_pop(struct cwq * q);
 bool            cwq_is_empty(struct cwq * q);
+int             cwq_flush(struct cwq * q);
 ssize_t         cwq_size(struct cwq * q);
 void            cwq_deliver(struct cwq * queue,
                             struct dt *  dt,

@@ -32,6 +32,8 @@
 #include "dtcp.h"
 #include "dtcp-utils.h"
 
+#include <linux/random.h>
+
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t          lock;
@@ -76,10 +78,10 @@ struct dtp {
         struct squeue *           seqq;
         struct workqueue_struct * twq;
         struct {
-#if 0
+#if 0                
                 struct rtimer * sender_inactivity;
-                struct rtimer * receiver_inactivity;
 #endif
+                struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
 };
@@ -96,6 +98,99 @@ static struct dtp_sv default_sv = {
         .window_based                  = false,
         .a                             = 0,
 };
+
+bool dtp_drf_flag(struct dtp * instance)
+{
+        bool flag;
+
+        if (!instance || !instance->sv)
+                return false;
+
+        spin_lock(&instance->sv->lock);
+        flag = instance->sv->drf_flag;
+        spin_unlock(&instance->sv->lock);
+
+        return flag;
+}
+
+static void drf_flag_set(struct dtp_sv * sv, bool value)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->drf_flag = value;
+        spin_unlock(&sv->lock);
+}
+
+static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->nxt_seq = sn;
+        spin_unlock(&sv->lock);
+
+        return;
+}
+
+static seq_num_t nxt_seq_get(struct dtp_sv * sv)
+{
+        seq_num_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = ++sv->nxt_seq;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
+static uint_t dropped_pdus(struct dtp_sv * sv)
+{
+        uint_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->dropped_pdus;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
+static void dropped_pdus_inc(struct dtp_sv * sv)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->dropped_pdus++;
+        spin_unlock(&sv->lock);
+}
+
+#if 0
+static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
+{
+        seq_num_t tmp;
+
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->max_seq_nr_rcv;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
+static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
+{
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        sv->max_seq_nr_rcv = nr;
+        spin_unlock(&sv->lock);
+}
+#endif
 
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
@@ -216,12 +311,17 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 
 static int default_initial_seq_number(struct dtp * dtp)
 {
+        seq_num_t seq_num;
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
+        
+        get_random_bytes(&seq_num, sizeof(seq_num_t));
+        nxt_seq_reset(dtp->sv, seq_num);
 
-        return 0;
+        return seq_num;
 }
 
 static struct dtp_policies default_policies = {
@@ -230,88 +330,6 @@ static struct dtp_policies default_policies = {
         .flow_control_overrun    = default_flow_control_overrun,
         .initial_sequence_number = default_initial_seq_number,
 };
-
-bool dtp_drf_flag(struct dtp * instance)
-{
-        bool flag;
-
-        if (!instance || !instance->sv)
-                return false;
-
-        spin_lock(&instance->sv->lock);
-        flag = instance->sv->drf_flag;
-        spin_unlock(&instance->sv->lock);
-
-        return flag;
-}
-
-static void drf_flag_set(struct dtp_sv * sv, bool value)
-{
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        sv->drf_flag = value;
-        spin_unlock(&sv->lock);
-}
-
-static seq_num_t nxt_seq_get(struct dtp_sv * sv)
-{
-        seq_num_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = ++sv->nxt_seq;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
-
-static uint_t dropped_pdus(struct dtp_sv * sv)
-{
-        uint_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->dropped_pdus;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
-
-static void dropped_pdus_inc(struct dtp_sv * sv)
-{
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        sv->dropped_pdus++;
-        spin_unlock(&sv->lock);
-}
-
-#if 0
-static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
-{
-        seq_num_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_seq_nr_rcv;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
-
-static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
-{
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        sv->max_seq_nr_rcv = nr;
-        spin_unlock(&sv->lock);
-}
-#endif
 
 /* Sequencing/reassembly queue */
 
@@ -655,55 +673,61 @@ static int pdu_post(struct dtp * instance,
 #if 0
 static void tf_sender_inactivity(void * data)
 { /* Runs the SenderInactivityTimerPolicy */ }
+#endif
 
 static void tf_receiver_inactivity(void * data)
-{ /* Runs the ReceiverInactivityTimerPolicy */ }
-
-static void squeue_cleanup(struct dtp * dtp)
-{
-        struct squeue * seqq;
-        seq_num_t            seq_num;
-        seq_num_t            LWE;
-        seq_num_t            max_sdu_gap;
-        struct dtp_sv *      sv;
+{ /* Runs the ReceiverInactivityTimerPolicy */ 
         struct dt *          dt;
-        struct pdu *         pdu;
+        struct dtp *         dtp;
+        struct dtcp *        dtcp;
+        struct dtcp_config * cfg;
+        struct dtp_sv *      sv;
 
-        ASSERT(dtp);
-
-        seqq = dtp->seqq;
-        ASSERT(seqq);
+        dtp = (struct dtp *) data;
+        if (!dtp) {
+                LOG_ERR("No dtp to work with");
+                return;
+        }
 
         sv = dtp->sv;
-        ASSERT(sv);
+        ASSERT(sv); 
 
         dt = dtp->parent;
-        ASSERT(dt);
+        ASSERT(dt); 
+        
+        dtcp = dt_dtcp(dt);
 
-        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+        drf_flag_set(sv, true); 
+        dtp->policies->initial_sequence_number(dtp);        
+        if (dtcp) {
+                cfg = dtcp_config_get(dtcp);
+                ASSERT(cfg);
+                if (dtcp_rtx_ctrl(cfg)) {
+                        struct rtxq * q;
 
-        spin_lock(&seqq->lock);
-        pdu     = seq_queue_pop(seqq->queue);
-        seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-        LWE     = dt_sv_rcv_lft_win(dt);
-        while (pdu && (seq_num == LWE + 1)) {
-                dt_sv_rcv_lft_win_set(dt, seq_num);
-                spin_unlock(&seqq->lock);
-                
-                pdu_post(dtp, pdu);
-                LOG_DBG("CLEANUP: PDU %d posted", seq_num);
+                        q = dt_rtxq(dt);
+                        if (!q) {
+                                LOG_ERR("Couldn't find the Retransmission queue");
+                                return;
+                        }
+                        rtxq_drop(q, 0, 0);
+                }
+                if (dtcp_flow_ctrl(cfg)) {
+                        struct cwq * cwq;
 
-                spin_lock(&seqq->lock);
-                pdu     = seq_queue_pop(seqq->queue);
-                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
-                LWE     = dt_sv_rcv_lft_win(dt);
+                        cwq = dt_cwq(dt);
+                        ASSERT(cwq);
+                        if (cwq_flush(cwq)) {
+                                LOG_ERR("Coudln't flush cwq");
+                                return;
+                        }
+                }
         }
-        if (pdu) seq_queue_push_ni(seqq->queue, pdu);
 
-        spin_unlock(&seqq->lock);
-
+        /*FIXME: Missing sending the control ack pdu */
+        return;
 }
-#endif
+
 
 /*
  * NOTE:
@@ -1003,18 +1027,17 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 #if 0
-        LOG_DBG("Inactivity Timers created...");
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
+#endif
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
                                                         tmp);
-#endif
         tmp->timers.a                   = rtimer_create(tf_a, tmp);
         if (
 #if 0
             !tmp->timers.sender_inactivity   ||
-            !tmp->timers.receiver_inactivity ||
 #endif
+            !tmp->timers.receiver_inactivity ||
             !tmp->timers.a) {
                 dtp_destroy(tmp);
                 return NULL;
@@ -1034,9 +1057,9 @@ int dtp_destroy(struct dtp * instance)
 #if 0
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
+#endif
         if (instance->timers.receiver_inactivity)
                 rtimer_destroy(instance->timers.receiver_inactivity);
-#endif
         if (instance->timers.a)
                 rtimer_destroy(instance->timers.a);
 
@@ -1375,14 +1398,12 @@ int dtp_receive(struct dtp * instance,
         LWE         = dt_sv_rcv_lft_win(dt);
         in_order    = sv->connection->policies_params->in_order_delivery;
         max_sdu_gap = sv->connection->policies_params->max_sdu_gap;
-#if 0
         /* Stop ReceiverInactivityTimer */
         if (rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
                   return -1;*/
         }
-#endif
         seq_num = pci_sequence_number_get(pci);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
@@ -1421,14 +1442,13 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                 }
-#if 0
                 /* Start ReceiverInactivityTimer */
                 if (rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt))))
-                        LOG_ERR("Failed to start timer");
-#endif
+                        LOG_ERR("Failed to restart RcvrInactivity timer");
+
                 return 0;
         }
 
@@ -1442,7 +1462,7 @@ int dtp_receive(struct dtp * instance,
                         if (pdu_post(instance, pdu))
                                 return -1;
 
-                        return 0;
+                        goto exit;
                 }
 
                 set_lft_win_edge = !(dtcp                                 && 
@@ -1463,14 +1483,14 @@ int dtp_receive(struct dtp * instance,
                         }
                         if (!set_lft_win_edge) {
                                 pdu_destroy(pdu);
-                                return 0;
+                                goto exit;
                         }
                 }
 
                 if (pdu_post(instance, pdu))
                         return -1;
 
-                return 0;
+                goto exit;
 
                 fail:
                 pdu_destroy(pdu);
@@ -1494,7 +1514,7 @@ int dtp_receive(struct dtp * instance,
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
 
-#if 0
+        exit:
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
@@ -1503,6 +1523,5 @@ int dtp_receive(struct dtp * instance,
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
-#endif
         return 0;
 }

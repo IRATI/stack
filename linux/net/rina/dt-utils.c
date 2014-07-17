@@ -156,6 +156,27 @@ bool cwq_is_empty(struct cwq * queue)
         return ret;
 }
 
+int cwq_flush(struct cwq * queue)
+{
+        struct pdu * tmp;
+
+        if (!queue)
+                return -1;
+
+        spin_lock(&queue->lock);
+        while (!rqueue_is_empty(queue->q)) {
+                tmp = (struct pdu *) rqueue_head_pop(queue->q);
+                if (!tmp) {
+                        LOG_ERR("Failed to retrieve PDU");
+                        return -1;
+                }
+                pdu_destroy(tmp);
+        }
+        spin_unlock(&queue->lock);
+
+        return 0;
+}
+
 ssize_t cwq_size(struct cwq * queue)
 {
         ssize_t tmp;
