@@ -424,15 +424,15 @@ static int send_worker(void * o)
                 buffer = pdu_ser_buffer(pdu_ser);
                 if (!buffer_is_ok(buffer)) {
                         LOG_ERR("Buffer is not okay");
-                        pdu_ser_destroy(pdu_ser);
                         spin_lock(&tmp->egress.queues->lock);
+                        pdu_ser_destroy(pdu_ser);
                         continue;
                 }
 
                 if (pdu_ser_buffer_disown(pdu_ser)) {
                         LOG_ERR("Could not disown buffer");
-                        pdu_ser_destroy(pdu_ser);
                         spin_lock(&tmp->egress.queues->lock);
+                        pdu_ser_destroy(pdu_ser);
                         continue;
                 }
 
@@ -443,6 +443,7 @@ static int send_worker(void * o)
                         spin_lock(&tmp->egress.queues->lock);
                         LOG_ERR("Error creating SDU from serialized PDU, "
                                 "dropping PDU!");
+                        buffer_destroy(buffer);
                         continue;
                 }
 
@@ -450,6 +451,7 @@ static int send_worker(void * o)
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
                         spin_lock(&tmp->egress.queues->lock);
+                        sdu_destroy(sdu);
                         continue; /* Useless for the moment */
                 }
 
@@ -488,7 +490,6 @@ int rmt_send_port_id(struct rmt * instance,
         item = rwq_work_create_ni(send_worker, instance);
         if (!item) {
                 LOG_ERR("Cannot send PDU to port-id %d", id);
-
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -497,14 +498,12 @@ int rmt_send_port_id(struct rmt * instance,
         s_queue = qmap_find(instance->egress.queues, id);
         if (!s_queue) {
                 spin_unlock(&instance->egress.queues->lock);
-
                 pdu_destroy(pdu);
                 return -1;
         }
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
                 spin_unlock(&instance->egress.queues->lock);
-
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -850,6 +849,7 @@ static int process_dt_pdu(struct rmt *       rmt,
 
         if (efcp_container_receive(rmt->efcpc, c, pdu)) {
                 LOG_ERR("EFCP container problems");
+                pdu_destroy(pdu);
                 return -1;
         }
 

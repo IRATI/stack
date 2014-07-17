@@ -556,11 +556,9 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
         if (buffer_size <= 0)
                 return NULL;
 
-
         pci = pdu_pci_get_ro(pdu);
         if (!pci)
                 return NULL;
-
 
         pdu_type = pci_type(pci);
         if (!pdu_type_is_ok(pdu_type)) {
