@@ -175,7 +175,7 @@ struct efcp * efcp_container_find(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_find);
 
-struct efcp_config * efcp_container_config(struct efcp_container * container) 
+struct efcp_config * efcp_container_config(struct efcp_container * container)
 {
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -186,7 +186,7 @@ struct efcp_config * efcp_container_config(struct efcp_container * container)
                 LOG_ERR("No container config set!");
                 return NULL;
         }
-                
+
         return container->config;
 }
 EXPORT_SYMBOL(efcp_container_config);

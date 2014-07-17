@@ -229,7 +229,6 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
 {
         struct rmt *         tmp;
         const char *         name;
-        struct efcp_config * conf;
 
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
@@ -246,18 +245,6 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         tmp->efcpc   = efcpc;
         tmp->pft     = pft_create();
         if (!tmp->pft) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        conf = efcp_container_config(efcpc);
-        if (!conf) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        tmp->serdes = serdes_create(dt_cons_dup(conf->dt_cons));
-        if (!tmp->serdes) {
                 rmt_destroy(tmp);
                 return NULL;
         }
@@ -356,6 +343,29 @@ int rmt_address_set(struct rmt * instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_address_set);
+
+int rmt_dt_cons_set(struct rmt *     instance,
+                    struct dt_cons * dt_cons)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!dt_cons) {
+                LOG_ERR("Bogus dt_cons passed");
+                return -1;
+        }
+
+        instance->serdes = serdes_create(dt_cons);
+        if (!instance->serdes) {
+                LOG_ERR("Serdes creation failed");
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_dt_cons_set);
 
 static int send_worker(void * o)
 {
