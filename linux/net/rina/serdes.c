@@ -720,11 +720,15 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
         ssize_t               pdu_len;
         seq_num_t             seq;
 
-        if (!pdu_ser_is_ok(pdu))
+        if (!pdu_ser_is_ok(pdu)) {
+                LOG_ERR("The pdu ser is crap");
                 return NULL;
+        }
 
-        if (!instance)
+        if (!instance) {
+                LOG_ERR("No instance passed");
                 return NULL;
+        }
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
@@ -732,27 +736,41 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
         tmp_buff = pdu_ser_buffer(pdu);
         ASSERT(tmp_buff);
 
-        if (buffer_length(tmp_buff) < base_pci_size(dt_cons))
+        if (buffer_length(tmp_buff) < base_pci_size(dt_cons)) {
+                LOG_ERR("Wrong length of buffer");
                 return NULL;
+        }
 
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
 
         new_pdu = pdu_create_gfp(flags);
-        if (!new_pdu)
+        if (!new_pdu) {
+                LOG_ERR("Failed to create new pdu");
                 return NULL;
+        }
 
         new_pci = pci_create_gfp(flags);
         if (!new_pci) {
+                LOG_ERR("Failed to create new pci");
                 pdu_destroy(new_pdu);
                 return NULL;
         }
 
         if (deserialize_base_pci(instance, new_pci, &offset, ptr, &pdu_len)) {
+        LOG_ERR("Could not deser base PCI"):
                 pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
         }
+
+        LOG_DBG("PCI Type: %02X", pci_type(new_pci));
+        LOG_DBG("PCI Source: %d", pci_source(new_pci));
+        LOG_DBG("PCI Destination: %d", pci_destination(new_pci));
+        LOG_DBG("PCI Source CEP: %d", pci_cep_source(new_pci));
+        LOG_DBG("PCI Destination CEP: %d", pci_cep_destination(new_pci));
+        LOG_DBG("PCI QoS ID: %d", pci_qos_id(new_pci));
+        LOG_DBG("PCI Flags: %d", pci_flags_get(new_pci));
 
         switch (pci_type(new_pci)) {
         case PDU_TYPE_MGMT:
@@ -772,6 +790,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
                                                   ptr + offset,
                                                   pdu_len - offset);
                 if (!new_buff) {
+                        LOG_ERR("Could not create new_buff");
                         pci_destroy(new_pci);
                         pdu_destroy(new_pdu);
                         return NULL;

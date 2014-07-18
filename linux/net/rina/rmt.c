@@ -1033,7 +1033,7 @@ static int receive_worker(void * o)
                         continue;
                 }
 
-                pci =  pdu_pci_get_ro(pdu);
+                pci = pdu_pci_get_ro(pdu);
                 if (!pci) {
                         LOG_ERR("No PCI to work with, dropping SDU!");
                         pdu_destroy(pdu);
