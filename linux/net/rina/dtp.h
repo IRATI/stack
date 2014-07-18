@@ -50,6 +50,9 @@ int          dtp_mgmt_write(struct rmt * rmt,
 int          dtp_receive(struct dtp * instance,
                          struct pdu * pdu);
 
-bool         dtp_drf_flag(struct dtp * instance);
+/*FIXME: This may be changed depending on the discussion around
+ * RcvrInactivityTimer Policy */
+/* DTP Policies called in DTCP */
+int dtp_initial_sequence_number(struct dtp * instance);
 
 #endif
