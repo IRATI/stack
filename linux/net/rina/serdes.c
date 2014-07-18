@@ -128,10 +128,10 @@ static int fc_pci_size(const struct dt_cons * dt_cons)
                 TIME_LEN;
 }
 
-static int serialize_base_pci(struct serdes *        instance,
-                              char *                 data,
-                              const struct pci *     pci,
-                              size_t                 pdu_len)
+static int serialize_base_pci(const struct serdes * instance,
+                              char *                data,
+                              const struct pci *    pci,
+                              size_t                pdu_len)
 {
         int              offset;
         address_t        addr;
@@ -192,10 +192,10 @@ static int serialize_base_pci(struct serdes *        instance,
         return 0;
 }
 
-static int serialize_ack_pci(struct serdes *        instance,
-                             char *                 data,
-                             const struct pci *     pci,
-                             int                    offset)
+static int serialize_ack_pci(const struct serdes * instance,
+                             char *                data,
+                             const struct pci *    pci,
+                             int                   offset)
 {
         seq_num_t        ack_seq;
         struct dt_cons * dt_cons;
@@ -215,10 +215,10 @@ static int serialize_ack_pci(struct serdes *        instance,
 }
 
 /* Passing dt_cons already, for future work */
-static int serialize_ctrl_seq(struct serdes *        instance,
-                              char *                 data,
-                              const struct pci *     pci,
-                              int                    offset)
+static int serialize_ctrl_seq(const struct serdes * instance,
+                              char *                data,
+                              const struct pci *    pci,
+                              int                   offset)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -237,10 +237,10 @@ static int serialize_ctrl_seq(struct serdes *        instance,
         return 0;
 }
 
-static int serialize_cc_pci(struct serdes *        instance,
-                            char *                 data,
-                            const struct pci *     pci,
-                            int                    offset)
+static int serialize_cc_pci(const struct serdes * instance,
+                            char *                data,
+                            const struct pci *    pci,
+                            int                   offset)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -277,10 +277,10 @@ static int serialize_cc_pci(struct serdes *        instance,
         return 0;
 }
 
-static int serialize_fc_pci(struct serdes *        instance,
-                            char *                 data,
-                            const struct pci *     pci,
-                            int                    offset)
+static int serialize_fc_pci(const struct serdes * instance,
+                            char *                data,
+                            const struct pci *    pci,
+                            int                   offset)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -312,11 +312,11 @@ static int serialize_fc_pci(struct serdes *        instance,
         return 0;
 }
 
-static int deserialize_base_pci(struct serdes *        instance,
-                                struct pci *           new_pci,
-                                int *                  offset,
-                                const uint8_t *        ptr,
-                                ssize_t *              pdu_len)
+static int deserialize_base_pci(const struct serdes * instance,
+                                struct pci *          new_pci,
+                                int *                 offset,
+                                const uint8_t *       ptr,
+                                ssize_t *             pdu_len)
 {
         int              vers;
         address_t        addr;
@@ -383,10 +383,10 @@ static int deserialize_base_pci(struct serdes *        instance,
         return 0;
 }
 
-static int deserialize_fc_pci(struct serdes *        instance,
-                              struct pci *           new_pci,
-                              int *                  offset,
-                              const uint8_t *        ptr)
+static int deserialize_fc_pci(const struct serdes * instance,
+                              struct pci *          new_pci,
+                              int *                 offset,
+                              const uint8_t *       ptr)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -422,10 +422,10 @@ static int deserialize_fc_pci(struct serdes *        instance,
         return 0;
 }
 
-static int deserialize_ack_pci(struct serdes *        instance,
-                               struct pci *           new_pci,
-                               int *                  offset,
-                               const uint8_t *        ptr)
+static int deserialize_ack_pci(const struct serdes * instance,
+                               struct pci *          new_pci,
+                               int *                 offset,
+                               const uint8_t *       ptr)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -446,10 +446,10 @@ static int deserialize_ack_pci(struct serdes *        instance,
         return 0;
 }
 
-static int deserialize_cc_pci(struct serdes *        instance,
-                              struct pci *           new_pci,
-                              int *                  offset,
-                              const uint8_t *        ptr)
+static int deserialize_cc_pci(const struct serdes * instance,
+                              struct pci *          new_pci,
+                              int *                 offset,
+                              const uint8_t *       ptr)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -496,10 +496,10 @@ static int deserialize_cc_pci(struct serdes *        instance,
 }
 
 /* Note: Already passing dt_cons here for future work */
-static int deserialize_ctrl_seq(struct serdes *        instance,
-                                struct pci *           new_pci,
-                                int *                  offset,
-                                const uint8_t *        ptr)
+static int deserialize_ctrl_seq(const struct serdes * instance,
+                                struct pci *          new_pci,
+                                int *                 offset,
+                                const uint8_t *       ptr)
 {
         seq_num_t        seq;
         struct dt_cons * dt_cons;
@@ -520,9 +520,9 @@ static int deserialize_ctrl_seq(struct serdes *        instance,
         return 0;
 }
 
-static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
-                                          struct serdes * instance,
-                                          struct pdu *    pdu)
+static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
+                                          const const struct serdes * instance,
+                                          struct pdu *                pdu)
 {
         struct pdu_ser *      tmp;
         struct dt_cons *      dt_cons;
@@ -703,14 +703,14 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t           flags,
         return tmp;
 }
 
-struct pdu_ser * pdu_serialize(struct serdes * instance,
-                               struct pdu *    pdu)
+struct pdu_ser * pdu_serialize(const struct serdes * instance,
+                               struct pdu *          pdu)
 { return pdu_serialize_gfp(GFP_KERNEL, instance, pdu); }
 EXPORT_SYMBOL(pdu_serialize);
 
-static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
-                                        struct serdes *        instance,
-                                        struct pdu_ser *       pdu)
+static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
+                                        const struct serdes * instance,
+                                        struct pdu_ser *      pdu)
 {
         struct pdu *          new_pdu;
         struct dt_cons *      dt_cons;
@@ -890,7 +890,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
         return new_pdu;
 }
 
-struct pdu * pdu_deserialize(struct serdes *  instance,
-                             struct pdu_ser * pdu)
+struct pdu * pdu_deserialize(const struct serdes * instance,
+                             struct pdu_ser *      pdu)
 { return pdu_deserialize_gfp(GFP_KERNEL, instance, pdu); }
 EXPORT_SYMBOL(pdu_deserialize);
