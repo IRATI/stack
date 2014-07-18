@@ -21,9 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "dt-utils"
-
 #include <linux/list.h>
+
+#define RINA_PREFIX "dt-utils"
 
 #include "logs.h"
 #include "utils.h"

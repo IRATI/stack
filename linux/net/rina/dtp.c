@@ -21,6 +21,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/random.h>
+
 #define RINA_PREFIX "dtp"
 
 #include "logs.h"
@@ -31,8 +33,6 @@
 #include "dt-utils.h"
 #include "dtcp.h"
 #include "dtcp-utils.h"
-
-#include <linux/random.h>
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
