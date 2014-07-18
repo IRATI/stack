@@ -21,7 +21,10 @@
 #include <iostream>
 #include <map>
 
+#define RINA_PREFIX     "event-loop"
+
 #include <librina/common.h>
+#include <librina/logs.h>
 
 #include "event-loop.h"
 
@@ -58,16 +61,22 @@ EventLoop::run()
                         break;
                 }
 
-                if (pre_function) {
-                        pre_function(event, data_model);
+                try {
+                	if (pre_function) {
+                		pre_function(event, data_model);
+                	}
+                	ty = event->eventType;
+                	if (handlers.count(ty) && handlers[ty]) {
+                		handlers[ty](event, data_model);
+                	}
+                	if (post_function) {
+                		post_function(event, data_model);
+                	}
+                } catch (Exception &e) {
+                	LOG_ERR("Problems processing event: %s", e.what());
                 }
-                ty = event->eventType;
-                if (handlers.count(ty) && handlers[ty]) {
-                        handlers[ty](event, data_model);
-                }
-                if (post_function) {
-                        post_function(event, data_model);
-                }
+
+                delete event;
         }
 }
 

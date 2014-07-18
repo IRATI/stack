@@ -259,24 +259,24 @@ void IPCProcessImpl::set_address(unsigned int address) {
 	dif_information_.dif_configuration_.address_ = address;
 }
 
-void IPCProcessImpl::processAssignToDIFRequestEvent(rina::AssignToDIFRequestEvent * event) {
+void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
 
 	if (state_ != INITIALIZED) {
 		//The IPC Process can only be assigned to a DIF once, reply with error message
 		LOG_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
 				state_);
-		rina::extendedIPCManager->assignToDIFResponse(*event, -1);
+		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 		return;
 	}
 
 	try {
-		unsigned int handle = rina::kernelIPCProcess->assignToDIF(event->difInformation);
-		pending_events_.put(handle, event);
+		unsigned int handle = rina::kernelIPCProcess->assignToDIF(event.difInformation);
+		pending_events_[handle] = event;
 		state_ = ASSIGN_TO_DIF_IN_PROCESS;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
-		rina::extendedIPCManager->assignToDIFResponse(*event, -1);
+		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 	}
 }
 
@@ -326,7 +326,6 @@ ipc_process_dif_registration_notification_handler(rina::IPCEvent *e,
 
 	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 			processRegistrationNotification(*event);
-	delete event;
 }
 
 static void
@@ -336,7 +335,7 @@ assign_to_dif_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::AssignToDIFRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->processAssignToDIFRequestEvent(event);
+	ipcp->processAssignToDIFRequestEvent(*event);
 }
 
 static void
@@ -347,7 +346,6 @@ assign_to_dif_response_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->processAssignToDIFResponseEvent(*event);
-	delete event;
 }
 
 static void
@@ -359,7 +357,6 @@ allocate_flow_request_result_event_handler(rina::IPCEvent *e,
 
 	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 			allocateRequestResult(*event);
-	delete event;
 }
 
 static void
@@ -377,7 +374,6 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
 		ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 				flowAllocationRequested(*event);
 	}
-	delete event;
 }
 
 static void
@@ -389,7 +385,6 @@ deallocate_flow_response_event_handler(rina::IPCEvent *e,
 
 	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 					deallocateFlowResponse(*event);
-	delete event;
 }
 
 static void
@@ -401,7 +396,6 @@ flow_deallocated_event_handler(rina::IPCEvent *e,
 
 	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 					flowDeallocatedRemotely(*event);
-	delete event;
 }
 
 static void
@@ -412,7 +406,6 @@ enroll_to_dif_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->enrollment_task_->processEnrollmentRequestEvent(event);
-	delete event;
 }
 
 static void
@@ -424,7 +417,6 @@ ipc_process_query_rib_handler(rina::IPCEvent *e,
 
 	ipcp->rib_daemon_->processQueryRIBRequestEvent(*event);
 	ipcp->requestPDUFTEDump();
-	delete event;
 }
 
 static void
@@ -435,7 +427,6 @@ application_registration_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->namespace_manager_->processApplicationRegistrationRequestEvent(*event);
-	delete event;
 }
 
 static void
@@ -446,7 +437,6 @@ application_unregistration_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->namespace_manager_->processApplicationUnregistrationRequestEvent(*event);
-	delete event;
 }
 
 static void
@@ -457,7 +447,6 @@ ipc_process_create_connection_response_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->flow_allocator_->processCreateConnectionResponseEvent(*event);
-	delete event;
 }
 
 static void
@@ -468,7 +457,6 @@ allocate_flow_response_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->flow_allocator_->submitAllocateResponse(*event);
-	delete event;
 }
 
 static void
@@ -479,7 +467,6 @@ ipc_process_create_connection_result_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->flow_allocator_->processCreateConnectionResultEvent(*event);
-	delete event;
 }
 
 static void
@@ -490,7 +477,6 @@ ipc_process_update_connection_response_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->flow_allocator_->processUpdateConnectionResponseEvent(*event);
-	delete event;
 }
 
 static void
@@ -501,7 +487,6 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->flow_allocator_->submitDeallocate(*event);
-	delete event;
 }
 
 static void
@@ -515,7 +500,6 @@ ipc_process_destroy_connection_result_handler(rina::IPCEvent *e,
 		LOG_WARN("Problems destroying connection with associated to port-id %d",
 				event->portId);
 	}
-	delete event;
 }
 
 static void
@@ -526,7 +510,6 @@ ipc_process_dump_ft_response_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
 	ipcp->logPDUFTE(*event);
-	delete event;
 }
 
 static void
@@ -536,7 +519,6 @@ ipc_process_default_handler(rina::IPCEvent *e,
 	(void) opaque;
 
 	LOG_WARN("Received unsupported event: %d", e->eventType);
-	delete e;
 }
 
 void register_handlers_all(EventLoop& loop) {

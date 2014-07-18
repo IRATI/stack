@@ -21,9 +21,10 @@
 #ifndef IPCP_IPC_PROCESS_HH
 #define IPCP_IPC_PROCESS_HH
 
+#include <map>
+
 #ifdef __cplusplus
 
-#include "common/concurrency.h"
 #include "common/event-loop.h"
 #include "ipcp/components.h"
 
@@ -53,7 +54,7 @@ public:
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
 	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
-	void processAssignToDIFRequestEvent(rina::AssignToDIFRequestEvent * event);
+	void processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event);
 	void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
 	void requestPDUFTEDump();
 	void logPDUFTE(const rina::DumpFTResponseEvent& event);
@@ -82,7 +83,7 @@ private:
 
 	rina::ApplicationProcessNamingInformation name_;
 	IPCProcessOperationalState state_;
-	ThreadSafeMapOfPointers<unsigned int, rina::IPCEvent> pending_events_;
+	std::map<unsigned int, rina::IPCEvent> pending_events_;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
 };
