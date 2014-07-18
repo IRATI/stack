@@ -43,6 +43,8 @@ int                  dtcp_send(struct dtcp * instance,
 /* Used by the DTP to notify the DTCP about events */
 int                  dtcp_sv_update(struct dtcp * instance,
                                     seq_num_t     seq);
+int                  dtcp_rcvr_inactivity_timer(struct dtcp * instance);
+int                  dtcp_sndr_inactivity_timer(struct dtcp * instance);
 
 /* Used by EFCP to send an incoming DTCP PDU */
 int                  dtcp_common_rcv_control(struct dtcp * dtcp,
@@ -54,7 +56,8 @@ int                  dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp);
 seq_num_t            dtcp_rcv_rt_win(struct dtcp * instance);
 seq_num_t            dtcp_snd_rt_win(struct dtcp * instance);
 seq_num_t            dtcp_snd_lf_win(struct dtcp * instance);
-int                  dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num);
+int                  dtcp_snd_lf_win_set(struct dtcp * instance,
+                                         seq_num_t seq_num);
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 

@@ -42,9 +42,10 @@
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
 #ifdef CONFIG_RINA_SUPPRESS_DEBUG_LOGS
-#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
-#else
+#warning Debugging logs will be suppressed
 #define LOG_DBG(FMT,   ARGS...) do { } while (0)
+#else
+#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
 #endif
 
 /* Helpers */

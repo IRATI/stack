@@ -36,6 +36,7 @@ struct dt_sv {
         seq_num_t    rcv_left_window_edge;
         bool         window_closed;
         seq_num_t    last_seq_num_sent;
+        bool         drf_flag;
 };
 
 struct dt {
@@ -58,6 +59,7 @@ static struct dt_sv default_sv = {
         .tr                   = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
+        .drf_flag             = false,
 };
 
 int dt_sv_init(struct dt * instance,
@@ -542,5 +544,31 @@ timeout_t dt_sv_tr(struct dt * dt)
         spin_unlock(&dt->lock);
 
         return tmp;
+}
+
+bool dt_sv_drf_flag(struct dt * dt)
+{
+        bool flag;
+
+        if (!dt || !dt->sv)
+                return false;
+
+        spin_lock(&dt->lock);
+        flag = dt->sv->drf_flag;
+        spin_unlock(&dt->lock);
+
+        return flag;
+}
+
+void dt_sv_drf_flag_set(struct dt * dt, bool value)
+{
+        if (!dt || !dt->sv)
+                return;
+
+        spin_lock(&dt->lock);
+        dt->sv->drf_flag = value;
+        spin_unlock(&dt->lock);
+
+        return;
 }
 
