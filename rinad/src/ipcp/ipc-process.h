@@ -21,9 +21,9 @@
 #ifndef IPCP_IPC_PROCESS_HH
 #define IPCP_IPC_PROCESS_HH
 
-#include <map>
-
 #ifdef __cplusplus
+
+#include <map>
 
 #include "common/event-loop.h"
 #include "ipcp/components.h"
