@@ -45,12 +45,6 @@ config RINA_ASSERTIONS
 	help
 	  No help for the time being
 
-config RINA_UNFILTERED_LOGS
-	bool "All logs set to debug level"
-	default y
-	help
-	  No help for the time being
-
 config RINA_SUPPRESS_DEBUG_LOGS
 	bool "Remove code related to debugging logs"
 	default n
