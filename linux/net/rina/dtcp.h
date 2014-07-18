@@ -44,6 +44,7 @@ int                  dtcp_send(struct dtcp * instance,
 int                  dtcp_sv_update(struct dtcp * instance,
                                     seq_num_t     seq);
 int                  dtcp_rcvr_inactivity_timer(struct dtcp * instance);
+int                  dtcp_sndr_inactivity_timer(struct dtcp * instance);
 
 /* Used by EFCP to send an incoming DTCP PDU */
 int                  dtcp_common_rcv_control(struct dtcp * dtcp,

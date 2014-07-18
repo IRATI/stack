@@ -77,9 +77,7 @@ struct dtp {
         struct squeue *           seqq;
         struct workqueue_struct * twq;
         struct {
-#if 0                
                 struct rtimer * sender_inactivity;
-#endif
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
@@ -142,30 +140,6 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
         sv->dropped_pdus++;
         spin_unlock(&sv->lock);
 }
-
-#if 0
-static seq_num_t max_seq_nr_rcv(struct dtp_sv * sv)
-{
-        seq_num_t tmp;
-
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        tmp = sv->max_seq_nr_rcv;
-        spin_unlock(&sv->lock);
-
-        return tmp;
-}
-
-static void max_seq_nr_rcv_set(struct dtp_sv * sv, seq_num_t nr)
-{
-        ASSERT(sv);
-
-        spin_lock(&sv->lock);
-        sv->max_seq_nr_rcv = nr;
-        spin_unlock(&sv->lock);
-}
-#endif
 
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
@@ -254,7 +228,8 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
-        struct dt * dt;
+        struct dt  * dt;
+        struct dtp * dtcp;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -267,14 +242,15 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                 return -1;
         }
 
-#if 0
+        dtcp = dt_dtcp(dt);
+
         /* Start SenderInactivityTimer */
-        if (rtimer_restart(dtp->timers.sender_inactivity,
+        if (dtcp &&
+            rtimer_restart(dtp->timers.sender_inactivity,
                            2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start sender_inactiviy timer");
-                return -1;
+                return 0;
         }
-#endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
 
@@ -418,15 +394,6 @@ static struct pdu * seq_queue_pop(struct seq_queue * q)
         return pdu;
 }
 
-#if 0
-static bool seq_queue_is_empty(struct seq_queue * q)
-{
-        ASSERT(q);
-
-        return list_empty(&q->head);
-}
-#endif
-
 static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
 {
         static struct seq_queue_entry * tmp, * cur, * last = NULL;
@@ -495,15 +462,6 @@ static int seq_queue_push_ni(struct seq_queue * q, struct pdu * pdu)
         return 0;
 }
 
-#if 0
-static seq_num_t seq_queue_last_to_ack(struct seq_queue * q, timeout_t t)
-{
-        LOG_MISSING;
-
-        return 0;
-}
-#endif
-
 static int squeue_destroy(struct squeue * seqq)
 {
         if (!seqq)
@@ -537,97 +495,6 @@ static struct squeue * squeue_create(struct dtp * dtp)
         return tmp;
 }
 
-#if 0
-static int squeue_deliver(struct squeue * seqq)
-{
-        LOG_MISSING;
-
-        return 0;
-}
-
-static struct pdu * squeue_pop(struct squeue * seqq)
-{
-        struct pdu * pdu;
-
-        ASSERT(seqq);
-
-        spin_lock(&seqq->lock);
-        pdu = seq_queue_pop(seqq->queue);
-        if (!pdu) {
-                spin_unlock(&seqq->lock);
-                LOG_ERR("Cannot pop PDU from sequencing queue %pK", seqq);
-                return NULL;
-        }
-        spin_unlock(&seqq->lock);
-
-        return pdu;
-}
-
-static int squeue_push(struct dtp * dtp, struct pdu * pdu)
-{
-        struct squeue * seqq;
-        struct dt *     dt;
-
-        ASSERT(dtp);
-
-        seqq = dtp->seqq;
-        ASSERT(seqq);
-
-        dt = dtp->parent;
-        ASSERT(dt);
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("No PDU to be pushed");
-                return -1;
-        }
-
-        spin_lock(&seqq->lock);
-        if (seq_queue_push_ni(seqq->queue, pdu)) {
-                spin_unlock(&seqq->lock);
-                dropped_pdus_inc(dtp->sv);
-                LOG_ERR("Could not push PDU into sequencing queue %pK. "
-                        "Dropped PDUs: %d", seqq, dropped_pdus(dtp->sv));
-                return -1;
-        }
-        spin_unlock(&seqq->lock);
-
-        return 0;
-}
-
-static bool squeue_is_empty(struct squeue * seqq)
-{
-        bool empty;
-
-        ASSERT(seqq);
-
-        spin_lock(&seqq->lock);
-        empty = seq_queue_is_empty(seqq->queue);
-        spin_unlock(&seqq->lock);
-
-        return empty;
-}
-
-static seq_num_t squeue_last_to_ack(struct squeue * seqq, timeout_t t)
-{
-        seq_num_t tmp;
-
-        ASSERT(seqq);
-
-        LOG_MISSING;
-
-        /* FIXME:
-         *   change this as it should be. It should return those PDUs with
-         *   timestam < time - A plus those that with seq_num exactly
-         *   consecutive to the last one
-         */
-        spin_lock(&seqq->lock);
-        tmp = seq_queue_last_to_ack(seqq->queue, t);
-        spin_unlock(&seqq->lock);
-
-        return tmp;
-}
-#endif
-
 static int pdu_post(struct dtp * instance,
                     struct pdu * pdu)
 {
@@ -660,10 +527,29 @@ static int pdu_post(struct dtp * instance,
         return 0;
 }
 
-#if 0
 static void tf_sender_inactivity(void * data)
-{ /* Runs the SenderInactivityTimerPolicy */ }
-#endif
+{ /* Runs the SenderInactivityTimerPolicy */
+        struct dt *          dt;
+        struct dtp *         dtp;
+        struct dtcp *        dtcp;
+
+        dtp = (struct dtp *) data;
+        if (!dtp) {
+                LOG_ERR("No dtp to work with");
+                return;
+        }
+
+        dt = dtp->parent;
+        ASSERT(dt);
+
+        dtcp = dt_dtcp(dt);
+
+        if (dtcp)
+                if (dtcp_rcvr_inactivity_timer(dtcp))
+                        LOG_ERR("Problems executing "
+                                "dtcp_receiver_inactivity_timer policy");
+        return;
+}
 
 static void tf_receiver_inactivity(void * data)
 { /* Runs the ReceiverInactivityTimerPolicy */ 
@@ -987,17 +873,14 @@ struct dtp * dtp_create(struct dt *         dt,
                 dtp_destroy(tmp);
                 return NULL;
         }
-#if 0
+
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
-#endif
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
                                                         tmp);
         tmp->timers.a                   = rtimer_create(tf_a, tmp);
         if (
-#if 0
             !tmp->timers.sender_inactivity   ||
-#endif
             !tmp->timers.receiver_inactivity ||
             !tmp->timers.a) {
                 dtp_destroy(tmp);
@@ -1015,10 +898,9 @@ int dtp_destroy(struct dtp * instance)
                 LOG_ERR("Bad instance passed, bailing out");
                 return -1;
         }
-#if 0
+
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
-#endif
         if (instance->timers.receiver_inactivity)
                 rtimer_destroy(instance->timers.receiver_inactivity);
         if (instance->timers.a)
@@ -1079,25 +961,43 @@ int dtp_write(struct dtp * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-#if 0
+
+        dt = instance->parent;
+        if (!dt) {
+                LOG_ERR("Bogus DT passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        /* State Vector must not be NULL */
+        sv = instance->sv;
+        if (!sv) {
+                LOG_ERR("Bogus DTP-SV passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        policies = instance->policies;
+        if (!policies) {
+                LOG_ERR("Bogus DTP policies passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (!sv->connection) {
+                LOG_ERR("Bogus SV connection passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        dtcp = dt_dtcp(dt);
+
         /* Stop SenderInactivityTimer */
-        if (rtimer_stop(instance->timers.sender_inactivity)) {
+        if (dtcp && rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
                    return -1; */
         }
-#endif
-
-        sv = instance->sv;
-        ASSERT(sv); /* State Vector must not be NULL */
-
-        dt = instance->parent;
-        ASSERT(dt);
-
-        dtcp = dt_dtcp(dt);
-
-        policies = instance->policies;
-        ASSERT(policies);
 
         pci = pci_create_ni();
         if (!pci) {
@@ -1123,8 +1023,6 @@ int dtp_write(struct dtp * instance,
          * be just thrown away from this point onwards
          */
         /* Probably needs to be revised */
-
-        ASSERT(sv->connection);
 
         if (pci_format(pci,
                        sv->connection->source_cep_id,
@@ -1212,7 +1110,6 @@ int dtp_write(struct dtp * instance,
                         return -1;
                 }
 
-#if 0
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
                                    2 * (dt_sv_mpl(dt) +
@@ -1221,17 +1118,10 @@ int dtp_write(struct dtp * instance,
                         LOG_ERR("Failed to start sender_inactiviy timer");
                         return -1;
                 }
-#endif
+
                 return 0;
         }
-#if 0
-        /* Start SenderInactivityTimer */
-        if (rtimer_restart(instance->timers.sender_inactivity,
-                           2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
-                LOG_ERR("Failed to start sender_inactiviy timer");
-                return -1;
-        }
-#endif
+
         /* Post SDU to RMT */
         return rmt_send(instance->rmt,
                         pci_destination(pci),

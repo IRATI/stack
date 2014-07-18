@@ -972,6 +972,54 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         return retval;
 }
 
+static int default_sender_inactivity(struct dtcp * dtcp)
+{
+        struct dt *          dt;
+        struct dtp *         dtp;
+        struct dtcp_config * cfg;
+
+        if (!dtcp) return 0;
+
+        dt = dtcp->parent;
+        if (!dt)
+                return -1;
+
+        dtp = dt_dtp(dt);
+        if (!dtp)
+                return -1;
+
+        dt_sv_drf_flag_set(dt, true);
+        dtp_initial_sequence_number(dtp);
+
+        cfg = dtcp_config_get(dtcp);
+        if (!cfg)
+                return -1;
+
+        if (dtcp_rtx_ctrl(cfg)) {
+                struct rtxq * q;
+
+                q = dt_rtxq(dt);
+                if (!q) {
+                        LOG_ERR("Couldn't find the Retransmission queue");
+                        return -1;
+                }
+                rtxq_flush(q);
+        }
+        if (dtcp_flow_ctrl(cfg)) {
+                struct cwq * cwq;
+
+                cwq = dt_cwq(dt);
+                ASSERT(cwq);
+                if (cwq_flush(cwq)) {
+                        LOG_ERR("Coudln't flush cwq");
+                        return -1;
+                }
+        }
+
+        /*FIXME: Missing sending the control ack pdu */
+        return 0;
+}
+
 static int default_receiver_inactivity(struct dtcp * dtcp)
 {  
         struct dt *          dt;
@@ -1063,7 +1111,7 @@ static struct dtcp_policies default_policies = {
         .no_rate_slow_down           = NULL,
         .no_override_default_peak    = NULL,
         .receiver_inactivity_timer   = default_receiver_inactivity,
-        .sender_inactivity_timer     = NULL,
+        .sender_inactivity_timer     = default_sender_inactivity,
 };
 
 /* FIXME: this should be completed with other parameters from the config */
@@ -1208,6 +1256,21 @@ int dtcp_sv_update(struct dtcp * instance,
         ASSERT(instance->policies->sv_update);
 
         if (instance->policies->sv_update(instance, seq))
+                return -1;
+
+        return 0;
+}
+
+int dtcp_sndr_inactivity_timer(struct dtcp * instance)
+{
+        if (!instance ||
+            !instance->policies ||
+            !instance->policies->sender_inactivity_timer) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (instance->policies->sender_inactivity_timer(instance))
                 return -1;
 
         return 0;
