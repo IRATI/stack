@@ -692,7 +692,7 @@ static void tf_receiver_inactivity(void * data)
 
 /*
  * NOTE:
- *   AF is the factor to which A is devided in order to obtain the
+ *   AF is the factor to which A is divided in order to obtain the
  *   period of the A-timer: Ta = A / AF
  */
 #define AF 1
@@ -746,20 +746,18 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         spin_lock(&seqq->lock);
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
-                LOG_DBG("LWEU: Loop LWE = %d", LWE);
 
                 pdu = pos->pdu;
                 if (!pdu_is_ok(pdu)) {
                         spin_unlock(&seqq->lock);
 
                         LOG_ERR("Bogus data, bailing out");
-                        return -1;
+                        return LWE;
                 }
 
-                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                seq_num = pci_sequence_number_get(pdu_pci_get_ro(pdu));
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
-                        LOG_DBG("Processing A timer order or in gap");
 
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 spin_unlock(&seqq->lock);
@@ -772,6 +770,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         spin_unlock(&seqq->lock);
                         if (pdu_post(dtp, pdu)) {
+
                                 return 0;
                         }
 
@@ -786,30 +785,31 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                    pos->time_stamp + msecs_to_jiffies(a))) {
                         LOG_DBG("Processing A timer expired");
 
-                        /*
-                         * FIXME:
-                         *   this has to work differently when DTCP is
-                         *   here ...
-                         */
-                        if (!dtcp) {
-                                if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                        spin_unlock(&seqq->lock);
-
-                                        LOG_ERR("Failed to set new "
-                                                "left window edge");
-                                        return 0;
-                                }
-                                pos->pdu = NULL;
-                                list_del(&pos->next);
-                                seq_queue_entry_destroy(pos);
-
+                        if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                                 spin_unlock(&seqq->lock);
-                                if (pdu_post(dtp, pdu))
-                                        return 0;
-                                spin_lock(&seqq->lock);
 
-                                LWE = dt_sv_rcv_lft_win(dt);
+                                LOG_DBG("Retransmissions will be required");
+                                return seq_num;
                         }
+
+                        if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                spin_unlock(&seqq->lock);
+
+                                LOG_ERR("Failed to set new "
+                                        "left window edge");
+                                return 0;
+                        }
+                        pos->pdu = NULL;
+                        list_del(&pos->next);
+                        seq_queue_entry_destroy(pos);
+
+                        spin_unlock(&seqq->lock);
+                        if (pdu_post(dtp, pdu))
+                                return 0;
+
+                        spin_lock(&seqq->lock);
+
+                        LWE = dt_sv_rcv_lft_win(dt);
 
                         continue;
                 }

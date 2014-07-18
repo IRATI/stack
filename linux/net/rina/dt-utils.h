@@ -65,8 +65,6 @@ int             rtxq_ack(struct rtxq * q,
 int             rtxq_nack(struct rtxq * q,
                           seq_num_t     seq_num,
                           timeout_t     tr);
-int             rtxq_drop(struct rtxq * q,
-                          seq_num_t     from,
-                          seq_num_t     to);
+int             rtxq_flush(struct rtxq * q);
 
 #endif

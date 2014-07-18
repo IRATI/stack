@@ -981,16 +981,20 @@ static int default_receiver_inactivity(struct dtcp * dtcp)
         if (!dtcp) return 0;
 
         dt = dtcp->parent;
-        ASSERT(dt); 
+        if (!dt)
+                return -1;
         
         dtp = dt_dtp(dt);
-        ASSERT(dtp);
+        if (!dtp)
+                return -1;
 
         dt_sv_drf_flag_set(dt, true); 
         dtp_initial_sequence_number(dtp);        
         
         cfg = dtcp_config_get(dtcp);
-        ASSERT(cfg);
+        if (!cfg)
+                return -1;
+
         if (dtcp_rtx_ctrl(cfg)) {
                 struct rtxq * q;
 
@@ -999,7 +1003,7 @@ static int default_receiver_inactivity(struct dtcp * dtcp)
                         LOG_ERR("Couldn't find the Retransmission queue");
                         return -1;
                 }
-                rtxq_drop(q, 0, 0);
+                rtxq_flush(q);
         }
         if (dtcp_flow_ctrl(cfg)) {
                 struct cwq * cwq;
@@ -1211,13 +1215,12 @@ int dtcp_sv_update(struct dtcp * instance,
 
 int dtcp_rcvr_inactivity_timer(struct dtcp * instance)
 {
-        if (!instance) {
+        if (!instance ||
+            !instance->policies ||
+            !instance->policies->receiver_inactivity_timer) {
                 LOG_ERR("Bogus instance passed");
                 return -1;
         }
-
-        ASSERT(instance->policies);
-        ASSERT(instance->policies->receiver_inactivity_timer);
 
         if (instance->policies->receiver_inactivity_timer(instance))
                 return -1;
