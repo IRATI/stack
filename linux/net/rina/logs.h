@@ -41,11 +41,16 @@
 #define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
+
+#ifdef CONFIG_RINA_DEBUG
 #ifdef CONFIG_RINA_SUPPRESS_DEBUG_LOGS
-#warning Debugging logs will be suppressed
+#warning Debugging logs WILL BE suppressed
 #define LOG_DBG(FMT,   ARGS...) do { } while (0)
 #else
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+#endif
+#else
+#define LOG_DBG(FMT,   ARGS...) do { } while (0)
 #endif
 
 /* Helpers */
@@ -58,13 +63,13 @@
 #define LOG_HBEAT do { } while (0)
 #endif
 
-#define LOG_OBSOLETE      LOG_ERR("Code in %s:%d is obsolete and "      \
-                                  "it will be removed soon, "           \
-                                  "DO NOT USE!!!",                      \
-                                  __FILE__, __LINE__)
-#define LOG_MISSING       LOG_ERR("Missing code in %s:%d",      \
-                                  __FILE__, __LINE__)
-#define LOG_UNSUPPORTED   LOG_WARN("Unsupported feature in %s:%d",      \
-                                   __FILE__, __LINE__)
+#define LOG_OBSOLETE    LOG_ERR("Code in %s:%d is obsolete and "        \
+                                "it will be removed soon, "             \
+                                "DO NOT USE!!!",                        \
+                                __FILE__, __LINE__)
+#define LOG_MISSING     LOG_ERR("Missing code in %s:%d",        \
+                                __FILE__, __LINE__)
+#define LOG_UNSUPPORTED LOG_WARN("Unsupported feature in %s:%d",        \
+                                 __FILE__, __LINE__)
 
 #endif
