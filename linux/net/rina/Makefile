@@ -16,7 +16,6 @@ obj-$(CONFIG_RINA) +=				\
 	connection.o common.o policies.o        \
 	dtcp-utils.o                            \
 
-
 obj-y +=					\
 	syscalls.o
 
