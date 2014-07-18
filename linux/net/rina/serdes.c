@@ -378,9 +378,6 @@ static int deserialize_base_pci(struct serdes *        instance,
         memcpy(pdu_len, ptr + *offset, dt_cons->length_length);
         *offset += dt_cons->length_length;
 
-        LOG_DBG("Length length: %d", dt_cons->length_length);
-        LOG_DBG("PDU Len: %d", pdu_len);
-        
         return 0;
 }
 
@@ -723,15 +720,11 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
         ssize_t               pdu_len;
         seq_num_t             seq;
 
-        if (!pdu_ser_is_ok(pdu)) {
-                LOG_ERR("The pdu ser is crap");
+        if (!pdu_ser_is_ok(pdu))
                 return NULL;
-        }
 
-        if (!instance) {
-                LOG_ERR("No instance passed");
+        if (!instance)
                 return NULL;
-        }
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
@@ -739,12 +732,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
         tmp_buff = pdu_ser_buffer(pdu);
         ASSERT(tmp_buff);
 
-        if (buffer_length(tmp_buff) < base_pci_size(dt_cons)) {
-                LOG_ERR("Wrong length of buffer");
+        if (buffer_length(tmp_buff) < base_pci_size(dt_cons))
                 return NULL;
-        }
-
-        LOG_DBG("Buffer length: %d", buffer_length(tmp_buff));
 
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
@@ -783,9 +772,6 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
-
-                LOG_DBG("Offset in PDU: %d", offset);
-                LOG_DBG("PDU length: %d", pdu_len);
 
                 new_buff = buffer_create_from_gfp(flags,
                                                   ptr + offset,
