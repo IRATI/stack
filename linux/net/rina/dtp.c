@@ -228,8 +228,8 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
 static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 {
 
-        struct dt  * dt;
-        struct dtp * dtcp;
+        struct dt  *  dt;
+        struct dtcp * dtcp;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
