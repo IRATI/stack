@@ -378,6 +378,9 @@ static int deserialize_base_pci(struct serdes *        instance,
         memcpy(pdu_len, ptr + *offset, dt_cons->length_length);
         *offset += dt_cons->length_length;
 
+        LOG_DBG("Length length: %d", dt_cons->length_length);
+        LOG_DBG("PDU Len: %d", pdu_len);
+        
         return 0;
 }
 
@@ -759,20 +762,13 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
                 return NULL;
         }
 
+        pdu_len = 0;
         if (deserialize_base_pci(instance, new_pci, &offset, ptr, &pdu_len)) {
                 LOG_ERR("Could not deser base PCI");
                 pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
         }
-
-        LOG_DBG("PCI Type: %02X", pci_type(new_pci));
-        LOG_DBG("PCI Source: %d", pci_source(new_pci));
-        LOG_DBG("PCI Destination: %d", pci_destination(new_pci));
-        LOG_DBG("PCI Source CEP: %d", pci_cep_source(new_pci));
-        LOG_DBG("PCI Destination CEP: %d", pci_cep_destination(new_pci));
-        LOG_DBG("PCI QoS ID: %d", pci_qos_id(new_pci));
-        LOG_DBG("PCI Flags: %d", pci_flags_get(new_pci));
 
         switch (pci_type(new_pci)) {
         case PDU_TYPE_MGMT:
