@@ -22,8 +22,6 @@
 #ifndef RINA_SERDES_H
 #define RINA_SERDES_H
 
-#include <linux/types.h>
-
 #include "pdu.h"
 #include "ipcp-instances.h"
 #include "pdu-ser.h"
