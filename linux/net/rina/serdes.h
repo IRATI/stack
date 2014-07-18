@@ -31,11 +31,11 @@
 struct serdes;
 
 struct serdes *        serdes_create(struct dt_cons * dt_cons);
-const struct dt_cons * serdes_dt_cons(struct serdes * instance);
+const struct dt_cons * serdes_dt_cons(const struct serdes * instance);
 int                    serdes_destroy(struct serdes * instance);
 
-struct pdu_ser * pdu_serialize(struct serdes * instance,
-                               struct pdu *    pdu);
-struct pdu *     pdu_deserialize(struct serdes *  instance,
-                                 struct pdu_ser * pdu);
+struct pdu_ser *       pdu_serialize(struct serdes * instance,
+                                     struct pdu *    pdu);
+struct pdu *           pdu_deserialize(struct serdes *  instance,
+                                       struct pdu_ser * pdu);
 #endif

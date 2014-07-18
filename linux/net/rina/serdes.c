@@ -34,32 +34,35 @@
 #include "buffer.h"
 #include "pci.h"
 
-#define VERSION_SIZE 1
+#define VERSION_SIZE  1
+
+/* FIXME: Remove this useless variable, we have to have a define for that */
 /* Cannot be a literal for memcpy */
 const uint8_t version = 1;
+
 #define PDU_TYPE_SIZE 1
-#define FLAGS_SIZE 1
+#define FLAGS_SIZE    1
 /* FIXME: To be also defined in dt_cons when rate based fc is added */
-#define RATE_LEN 0
-#define TIME_LEN 0
+#define RATE_LEN      0
+#define TIME_LEN      0
 /* FIXME: To be added in dt_cons ASAP */
-#define CTRL_SEQ_NR 4
+#define CTRL_SEQ_NR   4
 
 /* FIXME: These externs have to disappear from here */
-struct pdu * pdu_create_gfp(gfp_t flags);
+struct pdu *     pdu_create_gfp(gfp_t flags);
 
-struct pci * pci_create_gfp(gfp_t flags);
+struct pci *     pci_create_gfp(gfp_t flags);
 
-struct buffer * buffer_create_with_gfp(gfp_t  flags,
-                                       void * data,
-                                       size_t size);
+struct buffer *  buffer_create_with_gfp(gfp_t  flags,
+                                        void * data,
+                                        size_t size);
 
-struct buffer * buffer_create_from_gfp(gfp_t        flags,
-                                       const void * data,
-                                       size_t       size);
+struct buffer *  buffer_create_from_gfp(gfp_t        flags,
+                                        const void * data,
+                                        size_t       size);
 
-struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  size_t size);
+struct buffer *  buffer_create_gfp(gfp_t  flags,
+                                   size_t size);
 
 struct pdu_ser * pdu_ser_create_buffer_with_gfp(gfp_t           flags,
                                                 struct buffer * buffer);
@@ -89,10 +92,9 @@ struct serdes * serdes_create(struct dt_cons * dt_cons)
 { return serdes_create_gfp(GFP_KERNEL, dt_cons); }
 EXPORT_SYMBOL(serdes_create);
 
-const struct dt_cons * serdes_dt_cons(struct serdes * instance)
+const struct dt_cons * serdes_dt_cons(const struct serdes * instance)
 { return instance ? instance->dt_cons : NULL; }
 EXPORT_SYMBOL(serdes_dt_cons);
-
 
 int serdes_destroy(struct serdes * instance)
 {
