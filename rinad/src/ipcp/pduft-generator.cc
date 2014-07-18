@@ -858,7 +858,8 @@ void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 	try
 	{
 		db_->addObjectToGroup(ipc_process_->get_address(), event->flow_information_.getPortId(),
-				ipc_process_->getAdressByname(event->flow_information_.getRemoteAppName()), 1);
+				ipc_process_->get_namespace_manager()->
+					getAdressByname(event->flow_information_.getRemoteAppName()), 1);
 	} catch (Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
@@ -875,7 +876,8 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 			LOG_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(), it->getPortId(),
-								ipc_process_->getAdressByname(it->getRemoteAppName()), 1);
+								ipc_process_->get_namespace_manager()->
+								getAdressByname(it->getRemoteAppName()), 1);
 				allocated_flows_.erase(it);
 				break;
 			} catch (Exception &e) {

@@ -26,6 +26,7 @@
 
 #include <map>
 
+#include "common/concurrency.h"
 #include "ipcp/components.h"
 #include <librina/cdap.h>
 #include <librina/timer.h>

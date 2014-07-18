@@ -220,5 +220,13 @@ void RIBObjectData::set_displayable_value(const std::string& displayable_value) 
 	displayable_value_ = displayable_value;
 }
 
+/* CLASS ASSIGN TO DIF RESPONSE EVENT */
+AssignToDIFResponseEvent::AssignToDIFResponseEvent(
+                int result, unsigned int sequenceNumber):
+                        BaseResponseEvent(result,
+                                        ASSIGN_TO_DIF_RESPONSE_EVENT,
+                                        sequenceNumber) {
+}
+
 }
 

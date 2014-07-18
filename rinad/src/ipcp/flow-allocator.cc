@@ -96,7 +96,11 @@ void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 			objectClass, objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
-	//TODO: the QoS cube should be added into the configuration
+
+	rina::DIFInformation dif_information = ipc_process_->get_dif_information();
+	dif_information.dif_configuration_.efcp_configuration_.
+		qos_cubes_.push_back(*objectValue);
+	ipc_process_->set_dif_information(dif_information);
 }
 
 void QoSCubeSetRIBObject::deleteObject(const void* objectValue) {

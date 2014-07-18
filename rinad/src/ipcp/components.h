@@ -295,7 +295,7 @@ public:
 	/// application, or -1 if the app is not registered
 	/// @param apNamingInfo
 	/// @return
-	virtual int getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
 
 	/// Add an entry to the directory forwarding table
 	/// @param entry
@@ -331,6 +331,8 @@ public:
 	/// wants to join the DIF
 	virtual unsigned int getValidAddress(const std::string& ipcp_name,
 				const std::string& ipcp_instance) = 0;
+
+	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
 };
 
 ///N-1 Flow Manager interface
@@ -746,10 +748,9 @@ public:
 	virtual const rina::ApplicationProcessNamingInformation& get_name() const = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
-	virtual rina::DIFInformation& get_dif_information() const = 0;
+	virtual const rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
-	virtual const std::list<rina::Neighbor*>& get_neighbors() const = 0;
-	virtual unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) = 0;
+	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
 };
 
 /// Generates unique object instances

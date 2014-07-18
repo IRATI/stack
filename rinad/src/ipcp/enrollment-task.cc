@@ -343,7 +343,9 @@ const void* AddressRIBObject::get_value() const {
 void AddressRIBObject::writeObject(const void* object_value) {
 	int * address = (int *) object_value;
 	address_ = *address;
-	ipc_process_->get_dif_information().dif_configuration_.address_ = *address;
+	rina::DIFInformation dif_information = ipc_process_->get_dif_information();
+	dif_information.dif_configuration_.address_ = *address;
+	ipc_process_->set_dif_information(dif_information);
 }
 
 //Class EnrollmentFailedTimerTask

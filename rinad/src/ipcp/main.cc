@@ -19,15 +19,43 @@
  */
 
 #include <cstdlib>
+#include <sstream>
+
+#define RINA_PREFIX "ipcp-main"
 
 #include <librina/common.h>
+#include <librina/logs.h>
+#include "ipcp/ipc-process.h"
 
 int main(int argc, char * argv[])
 {
-        (void) argc;
-        (void) argv;
+	if (argc != 4) {
+		LOG_ERR("Wrong number of arguments: expected 4, got %d", argc);
+		return EXIT_FAILURE;
+	}
 
-        rina::initialize("test", "/tmp/test");
+	rina::ApplicationProcessNamingInformation name(argv[0], argv[1]);
+	unsigned short ipcp_id = 0;
+	unsigned int ipcm_port = 0;
 
-        return EXIT_SUCCESS;
+	std::stringstream ss(argv[2]);
+	if (! (ss >> ipcp_id)) {
+		LOG_ERR("Problems converting string to unsigned short");
+		return EXIT_FAILURE;
+	}
+
+	std::stringstream ss2(argv[3]);
+	if (! (ss2 >> ipcm_port)) {
+		LOG_ERR("Problems converting string to unsigned int");
+		return EXIT_FAILURE;
+	}
+
+	rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port);
+	rinad::EventLoop loop(&ipcp);
+
+	rinad::register_handlers_all(loop);
+
+	loop.run();
+
+	return EXIT_SUCCESS;
 }

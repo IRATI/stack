@@ -178,6 +178,15 @@ public:
         }
 };
 
+/**
+ * Event informing about the result of an assign to DIF operation
+ */
+class AssignToDIFResponseEvent: public BaseResponseEvent {
+public:
+        AssignToDIFResponseEvent(
+                        int result, unsigned int sequenceNumber);
+};
+
 }
 
 #endif

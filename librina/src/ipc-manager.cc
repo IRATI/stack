@@ -1209,14 +1209,6 @@ const std::list<RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const {
         return ribObjects;
 }
 
-/* CLASS ASSIGN TO DIF RESPONSE EVENT */
-AssignToDIFResponseEvent::AssignToDIFResponseEvent(
-                int result, unsigned int sequenceNumber):
-                        BaseResponseEvent(result,
-                                        ASSIGN_TO_DIF_RESPONSE_EVENT,
-                                        sequenceNumber) {
-}
-
 /* CLASS UPDATE DIF CONFIGURATION RESPONSE EVENT */
 UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
                 int result, unsigned int sequenceNumber):

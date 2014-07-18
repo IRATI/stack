@@ -115,6 +115,7 @@ public:
 	rina::DirectoryForwardingTableEntry * getDFTEntry(
 				const rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void processApplicationRegistrationRequestEvent(
 				const rina::ApplicationRegistrationRequestEvent& event);
 	void processApplicationUnregistrationRequestEvent(
@@ -123,6 +124,7 @@ public:
 			const std::string& ipcp_instance);
 	unsigned int getValidAddress(const std::string& ipcp_name,
 					const std::string& ipcp_instance);
+	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
 
 private:
 	/// The directory forwarding table

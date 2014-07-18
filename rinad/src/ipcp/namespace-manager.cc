@@ -410,6 +410,19 @@ void NamespaceManager::removeDFTEntry(const rina::ApplicationProcessNamingInform
 	}
 }
 
+unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
+	rina::ApplicationRegistrationInformation * regInfo;
+
+	regInfo = registrations_.find(apNamingInfo.getEncodedString());
+	if (!regInfo) {
+		LOG_DBG("Could not find a registered application with code : %s"
+				, apNamingInfo.getEncodedString().c_str());
+		return 0;
+	}
+
+	return regInfo->ipcProcessId;
+}
+
 int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrationRequestEvent& event,
 		int result) {
 	try {
@@ -629,6 +642,18 @@ unsigned int NamespaceManager::getValidAddress(const std::string& ipcp_name,
 	}
 
 	return 0;
+}
+
+unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
+	std::list<rina::Neighbor *> neighbors = ipc_process_->get_neighbors();
+	std::list<rina::Neighbor *>::const_iterator it;
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		if ((*it)->name_.processName.compare(name.processName) == 0) {
+			return (*it)->address_;
+		}
+	}
+
+	throw Exception("Unknown neighbor");
 }
 
 }

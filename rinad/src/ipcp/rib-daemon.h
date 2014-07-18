@@ -81,6 +81,7 @@ class RIBDaemon : public BaseRIBDaemon, public EventListener {
 public:
 	RIBDaemon();
 	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(Event * event);
 	void addRIBObject(BaseRIBObject * ribObject);
 	void removeRIBObject(BaseRIBObject * ribObject);

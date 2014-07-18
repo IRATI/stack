@@ -897,15 +897,6 @@ public:
 };
 
 /**
- * Event informing about the result of an assign to DIF operation
- */
-class AssignToDIFResponseEvent: public BaseResponseEvent {
-public:
-        AssignToDIFResponseEvent(
-                        int result, unsigned int sequenceNumber);
-};
-
-/**
  * Event informing about the result of an update DIF config operation
  */
 class UpdateDIFConfigurationResponseEvent: public BaseResponseEvent {

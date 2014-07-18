@@ -243,6 +243,10 @@ void RIBDaemon::set_ipc_process(IPCProcess * ipc_process)
 			&doManagementSDUReaderWork, (void *) data);
 }
 
+void RIBDaemon::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	LOG_DBG("Configuration set: %u", dif_configuration.address_);
+}
+
 void RIBDaemon::subscribeToEvents()
 {
 	subscribeToEvent(IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED, this);
