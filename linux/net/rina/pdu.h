@@ -36,8 +36,10 @@ struct pdu *          pdu_create(void);
 struct pdu *          pdu_create_ni(void);
 struct pdu *          pdu_create_with(struct sdu * sdu);
 struct pdu *          pdu_create_with_ni(struct sdu * sdu);
+/* FIXME: To be removed after ser/des */
 struct pdu *          pdu_create_from(const struct sdu * sdu);
 struct pdu *          pdu_create_from_ni(const struct sdu * sdu);
+
 struct pdu *          pdu_dup(const struct pdu * pdu);
 struct pdu *          pdu_dup_ni(const struct pdu * pdu);
 

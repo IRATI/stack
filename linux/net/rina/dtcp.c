@@ -785,8 +785,8 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                         pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
                                                  rcvr_rt_wind_edge(dtcp));
-                        pci_control_left_wind_edge_set(pci, snd_lft);
-                        pci_control_rt_wind_edge_set(pci, snd_rt);
+                        pci_control_my_left_wind_edge_set(pci, snd_lft);
+                        pci_control_my_rt_wind_edge_set(pci, snd_rt);
                 }
 
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
@@ -849,8 +849,8 @@ static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 
         pci_control_new_left_wind_edge_set(pci, LWE);
         pci_control_new_rt_wind_edge_set(pci, rcvr_rt_wind_edge(dtcp));
-        pci_control_left_wind_edge_set(pci, snd_lft);
-        pci_control_rt_wind_edge_set(pci, snd_rt);
+        pci_control_my_left_wind_edge_set(pci, snd_lft);
+        pci_control_my_rt_wind_edge_set(pci, snd_rt);
 
         if (pdu_send(dtcp, pdu))
                 return -1;

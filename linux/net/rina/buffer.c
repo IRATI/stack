@@ -133,7 +133,7 @@ struct buffer * buffer_create_from_ni(const void * data, size_t size)
 { return buffer_create_from_gfp(GFP_ATOMIC, data, size); }
 EXPORT_SYMBOL(buffer_create_from_ni);
 
-static struct buffer * buffer_create_gfp(gfp_t  flags,
+struct buffer * buffer_create_gfp(gfp_t  flags,
                                          size_t size)
 {
         struct buffer * tmp;

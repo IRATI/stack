@@ -24,7 +24,29 @@
 
 #include "logs.h"
 #include "debug.h"
+#include "utils.h"
 #include "ipcp-instances.h"
+
+struct dt_cons * dt_cons_dup_gfp(gfp_t                  flags,
+                                 const struct dt_cons * dt_cons)
+{
+        struct dt_cons * tmp;
+
+        if (!dt_cons)
+                return NULL;
+
+        tmp = rkmalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        memcpy(tmp, dt_cons, sizeof(*tmp));
+
+        return tmp;
+}
+
+struct dt_cons * dt_cons_dup(const struct dt_cons * dt_cons)
+{ return dt_cons_dup_gfp(GFP_KERNEL, dt_cons); }
+EXPORT_SYMBOL(dt_cons_dup);
 
 static bool has_common_hooks(struct ipcp_instance_ops * ops)
 {
