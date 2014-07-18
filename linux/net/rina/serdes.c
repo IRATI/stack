@@ -758,7 +758,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
         }
 
         if (deserialize_base_pci(instance, new_pci, &offset, ptr, &pdu_len)) {
-        LOG_ERR("Could not deser base PCI"):
+                LOG_ERR("Could not deser base PCI");
                 pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
                 return NULL;
