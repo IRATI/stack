@@ -112,19 +112,19 @@ EXPORT_SYMBOL(serdes_destroy);
 
 static int base_pci_size(const struct dt_cons * dt_cons)
 {
-        return VERSION_SIZE +
+        return VERSION_SIZE                 +
                 2 * dt_cons->address_length +
-                dt_cons->qos_id_length +
-                2 * dt_cons->cep_id_length +
-                PDU_TYPE_SIZE +
-                FLAGS_SIZE +
+                dt_cons->qos_id_length      +
+                2 * dt_cons->cep_id_length  +
+                PDU_TYPE_SIZE               +
+                FLAGS_SIZE                  +
                 dt_cons->length_length;
 }
 
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
         return 2 * dt_cons->seq_num_length +
-                2 * RATE_LEN +
+                2 * RATE_LEN               +
                 TIME_LEN;
 }
 

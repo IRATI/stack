@@ -56,28 +56,28 @@ typedef uint8_t pdu_flags_t;
 
 typedef uint8_t pdu_type_t;
 
-#define pdu_type_is_ok(X)                                 \
-        ((X == PDU_TYPE_DT)         ? true :              \
-         ((X == PDU_TYPE_CC)         ? true :             \
-          ((X == PDU_TYPE_SACK)       ? true :            \
-           ((X == PDU_TYPE_NACK)       ? true :           \
-            ((X == PDU_TYPE_FC)         ? true :          \
-             ((X == PDU_TYPE_ACK)        ? true :         \
-              ((X == PDU_TYPE_ACK_AND_FC) ? true :        \
-               ((X == PDU_TYPE_SACK_AND_FC) ? true :      \
-                ((X == PDU_TYPE_SNACK_AND_FC) ? true :    \
-                 ((X == PDU_TYPE_MGMT)         ? true :   \
+#define pdu_type_is_ok(X)                               \
+        ((X == PDU_TYPE_DT)         ? true :            \
+         ((X == PDU_TYPE_CC)         ? true :           \
+          ((X == PDU_TYPE_SACK)       ? true :          \
+           ((X == PDU_TYPE_NACK)       ? true :         \
+            ((X == PDU_TYPE_FC)         ? true :        \
+             ((X == PDU_TYPE_ACK)        ? true :       \
+              ((X == PDU_TYPE_ACK_AND_FC) ? true :      \
+               ((X == PDU_TYPE_SACK_AND_FC) ? true :    \
+                ((X == PDU_TYPE_SNACK_AND_FC) ? true :  \
+                 ((X == PDU_TYPE_MGMT)         ? true : \
                   false))))))))))
 
-#define pdu_type_is_control(X)                            \
-        ((X == PDU_TYPE_CC)         ? true :              \
-         ((X == PDU_TYPE_SACK)       ? true :             \
-          ((X == PDU_TYPE_NACK)       ? true :            \
-           ((X == PDU_TYPE_FC)         ? true :           \
-            ((X == PDU_TYPE_ACK)        ? true :          \
-             ((X == PDU_TYPE_ACK_AND_FC) ? true :         \
-              ((X == PDU_TYPE_SACK_AND_FC) ? true :       \
-               ((X == PDU_TYPE_SNACK_AND_FC) ? true :     \
+#define pdu_type_is_control(X)                          \
+        ((X == PDU_TYPE_CC)         ? true :            \
+         ((X == PDU_TYPE_SACK)       ? true :           \
+          ((X == PDU_TYPE_NACK)       ? true :          \
+           ((X == PDU_TYPE_FC)         ? true :         \
+            ((X == PDU_TYPE_ACK)        ? true :        \
+             ((X == PDU_TYPE_ACK_AND_FC) ? true :       \
+              ((X == PDU_TYPE_SACK_AND_FC) ? true :     \
+               ((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
                 false))))))))
 
 /* NOTE: The following function may return -1 */
@@ -137,9 +137,9 @@ int                   pci_control_ack_seq_num_set(struct pci * pci,
 int                   pci_control_new_rt_wind_edge_set(struct pci * pci,
                                                        seq_num_t    seq);
 int                   pci_control_my_rt_wind_edge_set(struct pci * pci,
-                                                   seq_num_t    seq);
+                                                      seq_num_t    seq);
 int                   pci_control_my_left_wind_edge_set(struct pci * pci,
-                                                     seq_num_t    seq);
+                                                        seq_num_t    seq);
 int                   pci_control_last_seq_num_rcvd_set(struct pci * pci,
                                                         seq_num_t    seq);
 int                   pci_control_new_left_wind_edge_set(struct pci * pci,

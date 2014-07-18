@@ -784,7 +784,7 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                         snd_rt  = snd_rt_wind_edge(dtcp);
                         pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
-                                                 rcvr_rt_wind_edge(dtcp));
+                                                         rcvr_rt_wind_edge(dtcp));
                         pci_control_my_left_wind_edge_set(pci, snd_lft);
                         pci_control_my_rt_wind_edge_set(pci, snd_rt);
                 }
@@ -1021,7 +1021,7 @@ static int default_sender_inactivity(struct dtcp * dtcp)
 }
 
 static int default_receiver_inactivity(struct dtcp * dtcp)
-{  
+{
         struct dt *          dt;
         struct dtp *         dtp;
         struct dtcp_config * cfg;
@@ -1031,14 +1031,14 @@ static int default_receiver_inactivity(struct dtcp * dtcp)
         dt = dtcp->parent;
         if (!dt)
                 return -1;
-        
+
         dtp = dt_dtp(dt);
         if (!dtp)
                 return -1;
 
-        dt_sv_drf_flag_set(dt, true); 
-        dtp_initial_sequence_number(dtp);        
-        
+        dt_sv_drf_flag_set(dt, true);
+        dtp_initial_sequence_number(dtp);
+
         cfg = dtcp_config_get(dtcp);
         if (!cfg)
                 return -1;

@@ -268,7 +268,7 @@ static int default_initial_seq_number(struct dtp * dtp)
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
-        
+
         get_random_bytes(&seq_num, sizeof(seq_num_t));
         nxt_seq_reset(dtp->sv, seq_num);
 
@@ -527,8 +527,9 @@ static int pdu_post(struct dtp * instance,
         return 0;
 }
 
+/* Runs the SenderInactivityTimerPolicy */
 static void tf_sender_inactivity(void * data)
-{ /* Runs the SenderInactivityTimerPolicy */
+{
         struct dt *          dt;
         struct dtp *         dtp;
         struct dtcp *        dtcp;
@@ -551,8 +552,9 @@ static void tf_sender_inactivity(void * data)
         return;
 }
 
+/* Runs the ReceiverInactivityTimerPolicy */
 static void tf_receiver_inactivity(void * data)
-{ /* Runs the ReceiverInactivityTimerPolicy */ 
+{
         struct dt *          dt;
         struct dtp *         dtp;
         struct dtcp *        dtcp;
@@ -564,8 +566,8 @@ static void tf_receiver_inactivity(void * data)
         }
 
         dt = dtp->parent;
-        ASSERT(dt); 
-        
+        ASSERT(dt);
+
         dtcp = dt_dtcp(dt);
 
         if (dtcp)
@@ -1253,7 +1255,7 @@ int dtp_receive(struct dtp * instance,
         if (dtcp && rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
-                return -1;*/
+                  return -1;*/
         }
         seq_num = pci_sequence_number_get(pci);
 
@@ -1293,7 +1295,8 @@ int dtp_receive(struct dtp * instance,
                                 return -1;
                         }
                         /* Start ReceiverInactivityTimer */
-                        if (rtimer_restart(instance->timers.receiver_inactivity,
+                        if (rtimer_restart(instance->
+                                           timers.receiver_inactivity,
                                            3 * (dt_sv_mpl(dt) +
                                                 dt_sv_r(dt)   +
                                                 dt_sv_a(dt))))
@@ -1315,10 +1318,10 @@ int dtp_receive(struct dtp * instance,
                         goto exit;
                 }
 
-                set_lft_win_edge = !(dtcp                                 && 
+                set_lft_win_edge = !(dtcp                                 &&
                                      dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
                                      ((seq_num -LWE) > max_sdu_gap));
-                
+
                 if (set_lft_win_edge) {
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new left window edge");
@@ -1342,7 +1345,7 @@ int dtp_receive(struct dtp * instance,
 
                 goto exit;
 
-                fail:
+        fail:
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -1364,7 +1367,7 @@ int dtp_receive(struct dtp * instance,
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
 
-        exit:
+ exit:
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
