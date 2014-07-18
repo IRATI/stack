@@ -741,6 +741,8 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
                 return NULL;
         }
 
+        LOG_DBG("Buffer length: %d", buffer_length(tmp_buff));
+
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
 
@@ -785,6 +787,9 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                  flags,
                         pdu_destroy(new_pdu);
                         return NULL;
                 }
+
+                LOG_DBG("Offset in PDU: %d", offset);
+                LOG_DBG("PDU length: %d", pdu_len);
 
                 new_buff = buffer_create_from_gfp(flags,
                                                   ptr + offset,
