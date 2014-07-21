@@ -55,28 +55,6 @@ std::string AuthValue::to_string() const {
 			+ "; Auth other: " + auth_other_;
 }
 
-// CLASS AbstractObjectValue
-template<typename T>
-AbstractObjectValue<T>::AbstractObjectValue() {
-	empty_ = true;
-}
-template<typename T>
-AbstractObjectValue<T>::AbstractObjectValue(T &value) {
-	value_ = value;
-	empty_ = false;
-}
-template<typename T>
-AbstractObjectValue<T>::~AbstractObjectValue() {
-}
-template<typename T>
-const void* AbstractObjectValue<T>::get_value() const {
-	return &value_;
-}
-template<typename T>
-bool AbstractObjectValue<T>::is_empty() const {
-	return empty_;
-}
-
 // CLASS IntObjectValue
 IntObjectValue::IntObjectValue() :
 		AbstractObjectValue() {
