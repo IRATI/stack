@@ -77,13 +77,23 @@ public:
 template<typename T>
 class AbstractObjectValue: public ObjectValueInterface {
 public:
-	AbstractObjectValue();
-	AbstractObjectValue(T &value);
-	virtual ~AbstractObjectValue();
-	const void* get_value() const;
-	virtual bool operator==(const AbstractObjectValue<T> &other) = 0;
-	bool is_empty() const;
+	AbstractObjectValue() {
+                empty_ = true;
+        }
+	AbstractObjectValue(T &value) {
+                value_ = value;
+                empty_ = false;
+        }
+	virtual ~AbstractObjectValue() { }
+
+	const void* get_value() const
+        { return &value_; }
+
+	bool is_empty() const
+        { return empty_; }
+
 	virtual types isType() const = 0;
+        virtual bool operator==(const AbstractObjectValue<T> &other) = 0;
 protected:
 	T value_;
 	bool empty_;
