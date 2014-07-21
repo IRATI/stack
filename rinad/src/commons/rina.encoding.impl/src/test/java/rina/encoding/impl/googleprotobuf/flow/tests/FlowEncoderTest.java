@@ -43,6 +43,7 @@ public class FlowEncoderTest {
 		DTCPConfig dtcpConfig = new DTCPConfig();
 		dtcpConfig.setRtxcontrol(true);
 		DTCPRtxControlConfig rtxConfig = new DTCPRtxControlConfig();
+		rtxConfig.setMaximumTimeToRetry(232);
 		rtxConfig.setDatarxmsnmax(25423);
 		dtcpConfig.setRtxcontrolconfig(rtxConfig);
 		dtcpConfig.setFlowcontrol(true);
@@ -64,8 +65,6 @@ public class FlowEncoderTest {
 		rate.setTimeperiod(1451234);
 		flowConfig.setRatebasedconfig(rate);
 		dtcpConfig.setFlowcontrolconfig(flowConfig);
-		dtcpConfig.setInitialrecvrinactivitytime(34);
-		dtcpConfig.setInitialsenderinactivitytime(51245);
 		connectionPolicies.setDtcpConfiguration(dtcpConfig);
 		flow.setConnectionPolicies(connectionPolicies);
 		flowEncoder = new FlowEncoder();
@@ -96,10 +95,8 @@ public class FlowEncoderTest {
 				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().isFlowcontrol());
 		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().isRtxcontrol(), 
 				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().isRtxcontrol());
-		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getInitialrecvrinactivitytime(), 
-				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getInitialrecvrinactivitytime());
-		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getInitialsenderinactivitytime(), 
-				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getInitialsenderinactivitytime());
+		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getMaximumTimeToRetry(), 
+				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getMaximumTimeToRetry());
 		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getDatarxmsnmax(), 
 				recoveredFlow.getConnectionPolicies().getDtcpConfiguration().getRtxcontrolconfig().getDatarxmsnmax());
 		Assert.assertEquals(flow.getConnectionPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbuffersthreshold(), 

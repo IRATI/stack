@@ -2441,6 +2441,7 @@ int testIpcpCreateConnectionRequest() {
         dtcpFlowCtrlConfig.setClosedwindowpolicy(closedWindowPolicy);
 
         DTCPRtxControlConfig dtcpRtxConfig;
+        dtcpRtxConfig.setMaximumTimeToRetry(2312);
         dtcpRtxConfig.setDatarxmsnmax(23424);
         dtcpRtxConfig.setInitialRtxTime(20);
 
@@ -2449,8 +2450,6 @@ int testIpcpCreateConnectionRequest() {
         dtcpConfig.setFlowcontrolconfig(dtcpFlowCtrlConfig);
         dtcpConfig.setRtxcontrol(true);
         dtcpConfig.setRtxcontrolconfig(dtcpRtxConfig);
-        dtcpConfig.setInitialrecvrinactivitytime(234);
-        dtcpConfig.setInitialsenderinactivitytime(123);
 
         ConnectionPolicies connectionPolicies;
         connectionPolicies.setDtcpPresent(true);
@@ -2565,16 +2564,6 @@ int testIpcpCreateConnectionRequest() {
         } else if (message.getConnection().getPolicies().getDtcpConfiguration().isRtxcontrol() !=
                         recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().isRtxcontrol()){
                 std::cout << "ConnPolicies.dtcpconfig.isRtxcontrol on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getInitialrecvrinactivitytime() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().getInitialrecvrinactivitytime()){
-                std::cout << "ConnPolicies.dtcpconfig.initialrcvrinatcitvitytime on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getInitialsenderinactivitytime() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().getInitialsenderinactivitytime()){
-                std::cout << "ConnPolicies.dtcpconfig.initialsenderinatcitvitytime on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getConnection().getPolicies().getDtcpConfiguration().getRtxcontrolconfig().getDatarxmsnmax() !=
