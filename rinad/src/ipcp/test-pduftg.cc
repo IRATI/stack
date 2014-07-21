@@ -164,6 +164,66 @@ private:
 	rinad::IPCProcess * ipc_process_;
 };
 
+class FakeNamespaceManager: public rinad::INamespaceManager {
+public:
+	void set_ipc_process(rinad::IPCProcess * ipc_process){
+		ipc_process_ = ipc_process;
+	}
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
+	}
+	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
+		(void) apNamingInfo;
+		return 0;
+	}
+	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) {
+		(void) apNamingInfo;
+		return 0;
+	}
+	void addDFTEntry(rina::DirectoryForwardingTableEntry * entry){
+		(void) entry;
+	}
+	rina::DirectoryForwardingTableEntry * getDFTEntry(
+				const rina::ApplicationProcessNamingInformation& apNamingInfo){
+		(void) apNamingInfo;
+		return 0;
+	}
+	void removeDFTEntry(const rina::ApplicationProcessNamingInformation& apNamingInfo){
+		(void) apNamingInfo;
+	}
+	void processApplicationRegistrationRequestEvent(
+				const rina::ApplicationRegistrationRequestEvent& event){
+		(void) event;
+	}
+	void processApplicationUnregistrationRequestEvent(
+				const rina::ApplicationUnregistrationRequestEvent& event){
+		(void) event;
+	}
+	bool isValidAddress(unsigned int address, const std::string& ipcp_name,
+				const std::string& ipcp_instance){
+		(void) address;
+		(void) ipcp_name;
+		(void) ipcp_instance;
+		return true;
+	}
+	unsigned int getValidAddress(const std::string& ipcp_name,
+					const std::string& ipcp_instance) {
+		(void) ipcp_name;
+		(void) ipcp_instance;
+		return 0;
+	}
+	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
+		if (name.getProcessName().compare("") == 0) {
+			throw Exception();
+		}
+		return 0;
+	}
+
+private:
+	rinad::IPCProcess * ipc_process_;
+
+};
+
 class FakeIPCProcess: public rinad::IPCProcess {
 public:
 	FakeIPCProcess() {
@@ -176,11 +236,13 @@ public:
 		timeout_ = 2000;
 		cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(&wire_factory_,
 				timeout_);
+		namespace_manager_ = new FakeNamespaceManager();
 	}
 	~FakeIPCProcess(){
 		delete encoder_;
 		delete rib_daemon_;
 		delete cdap_session_manager_;
+		delete namespace_manager_;
 	}
 	unsigned short get_id() {
 		return 0;
@@ -201,7 +263,7 @@ public:
 		return 0;
 	}
 	rinad::INamespaceManager* get_namespace_manager() {
-		return 0;
+		return namespace_manager_;
 	}
 	rinad::IResourceAllocator* get_resource_allocator() {
 		return 0;
@@ -233,19 +295,14 @@ public:
 	void set_dif_information(const rina::DIFInformation& dif_information) {
 		dif_information_ = dif_information;
 	}
-	const std::list<rina::Neighbor *>& get_neighbors() const {
+	const std::list<rina::Neighbor *> get_neighbors() const {
 		return neighbors_;
-	}
-	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
-		if (name.getProcessName().compare("") == 0) {
-			throw Exception();
-		}
-		return 0;
 	}
 
 private:
 	rinad::Encoder * encoder_;
 	rinad::IRIBDaemon * rib_daemon_;
+	rinad::INamespaceManager * namespace_manager_;
 	rina::ApplicationProcessNamingInformation name_;
 	rinad::IPCProcessOperationalState state_;
 	rina::DIFInformation dif_information_;
