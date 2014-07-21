@@ -1294,12 +1294,10 @@ int testIpcmAssignToDIFRequestMessage() {
 	dataTransferConstants.set_sequence_number_length(8);
 	efcpConfiguration.set_data_transfer_constants(dataTransferConstants);
 	QoSCube * qosCube = new QoSCube("cube 1", 1);
-	efcpConfiguration.add_qos_cube(*qosCube);
-	delete qosCube;
+	efcpConfiguration.add_qos_cube(qosCube);
 	qosCube = new QoSCube("cube 2", 2);
-	efcpConfiguration.add_qos_cube(*qosCube);
+	efcpConfiguration.add_qos_cube(qosCube);
 	qosCube->set_efcp_policies(ConnectionPolicies());
-	delete qosCube;
 	difConfiguration.set_efcp_configuration(efcpConfiguration);
 	difConfiguration.rmt_configuration_.rmt_scheduling_policy_.name_ = "FancySchedulingPolicy";
 	difConfiguration.pduft_generator_configuration_.pduft_generator_policy_.name_ = "LinkStateRouting";

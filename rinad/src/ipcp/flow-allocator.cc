@@ -96,11 +96,6 @@ void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 			objectClass, objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
-
-	rina::DIFInformation dif_information = ipc_process_->get_dif_information();
-	dif_information.dif_configuration_.efcp_configuration_.
-		qos_cubes_.push_back(*objectValue);
-	ipc_process_->set_dif_information(dif_information);
 }
 
 void QoSCubeSetRIBObject::deleteObject(const void* objectValue) {
@@ -149,7 +144,17 @@ void FlowAllocator::set_ipc_process(IPCProcess * ipc_process) {
 }
 
 void FlowAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("DIF configuration set: %u", dif_configuration.get_address());
+	//Create QoS cubes RIB objects
+	std::list<rina::QoSCube*>::const_iterator it;
+	std::stringstream ss;
+	const std::list<rina::QoSCube*>& cubes = dif_configuration.efcp_configuration_.qos_cubes_;
+	for (it = cubes.begin(); it != cubes.end(); ++it) {
+		ss<<EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
+		ss<<(*it)->name_;
+		rib_daemon_->createObject(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS, ss.str(), (*it), 0);
+		ss.str(std::string());
+		ss.clear();
+	}
 }
 
 void FlowAllocator::populateRIB() {
@@ -157,6 +162,8 @@ void FlowAllocator::populateRIB() {
 		BaseRIBObject * object = new FlowSetRIBObject(ipc_process_, this);
 		rib_daemon_->addRIBObject(object);
 		object = new QoSCubeSetRIBObject(ipc_process_);
+		rib_daemon_->addRIBObject(object);
+		object = new DataTransferConstantsRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
@@ -389,7 +396,7 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId) {
 //Class Simple New flow Request Policy
 Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 		const rina::FlowRequestEvent& event,
-		const std::list<rina::QoSCube>& qosCubes) {
+		const std::list<rina::QoSCube*>& qosCubes) {
 	Flow* flow;
 
 	flow = new Flow();
@@ -401,22 +408,22 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 	flow->state_ = Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
-	rina::QoSCube qosCube = selectQoSCube(event.getFlowSpecification(),
+	rina::QoSCube * qosCube = selectQoSCube(event.getFlowSpecification(),
 			qosCubes);
 	LOG_DBG("Selected qos cube with name %s and policies: %s",
-			qosCube.get_name().c_str());
+			qosCube->get_name().c_str());
 
 	rina::Connection * connection = new rina::Connection();
 	connection->setQosId(1);
 	connection->setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
 	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
-			qosCube.get_efcp_policies());
-	connectionPolicies.set_in_order_delivery(qosCube.is_ordered_delivery());
-	connectionPolicies.set_partial_delivery(qosCube.is_partial_delivery());
-	if (qosCube.get_max_allowable_gap() < 0) {
+			qosCube->get_efcp_policies());
+	connectionPolicies.set_in_order_delivery(qosCube->is_ordered_delivery());
+	connectionPolicies.set_partial_delivery(qosCube->is_partial_delivery());
+	if (qosCube->get_max_allowable_gap() < 0) {
 		connectionPolicies.set_max_sdu_gap(INT_MAX);
 	} else {
-		connectionPolicies.set_max_sdu_gap(qosCube.get_max_allowable_gap());
+		connectionPolicies.set_max_sdu_gap(qosCube->get_max_allowable_gap());
 	}
 	connection->setPolicies(connectionPolicies);
 	connections.push_back(connection);
@@ -428,20 +435,20 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 	return flow;
 }
 
-rina::QoSCube SimpleNewFlowRequestPolicy::selectQoSCube(
+rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
 		const rina::FlowSpecification& flowSpec,
-		const std::list<rina::QoSCube>& qosCubes) {
+		const std::list<rina::QoSCube*>& qosCubes) {
 	if (flowSpec.getMaxAllowableGap() < 0) {
 		return qosCubes.front();
 	}
 
-	std::list<rina::QoSCube>::const_iterator iterator;
-	rina::QoSCube cube;
+	std::list<rina::QoSCube*>::const_iterator iterator;
+	rina::QoSCube* cube;
 	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		cube = *iterator;
-		if (cube.get_efcp_policies().is_dtcp_present()) {
+		if (cube->get_efcp_policies().is_dtcp_present()) {
 			if (flowSpec.getMaxAllowableGap() >= 0 &&
-					cube.get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
+					cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
 				return cube;
 			}
 		}
@@ -1131,6 +1138,57 @@ void TearDownFlowTimerTask::run() {
 			requestor_);
 }
 
+//Class DatatransferConstantsRIBObject
+DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(IPCProcess * ipc_process):
+	BaseRIBObject(ipc_process, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+			objectInstanceGenerator->getObjectInstance(),
+			EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME){
+	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
+}
+
+void DataTransferConstantsRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	const rina::CDAPMessage * respMessage = 0;
+	const rina::SerializedObject * serializedObject = 0;
+	try {
+		serializedObject = encoder_->encode(get_value(),
+				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
+				*serializedObject);
+		respMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				class_, instance_, name_, &objectValue, 0, "", cdapMessage->invoke_id_);
+		rib_daemon_->sendMessage(*respMessage, cdapSessionDescriptor->port_id_, 0);
+	}catch (Exception &e) {
+		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
+	}
+
+	delete respMessage;
+	delete serializedObject;
+}
+
+void DataTransferConstantsRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+	rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	//Ignore, since Data Transfer Constants must be set before enrollment (via assign to DIF)
+	(void) cdapMessage;
+	(void) cdapSessionDescriptor;
+}
+
+void DataTransferConstantsRIBObject::createObject(const std::string& objectClass,
+        const std::string& objectName, const void* objectValue) {
+	(void) objectClass;
+	(void) objectName;
+	writeObject(objectValue);
+}
+
+void DataTransferConstantsRIBObject::writeObject(const void* objectValue) {
+	(void) objectValue;
+	dt_cons_ = ipc_process_->get_dif_information().dif_configuration_
+			.efcp_configuration_.data_transfer_constants_;
+}
+
+const void* DataTransferConstantsRIBObject::get_value() const {
+	return &dt_cons_;
+}
 
 // CLASS FlowEncoder
 const rina::SerializedObject* FlowEncoder::encode(const void* object) {

@@ -272,7 +272,8 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 
 	try {
 		unsigned int handle = rina::kernelIPCProcess->assignToDIF(event.difInformation);
-		pending_events_[handle] = event;
+		pending_events_.insert(std::pair<unsigned int,
+				rina::AssignToDIFRequestEvent>(handle, event));
 		state_ = ASSIGN_TO_DIF_IN_PROCESS;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
@@ -281,8 +282,63 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 }
 
 void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {
-	//TODO
-	(void) event;
+	rina::AccessGuard g(*lock_);
+
+	if (state_ == ASSIGNED_TO_DIF ) {
+		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
+				event.getResult());
+		return;
+	}
+
+	if (state_ != ASSIGN_TO_DIF_IN_PROCESS) {
+		LOG_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
+				state_);
+		return;
+	}
+
+	std::map<unsigned int, rina::AssignToDIFRequestEvent>::iterator it;
+	it = pending_events_.find(event.sequenceNumber);
+	if (it == pending_events_.end()) {
+		LOG_ERR("Couldn't find an Assign to DIF request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	pending_events_.erase(it);
+	if (event.result != 0) {
+		LOG_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
+				event.getResult());
+		LOG_ERR("Could not assign IPC Process to DIF %s",
+				it->second.difInformation.dif_name_.processName.c_str());
+		state_ = INITIALIZED;
+
+		try {
+			rina::extendedIPCManager->assignToDIFResponse(it->second, -1);
+		} catch (Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	//TODO do stuff
+	LOG_DBG("The kernel processed successfully the Assign to DIF request");
+	dif_information_ = it->second.difInformation;
+
+	rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
+	resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
+	enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
+	flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
+	namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
+	security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
+
+	state_ = ASSIGNED_TO_DIF;
+
+	try {
+		rina::extendedIPCManager->assignToDIFResponse(it->second, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
 }
 
 void IPCProcessImpl::requestPDUFTEDump() {

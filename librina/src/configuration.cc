@@ -24,6 +24,7 @@
 #define RINA_PREFIX "configuration"
 
 #include "librina/configuration.h"
+#include "librina/logs.h"
 
 namespace rina {
 
@@ -960,18 +961,51 @@ const std::string DataTransferConstants::toString(){
 EFCPConfiguration::EFCPConfiguration(){
 }
 
-const std::list<QoSCube>& EFCPConfiguration::get_qos_cubes() const {
+EFCPConfiguration::EFCPConfiguration(const EFCPConfiguration& other) {
+	copy(other);
+}
+
+EFCPConfiguration& EFCPConfiguration::operator=(const EFCPConfiguration & other) {
+	if (this == &other) {
+		return *this;
+	}
+
+	copy(other);
+
+	return *this;
+}
+
+void EFCPConfiguration::copy(const EFCPConfiguration & other) {
+	data_transfer_constants_ = other.data_transfer_constants_;
+	unknown_flowpolicy_ = other.unknown_flowpolicy_;
+	std::list<QoSCube*>::const_iterator it;
+	QoSCube * cube = 0;
+	for (it = other.qos_cubes_.begin(); it != other.qos_cubes_.end(); ++it) {
+		cube = new QoSCube(*(*it));
+		qos_cubes_.push_back(cube);
+	}
+}
+
+EFCPConfiguration::~EFCPConfiguration() {
+	std::list<QoSCube*>::iterator it;
+	rina::QoSCube * current = 0;
+	for (it=qos_cubes_.begin(); it != qos_cubes_.end(); ++it) {
+		current = *it;
+		if (current != 0) {
+			delete current;
+			*it = 0;
+		}
+	}
+}
+
+const std::list<QoSCube*>& EFCPConfiguration::get_qos_cubes() const {
 	return qos_cubes_;
 }
 
-void EFCPConfiguration::set_qos_cubes(const std::list<QoSCube>& qos_cubes) {
-	qos_cubes_ = qos_cubes;
-}
-
-void EFCPConfiguration::add_qos_cube(const QoSCube& qos_cube) {
-        std::list<QoSCube>::const_iterator iterator;
+void EFCPConfiguration::add_qos_cube(QoSCube* qos_cube) {
+        std::list<QoSCube*>::const_iterator iterator;
         for (iterator = qos_cubes_.begin(); iterator != qos_cubes_.end(); ++iterator) {
-            if (iterator->get_id() == qos_cube.get_id()) {
+            if ((*iterator)->id_ == qos_cube->id_) {
                     return;
             }
         }

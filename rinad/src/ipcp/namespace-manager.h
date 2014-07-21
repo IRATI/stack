@@ -49,6 +49,22 @@ public:
 	std::string rule_;
 };
 
+class WhateverCastNameSetRIBObject: public BaseRIBObject {
+public:
+	WhateverCastNameSetRIBObject(IPCProcess * ipc_process);
+	~WhateverCastNameSetRIBObject();
+	const void* get_value() const;
+	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void createObject(const std::string& objectClass,
+			const std::string& objectName,
+			const void* objectValue);
+
+private:
+	void createName(WhatevercastName * name);
+	rina::Lockable * lock_;
+};
+
 class DirectoryForwardingTableEntryRIBObject: public SimpleSetMemberRIBObject {
 public:
 	DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process, const std::string& object_name,

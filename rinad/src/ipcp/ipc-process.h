@@ -83,7 +83,7 @@ private:
 
 	rina::ApplicationProcessNamingInformation name_;
 	IPCProcessOperationalState state_;
-	std::map<unsigned int, rina::IPCEvent> pending_events_;
+	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
 };

@@ -269,11 +269,13 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 // FIll in the EFCPConfiguration object.
                 efcp_config.set_data_transfer_constants(
                                 dif_props.dataTransferConstants);
+                rina::QoSCube * qosCube = 0;
                 for (list<rina::QoSCube>::iterator
                                 qit = dif_props.qosCubes.begin();
                                 qit != dif_props.qosCubes.end();
                                 qit++) {
-                        efcp_config.add_qos_cube(*qit);
+                		qosCube = new rina::QoSCube(*qit);
+                        efcp_config.add_qos_cube(qosCube);
                 }
 
                 found = dif_props.

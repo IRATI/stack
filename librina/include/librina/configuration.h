@@ -606,13 +606,15 @@ public:
 class EFCPConfiguration {
 public:
         EFCPConfiguration();
+        EFCPConfiguration(const EFCPConfiguration& other);
+        EFCPConfiguration& operator=(const EFCPConfiguration & rhs);
+        ~EFCPConfiguration();
 #ifndef SWIG
         const DataTransferConstants& get_data_transfer_constants() const;
         void set_data_transfer_constants(
                         const DataTransferConstants& data_transfer_constants);
-        const std::list<QoSCube>& get_qos_cubes() const;
-        void set_qos_cubes(const std::list<QoSCube>& qos_cubes);
-        void add_qos_cube(const QoSCube& qos_cube);
+        const std::list<QoSCube *>& get_qos_cubes() const;
+        void add_qos_cube(QoSCube* qos_cube);
         const PolicyConfig& get_unknown_flow_policy() const;
         void set_unknown_flow_policy(const PolicyConfig& unknown_flow_policy);
 #endif
@@ -627,7 +629,10 @@ public:
         PolicyConfig unknown_flowpolicy_;
 
         /// The QoS cubes supported by the DIF, and its associated EFCP policies
-        std::list<QoSCube> qos_cubes_;
+        std::list<QoSCube*> qos_cubes_;
+
+private:
+        void copy(const EFCPConfiguration & other);
 };
 
 /// Configuration of the Flow Allocator

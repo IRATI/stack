@@ -123,44 +123,73 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 
 void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
 	if (event.getLocalApplicationName().getProcessName().compare(
-			ipc_process_->get_name().getProcessName()) == 0 &&
+			ipc_process_->get_name().getProcessName()) != 0 ||
 			event.getLocalApplicationName().getProcessInstance().compare(
-					ipc_process_->get_name().getProcessInstance()) == 0) {
-		//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-		//is both used for data transfer and management purposes
-
-		if (rina::extendedIPCManager->getFlowToRemoteApp(event.getRemoteApplicationName()) != 0) {
-			LOG_INFO("Rejecting flow since we already have a flow to the remote IPC Process: %s-%s",
-					event.getRemoteApplicationName().getProcessName().c_str(),
-					event.getRemoteApplicationName().getProcessInstance().c_str());
-			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
-			return;
-		}
-
-		rina::Flow * flow = rina::extendedIPCManager->allocateFlowResponse(event, 0, true);
-		LOG_INFO("Accepted new flow from IPC Process %s-%s",
+					ipc_process_->get_name().getProcessInstance()) != 0) {
+		LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
 				event.getRemoteApplicationName().getProcessName().c_str(),
 				event.getRemoteApplicationName().getProcessInstance().c_str());
 		try {
-			std::stringstream ss;
-			ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
-			ss<<EncoderConstants::SEPARATOR<<event.getPortId();
-			rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-					ss.str(), &(flow->getFlowInformation()), 0);
-		} catch (Exception &e){
-			LOG_ERR("Error creating RIB object: %s", e.what());
+			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+		} catch (Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
-
-		Event * flowAllocatedEvent = new NMinusOneFlowAllocatedEvent(event.getSequenceNumber(),
-				flow->getFlowInformation());
-		rib_daemon_->deliverEvent(flowAllocatedEvent);
 		return;
 	}
 
-	LOG_ERR("Rejected flow from %s-%s since this IPC Process is not the intended target of this flow",
+	//In this implementation we cannot accept flows if the IPC Process is not assigned to a DIF
+	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
+		LOG_ERR("Rejecting flow request since the IPC Process is not ASSIGNED to a DIF");
+		try {
+			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+		} catch (Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+		return;
+	}
+
+	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+	//is both used for data transfer and management purposes
+
+	if (rina::extendedIPCManager->getFlowToRemoteApp(event.getRemoteApplicationName()) != 0) {
+		LOG_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
+				event.getRemoteApplicationName().getProcessName().c_str(),
+				event.getRemoteApplicationName().getProcessInstance().c_str());
+		try {
+			rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+		} catch (Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+		return;
+	}
+
+	rina::Flow * flow = 0;
+	try {
+		flow = rina::extendedIPCManager->allocateFlowResponse(event, 0, true);
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		if (!flow) {
+			return;
+		}
+	}
+
+	LOG_INFO("Accepted new flow from IPC Process %s-%s",
 			event.getRemoteApplicationName().getProcessName().c_str(),
 			event.getRemoteApplicationName().getProcessInstance().c_str());
-	rina::extendedIPCManager->allocateFlowResponse(event, -1, true);
+	try {
+		std::stringstream ss;
+		ss<<EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME;
+		ss<<EncoderConstants::SEPARATOR<<event.getPortId();
+		rib_daemon_->createObject(EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
+				ss.str(), &(flow->getFlowInformation()), 0);
+	} catch (Exception &e){
+		LOG_ERR("Error creating RIB object: %s", e.what());
+	}
+
+	Event * flowAllocatedEvent = new NMinusOneFlowAllocatedEvent(event.getSequenceNumber(),
+			flow->getFlowInformation());
+	rib_daemon_->deliverEvent(flowAllocatedEvent);
+	return;
 }
 
 void NMinusOneFlowManager::deallocateNMinus1Flow(int portId) {
@@ -175,12 +204,22 @@ void NMinusOneFlowManager::deallocateFlowResponse(
 		success = true;
 	}
 
-	rina::extendedIPCManager->flowDeallocationResult(event.getPortId(), success);
+	try {
+		rina::extendedIPCManager->flowDeallocationResult(event.getPortId(), success);
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+
 	cleanFlowAndNotify(event.getPortId());
 }
 
 void NMinusOneFlowManager::flowDeallocatedRemotely(const rina::FlowDeallocatedEvent& event) {
-	rina::extendedIPCManager->flowDeallocated(event.getPortId());
+	try {
+		rina::extendedIPCManager->flowDeallocated(event.getPortId());
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+
 	cleanFlowAndNotify(event.getPortId());
 }
 
@@ -208,7 +247,12 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 
 void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) {
 	if (event.isRegistered()) {
-		rina::extendedIPCManager->appRegistered(event.getIPCProcessName(), event.getDIFName());
+		try {
+			rina::extendedIPCManager->appRegistered(event.getIPCProcessName(), event.getDIFName());
+		} catch (Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
 		LOG_INFO("IPC Process registered to N-1 DIF %s",
 					event.getDIFName().getProcessName().c_str());
 		try{
@@ -224,7 +268,12 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 		return;
 	}
 
-	rina::extendedIPCManager->appUnregistered(event.getIPCProcessName(), event.getDIFName());
+	try {
+		rina::extendedIPCManager->appUnregistered(event.getIPCProcessName(), event.getDIFName());
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+
 	LOG_INFO("IPC Process unregistered from N-1 DIF %s",
 			event.getDIFName().getProcessName().c_str());
 

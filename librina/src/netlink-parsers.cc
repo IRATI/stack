@@ -989,53 +989,53 @@ QoSCube * parseQoSCubeObject(nlattr *nested) {
 }
 
 int putQoSCubeObject(nl_msg* netlinkMessage,
-		const QoSCube& object){
+		QoSCube* object){
         struct nlattr *efcpPolicies;
 
 	NLA_PUT_STRING(netlinkMessage, QOS_CUBE_ATTR_NAME,
-			object.get_name().c_str());
+			object->name_.c_str());
 
-	NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_ID, object.get_id());
+	NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_ID, object->id_);
 
-	if (object.get_average_bandwidth() > 0) {
+	if (object->average_bandwidth_ > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_BAND,
-				object.get_average_bandwidth());
+				object->average_bandwidth_);
 	}
 
-	if (object.get_average_sdu_bandwidth() > 0) {
+	if (object->average_sdu_bandwidth_ > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_AVG_SDU_BAND,
-				object.get_average_sdu_bandwidth());
+				object->average_sdu_bandwidth_);
 	}
 
-	if (object.get_delay() > 0) {
-		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_DELAY, object.get_delay());
+	if (object->delay_ > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_DELAY, object->delay_);
 	}
 
-	if (object.get_jitter() > 0) {
-		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_JITTER, object.get_jitter());
+	if (object->jitter_ > 0) {
+		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_JITTER, object->jitter_);
 	}
 
-	if (object.get_max_allowable_gap() >= 0) {
+	if (object->max_allowable_gap_ >= 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_MAX_GAP,
-				object.get_max_allowable_gap());
+				object->max_allowable_gap_);
 	}
 
-	if (object.is_ordered_delivery()) {
+	if (object->ordered_delivery_) {
 		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_ORD_DEL);
 	}
 
-	if (object.is_partial_delivery()) {
+	if (object->partial_delivery_) {
 		NLA_PUT_FLAG(netlinkMessage, QOS_CUBE_ATTR_PART_DEL);
 	}
 
-	if (object.get_peak_bandwidth_duration() > 0) {
+	if (object->peak_bandwidth_duration_ > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_BAND_DUR,
-				object.get_peak_bandwidth_duration());
+				object->peak_bandwidth_duration_);
 	}
 
-	if (object.get_peak_sdu_bandwidth_duration() > 0) {
+	if (object->peak_sdu_bandwidth_duration_ > 0) {
 		NLA_PUT_U32(netlinkMessage, QOS_CUBE_ATTR_PEAK_SDU_BAND_DUR,
-				object.get_peak_sdu_bandwidth_duration());
+				object->peak_sdu_bandwidth_duration_);
 	}
 
 	/*if (object.getUndetectedBitErrorRate() > 0) {
@@ -1047,7 +1047,7 @@ int putQoSCubeObject(nl_msg* netlinkMessage,
 	        goto nla_put_failure;
 	}
 
-	if (putConnectionPoliciesObject(netlinkMessage, object.get_efcp_policies()) < 0) {
+	if (putConnectionPoliciesObject(netlinkMessage, object->efcp_policies_) < 0) {
 	        goto nla_put_failure;
 	}
 
@@ -1061,8 +1061,8 @@ int putQoSCubeObject(nl_msg* netlinkMessage,
 }
 
 int putListOfQoSCubeObjects(
-		nl_msg* netlinkMessage, const std::list<QoSCube>& qosCubes){
-	std::list<QoSCube>::const_iterator iterator;
+		nl_msg* netlinkMessage, const std::list<QoSCube*>& qosCubes){
+	std::list<QoSCube*>::const_iterator iterator;
 	struct nlattr *qosCube;
 	int i = 0;
 
@@ -1125,8 +1125,7 @@ int parseListOfQoSCubesForEFCPConfiguration(nlattr *nested,
                 if (qosCube == 0){
                         return -1;
                 }
-                efcpConfiguration->add_qos_cube(*qosCube);
-                delete qosCube;
+                efcpConfiguration->add_qos_cube(qosCube);
         }
 
         if (rem > 0){
@@ -6723,8 +6722,7 @@ DIFConfiguration * parseDIFConfigurationObject(nlattr *nested){
 			delete result;
 			return 0;
 		} else {
-			result->set_efcp_configuration(
-					*efcpConfig);
+			result->efcp_configuration_ = *efcpConfig;
 			delete efcpConfig;
 		}
 	}

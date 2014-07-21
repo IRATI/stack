@@ -215,7 +215,7 @@ public:
 	;
 	virtual Flow * generateFlowObject(
 			const rina::FlowRequestEvent& flowRequestEvent,
-			const std::list<rina::QoSCube>& qosCubes) = 0;
+			const std::list<rina::QoSCube*>& qosCubes) = 0;
 };
 
 class SimpleNewFlowRequestPolicy: public INewFlowRequetPolicy {
@@ -227,11 +227,11 @@ public:
 	}
 	;
 	Flow * generateFlowObject(const rina::FlowRequestEvent& flowRequestEvent,
-			const std::list<rina::QoSCube>& qosCubes);
+			const std::list<rina::QoSCube*>& qosCubes);
 
 private:
-	rina::QoSCube selectQoSCube(const rina::FlowSpecification& flowSpec,
-			const std::list<rina::QoSCube>& qosCubes);
+	rina::QoSCube * selectQoSCube(const rina::FlowSpecification& flowSpec,
+			const std::list<rina::QoSCube*>& qosCubes);
 };
 
 ///Implementation of the FlowAllocatorInstance
@@ -349,6 +349,24 @@ private:
 	FlowAllocatorInstance * flow_allocator_instance_;
 	std::string flow_object_name_;
 	bool requestor_;
+};
+
+class DataTransferConstantsRIBObject: public BaseRIBObject {
+public:
+	DataTransferConstantsRIBObject(IPCProcess * ipc_process);
+	void remoteReadObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void createObject(const std::string& objectClass,
+			const std::string& objectName,
+			const void* objectValue);
+	void writeObject(const void* object_value);
+	const void* get_value() const;
+
+private:
+	rina::CDAPSessionManagerInterface * cdap_session_manager_;
+	rina::DataTransferConstants dt_cons_;
 };
 
 /// Encoder of the Flow

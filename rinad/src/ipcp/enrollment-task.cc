@@ -1508,20 +1508,34 @@ const std::list<std::string> EnrollmentTask::get_enrolled_ipc_process_names() co
 }
 
 void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent* event) {
-	if (ipc_process_->get_operational_state() == ASSIGNED_TO_DIF) {
-		if (ipc_process_->get_dif_information().get_dif_name().processName.
-				compare(event->difName.processName) != 0) {
-			LOG_ERR("Was requested to enroll to a neighbor who is member of DIF %s, but I'm member of DIF %s",
-					ipc_process_->get_dif_information().get_dif_name().processName.c_str(),
-					event->difName.processName.c_str());
-
-			try {
-				rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
-						std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
-			}catch (Exception &e) {
-				LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
-			}
+	//Can only accept enrollment requests if assigned to a DIF
+	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
+		LOG_ERR("Rejected enrollment request since IPC Process is not ASSIGNED to a DIF");
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
+					std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+		}catch (Exception &e) {
+			LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
 		}
+
+		return;
+	}
+
+	//Check that the neighbor belongs to the same DIF as this IPC Process
+	if (ipc_process_->get_dif_information().get_dif_name().processName.
+			compare(event->difName.processName) != 0) {
+		LOG_ERR("Was requested to enroll to a neighbor who is member of DIF %s, but I'm member of DIF %s",
+				ipc_process_->get_dif_information().get_dif_name().processName.c_str(),
+				event->difName.processName.c_str());
+
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
+					std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
+		}catch (Exception &e) {
+			LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
+		}
+
+		return;
 	}
 
 	rina::Neighbor * neighbor = new rina::Neighbor();

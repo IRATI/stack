@@ -43,6 +43,99 @@ std::string WhatevercastName::toString() {
 	return result;
 }
 
+// Class WhatevercastNameSetRIBObject
+WhateverCastNameSetRIBObject::WhateverCastNameSetRIBObject(IPCProcess * ipc_process) :
+	BaseRIBObject(ipc_process, EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
+			objectInstanceGenerator->getObjectInstance(),
+			EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME) {
+	lock_ = new rina::Lockable();
+}
+
+WhateverCastNameSetRIBObject::~WhateverCastNameSetRIBObject() {
+	if (lock_) {
+		delete lock_;
+	}
+}
+
+const void* WhateverCastNameSetRIBObject::get_value() const {
+	return 0;
+}
+
+void WhateverCastNameSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
+	(void) cdapSessionDescriptor;
+	std::list<WhatevercastName *> namesToCreate;
+
+	try {
+		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
+		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
+
+		if (cdapMessage->get_obj_name().compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
+			std::list<WhatevercastName *> * names =
+					(std::list<WhatevercastName *> *) encoder_->decode(*serializedObject,
+							EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+			std::list<WhatevercastName *>::const_iterator iterator;
+			for(iterator = names->begin(); iterator != names->end(); ++iterator) {
+				namesToCreate.push_back((*iterator));
+			}
+
+			delete names;
+		} else {
+			WhatevercastName * name = (WhatevercastName *) encoder_->decode(*serializedObject,
+						EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
+			namesToCreate.push_back(name);
+		}
+	} catch (Exception &e) {
+		LOG_ERR("Error decoding CDAP object value: %s", e.what());
+	}
+
+	if (namesToCreate.size() == 0) {
+		LOG_DBG("No whatevercast name entries to create or update");
+		return;
+	}
+
+	try {
+		rib_daemon_->createObject(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
+				EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME, &namesToCreate, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems creating RIB object: %s", e.what());
+	}
+}
+
+void WhateverCastNameSetRIBObject::createObject(const std::string& objectClass,
+		const std::string& objectName,
+		const void* objectValue) {
+	(void) objectName;
+
+	if (objectClass.compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
+		std::list<WhatevercastName *>::const_iterator iterator;
+		std::list<WhatevercastName *> * names =
+				(std::list<WhatevercastName *> *) objectValue;
+
+		for (iterator = names->begin(); iterator != names->end(); ++iterator) {
+			createName((*iterator));
+		}
+	} else {
+		WhatevercastName * currentName = (WhatevercastName*) objectValue;
+		createName(currentName);
+	}
+}
+
+void WhateverCastNameSetRIBObject::createName(WhatevercastName * name) {
+	std::stringstream ss;
+	ss<<EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
+	ss<<name->rule_;
+	BaseRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_,
+			EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS, ss.str(), name);
+	add_child(ribObject);
+	try {
+		rib_daemon_->addRIBObject(ribObject);
+	} catch(Exception &e){
+		LOG_ERR("Problems adding object to the RIB: %s", e.what());
+	}
+}
+
 // Class DirectoryForwardingTableEntry RIB Object
 DirectoryForwardingTableEntryRIBObject::DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process,
 		const std::string& object_name, rina::DirectoryForwardingTableEntry * entry):
@@ -374,6 +467,8 @@ void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_c
 void NamespaceManager::populateRIB() {
 	try {
 		BaseRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipc_process_);
+		rib_daemon_->addRIBObject(object);
+		object = new WhateverCastNameSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
