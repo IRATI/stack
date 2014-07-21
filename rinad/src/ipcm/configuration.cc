@@ -206,6 +206,11 @@ void parse_rtx_flow_ctrl(const Json::Value root,
         if (rtx_ctrl != 0) {
                 rina::DTCPRtxControlConfig rfc;
 
+                rfc.max_time_to_retry_ =
+                        rtx_ctrl.get("maxTimeToRetry",
+                                     rfc.max_time_to_retry_)
+                        .asUInt();
+
                 rfc.data_rxms_nmax_ =
                         rtx_ctrl.get("dataRxmsNmax",
                                      rfc.data_rxms_nmax_)
@@ -273,25 +278,6 @@ void parse_efcp_policies(const Json::Value root,
                         // rtx_control_config_
                         parse_rtx_flow_ctrl(dtcp_conf, dc);
 
-                        dc.initial_sender_inactivity_time_ =
-                                dtcp_conf.get
-                                ("initialSenderInactivityTime",
-                                 dc.initial_sender_inactivity_time_)
-                                .asUInt();
-
-                        dc.initial_recvr_inactivity_time_ =
-                                dtcp_conf.get("initialRecvrInactivityTime",
-                                              dc.initial_recvr_inactivity_time_)
-                                .asUInt();
-
-                        parse_policy(dtcp_conf,
-                                     "rcvrTimerInactivityPolicy",
-                                     dc.rcvr_timer_inactivity_policy_);
-
-                        parse_policy(dtcp_conf,
-                                     "senderTimerInactivityPolicy",
-                                     dc.sender_timer_inactivity_policy_);
-
                         parse_policy(dtcp_conf,
                                      "lostControlPduPolicy",
                                      dc.lost_control_pdu_policy_);
@@ -300,6 +286,14 @@ void parse_efcp_policies(const Json::Value root,
                                      "rttEstimatorPolicy",
                                      dc.rtt_estimator_policy_);
                 }
+
+                parse_policy(dtcp_conf,
+                             "rcvrTimerInactivityPolicy",
+                             cp.rcvr_timer_inactivity_policy_);
+
+                parse_policy(dtcp_conf,
+                             "senderTimerInactivityPolicy",
+                             cp.sender_timer_inactivity_policy_);
 
                 parse_policy(con_pol,
                              "initialSeqNumPolicy",
