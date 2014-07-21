@@ -2226,11 +2226,14 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
                 *rackListPolicy, *rackPolicy, *sendingAckPolicy,
                 *rControlAckPolicy;
 
-        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_DATA_RXMSN_MAX,
-                        object.get_data_rxmsn_max());
+        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_MAX_TIME_TO_RETRY,
+        		object.get_max_time_to_retry());
 
-        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_INITIAL_RTX_TIME,
-                                object.get_initial_rtx_time());
+        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_DATA_RXMSN_MAX,
+        		object.get_data_rxmsn_max());
+
+        NLA_PUT_U32(netlinkMessage, DRCC_ATTR_INIT_RTX_TIME,
+        		object.get_initial_rtx_time());
 
         if (!(rtxTimExpPolicy = nla_nest_start(netlinkMessage,
                         DRCC_ATTR_RTX_TIME_EXP_POLICY))) {
@@ -2313,12 +2316,15 @@ int putDTCPRtxControlConfigObject(nl_msg * netlinkMessage,
 
 DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         struct nla_policy attr_policy[DRCC_ATTR_MAX + 1];
+        attr_policy[DRCC_ATTR_MAX_TIME_TO_RETRY].type = NLA_U32;
+        attr_policy[DRCC_ATTR_MAX_TIME_TO_RETRY].minlen = 4;
+        attr_policy[DRCC_ATTR_MAX_TIME_TO_RETRY].maxlen = 4;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type = NLA_U32;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].minlen = 4;
         attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].maxlen = 4;
-        attr_policy[DRCC_ATTR_INITIAL_RTX_TIME].type = NLA_U32;
-        attr_policy[DRCC_ATTR_INITIAL_RTX_TIME].minlen = 4;
-        attr_policy[DRCC_ATTR_INITIAL_RTX_TIME].maxlen = 4;
+        attr_policy[DRCC_ATTR_INIT_RTX_TIME].type = NLA_U32;
+        attr_policy[DRCC_ATTR_INIT_RTX_TIME].minlen = 4;
+        attr_policy[DRCC_ATTR_INIT_RTX_TIME].maxlen = 4;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].minlen = 0;
         attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].maxlen = 0;
@@ -2354,14 +2360,19 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
         PolicyConfig * sendingAckPolicy;
         PolicyConfig * rControlAckPolicy;
 
+        if (attrs[DRCC_ATTR_MAX_TIME_TO_RETRY]) {
+                result->set_max_time_to_retry(
+                                nla_get_u32(attrs[DRCC_ATTR_MAX_TIME_TO_RETRY]));
+        }
+
         if (attrs[DRCC_ATTR_DATA_RXMSN_MAX]) {
                 result->set_data_rxmsn_max(
                                 nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
         }
 
-        if (attrs[DRCC_ATTR_INITIAL_RTX_TIME]) {
+        if (attrs[DRCC_ATTR_INIT_RTX_TIME]) {
         	result->set_initial_rtx_time(
-        			nla_get_u32(attrs[DRCC_ATTR_INITIAL_RTX_TIME]));
+        			nla_get_u32(attrs[DRCC_ATTR_INIT_RTX_TIME]));
         }
 
         if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY]){
@@ -2441,8 +2452,8 @@ DTCPRtxControlConfig * parseDTCPRtxControlConfigObject(nlattr *nested) {
 
 int putDTCPConfigObject(nl_msg* netlinkMessage,
                 const DTCPConfig& object) {
-        struct nlattr *flowControlConfig, *rtxControlConfig, *rtimerInacPolicy,
-        *stimerInacPolicy, *lostControlPduPolicy, *rttEstimatorPolicy;
+        struct nlattr *flowControlConfig, *rtxControlConfig,
+                *lostControlPduPolicy, *rttEstimatorPolicy;
 
         if (object.is_flow_control()) {
                 NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_FLOW_CONTROL);
@@ -2474,12 +2485,6 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
                 nla_nest_end(netlinkMessage, rtxControlConfig);
         }
 
-        NLA_PUT_U32(netlinkMessage, DCA_ATTR_INIT_SINAC_TIME,
-                                object.get_initial_sender_inactivity_time());
-
-        NLA_PUT_U32(netlinkMessage, DCA_ATTR_INIT_RINAC_TIME,
-                                object.get_initial_recvr_inactivity_time());
-
         if (!(rttEstimatorPolicy = nla_nest_start(netlinkMessage,
                         DCA_ATTR_RTT_EST_POLICY))) {
                 goto nla_put_failure;
@@ -2491,30 +2496,6 @@ int putDTCPConfigObject(nl_msg* netlinkMessage,
         }
 
         nla_nest_end(netlinkMessage, rttEstimatorPolicy);
-
-        if (!(stimerInacPolicy = nla_nest_start(netlinkMessage,
-                        DCA_ATTR_SNDR_TIMER_INAC_POLICY))) {
-                goto nla_put_failure;
-        }
-
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_sender_timer_inactivity_policy())< 0) {
-                goto nla_put_failure;
-        }
-
-        nla_nest_end(netlinkMessage, stimerInacPolicy);
-
-        if (!(rtimerInacPolicy = nla_nest_start(netlinkMessage,
-                        DCA_ATTR_RCVR_TIMER_INAC_POLICY))) {
-                goto nla_put_failure;
-        }
-
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_rcvr_timer_inactivity_policy())< 0) {
-                goto nla_put_failure;
-        }
-
-        nla_nest_end(netlinkMessage, rtimerInacPolicy);
 
         if (!(lostControlPduPolicy = nla_nest_start(netlinkMessage,
                         DCA_ATTR_LOST_CONTROL_PDU_POLICY))) {
@@ -2550,18 +2531,6 @@ parseDTCPConfigObject(nlattr *nested) {
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].type = NLA_NESTED;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].minlen = 0;
         attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].maxlen = 0;
-        attr_policy[DCA_ATTR_INIT_SINAC_TIME].type = NLA_U32;
-        attr_policy[DCA_ATTR_INIT_SINAC_TIME].minlen = 4;
-        attr_policy[DCA_ATTR_INIT_SINAC_TIME].maxlen = 4;
-        attr_policy[DCA_ATTR_INIT_RINAC_TIME].type = NLA_U32;
-        attr_policy[DCA_ATTR_INIT_RINAC_TIME].minlen = 4;
-        attr_policy[DCA_ATTR_INIT_RINAC_TIME].maxlen = 4;
-        attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
-        attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].minlen = 0;
-        attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].maxlen = 0;
-        attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
-        attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].minlen = 0;
-        attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].maxlen = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].minlen = 0;
         attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].maxlen = 0;
@@ -2580,8 +2549,6 @@ parseDTCPConfigObject(nlattr *nested) {
         DTCPConfig * result = new DTCPConfig();
         DTCPFlowControlConfig * flowCtrlConfig;
         DTCPRtxControlConfig * rtxCtrlConfig;
-        PolicyConfig * sTimerInacPolicy;
-        PolicyConfig * rTimerInacPolicy;
         PolicyConfig * lostControlPduPolicy;
         PolicyConfig * rttEstimatorPolicy;
 
@@ -2629,40 +2596,6 @@ parseDTCPConfigObject(nlattr *nested) {
                 result->set_rtx_control(false);
         }
 
-        if (attrs[DCA_ATTR_INIT_SINAC_TIME]) {
-                result->set_initial_sender_inactivity_time(
-                                nla_get_u32(attrs[DCA_ATTR_INIT_SINAC_TIME]));
-        }
-
-        if (attrs[DCA_ATTR_INIT_RINAC_TIME]) {
-                result->set_initial_recvr_inactivity_time(
-                                nla_get_u32(attrs[DCA_ATTR_INIT_RINAC_TIME]));
-        }
-
-        if (attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]){
-                sTimerInacPolicy = parsePolicyConfigObject(
-                                attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]);
-                if (sTimerInacPolicy == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_sender_timer_inactivity_policy(*sTimerInacPolicy);
-                        delete sTimerInacPolicy;
-                }
-        }
-
-        if (attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]){
-                rTimerInacPolicy = parsePolicyConfigObject(
-                                attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]);
-                if (rTimerInacPolicy == 0) {
-                        delete result;
-                        return 0;
-                } else {
-                        result->set_rcvr_timer_inactivity_policy(*rTimerInacPolicy);
-                        delete rTimerInacPolicy;
-                }
-        }
-
         if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]){
                 lostControlPduPolicy = parsePolicyConfigObject(
                                 attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY]);
@@ -2693,7 +2626,8 @@ parseDTCPConfigObject(nlattr *nested) {
 int putConnectionPoliciesObject(nl_msg* netlinkMessage,
 		const ConnectionPolicies& object) {
 
-        struct nlattr *dtcpConfig, *initSeqNumPolicy;
+        struct nlattr *dtcpConfig, *initSeqNumPolicy, *rtimerInacPolicy,
+                *stimerInacPolicy;
 
         if (object.is_dtcp_present()){
                 NLA_PUT_FLAG(netlinkMessage, CPA_ATTR_DTCP_PRESENT);
@@ -2721,6 +2655,30 @@ int putConnectionPoliciesObject(nl_msg* netlinkMessage,
         }
 
         nla_nest_end(netlinkMessage, initSeqNumPolicy);
+
+        if (!(stimerInacPolicy = nla_nest_start(netlinkMessage,
+                        CPA_ATTR_SNDR_TIMER_INAC_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putPolicyConfigObject(netlinkMessage,
+                        object.get_sender_timer_inactivity_policy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, stimerInacPolicy);
+
+        if (!(rtimerInacPolicy = nla_nest_start(netlinkMessage,
+                        CPA_ATTR_RCVR_TIMER_INAC_POLICY))) {
+                goto nla_put_failure;
+        }
+
+        if (putPolicyConfigObject(netlinkMessage,
+                        object.get_rcvr_timer_inactivity_policy())< 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, rtimerInacPolicy);
 
         NLA_PUT_U32(netlinkMessage, CPA_ATTR_SEQ_NUM_ROLLOVER,
                         object.get_seq_num_rollover_threshold());
@@ -2759,6 +2717,12 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	attr_policy[CPA_ATTR_DTCP_CONFIG].type = NLA_NESTED;
 	attr_policy[CPA_ATTR_DTCP_CONFIG].minlen = 0;
 	attr_policy[CPA_ATTR_DTCP_CONFIG].maxlen = 0;
+	attr_policy[CPA_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
+	attr_policy[CPA_ATTR_RCVR_TIMER_INAC_POLICY].minlen = 0;
+	attr_policy[CPA_ATTR_RCVR_TIMER_INAC_POLICY].maxlen = 0;
+	attr_policy[CPA_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
+	attr_policy[CPA_ATTR_SNDR_TIMER_INAC_POLICY].minlen = 0;
+	attr_policy[CPA_ATTR_SNDR_TIMER_INAC_POLICY].maxlen = 0;
 	attr_policy[CPA_ATTR_INIT_SEQ_NUM_POLICY].type = NLA_NESTED;
 	attr_policy[CPA_ATTR_INIT_SEQ_NUM_POLICY].minlen = 0;
 	attr_policy[CPA_ATTR_INIT_SEQ_NUM_POLICY].maxlen = 0;
@@ -2793,6 +2757,8 @@ parseConnectionPoliciesObject(nlattr *nested) {
 			new ConnectionPolicies();
 	DTCPConfig * dtcpConfig;
 	PolicyConfig * initSeqNumPolicy;
+        PolicyConfig * sTimerInacPolicy;
+        PolicyConfig * rTimerInacPolicy;
 
 	if (attrs[CPA_ATTR_DTCP_PRESENT]) {
 	        result->set_dtcp_present(true);
@@ -2813,6 +2779,30 @@ parseConnectionPoliciesObject(nlattr *nested) {
 	        }
 	} else {
 	        result->set_dtcp_present(false);
+	}
+
+	if (attrs[CPA_ATTR_SNDR_TIMER_INAC_POLICY]){
+		sTimerInacPolicy = parsePolicyConfigObject(
+				attrs[CPA_ATTR_SNDR_TIMER_INAC_POLICY]);
+		if (sTimerInacPolicy == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->set_sender_timer_inactivity_policy(*sTimerInacPolicy);
+			delete sTimerInacPolicy;
+		}
+	}
+
+	if (attrs[CPA_ATTR_RCVR_TIMER_INAC_POLICY]){
+		rTimerInacPolicy = parsePolicyConfigObject(
+				attrs[CPA_ATTR_RCVR_TIMER_INAC_POLICY]);
+		if (rTimerInacPolicy == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->set_rcvr_timer_inactivity_policy(*rTimerInacPolicy);
+			delete rTimerInacPolicy;
+		}
 	}
 
 	if (attrs[CPA_ATTR_INIT_SEQ_NUM_POLICY]){

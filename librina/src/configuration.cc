@@ -385,8 +385,17 @@ const std::string DTCPFlowControlConfig::toString() {
 
 // CLASS DTCP RX CONTROL CONFIG
 DTCPRtxControlConfig::DTCPRtxControlConfig() {
-        data_rxms_nmax_ = 0;
-        initial_rtx_time_ = 0;
+	max_time_to_retry_ = 0;
+	data_rxms_nmax_ = 0;
+	initial_rtx_time_ = 0;
+}
+
+unsigned int DTCPRtxControlConfig::get_max_time_to_retry() const {
+	return max_time_to_retry_;
+}
+
+void DTCPRtxControlConfig::set_max_time_to_retry(unsigned int max_time_to_retry) {
+	max_time_to_retry_ = max_time_to_retry;
 }
 
 unsigned int DTCPRtxControlConfig::get_data_rxmsn_max() const {
@@ -458,7 +467,8 @@ void DTCPRtxControlConfig::set_sending_ack_policy(const PolicyConfig& sending_ac
 
 const std::string DTCPRtxControlConfig::toString() {
         std::stringstream ss;
-        ss<<"Max number of retx attempts: "<<data_rxms_nmax_;
+        ss<<"Max time to retry the transmission of a PDU (R)"<<max_time_to_retry_;
+        ss<<"; Max number of retx attempts: "<<data_rxms_nmax_;
         ss<<"; Initial retx time: "<<initial_rtx_time_<<std::endl;
         ss<<"; Rtx timer expiry policy (name/version): "<<rtx_timer_expiry_policy_.get_name();
         ss<<"/"<<rtx_timer_expiry_policy_.get_version()<<std::endl;
@@ -479,8 +489,6 @@ const std::string DTCPRtxControlConfig::toString() {
 DTCPConfig::DTCPConfig() {
         flow_control_ = false;
         rtx_control_ = false;
-        initial_recvr_inactivity_time_ = 0;
-        initial_sender_inactivity_time_ = 0;
 }
 
 bool DTCPConfig::is_flow_control() const {
@@ -500,22 +508,6 @@ void DTCPConfig::set_flow_control_config(
 	flow_control_config_ = flow_control_config;
 }
 
-unsigned int DTCPConfig::get_initial_recvr_inactivity_time() const {
-	return initial_recvr_inactivity_time_;
-}
-
-void DTCPConfig::set_initial_recvr_inactivity_time(unsigned int initial_recvr_inactivity_time) {
-	initial_recvr_inactivity_time_ = initial_recvr_inactivity_time;
-}
-
-unsigned int DTCPConfig::get_initial_sender_inactivity_time() const {
-	return initial_sender_inactivity_time_;
-}
-
-void DTCPConfig::set_initial_sender_inactivity_time(unsigned int initial_sender_inactivity_time) {
-	initial_recvr_inactivity_time_ = initial_sender_inactivity_time;
-}
-
 const PolicyConfig& DTCPConfig::get_lost_control_pdu_policy() const {
 	return lost_control_pdu_policy_;
 }
@@ -523,15 +515,6 @@ const PolicyConfig& DTCPConfig::get_lost_control_pdu_policy() const {
 void DTCPConfig::set_lost_control_pdu_policy(
                 const PolicyConfig& lostcontrolpdupolicy) {
 	lost_control_pdu_policy_ = lostcontrolpdupolicy;
-}
-
-const PolicyConfig& DTCPConfig::get_rcvr_timer_inactivity_policy() const {
-	return rcvr_timer_inactivity_policy_;
-}
-
-void DTCPConfig::set_rcvr_timer_inactivity_policy(
-                const PolicyConfig& rcvr_timer_inactivity_policy) {
-	rcvr_timer_inactivity_policy_ = rcvr_timer_inactivity_policy;
 }
 
 bool DTCPConfig::is_rtx_control() const {
@@ -550,15 +533,6 @@ void DTCPConfig::set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_
 	rtx_control_config_ = rtx_control_config;
 }
 
-const PolicyConfig& DTCPConfig::get_sender_timer_inactivity_policy() const {
-	return sender_timer_inactivity_policy_;
-}
-
-void DTCPConfig::set_sender_timer_inactivity_policy(
-                const PolicyConfig& sender_timer_inactivity_policy) {
-	sender_timer_inactivity_policy_ = sender_timer_inactivity_policy;
-}
-
 const PolicyConfig& DTCPConfig::get_rtt_estimator_policy() const {
 	return rtt_estimator_policy_;
 }
@@ -569,12 +543,6 @@ void DTCPConfig::set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_poli
 
 const std::string DTCPConfig::toString() {
         std::stringstream ss;
-        ss<<"Initial rcvr inactivity time: "<<initial_recvr_inactivity_time_;
-        ss<<"; Initial sedr inactivity time: "<<initial_sender_inactivity_time_<<std::endl;
-        ss<<"; Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
-        ss<<"/"<<sender_timer_inactivity_policy_.get_version();
-        ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();
-        ss<<"/"<<rcvr_timer_inactivity_policy_.get_version()<<std::endl;
         ss<<"Flow control? "<<flow_control_<<"; Retx control? "<<rtx_control_;
         ss<<"; Lost control PDU policy (name/version): "<<lost_control_pdu_policy_.get_name();
         ss<<"/"<<lost_control_pdu_policy_.get_version()<<std::endl;
@@ -598,6 +566,24 @@ ConnectionPolicies::ConnectionPolicies(){
 	in_order_delivery_ = false;
 	incomplete_delivery_ = false;
 	max_sdu_gap_ = 0;
+}
+
+const PolicyConfig& ConnectionPolicies::get_rcvr_timer_inactivity_policy() const {
+	return rcvr_timer_inactivity_policy_;
+}
+
+void ConnectionPolicies::set_rcvr_timer_inactivity_policy(
+                const PolicyConfig& rcvr_timer_inactivity_policy) {
+	rcvr_timer_inactivity_policy_ = rcvr_timer_inactivity_policy;
+}
+
+const PolicyConfig& ConnectionPolicies::get_sender_timer_inactivity_policy() const {
+	return sender_timer_inactivity_policy_;
+}
+
+void ConnectionPolicies::set_sender_timer_inactivity_policy(
+                const PolicyConfig& sender_timer_inactivity_policy) {
+	sender_timer_inactivity_policy_ = sender_timer_inactivity_policy;
 }
 
 const DTCPConfig& ConnectionPolicies::get_dtcp_configuration() const {
@@ -674,6 +660,10 @@ void ConnectionPolicies::set_incomplete_delivery(bool incomplete_delivery) {
 
 const std::string ConnectionPolicies::toString() {
         std::stringstream ss;
+        ss<<"Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
+        ss<<"/"<<sender_timer_inactivity_policy_.get_version();
+        ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();
+        ss<<"/"<<rcvr_timer_inactivity_policy_.get_version()<<std::endl;
         ss<<"DTCP present: "<<dtcp_present_;
         ss<<"; Initial A-timer: "<<initial_a_timer_;
         ss<<"; Seq. num roll. threshold: "<<seq_num_rollover_threshold_;

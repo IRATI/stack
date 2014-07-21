@@ -68,8 +68,6 @@ bool test_Flow () {
 	rate_to_encode.set_time_period(1451234);
 	flow_config_to_encode.set_rate_based_config(rate_to_encode);
 	dtcp_config_to_encode.set_flow_control_config(flow_config_to_encode);
-	dtcp_config_to_encode.set_initial_recvr_inactivity_time(34);
-	dtcp_config_to_encode.set_initial_sender_inactivity_time(51245);
 	connection_policies_to_encode.set_dtcp_configuration(dtcp_config_to_encode);
 	pconnection_to_encode->setPolicies(connection_policies_to_encode);
 	connection_list.push_front(pconnection_to_encode);
@@ -105,11 +103,8 @@ bool test_Flow () {
 			ret = false;
 		if(dtcp_config_to_encode.get_rtx_control_config().get_data_rxmsn_max() != dtcp_config_decoded.get_rtx_control_config().get_data_rxmsn_max())
 			ret = false;
-		if(dtcp_config_to_encode.get_initial_recvr_inactivity_time() != dtcp_config_decoded.get_initial_recvr_inactivity_time())
+		if(dtcp_config_to_encode.get_rtx_control_config().get_max_time_to_retry() != dtcp_config_decoded.get_rtx_control_config().get_max_time_to_retry())
 			ret = false;
-		if(dtcp_config_to_encode.get_initial_sender_inactivity_time() != dtcp_config_decoded.get_initial_sender_inactivity_time())
-			ret = false;
-
 		if(dtcp_config_to_encode.is_flow_control() != dtcp_config_decoded.is_flow_control())
 			ret = false;
 		else {

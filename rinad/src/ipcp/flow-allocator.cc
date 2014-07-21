@@ -1362,6 +1362,10 @@ rina::messages::connectionPolicies_t* FlowEncoder::get_connectionPolicies_t(cons
 	gpf_polc->set_seqnumrolloverthreshold(polc.get_seq_num_rollover_threshold());
 	//optional uint32 initialATimer
 	gpf_polc->set_initialatimer(polc.get_initial_a_timer());
+	//optional policyDescriptor_t rcvrtimerinactivitypolicy
+	gpf_polc->set_allocated_rcvrtimerinactivitypolicy(get_policyDescriptor_t(polc.get_rcvr_timer_inactivity_policy()));
+	//optional policyDescriptor_t sendertimerinactiviypolicy
+	gpf_polc->set_allocated_sendertimerinactiviypolicy(get_policyDescriptor_t(polc.get_sender_timer_inactivity_policy()));
 
 	return gpf_polc;
 }
@@ -1376,14 +1380,6 @@ rina::messages::dtcpConfig_t* FlowEncoder::get_dtcpConfig_t(const rina::DTCPConf
 	gpf_conf->set_rtxcontrol(conf.is_rtx_control());
 	//optional dtcpRtxControlConfig_t rtxControlConfig
 	gpf_conf->set_allocated_rtxcontrolconfig(get_dtcpRtxControlConfig_t(conf.get_rtx_control_config()));
-	//optional uint32 initialsenderinactivitytime
-	gpf_conf->set_initialsenderinactivitytime(conf.get_initial_sender_inactivity_time());
-	//optional uint32 initialrecvrinactivitytime
-	gpf_conf->set_initialrecvrinactivitytime(conf.get_initial_recvr_inactivity_time());
-	//optional policyDescriptor_t rcvrtimerinactivitypolicy
-	gpf_conf->set_allocated_rcvrtimerinactivitypolicy(get_policyDescriptor_t(conf.get_rcvr_timer_inactivity_policy()));
-	//optional policyDescriptor_t sendertimerinactiviypolicy
-	gpf_conf->set_allocated_sendertimerinactiviypolicy(get_policyDescriptor_t(conf.get_sender_timer_inactivity_policy()));
 	//optional policyDescriptor_t lostcontrolpdupolicy
 	gpf_conf->set_allocated_lostcontrolpdupolicy(get_policyDescriptor_t((conf.get_lost_control_pdu_policy())));
 	//optional policyDescriptor_t rttestimatorpolicy
@@ -1445,6 +1441,8 @@ rina::messages::dtcpFlowControlConfig_t* FlowEncoder::get_dtcpFlowControlConfig_
 
 rina::messages::dtcpRtxControlConfig_t* FlowEncoder::get_dtcpRtxControlConfig_t(const rina::DTCPRtxControlConfig &conf) const {
 	rina::messages::dtcpRtxControlConfig_t *gpf_conf = new rina::messages::dtcpRtxControlConfig_t;
+	//optional uint32 maxtimetoretry
+	gpf_conf->set_maxtimetoretry(conf.get_max_time_to_retry());
 	//optional uint32 datarxmsnmax
 	gpf_conf->set_datarxmsnmax(conf.get_data_rxmsn_max());
 	//optional policyDescriptor_t rtxtimerexpirypolicy
@@ -1511,11 +1509,19 @@ rina::ConnectionPolicies* FlowEncoder::get_ConnectionPolicies(const rina::messag
 	polc->set_dtcp_configuration(*conf);
 	delete conf;
 	conf = 0;
+	//optional policyDescriptor_t rcvrtimerinactivitypolicy
+	rina::PolicyConfig *p_conf = get_PolicyConfig(gpf_polc.rcvrtimerinactivitypolicy());
+	polc->set_rcvr_timer_inactivity_policy(*p_conf);
+	delete p_conf;
+	//optional policyDescriptor_t sendertimerinactiviypolicy
+	p_conf = get_PolicyConfig(gpf_polc.sendertimerinactiviypolicy());
+	polc->set_sender_timer_inactivity_policy(*p_conf);
+	delete p_conf;
 	//optional policyDescriptor_t initialseqnumpolicy
-	rina::PolicyConfig *po_conf = get_PolicyConfig(gpf_polc.initialseqnumpolicy());
-	polc->set_initial_seq_num_policy(*po_conf);
-	delete po_conf;
-	po_conf = 0;
+	p_conf = get_PolicyConfig(gpf_polc.initialseqnumpolicy());
+	polc->set_initial_seq_num_policy(*p_conf);
+	delete p_conf;
+	p_conf = 0;
 	//optional uint64 seqnumrolloverthreshold
 	polc->set_seq_num_rollover_threshold(gpf_polc.seqnumrolloverthreshold());
 	//optional uint32 initialATimer
@@ -1593,20 +1599,8 @@ rina::DTCPConfig* FlowEncoder::get_DTCPConfig(const rina::messages::dtcpConfig_t
 	conf->set_rtx_control_config(*rtx_conf);
 	delete rtx_conf;
 	rtx_conf = 0;
-	//optional uint32 initialsenderinactivitytime
-	conf->set_initial_sender_inactivity_time(gpf_conf.initialsenderinactivitytime());
-	//optional uint32 initialrecvrinactivitytime
-	conf->set_initial_recvr_inactivity_time(gpf_conf.initialrecvrinactivitytime());
-	//optional policyDescriptor_t rcvrtimerinactivitypolicy
-	rina::PolicyConfig *p_conf = get_PolicyConfig(gpf_conf.rcvrtimerinactivitypolicy());
-	conf->set_rcvr_timer_inactivity_policy(*p_conf);
-	delete p_conf;
-	//optional policyDescriptor_t sendertimerinactiviypolicy
-	p_conf = get_PolicyConfig(gpf_conf.sendertimerinactiviypolicy());
-	conf->set_sender_timer_inactivity_policy(*p_conf);
-	delete p_conf;
 	//optional policyDescriptor_t lostcontrolpdupolicy
-	p_conf = get_PolicyConfig(gpf_conf.lostcontrolpdupolicy());
+	rina::PolicyConfig * p_conf = get_PolicyConfig(gpf_conf.lostcontrolpdupolicy());
 	conf->set_lost_control_pdu_policy(*p_conf);
 	delete p_conf;
 	//optional policyDescriptor_t rttestimatorpolicy
@@ -1690,6 +1684,7 @@ rina::DTCPFlowControlConfig* FlowEncoder::get_DTCPFlowControlConfig(const rina::
 
 rina::DTCPRtxControlConfig* FlowEncoder::get_DTCPRtxControlConfig(const rina::messages::dtcpRtxControlConfig_t &gpf_conf) const {
 	rina::DTCPRtxControlConfig *conf = new rina::DTCPRtxControlConfig;
+	conf->set_max_time_to_retry(gpf_conf.maxtimetoretry());
 	//optional uint32 datarxmsnmax
 	conf->set_data_rxmsn_max(gpf_conf.datarxmsnmax());
 	//optional policyDescriptor_t rtxtimerexpirypolicy

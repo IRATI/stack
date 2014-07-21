@@ -96,20 +96,6 @@ public class GPBUtils {
 		return result;
 	}
 	
-	private static List<property_t> getAllPolicyParameters(PolicyParameterList list) {
-		List<property_t> result = new ArrayList<property_t>();
-		if (list == null || list.isEmpty()) {
-			return result;
-		}
-		
-		Iterator<PolicyParameter> iterator = list.iterator();
-		while (iterator.hasNext()) {
-			result.add(getPropertyType(iterator.next()));
-		}
-		
-		return result;
-	}
-	
 	private static property_t getPropertyType(PolicyParameter parameter) {
 		property_t result = null;
 		if (parameter == null){
@@ -185,14 +171,6 @@ public class GPBUtils {
 		return result;
 	}
 	
-	private static PolicyParameter getPolicyParameter(property_t parameter) {
-		if (parameter == null){
-			return new PolicyParameter();
-		}
-		
-		return new PolicyParameter(parameter.getName(), parameter.getValue());
-	}
-	
 	public static Map<String, String> getProperties(List<property_t> gpbProperties){
 		if (gpbProperties == null){
 			return null;
@@ -218,6 +196,14 @@ public class GPBUtils {
 		if (policyConfig != null) {
 			result.setInitialseqnumpolicy(policyConfig);
 		}
+		policyConfig = GPBUtils.getPolicyConfig(connectionPolicies.getRcvrtimerinactivitypolicy());
+		if (policyConfig != null) {
+			result.setRcvrtimerinactivitypolicy(policyConfig);
+		}
+		policyConfig = GPBUtils.getPolicyConfig(connectionPolicies.getSendertimerinactiviypolicy());
+		if (policyConfig != null) {
+			result.setSendertimerinactiviypolicy(policyConfig);
+		}
 		result.setSeqnumrolloverthreshold((int)connectionPolicies.getSeqnumrolloverthreshold());
 		if (result.isDtcpPresent()) {
 			result.setDtcpConfiguration(getDTCPConfig(connectionPolicies.getDtcpConfiguration()));
@@ -242,21 +228,10 @@ public class GPBUtils {
 		if (result.isRtxcontrol()) {
 			result.setRtxcontrolconfig(getDTCPRtxControlConfig(dtcpConfig.getRtxControlConfig()));
 		}
-		result.setInitialrecvrinactivitytime(dtcpConfig.getInitialrecvrinactivitytime());
-		result.setInitialsenderinactivitytime(dtcpConfig.getInitialsenderinactivitytime());
 		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getLostcontrolpdupolicy());
 		if (policyConfig != null) {
 			result.setLostcontrolpdupolicy(policyConfig);
 		}
-		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getRcvrtimerinactivitypolicy());
-		if (policyConfig != null) {
-			result.setRcvrtimerinactivitypolicy(policyConfig);
-		}
-		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getSendertimerinactiviypolicy());
-		if (policyConfig != null) {
-			result.setSendertimerinactiviypolicy(policyConfig);
-		}
-		
 		policyConfig = GPBUtils.getPolicyConfig(dtcpConfig.getRttestimatorpolicy());
 		if (policyConfig != null) {
 			result.setRttestimatorpolicy(policyConfig);
@@ -273,6 +248,7 @@ public class GPBUtils {
 			return result;
 		}
 		
+		result.setMaximumTimeToRetry(rtxControlConfig.getMaxtimetoretry());
 		result.setDatarxmsnmax(rtxControlConfig.getDatarxmsnmax());
 		result.setInitialRtxTime(rtxControlConfig.getInitialrtime());
 		
@@ -455,6 +431,8 @@ public class GPBUtils {
 
 		result = ConnectionPoliciesMessage.connectionPolicies_t.newBuilder().
 				setDtcpPresent(connectionPolicies.isDtcpPresent()).
+				setSendertimerinactiviypolicy(GPBUtils.getPolicyDescriptorType(connectionPolicies.getSendertimerinactiviypolicy())).
+				setRcvrtimerinactivitypolicy(GPBUtils.getPolicyDescriptorType(connectionPolicies.getRcvrtimerinactivitypolicy())).
 				setDtcpConfiguration(dtcpConfig).
 				setInitialATimer(connectionPolicies.getInitialATimer()).
 				setInitialseqnumpolicy(GPBUtils.getPolicyDescriptorType(connectionPolicies.getInitialseqnumpolicy())).
@@ -488,11 +466,7 @@ public class GPBUtils {
 				setFlowControlConfig(flowConfig).
 				setRtxControl(dtcpConfig.isRtxcontrol()).
 				setRtxControlConfig(rtxConfig).
-				setInitialrecvrinactivitytime(dtcpConfig.getInitialrecvrinactivitytime()).
-				setInitialsenderinactivitytime(dtcpConfig.getInitialsenderinactivitytime()).
 				setLostcontrolpdupolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getLostcontrolpdupolicy())).
-				setSendertimerinactiviypolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getSendertimerinactiviypolicy())).
-				setRcvrtimerinactivitypolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getRcvrtimerinactivitypolicy())).
 				setRttestimatorpolicy(GPBUtils.getPolicyDescriptorType(dtcpConfig.getRttestimatorpolicy())).
 				build();
 	}
@@ -503,6 +477,7 @@ public class GPBUtils {
 		}
 		
 		return ConnectionPoliciesMessage.dtcpRtxControlConfig_t.newBuilder().
+				setMaxtimetoretry((int)rtxControl.getMaximumTimeToRetry()).
 				setDatarxmsnmax((int)rtxControl.getDatarxmsnmax()).
 				setInitialrtime((int)rtxControl.getInitialRtxTime()).
 				setRcvrackpolicy(GPBUtils.getPolicyDescriptorType(rtxControl.getRcvrackpolicy())).

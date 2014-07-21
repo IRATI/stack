@@ -277,8 +277,13 @@ public:
         void set_sender_ack_policy(const PolicyConfig& sender_ack_policy);
         const PolicyConfig& get_sending_ack_policy() const;
         void set_sending_ack_policy(const PolicyConfig& sending_ack_policy);
+        unsigned int get_max_time_to_retry() const;
+        void set_max_time_to_retry(unsigned int max_time_to_retry);
 #endif
         const std::string toString();
+
+        ///  Maximum time to attempt the retransmission of a packet, this is R.
+        unsigned int max_time_to_retry_;
 
         /// the number of times the retransmission of a PDU will be attempted
         /// before some other action must be taken.
@@ -332,23 +337,13 @@ public:
         const DTCPFlowControlConfig& get_flow_control_config() const;
         void set_flow_control_config(
                         const DTCPFlowControlConfig& flow_control_config);
-        unsigned int get_initial_recvr_inactivity_time() const;
-        void set_initial_recvr_inactivity_time(unsigned int initial_recvr_inactivity_time);
-        unsigned int get_initial_sender_inactivity_time() const;
-        void set_initial_sender_inactivity_time(unsigned int initial_sender_inactivity_time);
         const PolicyConfig& get_lost_control_pdu_policy() const;
         void set_lost_control_pdu_policy(
                         const PolicyConfig& lostcontrolpdupolicy);
-        const PolicyConfig& get_rcvr_timer_inactivity_policy() const;
-        void set_rcvr_timer_inactivity_policy(
-                        const PolicyConfig& rcvr_timer_inactivity_policy);
         bool is_rtx_control() const;
         void set_rtx_control(bool rtx_control);
         const DTCPRtxControlConfig& get_rtx_control_config() const;
         void set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_config);
-        const PolicyConfig& get_sender_timer_inactivity_policy() const;
-        void set_sender_timer_inactivity_policy(
-                        const PolicyConfig& sender_timer_inactivity_policy);
         const PolicyConfig& get_rtt_estimator_policy() const;
         void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
 #endif
@@ -365,26 +360,6 @@ public:
 
         /// the rtx control configuration of a DTCP instance
         DTCPRtxControlConfig rtx_control_config_;
-
-        /// should be approximately 2Δt. This must be bounded. A DIF
-        /// specification may want to specify a maximum value.
-        unsigned int initial_sender_inactivity_time_;
-
-        /// should be approximately 3Δt. This must be bounded. A DIF
-        /// specification may want to specify a maximum value.
-        unsigned int initial_recvr_inactivity_time_;
-
-        /// used when DTCP is in use. If no PDUs arrive in this time period,
-        /// the receiver should expect a DRF in the next Transfer PDU. If not,
-        /// something is very wrong. The timeout value should generally be set
-        /// to 3(MPL+R+A).
-        PolicyConfig rcvr_timer_inactivity_policy_;
-
-        /// used when DTCP is in use. This timer is used to detect long periods
-        /// of no traffic, indicating that a DRF should be sent. If not,
-        /// something is very wrong. The timeout value should generally be set
-        /// to 2(MPL+R+A).
-        PolicyConfig sender_timer_inactivity_policy_;
 
         /// This policy determines what action to take when the PM detects that
         /// a control PDU (Ack or Flow Control) may have been lost.  If this
@@ -422,6 +397,12 @@ public:
         void set_partial_delivery(bool partial_delivery);
         bool is_incomplete_delivery() const;
         void set_incomplete_delivery(bool incomplete_delivery);
+        const PolicyConfig& get_rcvr_timer_inactivity_policy() const;
+        void set_rcvr_timer_inactivity_policy(
+        		const PolicyConfig& rcvr_timer_inactivity_policy);
+        const PolicyConfig& get_sender_timer_inactivity_policy() const;
+        void set_sender_timer_inactivity_policy(
+        		const PolicyConfig& sender_timer_inactivity_policy);
 #endif
         const std::string toString();
 
@@ -430,6 +411,18 @@ public:
 
         /// The configuration of the DTCP instance
         DTCPConfig dtcp_configuration_;
+
+        /// used when DTCP is in use. If no PDUs arrive in this time period,
+        /// the receiver should expect a DRF in the next Transfer PDU. If not,
+        /// something is very wrong. The timeout value should generally be set
+        /// to 3(MPL+R+A).
+        PolicyConfig rcvr_timer_inactivity_policy_;
+
+        /// used when DTCP is in use. This timer is used to detect long periods
+        /// of no traffic, indicating that a DRF should be sent. If not,
+        /// something is very wrong. The timeout value should generally be set
+        /// to 2(MPL+R+A).
+        PolicyConfig sender_timer_inactivity_policy_;
 
         /// This policy allows some discretion in selecting the initial sequence
         /// number, when DRF is going to be sent.

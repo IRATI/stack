@@ -2460,16 +2460,15 @@ int testIpcpCreateConnectionRequest() {
         dtcpFlowCtrlConfig.set_closed_window_policy(closedWindowPolicy);
 
         DTCPRtxControlConfig dtcpRtxConfig;
+        dtcpRtxConfig.set_max_time_to_retry(2312);
         dtcpRtxConfig.set_data_rxmsn_max(23424);
-        dtcpRtxConfig.set_initial_rtx_time(434);
+        dtcpRtxConfig.set_initial_rtx_time(20);
 
         DTCPConfig dtcpConfig;
         dtcpConfig.set_flow_control(true);
         dtcpConfig.set_flow_control_config(dtcpFlowCtrlConfig);
         dtcpConfig.set_rtx_control(true);
         dtcpConfig.set_rtx_control_config(dtcpRtxConfig);
-        dtcpConfig.set_initial_recvr_inactivity_time(234);
-        dtcpConfig.set_initial_sender_inactivity_time(123);
 
         ConnectionPolicies connectionPolicies;
         connectionPolicies.set_dtcp_present(true);
@@ -2586,20 +2585,10 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "ConnPolicies.dtcpconfig.isRtxcontrol on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_initial_recvr_inactivity_time() !=
-                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().get_initial_recvr_inactivity_time()){
-                std::cout << "ConnPolicies.dtcpconfig.initialrcvrinatcitvitytime on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_initial_sender_inactivity_time() !=
-                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().get_initial_sender_inactivity_time()){
-                std::cout << "ConnPolicies.dtcpconfig.initialsenderinatcitvitytime on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_rtx_control_config().get_data_rxmsn_max() !=
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_rtx_control_config().get_max_time_to_retry() !=
                         recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
-                        get_rtx_control_config().get_data_rxmsn_max()){
-                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.datarnmsnmax on original and recovered messages"
+                        get_rtx_control_config().get_max_time_to_retry()){
+                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.maxtimetorety on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_rtx_control_config().get_initial_rtx_time() !=
