@@ -61,6 +61,8 @@ struct dtp_policies {
         int (* flow_control_overrun)(struct dtp * instance,
                                      struct pdu * pdu);
         int (* initial_sequence_number)(struct dtp * instance);
+        int (* receiver_inactivity_timer)(struct dtp * instance);
+        int (* sender_inactivity_timer)(struct dtp * instance);
 };
 
 struct dtp {
@@ -275,11 +277,109 @@ static int default_initial_seq_number(struct dtp * dtp)
         return seq_num;
 }
 
+static int default_receiver_inactivity(struct dtp * dtp)
+{
+        struct dt *          dt;
+        struct dtcp *        dtcp;
+        struct dtcp_config * cfg;
+
+        if (!dtp) return 0;
+
+        dt = dtp->parent;
+        if (!dt)
+                return -1;
+
+        dtcp = dt_dtcp(dt);
+        if (!dtcp)
+                return -1;
+
+        dt_sv_drf_flag_set(dt, true);
+        dtp_initial_sequence_number(dtp);
+
+        cfg = dtcp_config_get(dtcp);
+        if (!cfg)
+                return -1;
+
+        if (dtcp_rtx_ctrl(cfg)) {
+                struct rtxq * q;
+
+                q = dt_rtxq(dt);
+                if (!q) {
+                        LOG_ERR("Couldn't find the Retransmission queue");
+                        return -1;
+                }
+                rtxq_flush(q);
+        }
+        if (dtcp_flow_ctrl(cfg)) {
+                struct cwq * cwq;
+
+                cwq = dt_cwq(dt);
+                ASSERT(cwq);
+                if (cwq_flush(cwq)) {
+                        LOG_ERR("Coudln't flush cwq");
+                        return -1;
+                }
+        }
+
+        /*FIXME: Missing sending the control ack pdu */
+        return 0;
+}
+
+static int default_sender_inactivity(struct dtp * dtp)
+{
+        struct dt *          dt;
+        struct dtcp *        dtcp;
+        struct dtcp_config * cfg;
+
+        if (!dtp) return 0;
+
+        dt = dtp->parent;
+        if (!dt)
+                return -1;
+
+        dtcp = dt_dtcp(dt);
+        if (!dtp)
+                return -1;
+
+        dt_sv_drf_flag_set(dt, true);
+        dtp_initial_sequence_number(dtp);
+
+        cfg = dtcp_config_get(dtcp);
+        if (!cfg)
+                return -1;
+
+        if (dtcp_rtx_ctrl(cfg)) {
+                struct rtxq * q;
+
+                q = dt_rtxq(dt);
+                if (!q) {
+                        LOG_ERR("Couldn't find the Retransmission queue");
+                        return -1;
+                }
+                rtxq_flush(q);
+        }
+        if (dtcp_flow_ctrl(cfg)) {
+                struct cwq * cwq;
+
+                cwq = dt_cwq(dt);
+                ASSERT(cwq);
+                if (cwq_flush(cwq)) {
+                        LOG_ERR("Coudln't flush cwq");
+                        return -1;
+                }
+        }
+
+        /*FIXME: Missing sending the control ack pdu */
+        return 0;
+}
+
 static struct dtp_policies default_policies = {
-        .transmission_control    = default_transmission,
-        .closed_window           = default_closed_window,
-        .flow_control_overrun    = default_flow_control_overrun,
-        .initial_sequence_number = default_initial_seq_number,
+        .transmission_control      = default_transmission,
+        .closed_window             = default_closed_window,
+        .flow_control_overrun      = default_flow_control_overrun,
+        .initial_sequence_number   = default_initial_seq_number,
+        .receiver_inactivity_timer = default_receiver_inactivity,
+        .sender_inactivity_timer   = default_sender_inactivity,
 };
 
 int dtp_initial_sequence_number(struct dtp * instance) {
@@ -530,50 +630,50 @@ static int pdu_post(struct dtp * instance,
 /* Runs the SenderInactivityTimerPolicy */
 static void tf_sender_inactivity(void * data)
 {
-        struct dt *          dt;
-        struct dtp *         dtp;
-        struct dtcp *        dtcp;
+        struct dtp * dtp;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
         }
+        if (!dtp->policies) {
+                LOG_ERR("No DTP policies");
+                return;
+        }
+        if (!dtp->policies->sender_inactivity_timer) {
+                LOG_ERR("No DTP sender inactivity policy");
+                return;
+        }
 
-        dt = dtp->parent;
-        ASSERT(dt);
+        if (dtp->policies->sender_inactivity_timer(dtp))
+                LOG_ERR("Problems executing the sender inactivity policy");
 
-        dtcp = dt_dtcp(dt);
-
-        if (dtcp)
-                if (dtcp_rcvr_inactivity_timer(dtcp))
-                        LOG_ERR("Problems executing "
-                                "dtcp_receiver_inactivity_timer policy");
         return;
 }
 
 /* Runs the ReceiverInactivityTimerPolicy */
 static void tf_receiver_inactivity(void * data)
 {
-        struct dt *          dt;
-        struct dtp *         dtp;
-        struct dtcp *        dtcp;
+        struct dtp * dtp;
 
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
         }
+        if (!dtp->policies) {
+                LOG_ERR("No DTP policies");
+                return;
+        }
+        if (!dtp->policies->receiver_inactivity_timer) {
+                LOG_ERR("No DTP sender inactivity policy");
+                return;
+        }
 
-        dt = dtp->parent;
-        ASSERT(dt);
+        if (dtp->policies->receiver_inactivity_timer(dtp))
+                LOG_ERR("Problems executing receiver inactivity policy");
 
-        dtcp = dt_dtcp(dt);
-
-        if (dtcp)
-                if (dtcp_rcvr_inactivity_timer(dtcp))
-                        LOG_ERR("Problems executing "
-                                "dtcp_receiver_inactivity_timer policy");
         return;
 }
 
