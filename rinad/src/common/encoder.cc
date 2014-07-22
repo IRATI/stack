@@ -23,6 +23,7 @@
 #include "common/encoder.h"
 #include "common/encoders/DataTransferConstantsMessage.pb.h"
 #include "common/encoders/DirectoryForwardingTableEntryArrayMessage.pb.h"
+#include "common/encoders/QoSCubeArrayMessage.pb.h"
 
 namespace rinad {
 
@@ -650,6 +651,110 @@ void* DirectoryForwardingTableEntryListEncoder::decode(const rina::SerializedObj
 	for (int i = 0; i < gpb_list.directoryforwardingtableentry_size(); ++i) {
 		list->push_back(DirectoryForwardingTableEntryEncoder::convertGPBToModel(
 				gpb_list.directoryforwardingtableentry(i)));
+	}
+
+	return (void *) list;
+}
+
+// CLASS QoSCubeEncoder
+const rina::SerializedObject* QoSCubeEncoder::encode(const void* object) {
+	rina::QoSCube *cube = (rina::QoSCube*) object;
+	rina::messages::qosCube_t gpb_cube;
+
+	QoSCubeEncoder::convertModelToGPB(&gpb_cube, cube);
+
+	int size = gpb_cube.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_cube.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* QoSCubeEncoder::decode(
+		const rina::SerializedObject &serialized_object) const {
+	rina::messages::qosCube_t gpb_cube;
+
+	gpb_cube.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	return (void*) QoSCubeEncoder::convertGPBToModel(gpb_cube);
+}
+
+void QoSCubeEncoder::convertModelToGPB(rina::messages::qosCube_t * gpb_cube,
+		rina::QoSCube * cube) {
+	gpb_cube->set_allocated_efcppolicies(Encoder::get_connectionPolicies_t(cube->efcp_policies_));
+	gpb_cube->set_averagebandwidth(cube->average_bandwidth_);
+	gpb_cube->set_averagesdubandwidth(cube->average_sdu_bandwidth_);
+	gpb_cube->set_delay(cube->delay_);
+	gpb_cube->set_jitter(cube->jitter_);
+	gpb_cube->set_maxallowablegapsdu(cube->max_allowable_gap_);
+	gpb_cube->set_name(cube->name_);
+	gpb_cube->set_order(cube->ordered_delivery_);
+	gpb_cube->set_partialdelivery(cube->partial_delivery_);
+	gpb_cube->set_peakbandwidthduration(cube->peak_bandwidth_duration_);
+	gpb_cube->set_peaksdubandwidthduration(cube->peak_sdu_bandwidth_duration_);
+	gpb_cube->set_qosid(cube->id_);
+	gpb_cube->set_undetectedbiterrorrate(cube->undetected_bit_error_rate_);
+
+	return;
+}
+
+rina::QoSCube * QoSCubeEncoder::convertGPBToModel(
+			const rina::messages::qosCube_t & gpb_cube) {
+	rina::QoSCube *cube = new rina::QoSCube();
+
+	rina::ConnectionPolicies *conPol =
+			Encoder::get_ConnectionPolicies(gpb_cube.efcppolicies());
+	cube->efcp_policies_ = *conPol;
+	delete conPol;
+	conPol = 0;
+
+	cube->average_bandwidth_ = gpb_cube.averagebandwidth();
+	cube->average_sdu_bandwidth_ = gpb_cube.averagesdubandwidth();
+	cube->delay_ = gpb_cube.delay();
+	cube->jitter_ = gpb_cube.jitter();
+	cube->max_allowable_gap_ = gpb_cube.maxallowablegapsdu();
+	cube->name_ = gpb_cube.name();
+	cube->ordered_delivery_ = gpb_cube.order();
+	cube->partial_delivery_ = gpb_cube.partialdelivery();
+	cube->peak_bandwidth_duration_ = gpb_cube.peakbandwidthduration();
+	cube->peak_sdu_bandwidth_duration_ = gpb_cube.peaksdubandwidthduration();
+	cube->id_ = gpb_cube.qosid();
+	cube->undetected_bit_error_rate_ = gpb_cube.undetectedbiterrorrate();
+
+	return cube;
+}
+
+// Class QoSCubeListEncoder
+const rina::SerializedObject* QoSCubeListEncoder::encode(const void* object) {
+	std::list<rina::QoSCube*> * list =
+			(std::list<rina::QoSCube*> *) object;
+	std::list<rina::QoSCube*>::const_iterator it;
+	rina::messages::qosCubes_t gpb_list;
+
+	rina::messages::qosCube_t * gpb_cube;
+	for (it = list->begin(); it != list->end(); ++it) {
+		gpb_cube = gpb_list.add_qoscube();
+		QoSCubeEncoder::convertModelToGPB(gpb_cube, (*it));
+	}
+
+	int size = gpb_list.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_list.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* QoSCubeListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+	rina::messages::qosCubes_t gpb_list;
+	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	std::list<rina::QoSCube*> * list = new std::list<rina::QoSCube*>();
+
+	for (int i = 0; i < gpb_list.qoscube_size(); ++i) {
+		list->push_back(QoSCubeEncoder::convertGPBToModel(
+				gpb_list.qoscube(i)));
 	}
 
 	return (void *) list;

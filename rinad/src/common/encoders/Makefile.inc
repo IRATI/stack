@@ -340,3 +340,65 @@ EXTRA_DIST +=					\
 	EnrollmentInformationMessage.stamp
 
 protoSOURCES += EnrollmentInformationMessage.pb.cc EnrollmentInformationMessage.pb.h
+
+
+QoSCubeMessage.stamp: QoSCubeMessage.proto
+	rm -f QoSCubeMessage.tmp
+	touch QoSCubeMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/QoSCubeMessage.proto
+	mv -f QoSCubeMessage.tmp $@
+
+QoSCubeMessage.pb.h QoSCubeMessage.pb.cc: QoSCubeMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf QoSCubeMessage.lock QoSCubeMessage.stamp' 1 2 13 15; \
+	  if mkdir QoSCubeMessage.lock 2>/dev/null; then \
+	    rm -f QoSCubeMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) QoSCubeMessage.stamp; \
+	    result=$$?; rm -rf QoSCubeMessage.lock; exit $$result; \
+	  else \
+	    while test -d QoSCubeMessage.lock; do sleep 1; done; \
+	    test -f QoSCubeMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	QoSCubeMessage.tmp
+
+EXTRA_DIST +=					\
+	QoSCubeMessage.proto				\
+	QoSCubeMessage.stamp
+
+protoSOURCES += QoSCubeMessage.pb.cc QoSCubeMessage.pb.h
+
+
+QoSCubeArrayMessage.stamp: QoSCubeArrayMessage.proto
+	rm -f QoSCubeArrayMessage.tmp
+	touch QoSCubeArrayMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/QoSCubeArrayMessage.proto
+	mv -f QoSCubeArrayMessage.tmp $@
+
+QoSCubeArrayMessage.pb.h QoSCubeArrayMessage.pb.cc: QoSCubeArrayMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf QoSCubeArrayMessage.lock QoSCubeArrayMessage.stamp' 1 2 13 15; \
+	  if mkdir QoSCubeArrayMessage.lock 2>/dev/null; then \
+	    rm -f QoSCubeArrayMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) QoSCubeArrayMessage.stamp; \
+	    result=$$?; rm -rf QoSCubeArrayMessage.lock; exit $$result; \
+	  else \
+	    while test -d QoSCubeArrayMessage.lock; do sleep 1; done; \
+	    test -f QoSCubeArrayMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	QoSCubeArrayMessage.tmp
+
+EXTRA_DIST +=					\
+	QoSCubeArrayMessage.proto				\
+	QoSCubeArrayMessage.stamp
+
+protoSOURCES += QoSCubeArrayMessage.pb.cc QoSCubeArrayMessage.pb.h

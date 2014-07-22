@@ -153,6 +153,10 @@ void IPCProcessImpl::init_encoder() {
 			new DirectoryForwardingTableEntryListEncoder());
 	encoder_->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 			new EnrollmentInformationRequestEncoder());
+	encoder_->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
+			new QoSCubeEncoder());
+	encoder_->addEncoder(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+			new QoSCubeListEncoder());
 	//TODO add backend encoders as they become available
 }
 

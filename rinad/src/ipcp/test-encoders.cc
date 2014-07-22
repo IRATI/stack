@@ -338,6 +338,126 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 	return true;
 }
 
+bool test_qos_cube(rinad::Encoder * encoder) {
+	rina::QoSCube cube;
+	rina::QoSCube * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	cube.average_bandwidth_ = 12134;
+	cube.average_sdu_bandwidth_ = 3141234;
+	cube.delay_ = 314;
+	cube.jitter_ = 252345;
+	cube.id_ = 12;
+	cube.max_allowable_gap_ = 1243;
+	cube.name_ = "test";
+	cube.ordered_delivery_ = true;
+	cube.partial_delivery_ = true;
+	cube.peak_bandwidth_duration_ = 1443;
+	cube.peak_sdu_bandwidth_duration_ = 1341;
+	cube.undetected_bit_error_rate_ = 2;
+	cube.efcp_policies_.dtcp_present_ = true;
+	cube.efcp_policies_.initial_a_timer_ = 23;
+	cube.efcp_policies_.initial_seq_num_policy_.name_ = "test-policy";
+
+	encoded_object = encoder->encode(&cube,
+			rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS);
+	recovered_obj = (rina::QoSCube *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS);
+
+	if (cube.average_bandwidth_ != recovered_obj->average_bandwidth_) {
+		return false;
+	}
+
+	if (cube.average_sdu_bandwidth_ != recovered_obj->average_sdu_bandwidth_) {
+		return false;
+	}
+
+	if (cube.delay_ != recovered_obj->delay_) {
+		return false;
+	}
+
+	if (cube.jitter_ != recovered_obj->jitter_) {
+		return false;
+	}
+
+	if (cube.id_ != recovered_obj->id_) {
+		return false;
+	}
+
+	if (cube.max_allowable_gap_ != recovered_obj->max_allowable_gap_) {
+		return false;
+	}
+
+	if (cube.name_.compare(recovered_obj->name_)!= 0 ){
+		return false;
+	}
+
+	if (cube.ordered_delivery_ != recovered_obj->ordered_delivery_) {
+		return false;
+	}
+
+	if (cube.partial_delivery_ != recovered_obj->partial_delivery_) {
+		return false;
+	}
+
+	if (cube.peak_bandwidth_duration_ != recovered_obj->peak_bandwidth_duration_) {
+		return false;
+	}
+
+	if (cube.peak_sdu_bandwidth_duration_ != recovered_obj->peak_sdu_bandwidth_duration_) {
+		return false;
+	}
+
+	if (cube.undetected_bit_error_rate_ != recovered_obj->undetected_bit_error_rate_) {
+		return false;
+	}
+
+	if (cube.efcp_policies_.dtcp_present_ != recovered_obj->efcp_policies_.dtcp_present_) {
+		return false;
+	}
+
+	if (cube.efcp_policies_.initial_a_timer_ != recovered_obj->efcp_policies_.initial_a_timer_) {
+		return false;
+	}
+
+	if (cube.efcp_policies_.initial_seq_num_policy_.name_.compare(
+			recovered_obj->efcp_policies_.initial_seq_num_policy_.name_) != 0) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("QoS Cube Encoder tested successfully");
+	return true;
+}
+
+bool test_qos_cube_list(rinad::Encoder * encoder) {
+	std::list<rina::QoSCube*> cube_list;
+	rina::QoSCube cube1;
+	rina::QoSCube cube2;
+	std::list<rina::QoSCube*> * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	cube_list.push_back(&cube1);
+	cube_list.push_back(&cube2);
+
+	encoded_object = encoder->encode(&cube_list,
+			rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
+	recovered_obj = (std::list<rina::QoSCube*> *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
+
+	if (cube_list.size() != recovered_obj->size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("QoS Cube List Encoder tested successfully");
+	return true;
+}
+
 int main()
 {
 	rinad::Encoder encoder;
@@ -353,6 +473,10 @@ int main()
 			new rinad::DirectoryForwardingTableEntryListEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 			new rinad::EnrollmentInformationRequestEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
+			new rinad::QoSCubeEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+			new rinad::QoSCubeListEncoder());
 
 	bool result = test_flow(&encoder);
 	if (!result) {
@@ -381,6 +505,18 @@ int main()
 	result = test_enrollment_information_request(&encoder);
 	if (!result) {
 		LOG_ERR("Problems testing Enrollment Information Request Encoder");
+		return -1;
+	}
+
+	result = test_qos_cube(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing QoS Cube Encoder");
+		return -1;
+	}
+
+	result = test_qos_cube_list(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing QoS Cube List Encoder");
 		return -1;
 	}
 

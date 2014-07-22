@@ -34,6 +34,7 @@
 #include "common/encoders/DirectoryForwardingTableEntryMessage.pb.h"
 #include "common/encoders/FlowMessage.pb.h"
 #include "common/encoders/PolicyDescriptorMessage.pb.h"
+#include "common/encoders/QoSCubeMessage.pb.h"
 #include "common/encoders/QoSSpecification.pb.h"
 
 namespace rinad {
@@ -215,7 +216,7 @@ class DirectoryForwardingTableEntryEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::SerializedObject &serialized_object) const;
-	static void convertModelToGPB(rina::messages::directoryForwardingTableEntry_t *,
+	static void convertModelToGPB(rina::messages::directoryForwardingTableEntry_t * gpb_dfte,
 			rina::DirectoryForwardingTableEntry * dfte);
 	static rina::DirectoryForwardingTableEntry * convertGPBToModel(
 			const rina::messages::directoryForwardingTableEntry_t& gpb_dfte);
@@ -223,6 +224,24 @@ public:
 
 /// Encoder of a list of DirectoryForwardingTableEntries
 class DirectoryForwardingTableEntryListEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+};
+
+/// Encoder of QoSCube object
+class QoSCubeEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+	static void convertModelToGPB(rina::messages::qosCube_t * gpb_cube,
+			rina::QoSCube * cube);
+	static rina::QoSCube * convertGPBToModel(
+			const rina::messages::qosCube_t & gpb_cube);
+};
+
+/// Encoder of a list of QoSCubes
+class QoSCubeListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::SerializedObject &serialized_object) const;
