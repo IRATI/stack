@@ -67,6 +67,22 @@ struct conn_policies * conn_policies_create(void)
                 return NULL;
         }
 
+        tmp->receiver_inactivity_timer = policy_create();
+        if (!tmp->receiver_inactivity_timer) {
+                LOG_ERR("Could not create receiver_inactivity_timer policy");
+                dtcp_config_destroy(tmp->dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->sender_inactivity_timer = policy_create();
+        if (!tmp->sender_inactivity_timer) {
+                LOG_ERR("Could not create sender_inactivity_timer policy");
+                dtcp_config_destroy(tmp->dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
+
         return tmp;
 }
 

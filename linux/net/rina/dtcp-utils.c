@@ -67,6 +67,7 @@ struct dtcp_fctrl_config {
 };
 
 struct dtcp_rxctrl_config {
+        uint_t          max_time_retry;
         uint_t          data_retransmit_max;
         uint_t          initial_tr;
         struct policy * retransmission_timer_expiry;
@@ -83,10 +84,6 @@ struct dtcp_config {
         struct dtcp_fctrl_config *  fctrl_cfg;
         bool                        rtx_ctrl;
         struct dtcp_rxctrl_config * rxctrl_cfg;
-        timeout_t                   receiver_inactivity;
-        timeout_t                   sender_inactivity;
-        struct policy *             receiver_inactivity_timer;
-        struct policy *             sender_inactivity_timer;
         struct policy *             lost_control_pdu;
         struct policy *             rtt_estimator;
 };
@@ -316,10 +313,6 @@ int dtcp_config_destroy(struct dtcp_config * cfg)
                 dtcp_fctrl_config_destroy(cfg->fctrl_cfg);
         if (cfg->rxctrl_cfg)
                 dtcp_rxctrl_config_destroy(cfg->rxctrl_cfg);
-        if (cfg->receiver_inactivity_timer)
-                policy_destroy(cfg->receiver_inactivity_timer);
-        if (cfg->sender_inactivity_timer)
-                policy_destroy(cfg->sender_inactivity_timer);
         if (cfg->lost_control_pdu)
                 policy_destroy(cfg->lost_control_pdu);
         if (cfg->rtt_estimator)
@@ -351,19 +344,6 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
           goto clean;
           }
         */
-        tmp->receiver_inactivity_timer = policy_create_gfp(flags);
-        if (!tmp->receiver_inactivity_timer) {
-                LOG_ERR("Could not create receiver_inactivity_timer"
-                        "in dtcp_config_create");
-                goto clean;
-        }
-
-        tmp->sender_inactivity_timer = policy_create_gfp(flags);
-        if (!tmp->sender_inactivity_timer) {
-                LOG_ERR("Could not create sender_inactivity_timer"
-                        "in dtcp_config_create");
-                goto clean;
-        }
 
         tmp->lost_control_pdu = policy_create_gfp(flags);
         if (!tmp->lost_control_pdu) {
@@ -680,6 +660,18 @@ int dtcp_receiving_flow_control_set(struct dtcp_config * cfg,
 EXPORT_SYMBOL(dtcp_receiving_flow_control_set);
 
 /* dtcp_rxctrl_config */
+int dtcp_max_time_retry_set(struct dtcp_config * cfg,
+                            uint_t max_time_retry)
+{
+        if (!cfg)
+                return -1;
+
+        cfg->rxctrl_cfg->max_time_retry = max_time_retry;
+
+        return 0;
+}
+EXPORT_SYMBOL(dtcp_max_time_retry_set);
+
 int dtcp_data_retransmit_max_set(struct dtcp_config * cfg,
                                  uint_t data_retransmit_max)
 {
@@ -820,54 +812,6 @@ int dtcp_rxctrl_cfg_set(struct dtcp_config * cfg,
         return 0;
 }
 EXPORT_SYMBOL(dtcp_rxctrl_cfg_set);
-
-int dtcp_receiver_inactivity_set(struct dtcp_config * cfg,
-                                 timeout_t receiver_inactivity)
-{
-        if (!cfg)
-                return -1;
-
-        cfg->receiver_inactivity = receiver_inactivity;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_receiver_inactivity_set);
-
-int dtcp_sender_inactivity_set(struct dtcp_config * cfg,
-                               timeout_t sender_inactivity)
-{
-        if (!cfg)
-                return -1;
-
-        cfg->sender_inactivity = sender_inactivity;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_sender_inactivity_set);
-
-int dtcp_receiver_inactivity_timer_set(struct dtcp_config * cfg,
-                                       struct policy * rcvr_inactivity_timer)
-{
-        if (!cfg) return -1;
-        if (!rcvr_inactivity_timer) return -1;
-
-        cfg->receiver_inactivity_timer = rcvr_inactivity_timer;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_receiver_inactivity_timer_set);
-
-int dtcp_sender_inactivity_timer_set(struct dtcp_config * cfg,
-                                     struct policy * sender_inactivity_timer)
-{
-        if (!cfg) return -1;
-        if (!sender_inactivity_timer) return -1;
-
-        cfg->sender_inactivity_timer = sender_inactivity_timer;
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_sender_inactivity_timer_set);
 
 int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
                               struct policy * lost_control_pdu)
@@ -1103,6 +1047,14 @@ struct policy * dtcp_receiving_flow_control(struct dtcp_config * cfg)
 EXPORT_SYMBOL(dtcp_receiving_flow_control);
 
 /* dtcp_rxctrl_config */
+uint_t dtcp_max_time_retry(struct dtcp_config * cfg)
+{
+        if (!cfg || !cfg->rxctrl_cfg ) return 0;
+
+        return cfg->rxctrl_cfg->max_time_retry;
+}
+EXPORT_SYMBOL(dtcp_max_time_retry);
+
 uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg)
 {
         if (!cfg || !cfg->rxctrl_cfg ) return 0;
@@ -1209,42 +1161,6 @@ struct dtcp_rxctrl_config * dtcp_rxctrl_cfg(struct dtcp_config * cfg)
         return cfg->rxctrl_cfg;
 }
 EXPORT_SYMBOL(dtcp_rxctrl_cfg);
-
-timeout_t dtcp_receiver_inactivity(struct dtcp_config * cfg)
-{
-        if (!cfg)
-                return 0;
-
-        return cfg->receiver_inactivity;
-}
-EXPORT_SYMBOL(dtcp_receiver_inactivity);
-
-timeout_t dtcp_sender_inactivity(struct dtcp_config * cfg)
-{
-        if (!cfg)
-                return 0;
-
-        return cfg->sender_inactivity;
-}
-EXPORT_SYMBOL(dtcp_sender_inactivity);
-
-struct policy * dtcp_receiver_inactivity_timer(struct dtcp_config * cfg)
-{
-        if (!cfg)
-                return NULL;
-
-        return cfg->receiver_inactivity_timer;
-}
-EXPORT_SYMBOL(dtcp_receiver_inactivity_timer);
-
-struct policy * dtcp_sender_inactivity_timer(struct dtcp_config * cfg)
-{
-        if (!cfg)
-                return NULL;
-
-        return cfg->sender_inactivity_timer;
-}
-EXPORT_SYMBOL(dtcp_sender_inactivity_timer);
 
 struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg)
 {
