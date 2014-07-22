@@ -37,6 +37,8 @@ struct conn_policies {
         bool                  dtcp_present;
         struct  dtcp_config * dtcp_cfg;
         struct policy *       initial_sequence_number;
+        struct policy *       receiver_inactivity_timer;
+        struct policy *       sender_inactivity_timer;
         /* Sequence number rollover threshold */
         int                   seq_num_ro_th;
         timeout_t             initial_a_timer;
@@ -67,7 +69,7 @@ struct connection {
 struct conn_policies * conn_policies_create(void);
 struct connection *    connection_create(void);
 struct connection *    connection_dup_from_user(const
-                                                struct connection __user * conn);
+                                                struct connection __user * c);
 int                    conn_policies_destroy(struct conn_policies * cp_params);
 int                    connection_destroy(struct connection * conn);
 

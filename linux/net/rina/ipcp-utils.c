@@ -48,7 +48,7 @@ struct name * name_create_ni(void)
 EXPORT_SYMBOL(name_create_ni);
 
 /* FIXME: This thing is bogus and has to be fixed properly */
-#ifdef CONFIG_RINA_DEBUG
+#ifdef CONFIG_RINA_ASSERTIONS
 static bool name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
