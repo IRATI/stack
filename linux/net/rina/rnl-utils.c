@@ -906,7 +906,7 @@ static int parse_policy_param(struct nlattr * attr, struct policy_parm * param)
         if (nla_parse_nested(attrs, PPA_ATTR_MAX, attr, attr_policy))
                 return -1;
 
-        if (attrs[PPA_ATTR_NAME] )
+        if (attrs[PPA_ATTR_NAME])
                 policy_param_name_set(param,
                                       nla_dup_string(attrs[PPA_ATTR_NAME],
                                                      GFP_KERNEL));
@@ -1481,11 +1481,11 @@ static int parse_dtcp_rctrl_config(struct nlattr * attr,
 
         if (attrs[DRCC_ATTR_MAX_TIME_TO_RETRY])
                 dtcp_max_time_retry_set(cfg,
-                                nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+                                        nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
 
         if (attrs[DRCC_ATTR_DATA_RXMSN_MAX])
                 dtcp_data_retransmit_max_set(cfg,
-                                nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+                                             nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
 
         if (attrs[DRCC_ATTR_INIT_TR])
                 dtcp_initial_tr_set(cfg,
@@ -1623,7 +1623,7 @@ static int parse_conn_policies_params(struct nlattr *        cpp_attr,
 
         cpp_struct->dtcp_present = nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        if (attrs[CPP_ATTR_DTCP_CONFIG] )
+        if (attrs[CPP_ATTR_DTCP_CONFIG])
                 if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG],
                                       cpp_struct->dtcp_cfg)) {
                         LOG_ERR("Could not parse dtcp config");
@@ -2445,7 +2445,7 @@ static int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
         if (nla_put_u32(skb_out, IFDN_ATTR_PORT_ID, id))
                 return format_fail("rnl_ipcm_alloc_flow_resp_msg");
 
-        if (nla_put_u32(skb_out, IFDN_ATTR_CODE, code ))
+        if (nla_put_u32(skb_out, IFDN_ATTR_CODE, code))
                 return format_fail("rnl_ipcm_alloc_flow_resp_msg");
 
         return 0;
@@ -2463,7 +2463,7 @@ static int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
         if (nla_put_u32(skb_out, ICCRE_ATTR_PORT_ID, id))
                 return format_fail("rnl_format_ipcm_conn_create_resp_msg");
 
-        if (nla_put_u32(skb_out, ICCRE_ATTR_SOURCE_CEP_ID, src_cep ))
+        if (nla_put_u32(skb_out, ICCRE_ATTR_SOURCE_CEP_ID, src_cep))
                 return format_fail("rnl_format_ipcm_conn_create_resp_msg");
 
         return 0;
@@ -2482,10 +2482,10 @@ static int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
         if (nla_put_u32(skb_out, ICCRS_ATTR_PORT_ID, id))
                 return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
-        if (nla_put_u32(skb_out, ICCRS_ATTR_SOURCE_CEP_ID, src_cep ))
+        if (nla_put_u32(skb_out, ICCRS_ATTR_SOURCE_CEP_ID, src_cep))
                 return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
-        if (nla_put_u32(skb_out, ICCRS_ATTR_DEST_CEP_ID, dst_cep ))
+        if (nla_put_u32(skb_out, ICCRS_ATTR_DEST_CEP_ID, dst_cep))
                 return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
         return 0;
@@ -2535,7 +2535,7 @@ static int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
                 return -1;
         }
 
-        if (nla_put_u32(skb_out, IRARE_ATTR_RESULT, result ))
+        if (nla_put_u32(skb_out, IRARE_ATTR_RESULT, result))
                 return format_fail("rnl_ipcm_reg_app_resp_msg");
 
         return 0;

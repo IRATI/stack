@@ -1049,7 +1049,7 @@ EXPORT_SYMBOL(dtcp_receiving_flow_control);
 /* dtcp_rxctrl_config */
 uint_t dtcp_max_time_retry(struct dtcp_config * cfg)
 {
-        if (!cfg || !cfg->rxctrl_cfg ) return 0;
+        if (!cfg || !cfg->rxctrl_cfg) return 0;
 
         return cfg->rxctrl_cfg->max_time_retry;
 }
@@ -1057,7 +1057,7 @@ EXPORT_SYMBOL(dtcp_max_time_retry);
 
 uint_t dtcp_data_retransmit_max(struct dtcp_config * cfg)
 {
-        if (!cfg || !cfg->rxctrl_cfg ) return 0;
+        if (!cfg || !cfg->rxctrl_cfg) return 0;
 
         return cfg->rxctrl_cfg->data_retransmit_max;
 }
@@ -1065,7 +1065,7 @@ EXPORT_SYMBOL(dtcp_data_retransmit_max);
 
 uint_t dtcp_initial_tr(struct dtcp_config * cfg)
 {
-        if (!cfg || !cfg->rxctrl_cfg ) return 0;
+        if (!cfg || !cfg->rxctrl_cfg) return 0;
 
         return cfg->rxctrl_cfg->initial_tr;
 }

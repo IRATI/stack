@@ -123,7 +123,6 @@ int dtcp_lost_control_pdu_set(struct dtcp_config * cfg,
 int dtcp_rtt_estimator_set(struct dtcp_config * cfg,
                            struct policy * rtt_estimator);
 
-/* Getters */
 /* window_fctrl_config */
 uint_t          dtcp_max_closed_winq_length(struct dtcp_config * cfg);
 uint_t          dtcp_initial_credit(struct dtcp_config * cfg);
@@ -173,5 +172,3 @@ struct policy *             dtcp_lost_control_pdu(struct dtcp_config * cfg);
 struct policy *             dtcp_rtt_estimator(struct dtcp_config * cfg);
 
 #endif
-
-
