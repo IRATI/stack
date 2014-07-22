@@ -333,6 +333,12 @@ static int deserialize_base_pci(const struct serdes * instance,
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
 
+        addr      = 0;
+        cep       = 0;
+        qos       = 0;
+        pdu_type  = 0x00;
+        pdu_flags = 0x0;
+
         *offset = 0;
         memcpy(&vers, ptr + *offset, VERSION_SIZE);
         *offset += VERSION_SIZE;
@@ -399,6 +405,8 @@ static int deserialize_fc_pci(const struct serdes * instance,
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
 
+        seq = 0;
+
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
         if (pci_control_new_rt_wind_edge_set(new_pci, seq))
@@ -438,6 +446,8 @@ static int deserialize_ack_pci(const struct serdes * instance,
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
 
+        seq = 0;
+
         memcpy(&seq, ptr + *offset, dt_cons->seq_num_length);
         *offset += dt_cons->seq_num_length;
         if (pci_control_ack_seq_num_set(new_pci, seq))
@@ -461,6 +471,8 @@ static int deserialize_cc_pci(const struct serdes * instance,
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
+
+        seq = 0;
 
         memcpy(&seq, ptr + *offset, CTRL_SEQ_NR);
         *offset += CTRL_SEQ_NR;
@@ -511,6 +523,8 @@ static int deserialize_ctrl_seq(const struct serdes * instance,
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
+
+        seq = 0;
 
         memcpy(&seq, ptr + *offset, CTRL_SEQ_NR);
         *offset += CTRL_SEQ_NR;
