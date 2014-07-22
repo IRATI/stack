@@ -144,9 +144,16 @@ void IPCProcessImpl::init_cdap_session_manager() {
 
 void IPCProcessImpl::init_encoder() {
 	encoder_ = new rinad::Encoder();
+	encoder_->addEncoder(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+			new DataTransferConstantsEncoder());
+	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS, new FlowEncoder());
+	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
+			new DirectoryForwardingTableEntryEncoder());
+	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+			new DirectoryForwardingTableEntryListEncoder());
+	encoder_->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
+			new EnrollmentInformationRequestEncoder());
 	//TODO add backend encoders as they become available
-	//encoder_->addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
-	//		new FakeEncoder());
 }
 
 void IPCProcessImpl::init_enrollment_task() {

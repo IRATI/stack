@@ -22,35 +22,20 @@
 #include <sstream>
 #include <vector>
 
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+
 #define RINA_PREFIX "enrollment-task"
 
 #include <librina/logs.h>
 #include "common/concurrency.h"
-#include "enrollment-task.h"
+#include "common/encoders/EnrollmentInformationMessage.pb.h"
+#include "ipcp/enrollment-task.h"
 
 namespace rinad {
 
 //	CLASS EnrollmentInformationRequest
 EnrollmentInformationRequest::EnrollmentInformationRequest() {
 	address_ = 0;
-}
-
-unsigned int EnrollmentInformationRequest::get_address() const {
-	return address_;
-}
-
-void EnrollmentInformationRequest::set_address(unsigned int address) {
-	address_ = address;
-}
-
-const std::list<rina::ApplicationProcessNamingInformation>&
-EnrollmentInformationRequest::get_supporting_difs() const {
-	return supporting_difs_;
-}
-
-void EnrollmentInformationRequest::set_supporting_difs(
-		const std::list<rina::ApplicationProcessNamingInformation> &supporting_difs) {
-	supporting_difs_ = supporting_difs;
 }
 
 //Class WatchdogTimerTask
@@ -693,21 +678,19 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 	const rina::SerializedObject * serializedObject = 0;
 	try{
 		EnrollmentInformationRequest eiRequest;
-		std::list<rina::ApplicationProcessNamingInformation> supportingDifs;
 		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 		std::vector<rina::ApplicationRegistration *> registrations =
 				rina::extendedIPCManager->getRegisteredApplications();
 		for(unsigned int i=0; i<registrations.size(); i++) {
 			for(it = registrations[i]->DIFNames.begin();
 					it != registrations[i]->DIFNames.end(); ++it) {
-				supportingDifs.push_back(*it);
+				eiRequest.supporting_difs_.push_back(*it);
 			}
 		}
-		eiRequest.set_supporting_difs(supportingDifs);
 
 		if (ipc_process_->get_address() != 0) {
 			was_dif_member_before_enrollment_ = true;
-			eiRequest.set_address(ipc_process_->get_address());
+			eiRequest.address_ = ipc_process_->get_address();
 		} else {
 			rina::DIFInformation difInformation;
 			difInformation.dif_name_ = enrollment_request_->event_->difName;
@@ -766,7 +749,7 @@ void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
 		EnrollmentInformationRequest * response = (EnrollmentInformationRequest *)
 						encoder_->decode(*serializedObject, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
 
-		unsigned int address = response->get_address();
+		unsigned int address = response->address_;
 		delete response;
 
 		try {
@@ -1172,14 +1155,14 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 			eiRequest = (EnrollmentInformationRequest *) encoder_->decode(*serializedObject,
 					EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
 
-			if (!namespace_manager_->isValidAddress(eiRequest->get_address(), remote_peer_->name_.processName,
+			if (!namespace_manager_->isValidAddress(eiRequest->address_, remote_peer_->name_.processName,
 					remote_peer_->name_.processInstance)) {
 				requiresInitialization = true;
 			}
 
 			std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
-			for (it = eiRequest->get_supporting_difs().begin();
-					it != eiRequest->get_supporting_difs().end(); ++it) {
+			for (it = eiRequest->supporting_difs_.begin();
+					it != eiRequest->supporting_difs_.end(); ++it) {
 				remote_peer_->supporting_difs_.push_back(*it);
 			}
 		}catch (Exception &e) {
@@ -1200,7 +1183,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 			return;
 		}
 
-		eiRequest->set_address(address);
+		eiRequest->address_ = address;
 		try {
 			serializedObject = encoder_->encode(&eiRequest, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
 		} catch (Exception &e) {
@@ -1222,7 +1205,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		}
 
 		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
-		remote_peer_->set_address(eiRequest->get_address());
+		remote_peer_->address_ = eiRequest->address_;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 		delete responseMessage;
@@ -2078,6 +2061,41 @@ void OperationalStatusRIBObject::sendErrorMessage(const rina::CDAPSessionDescrip
 
 const void* OperationalStatusRIBObject::get_value() const {
 	return &operational_state_;
+}
+
+// Class EnrollmentInformationRequestEncoder
+const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const void* object) {
+	EnrollmentInformationRequest *eir = (EnrollmentInformationRequest*) object;
+	rina::messages::enrollmentInformation_t gpb_eir;
+
+	gpb_eir.set_address(eir->address_);
+
+	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+	for(it = eir->supporting_difs_.begin(); it != eir->supporting_difs_.end(); ++it) {
+		gpb_eir.add_supportingdifs(it->processName);
+	}
+
+	int size = gpb_eir.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_eir.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* EnrollmentInformationRequestEncoder::decode(const rina::SerializedObject &serialized_object) const {
+	rina::messages::enrollmentInformation_t gpb_eir;
+	gpb_eir.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
+	request->address_ = gpb_eir.address();
+
+	for (int i = 0; i < gpb_eir.supportingdifs_size(); ++i) {
+		request->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
+				gpb_eir.supportingdifs(i), ""));
+	}
+
+	return (void *) request;
 }
 
 }

@@ -23,12 +23,16 @@
 #include <list>
 #include <iostream>
 
-#include <librina/common.h>
+#define RINA_PREFIX "encoders-tests"
 
-#include "encoder.h"
+#include <librina/logs.h>
+
+#include <librina/configuration.h>
+#include "common/encoder.h"
+#include "ipcp/enrollment-task.h"
 #include "ipcp/flow-allocator.h"
 
-bool test_Flow () {
+bool test_flow (rinad::Encoder * encoder) {
 	rinad::Flow flow_to_encode;
 	rinad::Flow *pflow_to_encode;
 	std::list<rina::Connection*> connection_list;
@@ -39,8 +43,6 @@ bool test_Flow () {
 	rina::DTCPFlowControlConfig flow_config_to_encode;
 	rina::DTCPWindowBasedFlowControlConfig window_to_encode;
 	rina::DTCPRateBasedFlowControlConfig rate_to_encode;
-	rinad::FlowEncoder encoder;
-	bool ret = true;
 
 	// Set
 	flow_to_encode.source_naming_info_ = rina::ApplicationProcessNamingInformation("test", "1");
@@ -75,84 +77,312 @@ bool test_Flow () {
 
 	// Encode
 	pflow_to_encode = &flow_to_encode;
-	const rina::SerializedObject *serialized_object = encoder.encode((void*)pflow_to_encode);
+	const rina::SerializedObject *serialized_object = encoder->encode((void*)pflow_to_encode,
+			rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS);
 	// Decode
-	rinad::Flow *pflow_decoded = (rinad::Flow*)encoder.decode(*serialized_object);
+	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(*serialized_object,
+			rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS);
 
 	// Assert
 	if (pflow_to_encode->source_naming_info_.processName != pflow_decoded->source_naming_info_.processName)
-		ret = false;
+		return false;
 	if (pflow_to_encode->source_naming_info_.processInstance != pflow_decoded->source_naming_info_.processInstance)
-		ret = false;
+		return false;
 
 	rina::Connection *pconnection_decoded = pflow_decoded->connections_.front();
 	rina::ConnectionPolicies connection_policies_decoded = pconnection_decoded->getPolicies();
 	if ( connection_policies_to_encode.get_seq_num_rollover_threshold() != connection_policies_decoded.get_seq_num_rollover_threshold())
-		ret = false;
+		return false;
 	if ( connection_policies_to_encode.get_initial_a_timer() != connection_policies_decoded.get_initial_a_timer())
-		ret = false;
+		return false;
 	if ( connection_policies_to_encode.get_initial_seq_num_policy() != connection_policies_decoded.get_initial_seq_num_policy())
-		ret = false;
+		return false;
 
 	if ( connection_policies_to_encode.is_dtcp_present() != connection_policies_decoded.is_dtcp_present())
-		ret = false;
+		return false;
 	else {
 
 		rina::DTCPConfig dtcp_config_decoded = connection_policies_decoded.get_dtcp_configuration();
 		if(dtcp_config_to_encode.is_rtx_control() != dtcp_config_decoded.is_rtx_control())
-			ret = false;
+			return false;
 		if(dtcp_config_to_encode.get_rtx_control_config().get_data_rxmsn_max() != dtcp_config_decoded.get_rtx_control_config().get_data_rxmsn_max())
-			ret = false;
+			return false;
 		if(dtcp_config_to_encode.get_rtx_control_config().get_max_time_to_retry() != dtcp_config_decoded.get_rtx_control_config().get_max_time_to_retry())
-			ret = false;
+			return false;
 		if(dtcp_config_to_encode.is_flow_control() != dtcp_config_decoded.is_flow_control())
-			ret = false;
+			return false;
 		else {
 			rina::DTCPFlowControlConfig flow_config_decoded = dtcp_config_decoded.get_flow_control_config();
 			if (flow_config_to_encode.get_rcv_buffers_threshold() != flow_config_decoded.get_rcv_buffers_threshold())
-				ret = false;
+				return false;
 			if (flow_config_to_encode.get_rcv_bytes_percent_threshold() != flow_config_decoded.get_rcv_bytes_percent_threshold())
-				ret = false;
+				return false;
 			if (flow_config_to_encode.get_rcv_bytes_threshold() != flow_config_decoded.get_rcv_bytes_threshold())
-				ret = false;
+				return false;
 			if (flow_config_to_encode.get_sent_buffers_threshold() != flow_config_decoded.get_sent_buffers_threshold())
-				ret = false;
+				return false;
 			if (flow_config_to_encode.get_sent_bytes_percent_threshold() != flow_config_decoded.get_sent_bytes_percent_threshold())
-				ret = false;
+				return false;
 			if (flow_config_to_encode.get_sent_bytes_threshold() != flow_config_decoded.get_sent_bytes_threshold())
-				ret = false;
+				return false;
 
 			if (flow_config_to_encode.is_window_based() != flow_config_decoded.is_window_based())
-				ret = false;
+				return false;
 			else{
 				rina::DTCPWindowBasedFlowControlConfig window_decoded = flow_config_decoded.get_window_based_config();
 				if (window_to_encode.get_initial_credit() != window_decoded.get_initial_credit())
-					ret = false;
+					return false;
 				if (window_to_encode.get_maxclosed_window_queue_length() != window_decoded.get_maxclosed_window_queue_length())
-					ret = false;
+					return false;
 			}
 
 			if (flow_config_to_encode.is_rate_based() != flow_config_decoded.is_rate_based())
-				ret = false;
+				return false;
 			else {
 				rina::DTCPRateBasedFlowControlConfig rate_decoded = flow_config_decoded.get_rate_based_config();
 				if (rate_to_encode.get_sending_rate() != rate_decoded.get_sending_rate())
-					ret = false;
+					return false;
 				if (rate_to_encode.get_time_period() != rate_decoded.get_time_period())
-					ret = false;
+					return false;
 			}
 		}
 	}
 
-	return ret;
+	LOG_INFO("Flow Encoder tested successfully");
+	return true;
+}
+
+bool test_data_transfer_constants(rinad::Encoder * encoder) {
+	rina::DataTransferConstants dtc;
+	rina::DataTransferConstants * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	dtc.address_length_ = 23;
+	dtc.cep_id_length_ = 15;
+	dtc.dif_integrity_ = true;
+	dtc.length_length_ = 12;
+	dtc.max_pdu_lifetime_ = 45243;
+	dtc.max_pdu_size_ = 1233;
+	dtc.port_id_length_ = 541;
+	dtc.qos_id_lenght_ = 3414;
+	dtc.sequence_number_length_ = 123;
+
+	encoded_object = encoder->encode(&dtc,
+			rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+	recovered_obj = (rina::DataTransferConstants*) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+
+	if (dtc.address_length_ != recovered_obj->address_length_) {
+		return false;
+	}
+
+	if (dtc.cep_id_length_ != recovered_obj->cep_id_length_) {
+		return false;
+	}
+
+	if (dtc.dif_integrity_ != recovered_obj->dif_integrity_) {
+		return false;
+	}
+
+	if (dtc.length_length_ != recovered_obj->length_length_) {
+		return false;
+	}
+
+	if (dtc.max_pdu_lifetime_ != recovered_obj->max_pdu_lifetime_) {
+		return false;
+	}
+
+	if (dtc.max_pdu_size_ != recovered_obj->max_pdu_size_) {
+		return false;
+	}
+
+	if (dtc.port_id_length_ != recovered_obj->port_id_length_) {
+		return false;
+	}
+
+	if (dtc.qos_id_lenght_ != recovered_obj->qos_id_lenght_) {
+		return false;
+	}
+
+	if (dtc.sequence_number_length_ != recovered_obj->sequence_number_length_) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Data Transfer Constants Encoder tested successfully");
+	return true;
+}
+
+bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
+	rina::DirectoryForwardingTableEntry dfte;
+	rina::DirectoryForwardingTableEntry * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	dfte.address_ = 232;
+	dfte.timestamp_ = 5265235;
+	dfte.ap_naming_info_.processName = "test";
+	dfte.ap_naming_info_.processInstance = "1";
+	dfte.ap_naming_info_.entityName = "ae";
+	dfte.ap_naming_info_.entityInstance = "1";
+
+	encoded_object = encoder->encode(&dfte,
+			rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+	recovered_obj = (rina::DirectoryForwardingTableEntry*) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+
+	if (dfte.address_ != recovered_obj->address_) {
+		return false;
+	}
+
+	if (dfte.timestamp_ != recovered_obj->timestamp_) {
+		return false;
+	}
+
+	if (dfte.ap_naming_info_.processName.compare(
+			recovered_obj->ap_naming_info_.processName) != 0) {
+		return false;
+	}
+
+	if (dfte.ap_naming_info_.processInstance.compare(
+			recovered_obj->ap_naming_info_.processInstance) != 0) {
+		return false;
+	}
+
+	if (dfte.ap_naming_info_.entityName.compare(
+			recovered_obj->ap_naming_info_.entityName) != 0) {
+		return false;
+	}
+
+	if (dfte.ap_naming_info_.entityInstance.compare(
+			recovered_obj->ap_naming_info_.entityInstance) != 0) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Directory Forwarding Table Entry Encoder tested successfully");
+	return true;
+}
+
+bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
+	std::list<rina::DirectoryForwardingTableEntry*> dfte_list;
+	rina::DirectoryForwardingTableEntry dfte1;
+	rina::DirectoryForwardingTableEntry dfte2;
+	std::list<rina::DirectoryForwardingTableEntry*> * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	dfte1.address_ = 232;
+	dfte1.timestamp_ = 5265235;
+	dfte1.ap_naming_info_.processName = "test";
+	dfte1.ap_naming_info_.processInstance = "1";
+	dfte1.ap_naming_info_.entityName = "ae";
+	dfte1.ap_naming_info_.entityInstance = "1";
+	dfte_list.push_back(&dfte1);
+	dfte2.address_ = 2312;
+	dfte2.timestamp_ = 52265235;
+	dfte2.ap_naming_info_.processName = "atest";
+	dfte2.ap_naming_info_.processInstance = "2";
+	dfte2.ap_naming_info_.entityName = "adfs";
+	dfte2.ap_naming_info_.entityInstance = "2";
+	dfte_list.push_back(&dfte2);
+
+	encoded_object = encoder->encode(&dfte_list,
+			rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
+	recovered_obj = (std::list<rina::DirectoryForwardingTableEntry*> *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
+
+	if (dfte_list.size() != recovered_obj->size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Directory Forwarding Table Entry List Encoder tested successfully");
+	return true;
+}
+
+bool test_enrollment_information_request(rinad::Encoder * encoder) {
+	rinad::EnrollmentInformationRequest request;
+	rina::ApplicationProcessNamingInformation name1;
+	rina::ApplicationProcessNamingInformation name2;
+	rinad::EnrollmentInformationRequest * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	name1.processName = "dif1";
+	name2.processName = "dif2";
+	request.supporting_difs_.push_back(name1);
+	request.supporting_difs_.push_back(name2);
+	request.address_ = 141234;
+
+	encoded_object = encoder->encode(&request,
+			rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+	recovered_obj = (rinad::EnrollmentInformationRequest *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+
+	if (request.address_ != recovered_obj->address_) {
+		return false;
+	}
+
+	if (request.supporting_difs_.size() != recovered_obj->supporting_difs_.size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Enrollment Information Request Encoder tested successfully");
+	return true;
 }
 
 int main()
 {
-	bool result = test_Flow();
+	rinad::Encoder encoder;
+	encoder.addEncoder(rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+			new rinad::DataTransferConstantsEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+			new rinad::FlowEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
+			new rinad::DirectoryForwardingTableEntryEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+			new rinad::DirectoryForwardingTableEntryListEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+			new rinad::DirectoryForwardingTableEntryListEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
+			new rinad::EnrollmentInformationRequestEncoder());
 
-	if (result)
-		return 0;
-	else
+	bool result = test_flow(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Flow Encoder");
 		return -1;
+	}
+
+	result = test_data_transfer_constants(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Data Transfer Constants Encoder");
+		return -1;
+	}
+
+	result = test_directory_forwarding_table_entry(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Directory Forwarding Table Entry Encoder");
+		return -1;
+	}
+
+	result = test_directory_forwarding_table_entry_list(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Directory Forwarding Table Entry List Encoder");
+		return -1;
+	}
+
+	result = test_enrollment_information_request(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Enrollment Information Request Encoder");
+		return -1;
+	}
+
+	return 0;
 }

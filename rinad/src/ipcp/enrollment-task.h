@@ -40,12 +40,7 @@ namespace rinad {
 class EnrollmentInformationRequest {
 public:
 	EnrollmentInformationRequest();
-	unsigned int get_address() const;
-	void set_address(unsigned int address);
-	const std::list<rina::ApplicationProcessNamingInformation>& get_supporting_difs() const;
-	void set_supporting_difs(const std::list<rina::ApplicationProcessNamingInformation> &supporting_difs);
 
-private:
 	/// The address of the IPC Process that requests
 	///to join a DIF
 	unsigned int address_;
@@ -465,6 +460,13 @@ private:
 	IPCProcessOperationalState operational_state_;
 	EnrollmentTask * enrollment_task_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
+};
+
+/// Encoder of a list of EnrollmentInformationRequest
+class EnrollmentInformationRequestEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
 };
 
 }

@@ -1197,10 +1197,10 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 
 	// SourceNamingInfo
 	gpf_flow.set_allocated_sourcenaminginfo(
-			get_applicationProcessNamingInfo_t(flow->source_naming_info_));
+			Encoder::get_applicationProcessNamingInfo_t(flow->source_naming_info_));
 	// DestinationNamingInfo
 	gpf_flow.set_allocated_destinationnaminginfo(
-			get_applicationProcessNamingInfo_t(flow->destination_naming_info_));
+			Encoder::get_applicationProcessNamingInfo_t(flow->destination_naming_info_));
 	// sourcePortId
 	gpf_flow.set_sourceportid(flow->source_port_id_);
 	//destinationPortId
@@ -1227,9 +1227,9 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 	//state
 	gpf_flow.set_state(flow->state_);
 	//qosParameters
-	gpf_flow.set_allocated_qosparameters(get_qosSpecification_t(flow->flow_specification_));
+	gpf_flow.set_allocated_qosparameters(Encoder::get_qosSpecification_t(flow->flow_specification_));
 	//optional connectionPolicies_t connectionPolicies
-	gpf_flow.set_allocated_connectionpolicies(get_connectionPolicies_t(flow->getActiveConnection()->getPolicies()));
+	gpf_flow.set_allocated_connectionpolicies(Encoder::get_connectionPolicies_t(flow->getActiveConnection()->getPolicies()));
 	//accessControl
 	if (flow->access_control_ != 0)
 		gpf_flow.set_accesscontrol(flow->access_control_);
@@ -1255,512 +1255,42 @@ const rina::SerializedObject &serialized_object) const {
 
 	gpf_flow.ParseFromArray(serialized_object.message_, serialized_object.size_);
 
-	// SourceNamingInfo
-	rina::ApplicationProcessNamingInformation *src_app = get_ApplicationProcessNamingInformation(gpf_flow.sourcenaminginfo());
+	rina::ApplicationProcessNamingInformation *src_app =
+			Encoder::get_ApplicationProcessNamingInformation(gpf_flow.sourcenaminginfo());
 	flow->source_naming_info_ = *src_app;
 	delete src_app;
 	src_app = 0;
-	// DestinationNamingInfo
-	rina::ApplicationProcessNamingInformation *dest_app = get_ApplicationProcessNamingInformation(gpf_flow.destinationnaminginfo());
+
+	rina::ApplicationProcessNamingInformation *dest_app =
+			Encoder::get_ApplicationProcessNamingInformation(gpf_flow.destinationnaminginfo());
 	flow->destination_naming_info_ = *dest_app;
 	delete dest_app;
 	dest_app = 0;
-	// sourcePortId
+
 	flow->source_port_id_ = gpf_flow.sourceportid();
-	//destinationPortId
 	flow->destination_port_id_ = gpf_flow.destinationportid();
-	//sourceAddress
 	flow->source_address_ = gpf_flow.sourceaddress();
-	//destinationAddress
 	flow->destination_address_ = gpf_flow.destinationaddress();
-	//connectionIds
 	for (int i = 0; i < gpf_flow.connectionids_size(); ++i)
-		flow->connections_.push_back(get_Connection(gpf_flow.connectionids(i)));
-	//currentConnectionIdIndex
+		flow->connections_.push_back(Encoder::get_Connection(gpf_flow.connectionids(i)));
 	flow->current_connection_index_ = gpf_flow.currentconnectionidindex();
-	//state
 	flow->state_ = static_cast<rinad::Flow::IPCPFlowState>(gpf_flow.state());
-	//qosParameters
-	rina::FlowSpecification *fs = get_FlowSpecification(gpf_flow.qosparameters());
+	rina::FlowSpecification *fs = Encoder::get_FlowSpecification(gpf_flow.qosparameters());
 	flow->flow_specification_ = *fs;
 	delete fs;
 	fs = 0;
 
-	//optional connectionPolicies_t connectionPolicies
-	rina::ConnectionPolicies *conn_polc = get_ConnectionPolicies(gpf_flow.connectionpolicies());
+	rina::ConnectionPolicies *conn_polc = Encoder::get_ConnectionPolicies(gpf_flow.connectionpolicies());
 	flow->getActiveConnection()->setPolicies(*conn_polc);
 	delete conn_polc;
 	conn_polc = 0;
-	//accessControl
+
 	flow->access_control_ =  const_cast<char*>(gpf_flow.accesscontrol().c_str());
-	//maxCreateFlowRetries
 	flow->max_create_flow_retries_ = gpf_flow.maxcreateflowretries();
-	//createFlowRetries
 	flow->create_flow_retries_ = gpf_flow.createflowretries();
-	//hopCount
 	flow->hop_count_ = gpf_flow.hopcount();
 
 	return (void*) flow;
-}
-
-rina::messages::applicationProcessNamingInfo_t* FlowEncoder::get_applicationProcessNamingInfo_t(
-		const rina::ApplicationProcessNamingInformation &name) const {
-	rina::messages::applicationProcessNamingInfo_t *gpf_name =
-			new rina::messages::applicationProcessNamingInfo_t;
-	gpf_name->set_applicationprocessname(name.getProcessName().c_str());
-	gpf_name->set_applicationprocessinstance(name.getProcessInstance());
-	gpf_name->set_applicationentityname(name.getEntityName());
-	gpf_name->set_applicationentityinstance(name.getEntityInstance());
-	return gpf_name;
-}
-
-rina::messages::qosSpecification_t* FlowEncoder::get_qosSpecification_t(
-		const rina::FlowSpecification &flow_spec) const {
-	rina::messages::qosSpecification_t *gpf_flow_spec =
-			new rina::messages::qosSpecification_t;
-	//name
-	gpf_flow_spec->set_name("");
-	//qosid
-	gpf_flow_spec->set_qosid(0);
-	//averageBandwidth
-	gpf_flow_spec->set_averagebandwidth(flow_spec.getAverageBandwidth());
-	//averageSDUBandwidth
-	gpf_flow_spec->set_averagesdubandwidth(flow_spec.getAverageSduBandwidth());
-	//peakBandwidthDuration
-	gpf_flow_spec->set_peakbandwidthduration(
-			flow_spec.getPeakBandwidthDuration());
-	//peakSDUBandwidthDuration
-	gpf_flow_spec->set_peaksdubandwidthduration(
-			flow_spec.getPeakSduBandwidthDuration());
-	//undetectedBitErrorRate
-	gpf_flow_spec->set_undetectedbiterrorrate(
-			flow_spec.getUndetectedBitErrorRate());
-	//partialDelivery
-	gpf_flow_spec->set_partialdelivery(flow_spec.isPartialDelivery());
-	//order
-	gpf_flow_spec->set_order(flow_spec.isOrderedDelivery());
-	//maxAllowableGapSdu
-	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.getMaxAllowableGap());
-	//delay
-	gpf_flow_spec->set_delay(flow_spec.getDelay());
-	//jitter
-	gpf_flow_spec->set_jitter(flow_spec.getJitter());
-
-	return gpf_flow_spec;
-}
-
-rina::messages::connectionPolicies_t* FlowEncoder::get_connectionPolicies_t(const rina::ConnectionPolicies &polc) const {
-	rina::messages::connectionPolicies_t *gpf_polc = new rina::messages::connectionPolicies_t;
-
-	//optional bool dtcpPresent
-	gpf_polc->set_dtcppresent(polc.is_dtcp_present());
-	//optional dtcpConfig_t dtcpConfiguration
-	gpf_polc->set_allocated_dtcpconfiguration(get_dtcpConfig_t(polc.get_dtcp_configuration()));
-	//optional policyDescriptor_t initialseqnumpolicy
-	gpf_polc->set_allocated_initialseqnumpolicy(get_policyDescriptor_t(polc.get_initial_seq_num_policy()));
-	//optional uint64 seqnumrolloverthreshold
-	gpf_polc->set_seqnumrolloverthreshold(polc.get_seq_num_rollover_threshold());
-	//optional uint32 initialATimer
-	gpf_polc->set_initialatimer(polc.get_initial_a_timer());
-	//optional policyDescriptor_t rcvrtimerinactivitypolicy
-	gpf_polc->set_allocated_rcvrtimerinactivitypolicy(get_policyDescriptor_t(polc.get_rcvr_timer_inactivity_policy()));
-	//optional policyDescriptor_t sendertimerinactiviypolicy
-	gpf_polc->set_allocated_sendertimerinactiviypolicy(get_policyDescriptor_t(polc.get_sender_timer_inactivity_policy()));
-
-	return gpf_polc;
-}
-
-rina::messages::dtcpConfig_t* FlowEncoder::get_dtcpConfig_t(const rina::DTCPConfig &conf) const {
-	rina::messages::dtcpConfig_t *gpf_conf = new rina::messages::dtcpConfig_t;
-	//optional bool flowControl
-	gpf_conf->set_flowcontrol(conf.is_flow_control());
-	//optional dtcpFlowControlConfig_t flowControlConfig
-	gpf_conf->set_allocated_flowcontrolconfig(get_dtcpFlowControlConfig_t(conf.get_flow_control_config()));
-	//optional bool rtxControl
-	gpf_conf->set_rtxcontrol(conf.is_rtx_control());
-	//optional dtcpRtxControlConfig_t rtxControlConfig
-	gpf_conf->set_allocated_rtxcontrolconfig(get_dtcpRtxControlConfig_t(conf.get_rtx_control_config()));
-	//optional policyDescriptor_t lostcontrolpdupolicy
-	gpf_conf->set_allocated_lostcontrolpdupolicy(get_policyDescriptor_t((conf.get_lost_control_pdu_policy())));
-	//optional policyDescriptor_t rttestimatorpolicy
-	gpf_conf->set_allocated_rttestimatorpolicy(get_policyDescriptor_t((conf.get_rtt_estimator_policy())));
-
-	return gpf_conf;
-}
-
-rina::messages::policyDescriptor_t* FlowEncoder::get_policyDescriptor_t(const rina::PolicyConfig &conf) const {
-	rina::messages::policyDescriptor_t *gpf_conf = new rina::messages::policyDescriptor_t;
-	//optional string policyName
-	gpf_conf->set_policyname(conf.get_name());
-	//optional string policyImplName
-	gpf_conf->set_policyimplname(conf.get_name());
-	//optional string version
-	gpf_conf->set_version(conf.get_version());
-	//repeated property_t policyParameters
-	for (std::list<rina::PolicyParameter>::const_iterator it = conf.get_parameters().begin(); it != conf.get_parameters().end(); ++it) {
-		rina::messages::property_t *pro = gpf_conf->add_policyparameters();
-		*pro = *get_property_t(*it);
-	}
-
-	return gpf_conf;
-}
-
-rina::messages::dtcpFlowControlConfig_t* FlowEncoder::get_dtcpFlowControlConfig_t(const rina::DTCPFlowControlConfig &conf) const {
-	rina::messages::dtcpFlowControlConfig_t *gpf_conf = new rina::messages::dtcpFlowControlConfig_t ;
-	//optional bool windowBased
-	gpf_conf->set_windowbased(conf.is_window_based());
-	//optional dtcpWindowBasedFlowControlConfig_t windowBasedConfig
-	gpf_conf->set_allocated_windowbasedconfig(get_dtcpWindowBasedFlowControlConfig_t(conf.get_window_based_config()));
-	//optional bool rateBased
-	gpf_conf->set_ratebased(conf.is_rate_based());
-	//optional dtcpRateBasedFlowControlConfig_t rateBasedConfig
-	gpf_conf->set_allocated_ratebasedconfig(get_dtcpRateBasedFlowControlConfig_t(conf.get_rate_based_config()));
-	//optional uint64 sentbytesthreshold
-	gpf_conf->set_sentbytesthreshold(conf.get_sent_bytes_threshold());
-	//optional uint64 sentbytespercentthreshold
-	gpf_conf->set_sentbytespercentthreshold(conf.get_sent_bytes_percent_threshold());
-	//optional uint64 sentbuffersthreshold
-	gpf_conf->set_sentbuffersthreshold(conf.get_sent_buffers_threshold());
-	//optional uint64 rcvbytesthreshold
-	gpf_conf->set_rcvbytesthreshold(conf.get_rcv_bytes_threshold());
-	//optional uint64 rcvbytespercentthreshold
-	gpf_conf->set_rcvbytespercentthreshold(conf.get_rcv_bytes_percent_threshold());
-	//optional uint64 rcvbuffersthreshold
-	gpf_conf->set_rcvbuffersthreshold(conf.get_rcv_buffers_threshold());
-	//optional policyDescriptor_t closedwindowpolicy
-	gpf_conf->set_allocated_closedwindowpolicy(get_policyDescriptor_t(conf.get_closed_window_policy()));
-	//optional policyDescriptor_t flowcontroloverrunpolicy
-	gpf_conf->set_allocated_flowcontroloverrunpolicy(get_policyDescriptor_t(conf.get_flow_control_overrun_policy()));
-	//optional policyDescriptor_t reconcileflowcontrolpolicy
-	gpf_conf->set_allocated_reconcileflowcontrolpolicy(get_policyDescriptor_t(conf.get_reconcile_flow_control_policy()));
-	//optional policyDescriptor_t receivingflowcontrolpolicy
-	gpf_conf->set_allocated_receivingflowcontrolpolicy(get_policyDescriptor_t(conf.get_receiving_flow_control_policy()));
-
-	return gpf_conf;
-}
-
-rina::messages::dtcpRtxControlConfig_t* FlowEncoder::get_dtcpRtxControlConfig_t(const rina::DTCPRtxControlConfig &conf) const {
-	rina::messages::dtcpRtxControlConfig_t *gpf_conf = new rina::messages::dtcpRtxControlConfig_t;
-	//optional uint32 maxtimetoretry
-	gpf_conf->set_maxtimetoretry(conf.get_max_time_to_retry());
-	//optional uint32 datarxmsnmax
-	gpf_conf->set_datarxmsnmax(conf.get_data_rxmsn_max());
-	//optional policyDescriptor_t rtxtimerexpirypolicy
-	gpf_conf->set_allocated_rtxtimerexpirypolicy(get_policyDescriptor_t(conf.get_rtx_timer_expiry_policy()));
-	//optional policyDescriptor_t senderackpolicy
-	gpf_conf->set_allocated_senderackpolicy(get_policyDescriptor_t(conf.get_sender_ack_policy()));
-	//optional policyDescriptor_t recvingacklistpolicy
-	gpf_conf->set_allocated_recvingacklistpolicy(get_policyDescriptor_t(conf.get_recving_ack_list_policy()));
-	//optional policyDescriptor_t rcvrackpolicy
-	gpf_conf->set_allocated_rcvrackpolicy(get_policyDescriptor_t(conf.get_rcvr_ack_policy()));
-	//optional policyDescriptor_t sendingackpolicy
-	gpf_conf->set_allocated_sendingackpolicy(get_policyDescriptor_t(conf.get_sending_ack_policy()));
-	//optional policyDescriptor_t rcvrcontrolackpolicy
-	gpf_conf->set_allocated_rcvrcontrolackpolicy(get_policyDescriptor_t(conf.get_rcvr_control_ack_policy()));
-
-	return gpf_conf;
-}
-
-rina::messages::property_t* FlowEncoder::get_property_t(const rina::PolicyParameter &conf) const {
-	rina::messages::property_t *gpf_conf = new rina::messages::property_t;
-	//required string name
-	gpf_conf->set_name(conf.get_name());
-	//required string value
-	gpf_conf->set_value(conf.get_value());
-
-	return gpf_conf;
-}
-
-rina::messages::dtcpWindowBasedFlowControlConfig_t* FlowEncoder::get_dtcpWindowBasedFlowControlConfig_t(const rina::DTCPWindowBasedFlowControlConfig &conf) const {
-	rina::messages::dtcpWindowBasedFlowControlConfig_t * gpf_conf = new rina::messages::dtcpWindowBasedFlowControlConfig_t;
-	//optional uint64 maxclosedwindowqueuelength
-	gpf_conf->set_maxclosedwindowqueuelength(conf.get_maxclosed_window_queue_length());
-	//optional uint64 initialcredit
-	gpf_conf->set_initialcredit(conf.get_initial_credit());
-	//optional policyDescriptor_t rcvrflowcontrolpolicyç
-	gpf_conf->set_allocated_rcvrflowcontrolpolicy(get_policyDescriptor_t(conf.get_rcvr_flow_control_policy()));
-	//optional policyDescriptor_t txcontrolpolicy
-	gpf_conf->set_allocated_txcontrolpolicy(get_policyDescriptor_t(conf.getTxControlPolicy()));
-
-	return gpf_conf;
-}
-rina::messages::dtcpRateBasedFlowControlConfig_t* FlowEncoder::get_dtcpRateBasedFlowControlConfig_t(const rina::DTCPRateBasedFlowControlConfig &conf) const {
-	rina::messages::dtcpRateBasedFlowControlConfig_t *gpf_conf = new rina::messages::dtcpRateBasedFlowControlConfig_t;
-	//optional uint64 sendingrate
-	gpf_conf->set_sendingrate(conf.get_sending_rate());
-	//optional uint64 timeperiod
-	gpf_conf->set_timeperiod(conf.get_time_period());
-	//optional policyDescriptor_t norateslowdownpolicy
-	gpf_conf->set_allocated_norateslowdownpolicy(get_policyDescriptor_t(conf.get_no_rate_slow_down_policy()));
-	//optional policyDescriptor_t nooverridedefaultpeakpolicy
-	gpf_conf->set_allocated_nooverridedefaultpeakpolicy(get_policyDescriptor_t(conf.get_no_override_default_peak_policy()));
-	//optional policyDescriptor_t ratereductionpolicy
-	gpf_conf->set_allocated_ratereductionpolicy(get_policyDescriptor_t(conf.get_rate_reduction_policy()));
-
-	return gpf_conf;
-}
-
-rina::ConnectionPolicies* FlowEncoder::get_ConnectionPolicies(const rina::messages::connectionPolicies_t &gpf_polc) const {
-	rina::ConnectionPolicies *polc = new rina::ConnectionPolicies;
-	//optional bool dtcpPresent
-	polc->set_dtcp_present(gpf_polc.dtcppresent());
-	//optional dtcpConfig_t dtcpConfiguration
-	rina::DTCPConfig *conf = get_DTCPConfig(gpf_polc.dtcpconfiguration());
-	polc->set_dtcp_configuration(*conf);
-	delete conf;
-	conf = 0;
-	//optional policyDescriptor_t rcvrtimerinactivitypolicy
-	rina::PolicyConfig *p_conf = get_PolicyConfig(gpf_polc.rcvrtimerinactivitypolicy());
-	polc->set_rcvr_timer_inactivity_policy(*p_conf);
-	delete p_conf;
-	//optional policyDescriptor_t sendertimerinactiviypolicy
-	p_conf = get_PolicyConfig(gpf_polc.sendertimerinactiviypolicy());
-	polc->set_sender_timer_inactivity_policy(*p_conf);
-	delete p_conf;
-	//optional policyDescriptor_t initialseqnumpolicy
-	p_conf = get_PolicyConfig(gpf_polc.initialseqnumpolicy());
-	polc->set_initial_seq_num_policy(*p_conf);
-	delete p_conf;
-	p_conf = 0;
-	//optional uint64 seqnumrolloverthreshold
-	polc->set_seq_num_rollover_threshold(gpf_polc.seqnumrolloverthreshold());
-	//optional uint32 initialATimer
-	polc->set_initial_a_timer(gpf_polc.initialatimer());
-
-	return polc;
-}
-
-rina::ApplicationProcessNamingInformation* FlowEncoder::get_ApplicationProcessNamingInformation(
-		const rina::messages::applicationProcessNamingInfo_t &gpf_app) const {
-	rina::ApplicationProcessNamingInformation *app = new rina::ApplicationProcessNamingInformation;
-
-	app->setProcessName(gpf_app.applicationprocessname());
-	app->setProcessInstance(gpf_app.applicationprocessinstance());
-	app->setEntityName(gpf_app.applicationentityname());
-	app->setEntityInstance(gpf_app.applicationentityinstance());
-
-	return app;
-}
-
-rina::Connection* FlowEncoder::get_Connection(const rina::messages::connectionId_t &gpf_conn) const {
-	rina::Connection *conn = new rina::Connection;
-
-	//qosId
-	conn->setQosId(gpf_conn.qosid());
-	//sourceCEPId
-	conn->setSourceCepId(gpf_conn.sourcecepid());
-	//destinationCEPId
-	conn->setDestCepId(gpf_conn.destinationcepid());
-
-	return conn;
-}
-
-rina::FlowSpecification* FlowEncoder::get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos) const {
-	rina::FlowSpecification *qos = new rina::FlowSpecification;
-
-	//averageBandwidth
-	qos->setAverageBandwidth(gpf_qos.averagebandwidth());
-	//averageSDUBandwidth
-	qos->setAverageSduBandwidth(gpf_qos.averagesdubandwidth());
-	//peakBandwidthDuration
-	qos->setPeakBandwidthDuration(gpf_qos.peakbandwidthduration());
-	//peakSDUBandwidthDuration
-	qos->setPeakSduBandwidthDuration(gpf_qos.peaksdubandwidthduration());
-	//undetectedBitErrorRate
-	qos->setUndetectedBitErrorRate(gpf_qos.undetectedbiterrorrate());
-	//partialDelivery
-	qos->setPartialDelivery(gpf_qos.partialdelivery());
-	//order
-	qos->setOrderedDelivery(gpf_qos.partialdelivery());
-	//maxAllowableGapSdu
-	qos->setMaxAllowableGap(gpf_qos.maxallowablegapsdu());
-	//delay
-	qos->setDelay(gpf_qos.delay());
-	//jitter
-	qos->setJitter(gpf_qos.jitter());
-
-	return qos;
-}
-
-rina::DTCPConfig* FlowEncoder::get_DTCPConfig(const rina::messages::dtcpConfig_t &gpf_conf) const {
-	rina::DTCPConfig *conf = new rina::DTCPConfig;
-
-	//optional bool flowControl
-	conf->flow_control_ = gpf_conf.flowcontrol();
-	//optional dtcpFlowControlConfig_t flowControlConfig
-	rina::DTCPFlowControlConfig *flow_conf = get_DTCPFlowControlConfig(gpf_conf.flowcontrolconfig());
-	conf->set_flow_control_config(*flow_conf);
-	delete flow_conf;
-	flow_conf = 0;
-	//optional bool rtxControl
-	conf->set_rtx_control(gpf_conf.rtxcontrol());
-	//optional dtcpRtxControlConfig_t rtxControlConfig
-	rina::DTCPRtxControlConfig *rtx_conf = get_DTCPRtxControlConfig(gpf_conf.rtxcontrolconfig());
-	conf->set_rtx_control_config(*rtx_conf);
-	delete rtx_conf;
-	rtx_conf = 0;
-	//optional policyDescriptor_t lostcontrolpdupolicy
-	rina::PolicyConfig * p_conf = get_PolicyConfig(gpf_conf.lostcontrolpdupolicy());
-	conf->set_lost_control_pdu_policy(*p_conf);
-	delete p_conf;
-	//optional policyDescriptor_t rttestimatorpolicy
-	p_conf = get_PolicyConfig(gpf_conf.rttestimatorpolicy());
-	conf->set_rtt_estimator_policy(*p_conf);
-	delete p_conf;
-	p_conf = 0;
-
-	return conf;
-
-}
-
-rina::PolicyConfig* FlowEncoder::get_PolicyConfig(const rina::messages::policyDescriptor_t &gpf_conf) const {
-	rina::PolicyConfig *conf = new rina::PolicyConfig;
-
-	//optional string policyName
-	conf->set_name(gpf_conf.policyname());
-	//optional string version
-	conf->set_version(gpf_conf.version());
-	//repeated property_t policyParameters
-	for (int i =0; i < gpf_conf.policyparameters_size(); ++i)	{
-		rina::PolicyParameter *param = get_PolicyParameter(gpf_conf.policyparameters(i));
-		conf->parameters_.push_back(*param);
-		delete param;
-	}
-
-	return conf;
-}
-rina::DTCPFlowControlConfig* FlowEncoder::get_DTCPFlowControlConfig(const rina::messages::dtcpFlowControlConfig_t &gpf_conf) const {
-	rina::DTCPFlowControlConfig *conf = new rina::DTCPFlowControlConfig;
-
-	//optional bool windowBased
-	conf->set_window_based(gpf_conf.windowbased());
-	//optional dtcpWindowBasedFlowControlConfig_t windowBasedConfig
-	rina::DTCPWindowBasedFlowControlConfig *window = get_DTCPWindowBasedFlowControlConfig(gpf_conf.windowbasedconfig());
-	conf->set_window_based_config(*window);
-	delete window;
-	window = 0;
-	//optional bool rateBased
-	conf->set_rate_based(gpf_conf.ratebased());
-	//optional dtcpRateBasedFlowControlConfig_t rateBasedConfig
-	rina::DTCPRateBasedFlowControlConfig *rate = get_DTCPRateBasedFlowControlConfig(gpf_conf.ratebasedconfig());
-	conf->set_rate_based_config(*rate);
-	delete rate;
-	rate = 0;
-	//optional uint64 sentbytesthreshold
-	conf->set_sent_bytes_threshold(gpf_conf.sentbytesthreshold());
-	//optional uint64 sentbytespercentthreshold
-	conf->set_sent_bytes_percent_threshold(gpf_conf.sentbytespercentthreshold());
-	//optional uint64 sentbuffersthreshold
-	conf->set_sent_buffers_threshold(gpf_conf.sentbuffersthreshold());
-	//optional uint64 rcvbytesthreshold
-	conf->set_rcv_bytes_threshold(gpf_conf.rcvbytesthreshold());
-	//optional uint64 rcvbytespercentthreshold
-	conf->set_rcv_bytes_percent_threshold(gpf_conf.rcvbytespercentthreshold());
-	//optional uint64 rcvbuffersthreshold
-	conf->set_rcv_buffers_threshold(gpf_conf.rcvbuffersthreshold());
-	//optional policyDescriptor_t closedwindowpolicy
-	rina::PolicyConfig *poli = get_PolicyConfig(gpf_conf.closedwindowpolicy());
-	conf->set_closed_window_policy(*poli);
-	delete poli;
-	poli = 0;
-	//optional policyDescriptor_t flowcontroloverrunpolicy
-	poli = get_PolicyConfig(gpf_conf.flowcontroloverrunpolicy());
-	conf->set_flow_control_overrun_policy(*poli);
-	delete poli;
-	poli = 0;
-	//optional policyDescriptor_t reconcileflowcontrolpolicy
-	poli = get_PolicyConfig(gpf_conf.reconcileflowcontrolpolicy());
-	conf->set_reconcile_flow_control_policy(*poli);
-	delete poli;
-	poli = 0;
-	//optional policyDescriptor_t receivingflowcontrolpolicy
-	poli = get_PolicyConfig(gpf_conf.receivingflowcontrolpolicy());
-	conf->set_receiving_flow_control_policy(*poli);
-	delete poli;
-	poli = 0;
-
-	return conf;
-}
-
-rina::DTCPRtxControlConfig* FlowEncoder::get_DTCPRtxControlConfig(const rina::messages::dtcpRtxControlConfig_t &gpf_conf) const {
-	rina::DTCPRtxControlConfig *conf = new rina::DTCPRtxControlConfig;
-	conf->set_max_time_to_retry(gpf_conf.maxtimetoretry());
-	//optional uint32 datarxmsnmax
-	conf->set_data_rxmsn_max(gpf_conf.datarxmsnmax());
-	//optional policyDescriptor_t rtxtimerexpirypolicy
-	rina::PolicyConfig *polc = get_PolicyConfig(gpf_conf.rtxtimerexpirypolicy());
-	conf->set_rtx_timer_expiry_policy(*polc);
-	//optional policyDescriptor_t senderackpolicy
-	polc = get_PolicyConfig(gpf_conf.senderackpolicy());
-	conf->set_sender_ack_policy(*polc);
-	//optional policyDescriptor_t recvingacklistpolicy
-	polc = get_PolicyConfig(gpf_conf.recvingacklistpolicy());
-	conf->set_recving_ack_list_policy(*polc);
-	//optional policyDescriptor_t rcvrackpolicy
-	polc = get_PolicyConfig(gpf_conf.rcvrackpolicy());
-	conf->set_rcvr_ack_policy(*polc);
-	//optional policyDescriptor_t sendingackpolicy
-	polc = get_PolicyConfig(gpf_conf.sendingackpolicy());
-	conf->set_sending_ack_policy(*polc);
-	//optional policyDescriptor_t rcvrcontrolackpolicy
-	polc = get_PolicyConfig(gpf_conf.rcvrcontrolackpolicy());
-	conf->set_rcvr_control_ack_policy(*polc);
-
-	return conf;
-}
-
-rina::PolicyParameter* FlowEncoder::get_PolicyParameter(const rina::messages::property_t &gpf_conf) const {
-	rina::PolicyParameter *conf = new rina::PolicyParameter;
-	//required string name
-	conf->set_name(gpf_conf.name());
-	//required string value
-	conf->set_value(gpf_conf.value());
-
-	return conf;
-}
-rina::DTCPWindowBasedFlowControlConfig* FlowEncoder::get_DTCPWindowBasedFlowControlConfig(const rina::messages::dtcpWindowBasedFlowControlConfig_t &gpf_conf) const {
-	rina::DTCPWindowBasedFlowControlConfig *conf = new rina::DTCPWindowBasedFlowControlConfig;
-
-	//optional uint64 maxclosedwindowqueuelength
-	conf->set_max_closed_window_queue_length(gpf_conf.maxclosedwindowqueuelength());
-	//optional uint64 initialcredit
-	conf->set_initial_credit(gpf_conf.initialcredit());
-	//optional policyDescriptor_t rcvrflowcontrolpolicyç
-	rina::PolicyConfig *poli = get_PolicyConfig(gpf_conf.rcvrflowcontrolpolicy());
-	conf->set_rcvr_flow_control_policy(*poli);
-	delete poli;
-	poli = 0;
-	//optional policyDescriptor_t txcontrolpolicy
-	poli = get_PolicyConfig(gpf_conf.txcontrolpolicy());
-	conf->set_tx_control_policy(*poli);
-	delete poli;
-	poli = 0;
-
-	return conf;
-}
-rina::DTCPRateBasedFlowControlConfig* FlowEncoder::get_DTCPRateBasedFlowControlConfig(const rina::messages::dtcpRateBasedFlowControlConfig_t &gpf_conf) const{
-	rina::DTCPRateBasedFlowControlConfig *conf = new rina::DTCPRateBasedFlowControlConfig;
-	//optional uint64 sendingrate
-	conf->set_sending_rate(gpf_conf.sendingrate());
-	//optional uint64 timeperiod
-	conf->set_time_period(gpf_conf.timeperiod());
-	//optional policyDescriptor_t norateslowdownpolicy
-	rina::PolicyConfig *poli = get_PolicyConfig(gpf_conf.norateslowdownpolicy());
-	conf->set_no_rate_slow_down_policy(*poli);
-	delete poli;
-	poli = 0;
-	//optional policyDescriptor_t nooverridedefaultpeakpolicy
-	poli = get_PolicyConfig(gpf_conf.nooverridedefaultpeakpolicy());
-	conf->set_no_override_default_peak_policy(*poli);
-	delete poli;
-	poli = 0;
-	//optional policyDescriptor_t ratereductionpolicy
-	poli = get_PolicyConfig(gpf_conf.ratereductionpolicy());
-	conf->set_rate_reduction_policy(*poli);
-	delete poli;
-	poli = 0;
-
-	return conf;
 }
 
 }

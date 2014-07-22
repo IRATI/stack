@@ -216,3 +216,127 @@ EXTRA_DIST +=					\
 	QoSSpecification.stamp
 
 protoSOURCES += QoSSpecification.pb.cc QoSSpecification.pb.h
+
+
+DataTransferConstantsMessage.stamp: DataTransferConstantsMessage.proto
+	rm -f DataTransferConstantsMessage.tmp
+	touch DataTransferConstantsMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/DataTransferConstantsMessage.proto
+	mv -f DataTransferConstantsMessage.tmp $@
+
+DataTransferConstantsMessage.pb.h DataTransferConstantsMessage.pb.cc: DataTransferConstantsMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf DataTransferConstantsMessage.lock DataTransferConstantsMessage.stamp' 1 2 13 15; \
+	  if mkdir DataTransferConstantsMessage.lock 2>/dev/null; then \
+	    rm -f DataTransferConstantsMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) DataTransferConstantsMessage.stamp; \
+	    result=$$?; rm -rf DataTransferConstantsMessage.lock; exit $$result; \
+	  else \
+	    while test -d DataTransferConstantsMessage.lock; do sleep 1; done; \
+	    test -f DataTransferConstantsMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	DataTransferConstantsMessage.tmp
+
+EXTRA_DIST +=					\
+	DataTransferConstantsMessage.proto				\
+	DataTransferConstantsMessage.stamp
+
+protoSOURCES += DataTransferConstantsMessage.pb.cc DataTransferConstantsMessage.pb.h
+
+
+DirectoryForwardingTableEntryMessage.stamp: DirectoryForwardingTableEntryMessage.proto
+	rm -f DirectoryForwardingTableEntryMessage.tmp
+	touch DirectoryForwardingTableEntryMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/DirectoryForwardingTableEntryMessage.proto
+	mv -f DirectoryForwardingTableEntryMessage.tmp $@
+
+DirectoryForwardingTableEntryMessage.pb.h DirectoryForwardingTableEntryMessage.pb.cc: DirectoryForwardingTableEntryMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf DirectoryForwardingTableEntryMessage.lock DirectoryForwardingTableEntryMessage.stamp' 1 2 13 15; \
+	  if mkdir DirectoryForwardingTableEntryMessage.lock 2>/dev/null; then \
+	    rm -f DirectoryForwardingTableEntryMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) DirectoryForwardingTableEntryMessage.stamp; \
+	    result=$$?; rm -rf DirectoryForwardingTableEntryMessage.lock; exit $$result; \
+	  else \
+	    while test -d DirectoryForwardingTableEntryMessage.lock; do sleep 1; done; \
+	    test -f DirectoryForwardingTableEntryMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	DirectoryForwardingTableEntryMessage.tmp
+
+EXTRA_DIST +=					\
+	DirectoryForwardingTableEntryMessage.proto				\
+	DirectoryForwardingTableEntryMessage.stamp
+
+protoSOURCES += DirectoryForwardingTableEntryMessage.pb.cc DirectoryForwardingTableEntryMessage.pb.h
+
+
+DirectoryForwardingTableEntryArrayMessage.stamp: DirectoryForwardingTableEntryArrayMessage.proto
+	rm -f DirectoryForwardingTableEntryArrayMessage.tmp
+	touch DirectoryForwardingTableEntryArrayMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/DirectoryForwardingTableEntryArrayMessage.proto
+	mv -f DirectoryForwardingTableEntryArrayMessage.tmp $@
+
+DirectoryForwardingTableEntryArrayMessage.pb.h DirectoryForwardingTableEntryArrayMessage.pb.cc: DirectoryForwardingTableEntryArrayMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf DirectoryForwardingTableEntryArrayMessage.lock DirectoryForwardingTableEntryArrayMessage.stamp' 1 2 13 15; \
+	  if mkdir DirectoryForwardingTableEntryArrayMessage.lock 2>/dev/null; then \
+	    rm -f DirectoryForwardingTableEntryArrayMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) DirectoryForwardingTableEntryArrayMessage.stamp; \
+	    result=$$?; rm -rf DirectoryForwardingTableEntryArrayMessage.lock; exit $$result; \
+	  else \
+	    while test -d DirectoryForwardingTableEntryArrayMessage.lock; do sleep 1; done; \
+	    test -f DirectoryForwardingTableEntryArrayMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	DirectoryForwardingTableEntryArrayMessage.tmp
+
+EXTRA_DIST +=					\
+	DirectoryForwardingTableEntryArrayMessage.proto				\
+	DirectoryForwardingTableEntryArrayMessage.stamp
+
+protoSOURCES += DirectoryForwardingTableEntryArrayMessage.pb.cc DirectoryForwardingTableEntryArrayMessage.pb.h
+
+
+EnrollmentInformationMessage.stamp: EnrollmentInformationMessage.proto
+	rm -f EnrollmentInformationMessage.tmp
+	touch EnrollmentInformationMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/EnrollmentInformationMessage.proto
+	mv -f EnrollmentInformationMessage.tmp $@
+
+EnrollmentInformationMessage.pb.h EnrollmentInformationMessage.pb.cc: EnrollmentInformationMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf EnrollmentInformationMessage.lock EnrollmentInformationMessage.stamp' 1 2 13 15; \
+	  if mkdir EnrollmentInformationMessage.lock 2>/dev/null; then \
+	    rm -f EnrollmentInformationMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) EnrollmentInformationMessage.stamp; \
+	    result=$$?; rm -rf EnrollmentInformationMessage.lock; exit $$result; \
+	  else \
+	    while test -d EnrollmentInformationMessage.lock; do sleep 1; done; \
+	    test -f EnrollmentInformationMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	EnrollmentInformationMessage.tmp
+
+EXTRA_DIST +=					\
+	EnrollmentInformationMessage.proto				\
+	EnrollmentInformationMessage.stamp
+
+protoSOURCES += EnrollmentInformationMessage.pb.cc EnrollmentInformationMessage.pb.h
