@@ -345,7 +345,8 @@ static int deserialize_base_pci(const struct serdes * instance,
         *offset += VERSION_SIZE;
 
         if (vers != version) {
-                LOG_ERR("Received an unknown version of the EFCP PDU");
+                LOG_ERR("Received an unknown version of the EFCP PDU (%d)",
+                        vers);
                 return -1;
         }
 
