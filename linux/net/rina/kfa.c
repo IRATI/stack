@@ -614,9 +614,9 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                                                   queue_ready(flow));
                 if (retval)
                         LOG_ERR("Wait-event interrupted (%d)", retval);
+                LOG_DBG("Read Woken up");
 
                 mutex_lock(&instance->lock);
-                LOG_DBG("Read Woken up");
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
