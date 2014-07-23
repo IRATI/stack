@@ -34,18 +34,18 @@ struct dtcp_config;
 /* FIXME: More params to be added */
 struct conn_policies {
         /* FIXME: Anyone using this variable? To be removed */
-        bool                  dtcp_present;
-        struct  dtcp_config * dtcp_cfg;
-        struct policy *       initial_sequence_number;
-        struct policy *       receiver_inactivity_timer;
-        struct policy *       sender_inactivity_timer;
+        bool                 dtcp_present;
+        struct dtcp_config * dtcp_cfg;
+        struct policy *      initial_sequence_number;
+        struct policy *      receiver_inactivity_timer;
+        struct policy *      sender_inactivity_timer;
         /* Sequence number rollover threshold */
-        int                   seq_num_ro_th;
-        timeout_t             initial_a_timer;
-        bool                  partial_delivery;
-        bool                  incomplete_delivery;
-        bool                  in_order_delivery;
-        seq_num_t             max_sdu_gap;
+        int                  seq_num_ro_th;
+        timeout_t            initial_a_timer;
+        bool                 partial_delivery;
+        bool                 incomplete_delivery;
+        bool                 in_order_delivery;
+        seq_num_t            max_sdu_gap;
 };
 
 /* NOTE: Do not use this struct directly, IT MUST BE HIDDEN */
