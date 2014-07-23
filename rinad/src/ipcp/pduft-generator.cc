@@ -26,7 +26,8 @@
 
 #include <librina/logs.h>
 
-#include "pduft-generator.h"
+#include "common/encoders/FlowStateGroupMessage.pb.h"
+#include "ipcp/pduft-generator.h"
 
 namespace rinad {
 
@@ -1021,6 +1022,87 @@ void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
 		delete responseMessage;
 		delete serializedObject;
 	}
+}
+
+//Class FlowStateObjectEncoder
+const rina::SerializedObject* FlowStateObjectEncoder::encode(const void* object) {
+	FlowStateObject * fso = (FlowStateObject*) object;
+	rina::messages::flowStateObject_t gpb_fso;
+
+	FlowStateObjectEncoder::convertModelToGPB(&gpb_fso, fso);
+
+	int size = gpb_fso.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_fso.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* FlowStateObjectEncoder::decode(
+		const rina::SerializedObject &serialized_object) const {
+	rina::messages::flowStateObject_t gpb_fso;
+
+	gpb_fso.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	return (void*) FlowStateObjectEncoder::convertGPBToModel(gpb_fso);
+}
+
+void FlowStateObjectEncoder::convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
+		FlowStateObject * fso) {
+	gpb_fso->set_address(fso->address_);
+	gpb_fso->set_age(fso->age_);
+	gpb_fso->set_neighbor_address(fso->neighbor_address_);
+	gpb_fso->set_neighbor_portid(fso->neighbor_port_id_);
+	gpb_fso->set_portid(fso->port_id_);
+	gpb_fso->set_sequence_number(fso->sequence_number_);
+	gpb_fso->set_state(fso->up_);
+
+	return;
+}
+
+FlowStateObject * FlowStateObjectEncoder::convertGPBToModel(
+			const rina::messages::flowStateObject_t & gpb_fso) {
+	FlowStateObject * fso = new FlowStateObject(gpb_fso.address(), gpb_fso.portid(),
+			gpb_fso.neighbor_address(), gpb_fso.neighbor_portid(), gpb_fso.state(),
+			gpb_fso.sequence_number(), gpb_fso.age());
+
+	return fso;
+}
+
+// Class FlowStateObjectListEncoder
+const rina::SerializedObject* FlowStateObjectListEncoder::encode(const void* object) {
+	std::list<FlowStateObject*> * list =
+			(std::list<FlowStateObject*> *) object;
+	std::list<FlowStateObject*>::const_iterator it;
+	rina::messages::flowStateObjectGroup_t gpb_list;
+
+	rina::messages::flowStateObject_t * gpb_fso;
+	for (it = list->begin(); it != list->end(); ++it) {
+		gpb_fso = gpb_list.add_flow_state_objects();
+		FlowStateObjectEncoder::convertModelToGPB(gpb_fso, (*it));
+	}
+
+	int size = gpb_list.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_list.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* FlowStateObjectListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+	rina::messages::flowStateObjectGroup_t gpb_list;
+	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	std::list<FlowStateObject*> * list = new std::list<FlowStateObject*>();
+
+	for (int i = 0; i < gpb_list.flow_state_objects_size(); ++i) {
+		list->push_back(FlowStateObjectEncoder::convertGPBToModel(
+				gpb_list.flow_state_objects(i)));
+	}
+
+	return (void *) list;
 }
 
 }

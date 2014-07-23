@@ -1187,4 +1187,18 @@ std::string DirectoryForwardingTableEntry::toString() {
 	return ss.str();
 }
 
+//	CLASS WhatevercastName
+bool WhatevercastName::operator==(const WhatevercastName &other) {
+	if (name_ == other.name_) {
+		return true;
+	}
+	return false;
+}
+
+std::string WhatevercastName::toString() {
+	std::string result = "Name: " + name_ + "\n";
+	result = result + "Rule: " + rule_;
+	return result;
+}
+
 }

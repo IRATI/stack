@@ -24,6 +24,8 @@
 #include "common/encoders/DataTransferConstantsMessage.pb.h"
 #include "common/encoders/DirectoryForwardingTableEntryArrayMessage.pb.h"
 #include "common/encoders/QoSCubeArrayMessage.pb.h"
+#include "common/encoders/WhatevercastNameArrayMessage.pb.h"
+#include "common/encoders/NeighborArrayMessage.pb.h"
 
 namespace rinad {
 
@@ -755,6 +757,178 @@ void* QoSCubeListEncoder::decode(const rina::SerializedObject &serialized_object
 	for (int i = 0; i < gpb_list.qoscube_size(); ++i) {
 		list->push_back(QoSCubeEncoder::convertGPBToModel(
 				gpb_list.qoscube(i)));
+	}
+
+	return (void *) list;
+}
+
+//Class WhatevercastNameEncoder
+const rina::SerializedObject* WhatevercastNameEncoder::encode(const void* object) {
+	rina::WhatevercastName *name = (rina::WhatevercastName*) object;
+	rina::messages::whatevercastName_t gpb_name;
+
+	WhatevercastNameEncoder::convertModelToGPB(&gpb_name, name);
+
+	int size = gpb_name.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_name.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* WhatevercastNameEncoder::decode(
+		const rina::SerializedObject &serialized_object) const {
+	rina::messages::whatevercastName_t gpb_name;
+
+	gpb_name.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	return (void*) WhatevercastNameEncoder::convertGPBToModel(gpb_name);
+}
+
+void WhatevercastNameEncoder::convertModelToGPB(rina::messages::whatevercastName_t * gpb_name,
+		rina::WhatevercastName * name) {
+	gpb_name->set_name(name->name_);
+	gpb_name->set_rule(name->rule_);
+	std::list<std::string>::iterator it;
+	for (it=name->set_members_.begin(); it != name->set_members_.end(); ++it) {
+		gpb_name->add_setmembers((*it));
+	}
+
+	return;
+}
+
+rina::WhatevercastName * WhatevercastNameEncoder::convertGPBToModel(
+			const rina::messages::whatevercastName_t & gpb_name) {
+	rina::WhatevercastName *name = new rina::WhatevercastName();
+
+	name->name_ = gpb_name.name();
+	name->rule_ = gpb_name.rule();
+	for(int i=0; i<gpb_name.setmembers_size(); i++) {
+		name->set_members_.push_back(gpb_name.setmembers(i));
+	}
+
+	return name;
+}
+
+// Class WhatevercastNameListEncoder
+const rina::SerializedObject* WhatevercastNameListEncoder::encode(const void* object) {
+	std::list<rina::WhatevercastName*> * list =
+			(std::list<rina::WhatevercastName*> *) object;
+	std::list<rina::WhatevercastName*>::const_iterator it;
+	rina::messages::whatevercastNames_t gpb_list;
+
+	rina::messages::whatevercastName_t * gpb_name;
+	for (it = list->begin(); it != list->end(); ++it) {
+		gpb_name = gpb_list.add_whatevercastname();
+		WhatevercastNameEncoder::convertModelToGPB(gpb_name, (*it));
+	}
+
+	int size = gpb_list.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_list.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* WhatevercastNameListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+	rina::messages::whatevercastNames_t gpb_list;
+	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	std::list<rina::WhatevercastName*> * list = new std::list<rina::WhatevercastName*>();
+
+	for (int i = 0; i < gpb_list.whatevercastname_size(); ++i) {
+		list->push_back(WhatevercastNameEncoder::convertGPBToModel(
+				gpb_list.whatevercastname(i)));
+	}
+
+	return (void *) list;
+}
+
+//Class NeighborEncoder
+const rina::SerializedObject* NeighborEncoder::encode(const void* object) {
+	rina::Neighbor * nei = (rina::Neighbor*) object;
+	rina::messages::neighbor_t gpb_nei;
+
+	NeighborEncoder::convertModelToGPB(&gpb_nei, nei);
+
+	int size = gpb_nei.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_nei.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* NeighborEncoder::decode(
+		const rina::SerializedObject &serialized_object) const {
+	rina::messages::neighbor_t gpb_nei;
+
+	gpb_nei.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	return (void*) NeighborEncoder::convertGPBToModel(gpb_nei);
+}
+
+void NeighborEncoder::convertModelToGPB(rina::messages::neighbor_t * gpb_nei,
+		rina::Neighbor * nei) {
+	gpb_nei->set_address(nei->address_);
+	gpb_nei->set_applicationprocessname(nei->name_.processName);
+	gpb_nei->set_applicationprocessinstance(nei->name_.processInstance);
+	std::list<rina::ApplicationProcessNamingInformation>::iterator it;
+	for (it = nei->supporting_difs_.begin();
+			it != nei->supporting_difs_.end(); ++it) {
+		gpb_nei->add_supportingdifs(it->processName);
+	}
+
+	return;
+}
+
+rina::Neighbor * NeighborEncoder::convertGPBToModel(
+			const rina::messages::neighbor_t & gpb_nei) {
+	rina::Neighbor *nei = new rina::Neighbor();
+
+	nei->address_ = gpb_nei.address();
+	nei->name_.processName = gpb_nei.applicationprocessname();
+	nei->name_.processInstance = gpb_nei.applicationprocessinstance();
+	for(int i=0; i<gpb_nei.supportingdifs_size(); i++) {
+		nei->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
+				gpb_nei.supportingdifs(i), ""));
+	}
+
+	return nei;
+}
+
+// Class NeighborListEncoder
+const rina::SerializedObject* NeighborListEncoder::encode(const void* object) {
+	std::list<rina::Neighbor*> * list =
+			(std::list<rina::Neighbor*> *) object;
+	std::list<rina::Neighbor*>::const_iterator it;
+	rina::messages::neighbors_t gpb_list;
+
+	rina::messages::neighbor_t * gpb_nei;
+	for (it = list->begin(); it != list->end(); ++it) {
+		gpb_nei = gpb_list.add_neighbor();
+		NeighborEncoder::convertModelToGPB(gpb_nei, (*it));
+	}
+
+	int size = gpb_list.ByteSize();
+	char *serialized_message = new char[size];
+	gpb_list.SerializeToArray(serialized_message, size);
+	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
+
+	return serialized_object;
+}
+
+void* NeighborListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+	rina::messages::neighbors_t gpb_list;
+	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	std::list<rina::Neighbor*> * list = new std::list<rina::Neighbor*>();
+
+	for (int i = 0; i < gpb_list.neighbor_size(); ++i) {
+		list->push_back(NeighborEncoder::convertGPBToModel(
+				gpb_list.neighbor(i)));
 	}
 
 	return (void *) list;

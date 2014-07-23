@@ -1,7 +1,0 @@
-package rina.messages;
-option java_package="rina.encoding.impl.googleprotobuf.enrollment";
-
-message enrollmentInformation_t {	 // carries information about a member that requests enrollment to a DIF
-	optional uint64	address = 1;
-	repeated string supportingDifs = 2;
-}

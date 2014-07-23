@@ -28,6 +28,7 @@
 #include "ipcp/flow-allocator.h"
 #include "ipcp/ipc-process.h"
 #include "ipcp/namespace-manager.h"
+#include "ipcp/pduft-generator.h"
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
 #include "ipcp/security-manager.h"
@@ -146,18 +147,30 @@ void IPCProcessImpl::init_encoder() {
 	encoder_ = new rinad::Encoder();
 	encoder_->addEncoder(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 			new DataTransferConstantsEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS, new FlowEncoder());
 	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 			new DirectoryForwardingTableEntryEncoder());
 	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 			new DirectoryForwardingTableEntryListEncoder());
 	encoder_->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 			new EnrollmentInformationRequestEncoder());
+	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+			new FlowEncoder());
+	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
+			new FlowStateObjectEncoder());
+	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+			new FlowStateObjectListEncoder());
+	encoder_->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+			new NeighborEncoder());
+	encoder_->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+			new NeighborListEncoder());
 	encoder_->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
 			new QoSCubeEncoder());
 	encoder_->addEncoder(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 			new QoSCubeListEncoder());
-	//TODO add backend encoders as they become available
+	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS,
+			new WhatevercastNameEncoder());
+	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
+			new WhatevercastNameListEncoder());
 }
 
 void IPCProcessImpl::init_enrollment_task() {

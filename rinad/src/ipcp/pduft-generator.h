@@ -25,9 +25,10 @@
 #ifdef __cplusplus
 
 #include <set>
+#include <librina/timer.h>
 
 #include "ipcp/components.h"
-#include <librina/timer.h>
+#include "common/encoders/FlowStateMessage.pb.h"
 
 namespace rinad {
 
@@ -449,6 +450,24 @@ private:
 	/// that a flow has been allocated to, in one or more CDAP M_WRITE messages targeting the
 	/// /dif/management/routing/flowstateobjectgroup/ object.
 	void processNeighborAddedEvent(NeighborAddedEvent * event);
+};
+
+/// Encoder of Flow State object
+class FlowStateObjectEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+	static void convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
+			FlowStateObject * fso);
+	static FlowStateObject * convertGPBToModel(
+			const rina::messages::flowStateObject_t & gpb_fso);
+};
+
+/// Encoder of a list of Flow State Objects
+class FlowStateObjectListEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
 };
 
 }

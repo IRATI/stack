@@ -32,37 +32,6 @@ EXTRA_DIST +=					\
 protoSOURCES += ApplicationProcessNamingInfoMessage.pb.cc ApplicationProcessNamingInfoMessage.pb.h
 
 
-ApplicationRegistrationMessage.stamp: ApplicationRegistrationMessage.proto
-	rm -f ApplicationRegistrationMessage.tmp
-	touch ApplicationRegistrationMessage.tmp
-	$(PROTOC) -I$(builddir) -I$(srcdir)	\
-		--cpp_out=$(builddir)		\
-		$(srcdir)/ApplicationRegistrationMessage.proto
-	mv -f ApplicationRegistrationMessage.tmp $@
-
-ApplicationRegistrationMessage.pb.h ApplicationRegistrationMessage.pb.cc: ApplicationRegistrationMessage.stamp
-	if test -f $@; then :; else \
-	  trap 'rm -rf ApplicationRegistrationMessage.lock ApplicationRegistrationMessage.stamp' 1 2 13 15; \
-	  if mkdir ApplicationRegistrationMessage.lock 2>/dev/null; then \
-	    rm -f ApplicationRegistrationMessage.stamp; \
-	    $(MAKE) $(AM_MAKEFLAGS) ApplicationRegistrationMessage.stamp; \
-	    result=$$?; rm -rf ApplicationRegistrationMessage.lock; exit $$result; \
-	  else \
-	    while test -d ApplicationRegistrationMessage.lock; do sleep 1; done; \
-	    test -f ApplicationRegistrationMessage.stamp; \
-	  fi; \
-	fi
-
-MOSTLYCLEANFILES +=				\
-	ApplicationRegistrationMessage.tmp
-
-EXTRA_DIST +=					\
-	ApplicationRegistrationMessage.proto				\
-	ApplicationRegistrationMessage.stamp
-
-protoSOURCES += ApplicationRegistrationMessage.pb.cc ApplicationRegistrationMessage.pb.h
-
-
 CommonMessages.stamp: CommonMessages.proto
 	rm -f CommonMessages.tmp
 	touch CommonMessages.tmp
@@ -402,3 +371,189 @@ EXTRA_DIST +=					\
 	QoSCubeArrayMessage.stamp
 
 protoSOURCES += QoSCubeArrayMessage.pb.cc QoSCubeArrayMessage.pb.h
+
+
+WhatevercastNameMessage.stamp: WhatevercastNameMessage.proto
+	rm -f WhatevercastNameMessage.tmp
+	touch WhatevercastNameMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/WhatevercastNameMessage.proto
+	mv -f WhatevercastNameMessage.tmp $@
+
+WhatevercastNameMessage.pb.h WhatevercastNameMessage.pb.cc: WhatevercastNameMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf WhatevercastNameMessage.lock WhatevercastNameMessage.stamp' 1 2 13 15; \
+	  if mkdir WhatevercastNameMessage.lock 2>/dev/null; then \
+	    rm -f WhatevercastNameMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) WhatevercastNameMessage.stamp; \
+	    result=$$?; rm -rf WhatevercastNameMessage.lock; exit $$result; \
+	  else \
+	    while test -d WhatevercastNameMessage.lock; do sleep 1; done; \
+	    test -f WhatevercastNameMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	WhatevercastNameMessage.tmp
+
+EXTRA_DIST +=					\
+	WhatevercastNameMessage.proto				\
+	WhatevercastNameMessage.stamp
+
+protoSOURCES += WhatevercastNameMessage.pb.cc WhatevercastNameMessage.pb.h
+
+
+WhatevercastNameArrayMessage.stamp: WhatevercastNameArrayMessage.proto
+	rm -f WhatevercastNameArrayMessage.tmp
+	touch WhatevercastNameArrayMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/WhatevercastNameArrayMessage.proto
+	mv -f WhatevercastNameArrayMessage.tmp $@
+
+WhatevercastNameArrayMessage.pb.h WhatevercastNameArrayMessage.pb.cc: WhatevercastNameArrayMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf WhatevercastNameArrayMessage.lock WhatevercastNameArrayMessage.stamp' 1 2 13 15; \
+	  if mkdir WhatevercastNameArrayMessage.lock 2>/dev/null; then \
+	    rm -f WhatevercastNameArrayMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) WhatevercastNameArrayMessage.stamp; \
+	    result=$$?; rm -rf WhatevercastNameArrayMessage.lock; exit $$result; \
+	  else \
+	    while test -d WhatevercastNameArrayMessage.lock; do sleep 1; done; \
+	    test -f WhatevercastNameArrayMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	WhatevercastNameArrayMessage.tmp
+
+EXTRA_DIST +=					\
+	WhatevercastNameArrayMessage.proto				\
+	WhatevercastNameArrayMessage.stamp
+
+protoSOURCES += WhatevercastNameArrayMessage.pb.cc WhatevercastNameArrayMessage.pb.h
+
+
+NeighborMessage.stamp: NeighborMessage.proto
+	rm -f NeighborMessage.tmp
+	touch NeighborMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/NeighborMessage.proto
+	mv -f NeighborMessage.tmp $@
+
+NeighborMessage.pb.h NeighborMessage.pb.cc: NeighborMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf NeighborMessage.lock NeighborMessage.stamp' 1 2 13 15; \
+	  if mkdir NeighborMessage.lock 2>/dev/null; then \
+	    rm -f NeighborMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) NeighborMessage.stamp; \
+	    result=$$?; rm -rf NeighborMessage.lock; exit $$result; \
+	  else \
+	    while test -d NeighborMessage.lock; do sleep 1; done; \
+	    test -f NeighborMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	NeighborMessage.tmp
+
+EXTRA_DIST +=					\
+	NeighborMessage.proto				\
+	NeighborMessage.stamp
+
+protoSOURCES += NeighborMessage.pb.cc NeighborMessage.pb.h
+
+
+NeighborArrayMessage.stamp: NeighborArrayMessage.proto
+	rm -f NeighborArrayMessage.tmp
+	touch NeighborArrayMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/NeighborArrayMessage.proto
+	mv -f NeighborArrayMessage.tmp $@
+
+NeighborArrayMessage.pb.h NeighborArrayMessage.pb.cc: NeighborArrayMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf NeighborArrayMessage.lock NeighborArrayMessage.stamp' 1 2 13 15; \
+	  if mkdir NeighborArrayMessage.lock 2>/dev/null; then \
+	    rm -f NeighborArrayMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) NeighborArrayMessage.stamp; \
+	    result=$$?; rm -rf NeighborArrayMessage.lock; exit $$result; \
+	  else \
+	    while test -d NeighborArrayMessage.lock; do sleep 1; done; \
+	    test -f NeighborArrayMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	NeighborArrayMessage.tmp
+
+EXTRA_DIST +=					\
+	NeighborArrayMessage.proto				\
+	NeighborArrayMessage.stamp
+
+protoSOURCES += NeighborArrayMessage.pb.cc NeighborArrayMessage.pb.h
+
+
+FlowStateMessage.stamp: FlowStateMessage.proto
+	rm -f FlowStateMessage.tmp
+	touch FlowStateMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/FlowStateMessage.proto
+	mv -f FlowStateMessage.tmp $@
+
+FlowStateMessage.pb.h FlowStateMessage.pb.cc: FlowStateMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf FlowStateMessage.lock FlowStateMessage.stamp' 1 2 13 15; \
+	  if mkdir FlowStateMessage.lock 2>/dev/null; then \
+	    rm -f FlowStateMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) FlowStateMessage.stamp; \
+	    result=$$?; rm -rf FlowStateMessage.lock; exit $$result; \
+	  else \
+	    while test -d FlowStateMessage.lock; do sleep 1; done; \
+	    test -f FlowStateMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	FlowStateMessage.tmp
+
+EXTRA_DIST +=					\
+	FlowStateMessage.proto				\
+	FlowStateMessage.stamp
+
+protoSOURCES += FlowStateMessage.pb.cc FlowStateMessage.pb.h
+
+
+FlowStateGroupMessage.stamp: FlowStateGroupMessage.proto
+	rm -f FlowStateGroupMessage.tmp
+	touch FlowStateGroupMessage.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/FlowStateGroupMessage.proto
+	mv -f FlowStateGroupMessage.tmp $@
+
+FlowStateGroupMessage.pb.h FlowStateGroupMessage.pb.cc: FlowStateGroupMessage.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf FlowStateGroupMessage.lock FlowStateGroupMessage.stamp' 1 2 13 15; \
+	  if mkdir FlowStateGroupMessage.lock 2>/dev/null; then \
+	    rm -f FlowStateGroupMessage.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) FlowStateGroupMessage.stamp; \
+	    result=$$?; rm -rf FlowStateGroupMessage.lock; exit $$result; \
+	  else \
+	    while test -d FlowStateGroupMessage.lock; do sleep 1; done; \
+	    test -f FlowStateGroupMessage.stamp; \
+	  fi; \
+	fi
+
+MOSTLYCLEANFILES +=				\
+	FlowStateGroupMessage.tmp
+
+EXTRA_DIST +=					\
+	FlowStateGroupMessage.proto				\
+	FlowStateGroupMessage.stamp
+
+protoSOURCES += FlowStateGroupMessage.pb.cc FlowStateGroupMessage.pb.h

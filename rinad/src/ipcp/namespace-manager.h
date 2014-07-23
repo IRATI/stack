@@ -24,30 +24,11 @@
 
 #ifdef __cplusplus
 
+#include <librina/ipc-process.h>
 #include "common/concurrency.h"
 #include "ipcp/components.h"
 
 namespace rinad {
-
-/// Defines a whatevercast name (or a name of a set of names).
-/// In traditional architectures, sets that returned all members were called multicast; while
-/// sets that returned one member were called anycast.  It is not clear what sets that returned
-/// something in between were called.  With the more general definition here, these
-/// distinctions are unnecessary.
-class WhatevercastName {
-public:
-	bool operator==(const WhatevercastName &other);
-	std::string toString();
-
-	/// The name
-	std::string name_;
-
-	/// The members of the set
-	std::list<std::string> set_members_;
-
-	/// The rule to select one or more members from the set
-	std::string rule_;
-};
 
 class WhateverCastNameSetRIBObject: public BaseRIBObject {
 public:
@@ -61,7 +42,7 @@ public:
 			const void* objectValue);
 
 private:
-	void createName(WhatevercastName * name);
+	void createName(rina::WhatevercastName * name);
 	rina::Lockable * lock_;
 };
 

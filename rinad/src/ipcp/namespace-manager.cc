@@ -29,20 +29,6 @@
 
 namespace rinad {
 
-//	CLASS WhatevercastName
-bool WhatevercastName::operator==(const WhatevercastName &other) {
-	if (name_ == other.name_) {
-		return true;
-	}
-	return false;
-}
-
-std::string WhatevercastName::toString() {
-	std::string result = "Name: " + name_ + "\n";
-	result = result + "Rule: " + rule_;
-	return result;
-}
-
 // Class WhatevercastNameSetRIBObject
 WhateverCastNameSetRIBObject::WhateverCastNameSetRIBObject(IPCProcess * ipc_process) :
 	BaseRIBObject(ipc_process, EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
@@ -65,24 +51,24 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(const rina::CDAPMessage * 
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 	(void) cdapSessionDescriptor;
-	std::list<WhatevercastName *> namesToCreate;
+	std::list<rina::WhatevercastName *> namesToCreate;
 
 	try {
 		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
 		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 
 		if (cdapMessage->get_obj_name().compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
-			std::list<WhatevercastName *> * names =
-					(std::list<WhatevercastName *> *) encoder_->decode(*serializedObject,
+			std::list<rina::WhatevercastName *> * names =
+					(std::list<rina::WhatevercastName *> *) encoder_->decode(*serializedObject,
 							EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
-			std::list<WhatevercastName *>::const_iterator iterator;
+			std::list<rina::WhatevercastName *>::const_iterator iterator;
 			for(iterator = names->begin(); iterator != names->end(); ++iterator) {
 				namesToCreate.push_back((*iterator));
 			}
 
 			delete names;
 		} else {
-			WhatevercastName * name = (WhatevercastName *) encoder_->decode(*serializedObject,
+			rina::WhatevercastName * name = (rina::WhatevercastName *) encoder_->decode(*serializedObject,
 						EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
 			namesToCreate.push_back(name);
 		}
@@ -109,20 +95,20 @@ void WhateverCastNameSetRIBObject::createObject(const std::string& objectClass,
 	(void) objectName;
 
 	if (objectClass.compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
-		std::list<WhatevercastName *>::const_iterator iterator;
-		std::list<WhatevercastName *> * names =
-				(std::list<WhatevercastName *> *) objectValue;
+		std::list<rina::WhatevercastName *>::const_iterator iterator;
+		std::list<rina::WhatevercastName *> * names =
+				(std::list<rina::WhatevercastName *> *) objectValue;
 
 		for (iterator = names->begin(); iterator != names->end(); ++iterator) {
 			createName((*iterator));
 		}
 	} else {
-		WhatevercastName * currentName = (WhatevercastName*) objectValue;
+		rina::WhatevercastName * currentName = (rina::WhatevercastName*) objectValue;
 		createName(currentName);
 	}
 }
 
-void WhateverCastNameSetRIBObject::createName(WhatevercastName * name) {
+void WhateverCastNameSetRIBObject::createName(rina::WhatevercastName * name) {
 	std::stringstream ss;
 	ss<<EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
 	ss<<name->rule_;

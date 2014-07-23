@@ -27,7 +27,6 @@
 #include <librina/timer.h>
 
 #include "common/concurrency.h"
-#include "common/encoder.h"
 #include "ipcp/components.h"
 
 namespace rinad {

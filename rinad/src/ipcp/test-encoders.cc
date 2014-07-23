@@ -31,6 +31,7 @@
 #include "common/encoder.h"
 #include "ipcp/enrollment-task.h"
 #include "ipcp/flow-allocator.h"
+#include "ipcp/pduft-generator.h"
 
 bool test_flow (rinad::Encoder * encoder) {
 	rinad::Flow flow_to_encode;
@@ -458,13 +459,206 @@ bool test_qos_cube_list(rinad::Encoder * encoder) {
 	return true;
 }
 
+bool test_whatevercast_name(rinad::Encoder * encoder) {
+	rina::WhatevercastName name;
+	rina::WhatevercastName * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	name.name_ = "all members";
+	name.rule_ = "fancy rule";
+	name.set_members_.push_back("member1");
+	name.set_members_.push_back("member2");
+
+	encoded_object = encoder->encode(&name,
+			rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
+	recovered_obj = (rina::WhatevercastName *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
+
+	if (name.name_.compare(recovered_obj->name_) != 0) {
+		return false;
+	}
+
+	if (name.rule_.compare(recovered_obj->rule_) != 0) {
+		return false;
+	}
+
+	if (name.set_members_.size() != recovered_obj->set_members_.size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Whatevercast Name Encoder tested successfully");
+	return true;
+}
+
+bool test_whatevercast_name_list(rinad::Encoder * encoder) {
+	std::list<rina::WhatevercastName*> name_list;
+	rina::WhatevercastName name1;
+	rina::WhatevercastName name2;
+	std::list<rina::WhatevercastName*> * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	name_list.push_back(&name1);
+	name_list.push_back(&name2);
+
+	encoded_object = encoder->encode(&name_list,
+			rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS);
+	recovered_obj = (std::list<rina::WhatevercastName*> *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS);
+
+	if (name_list.size() != recovered_obj->size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Whatevercast Name List Encoder tested successfully");
+	return true;
+}
+
+bool test_neighbor(rinad::Encoder * encoder) {
+	rina::Neighbor nei;
+	rina::Neighbor * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	nei.name_.processName = "test1.IRATI",
+	nei.name_.processInstance = "1";
+	nei.address_ = 25;
+	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("test2.IRATI", "1"));
+	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("Castefa.i2CAT", "1"));
+
+	encoded_object = encoder->encode(&nei,
+			rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
+	recovered_obj = (rina::Neighbor *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
+
+	if (nei.name_.processName.compare(recovered_obj->name_.processName) != 0) {
+		return false;
+	}
+
+	if (nei.name_.processInstance.compare(recovered_obj->name_.processInstance) != 0) {
+		return false;
+	}
+
+	if (nei.address_ != recovered_obj->address_) {
+		return false;
+	}
+
+	if (nei.supporting_difs_.size() != recovered_obj->supporting_difs_.size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Neighbor Encoder tested successfully");
+	return true;
+}
+
+bool test_neighbor_list(rinad::Encoder * encoder) {
+	std::list<rina::Neighbor*> nei_list;
+	rina::Neighbor nei1;
+	rina::Neighbor nei2;
+	std::list<rina::Neighbor*> * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	nei_list.push_back(&nei1);
+	nei_list.push_back(&nei2);
+
+	encoded_object = encoder->encode(&nei_list,
+			rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+	recovered_obj = (std::list<rina::Neighbor*> *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+
+	if (nei_list.size() != recovered_obj->size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Neighbor List Encoder tested successfully");
+	return true;
+}
+
+bool test_flow_state_object(rinad::Encoder * encoder) {
+	rinad::FlowStateObject fso = rinad::FlowStateObject(23, 1, 34, 2, true, 123, 434);
+	rinad::FlowStateObject * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	encoded_object = encoder->encode(&fso,
+			rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS);
+	recovered_obj = (rinad::FlowStateObject *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS);
+
+	if (fso.address_ != recovered_obj->address_) {
+		return false;
+	}
+
+	if (fso.age_ != recovered_obj->age_) {
+		return false;
+	}
+
+	if (fso.neighbor_address_ != recovered_obj->neighbor_address_) {
+		return false;
+	}
+
+	if (fso.neighbor_port_id_ != recovered_obj->neighbor_port_id_) {
+		return false;
+	}
+
+	if (fso.port_id_ != recovered_obj->port_id_) {
+		return false;
+	}
+
+	if (fso.sequence_number_ != recovered_obj->sequence_number_) {
+		return false;
+	}
+
+	if (fso.up_ != recovered_obj->up_) {
+		return false;
+	}
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Flow State Object Encoder tested successfully");
+	return true;
+}
+
+bool test_flow_state_object_list(rinad::Encoder * encoder) {
+	std::list<rinad::FlowStateObject *> fso_list;
+	rinad::FlowStateObject fso1 = rinad::FlowStateObject(23, 1, 34, 2, true, 123, 434);
+	rinad::FlowStateObject fso2 = rinad::FlowStateObject(34, 2, 23, 1, true, 223, 434);
+	std::list<rinad::FlowStateObject*> * recovered_obj = 0;
+	const rina::SerializedObject * encoded_object;
+
+	fso_list.push_back(&fso1);
+	fso_list.push_back(&fso2);
+
+	encoded_object = encoder->encode(&fso_list,
+			rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+	recovered_obj = (std::list<rinad::FlowStateObject*> *) encoder->decode(*encoded_object,
+			rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+
+	if (fso_list.size() != recovered_obj->size()) {
+		return false;
+	}
+
+	delete recovered_obj;
+	delete encoded_object;
+
+	LOG_INFO("Flow State Object List Encoder tested successfully");
+	return true;
+}
+
 int main()
 {
 	rinad::Encoder encoder;
 	encoder.addEncoder(rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 			new rinad::DataTransferConstantsEncoder());
-	encoder.addEncoder(rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-			new rinad::FlowEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 			new rinad::DirectoryForwardingTableEntryEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
@@ -473,18 +667,26 @@ int main()
 			new rinad::DirectoryForwardingTableEntryListEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 			new rinad::EnrollmentInformationRequestEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+			new rinad::FlowEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+			new rinad::FlowStateObjectListEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
+			new rinad::FlowStateObjectEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+			new rinad::NeighborEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+			new rinad::NeighborListEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
 			new rinad::QoSCubeEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 			new rinad::QoSCubeListEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS,
+			new rinad::WhatevercastNameEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
+			new rinad::WhatevercastNameListEncoder());
 
-	bool result = test_flow(&encoder);
-	if (!result) {
-		LOG_ERR("Problems testing Flow Encoder");
-		return -1;
-	}
-
-	result = test_data_transfer_constants(&encoder);
+	bool result = test_data_transfer_constants(&encoder);
 	if (!result) {
 		LOG_ERR("Problems testing Data Transfer Constants Encoder");
 		return -1;
@@ -508,6 +710,36 @@ int main()
 		return -1;
 	}
 
+	result = test_flow(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Flow Encoder");
+		return -1;
+	}
+
+	result = test_flow_state_object(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Flow State Object Encoder");
+		return -1;
+	}
+
+	result = test_flow_state_object_list(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Flow State Object List Encoder");
+		return -1;
+	}
+
+	result = test_neighbor(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Neighbor Encoder");
+		return -1;
+	}
+
+	result = test_neighbor_list(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Neighbor List Encoder");
+		return -1;
+	}
+
 	result = test_qos_cube(&encoder);
 	if (!result) {
 		LOG_ERR("Problems testing QoS Cube Encoder");
@@ -517,6 +749,18 @@ int main()
 	result = test_qos_cube_list(&encoder);
 	if (!result) {
 		LOG_ERR("Problems testing QoS Cube List Encoder");
+		return -1;
+	}
+
+	result = test_whatevercast_name(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Whatevercast Name Encoder");
+		return -1;
+	}
+
+	result = test_whatevercast_name_list(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Whatevercast Name List Encoder");
 		return -1;
 	}
 

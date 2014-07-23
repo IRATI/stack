@@ -41,7 +41,8 @@ test_encoders_SOURCES  =			\
 	events.cc            events.h       \
 	rib-daemon.cc        rib-daemon.h		\
 	flow-allocator.cc    flow-allocator.h  \
-	enrollment-task.cc   enrollment-task.h
+	enrollment-task.cc   enrollment-task.h  \
+    pduft-generator.cc   pduft-generator.h
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
 

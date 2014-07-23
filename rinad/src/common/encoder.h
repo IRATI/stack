@@ -33,9 +33,11 @@
 #include "common/encoders/ConnectionPoliciesMessage.pb.h"
 #include "common/encoders/DirectoryForwardingTableEntryMessage.pb.h"
 #include "common/encoders/FlowMessage.pb.h"
+#include "common/encoders/NeighborMessage.pb.h"
 #include "common/encoders/PolicyDescriptorMessage.pb.h"
 #include "common/encoders/QoSCubeMessage.pb.h"
 #include "common/encoders/QoSSpecification.pb.h"
+#include "common/encoders/WhatevercastNameMessage.pb.h"
 
 namespace rinad {
 
@@ -242,6 +244,42 @@ public:
 
 /// Encoder of a list of QoSCubes
 class QoSCubeListEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+};
+
+/// Encoder of WhatevercastName object
+class WhatevercastNameEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+	static void convertModelToGPB(rina::messages::whatevercastName_t * gpb_name,
+			rina::WhatevercastName * name);
+	static rina::WhatevercastName * convertGPBToModel(
+			const rina::messages::whatevercastName_t & gpb_name);
+};
+
+/// Encoder of a list of WhatevercastNames
+class WhatevercastNameListEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+};
+
+/// Encoder of Neighbor object
+class NeighborEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::SerializedObject &serialized_object) const;
+	static void convertModelToGPB(rina::messages::neighbor_t * gpb_nei,
+			rina::Neighbor * nei);
+	static rina::Neighbor * convertGPBToModel(
+			const rina::messages::neighbor_t & gpb_nei);
+};
+
+/// Encoder of a list of Neighbors
+class NeighborListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::SerializedObject &serialized_object) const;
