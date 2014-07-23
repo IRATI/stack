@@ -253,9 +253,9 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                 LOG_ERR("Failed to start sender_inactiviy timer");
                 return 0;
         }
+
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
-
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
                         pci_qos_id(pdu_pci_get_ro(pdu)),
@@ -382,7 +382,8 @@ static struct dtp_policies default_policies = {
         .sender_inactivity_timer   = default_sender_inactivity,
 };
 
-int dtp_initial_sequence_number(struct dtp * instance) {
+int dtp_initial_sequence_number(struct dtp * instance)
+{
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
                 return -1;
@@ -676,7 +677,6 @@ static void tf_receiver_inactivity(void * data)
 
         return;
 }
-
 
 /*
  * NOTE:
@@ -979,8 +979,7 @@ struct dtp * dtp_create(struct dt *         dt,
         tmp->timers.receiver_inactivity = rtimer_create(tf_receiver_inactivity,
                                                         tmp);
         tmp->timers.a                   = rtimer_create(tf_a, tmp);
-        if (
-            !tmp->timers.sender_inactivity   ||
+        if (!tmp->timers.sender_inactivity   ||
             !tmp->timers.receiver_inactivity ||
             !tmp->timers.a) {
                 dtp_destroy(tmp);

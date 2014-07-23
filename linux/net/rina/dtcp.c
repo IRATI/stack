@@ -780,6 +780,7 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
                         snd_rt  = snd_rt_wind_edge(dtcp);
+
                         pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
                                                          rcvr_rt_wind_edge(dtcp));
@@ -949,8 +950,10 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
 
                 if (!rtx_ctrl) {
                         LOG_DBG("Receiving flow ctrl invoked");
-                        if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
-                                LOG_ERR("Failed Receiving Flow Control policy");
+                        if (dtcp->policies->receiving_flow_control(dtcp,
+                                                                   seq)) {
+                                LOG_ERR("Failed Receiving Flow Control "
+                                        "policy");
                                 retval = -1;
                         }
 
