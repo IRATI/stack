@@ -180,8 +180,7 @@ struct dtp * dt_dtp_unbind(struct dt * dt)
         if (!dt->dtp) {
                 spin_unlock(&dt->lock);
 
-                LOG_ERR("No DTP instance bound to instance %pK, "
-                        "cannot bind", dt);
+                LOG_DBG("No DTP bound to instance %pK", dt);
                 return NULL;
         }
 
@@ -231,7 +230,7 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
         if (!dt->dtcp) {
                 spin_unlock(&dt->lock);
 
-                LOG_ERR("No DTCP bound to instance %pK", dt);
+                LOG_DBG("No DTCP bound to instance %pK", dt);
                 return NULL;
         }
 
@@ -280,7 +279,7 @@ struct cwq * dt_cwq_unbind(struct dt * dt)
         if (!dt->cwq) {
                 spin_unlock(&dt->lock);
 
-                LOG_ERR("No CWQ bound to instance %pK", dt);
+                LOG_DBG("No CWQ bound to instance %pK", dt);
                 return NULL;
         }
 
@@ -304,7 +303,7 @@ struct rtxq * dt_rtxq_unbind(struct dt * dt)
         if (!dt->rtxq) {
                 spin_unlock(&dt->lock);
 
-                LOG_ERR("No RTXQ bound to instance %pK", dt);
+                LOG_DBG("No RTXQ bound to instance %pK", dt);
                 return NULL;
         }
 
