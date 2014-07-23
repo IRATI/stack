@@ -40,10 +40,6 @@
 #include "rmt.h"
 #include "dt-utils.h"
 
-#ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 0
-#endif
-
 struct efcp {
         struct connection *     connection;
         struct dt *             dt;
@@ -79,6 +75,11 @@ static int efcp_destroy(struct efcp * instance)
         }
 
         if (instance->dt) {
+                /*
+                 * FIXME:
+                 *   Shouldn't we check for flows running, before
+                 *   unbinding dtp, dtcp, cwq and rtxw ???
+                 */
                 struct dtp *  dtp  = dt_dtp_unbind(instance->dt);
                 struct dtcp * dtcp = dt_dtcp_unbind(instance->dt);
                 struct cwq *  cwq  = dt_cwq_unbind(instance->dt);
@@ -421,23 +422,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: We change the connection cep-id and we return cep-id ... */
         connection->source_cep_id = cep_id;
         tmp->connection           = connection;
-
-#if DTCP_TEST_ENABLE
-        connection->policies_params->dtcp_present = true;
-        if (!connection->policies_params->dtcp_cfg) {
-                LOG_ERR("DTCP config was not there for DTCP_TEST_ENABLE");
-                efcp_destroy(tmp);
-                return cep_id_bad();
-        }
-        dtcp_max_closed_winq_length_set(connection->policies_params->dtcp_cfg,
-                                        20);
-        dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
-        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, false);
-        dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg,
-                                    true);
-        dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg,
-                                  false);
-#endif
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
