@@ -720,9 +720,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         in_order_del   = sv->connection->policies_params->in_order_delivery;
         incomplete_del = sv->connection->policies_params->incomplete_delivery;
 
-        /* FIXME: This has to be fixed from user-space */
-        /* max_sdu_gap    = sv->connection->policies_params->max_sdu_gap; */
-        max_sdu_gap    = 0;
+        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
 
         /* FIXME: Invoke delimiting */
 
