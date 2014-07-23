@@ -333,6 +333,7 @@ static int deserialize_base_pci(const struct serdes * instance,
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
 
+        vers      = 0;
         addr      = 0;
         cep       = 0;
         qos       = 0;
