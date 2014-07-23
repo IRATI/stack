@@ -505,16 +505,17 @@ int kfa_flow_sdu_write(struct kfa * instance,
                                                    PORT_STATE_PENDING));
                 if (retval)
                         LOG_ERR("Wait-event interrupted (%d)", retval);
-                LOG_DBG("Write woken up");
+                LOG_DBG("Write woken up (%d)", retval);
 
                 mutex_lock(&instance->lock);
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
-                        LOG_ERR("There is no flow bound to port-id %d anymore",
-                                id);
                         mutex_unlock(&instance->lock);
                         sdu_destroy(sdu);
+
+                        LOG_ERR("There is no flow bound to port-id %d anymore",
+                                id);
                         return -1;
                 }
 
@@ -614,15 +615,16 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                                                   queue_ready(flow));
                 if (retval)
                         LOG_ERR("Wait-event interrupted (%d)", retval);
-                LOG_DBG("Read Woken up");
+                LOG_DBG("Read Woken up (%d)", retval);
 
                 mutex_lock(&instance->lock);
 
                 flow = kfa_pmap_find(instance->flows, id);
                 if (!flow) {
+                        mutex_unlock(&instance->lock);
+
                         LOG_ERR("There is no flow bound to port-id %d anymore",
                                 id);
-                        mutex_unlock(&instance->lock);
                         return -1;
                 }
 
@@ -645,8 +647,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
         *sdu = rfifo_pop(flow->sdu_ready);
         if (!sdu_is_ok(*sdu)) {
-                LOG_ERR("There is not a valid in port-id %d fifo",
-                        id);
+                LOG_ERR("There is not a valid in port-id %d fifo", id);
                 retval = -1;
         }
 
