@@ -336,6 +336,9 @@ void parse_dif_configs(const Json::Value   &root,
                 props.difType = dif_configs[i].get("difType",
                                                    string()).asString();
 
+                LOG_INFO("Parsing configuration of DIF %s of type %s",
+                		props.difName.processName.c_str(),
+                		props.difType.c_str());
                 // Data transfer constants
                 Json::Value dt_const = dif_configs[i]["difProperties"];
                 if (dt_const != 0) {
@@ -653,15 +656,12 @@ void parse_dif_configs(const Json::Value   &root,
                 // configParameters;
                 Json::Value confParams = dif_configs[i]["configParameters"];
                 if (confParams != 0) {
-                        Json::Value::Members members =
-                                confParams.getMemberNames();
-                        for (unsigned int j = 0; j < members.size(); j++) {
-                                string value = confParams.get
-                                        (members[i], string()).asString();
-                                props.configParameters.insert
-                                        (pair<string, string>
-                                         (members[i], value));
-                        }
+                	for (unsigned int i = 0; i < confParams.size(); i++) {
+                        props.configParameters.insert
+                                (pair<string, string>
+                                 (confParams[i].get("name", string()).asString(),
+                                		 confParams[i].get("value", string()).asString()));
+                	}
                 }
 
                 difConfigurations.push_back(props);

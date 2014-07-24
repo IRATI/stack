@@ -1,6 +1,6 @@
 {
   "localConfiguration" : {
-    "installationPath" : "@pkgdatadir@",
+    "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
@@ -39,12 +39,14 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "100",
+    "difType" : "shim-eth-vlan",
     "configParameters" : [ {
     	"name" : "interface-name", 
     	"value" : "eth1"
       } ]
   }, {
     "difName" : "normal.DIF",
+    "difType" : "normal-ipc",
     "dataTransferConstants" : {
     	"addressLength" : 2,
     	"cepIdLength" : 2,

@@ -29,26 +29,29 @@
 
 int main(int argc, char * argv[])
 {
-	if (argc != 4) {
-		LOG_ERR("Wrong number of arguments: expected 4, got %d", argc);
+	if (argc != 5) {
+		LOG_ERR("Wrong number of arguments: expected 5, got %d", argc);
 		return EXIT_FAILURE;
 	}
 
-	rina::ApplicationProcessNamingInformation name(argv[0], argv[1]);
+	rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
+	LOG_INFO("IPC Process name: %s; IPC Process instance: %s", argv[1], argv[2]);
 	unsigned short ipcp_id = 0;
 	unsigned int ipcm_port = 0;
 
-	std::stringstream ss(argv[2]);
+	std::stringstream ss(argv[3]);
 	if (! (ss >> ipcp_id)) {
 		LOG_ERR("Problems converting string to unsigned short");
 		return EXIT_FAILURE;
 	}
+	LOG_INFO("IPC Process id: %u", ipcp_id);
 
-	std::stringstream ss2(argv[3]);
+	std::stringstream ss2(argv[4]);
 	if (! (ss2 >> ipcm_port)) {
 		LOG_ERR("Problems converting string to unsigned int");
 		return EXIT_FAILURE;
 	}
+	LOG_INFO("IPC Manager port: %u", ipcm_port);
 
 	rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port);
 	rinad::EventLoop loop(&ipcp);

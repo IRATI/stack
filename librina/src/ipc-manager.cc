@@ -841,10 +841,8 @@ IPCProcess * IPCProcessFactory::create(
 			char * argv[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
-				stringToCharArray("/usr/bin/java"),
-				stringToCharArray("-jar"),
-				stringToCharArray(_installationPath +
-					          "/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
+				stringToCharArray("."+_installationPath +
+					          "/ipcp"),
 				stringToCharArray(ipcProcessName.getProcessName()),
 				stringToCharArray(ipcProcessName.getProcessInstance()),
 				intToCharArray(ipcProcessId),
