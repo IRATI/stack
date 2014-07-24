@@ -87,6 +87,15 @@ private:
 	rina::Lockable * lock_;
 };
 
+class NeighborRIBObject: public SimpleSetMemberRIBObject {
+public:
+	NeighborRIBObject(IPCProcess* ipc_process,
+			const std::string& object_class,
+			const std::string& object_name,
+			const rina::Neighbor* neighbor);
+	std::string get_displayable_value();
+};
+
 class NeighborSetRIBObject: public BaseRIBObject {
 public:
 	NeighborSetRIBObject(IPCProcess * ipc_process);
@@ -113,6 +122,7 @@ public:
 	~AddressRIBObject();
 	const void* get_value() const;
 	void writeObject(const void* object_value);
+	std::string get_displayable_value();
 
 private:
 	unsigned int address_;
@@ -453,11 +463,11 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void startObject(const void* object);
 	void stopObject(const void* object);
+	std::string get_displayable_value();
 
 private:
 	void sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
-	IPCProcessOperationalState operational_state_;
 	EnrollmentTask * enrollment_task_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 };

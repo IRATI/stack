@@ -54,6 +54,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	}
 
 	name_ = name;
+	state_ = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
 	init_delimiter();

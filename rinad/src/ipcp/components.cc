@@ -130,14 +130,16 @@ BaseRIBObject::BaseRIBObject(IPCProcess * ipc_process, const std::string& object
 
 rina::RIBObjectData BaseRIBObject::get_data() {
 	rina::RIBObjectData result;
-	result.set_class(class_);
-    result.set_name(name_);
-    result.set_instance(instance_);
-
-    //TODO set displayable_value
-    //TODO set value
+	result.class_ = class_;
+    result.name_ = name_;
+    result.instance_ = instance_;
+    result.displayable_value_ = get_displayable_value();
 
     return result;
+}
+
+std::string BaseRIBObject::get_displayable_value() {
+	return "-";
 }
 
 const std::list<BaseRIBObject*>& BaseRIBObject::get_children() const {

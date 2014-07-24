@@ -128,6 +128,7 @@ public:
 			IFlowAllocatorInstance * flow_allocator_instance);
 	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	std::string get_displayable_value();
 
 private:
 	IFlowAllocatorInstance * flow_allocator_instance_;
@@ -146,6 +147,15 @@ public:
 
 private:
 	IFlowAllocator * flow_allocator_;
+};
+
+class QoSCubeRIBObject: public SimpleSetMemberRIBObject {
+public:
+	QoSCubeRIBObject(IPCProcess* ipc_process,
+			const std::string& object_class,
+			const std::string& object_name,
+			const rina::QoSCube* cube);
+	std::string get_displayable_value();
 };
 
 /// Representation of a set of QoS cubes in the RIB
@@ -356,10 +366,10 @@ public:
 			const void* objectValue);
 	void writeObject(const void* object_value);
 	const void* get_value() const;
+	std::string get_displayable_value();
 
 private:
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
-	rina::DataTransferConstants dt_cons_;
 };
 
 /// Encoder of the Flow

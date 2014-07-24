@@ -176,6 +176,27 @@ void WatchdogRIBObject::readResponse(const rina::CDAPMessage * cdapMessage,
 	}
 }
 
+// Class Neighbor RIB object
+NeighborRIBObject::NeighborRIBObject(IPCProcess* ipc_process,
+		const std::string& object_class, const std::string& object_name,
+		const rina::Neighbor* neighbor) :
+				SimpleSetMemberRIBObject(ipc_process, object_class,
+						object_name, neighbor) {
+};
+
+std::string NeighborRIBObject::get_displayable_value() {
+    const rina::Neighbor * nei = (const rina::Neighbor *) get_value();
+    std::stringstream ss;
+    ss << "Name: " << nei->name_.getEncodedString();
+    ss << "; Address: " << nei->address_;
+    ss << "; Enrolled: " << nei->enrolled_ << std::endl;
+    ss << "; Supporting DIF Name: " << nei->supporting_dif_name_.processName;
+    ss << "; Underlying port-id: " << nei->underlying_port_id_;
+    ss << "; Number of enroll. attempts: " << nei->number_of_enrollment_attempts_;
+
+    return ss.str();
+}
+
 // Class Neighbor Set RIB Object
 NeighborSetRIBObject::NeighborSetRIBObject(IPCProcess * ipc_process) :
 	BaseRIBObject(ipc_process, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
@@ -301,7 +322,7 @@ void NeighborSetRIBObject::createNeighbor(rina::Neighbor * neighbor) {
 	std::stringstream ss;
 	ss<<EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
 	ss<<neighbor->name_.processName;
-	BaseRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_,
+	BaseRIBObject * ribObject = new NeighborRIBObject(ipc_process_,
 			EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS, ss.str(), neighbor);
 	add_child(ribObject);
 	try {
@@ -331,6 +352,12 @@ void AddressRIBObject::writeObject(const void* object_value) {
 	rina::DIFInformation dif_information = ipc_process_->get_dif_information();
 	dif_information.dif_configuration_.address_ = *address;
 	ipc_process_->set_dif_information(dif_information);
+}
+
+std::string AddressRIBObject::get_displayable_value() {
+    std::stringstream ss;
+    ss<<"Address: "<<address_;
+    return ss.str();
 }
 
 //Class EnrollmentFailedTimerTask
@@ -2006,7 +2033,6 @@ OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process)
 						EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME) {
 	enrollment_task_ = (EnrollmentTask *) ipc_process->get_enrollment_task();
 	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
-	operational_state_ = ipc_process_->get_operational_state();
 }
 
 void OperationalStatusRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessage,
@@ -2025,7 +2051,6 @@ void OperationalStatusRIBObject::remoteStartObject(const rina::CDAPMessage * cda
 
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(ASSIGNED_TO_DIF);
-		operational_state_ = ASSIGNED_TO_DIF;
 	}
 }
 
@@ -2033,7 +2058,6 @@ void OperationalStatusRIBObject::startObject(const void* object) {
 	(void) object; // Stop compiler barfs
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(ASSIGNED_TO_DIF);
-		operational_state_ = ASSIGNED_TO_DIF;
 	}
 }
 
@@ -2041,7 +2065,6 @@ void OperationalStatusRIBObject::stopObject(const void* object) {
 	(void) object; // Stop compiler barfs
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(INITIALIZED);
-		operational_state_ = INITIALIZED;
 	}
 }
 
@@ -2060,7 +2083,27 @@ void OperationalStatusRIBObject::sendErrorMessage(const rina::CDAPSessionDescrip
 }
 
 const void* OperationalStatusRIBObject::get_value() const {
-	return &operational_state_;
+	return &(ipc_process_->get_operational_state());
+}
+
+std::string OperationalStatusRIBObject::get_displayable_value() {
+	if (ipc_process_->get_operational_state() == INITIALIZED) {
+		return "Initialized";
+	}
+
+	if (ipc_process_->get_operational_state() == NOT_INITIALIZED ) {
+		return "Not Initialized";
+	}
+
+	if (ipc_process_->get_operational_state() == ASSIGN_TO_DIF_IN_PROCESS ) {
+		return "Assign to DIF in process";
+	}
+
+	if (ipc_process_->get_operational_state() == ASSIGNED_TO_DIF ) {
+		return "Assigned to DIF";
+	}
+
+	return "Unknown State";
 }
 
 // Class EnrollmentInformationRequestEncoder

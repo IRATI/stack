@@ -46,6 +46,10 @@ void FlowRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
 			cdapSessionDescriptor->get_port_id());
 }
 
+std::string FlowRIBObject::get_displayable_value() {
+	return flow_allocator_instance_->get_flow()->toString();
+}
+
 //Class Flow Set RIB Object
 FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process,
 		IFlowAllocator * flow_allocator) :
@@ -74,6 +78,32 @@ const void* FlowSetRIBObject::get_value() const {
 	return flow_allocator_;
 }
 
+// Class Neighbor RIB object
+QoSCubeRIBObject::QoSCubeRIBObject(IPCProcess* ipc_process,
+		const std::string& object_class, const std::string& object_name,
+		const rina::QoSCube* cube) :
+				SimpleSetMemberRIBObject(ipc_process, object_class,
+						object_name, cube) {
+};
+
+std::string QoSCubeRIBObject::get_displayable_value() {
+    const rina::QoSCube * cube = (const rina::QoSCube *) get_value();
+    std::stringstream ss;
+    ss<<"Name: "<<name_<<"; Id: "<<cube->id_;
+    ss<<"; Jitter: "<<cube->jitter_<<"; Delay: "<<cube->delay_<<std::endl;
+    ss<<"In oder delivery: "<<cube->ordered_delivery_;
+    ss<<"; Partial delivery allowed: "<<cube->partial_delivery_<<std::endl;
+    ss<<"Max allowed gap between SDUs: "<<cube->max_allowable_gap_;
+    ss<<"; Undetected bit error rate: "<<cube->undetected_bit_error_rate_<<std::endl;
+    ss<<"Average bandwidth (bytes/s): "<<cube->average_bandwidth_;
+    ss<<"; Average SDU bandwidth (bytes/s): "<<cube->average_sdu_bandwidth_<<std::endl;
+    ss<<"Peak bandwidth duration (ms): "<<cube->peak_bandwidth_duration_;
+    ss<<"; Peak SDU bandwidth duration (ms): "<<cube->peak_sdu_bandwidth_duration_<<std::endl;
+    rina::ConnectionPolicies con = cube->efcp_policies_;
+    ss<<"EFCP policies: "<< con.toString();
+    return ss.str();
+}
+
 //Class QoS Cube Set RIB Object
 QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process) :
 		BaseRIBObject(ipc_process,
@@ -92,7 +122,7 @@ void QoSCubeSetRIBObject::remoteCreateObject(
 
 void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
 		const std::string& objectName, rina::QoSCube* objectValue) {
-	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_,
+	QoSCubeRIBObject * ribObject = new QoSCubeRIBObject(ipc_process_,
 			objectClass, objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
@@ -1182,12 +1212,17 @@ void DataTransferConstantsRIBObject::createObject(const std::string& objectClass
 
 void DataTransferConstantsRIBObject::writeObject(const void* objectValue) {
 	(void) objectValue;
-	dt_cons_ = ipc_process_->get_dif_information().dif_configuration_
-			.efcp_configuration_.data_transfer_constants_;
 }
 
 const void* DataTransferConstantsRIBObject::get_value() const {
-	return &dt_cons_;
+	return &(ipc_process_->get_dif_information().dif_configuration_
+			.efcp_configuration_.data_transfer_constants_);
+}
+
+std::string DataTransferConstantsRIBObject::get_displayable_value() {
+	rina::DataTransferConstants dtc = ipc_process_->get_dif_information().
+			dif_configuration_.efcp_configuration_.data_transfer_constants_;
+	return dtc.toString();
 }
 
 // CLASS FlowEncoder

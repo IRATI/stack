@@ -468,6 +468,7 @@ public:
                       long object_instance,
                       const std::string& object_name);
 	rina::RIBObjectData get_data();
+	virtual std::string get_displayable_value();
 	virtual const void* get_value() const = 0;
 
 	/// Parent-child management operations
