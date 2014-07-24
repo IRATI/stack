@@ -493,6 +493,47 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
         return 0;
 }
 
+std::string
+IPCManager::query_rib(rina::IPCProcess *ipcp)
+{
+        if (!ipcp) {
+                return "Bogus input parameters";
+        }
+
+        std::string ret = "Query RIB operation was not successful";
+
+        concurrency.lock();
+
+        // Invoke librina to assign the IPC process to the
+        // DIF specified by dif_info.
+        try {
+                unsigned int seqnum = ipcp->queryRIB("", "", 0, 0, "");
+
+                pending_ipcp_query_rib_responses[seqnum] = ipcp;
+                cout << "Requested query RIB of IPC process " <<
+                        ipcp->name.toString() << endl;
+                concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
+                                           seqnum);
+
+                std::map<unsigned int, std::string >::iterator mit;
+                mit = query_rib_responses.find(seqnum);
+                if (mit != query_rib_responses.end()) {
+                	ret = mit->second;
+                	query_rib_responses.erase(seqnum);
+                }
+
+        } catch (rina::QueryRIBException) {
+                cerr << "Error while querying RIB of IPC Process " <<
+                        ipcp->name.toString() << endl;
+                goto out;
+        }
+
+out:
+        concurrency.unlock();
+
+        return ret;
+}
+
 static void
 application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
@@ -754,8 +795,41 @@ query_rib_response_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
 
         cout << "Query RIB response event arrived" << endl;
-        (void) event; // Stop compiler barfs
-        (void) ipcm;    // Stop compiler barfs
+
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        rina::IPCProcess *ipcp = NULL;
+        bool success = (event->result == 0);
+
+        mit = ipcm->pending_ipcp_query_rib_responses.find(event->sequenceNumber);
+        if (mit == ipcm->pending_ipcp_query_rib_responses.end()) {
+                cerr << __func__ << ": Warning: IPC process query RIB "
+                        "response received, but no corresponding pending "
+                        "request" << endl;
+                return;
+        }
+
+        ipcp = mit->second;
+        if (success) {
+                cout << "Query RIB operation completed for IPC "
+                        << "process " << ipcp->name.toString() << endl;
+                std::stringstream ss;
+            	list<rina::RIBObjectData>::iterator lit;
+            	ss<< "Query RIB operation successful. Objects:" << endl;
+            	for (lit = event->ribObjects.begin(); lit != event->ribObjects.end();
+            			++lit){
+            		ss << "Name: " << lit->name_ << "; Class: "<< lit->class_;
+            		ss << "; Instance: "<< lit->instance_ << endl;
+            		ss << "Value: " << lit->displayable_value_ <<endl;
+            		ss << "" << endl;
+            	}
+                ipcm->query_rib_responses[event->sequenceNumber] = ss.str();
+        } else {
+                cerr << __func__ << ": Error: Query RIB operation of "
+                        "process " << ipcp->name.toString() << " failed"
+                        << endl;
+        }
+
+        ipcm->pending_ipcp_query_rib_responses.erase(mit);
 }
 
 static void

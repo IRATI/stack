@@ -115,11 +115,17 @@ class IPCManager : public EventLoopData {
         int deallocate_flow(rina::IPCProcess *ipcp,
                             const rina::FlowDeallocateRequestEvent& event);
 
+        std::string query_rib(rina::IPCProcess *ipcp);
+
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
 
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
+
+        std::map<unsigned int, rina::IPCProcess*> pending_ipcp_query_rib_responses;
+
+        std::map<unsigned int, std::string > query_rib_responses;
 
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*, rina::IPCProcess*>

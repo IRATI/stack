@@ -35,7 +35,6 @@ int main(int argc, char * argv[])
 	}
 
 	rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
-	LOG_INFO("IPC Process name: %s; IPC Process instance: %s", argv[1], argv[2]);
 	unsigned short ipcp_id = 0;
 	unsigned int ipcm_port = 0;
 
@@ -44,16 +43,20 @@ int main(int argc, char * argv[])
 		LOG_ERR("Problems converting string to unsigned short");
 		return EXIT_FAILURE;
 	}
-	LOG_INFO("IPC Process id: %u", ipcp_id);
 
 	std::stringstream ss2(argv[4]);
 	if (! (ss2 >> ipcm_port)) {
 		LOG_ERR("Problems converting string to unsigned int");
 		return EXIT_FAILURE;
 	}
-	LOG_INFO("IPC Manager port: %u", ipcm_port);
 
 	rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port);
+
+	LOG_INFO("IPC Process name: %s; IPC Process instance: %s", argv[1], argv[2]);
+	LOG_INFO("IPC Process id: %u", ipcp_id);
+	LOG_INFO("IPC Manager port: %u", ipcm_port);
+	LOG_INFO("IPC Process initialized, executing event loop...");
+
 	rinad::EventLoop loop(&ipcp);
 
 	rinad::register_handlers_all(loop);

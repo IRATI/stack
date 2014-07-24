@@ -100,6 +100,9 @@ IPCMConsole::IPCMConsole(IPCManager& r) :
                                 "USAGE: enroll-to-dif <ipcp-id> <dif-name> "
                                 "<supporting-dif-name> <neighbor-process-name>"
                                 "<neighbor-process-instance>");
+        commands_map["query-rib"] =
+                        ConsoleCmdInfo(&IPCMConsole::query_rib,
+                                "USAGE: query-rib <ipcp-id>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -395,6 +398,35 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
                         outstream << "DIF assignment completed successfully"
                                         << endl;
                 }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::query_rib(std::vector<string>& args)
+{
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 2) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        rina::IPCProcess *ipcp = NULL;
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+        		outstream << ipcm.query_rib(ipcp) << endl;
         }
 
         return CMDRETCONT;
