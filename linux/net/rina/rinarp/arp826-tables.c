@@ -477,6 +477,7 @@ static int tbls_create_gfp(gfp_t               flags,
                            size_t              hwlen)
 {
         struct table * cl;
+        unsigned long  irqflags;
 
         LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
                 ptype, hwlen);
@@ -496,15 +497,15 @@ static int tbls_create_gfp(gfp_t               flags,
 
         LOG_DBG("Now adding the new table to the tables map");
 
-        spin_lock(&tables_lock);
+        spin_lock_irqsave(&tables_lock, irqflags);
         if (tmap_entry_add_ni(tables, device, ptype, cl)) {
-                spin_unlock(&tables_lock);
+                spin_unlock_irqrestore(&tables_lock, irqflags);
 
                 tbl_destroy(cl);
 
                 return -1;
         }
-        spin_unlock(&tables_lock);
+        spin_unlock_irqrestore(&tables_lock, irqflags);
 
         LOG_DBG("Table for created successfully "
                 "(device = %pK, ptype = 0x%04X, hwlen = %zd)",
