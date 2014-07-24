@@ -695,8 +695,9 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                 return -1;
         }
         spin_unlock(&data->mgmt_data->lock);
+
         LOG_DBG("Gonna wake up all waitqueues: %d", port_id);
-        wake_up_all(&data->mgmt_data->wait_q);
+        wake_up_interruptible_all(&data->mgmt_data->wait_q);
 
         return 0;
 }
@@ -827,7 +828,8 @@ static int mgmt_data_destroy(struct mgmt_data * data)
                 return 0;
         }
         spin_unlock(&data->lock);
-        wake_up_all(&data->wait_q);
+
+        wake_up_interruptible_all(&data->wait_q);
 
         return 0;
 }

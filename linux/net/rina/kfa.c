@@ -332,9 +332,9 @@ int kfa_flow_rmt_unbind(struct kfa * instance,
 EXPORT_SYMBOL(kfa_flow_rmt_unbind);
 
 /* NOTE: Add instance-locking IFF exporting to API */
-static int __kfa_flow_destroy(struct kfa *       instance,
-                              struct ipcp_flow * flow,
-                              port_id_t          id)
+static int kfa_flow_destroy(struct kfa *       instance,
+                            struct ipcp_flow * flow,
+                            port_id_t          id)
 {
         struct ipcp_instance * ipcp;
         int                    retval = 0;
@@ -417,7 +417,7 @@ int kfa_flow_deallocate(struct kfa * instance,
         if ((atomic_read(&flow->readers) == 0) &&
             (atomic_read(&flow->writers) == 0) &&
             (atomic_read(&flow->posters) == 0)) {
-                if (__kfa_flow_destroy(instance, flow, id))
+                if (kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 mutex_unlock(&instance->lock);
                 return 0;
@@ -425,7 +425,8 @@ int kfa_flow_deallocate(struct kfa * instance,
 
         mutex_unlock(&instance->lock);
 
-        wake_up_all(&flow->wait_queue);
+        LOG_DBG("Waking up all!");
+        wake_up_interruptible_all(&flow->wait_queue);
 
         return 0;
 }
@@ -503,9 +504,17 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 retval = wait_event_interruptible(flow->wait_queue,
                                                   (flow->state !=
                                                    PORT_STATE_PENDING));
-                if (retval)
-                        LOG_ERR("Wait-event interrupted (%d)", retval);
                 LOG_DBG("Write woken up (%d)", retval);
+
+                if (retval) {
+                        LOG_DBG("Wait-event interrupted (%d)", retval);
+                        if (signal_pending(current)) {
+                                LOG_DBG("A signal is pending "
+                                        "(sig = 0x%08zx%08zx)", 
+                                        current->pending.signal.sig[0], 
+                                        current->pending.signal.sig[1]);
+                        }
+                }
 
                 mutex_lock(&instance->lock);
 
@@ -548,7 +557,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
             (atomic_read(&flow->readers) == 0)  &&
             (atomic_read(&flow->posters) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
-                if (__kfa_flow_destroy(instance, flow, id))
+                if (kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
 
         mutex_unlock(&instance->lock);
@@ -558,10 +567,27 @@ int kfa_flow_sdu_write(struct kfa * instance,
 
 static bool queue_ready(struct ipcp_flow * flow)
 {
-        if (flow->state == PORT_STATE_DEALLOCATED ||
-            (flow->state != PORT_STATE_PENDING &&
-             !rfifo_is_empty(flow->sdu_ready)))
+        ASSERT(flow);
+
+        LOG_DBG("Queue-ready check called");
+
+        if (flow->state == PORT_STATE_DEALLOCATED) {
+                LOG_DBG("Queue-ready / "
+                        "flow state is PORT_STATE_DEALLOCATED");
                 return true;
+        }
+
+        if (flow->state != PORT_STATE_PENDING &&
+            !rfifo_is_empty(flow->sdu_ready)) {
+                if (flow->state != PORT_STATE_PENDING)
+                        LOG_DBG("Queue-ready / "
+                                "flow state is not PORT_STATE_PENDING");
+                if (!rfifo_is_empty(flow->sdu_ready))
+                        LOG_DBG("Queue-ready / "
+                                "rfifo is not empty");
+                return true;
+        }
+
         return false;
 }
 
@@ -613,9 +639,17 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                         &flow->wait_queue);
                 retval = wait_event_interruptible(flow->wait_queue,
                                                   queue_ready(flow));
-                if (retval)
-                        LOG_ERR("Wait-event interrupted (%d)", retval);
-                LOG_DBG("Read Woken up (%d)", retval);
+                LOG_DBG("Read woken up (%d)", retval);
+
+                if (retval) {
+                        LOG_DBG("Wait-event interrupted (%d)", retval);
+                        if (signal_pending(current)) {
+                                LOG_DBG("A signal is pending "
+                                        "(sig = 0x%08zx%08zx)", 
+                                        current->pending.signal.sig[0], 
+                                        current->pending.signal.sig[1]);
+                        }
+                }
 
                 mutex_lock(&instance->lock);
 
@@ -658,7 +692,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
             (atomic_read(&flow->writers) == 0)  &&
             (atomic_read(&flow->posters) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED))
-                if (__kfa_flow_destroy(instance, flow, id))
+                if (kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
 
         mutex_unlock(&instance->lock);
@@ -727,7 +761,7 @@ int kfa_sdu_post(struct kfa * instance,
             (atomic_read(&flow->writers) == 0)  &&
             (atomic_read(&flow->readers) == 0)  &&
             (flow->state == PORT_STATE_DEALLOCATED)) {
-                if (__kfa_flow_destroy(instance, flow, id))
+                if (kfa_flow_destroy(instance, flow, id))
                         LOG_ERR("Could not destroy the flow correctly");
                 flow = NULL;
         }
@@ -741,7 +775,7 @@ int kfa_sdu_post(struct kfa * instance,
                 LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
                         wq, wq->task_list.next, wq->task_list.prev);
 
-                wake_up(wq);
+                wake_up_interruptible_all(wq);
                 LOG_DBG("SDU posted");
                 LOG_DBG("Sleeping read syscall should be working now");
         }
