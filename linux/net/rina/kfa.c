@@ -166,15 +166,15 @@ port_id_t kfa_port_id_reserve(struct kfa *     instance,
         mutex_lock(&instance->lock);
 
         if (!instance->pidm) {
-                LOG_ERR("This KFA instance doesn't have a PIDM");
                 mutex_unlock(&instance->lock);
+                LOG_ERR("This KFA instance doesn't have a PIDM");
                 return port_id_bad();
         }
 
         pid = pidm_allocate(instance->pidm);
         if (!is_port_id_ok(pid)) {
-                LOG_ERR("Cannot get a port-id");
                 mutex_unlock(&instance->lock);
+                LOG_ERR("Cannot get a port-id");
                 return port_id_bad();
         }
 
