@@ -509,10 +509,13 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 if (retval) {
                         LOG_DBG("Wait-event interrupted (%d)", retval);
                         if (signal_pending(current)) {
+                                LOG_DBG("A signal is pending");
+#if 0
                                 LOG_DBG("A signal is pending "
                                         "(sig = 0x%08zx%08zx)", 
                                         current->pending.signal.sig[0], 
                                         current->pending.signal.sig[1]);
+#endif
                         }
                 }
 
@@ -644,10 +647,13 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 if (retval) {
                         LOG_DBG("Wait-event interrupted (%d)", retval);
                         if (signal_pending(current)) {
+                                LOG_DBG("A signal is pending");
+#if 0
                                 LOG_DBG("A signal is pending "
                                         "(sig = 0x%08zx%08zx)", 
                                         current->pending.signal.sig[0], 
                                         current->pending.signal.sig[1]);
+#endif
                         }
                 }
 
