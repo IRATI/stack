@@ -103,7 +103,7 @@ const FlowInformation& Flow::getFlowInformation() const {
    return flowInformation;
 }
 
-int Flow::readSDU(void * sdu, int maxBytes) {
+int Flow::readSDU(void * sdu, int maxBytes) throw(Exception){
 	if (flowState != FLOW_ALLOCATED) {
 		throw FlowNotAllocatedException();
 	}
@@ -122,7 +122,7 @@ int Flow::readSDU(void * sdu, int maxBytes) {
 #endif
 }
 
-void Flow::writeSDU(void * sdu, int size) {
+void Flow::writeSDU(void * sdu, int size) throw(Exception) {
 	if (flowState != FLOW_ALLOCATED) {
 		throw FlowNotAllocatedException();
 	}

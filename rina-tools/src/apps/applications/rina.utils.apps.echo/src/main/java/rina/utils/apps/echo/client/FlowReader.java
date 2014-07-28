@@ -74,7 +74,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 					printStats();
 					stop();
 				}
-			}catch(Exception ex){
+			}catch(eu.irati.librina.Exception ex){
 				if (!isStopped()) {
 					log.error("Problems reading SDU from flow "+flow.getPortId());
 					stop();

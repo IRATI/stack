@@ -213,7 +213,7 @@ public:
 	 * @return int The number of bytes read
 	 * @throws IPCException if the flow is not in the ALLOCATED state
 	 */
-	int readSDU(void * sdu, int maxBytes);
+	int readSDU(void * sdu, int maxBytes) throw(Exception);
 
 	/**
 	 * Writes an SDU to the flow
@@ -223,7 +223,7 @@ public:
 	 * @throws IPCException if the flow is not in the ALLOCATED state or
 	 * there are problems writing to the flow
 	 */
-	void writeSDU(void * sdu, int size);
+	void writeSDU(void * sdu, int size) throw(Exception);
 
 	friend class IPCManager;
 };

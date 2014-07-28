@@ -64,6 +64,12 @@
   }
 %}
 
+%typemap(throws, throws="eu.irati.librina.Exception") Exception {
+  jclass excep = jenv->FindClass("eu/irati/librina/Exception");
+  if (excep)
+    jenv->ThrowNew(excep, $1.what());
+  return $null;
+}
 %typemap(throws, throws="eu.irati.librina.IPCException") rina::IPCException {
   jclass excep = jenv->FindClass("eu/irati/librina/IPCException");
   if (excep)

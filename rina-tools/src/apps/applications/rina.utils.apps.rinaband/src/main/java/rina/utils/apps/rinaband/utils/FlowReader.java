@@ -40,7 +40,7 @@ public class FlowReader implements Runnable{
 					sdu[i] = buffer[i];
 				}
 				sduListener.sduDelivered(sdu);
-			}catch(Exception ex){
+			}catch(eu.irati.librina.Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
 				stop();
 			}

@@ -72,7 +72,7 @@ public class TestController implements Runnable {
 				bytesRead = flow.readSDU(buffer, maxSDUSize);
 				setLatestSDUReceivedTime(Calendar.getInstance().getTimeInMillis());
 				processSDU(buffer, bytesRead);
-			}catch(Exception ex){
+			}catch(eu.irati.librina.Exception ex){
 				log.error("Problems reading SDU from flow "+flow.getPortId());
 				stop();
 			}
