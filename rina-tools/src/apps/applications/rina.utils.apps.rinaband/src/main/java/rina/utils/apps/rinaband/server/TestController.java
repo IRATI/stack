@@ -187,8 +187,8 @@ public class TestController implements SDUListener, FlowAcceptor,
 			ipcEventConsumer.addApplicationRegistrationListener(this, dataApNamingInfo);
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(ApplicationRegistrationType.APPLICATION_REGISTRATION_SINGLE_DIF);
-			appRegInfo.setApplicationName(dataApNamingInfo);
-			appRegInfo.setDIFName(difName);
+			appRegInfo.setAppName(dataApNamingInfo);
+			appRegInfo.setDifName(difName);
 			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
 			storedCDAPMessage = cdapMessage;
 		}catch(Exception ex){

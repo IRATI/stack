@@ -100,7 +100,7 @@ public class RINABandServer implements FlowAcceptor, FlowDeallocationListener, A
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(
 							ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF);
-			appRegInfo.setApplicationName(controlApNamingInfo);
+			appRegInfo.setAppName(controlApNamingInfo);
 			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
 			log.info("Requested registration of control AE: "+controlApNamingInfo.toString());
 		}catch(Exception ex){

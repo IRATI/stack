@@ -200,7 +200,7 @@ public class RINABandClient implements SDUListener, FlowAllocationListener{
 		try{
 			//1 Commit flow
 			controlFlow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
-					event.getPortId(), event.getDIFName());
+					event.getPortId(), event.getDifName());
 			
 			//2 Start flowReader
 			FlowReader flowReader = new FlowReader(this.controlFlow, this, 10000);
@@ -230,7 +230,7 @@ public class RINABandClient implements SDUListener, FlowAllocationListener{
 			if (event.getPortId() > 0){
 				//1 Commit flow
 				Flow flow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
-						event.getPortId(), event.getDIFName());
+						event.getPortId(), event.getDifName());
 				
 				//2 Start test worker
 				TestWorker testWorker = new TestWorker(testInformation, this, timer);

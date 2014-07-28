@@ -134,7 +134,7 @@ FlowAllocationListener, FlowDeallocationListener {
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(
 							ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF);
-			appRegInfo.setApplicationName(clientApNamingInfo);
+			appRegInfo.setAppName(clientApNamingInfo);
 			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
 			log.info("Requested registration of AE: "+clientApNamingInfo.toString());
 		}catch(Exception ex){
@@ -217,7 +217,7 @@ FlowAllocationListener, FlowDeallocationListener {
 		
 		try{
 			allocatedFlow = rina.getIpcManager().commitPendingFlow(event.getSequenceNumber(), 
-					event.getPortId(), event.getDIFName());
+					event.getPortId(), event.getDifName());
 		}catch(Exception ex){
 			log.error(ex.getMessage());
 			System.exit(-1);

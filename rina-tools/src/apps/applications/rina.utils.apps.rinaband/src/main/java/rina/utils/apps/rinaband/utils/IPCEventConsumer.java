@@ -81,9 +81,9 @@ public class IPCEventConsumer implements Runnable{
 		
 		while (true){
 			event = ipcEventProducer.eventWait();
-			System.out.println("IPC Event has happened: "+event.getType());
+			System.out.println("IPC Event has happened: "+event.getEventType());
 			
-			if (event.getType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
+			if (event.getEventType() == IPCEventType.FLOW_ALLOCATION_REQUESTED_EVENT){
 				FlowRequestEvent flowRequestEvent = (FlowRequestEvent) event;
 				log.info("Looking for flow acceptors for application: "
 						+ Utils.getApplicationNamingInformationCode(
@@ -97,7 +97,7 @@ public class IPCEventConsumer implements Runnable{
 					System.out.println("Could not find handler for flows targetting local application "
 								+flowRequestEvent.getLocalApplicationName());
 				}
-			} else if (event.getType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
+			} else if (event.getEventType() == IPCEventType.FLOW_DEALLOCATED_EVENT){
 				FlowDeallocatedEvent flowDeallocatedEvent = (FlowDeallocatedEvent) event;
 				FlowDeallocationListener listener = flowDeallocationListeners.get(flowDeallocatedEvent.getPortId());
 				if (listener != null){
@@ -106,21 +106,21 @@ public class IPCEventConsumer implements Runnable{
 					System.out.println("Could not find handler for flow deallocation events targetting flow"
 							+flowDeallocatedEvent.getPortId());
 				}
-			} else if (event.getType() == IPCEventType.REGISTER_APPLICATION_RESPONSE_EVENT){
+			} else if (event.getEventType() == IPCEventType.REGISTER_APPLICATION_RESPONSE_EVENT){
 				RegisterApplicationResponseEvent regEvent = (RegisterApplicationResponseEvent) event;
 				ApplicationRegistrationListener listener = applicationRegistrationListeners.get(
 						Utils.getApplicationNamingInformationCode(regEvent.getApplicationName()));
 				if (listener != null){
 					listener.dispatchApplicationRegistrationResponseEvent(regEvent);
 				}
-			} else if (event.getType() == IPCEventType.UNREGISTER_APPLICATION_RESPONSE_EVENT){
+			} else if (event.getEventType() == IPCEventType.UNREGISTER_APPLICATION_RESPONSE_EVENT){
 				UnregisterApplicationResponseEvent regEvent = (UnregisterApplicationResponseEvent) event;
 				ApplicationRegistrationListener listener = applicationRegistrationListeners.get(
 						Utils.getApplicationNamingInformationCode(regEvent.getApplicationName()));
 				if (listener != null){
 					listener.dispatchApplicationUnregistrationResponseEvent(regEvent);
 				}
-			} else if (event.getType() == IPCEventType.ALLOCATE_FLOW_REQUEST_RESULT_EVENT){
+			} else if (event.getEventType() == IPCEventType.ALLOCATE_FLOW_REQUEST_RESULT_EVENT){
 				AllocateFlowRequestResultEvent flowEvent = (AllocateFlowRequestResultEvent) event;
 				FlowAllocationListener listener = flowAllocationListeners.get(event.getSequenceNumber());
 				if (listener != null){

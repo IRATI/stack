@@ -89,7 +89,7 @@ public class EchoServer implements FlowAcceptor, ApplicationRegistrationListener
 			ApplicationRegistrationInformation appRegInfo = 
 					new ApplicationRegistrationInformation(
 							ApplicationRegistrationType.APPLICATION_REGISTRATION_ANY_DIF);
-			appRegInfo.setApplicationName(echoApNamingInfo);
+			appRegInfo.setAppName(echoApNamingInfo);
 			rina.getIpcManager().requestApplicationRegistration(appRegInfo);
 			log.info("Requested registration of control AE: "+echoApNamingInfo.toString());
 		}catch(Exception ex){

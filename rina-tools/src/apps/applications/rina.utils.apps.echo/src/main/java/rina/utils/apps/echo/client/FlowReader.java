@@ -12,7 +12,6 @@ import rina.utils.apps.echo.utils.FlowDeallocationListener;
 
 import eu.irati.librina.Flow;
 import eu.irati.librina.FlowDeallocatedEvent;
-import eu.irati.librina.FlowDeallocationException;
 import eu.irati.librina.rina;
 
 /**
@@ -109,7 +108,7 @@ public class FlowReader implements Runnable, FlowDeallocationListener{
 		if (flow.isAllocated()){
 			try{
 				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
-			}catch(FlowDeallocationException ex){
+			}catch(Exception ex){
 				ex.printStackTrace();
 			}
 		}
