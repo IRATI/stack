@@ -451,7 +451,6 @@ static int send_worker(void * o)
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
                         spin_lock(&tmp->egress.queues->lock);
-                        sdu_destroy(sdu);
                         continue; /* Useless for the moment */
                 }
 
