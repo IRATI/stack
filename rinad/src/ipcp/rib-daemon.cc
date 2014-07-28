@@ -35,7 +35,7 @@ RIB::~RIB() throw()
 { }
 
 BaseRIBObject* RIB::getRIBObject(const std::string& objectClass,
-                                 const std::string& objectName)
+                                 const std::string& objectName, bool check)
 {
 	BaseRIBObject* ribObject;
 	std::map<std::string, BaseRIBObject*>::iterator it;
@@ -49,7 +49,7 @@ BaseRIBObject* RIB::getRIBObject(const std::string& objectClass,
 	}
 
 	ribObject = it->second;
-	if (ribObject->class_.compare(objectClass) != 0) {
+	if (check && ribObject->class_.compare(objectClass) != 0) {
 		throw Exception("Object class does not match the user specified one");
 	}
 
@@ -328,7 +328,7 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	BaseRIBObject * ribObject;
 
 	try {
-		ribObject = rib_.getRIBObject(objectClass, objectName);
+		ribObject = rib_.getRIBObject(objectClass, objectName, true);
 	} catch (Exception &e) {
 		//Delegate creation to the parent if the object is not there
                 std::string::size_type position =
@@ -336,7 +336,7 @@ void RIBDaemon::createObject(const std::string& objectClass,
 		if (position == std::string::npos)
 			throw e;
 		std::string parentObjectName = objectName.substr(0, position);
-		ribObject = rib_.getRIBObject(objectClass, parentObjectName);
+		ribObject = rib_.getRIBObject(objectClass, parentObjectName, false);
 	}
 
 	//Create the object
@@ -397,7 +397,7 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
 {
 	BaseRIBObject * ribObject;
 
-	ribObject = rib_.getRIBObject(objectClass, objectName);
+	ribObject = rib_.getRIBObject(objectClass, objectName, true);
 	ribObject->deleteObject(objectValue);
 
 	//Notify neighbors if needed
@@ -436,13 +436,13 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
 
 BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
                                       const std::string& objectName)
-{ return rib_.getRIBObject(objectClass, objectName); }
+{ return rib_.getRIBObject(objectClass, objectName, true); }
 
 void RIBDaemon::writeObject(const std::string& objectClass,
                             const std::string& objectName,
                             const void* objectValue)
 {
-	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
+	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName, true);
 	object->writeObject(objectValue);
 }
 
@@ -450,7 +450,7 @@ void RIBDaemon::startObject(const std::string& objectClass,
                             const std::string& objectName,
                             const void* objectValue)
 {
-	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
+	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName, true);
 	object->startObject(objectValue);
 }
 
@@ -458,7 +458,7 @@ void RIBDaemon::stopObject(const std::string& objectClass,
                            const std::string& objectName,
                            const void* objectValue)
 {
-	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName);
+	BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName, true);
 	object->stopObject(objectValue);
 }
 
@@ -513,7 +513,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			// doesn't exist it is a CREATE, therefore it is handled to the parent object
 			try {
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-											cdapMessage->get_obj_name());
+											cdapMessage->get_obj_name(), true);
 				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
 			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
@@ -523,39 +523,39 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 					throw e;
 				}
 				std::string parentObjectName = cdapMessage->get_obj_name().substr(0, position);
-				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName);
+				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, true);
 				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
 			}
 
 			break;
 		case rina::CDAPMessage::M_DELETE:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-							cdapMessage->get_obj_name());
+							cdapMessage->get_obj_name(), true);
 			ribObject->remoteDeleteObject(cdapMessage, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-							cdapMessage->get_obj_name());
+							cdapMessage->get_obj_name(), true);
 			ribObject->remoteStartObject(cdapMessage, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_STOP:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-							cdapMessage->get_obj_name());
+							cdapMessage->get_obj_name(), true);
 			ribObject->remoteStopObject(cdapMessage, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_READ:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-							cdapMessage->get_obj_name());
+							cdapMessage->get_obj_name(), true);
 			ribObject->remoteReadObject(cdapMessage, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-							cdapMessage->get_obj_name());
+							cdapMessage->get_obj_name(), true);
 			ribObject->remoteCancelReadObject(cdapMessage, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_WRITE:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
-							cdapMessage->get_obj_name());
+							cdapMessage->get_obj_name(), true);
 			ribObject->remoteWriteObject(cdapMessage, cdapSessionDescriptor);
 			break;
 		default:

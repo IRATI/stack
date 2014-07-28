@@ -71,6 +71,42 @@ private:
 	IPDUForwardingTableGenerator * pdu_forwarding_table_generator_;
 };
 
+class DIFRegistrationRIBObject: public SimpleSetMemberRIBObject {
+public:
+	DIFRegistrationRIBObject(IPCProcess* ipc_process,
+			const std::string& object_class,
+			const std::string& object_name,
+			const std::string* dif_name);
+	std::string get_displayable_value();
+};
+
+class DIFRegistrationSetRIBObject: public BaseRIBObject {
+public:
+	DIFRegistrationSetRIBObject(IPCProcess * ipc_process);
+	const void* get_value() const;
+	void createObject(const std::string& objectClass,
+                          const std::string& objectName,
+                          const void* objectValue);
+};
+
+class NMinusOneFlowRIBObject: public SimpleSetMemberRIBObject {
+public:
+	NMinusOneFlowRIBObject(IPCProcess* ipc_process,
+			const std::string& object_class,
+			const std::string& object_name,
+			const rina::FlowInformation* flow_info);
+	std::string get_displayable_value();
+};
+
+class NMinusOneFlowSetRIBObject: public BaseRIBObject {
+public:
+	NMinusOneFlowSetRIBObject(IPCProcess * ipc_process);
+	const void* get_value() const;
+	void createObject(const std::string& objectClass,
+                          const std::string& objectName,
+                          const void* objectValue);
+};
+
 }
 
 #endif

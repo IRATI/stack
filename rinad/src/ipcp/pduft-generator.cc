@@ -53,7 +53,7 @@ void PDUForwardingTableGenerator::set_dif_configuration(
 		throw Exception("Unknown PDU Forwarting Table Generator Policy");
 	}
 
-	//TODO pduftg_policy_ = new LinkStatePDUFTGeneratorPolicyImpl();
+	pduftg_policy_ = new LinkStatePDUFTGeneratorPolicy();
 	pduftg_policy_->set_ipc_process(ipc_process_);
 	pduftg_policy_->set_dif_configuration(dif_configuration);
 }

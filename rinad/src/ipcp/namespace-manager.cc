@@ -447,7 +447,7 @@ void NamespaceManager::set_ipc_process(IPCProcess * ipc_process) {
 }
 
 void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("DIF configuration set: %u", dif_configuration.get_address());
+	LOG_DBG("DIF configuration set: %u", dif_configuration.address_);
 }
 
 void NamespaceManager::populateRIB() {

@@ -66,10 +66,12 @@ void FlowSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
 }
 
 void FlowSetRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName, IFlowAllocatorInstance* objectValue) {
+		const std::string& objectName, const void* objectValue) {
 	FlowRIBObject * flowRIBObject;
 
-	flowRIBObject = new FlowRIBObject(ipc_process_, objectClass, objectName, objectValue);
+	void * fai = const_cast<void *>(objectValue);
+	flowRIBObject = new FlowRIBObject(ipc_process_, objectClass, objectName,
+			(FlowAllocatorInstance *) fai);
 	add_child(flowRIBObject);
 	rib_daemon_->addRIBObject(flowRIBObject);
 }
@@ -121,9 +123,9 @@ void QoSCubeSetRIBObject::remoteCreateObject(
 }
 
 void QoSCubeSetRIBObject::createObject(const std::string& objectClass,
-		const std::string& objectName, rina::QoSCube* objectValue) {
+		const std::string& objectName, const void* objectValue) {
 	QoSCubeRIBObject * ribObject = new QoSCubeRIBObject(ipc_process_,
-			objectClass, objectName, objectValue);
+			objectClass, objectName, (const rina::QoSCube*) objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
 }

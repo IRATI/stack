@@ -42,23 +42,18 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 	ipc_process_ = ipc_process;
 	rib_daemon_ = ipc_process->get_rib_daemon();
 	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
+	populateRIB();
 }
 
 void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("DIF configuration set %u", dif_configuration.get_address());
+	LOG_DBG("DIF configuration set %u", dif_configuration.address_);
 }
 
 void NMinusOneFlowManager::populateRIB(){
 	try {
-		BaseRIBObject * object = new SimpleSetRIBObject(ipc_process_,
-				EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS,
-				EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME);
+		BaseRIBObject * object = new DIFRegistrationSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
-		object = new SimpleSetRIBObject(ipc_process_,
-				EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS,
-				EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME);
+		object = new NMinusOneFlowSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
 	} catch (Exception &e) {
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
@@ -361,6 +356,85 @@ INMinusOneFlowManager * ResourceAllocator::get_n_minus_one_flow_manager() const 
 
 IPDUForwardingTableGenerator * ResourceAllocator::get_pdu_forwarding_table_generator() const {
 	return pdu_forwarding_table_generator_;
+}
+
+//Class DIF registration RIB Object
+DIFRegistrationRIBObject::DIFRegistrationRIBObject(IPCProcess* ipc_process,
+		const std::string& object_class,
+		const std::string& object_name,
+		const std::string* dif_name) : SimpleSetMemberRIBObject(ipc_process,
+				object_class, object_name, dif_name) {
+}
+
+std::string DIFRegistrationRIBObject::get_displayable_value() {
+    const std::string * dif_name = (const std::string *) get_value();
+    std::stringstream ss;
+    ss << "N-1 DIF name: " << *dif_name;
+
+    return ss.str();
+}
+
+// Class DIF registration set RIB Object
+DIFRegistrationSetRIBObject::DIFRegistrationSetRIBObject(IPCProcess * ipc_process):
+	BaseRIBObject(ipc_process, EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
+			objectInstanceGenerator->getObjectInstance(),
+			EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME){
+}
+
+const void* DIFRegistrationSetRIBObject::get_value() const {
+	return 0;
+}
+
+void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
+                      const std::string& objectName,
+                      const void* objectValue) {
+	DIFRegistrationRIBObject * ribObject = new DIFRegistrationRIBObject(ipc_process_, objectClass,
+			objectName, (const std::string *) objectValue);
+	add_child(ribObject);
+	rib_daemon_->addRIBObject(ribObject);
+}
+
+//Class N-1 Flow RIB Object
+NMinusOneFlowRIBObject::NMinusOneFlowRIBObject(IPCProcess* ipc_process,
+		const std::string& object_class,
+		const std::string& object_name,
+		const rina::FlowInformation* flow_info) : SimpleSetMemberRIBObject(ipc_process,
+				object_class, object_name, flow_info) {
+}
+
+std::string NMinusOneFlowRIBObject::get_displayable_value() {
+    const rina::FlowInformation * flow_info = (const rina::FlowInformation *) get_value();
+    std::stringstream ss;
+    rina::ApplicationProcessNamingInformation name;
+    name = flow_info->localAppName;
+    ss << "Local app name: " << name.getEncodedString();
+    name = flow_info->remoteAppName;
+    ss << "Remote app name: " << name.getEncodedString() << std::endl;
+    ss << "N-1 DIF name: " << flow_info->difName.processName;
+    ss << "; port-id: " << flow_info->portId << std::endl;
+    rina::FlowSpecification flowSpec = flow_info->flowSpecification;
+    ss << "Flow characteristics: " << flowSpec.toString();
+    return ss.str();
+}
+
+// Class N-1 Flow set RIB Object
+NMinusOneFlowSetRIBObject::NMinusOneFlowSetRIBObject(IPCProcess * ipc_process):
+	BaseRIBObject(ipc_process, EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
+			objectInstanceGenerator->getObjectInstance(),
+			EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME){
+}
+
+const void* NMinusOneFlowSetRIBObject::get_value() const {
+	return 0;
+}
+
+void NMinusOneFlowSetRIBObject::createObject(const std::string& objectClass,
+                      const std::string& objectName,
+                      const void* objectValue) {
+	NMinusOneFlowRIBObject * ribObject = new NMinusOneFlowRIBObject(ipc_process_, objectClass,
+			objectName, (const rina::FlowInformation *) objectValue);
+	add_child(ribObject);
+	rib_daemon_->addRIBObject(ribObject);
 }
 
 }

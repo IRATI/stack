@@ -183,7 +183,8 @@ bool DIFProperties::lookup_ipcp_address(
         for (list<KnownIPCProcessAddress>::const_iterator
                 it = knownIPCProcessAddresses.begin();
                         it != knownIPCProcessAddresses.end(); it++) {
-                        if (it->name == ipcp_name) {
+                        if (it->name.processName.compare(ipcp_name.processName) == 0 &&
+                        		it->name.processInstance.compare(ipcp_name.processInstance) == 0) {
                                 result = it->address;
                                 return true;
                         }

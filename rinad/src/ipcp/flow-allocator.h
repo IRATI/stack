@@ -142,7 +142,7 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
-			const std::string& objectName, IFlowAllocatorInstance* objectValue);
+			const std::string& objectName, const void* objectValue);
 	const void* get_value() const;
 
 private:
@@ -166,7 +166,7 @@ public:
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
-			const std::string& objectName, rina::QoSCube* objectValue);
+			const std::string& objectName, const void* objectValue);
 	void deleteObject(const void* objectValue);
 	const void* get_value() const;
 };

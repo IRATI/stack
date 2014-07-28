@@ -43,7 +43,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	try {
 		std::stringstream ss;
 		ss << IPCP_LOG_FILE_PREFIX << "-" << id;
-		rina::initialize(LOG_LEVEL_DBG, ss.str());
+		rina::initialize(LOG_LEVEL_DBG, "");
 		rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
 		rina::extendedIPCManager->ipcProcessId = id;
 		rina::kernelIPCProcess->ipcProcessId = id;
@@ -329,6 +329,8 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 		return;
 	}
 
+	rina::AssignToDIFRequestEvent requestEvent = it->second;
+	dif_information_ = requestEvent.difInformation;
 	pending_events_.erase(it);
 	if (event.result != 0) {
 		LOG_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
@@ -348,19 +350,18 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	//TODO do stuff
 	LOG_DBG("The kernel processed successfully the Assign to DIF request");
-	dif_information_ = it->second.difInformation;
 
 	rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
 	resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
-	enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
-	flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
 	namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 	security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
+	flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
+	enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
 
 	state_ = ASSIGNED_TO_DIF;
 
 	try {
-		rina::extendedIPCManager->assignToDIFResponse(it->second, 0);
+		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}

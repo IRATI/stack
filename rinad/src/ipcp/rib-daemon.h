@@ -41,7 +41,7 @@ public:
 	/// @param objectName
 	/// @return
 	BaseRIBObject* getRIBObject(const std::string& objectClass,
-			const std::string& objectName);
+			const std::string& objectName, bool check);
 	void addRIBObject(BaseRIBObject* ribObject);
 	BaseRIBObject * removeRIBObject(const std::string& objectName);
 	std::list<BaseRIBObject*> getRIBObjects();

@@ -170,11 +170,6 @@ static bool ipcm_register_response_common(
                 // Notify the N-1 IPC process.
                 slave_ipcp->registerApplicationResult(
                                         event->sequenceNumber, success);
-
-                cout << "IPC process " << slave_ipcp->name.toString() <<
-                        " informed about registration of application " <<
-                        app_name.toString() << " to N-1 DIF " <<
-                        slave_dif_name.toString() << endl;
         } catch (rina::IpcmRegisterApplicationException) {
                 cerr <<  __func__ << ": Error while reporting "
                         "registration result of application "

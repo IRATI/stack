@@ -43,16 +43,16 @@ void parse_name(const Json::Value &root,
                 rina::ApplicationProcessNamingInformation &name)
 {
         name.processName =
-                root.get("applicationProcessName",
+                root.get("apName",
                          string()).asString();
         name.processInstance =
-                root.get("applicationProcessInstance",
+                root.get("apInstance",
                          string()).asString();
         name.entityName =
-                root.get("applicationEntityName",
+                root.get("aeName",
                          string()).asString();
         name.entityInstance =
-                root.get("applicationEntityInstance",
+                root.get("aeInstance",
                          string()).asString();
 }
 
@@ -500,19 +500,19 @@ void parse_dif_configs(const Json::Value   &root,
 
                                 exp.applicationProcessName =
                                         exp_app[j]
-                                        .get("applicationProcessName",
+                                        .get("apName",
                                              string())
                                         .asString();
 
                                 exp.applicationProcessInstance =
                                         exp_app[j]
-                                        .get("applicationProcessInstance",
+                                        .get("apInstance",
                                              string())
                                         .asString();
 
                                 exp.applicationEntityName =
                                         exp_app[j]
-                                        .get("applicationEntityName",
+                                        .get("aeName",
                                              string())
                                         .asString();
 
@@ -534,17 +534,17 @@ void parse_dif_configs(const Json::Value   &root,
                                 rinad::DirectoryEntry de;
 
                                 de.applicationProcessName =
-                                        dir[j].get("applicationProcessName",
+                                        dir[j].get("apName",
                                                 string())
                                         .asString();
 
                                 de.applicationProcessInstance =
-                                        dir[j].get("applicationProcessInstance",
+                                        dir[j].get("apInstance",
                                                    string())
                                         .asString();
 
                                 de.applicationEntityName =
-                                        dir[j].get("applicationEntityName",
+                                        dir[j].get("aeName",
                                                    string())
                                         .asString();
 
