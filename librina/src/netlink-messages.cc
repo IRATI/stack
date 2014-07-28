@@ -215,7 +215,7 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 					true, sourceAppName, destAppName,
 					getSourceIpcProcessId(),
 					getSequenceNumber());
-	event->setDIFName(difName);
+	event->DIFName = difName;
 	return event;
 }
 
@@ -754,9 +754,9 @@ setRegIpcProcessId(unsigned short regIpcProcessId) {
 IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 	ApplicationRegistrationInformation information =
 		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
-	information.setDIFName(difName);
-	information.setApplicationName(applicationName);
-	information.setIpcProcessId(regIpcProcessId);
+	information.difName = difName;
+	information.appName = applicationName;
+	information.ipcProcessId = regIpcProcessId;
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					information,

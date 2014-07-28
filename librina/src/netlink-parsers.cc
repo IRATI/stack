@@ -666,13 +666,13 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 int putApplicationProcessNamingInformationObject(nl_msg* netlinkMessage,
 		const ApplicationProcessNamingInformation& object) {
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_PROCESS_NAME,
-			object.getProcessName().c_str());
+			object.processName.c_str());
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_PROCESS_INSTANCE,
-			object.getProcessInstance().c_str());
+			object.processInstance.c_str());
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_ENTITY_NAME,
-			object.getEntityName().c_str());
+			object.entityName.c_str());
 	NLA_PUT_STRING(netlinkMessage, APNI_ATTR_ENTITY_INSTANCE,
-			object.getEntityInstance().c_str());
+			object.entityInstance.c_str());
 
 	return 0;
 
@@ -709,21 +709,21 @@ parseApplicationProcessNamingInformationObject(nlattr *nested) {
 	ApplicationProcessNamingInformation * result =
 			new ApplicationProcessNamingInformation();
 	if (attrs[APNI_ATTR_PROCESS_NAME]) {
-		result->setProcessName(nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]));
+		result->processName = nla_get_string(attrs[APNI_ATTR_PROCESS_NAME]);
 	}
 
 	if (attrs[APNI_ATTR_PROCESS_INSTANCE]) {
-		result->setProcessInstance(
-				nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]));
+		result->processInstance =
+				nla_get_string(attrs[APNI_ATTR_PROCESS_INSTANCE]);
 	}
 
 	if (attrs[APNI_ATTR_ENTITY_NAME]) {
-		result->setEntityName(nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]));
+		result->entityName = nla_get_string(attrs[APNI_ATTR_ENTITY_NAME]);
 	}
 
 	if (attrs[APNI_ATTR_ENTITY_INSTANCE]) {
-		result->setEntityInstance(
-				nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]));
+		result->entityInstance =
+				nla_get_string(attrs[APNI_ATTR_ENTITY_INSTANCE]);
 	}
 
 	return result;
@@ -731,45 +731,45 @@ parseApplicationProcessNamingInformationObject(nlattr *nested) {
 
 int putFlowSpecificationObject(nl_msg* netlinkMessage,
 		const FlowSpecification& object) {
-	if (object.getAverageBandwidth() > 0) {
+	if (object.averageBandwidth > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_AVG_BWITH,
-				object.getAverageBandwidth());
+				object.averageBandwidth);
 	}
-	if (object.getAverageSduBandwidth() > 0) {
+	if (object.averageSDUBandwidth > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_AVG_SDU_BWITH,
-				object.getAverageSduBandwidth());
+				object.averageSDUBandwidth);
 	}
-	if (object.getDelay() > 0) {
-		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_DELAY, object.getDelay());
+	if (object.delay > 0) {
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_DELAY, object.delay);
 	}
-	if (object.getJitter() > 0) {
-		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_JITTER, object.getJitter());
+	if (object.jitter > 0) {
+		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_JITTER, object.jitter);
 	}
-	if (object.getMaxAllowableGap() >= 0) {
+	if (object.maxAllowableGap >= 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_MAX_GAP,
-				object.getMaxAllowableGap());
+				object.maxAllowableGap);
 	}
-	if (object.getMaxSDUSize() > 0) {
+	if (object.maxSDUsize > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_MAX_SDU_SIZE,
-				object.getMaxSDUSize());
+				object.maxSDUsize);
 	}
-	if (object.isOrderedDelivery()) {
+	if (object.orderedDelivery) {
 		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_IN_ORD_DELIVERY);
 	}
-	if (object.isPartialDelivery()) {
+	if (object.partialDelivery) {
 		NLA_PUT_FLAG(netlinkMessage, FSPEC_ATTR_PART_DELIVERY);
 	}
-	if (object.getPeakBandwidthDuration() > 0) {
+	if (object.peakBandwidthDuration > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_PEAK_BWITH_DURATION,
-				object.getPeakBandwidthDuration());
+				object.peakBandwidthDuration);
 	}
-	if (object.getPeakSduBandwidthDuration() > 0) {
+	if (object.peakSDUBandwidthDuration > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_PEAK_SDU_BWITH_DURATION,
-				object.getPeakSduBandwidthDuration());
+				object.peakSDUBandwidthDuration);
 	}
-	if (object.getUndetectedBitErrorRate() > 0) {
+	if (object.undetectedBitErrorRate > 0) {
 		NLA_PUT_U32(netlinkMessage, FSPEC_ATTR_UNDETECTED_BER,
-				object.getUndetectedBitErrorRate());
+				object.undetectedBitErrorRate);
 	}
 
 	return 0;
@@ -826,50 +826,50 @@ FlowSpecification * parseFlowSpecificationObject(nlattr *nested) {
 
 	FlowSpecification * result = new FlowSpecification();
 	if (attrs[FSPEC_ATTR_AVG_BWITH]) {
-		result->setAverageBandwidth(nla_get_u32(attrs[FSPEC_ATTR_AVG_BWITH]));
+		result->averageBandwidth = nla_get_u32(attrs[FSPEC_ATTR_AVG_BWITH]);
 	}
 
 	if (attrs[FSPEC_ATTR_AVG_SDU_BWITH]) {
-		result->setAverageSduBandwidth(
-				nla_get_u32(attrs[FSPEC_ATTR_AVG_SDU_BWITH]));
+		result->averageSDUBandwidth =
+				nla_get_u32(attrs[FSPEC_ATTR_AVG_SDU_BWITH]);
 	}
 
 	if (attrs[FSPEC_ATTR_DELAY]) {
-		result->setDelay(nla_get_u32(attrs[FSPEC_ATTR_DELAY]));
+		result->delay = nla_get_u32(attrs[FSPEC_ATTR_DELAY]);
 	}
 
 	if (attrs[FSPEC_ATTR_JITTER]) {
-		result->setJitter(nla_get_u32(attrs[FSPEC_ATTR_JITTER]));
+		result->jitter = nla_get_u32(attrs[FSPEC_ATTR_JITTER]);
 	}
 
 	if (attrs[FSPEC_ATTR_MAX_GAP]) {
-		result->setMaxAllowableGap(nla_get_u32(attrs[FSPEC_ATTR_MAX_GAP]));
+		result->maxAllowableGap = nla_get_u32(attrs[FSPEC_ATTR_MAX_GAP]);
 	}
 
 	if (attrs[FSPEC_ATTR_MAX_SDU_SIZE]) {
-		result->setMaxSDUSize(nla_get_u32(attrs[FSPEC_ATTR_MAX_SDU_SIZE]));
+		result->maxSDUsize = nla_get_u32(attrs[FSPEC_ATTR_MAX_SDU_SIZE]);
 	}
 
 	if (attrs[FSPEC_ATTR_IN_ORD_DELIVERY]) {
-		result->setOrderedDelivery(true);
+		result->orderedDelivery = true;
 	} else {
-		result->setOrderedDelivery(false);
+		result->orderedDelivery = false;
 	}
 
 	if (attrs[FSPEC_ATTR_PART_DELIVERY]) {
-		result->setPartialDelivery(true);
+		result->partialDelivery = true;
 	} else {
-		result->setPartialDelivery(false);
+		result->partialDelivery = false;
 	}
 
 	if (attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]) {
-		result->setPeakBandwidthDuration(
-				nla_get_u32(attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]));
+		result->peakBandwidthDuration =
+				nla_get_u32(attrs[FSPEC_ATTR_PEAK_BWITH_DURATION]);
 	}
 
 	if (attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]) {
-		result->setPeakSduBandwidthDuration(
-				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]));
+		result->peakSDUBandwidthDuration =
+				nla_get_u32(attrs[FSPEC_ATTR_PEAK_SDU_BWITH_DURATION]);
 	}
 
 	return result;
@@ -1095,14 +1095,14 @@ int putDIFPropertiesObject(nl_msg* netlinkMessage,
 		goto nla_put_failure;
 	}
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-			object.getDifName()) < 0) {
+			object.DIFName) < 0) {
 		goto nla_put_failure;
 	}
 
 	nla_nest_end(netlinkMessage, difName);
 
 	NLA_PUT_U32(netlinkMessage, DIF_PROP_ATTR_MAX_SDU_SIZE,
-			object.getMaxSduSize());
+			object.maxSDUSize);
 
 	return 0;
 
@@ -1172,10 +1172,10 @@ DIFProperties * parseDIFPropertiesObject(nlattr *nested){
 
 int putParameterObject(nl_msg* netlinkMessage, const Parameter& object){
 	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_NAME,
-			object.getName().c_str());
+			object.name.c_str());
 
 	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_VALUE,
-				object.getValue().c_str());
+				object.value.c_str());
 
 	return 0;
 
@@ -1231,13 +1231,13 @@ Parameter * parseParameter(nlattr *nested){
 	Parameter * result = new Parameter();
 
 	if (attrs[PARAM_ATTR_NAME]){
-		result->setName(
-				nla_get_string(attrs[PARAM_ATTR_NAME]));
+		result->name =
+				nla_get_string(attrs[PARAM_ATTR_NAME]);
 	}
 
 	if (attrs[PARAM_ATTR_VALUE]){
-		result->setValue(
-				nla_get_string(attrs[PARAM_ATTR_VALUE]));
+		result->value =
+				nla_get_string(attrs[PARAM_ATTR_VALUE]);
 	}
 
 	return result;
@@ -1434,23 +1434,23 @@ int putApplicationRegistrationInformationObject(nl_msg* netlinkMessage,
 	}
 
 	if (putApplicationProcessNamingInformationObject(netlinkMessage,
-	                object.getApplicationName()) < 0) {
+	                object.appName) < 0) {
 	        goto nla_put_failure;
 	}
 
 	nla_nest_end(netlinkMessage, appName);
 
 	NLA_PUT_U32(netlinkMessage, ARIA_ATTR_APP_REG_TYPE,
-			object.getRegistrationType());
+			object.applicationRegistrationType);
 
-	if (object.getRegistrationType() == APPLICATION_REGISTRATION_SINGLE_DIF){
+	if (object.applicationRegistrationType == APPLICATION_REGISTRATION_SINGLE_DIF){
 		if (!(difName = nla_nest_start(netlinkMessage,
 				ARIA_ATTR_APP_DIF_NAME))) {
 			goto nla_put_failure;
 		}
 
 		if (putApplicationProcessNamingInformationObject(netlinkMessage,
-				object.getDIFName()) < 0) {
+				object.difName) < 0) {
 			goto nla_put_failure;
 		}
 
@@ -1499,7 +1499,7 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 	                delete result;
 	                return 0;
 	        } else {
-	                result->setApplicationName(*appName);
+	                result->appName = *appName;
 	                delete appName;
 	        }
 	}
@@ -1511,7 +1511,7 @@ ApplicationRegistrationInformation * parseApplicationRegistrationInformation(
 			delete result;
 			return 0;
 		} else {
-			result->setDIFName(*difName);
+			result->difName = *difName;
 			delete difName;
 		}
 	}

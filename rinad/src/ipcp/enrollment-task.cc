@@ -1691,7 +1691,7 @@ void EnrollmentTask::connect(const rina::CDAPMessage * cdapMessage,
 				getNMinus1FlowInformation(cdapSessionDescriptor->port_id_);
 		EnrollerStateMachine * enrollmentStateMachine = (EnrollerStateMachine *) createEnrollmentStateMachine(
 				cdapSessionDescriptor->get_destination_application_process_naming_info(),
-				cdapSessionDescriptor->port_id_, false, flowInformation.getDifName());
+				cdapSessionDescriptor->port_id_, false, flowInformation.difName);
 		enrollmentStateMachine->connect(cdapMessage, cdapSessionDescriptor->port_id_);
 	}catch(Exception &e){
 		LOG_ERR("Problems: %s", e.what());
@@ -1919,10 +1919,10 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 
 	//1 Remove enrollment state machine from the store
 	BaseEnrollmentStateMachine * stateMachine =
-			getEnrollmentStateMachine(remotePeerNamingInfo.getProcessName(), portId, true);
+			getEnrollmentStateMachine(remotePeerNamingInfo.processName, portId, true);
 	if (!stateMachine) {
 		LOG_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
-				remotePeerNamingInfo.getProcessName().c_str(), portId);
+				remotePeerNamingInfo.processName.c_str(), portId);
 		return;
 	}
 

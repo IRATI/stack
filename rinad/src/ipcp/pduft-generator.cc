@@ -545,7 +545,7 @@ std::vector< std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagat
 
 		for(flowsIterator = flows.begin(); flowsIterator!= flows.end();
 				++flowsIterator) {
-			portId = (*flowsIterator).getPortId();
+			portId = (*flowsIterator).portId;
 			if ((*fsosIterator)->avoid_port_ != portId) {
 				LOG_DBG("To be sent to port %d", portId);
 				group.push_back((*fsosIterator));
@@ -845,7 +845,7 @@ void LinkStatePDUFTGeneratorPolicy::processFlowDeallocatedEvent(
 
 	for (it = allocated_flows_.begin(); it != allocated_flows_.end();
 			++it) {
-		if (it->getPortId() == event->port_id_) {
+		if (it->portId == event->port_id_) {
 			allocated_flows_.erase(it);
 			return;
 		}
@@ -858,9 +858,9 @@ void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 		NMinusOneFlowAllocatedEvent * event) {
 	try
 	{
-		db_->addObjectToGroup(ipc_process_->get_address(), event->flow_information_.getPortId(),
+		db_->addObjectToGroup(ipc_process_->get_address(), event->flow_information_.portId,
 				ipc_process_->get_namespace_manager()->
-					getAdressByname(event->flow_information_.getRemoteAppName()), 1);
+					getAdressByname(event->flow_information_.remoteAppName), 1);
 	} catch (Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
 		allocated_flows_.push_back(event->flow_information_);
@@ -872,13 +872,13 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 
 	for (it = allocated_flows_.begin(); it != allocated_flows_.end();
 				++it) {
-		if (it->getRemoteAppName().getProcessName().compare(
-				event->neighbor_->get_name().getProcessName()) == 0) {
+		if (it->remoteAppName.processName.compare(
+				event->neighbor_->get_name().processName) == 0) {
 			LOG_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
-				db_->addObjectToGroup(ipc_process_->get_address(), it->getPortId(),
+				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
 								ipc_process_->get_namespace_manager()->
-								getAdressByname(it->getRemoteAppName()), 1);
+								getAdressByname(it->remoteAppName), 1);
 				allocated_flows_.erase(it);
 				break;
 			} catch (Exception &e) {
@@ -936,10 +936,10 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 			try {
 				serializedObject = db_->encode();
 				rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
-				cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(it->getPortId(), 0,
+				cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(it->portId, 0,
 						rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
 						&objectValue, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
-				rib_daemon_->sendMessage(*cdapMessage, it->getPortId(), 0);
+				rib_daemon_->sendMessage(*cdapMessage, it->portId, 0);
 				delete cdapMessage;
 				delete serializedObject;
 			} catch (Exception &e) {

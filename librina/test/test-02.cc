@@ -104,7 +104,7 @@ int main() {
 	FlowSpecification *flowSpec = new FlowSpecification();
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
 			true, *sourceName, *difName, 1234, 4545);
-	flowRequest->setPortId(430);
+	flowRequest->portId = 430;
 	ipcProcess1->allocateFlow(*flowRequest);
 
 	/* TEST QUERY RIB */
@@ -114,7 +114,7 @@ int main() {
 	/* TEST APPLICATION REGISTERED */
 	ApplicationRegistrationInformation appRegInfo =
 			ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
-	appRegInfo.setDIFName(*difName);
+	appRegInfo.difName = *difName;
 	ApplicationRegistrationRequestEvent * event = new
 			ApplicationRegistrationRequestEvent(appRegInfo, 34);
 	applicationManager->applicationRegistered(*event, *difName, 0);

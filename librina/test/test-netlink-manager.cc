@@ -34,21 +34,21 @@ int main() {
 	NetlinkManager destination = NetlinkManager(31);
 
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("12");
-	sourceName.setEntityName("database");
-	sourceName.setEntityInstance("12");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "12";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "12";
 
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("12345");
-	destName.setEntityName("printer");
-	destName.setEntityInstance("12623456");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "12345";
+	destName.entityName = "printer";
+	destName.entityInstance = "12623456";
 
 	FlowSpecification flowSpec;
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/test.DIF");
+	difName.processName = "/difs/test.DIF";
 
 	DIFInformation difInformation;
 	difInformation.set_dif_type("shim-dummy");
@@ -79,10 +79,10 @@ int main() {
 			<< " destination IPC Process id "<< result->getDestIpcProcessId()
 			<< "\n";
 	std::cout << "Source application process name: "
-			<< result->getSourceAppName().getProcessName() << "\n";
+			<< result->getSourceAppName().processName << "\n";
 	std::cout << "Destination application process name: "
-			<< result->getDestAppName().getProcessName() << "\n";
+			<< result->getDestAppName().processName << "\n";
 	std::cout << "In order delivery requested: "
-			<< result->getFlowSpecification().isOrderedDelivery() << "\n";
+			<< result->getFlowSpecification().orderedDelivery << "\n";
 	delete result;
 }

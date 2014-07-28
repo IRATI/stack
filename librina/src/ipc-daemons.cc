@@ -137,12 +137,12 @@ const std::string Neighbor::toString(){
 	ss<<"; Average RTT(ms): "<<average_rtt_in_ms_;
 	ss<<"; Is enrolled: "<<enrolled_<<std::endl;
 	ss<<"Name: "<<name_.toString()<<std::endl;
-	ss<<"Supporting DIF in common: "<<supporting_dif_name_.getProcessName();
+	ss<<"Supporting DIF in common: "<<supporting_dif_name_.processName;
 	ss<<"; N-1 port-id: "<<underlying_port_id_<<std::endl;
 	ss<<"List of supporting DIFs: ";
 	for (std::list<ApplicationProcessNamingInformation>::iterator it = supporting_difs_.begin();
 			it != supporting_difs_.end(); it++)
-		ss<< it->getProcessName() << "; ";
+		ss<< it->processName << "; ";
 	ss<<std::endl;
 	ss<<"Last heard from time (ms): "<<last_heard_from_time_in_ms_;
 	ss<<"; Number of enrollment attempts: "<<number_of_enrollment_attempts_;

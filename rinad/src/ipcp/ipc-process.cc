@@ -311,7 +311,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	if (state_ == ASSIGNED_TO_DIF ) {
 		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
-				event.getResult());
+				event.result);
 		return;
 	}
 
@@ -332,7 +332,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	pending_events_.erase(it);
 	if (event.result != 0) {
 		LOG_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
-				event.getResult());
+				event.result);
 		LOG_ERR("Could not assign IPC Process to DIF %s",
 				it->second.difInformation.dif_name_.processName.c_str());
 		state_ = INITIALIZED;
@@ -447,7 +447,7 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	if (event->isLocalRequest()) {
+	if (event->localRequest) {
 		//A local application is requesting this IPC Process to allocate a flow
 		ipcp->flow_allocator_->submitAllocateRequest(event);
 	} else {

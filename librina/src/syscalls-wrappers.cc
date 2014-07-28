@@ -166,10 +166,10 @@ int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProce
         DUMP_SYSCALL("SYS_createIPCProcess", SYS_createIPCProcess);
 
         result = syscall(SYS_createIPCProcess,
-                         ipcProcessName.getProcessName().c_str(),
-                         ipcProcessName.getProcessInstance().c_str(),
-                         ipcProcessName.getEntityName().c_str(),
-                         ipcProcessName.getEntityInstance().c_str(),
+                         ipcProcessName.processName.c_str(),
+                         ipcProcessName.processInstance.c_str(),
+                         ipcProcessName.entityName.c_str(),
+                         ipcProcessName.entityInstance.c_str(),
                          ipcProcessId,
                          difType.c_str());
 
@@ -190,8 +190,8 @@ int syscallAllocatePortId(unsigned short ipcProcessId,
 
         result = syscall(SYS_allocatePortId,
                          ipcProcessId,
-                         applicationName.getProcessName().c_str(),
-                         applicationName.getProcessInstance().c_str());
+                         applicationName.processName.c_str(),
+                         applicationName.processInstance.c_str());
 
         if (result < 0) {
                 LOG_ERR("Syscall allocate port id failed: %d", result);

@@ -37,10 +37,10 @@ namespace rina {
 Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const FlowSpecification& flowSpecification, FlowState flowState){
-	flowInformation.setLocalAppName(localApplicationName);
-	flowInformation.setRemoteAppName(remoteApplicationName);
-	flowInformation.setFlowSpecification(flowSpecification);
-	flowInformation.setPortId(0);
+	flowInformation.localAppName = localApplicationName;
+	flowInformation.remoteAppName = remoteApplicationName;
+	flowInformation.flowSpecification = flowSpecification;
+	flowInformation.portId = 0;
 	this->flowState = flowState;
 }
 
@@ -48,20 +48,20 @@ Flow::Flow(const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const FlowSpecification& flowSpecification, FlowState flowState,
 		const ApplicationProcessNamingInformation& DIFName, int portId) {
-	flowInformation.setLocalAppName(localApplicationName);
-	flowInformation.setRemoteAppName(remoteApplicationName);
-	flowInformation.setFlowSpecification(flowSpecification);
-	flowInformation.setPortId(portId);
-	flowInformation.setDifName(DIFName);
+	flowInformation.localAppName = localApplicationName;
+	flowInformation.remoteAppName = remoteApplicationName;
+	flowInformation.flowSpecification = flowSpecification;
+	flowInformation.portId = portId;
+	flowInformation.difName = DIFName;
 	this->flowState = flowState;
 }
 
 void Flow::setPortId(int portId){
-	flowInformation.setPortId(portId);
+	flowInformation.portId = portId;
 }
 
 void Flow::setDIFName(const ApplicationProcessNamingInformation& DIFName) {
-	flowInformation.setDifName(DIFName);
+	flowInformation.difName = DIFName;
 }
 
 void Flow::setState(FlowState flowState) {
@@ -73,26 +73,26 @@ const FlowState& Flow::getState() const {
 }
 
 int Flow::getPortId() const {
-	return flowInformation.getPortId();
+	return flowInformation.portId;
 }
 
 const ApplicationProcessNamingInformation&
 Flow::getDIFName() const {
-	return flowInformation.getDifName();
+	return flowInformation.difName;
 }
 
 const ApplicationProcessNamingInformation&
 Flow::getLocalApplicationName() const {
-	return flowInformation.getLocalAppName();
+	return flowInformation.localAppName;
 }
 
 const ApplicationProcessNamingInformation&
 Flow::getRemoteApplcationName() const {
-	return flowInformation.getRemoteAppName();
+	return flowInformation.remoteAppName;
 }
 
 const FlowSpecification& Flow::getFlowSpecification() const {
-	return flowInformation.getFlowSpecification();
+	return flowInformation.flowSpecification;
 }
 
 bool Flow::isAllocated() const{
@@ -113,7 +113,7 @@ int Flow::readSDU(void * sdu, int maxBytes) {
 
 	return maxBytes;
 #else
-	int result = syscallReadSDU(flowInformation.getPortId(), sdu, maxBytes);
+	int result = syscallReadSDU(flowInformation.portId, sdu, maxBytes);
 	if (result < 0){
 		throw ReadSDUException();
 	}
@@ -132,7 +132,7 @@ void Flow::writeSDU(void * sdu, int size) {
         (void)sdu;
         (void)size;
 #else
-	int result = syscallWriteSDU(flowInformation.getPortId(), sdu, size);
+	int result = syscallWriteSDU(flowInformation.portId, sdu, size);
 	if (result < 0){
 		throw WriteSDUException();
 	}
@@ -143,14 +143,6 @@ void Flow::writeSDU(void * sdu, int size) {
 ApplicationRegistration::ApplicationRegistration(
 		const ApplicationProcessNamingInformation& applicationName) {
 	this->applicationName = applicationName;
-}
-
-const ApplicationProcessNamingInformation& ApplicationRegistration::getApplicationName() const {
-	return applicationName;
-}
-
-const std::list<ApplicationProcessNamingInformation>& ApplicationRegistration::getDIFNames() const {
-	return DIFNames;
 }
 
 void ApplicationRegistration::addDIFName(
@@ -347,7 +339,7 @@ Flow * IPCManager::internalAllocateFlowResponse(
         responseMessage.setResult(result);
         responseMessage.setNotifySource(notifySource);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+        responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try{
                 rinaManager->sendMessage(&responseMessage);
@@ -360,12 +352,12 @@ Flow * IPCManager::internalAllocateFlowResponse(
                 return 0;
         }
 
-        Flow * flow = new Flow(flowRequestEvent.getLocalApplicationName(),
-                        flowRequestEvent.getRemoteApplicationName(),
-                        flowRequestEvent.getFlowSpecification(), FLOW_ALLOCATED,
-                        flowRequestEvent.getDIFName(), flowRequestEvent.getPortId());
+        Flow * flow = new Flow(flowRequestEvent.localApplicationName,
+                        flowRequestEvent.remoteApplicationName,
+                        flowRequestEvent.flowSpecification, FLOW_ALLOCATED,
+                        flowRequestEvent.DIFName, flowRequestEvent.portId);
         lock();
-        allocatedFlows[flowRequestEvent.getPortId()] = flow;
+        allocatedFlows[flowRequestEvent.portId] = flow;
         unlock();
         return flow;
 }
@@ -435,12 +427,12 @@ ApplicationRegistration * IPCManager::commitPendingResitration(
         registrationInformation.erase(seqNumber);
 
         applicationRegistration = getApplicationRegistration(
-                        appRegInfo.getApplicationName());
+                        appRegInfo.appName);
 
         if (!applicationRegistration){
                 applicationRegistration = new ApplicationRegistration(
-                                appRegInfo.getApplicationName());
-                applicationRegistrations[appRegInfo.getApplicationName()] =
+                                appRegInfo.appName);
+                applicationRegistrations[appRegInfo.appName] =
                                 applicationRegistration;
         }
 
@@ -480,8 +472,8 @@ unsigned int IPCManager::requestApplicationUnregistration(
         }
 
         std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-        for (iterator = applicationRegistration->getDIFNames().begin();
-                        iterator != applicationRegistration->getDIFNames().end();
+        for (iterator = applicationRegistration->DIFNames.begin();
+                        iterator != applicationRegistration->DIFNames.end();
                         ++iterator) {
                 if (*iterator == DIFName) {
                         found = true;
@@ -495,8 +487,8 @@ unsigned int IPCManager::requestApplicationUnregistration(
         }
 
         ApplicationRegistrationInformation appRegInfo;
-        appRegInfo.setApplicationName(applicationName);
-        appRegInfo.setDIFName(DIFName);
+        appRegInfo.appName = applicationName;
+        appRegInfo.difName = DIFName;
 
 #if STUB_API
         registrationInformation[0] = appRegInfo;
@@ -540,7 +532,7 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success) {
        ApplicationRegistration * applicationRegistration;
 
        applicationRegistration = getApplicationRegistration(
-                       appRegInfo.getApplicationName());
+                       appRegInfo.appName);
        if (!applicationRegistration){
                unlock();
                throw ApplicationUnregistrationException(
@@ -552,15 +544,15 @@ void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success) {
        }
 
        std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-       for (iterator = applicationRegistration->getDIFNames().begin();
-                       iterator != applicationRegistration->getDIFNames().end();
+       for (iterator = applicationRegistration->DIFNames.begin();
+                       iterator != applicationRegistration->DIFNames.end();
                        ++iterator) {
-               if (*iterator == appRegInfo.getDIFName()) {
+               if (*iterator == appRegInfo.difName) {
                        applicationRegistration->removeDIFName(
-                                       appRegInfo.getDIFName());
-                       if (applicationRegistration->getDIFNames().size() == 0) {
+                                       appRegInfo.difName);
+                       if (applicationRegistration->DIFNames.size() == 0) {
                                applicationRegistrations.erase(
-                                       appRegInfo.getApplicationName());
+                                       appRegInfo.appName);
                        }
 
                        break;
@@ -659,7 +651,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId) {
 #else
 
 	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
-		flow->getLocalApplicationName().getProcessName().c_str(),
+		flow->getLocalApplicationName().processName.c_str(),
 		flow->getPortId());
 	AppDeallocateFlowRequestMessage message;
 	message.setApplicationName(flow->getLocalApplicationName());
@@ -767,16 +759,6 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 	this->DIFName = DIFName;
 }
 
-const ApplicationProcessNamingInformation&
-ApplicationUnregisteredEvent::getApplicationName() const {
-	return applicationName;
-}
-
-const ApplicationProcessNamingInformation&
-ApplicationUnregisteredEvent::getDIFName() const {
-	return DIFName;
-}
-
 /* CLASS APPLICATION REGISTRATION CANCELED EVENT*/
 AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
                 const std::string& reason,
@@ -788,21 +770,6 @@ AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
         this->code = code;
         this->reason = reason;
         this->difName = difName;
-}
-
-int AppRegistrationCanceledEvent::getCode() const{
-	return code;
-}
-const std::string AppRegistrationCanceledEvent::getReason() const{
-	return reason;
-}
-const ApplicationProcessNamingInformation&
-AppRegistrationCanceledEvent::getApplicationName() const{
-	return applicationName;
-}
-const ApplicationProcessNamingInformation
-AppRegistrationCanceledEvent::getDIFName() const{
-	return difName;
 }
 
 /* CLASS AllocateFlowRequestResultEvent EVENT*/
@@ -819,20 +786,6 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
         this->portId = portId;
 }
 
-const ApplicationProcessNamingInformation&
-AllocateFlowRequestResultEvent::getAppName() const{
-        return sourceAppName;
-}
-
-const ApplicationProcessNamingInformation&
-        AllocateFlowRequestResultEvent::getDIFName() const{
-        return difName;
-}
-
-int AllocateFlowRequestResultEvent::getPortId() const{
-        return portId;
-}
-
 /* CLASS Deallocate Flow Response EVENT*/
 DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
@@ -843,15 +796,6 @@ DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
                                          sequenceNumber){
         this->appName = appName;
         this->portId = portId;
-}
-
-const ApplicationProcessNamingInformation&
-DeallocateFlowResponseEvent::getAppName() const{
-        return appName;
-}
-
-int DeallocateFlowResponseEvent::getPortId() const{
-        return portId;
 }
 
 /* CLASS Get DIF Properties Response EVENT*/
@@ -865,16 +809,6 @@ GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
                                          sequenceNumber){
         this->applicationName = appName;
         this->difProperties = difProperties;
-}
-
-const ApplicationProcessNamingInformation&
-GetDIFPropertiesResponseEvent::getAppName() const {
-        return applicationName;
-}
-
-const std::list<DIFProperties>& GetDIFPropertiesResponseEvent::
-        getDIFProperties() const {
-        return difProperties;
 }
 
 }

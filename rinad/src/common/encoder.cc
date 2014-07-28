@@ -146,10 +146,10 @@ rina::messages::applicationProcessNamingInfo_t* Encoder::get_applicationProcessN
 		const rina::ApplicationProcessNamingInformation &name) {
 	rina::messages::applicationProcessNamingInfo_t *gpf_name =
 			new rina::messages::applicationProcessNamingInfo_t;
-	gpf_name->set_applicationprocessname(name.getProcessName().c_str());
-	gpf_name->set_applicationprocessinstance(name.getProcessInstance());
-	gpf_name->set_applicationentityname(name.getEntityName());
-	gpf_name->set_applicationentityinstance(name.getEntityInstance());
+	gpf_name->set_applicationprocessname(name.processName);
+	gpf_name->set_applicationprocessinstance(name.processInstance);
+	gpf_name->set_applicationentityname(name.entityName);
+	gpf_name->set_applicationentityinstance(name.entityInstance);
 	return gpf_name;
 }
 
@@ -157,10 +157,10 @@ rina::ApplicationProcessNamingInformation* Encoder::get_ApplicationProcessNaming
 		const rina::messages::applicationProcessNamingInfo_t &gpf_app) {
 	rina::ApplicationProcessNamingInformation *app = new rina::ApplicationProcessNamingInformation;
 
-	app->setProcessName(gpf_app.applicationprocessname());
-	app->setProcessInstance(gpf_app.applicationprocessinstance());
-	app->setEntityName(gpf_app.applicationentityname());
-	app->setEntityInstance(gpf_app.applicationentityinstance());
+	app->processName = gpf_app.applicationprocessname();
+	app->processInstance = gpf_app.applicationprocessinstance();
+	app->entityName = gpf_app.applicationentityname();
+	app->entityInstance = gpf_app.applicationentityinstance();
 
 	return app;
 }
@@ -170,19 +170,19 @@ rina::messages::qosSpecification_t* Encoder::get_qosSpecification_t(
 	rina::messages::qosSpecification_t *gpf_flow_spec =
 			new rina::messages::qosSpecification_t;
 
-	gpf_flow_spec->set_averagebandwidth(flow_spec.getAverageBandwidth());
-	gpf_flow_spec->set_averagesdubandwidth(flow_spec.getAverageSduBandwidth());
+	gpf_flow_spec->set_averagebandwidth(flow_spec.averageBandwidth);
+	gpf_flow_spec->set_averagesdubandwidth(flow_spec.averageSDUBandwidth);
 	gpf_flow_spec->set_peakbandwidthduration(
-			flow_spec.getPeakBandwidthDuration());
+			flow_spec.peakBandwidthDuration);
 	gpf_flow_spec->set_peaksdubandwidthduration(
-			flow_spec.getPeakSduBandwidthDuration());
+			flow_spec.peakSDUBandwidthDuration);
 	gpf_flow_spec->set_undetectedbiterrorrate(
-			flow_spec.getUndetectedBitErrorRate());
-	gpf_flow_spec->set_partialdelivery(flow_spec.isPartialDelivery());
-	gpf_flow_spec->set_order(flow_spec.isOrderedDelivery());
-	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.getMaxAllowableGap());
-	gpf_flow_spec->set_delay(flow_spec.getDelay());
-	gpf_flow_spec->set_jitter(flow_spec.getJitter());
+			flow_spec.undetectedBitErrorRate);
+	gpf_flow_spec->set_partialdelivery(flow_spec.partialDelivery);
+	gpf_flow_spec->set_order(flow_spec.orderedDelivery);
+	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.maxAllowableGap);
+	gpf_flow_spec->set_delay(flow_spec.delay);
+	gpf_flow_spec->set_jitter(flow_spec.jitter);
 
 	return gpf_flow_spec;
 }
@@ -517,16 +517,16 @@ rina::Connection* Encoder::get_Connection(const rina::messages::connectionId_t &
 rina::FlowSpecification* Encoder::get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos) {
 	rina::FlowSpecification *qos = new rina::FlowSpecification;
 
-	qos->setAverageBandwidth(gpf_qos.averagebandwidth());
-	qos->setAverageSduBandwidth(gpf_qos.averagesdubandwidth());
-	qos->setPeakBandwidthDuration(gpf_qos.peakbandwidthduration());
-	qos->setPeakSduBandwidthDuration(gpf_qos.peaksdubandwidthduration());
-	qos->setUndetectedBitErrorRate(gpf_qos.undetectedbiterrorrate());
-	qos->setPartialDelivery(gpf_qos.partialdelivery());
-	qos->setOrderedDelivery(gpf_qos.partialdelivery());
-	qos->setMaxAllowableGap(gpf_qos.maxallowablegapsdu());
-	qos->setDelay(gpf_qos.delay());
-	qos->setJitter(gpf_qos.jitter());
+	qos->averageBandwidth = gpf_qos.averagebandwidth();
+	qos->averageSDUBandwidth = gpf_qos.averagesdubandwidth();
+	qos->peakBandwidthDuration = gpf_qos.peakbandwidthduration();
+	qos->peakSDUBandwidthDuration = gpf_qos.peaksdubandwidthduration();
+	qos->undetectedBitErrorRate = gpf_qos.undetectedbiterrorrate();
+	qos->partialDelivery = gpf_qos.partialdelivery();
+	qos->orderedDelivery = gpf_qos.partialdelivery();
+	qos->maxAllowableGap = gpf_qos.maxallowablegapsdu();
+	qos->delay = gpf_qos.delay();
+	qos->jitter = gpf_qos.jitter();
 
 	return qos;
 }

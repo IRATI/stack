@@ -1071,22 +1071,22 @@ CDAPSessionDescriptor::~CDAPSessionDescriptor() {
 const ApplicationProcessNamingInformation CDAPSessionDescriptor::get_source_application_process_naming_info() {
 	ap_naming_info_ = ApplicationProcessNamingInformation(src_ap_name_,src_ap_inst_);
 	if (!src_ae_name_.empty()) {
-		ap_naming_info_.setEntityName(src_ae_name_);
+		ap_naming_info_.entityName = src_ae_name_;
 	}
 
 	if (!src_ae_inst_.empty()) {
-		ap_naming_info_.setEntityInstance(src_ae_inst_);
+		ap_naming_info_.entityInstance = src_ae_inst_;
 	}
 	return ap_naming_info_;
 }
 const ApplicationProcessNamingInformation CDAPSessionDescriptor::get_destination_application_process_naming_info() {
 	ap_naming_info_ = ApplicationProcessNamingInformation(dest_ap_name_,dest_ap_inst_);
 	if (!dest_ae_name_.empty()) {
-		ap_naming_info_.setEntityName(dest_ae_name_);
+		ap_naming_info_.entityName = dest_ae_name_;
 	}
 
 	if (!dest_ae_inst_.empty()) {
-		ap_naming_info_.setEntityInstance(dest_ae_inst_);
+		ap_naming_info_.entityInstance = dest_ae_inst_;
 	}
 	return ap_naming_info_;
 }

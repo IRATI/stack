@@ -190,7 +190,7 @@ unsigned int IPCProcess::assignToDIF(
                 throw AssignToDIFException("IPC Process not yet initialized");
 
         std::string currentDIFName =
-                        this->difInformation.get_dif_name().getProcessName();
+                        this->difInformation.get_dif_name().processName;
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(difMember || assignInProcess) {
@@ -249,7 +249,7 @@ unsigned int IPCProcess::updateDIFConfiguration(
         unsigned int seqNum=0;
 
         std::string currentDIFName =
-                        this->difInformation.get_dif_name().getProcessName();
+                        this->difInformation.get_dif_name().processName;
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(!difMember || configureInProcess) {
@@ -309,7 +309,7 @@ void IPCProcess::notifyRegistrationToSupportingDIF(
         if (it != nMinusOneDIFs.end()) {
                 throw NotifyRegistrationToDIFException(
                                 "IPCProcess already registered to N-1 DIF"
-                                + difName.getProcessName());
+                                + difName.processName);
         }
 
 #if STUB_API
@@ -342,7 +342,7 @@ void IPCProcess::notifyUnregistrationFromSupportingDIF(
         if (it == nMinusOneDIFs.end()) {
                 throw NotifyRegistrationToDIFException(
                                 "IPCProcess not registered to N-1 DIF"
-                                + difName.getProcessName());
+                                + difName.processName);
         }
 
 #if STUB_API
@@ -568,12 +568,12 @@ unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest) {
 	//Do nothing
 #else
 	IpcmAllocateFlowRequestMessage message;
-	message.setSourceAppName(flowRequest.getLocalApplicationName());
-	message.setDestAppName(flowRequest.getRemoteApplicationName());
-	message.setFlowSpec(flowRequest.getFlowSpecification());
-	message.setDifName(flowRequest.getDIFName());
+	message.setSourceAppName(flowRequest.localApplicationName);
+	message.setDestAppName(flowRequest.remoteApplicationName);
+	message.setFlowSpec(flowRequest.flowSpecification);
+	message.setDifName(flowRequest.DIFName);
 	message.setSourceIpcProcessId(
-	                flowRequest.getFlowRequestorIPCProcessId());
+	                flowRequest.flowRequestorIpcProcessId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -588,11 +588,11 @@ unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest) {
 #endif
 
 	FlowInformation flowInformation;
-	flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
-	flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
-	flowInformation.setDifName(difInformation.get_dif_name());
-	flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
-	flowInformation.setPortId(flowRequest.getPortId());
+	flowInformation.localAppName = flowRequest.localApplicationName;
+	flowInformation.remoteAppName = flowRequest.remoteApplicationName;
+	flowInformation.difName = difInformation.dif_name_;
+	flowInformation.flowSpecification = flowRequest.flowSpecification;
+	flowInformation.portId = flowRequest.portId;
 
 	pendingFlowOperations[seqNum] = flowInformation;
 
@@ -609,7 +609,7 @@ void IPCProcess::allocateFlowResult(
 	FlowInformation flowInformation;
 	try {
 		flowInformation = getPendingFlowOperation(sequenceNumber);
-		flowInformation.setPortId(portId);
+		flowInformation.portId = portId;
 	} catch(IPCException &e){
 		throw AllocateFlowException(e.what());
 	}
@@ -625,11 +625,11 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 
 	if (result == 0) {
 		FlowInformation flowInformation;
-		flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
-		flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
-		flowInformation.setDifName(difInformation.get_dif_name());
-		flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
-		flowInformation.setPortId(flowRequest.getPortId());
+		flowInformation.localAppName = flowRequest.localApplicationName;
+		flowInformation.remoteAppName = flowRequest.remoteApplicationName;
+		flowInformation.difName = difInformation.dif_name_;
+		flowInformation.flowSpecification = flowRequest.flowSpecification;
+		flowInformation.portId = flowRequest.portId;
 
 		allocatedFlows.push_back(flowInformation);
 	}
@@ -645,7 +645,7 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
-	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
+	responseMessage.setSequenceNumber(flowRequest.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 
 	try{
@@ -666,7 +666,7 @@ bool IPCProcess::getFlowInformation(int flowPortId, FlowInformation& result) {
 
 	for (iterator = allocatedFlows.begin();
 			iterator != allocatedFlows.end(); ++iterator) {
-                if (iterator->getPortId() == flowPortId) {
+                if (iterator->portId == flowPortId) {
                         result = *iterator;
                         return true;
                 }
@@ -843,8 +843,8 @@ IPCProcess * IPCProcessFactory::create(
                                 /* FIXME: These hardwired things must disappear */
 				stringToCharArray("."+_installationPath +
 					          "/ipcp"),
-				stringToCharArray(ipcProcessName.getProcessName()),
-				stringToCharArray(ipcProcessName.getProcessInstance()),
+				stringToCharArray(ipcProcessName.processName),
+				stringToCharArray(ipcProcessName.processInstance),
 				intToCharArray(ipcProcessId),
 				intToCharArray(getNelinkPortId()),
 				0
@@ -974,11 +974,10 @@ void ApplicationManager::applicationRegistered(
 #else
 	AppRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.
-	                getApplicationRegistrationInformation().
-	                getApplicationName());
+			applicationRegistrationInformation.appName);
 	responseMessage.setDifName(difName);
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -999,9 +998,9 @@ void ApplicationManager::applicationUnregistered(
         (void)result;
 #else
 	AppUnregisterApplicationResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setApplicationName(event.applicationName);
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -1019,10 +1018,10 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent)
         (void)flowRequestEvent;
 #else
 	AppAllocateFlowRequestResultMessage responseMessage;
-	responseMessage.setPortId(flowRequestEvent.getPortId());
-	responseMessage.setSourceAppName(flowRequestEvent.getLocalApplicationName());
-	responseMessage.setDifName(flowRequestEvent.getDIFName());
-	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+	responseMessage.setPortId(flowRequestEvent.portId);
+	responseMessage.setSourceAppName(flowRequestEvent.localApplicationName);
+	responseMessage.setDifName(flowRequestEvent.DIFName);
+	responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -1074,10 +1073,10 @@ void ApplicationManager::flowDeallocated(
         (void)result;
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.getApplicationName());
-	responseMessage.setPortId(event.getPortId());
+	responseMessage.setApplicationName(event.applicationName);
+	responseMessage.setPortId(event.portId);
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);
@@ -1123,7 +1122,7 @@ void ApplicationManager::getDIFPropertiesResponse(
 	responseMessage.setResult(result);
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDIFProperties(difProperties);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try{
 		rinaManager->sendMessage(&responseMessage);

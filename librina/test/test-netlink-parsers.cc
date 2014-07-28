@@ -31,21 +31,21 @@ int testAppAllocateFlowRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("12");
-	sourceName.setEntityName("database");
-	sourceName.setEntityInstance("12");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "12";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "12";
 
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("12345");
-	destName.setEntityName("printer");
-	destName.setEntityInstance("12623456");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "12345";
+	destName.entityName = "printer";
+	destName.entityInstance = "12623456";
 
 	FlowSpecification flowSpec;
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("test.DIF");
+	difName.processName = "test.DIF";
 
 	AppAllocateFlowRequestMessage message;
 	message.setSourceAppName(sourceName);
@@ -115,14 +115,14 @@ int testAppAllocateFlowRequestResultMessage() {
 
 	ApplicationProcessNamingInformation * sourceName =
 			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	sourceName->processName = "/apps/source";
+	sourceName->processInstance = "12";
+	sourceName->entityName = "database";
+	sourceName->entityInstance = "12";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	difName->processName = "/difs/Test.DIF";
 
 	AppAllocateFlowRequestResultMessage * message =
 			new AppAllocateFlowRequestResultMessage();
@@ -197,21 +197,21 @@ int testAppAllocateFlowRequestArrivedMessage() {
 
 	ApplicationProcessNamingInformation * sourceName =
 			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	sourceName->processName = "/apps/source";
+	sourceName->processInstance = "12";
+	sourceName->entityName = "database";
+	sourceName->entityInstance = "12";
 
 	ApplicationProcessNamingInformation * destName =
 			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	destName->processName = "/apps/dest";
+	destName->processInstance = "12345";
+	destName->entityName = "printer";
+	destName->entityInstance = "12623456";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test1.DIF");
+	difName->processName = "/difs/Test1.DIF";
 
 	FlowSpecification * flowSpec = new FlowSpecification();
 
@@ -348,10 +348,10 @@ int testAppDeallocateFlowRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("15");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("13");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	AppDeallocateFlowRequestMessage message;;
 	message.setPortId(47);
@@ -407,10 +407,10 @@ int testAppDeallocateFlowResponseMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source2");
-	applicationName.setProcessInstance("11");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("9");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	AppDeallocateFlowResponseMessage message;
 	message.setResult(0);
@@ -471,10 +471,10 @@ int testAppFlowDeallocatedNotificationMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("35");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("3");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	AppFlowDeallocatedNotificationMessage message;;
 	message.setPortId(47);
@@ -537,14 +537,14 @@ int testAppRegisterApplicationRequestMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("31");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test2.DIF");
+	difName->processName = "/difs/Test2.DIF";
 
 	AppRegisterApplicationRequestMessage * message =
 			new AppRegisterApplicationRequestMessage();
@@ -552,8 +552,8 @@ int testAppRegisterApplicationRequestMessage() {
 	ApplicationRegistrationInformation appRegInfo =
 		ApplicationRegistrationInformation(
 				APPLICATION_REGISTRATION_SINGLE_DIF);
-	appRegInfo.setDIFName(*difName);
-	appRegInfo.setApplicationName(*applicationName);
+	appRegInfo.difName = *difName;
+	appRegInfo.appName = *applicationName;
 
 	message->setApplicationRegistrationInformation(appRegInfo);
 
@@ -584,22 +584,22 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Error parsing Register Application Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getApplicationRegistrationInformation().getApplicationName()
+	} else if (message->getApplicationRegistrationInformation().appName
 			!= recoveredMessage->getApplicationRegistrationInformation().
-			getApplicationName()) {
+			appName) {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getApplicationRegistrationInformation().
-			getRegistrationType() !=
+			applicationRegistrationType !=
 			recoveredMessage->getApplicationRegistrationInformation().
-			getRegistrationType()) {
+			applicationRegistrationType) {
 		std::cout << "Application Registration Type on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	}  else if (message->getApplicationRegistrationInformation().getDIFName()
+	}  else if (message->getApplicationRegistrationInformation().difName
 			!= recoveredMessage->getApplicationRegistrationInformation().
-			getDIFName()) {
+			difName) {
 		std::cout << "DIF name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
@@ -623,14 +623,14 @@ int testAppRegisterApplicationResponseMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("30");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	difName->processName = "/difs/Test.DIF";
 
 	AppRegisterApplicationResponseMessage * message =
 			new AppRegisterApplicationResponseMessage();
@@ -700,14 +700,14 @@ int testAppUnregisterApplicationRequestMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("5");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("3");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test2.DIF");
+	difName->processName = "/difs/Test2.DIF";
 
 	AppUnregisterApplicationRequestMessage * message =
 			new AppUnregisterApplicationRequestMessage();
@@ -771,10 +771,10 @@ int testAppUnregisterApplicationResponseMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("5");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("3");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	AppUnregisterApplicationResponseMessage * message =
 			new AppUnregisterApplicationResponseMessage();
@@ -834,13 +834,13 @@ int testAppGetDIFPropertiesRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("5");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("3");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test2.DIF");
+	difName.processName = "/difs/Test2.DIF";
 
 	AppGetDIFPropertiesRequestMessage message;
 	message.setDifName(difName);
@@ -1018,14 +1018,14 @@ int testIpcmRegisterApplicationRequestMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("31");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test2.DIF");
+	difName->processName = "/difs/Test2.DIF";
 
 	IpcmRegisterApplicationRequestMessage * message =
 			new IpcmRegisterApplicationRequestMessage();
@@ -1095,14 +1095,14 @@ int testIpcmRegisterApplicationResponseMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("30");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	difName->processName = "/difs/Test.DIF";
 
 	IpcmRegisterApplicationResponseMessage * message =
 			new IpcmRegisterApplicationResponseMessage();
@@ -1159,13 +1159,13 @@ int testIpcmUnregisterApplicationRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("25");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("31");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test2.DIF");
+	difName.processName = "/difs/Test2.DIF";
 
 	IpcmUnregisterApplicationRequestMessage message;
 	message.setDifName(difName);
@@ -1267,7 +1267,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation  difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 
 	IpcmAssignToDIFRequestMessage message;
 	DIFInformation difInformation;
@@ -1608,12 +1608,12 @@ int testIpcmEnrollToDIFRequestMessage() {
 
         IpcmEnrollToDIFRequestMessage message;
         ApplicationProcessNamingInformation difName;
-        difName.setProcessName("normal.DIF");
+        difName.processName = "normal.DIF";
         ApplicationProcessNamingInformation supportingDifName;
-        supportingDifName.setProcessName("100");
+        supportingDifName.processName = "100";
         ApplicationProcessNamingInformation neighborName;
-        neighborName.setProcessName("test");
-        neighborName.setProcessInstance("1");
+        neighborName.processName = "test";
+        neighborName.processInstance = "1";
         message.setDifName(difName);
         message.setSupportingDifName(supportingDifName);
         message.setNeighborName(neighborName);
@@ -1673,11 +1673,11 @@ int testIpcmEnrollToDIFResponseMessage() {
         message.setResult(-25);
         Neighbor neighbor;
         ApplicationProcessNamingInformation name;
-        name.setProcessName("test");
-        name.setProcessInstance("1");
+        name.processName = "test";
+        name.processInstance = "1";
         neighbor.set_name(name);
         ApplicationProcessNamingInformation supportingDIF;
-        supportingDIF.setProcessName("100");
+        supportingDIF.processName = "100";
         neighbor.set_supporting_dif_name(supportingDIF);
         message.addNeighbor(neighbor);
 
@@ -1733,11 +1733,11 @@ int testIpcmNeighborsModifiedNotificaiton() {
         message.setAdded(false);
         Neighbor neighbor;
         ApplicationProcessNamingInformation name;
-        name.setProcessName("test");
-        name.setProcessInstance("1");
+        name.processName = "test";
+        name.processInstance = "1";
         neighbor.set_name(name);
         ApplicationProcessNamingInformation supportingDIF;
-        supportingDIF.setProcessName("100");
+        supportingDIF.processName = "100";
         neighbor.set_supporting_dif_name(supportingDIF);
         message.addNeighbor(neighbor);
 
@@ -1791,21 +1791,21 @@ int testIpcmAllocateFlowRequestMessage() {
 
 	IpcmAllocateFlowRequestMessage message;
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("1");
-	sourceName.setEntityName("database");
-	sourceName.setEntityName("1234");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "1";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "1234";
 	message.setSourceAppName(sourceName);
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("4");
-	destName.setEntityName("server");
-	destName.setEntityName("342");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "4";
+	destName.entityName = "server";
+	destName.entityInstance = "342";
 	message.setDestAppName(destName);
 	FlowSpecification flowSpec;
 	message.setFlowSpec(flowSpec);
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 	message.setDifName(difName);
 
 	struct nl_msg* netlinkMessage;
@@ -1914,19 +1914,19 @@ int testIpcmAllocateFlowRequestArrivedMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("12");
-	sourceName.setEntityName("database");
-	sourceName.setEntityInstance("12");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "1";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "1234";
 
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("12345");
-	destName.setEntityName("printer");
-	destName.setEntityInstance("12623456");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "4";
+	destName.entityName = "server";
+	destName.entityInstance = "342";
 
 	ApplicationProcessNamingInformation difName;;
-	difName.setProcessName("/difs/Test1.DIF");
+	difName.processName = "/difs/Test1.DIF";
 
 	FlowSpecification flowSpec;
 
@@ -2200,13 +2200,13 @@ int testIpcmIPCProcessDIFResgistrationNotification() {
 
 	IpcmDIFRegistrationNotification message;
 	ApplicationProcessNamingInformation ipcProcessName;
-	ipcProcessName.setProcessName("/ipcprocesses/Barcelona/i2CAT");
-	ipcProcessName.setProcessInstance("1");
-	ipcProcessName.setEntityName("Management");
-	ipcProcessName.setProcessInstance("1234");
+	ipcProcessName.processName = "/apps/dest";
+	ipcProcessName.processInstance = "4";
+	ipcProcessName.entityName = "server";
+	ipcProcessName.entityInstance = "342";
 	message.setIpcProcessName(ipcProcessName);
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 	message.setDifName(difName);
 	message.setRegistered(true);
 
@@ -2333,14 +2333,14 @@ int testAppGetDIFPropertiesResponseMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation appName;
-	appName.setProcessName("/test/apps/rinaband");
-	appName.setProcessInstance("1");
-	appName.setEntityName("control");
-	appName.setEntityInstance("23");
+	appName.processName = "/test/apps/rinaband";
+	appName.processInstance = "1";
+	appName.entityName = "control";
+	appName.entityInstance = "23";
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 	ApplicationProcessNamingInformation difName2;
-	difName2.setProcessName("/difs/shim-dummy.DIF");
+	difName2.processName = "/difs/shim-dummy.DIF";
 
 	AppGetDIFPropertiesResponseMessage message;
 	message.setResult(0);
@@ -2394,12 +2394,12 @@ int testAppGetDIFPropertiesResponseMessage() {
 				++iterator) {
 			const DIFProperties& difProperties = *iterator;
 			if (i == 0){
-				if (difProperties.getDifName() != difName){
+				if (difProperties.DIFName != difName){
 					std::cout << "DIF name on original and recovered messages"
 							<< " are different 1\n";
 					returnValue = -1;
 					break;
-				}else if (difProperties.getMaxSduSize()!= 9000){
+				}else if (difProperties.maxSDUSize != 9000){
 					std::cout << "Max SDU size on original and recovered messages"
 							<< " are different 1\n";
 					returnValue = -1;
@@ -2408,12 +2408,12 @@ int testAppGetDIFPropertiesResponseMessage() {
 
 				i++;
 			}else if (i == 1){
-				if (difProperties.getDifName() != difName2){
+				if (difProperties.DIFName != difName2){
 					std::cout << "DIF name on original and recovered messages"
 							<< " are different 2 \n";
 					returnValue = -1;
 					break;
-				}else if (difProperties.getMaxSduSize()!= 25000){
+				}else if (difProperties.maxSDUSize != 25000){
 					std::cout << "Max SDU size on original and recovered messages"
 							<< " are different 2 \n";
 					returnValue = -1;

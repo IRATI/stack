@@ -521,7 +521,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 	int result = 0;
 
 	rina::ApplicationProcessNamingInformation appToRegister =
-			event.getApplicationRegistrationInformation().getApplicationName();
+			event.applicationRegistrationInformation.appName;
 	if (registrations_.find(appToRegister.getEncodedString())) {
 		LOG_ERR("Application % is already registered in this IPC Process",
 				appToRegister.getEncodedString().c_str());
@@ -532,10 +532,10 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 
 	rina::ApplicationRegistrationInformation * registration = new
 			rina::ApplicationRegistrationInformation(
-					event.getApplicationRegistrationInformation().getRegistrationType());
-	registration->setApplicationName(event.getApplicationRegistrationInformation().getApplicationName());
-	registration->setDIFName(event.getApplicationRegistrationInformation().getDIFName());
-	registration->setIpcProcessId(ipc_process_->get_id());
+					event.applicationRegistrationInformation.applicationRegistrationType);
+	registration->appName = event.applicationRegistrationInformation.appName;
+	registration->difName = event.applicationRegistrationInformation.difName;
+	registration->ipcProcessId = ipc_process_->get_id();
 	registrations_.put(appToRegister.getEncodedString(), registration);
 	LOG_INFO("Successfully registered application %s with IPC Process id %us",
 			appToRegister.getEncodedString().c_str(), ipc_process_->get_id());
@@ -581,21 +581,21 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 	int result = 0;
 
 	rina::ApplicationRegistrationInformation * unregisteredApp =
-			registrations_.erase(event.getApplicationName().getEncodedString());
+			registrations_.erase(event.applicationName.getEncodedString());
 
 	if (!unregisteredApp) {
 		LOG_ERR("Application %s is not registered in this IPC Process",
-				event.getApplicationName().getEncodedString().c_str());
+				event.applicationName.getEncodedString().c_str());
 		replyToIPCManagerUnregister(event, -1);
 		return;
 	}
 
 	LOG_INFO("Successfully unregistered application %s ",
-			 unregisteredApp->getApplicationName().getEncodedString().c_str());
+			 unregisteredApp->appName.getEncodedString().c_str());
 
 	result = replyToIPCManagerUnregister(event, 0);
 	if (result == -1) {
-		registrations_.put(event.getApplicationName().getEncodedString(), unregisteredApp);
+		registrations_.put(event.applicationName.getEncodedString(), unregisteredApp);
 		return;
 	}
 
@@ -605,7 +605,7 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 	try {
 		std::stringstream ss;
 		ss<<EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME;
-		ss<<EncoderConstants::SEPARATOR<< unregisteredApp->getApplicationName().getEncodedString();
+		ss<<EncoderConstants::SEPARATOR<< unregisteredApp->appName.getEncodedString();
 		rib_daemon_->deleteObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 				ss.str(), 0, &notificationPolicy);
 	} catch (Exception &e) {

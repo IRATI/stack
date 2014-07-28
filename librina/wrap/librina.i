@@ -214,7 +214,7 @@
   }
 
 %typemap(out) rina::IPCEvent *rina::IPCEventProducer::OPERATION {
-    if ($1->getType() == rina::APPLICATION_REGISTRATION_REQUEST_EVENT) {
+    if ($1->eventType == rina::APPLICATION_REGISTRATION_REQUEST_EVENT) {
     	rina::ApplicationRegistrationRequestEvent *appRegReqEvent = dynamic_cast<rina::ApplicationRegistrationRequestEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationRegistrationRequestEvent");
         if (clazz) {
@@ -225,7 +225,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT) {
+    } else if ($1->eventType == rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT) {
     	rina::ApplicationUnregistrationRequestEvent *appUnregReqEvent = dynamic_cast<rina::ApplicationUnregistrationRequestEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/ApplicationUnregistrationRequestEvent");
         if (clazz) {
@@ -236,7 +236,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::FLOW_ALLOCATION_REQUESTED_EVENT) {
+    } else if ($1->eventType == rina::FLOW_ALLOCATION_REQUESTED_EVENT) {
     	rina::FlowRequestEvent *flowReqEvent = dynamic_cast<rina::FlowRequestEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/FlowRequestEvent");
         if (clazz) {
@@ -247,7 +247,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::FLOW_DEALLOCATION_REQUESTED_EVENT) {
+    } else if ($1->eventType == rina::FLOW_DEALLOCATION_REQUESTED_EVENT) {
     	rina::FlowDeallocateRequestEvent *flowReqEvent = dynamic_cast<rina::FlowDeallocateRequestEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/FlowDeallocateRequestEvent");
         if (clazz) {
@@ -258,7 +258,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::FLOW_DEALLOCATED_EVENT) {
+    } else if ($1->eventType == rina::FLOW_DEALLOCATED_EVENT) {
     	rina::FlowDeallocatedEvent *flowReqEvent = dynamic_cast<rina::FlowDeallocatedEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/FlowDeallocatedEvent");
         if (clazz) {
@@ -269,7 +269,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::REGISTER_APPLICATION_RESPONSE_EVENT) {
+    } else if ($1->eventType == rina::REGISTER_APPLICATION_RESPONSE_EVENT) {
     	rina::RegisterApplicationResponseEvent *flowReqEvent = dynamic_cast<rina::RegisterApplicationResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/RegisterApplicationResponseEvent");
         if (clazz) {
@@ -280,7 +280,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::UNREGISTER_APPLICATION_RESPONSE_EVENT) {
+    } else if ($1->eventType == rina::UNREGISTER_APPLICATION_RESPONSE_EVENT) {
     	rina::UnregisterApplicationResponseEvent *flowReqEvent = dynamic_cast<rina::UnregisterApplicationResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/UnregisterApplicationResponseEvent");
         if (clazz) {
@@ -291,7 +291,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::ALLOCATE_FLOW_RESPONSE_EVENT) {
+    } else if ($1->eventType == rina::ALLOCATE_FLOW_RESPONSE_EVENT) {
     	rina::AllocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::AllocateFlowResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/AllocateFlowResponseEvent");
         if (clazz) {
@@ -302,7 +302,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
+    } else if ($1->eventType == rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
     	rina::AllocateFlowRequestResultEvent *flowReqEvent = dynamic_cast<rina::AllocateFlowRequestResultEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/AllocateFlowRequestResultEvent");
         if (clazz) {
@@ -313,7 +313,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::DEALLOCATE_FLOW_RESPONSE_EVENT) {
+    } else if ($1->eventType == rina::DEALLOCATE_FLOW_RESPONSE_EVENT) {
     	rina::DeallocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::DeallocateFlowResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/DeallocateFlowResponseEvent");
         if (clazz) {
@@ -324,7 +324,7 @@
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->getType() == rina::GET_DIF_PROPERTIES_RESPONSE_EVENT) {
+    } else if ($1->eventType == rina::GET_DIF_PROPERTIES_RESPONSE_EVENT) {
     	rina::GetDIFPropertiesResponseEvent *flowReqEvent = dynamic_cast<rina::GetDIFPropertiesResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/GetDIFPropertiesResponseEvent");
         if (clazz) {

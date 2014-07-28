@@ -78,10 +78,10 @@ ApplicationProcessNamingInformation &
 ApplicationProcessNamingInformation::operator=(
 		const ApplicationProcessNamingInformation & other){
 	if (this != &other){
-		processName = other.getProcessName();
-		processInstance = other.getProcessInstance();
-		entityName = other.getEntityName();
-		entityInstance = other.getEntityInstance();
+		processName = other.processName;
+		processInstance = other.processInstance;
+		entityName = other.entityName;
+		entityInstance = other.entityInstance;
 	}
 
 	return *this;
@@ -89,28 +89,28 @@ ApplicationProcessNamingInformation::operator=(
 
 bool ApplicationProcessNamingInformation::operator>(
 		const ApplicationProcessNamingInformation &other) const {
-	int aux = getProcessName().compare(other.getProcessName());
+	int aux = processName.compare(other.processName);
 	if (aux > 0) {
 		return true;
 	} else if (aux < 0) {
 		return false;
 	}
 
-	aux = getProcessInstance().compare(other.getProcessInstance());
+	aux = processInstance.compare(other.processInstance);
 	if (aux > 0) {
 		return true;
 	} else if (aux < 0) {
 		return false;
 	}
 
-	aux = getEntityName().compare(other.getEntityName());
+	aux = entityName.compare(other.entityName);
 	if (aux > 0) {
 		return true;
 	} else if (aux < 0) {
 		return false;
 	}
 
-	aux = getEntityInstance().compare(other.getEntityInstance());
+	aux = entityInstance.compare(other.entityInstance);
 	if (aux > 0) {
 		return true;
 	} else {
@@ -125,28 +125,28 @@ bool ApplicationProcessNamingInformation::operator<=(
 
 bool ApplicationProcessNamingInformation::operator<(
 		const ApplicationProcessNamingInformation &other) const {
-	int aux = getProcessName().compare(other.getProcessName());
+	int aux = processName.compare(other.processName);
 	if (aux < 0) {
 		return true;
 	} else if (aux > 0) {
 		return false;
 	}
 
-	aux = getProcessInstance().compare(other.getProcessInstance());
+	aux = processInstance.compare(other.processInstance);
 	if (aux < 0) {
 		return true;
 	} else if (aux > 0) {
 		return false;
 	}
 
-	aux = getEntityName().compare(other.getEntityName());
+	aux = entityName.compare(other.entityName);
 	if (aux < 0) {
 		return true;
 	} else if (aux > 0) {
 		return false;
 	}
 
-	aux = getEntityInstance().compare(other.getEntityInstance());
+	aux = entityInstance.compare(other.entityInstance);
 	if (aux < 0) {
 		return true;
 	} else {
@@ -157,46 +157,6 @@ bool ApplicationProcessNamingInformation::operator<(
 bool ApplicationProcessNamingInformation::operator>=(
 		const ApplicationProcessNamingInformation &other) const {
 	return !(*this < other);
-}
-
-const std::string & ApplicationProcessNamingInformation::getEntityInstance()
-		const {
-	return entityInstance;
-}
-
-void ApplicationProcessNamingInformation::setEntityInstance(
-		const std::string & entityInstance) {
-	this->entityInstance = entityInstance;
-}
-
-const std::string & ApplicationProcessNamingInformation::getEntityName()
-		const {
-	return entityName;
-}
-
-void ApplicationProcessNamingInformation::setEntityName(
-		const std::string & entityName) {
-	this->entityName = entityName;
-}
-
-const std::string & ApplicationProcessNamingInformation::getProcessInstance()
-		const {
-	return processInstance;
-}
-
-void ApplicationProcessNamingInformation::setProcessInstance(
-		const std::string & processInstance) {
-	this->processInstance = processInstance;
-}
-
-const std::string & ApplicationProcessNamingInformation::getProcessName()
-		const {
-	return processName;
-}
-
-void ApplicationProcessNamingInformation::setProcessName(
-		const std::string & processName) {
-	this->processName = processName;
 }
 
 std::string ApplicationProcessNamingInformation::
@@ -234,98 +194,6 @@ FlowSpecification::FlowSpecification() {
 	maxSDUsize = 0;
 }
 
-unsigned int FlowSpecification::getAverageBandwidth() const {
-	return averageBandwidth;
-}
-
-void FlowSpecification::setAverageBandwidth(unsigned int averageBandwidth) {
-	this->averageBandwidth = averageBandwidth;
-}
-
-unsigned int FlowSpecification::getAverageSduBandwidth() const {
-	return averageSDUBandwidth;
-}
-
-void FlowSpecification::setAverageSduBandwidth(
-		unsigned int averageSduBandwidth) {
-	averageSDUBandwidth = averageSduBandwidth;
-}
-
-unsigned int FlowSpecification::getDelay() const {
-	return delay;
-}
-
-void FlowSpecification::setDelay(unsigned int delay) {
-	this->delay = delay;
-}
-
-unsigned int FlowSpecification::getJitter() const {
-	return jitter;
-}
-
-void FlowSpecification::setJitter(unsigned int jitter) {
-	this->jitter = jitter;
-}
-
-int FlowSpecification::getMaxAllowableGap() const {
-	return maxAllowableGap;
-}
-
-void FlowSpecification::setMaxAllowableGap(int maxAllowableGap) {
-	this->maxAllowableGap = maxAllowableGap;
-}
-
-unsigned int FlowSpecification::getMaxSDUSize() const {
-	return maxSDUsize;
-}
-
-void FlowSpecification::setMaxSDUSize(unsigned int maxSduSize) {
-	maxSDUsize = maxSduSize;
-}
-
-bool FlowSpecification::isOrderedDelivery() const {
-	return orderedDelivery;
-}
-
-void FlowSpecification::setOrderedDelivery(bool orderedDelivery) {
-	this->orderedDelivery = orderedDelivery;
-}
-
-bool FlowSpecification::isPartialDelivery() const {
-	return partialDelivery;
-}
-
-void FlowSpecification::setPartialDelivery(bool partialDelivery) {
-	this->partialDelivery = partialDelivery;
-}
-
-unsigned int FlowSpecification::getPeakBandwidthDuration() const {
-	return peakBandwidthDuration;
-}
-
-void FlowSpecification::setPeakBandwidthDuration(
-		unsigned int peakBandwidthDuration) {
-	this->peakBandwidthDuration = peakBandwidthDuration;
-}
-
-unsigned int FlowSpecification::getPeakSduBandwidthDuration() const {
-	return peakSDUBandwidthDuration;
-}
-
-void FlowSpecification::setPeakSduBandwidthDuration(
-		unsigned int peakSduBandwidthDuration) {
-	peakSDUBandwidthDuration = peakSduBandwidthDuration;
-}
-
-double FlowSpecification::getUndetectedBitErrorRate() const {
-	return undetectedBitErrorRate;
-}
-
-void FlowSpecification::setUndetectedBitErrorRate(
-		double undetectedBitErrorRate) {
-	this->undetectedBitErrorRate = undetectedBitErrorRate;
-}
-
 const std::string FlowSpecification::toString() {
         std::stringstream ss;
         ss<<"Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;
@@ -341,47 +209,47 @@ const std::string FlowSpecification::toString() {
 }
 
 bool FlowSpecification::operator==(const FlowSpecification &other) const {
-	if (averageBandwidth != other.getAverageBandwidth()) {
+	if (averageBandwidth != other.averageBandwidth) {
 		return false;
 	}
 
-	if (averageSDUBandwidth != other.getAverageSduBandwidth()) {
+	if (averageSDUBandwidth != other.averageSDUBandwidth) {
 		return false;
 	}
 
-	if (peakBandwidthDuration != other.getPeakBandwidthDuration()) {
+	if (peakBandwidthDuration != other.peakBandwidthDuration) {
 		return false;
 	}
 
-	if (peakSDUBandwidthDuration != other.getPeakSduBandwidthDuration()) {
+	if (peakSDUBandwidthDuration != other.peakSDUBandwidthDuration) {
 		return false;
 	}
 
-	if (undetectedBitErrorRate != other.getUndetectedBitErrorRate()) {
+	if (undetectedBitErrorRate != other.undetectedBitErrorRate) {
 		return false;
 	}
 
-	if (partialDelivery != other.isPartialDelivery()) {
+	if (partialDelivery != other.partialDelivery) {
 		return false;
 	}
 
-	if (orderedDelivery != other.isOrderedDelivery()) {
+	if (orderedDelivery != other.orderedDelivery) {
 		return false;
 	}
 
-	if (maxAllowableGap != other.getMaxAllowableGap()) {
+	if (maxAllowableGap != other.maxAllowableGap) {
 		return false;
 	}
 
-	if (delay != other.getDelay()) {
+	if (delay != other.delay) {
 		return false;
 	}
 
-	if (jitter != other.getJitter()) {
+	if (jitter != other.jitter) {
 		return false;
 	}
 
-	if (maxSDUsize != other.getMaxSDUSize()) {
+	if (maxSDUsize != other.maxSDUsize) {
 		return false;
 	}
 
@@ -395,7 +263,7 @@ bool FlowSpecification::operator!=(const FlowSpecification &other) const {
 /* CLASS FLOW INFORMATION */
 bool FlowInformation::operator==(
 		const FlowInformation &other) const {
-	return getPortId() == other.getPortId();
+	return portId == other.portId;
 }
 
 bool FlowInformation::operator!=(
@@ -403,59 +271,12 @@ bool FlowInformation::operator!=(
 	return !(*this == other);
 }
 
-const ApplicationProcessNamingInformation&
-FlowInformation::getDifName() const {
-	return difName;
-}
-
-void FlowInformation::setDifName(
-		const ApplicationProcessNamingInformation& difName) {
-	this->difName = difName;
-}
-
-const FlowSpecification& FlowInformation::getFlowSpecification() const {
-	return flowSpecification;
-}
-
-void FlowInformation::setFlowSpecification(
-		const FlowSpecification& flowSpecification) {
-	this->flowSpecification = flowSpecification;
-}
-
-const ApplicationProcessNamingInformation&
-FlowInformation::getLocalAppName() const {
-	return localAppName;
-}
-
-void FlowInformation::setLocalAppName(
-		const ApplicationProcessNamingInformation& localAppName) {
-	this->localAppName = localAppName;
-}
-
-int FlowInformation::getPortId() const {
-	return portId;
-}
-
-void FlowInformation::setPortId(int portId) {
-	this->portId = portId;
-}
-
-const ApplicationProcessNamingInformation&
-FlowInformation::getRemoteAppName() const {
-	return remoteAppName;
-}
-
-void FlowInformation::setRemoteAppName(
-		const ApplicationProcessNamingInformation& remoteAppName) {
-	this->remoteAppName = remoteAppName;
-}
-
 const std::string FlowInformation::toString(){
         std::stringstream ss;
 
         ss<<"Local app name: "<<localAppName.toString()<<std::endl;
         ss<<"Remote app name: "<<remoteAppName.toString()<<std::endl;
-        ss<<"DIF name: "<<difName.getProcessName();
+        ss<<"DIF name: "<<difName.processName;
         ss<<"; Port-id: "<<portId<<std::endl;
         ss<<"Flow specification: "<<flowSpecification.toString();
 
@@ -469,14 +290,6 @@ DIFProperties::DIFProperties(
 	this->maxSDUSize = maxSDUSize;
 }
 
-const ApplicationProcessNamingInformation& DIFProperties::getDifName() const {
-	return this->DIFName;
-}
-
-unsigned int DIFProperties::getMaxSduSize() const {
-	return maxSDUSize;
-}
-
 /* CLASS BASE RESPONSE EVENT */
 BaseResponseEvent::BaseResponseEvent(
                         int result,
@@ -485,11 +298,6 @@ BaseResponseEvent::BaseResponseEvent(
                               IPCEvent(eventType,
                                              sequenceNumber){
         this->result = result;
-}
-
-
-int BaseResponseEvent::getResult() const {
-        return result;
 }
 
 /* CLASS FLOW REQUEST EVENT */
@@ -538,50 +346,6 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->ipcProcessId = ipcProcessId;
 }
 
-void FlowRequestEvent::setPortId(int portId){
-	this->portId = portId;
-}
-
-void FlowRequestEvent::setDIFName(
-		const ApplicationProcessNamingInformation& difName){
-	this->DIFName = difName;
-}
-
-int FlowRequestEvent::getPortId() const {
-	return portId;
-}
-
-bool FlowRequestEvent::isLocalRequest() const{
-	return localRequest;
-}
-
-const FlowSpecification& FlowRequestEvent::getFlowSpecification() const {
-	return flowSpecification;
-}
-
-const ApplicationProcessNamingInformation&
-	FlowRequestEvent::getDIFName() const {
-	return DIFName;
-}
-
-const ApplicationProcessNamingInformation&
-	FlowRequestEvent::getLocalApplicationName() const {
-	return localApplicationName;
-}
-
-const ApplicationProcessNamingInformation&
-	FlowRequestEvent::getRemoteApplicationName() const {
-	return remoteApplicationName;
-}
-
-int FlowRequestEvent::getFlowRequestorIPCProcessId() const {
-        return flowRequestorIpcProcessId;
-}
-
-unsigned short FlowRequestEvent::getIPCProcessId() const {
-        return ipcProcessId;
-}
-
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
 FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& appName,
@@ -599,29 +363,12 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 	this->portId = portId;
 }
 
-int FlowDeallocateRequestEvent::getPortId() const{
-	return portId;
-}
-
-const ApplicationProcessNamingInformation&
-	FlowDeallocateRequestEvent::getApplicationName() const{
-	return applicationName;
-}
-
 /* CLASS FLOW DEALLOCATED EVENT */
 FlowDeallocatedEvent::FlowDeallocatedEvent(
 		int portId, int code) :
 				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
 	this->portId = portId;
 	this->code = code;
-}
-
-int FlowDeallocatedEvent::getPortId() const {
-	return portId;
-}
-
-int FlowDeallocatedEvent::getCode() const{
-	return code;
 }
 
 /* CLASS APPLICATION REGISTRATION INFORMATION */
@@ -636,45 +383,11 @@ ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 	ipcProcessId = 0;
 }
 
-ApplicationRegistrationType
-ApplicationRegistrationInformation::getRegistrationType() const{
-	return applicationRegistrationType;
-}
-
-const ApplicationProcessNamingInformation &
-ApplicationRegistrationInformation::getDIFName() const{
-	return difName;
-}
-
-void ApplicationRegistrationInformation::setDIFName(
-		const ApplicationProcessNamingInformation& difName){
-	this->difName = difName;
-}
-
-const ApplicationProcessNamingInformation&
-        ApplicationRegistrationInformation::getApplicationName() const {
-        return appName;
-}
-
-void ApplicationRegistrationInformation::setApplicationName(
-                const ApplicationProcessNamingInformation& appName) {
-        this->appName = appName;
-}
-
-unsigned short ApplicationRegistrationInformation::getIpcProcessId() const {
-        return ipcProcessId;
-}
-
-void ApplicationRegistrationInformation::setIpcProcessId(
-                unsigned short ipcProcessId) {
-        this->ipcProcessId = ipcProcessId;
-}
-
 const std::string ApplicationRegistrationInformation::toString(){
         std::stringstream ss;
 
         ss<<"Application name: "<<appName.toString()<<std::endl;
-        ss<<"DIF name: "<<difName.getProcessName();
+        ss<<"DIF name: "<<difName.processName;
         ss<<"; IPC Process id: "<<ipcProcessId;
 
         return ss.str();
@@ -688,12 +401,6 @@ ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
 				sequenceNumber) {
 	this->applicationRegistrationInformation =
 			applicationRegistrationInformation;
-}
-
-const ApplicationRegistrationInformation&
-ApplicationRegistrationRequestEvent::getApplicationRegistrationInformation()
-const {
-	return applicationRegistrationInformation;
 }
 
 /* CLASS BASE APPLICATION REGISTRATION EVENT */
@@ -713,16 +420,6 @@ BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
                         unsigned int sequenceNumber):
                                 IPCEvent(eventType, sequenceNumber) {
         this->applicationName = appName;
-}
-
-const ApplicationProcessNamingInformation&
-BaseApplicationRegistrationEvent::getApplicationName() const {
-        return applicationName;
-}
-
-const ApplicationProcessNamingInformation&
-BaseApplicationRegistrationEvent::getDIFName() const {
-        return DIFName;
 }
 
 /* CLASS APPLICATION UNREGISTRATION REQUEST EVENT */
@@ -762,10 +459,6 @@ BaseApplicationRegistrationResponseEvent::
         this->result = result;
 }
 
-int BaseApplicationRegistrationResponseEvent::getResult() const{
-        return result;
-}
-
 /* CLASS REGISTER APPLICATION RESPONSE EVENT */
 RegisterApplicationResponseEvent::RegisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
@@ -803,14 +496,6 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
 }
 
-bool AllocateFlowResponseEvent::isNotifySource() const {
-        return notifySource;
-}
-
-int AllocateFlowResponseEvent::getFlowAcceptorIpcProcessId() const {
-        return flowAcceptorIpcProcessId;
-}
-
 /* CLASS OS PROCESS FINALIZED EVENT */
 OSProcessFinalizedEvent::OSProcessFinalizedEvent(
 		const ApplicationProcessNamingInformation& appName,
@@ -827,16 +512,16 @@ OSProcessFinalizedEvent::OSProcessFinalizedEvent(
 /* Auxiliar function called in case of using the stubbed version of the API */
 IPCEvent * getIPCEvent(){
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("12");
-	sourceName.setEntityName("database");
-	sourceName.setEntityInstance("12");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "12";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "12";
 
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("12345");
-	destName.setEntityName("printer");
-	destName.setEntityInstance("12623456");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "12345";
+	destName.entityName = "printer";
+	destName.entityInstance = "12623456";
 
 	FlowSpecification flowSpec;
 
@@ -899,8 +584,8 @@ Parameter::Parameter(const std::string & name, const std::string & value){
 }
 
 bool Parameter::operator==(const Parameter &other) const {
-	if (this->name.compare(other.getName()) == 0 &&
-			this->value.compare(other.getValue()) == 0)
+	if (this->name.compare(other.name) == 0 &&
+			this->value.compare(other.value) == 0)
 		return true;
 
 	return false;
@@ -908,22 +593,6 @@ bool Parameter::operator==(const Parameter &other) const {
 
 bool Parameter::operator!=(const Parameter &other) const {
 	return !(*this == other);
-}
-
-const std::string& Parameter::getName() const {
-	return name;
-}
-
-void Parameter::setName(const std::string& name) {
-	this->name = name;
-}
-
-const std::string& Parameter::getValue() const {
-	return value;
-}
-
-void Parameter::setValue(const std::string& value) {
-	this->value = value;
 }
 
 // CLASS SerializedMessage

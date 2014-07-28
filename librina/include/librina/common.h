@@ -69,16 +69,7 @@ public:
 	bool operator<=(const ApplicationProcessNamingInformation &other) const;
 	bool operator<(const ApplicationProcessNamingInformation &other) const;
 	bool operator>=(const ApplicationProcessNamingInformation &other) const;
-#ifndef SWIG
-	const std::string& getEntityInstance() const;
-	void setEntityInstance(const std::string& entityInstance);
-	const std::string& getEntityName() const;
-	void setEntityName(const std::string& entityName);
-	const std::string& getProcessInstance() const;
-	void setProcessInstance(const std::string& processInstance);
-	const std::string& getProcessName() const;
-	void setProcessName(const std::string& processName);
-#endif
+
 	std::string getProcessNamePlusInstance();
 	const std::string getEncodedString() const;
 	const std::string toString() const;
@@ -167,30 +158,6 @@ public:
 	FlowSpecification();
 	bool operator==(const FlowSpecification &other) const;
 	bool operator!=(const FlowSpecification &other) const;
-#ifndef SWIG
-	unsigned int getAverageBandwidth() const;
-	void setAverageBandwidth(unsigned int averageBandwidth);
-	unsigned int getAverageSduBandwidth() const;
-	void setAverageSduBandwidth(unsigned int averageSduBandwidth);
-	unsigned int getDelay() const;
-	void setDelay(unsigned int delay);
-	unsigned int getJitter() const;
-	void setJitter(unsigned int jitter);
-	int getMaxAllowableGap() const;
-	void setMaxAllowableGap(int maxAllowableGap);
-	unsigned int getMaxSDUSize() const;
-	void setMaxSDUSize(unsigned int maxSduSize);
-	bool isOrderedDelivery() const;
-	void setOrderedDelivery(bool orderedDelivery);
-	bool isPartialDelivery() const;
-	void setPartialDelivery(bool partialDelivery);
-	unsigned int getPeakBandwidthDuration() const;
-	void setPeakBandwidthDuration(unsigned int peakBandwidthDuration);
-	unsigned int getPeakSduBandwidthDuration() const;
-	void setPeakSduBandwidthDuration(unsigned int peakSduBandwidthDuration);
-	double getUndetectedBitErrorRate() const;
-	void setUndetectedBitErrorRate(double undetectedBitErrorRate);
-#endif
 	const std::string toString();
 };
 
@@ -216,20 +183,6 @@ public:
 
 	bool operator==(const FlowInformation &other) const;
 	bool operator!=(const FlowInformation &other) const;
-#ifndef SWIG
-	const ApplicationProcessNamingInformation& getDifName() const;
-	void setDifName(const ApplicationProcessNamingInformation& difName);
-	const FlowSpecification& getFlowSpecification() const;
-	void setFlowSpecification(const FlowSpecification& flowSpecification);
-	const ApplicationProcessNamingInformation& getLocalAppName() const;
-	void setLocalAppName(
-			const ApplicationProcessNamingInformation& localAppName);
-	int getPortId() const;
-	void setPortId(int portId);
-	const ApplicationProcessNamingInformation& getRemoteAppName() const;
-	void setRemoteAppName(
-			const ApplicationProcessNamingInformation& remoteAppName);
-#endif
 	const std::string toString();
 };
 
@@ -251,10 +204,6 @@ public:
 	DIFProperties();
 	DIFProperties(const ApplicationProcessNamingInformation& DIFName,
 			int maxSDUSize);
-#ifndef SWIG
-	const ApplicationProcessNamingInformation& getDifName() const;
-	unsigned int getMaxSduSize() const;
-#endif
 };
 
 /**
@@ -325,15 +274,6 @@ public:
 		this->eventType = eventType;
 		this->sequenceNumber = sequenceNumber;
 	}
-#ifndef SWIG
-	IPCEventType getType() const {
-		return eventType;
-	}
-
-	unsigned int getSequenceNumber() const{
-		return sequenceNumber;
-	}
-#endif
 };
 
 class BaseResponseEvent: public IPCEvent {
@@ -345,9 +285,6 @@ public:
                         int result,
                         IPCEventType eventType,
                         unsigned int sequenceNumber);
-#ifndef SWIG
-        int getResult() const;
-#endif
 };
 
 /**
@@ -394,17 +331,6 @@ public:
 			const ApplicationProcessNamingInformation& DIFName,
 			unsigned short ipcProcessId,
 			unsigned int sequenceNumber);
-#ifndef SWIG
-	int getPortId() const;
-	const FlowSpecification& getFlowSpecification() const;
-	void setPortId(int portId);
-	void setDIFName(const ApplicationProcessNamingInformation& difName);
-	const ApplicationProcessNamingInformation& getDIFName() const;
-	const ApplicationProcessNamingInformation& getLocalApplicationName() const;
-	const ApplicationProcessNamingInformation& getRemoteApplicationName() const;
-	int getFlowRequestorIPCProcessId() const;
-	unsigned short getIPCProcessId() const;
-#endif
 	bool isLocalRequest() const;
 };
 
@@ -425,10 +351,6 @@ public:
 			unsigned int sequenceNumber);
 	FlowDeallocateRequestEvent(int portId,
 				unsigned int sequenceNumber);
-#ifndef SWIG
-	int getPortId() const;
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-#endif
 };
 
 /**
@@ -444,11 +366,6 @@ public:
 	int code;
 
 	FlowDeallocatedEvent(int portId, int code);
-#ifndef SWIG
-	int getPortId() const;
-	int getCode() const;
-	const ApplicationProcessNamingInformation getDIFName() const;
-#endif
 };
 
 /**
@@ -486,17 +403,7 @@ public:
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType);
-#ifndef SWIG
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	void setApplicationName(
-	                const ApplicationProcessNamingInformation& appName);
-	ApplicationRegistrationType getRegistrationType() const;
-	const ApplicationProcessNamingInformation& getDIFName() const;
-	void setDIFName(const ApplicationProcessNamingInformation& difName);
-        unsigned short getIpcProcessId() const;
-        void setIpcProcessId(unsigned short ipcProcessId);
-#endif
-        const std::string toString();
+    const std::string toString();
 };
 
 /**
@@ -512,10 +419,6 @@ public:
 	ApplicationRegistrationRequestEvent(
 		const ApplicationRegistrationInformation&
 		applicationRegistrationInformation, unsigned int sequenceNumber);
-#ifndef SWIG
-	const ApplicationRegistrationInformation&
-		getApplicationRegistrationInformation() const;
-#endif
 };
 
 class BaseApplicationRegistrationEvent: public IPCEvent {
@@ -536,10 +439,6 @@ public:
                         const ApplicationProcessNamingInformation& appName,
                         IPCEventType eventType,
                         unsigned int sequenceNumber);
-#ifndef SWIG
-        const ApplicationProcessNamingInformation& getApplicationName() const;
-        const ApplicationProcessNamingInformation& getDIFName() const;
-#endif
 };
 
 /**
@@ -574,9 +473,6 @@ public:
                         int result,
                         IPCEventType eventType,
                         unsigned int sequenceNumber);
-#ifndef SWIG
-        int getResult() const;
-#endif
 };
 
 /**
@@ -622,10 +518,6 @@ public:
                         bool notifysource,
                         int flowAcceptorIpcProcessId,
                         unsigned int sequenceNumber);
-#ifndef SWIG
-        bool isNotifySource() const;
-        int getFlowAcceptorIpcProcessId() const;
-#endif
 };
 
 /**
@@ -649,10 +541,6 @@ public:
 
 	OSProcessFinalizedEvent(const ApplicationProcessNamingInformation& appName,
 			unsigned int ipcProcessId, unsigned int sequenceNumber);
-#ifndef SWIG
-	const ApplicationProcessNamingInformation& getApplicationName() const;
-	unsigned int getIPCProcessId() const;
-#endif
 };
 
 /**
@@ -700,12 +588,6 @@ public:
         Parameter(const std::string & name, const std::string & value);
         bool operator==(const Parameter &other) const;
         bool operator!=(const Parameter &other) const;
-#ifndef SWIG
-        const std::string& getName() const;
-        void setName(const std::string& name);
-        const std::string& getValue() const;
-        void setValue(const std::string& value);
-#endif
 };
 
 /**

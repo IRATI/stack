@@ -347,12 +347,12 @@ void ExtendedIPCManager::appUnregistered(
         }
 
         std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-        for (iterator = applicationRegistration->getDIFNames() .begin();
-                        iterator != applicationRegistration->getDIFNames().end();
+        for (iterator = applicationRegistration->DIFNames.begin();
+                        iterator != applicationRegistration->DIFNames.end();
                         ++iterator) {
                 if (*iterator == DIFName) {
                         applicationRegistration->removeDIFName(DIFName);
-                        if (applicationRegistration->getDIFNames().size() == 0) {
+                        if (applicationRegistration->DIFNames.size() == 0) {
                                 removeApplicationRegistration(appName);
                         }
 
@@ -373,7 +373,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 #else
 	IpcmAssignToDIFResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
@@ -402,7 +402,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDIFRequestEvent& even
         responseMessage.setDIFInformation(difInformation);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
-        responseMessage.setSequenceNumber(event.getSequenceNumber());
+        responseMessage.setSequenceNumber(event.sequenceNumber);
         responseMessage.setResponseMessage(true);
         try {
                 rinaManager->sendMessage(&responseMessage);
@@ -446,7 +446,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 #else
 	IpcmRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
@@ -468,7 +468,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 #else
 	IpcmUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
@@ -491,8 +491,8 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 	IpcmAllocateFlowRequestResultMessage responseMessage;
 
 	responseMessage.setResult(result);
-	responseMessage.setPortId(event.getPortId());
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setPortId(event.portId);
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
@@ -576,7 +576,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 	IpcmDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
-	responseMessage.setSequenceNumber(flowDeallocateEvent.getSequenceNumber());
+	responseMessage.setSequenceNumber(flowDeallocateEvent.sequenceNumber);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -622,7 +622,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	IpcmDIFQueryRIBResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setRIBObjects(ribObjects);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);

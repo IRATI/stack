@@ -144,7 +144,7 @@ public:
 		operationCalled(objectClass, objectName, objectValue);
 	}
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event){
-		LOG_DBG("Event: %d", event.getType());
+		LOG_DBG("Event: %d", event.eventType);
 	}
 	std::list<rinad::BaseRIBObject *> getRIBObjects() {
 		std::list<rinad::BaseRIBObject *> result;
@@ -213,7 +213,7 @@ public:
 		return 0;
 	}
 	unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name) {
-		if (name.getProcessName().compare("") == 0) {
+		if (name.processName.compare("") == 0) {
 			throw Exception();
 		}
 		return 0;
@@ -715,7 +715,7 @@ int flowdeAllocated_DeAllocateFlow_True() {
 	pduftgPolicy.set_dif_configuration(difConfiguration);
 
 	rina::FlowInformation flowInfo;
-	flowInfo.setPortId(3);
+	flowInfo.portId = 3;
 	rinad::NMinusOneFlowAllocatedEvent event = rinad::NMinusOneFlowAllocatedEvent(4, flowInfo);
 	pduftgPolicy.eventHappened(&event);
 	if (pduftgPolicy.get_allocated_flows().size() != 1) {

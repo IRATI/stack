@@ -61,13 +61,13 @@ bool checkRegisteredApplications(unsigned int expectedApps) {
         for (unsigned int i = 0; i < registeredApplications.size(); i++) {
                 applicationRegistration = registeredApplications.at(i);
                 std::cout << "Application "
-                                << applicationRegistration->getApplicationName()
-                                                .getProcessName() << " registered at DIFs: ";
+                                << applicationRegistration->applicationName
+                                                .processName << " registered at DIFs: ";
                 std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-                for (iterator = applicationRegistration->getDIFNames().begin();
-                                iterator != applicationRegistration->getDIFNames().end();
+                for (iterator = applicationRegistration->DIFNames.begin();
+                                iterator != applicationRegistration->DIFNames.end();
                                 ++iterator) {
-                        std::cout << iterator->getProcessName() << ", ";
+                        std::cout << iterator->processName << ", ";
                 }
                 std::cout << "\n";
         }
@@ -92,7 +92,7 @@ int main() {
 
 	Flow * flow = ipcManager->commitPendingFlow(seqNumber, 23, difName);
 	std::cout << "Flow allocated, portId is " << flow->getPortId()
-			<< "; DIF name is: " << flow->getDIFName().getProcessName()
+			<< "; DIF name is: " << flow->getDIFName().processName
 			<< "\n";
 
 	/* TEST WRITE SDU */
@@ -104,7 +104,7 @@ int main() {
 			true, sourceName, destinationName, difName, 23, 234);
 	Flow * flow2 = ipcManager->allocateFlowResponse(flowRequestEvent, 0, true);
 	std::cout << "Accepted flow allocation, portId is " << flow2->getPortId()
-			<< "; DIF name is: " << flow2->getDIFName().getProcessName()
+			<< "; DIF name is: " << flow2->getDIFName().processName
 			<< "\n";
 
 	/* TEST READ SDU */
@@ -150,8 +150,8 @@ int main() {
 	ApplicationRegistrationInformation info =
 			 ApplicationRegistrationInformation(
 					APPLICATION_REGISTRATION_SINGLE_DIF);
-	info.setDIFName(difName);
-	info.setApplicationName(sourceName);
+	info.difName = difName;
+	info.appName = sourceName;
 	seqNumber = ipcManager->requestApplicationRegistration(info);
 	ipcManager->commitPendingResitration(seqNumber, difName);
 	if (!checkRegisteredApplications(1)) {

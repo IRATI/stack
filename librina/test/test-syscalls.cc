@@ -60,8 +60,8 @@ int main() {
 	//Create an IPC Process
 	ApplicationProcessNamingInformation * ipcProcessName =
 			new ApplicationProcessNamingInformation();
-	ipcProcessName->setProcessName("/ipcprocesses/Barcelona/i2CAT");
-	ipcProcessName->setProcessInstance("1");
+	ipcProcessName->processName = "/ipcprocesses/Barcelona/i2CAT";
+	ipcProcessName->processInstance = "1";
 	result = syscallCreateIPCProcess(
 			*ipcProcessName, 1, "shim-dummy");
 	std::cout<<"Called IPC Process create system call with result "

@@ -230,7 +230,7 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}else{
 			putAPNametoNetlinkPortIdMapping(
 			        specificMessage->getApplicationRegistrationInformation().
-			                getApplicationName(),
+			                appName,
 			        specificMessage->getSourcePortId(),
 				specificMessage->getSourceIpcProcessId());
 		}
@@ -444,8 +444,8 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			if (event) {
 				eventsQueue->put(event);
 				LOG_DBG("Added event of type %d and sequence number %u to events queue",
-				                (int)event->getType(),
-				                event->getSequenceNumber());
+				                (int)event->eventType,
+				                event->sequenceNumber);
 			}
 
 			delete message;
@@ -455,8 +455,8 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			if (event) {
 			        eventsQueue->put(event);
 			        LOG_DBG("Added event of type %d and sequence number %u to events queue",
-			                        (int)event->getType(),
-			                        event->getSequenceNumber());
+			                        (int)event->eventType,
+			                        event->sequenceNumber);
 			} else
 			        LOG_WARN("Event is null for message type %d",
 			                        incomingMessage->getOperationCode());

@@ -280,7 +280,7 @@ void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent * event) {
 
 	try {
 		portId = rina::extendedIPCManager->allocatePortId(
-				event->getLocalApplicationName());
+				event->localApplicationName);
 		LOG_DBG("Got assigned port-id %d", portId);
 	} catch (Exception &e) {
 		LOG_ERR(
@@ -289,7 +289,7 @@ void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent * event) {
 		replyToIPCManager(*event, -1);
 	}
 
-	event->setPortId(portId);
+	event->portId = portId;
 	flowAllocatorInstance = new FlowAllocatorInstance(ipc_process_, this,
 			cdap_session_manager_, portId);
 	flow_allocator_instances_.put(portId, flowAllocatorInstance);
@@ -331,21 +331,21 @@ void FlowAllocator::submitAllocateResponse(
 
 	LOG_DBG(
 			"Local application invoked allocate response with seq num %ud and result %d, ",
-			event.getSequenceNumber(), event.getResult());
+			event.sequenceNumber, event.result);
 
 	std::list<IFlowAllocatorInstance *> fais =
 			flow_allocator_instances_.getEntries();
 	std::list<IFlowAllocatorInstance *>::iterator iterator;
 	for (iterator = fais.begin(); iterator != fais.end(); ++iterator) {
 		if ((*iterator)->get_allocate_response_message_handle()
-				== event.getSequenceNumber()) {
+				== event.sequenceNumber) {
 			flowAllocatorInstance = *iterator;
 			flowAllocatorInstance->submitAllocateResponse(event);
 			return;
 		}
 	}
 
-	LOG_ERR("Could not find FAI with handle %ud", event.getSequenceNumber());
+	LOG_ERR("Could not find FAI with handle %ud", event.sequenceNumber);
 }
 
 void FlowAllocator::processCreateConnectionResultEvent(
@@ -390,15 +390,15 @@ void FlowAllocator::submitDeallocate(
 		const rina::FlowDeallocateRequestEvent& event) {
 	IFlowAllocatorInstance * flowAllocatorInstance;
 
-	flowAllocatorInstance = flow_allocator_instances_.find(event.getPortId());
+	flowAllocatorInstance = flow_allocator_instances_.find(event.portId);
 	if (!flowAllocatorInstance) {
-		LOG_ERR("Problems looking for FAI at portId %d", event.getPortId());
+		LOG_ERR("Problems looking for FAI at portId %d", event.portId);
 		try {
-			rina::extendedIPCManager->deallocatePortId(event.getPortId());
+			rina::extendedIPCManager->deallocatePortId(event.portId);
 		} catch (Exception &e) {
 			LOG_ERR(
 					"Problems requesting IPC Manager to deallocate port-id %d: %s",
-					event.getPortId(), e.what());
+					event.portId, e.what());
 		}
 
 		try {
@@ -430,27 +430,27 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 	Flow* flow;
 
 	flow = new Flow();
-	flow->destination_naming_info_ = event.getRemoteApplicationName();
-	flow->source_naming_info_ = event.getLocalApplicationName();
+	flow->destination_naming_info_ = event.remoteApplicationName;
+	flow->source_naming_info_ = event.localApplicationName;
 	flow->hop_count_ = 3;
 	flow->max_create_flow_retries_ = 1;
 	flow->source_ = true;
 	flow->state_ = Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
-	rina::QoSCube * qosCube = selectQoSCube(event.getFlowSpecification(),
+	rina::QoSCube * qosCube = selectQoSCube(event.flowSpecification,
 			qosCubes);
 	LOG_DBG("Selected qos cube with name %s and policies: %s",
 			qosCube->get_name().c_str());
 
 	rina::Connection * connection = new rina::Connection();
 	connection->setQosId(1);
-	connection->setFlowUserIpcProcessId(event.getFlowRequestorIPCProcessId());
+	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
 	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
 			qosCube->get_efcp_policies());
 	connectionPolicies.set_in_order_delivery(qosCube->is_ordered_delivery());
 	connectionPolicies.set_partial_delivery(qosCube->is_partial_delivery());
-	if (qosCube->get_max_allowable_gap() < 0) {
+	if (event.flowSpecification.maxAllowableGap < 0) {
 		connectionPolicies.set_max_sdu_gap(INT_MAX);
 	} else {
 		connectionPolicies.set_max_sdu_gap(qosCube->get_max_allowable_gap());
@@ -460,7 +460,7 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 
 	flow->connections_ = connections;
 	flow->current_connection_index_ = 0;
-	flow->flow_specification_ = event.getFlowSpecification();
+	flow->flow_specification_ = event.flowSpecification;
 
 	return flow;
 }
@@ -468,7 +468,7 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
 		const rina::FlowSpecification& flowSpec,
 		const std::list<rina::QoSCube*>& qosCubes) {
-	if (flowSpec.getMaxAllowableGap() < 0) {
+	if (flowSpec.maxAllowableGap < 0) {
 		return qosCubes.front();
 	}
 
@@ -477,7 +477,7 @@ rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
 	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
 		cube = *iterator;
 		if (cube->get_efcp_policies().is_dtcp_present()) {
-			if (flowSpec.getMaxAllowableGap() >= 0 &&
+			if (flowSpec.maxAllowableGap >= 0 &&
 					cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
 				return cube;
 			}
@@ -589,14 +589,14 @@ void FlowAllocatorInstance::submitAllocateRequest(
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(
-			event.getRemoteApplicationName());
+			event.remoteApplicationName);
 	LOG_DBG("The directory forwarding table returned address %ud",
                 destinationAddress);
 	flow_->destination_address_ = destinationAddress;
 	if (destinationAddress == 0){
 		std::stringstream ss;
 		ss << "Could not find entry in DFT for application ";
-		ss << event.getRemoteApplicationName().toString();
+		ss << event.remoteApplicationName.toString();
 		throw Exception(ss.str().c_str());
 	}
 
@@ -833,7 +833,7 @@ void FlowAllocatorInstance::submitAllocateResponse(
 
 	const rina::CDAPMessage * cdapMessage = 0;
 	const rina::SerializedObject * serializedObject = 0;
-	if (event.getResult() == 0) {
+	if (event.result == 0) {
 		//Flow has been accepted
 		try {
 			serializedObject = encoder_->encode(flow_,
@@ -925,7 +925,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 				event.getResult());
 
 		try {
-			flow_request_event_.setPortId(-1);
+			flow_request_event_.portId = -1;
 			rina::extendedIPCManager->allocateFlowRequestResult(
 					flow_request_event_, event.getResult());
 		} catch (Exception &e) {
@@ -948,7 +948,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 	state_ = FLOW_ALLOCATED;
 
 	try {
-		flow_request_event_.setPortId(port_id_);
+		flow_request_event_.portId = port_id_;
 		rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
 				0);
 	} catch (Exception &e) {
@@ -1104,7 +1104,7 @@ void FlowAllocatorInstance::createResponse(
 
 		//Answer IPC Manager
 		try {
-			flow_request_event_.setPortId(-1);
+			flow_request_event_.portId = -1;
 			rina::extendedIPCManager->allocateFlowRequestResult(
 					flow_request_event_, cdapMessage->get_result());
 		} catch (Exception &e) {
@@ -1139,7 +1139,7 @@ void FlowAllocatorInstance::createResponse(
 
 		//Answer IPC Manager
 		try {
-			flow_request_event_.setPortId(-1);
+			flow_request_event_.portId = -1;
 			rina::extendedIPCManager->allocateFlowRequestResult(
 					flow_request_event_, cdapMessage->get_result());
 		} catch (Exception &e) {
