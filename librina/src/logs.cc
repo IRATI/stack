@@ -70,6 +70,10 @@ int setLogFile(const std::string& pathToFile)
 {
 	int result = 0;
 
+	if (pathToFile.compare("") == 0) {
+		return result;
+	}
+
 	pthread_rwlock_wrlock(&outputStreamLock);
 	if (logOutputStream != stdout) {
 	        result = -1;

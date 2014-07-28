@@ -14,7 +14,6 @@ import rina.utils.apps.echo.TestInformation;
 import rina.utils.apps.echo.protobuf.EchoTestMessageEncoder;
 
 import eu.irati.librina.Flow;
-import eu.irati.librina.FlowDeallocationException;
 import eu.irati.librina.rina;
 
 /**
@@ -189,7 +188,7 @@ public class TestController implements Runnable {
 		if (flow.isAllocated()){
 			try{
 				rina.getIpcManager().requestFlowDeallocation(flow.getPortId());
-			}catch(FlowDeallocationException ex){
+			}catch(Exception ex){
 				ex.printStackTrace();
 			}
 		}
