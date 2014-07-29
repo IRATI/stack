@@ -301,8 +301,11 @@ pthread_t Thread::getThreadType() const{
 }
 
 void Thread::join(void ** status){
-	if(pthread_join(thread_id_, status)){
-		LOG_CRIT("%s", ConcurrentException::error_join_thread.c_str());
+	int error = pthread_join(thread_id_, status);
+	if(error != 0){
+		LOG_CRIT("%s. Error is: %d",
+				ConcurrentException::error_join_thread.c_str(),
+				error);
 		throw ConcurrentException(ConcurrentException::error_join_thread);
 	}
 }

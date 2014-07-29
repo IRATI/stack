@@ -81,6 +81,7 @@ void TaskScheduler::runTasks() {
 			iter != tasks_.upper_bound(now); ++iter) {
 		try {
 			ThreadAttributes threadAttributes;
+			threadAttributes.setDettached();
 			Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
 			delete t;
 			t = 0;
@@ -118,6 +119,7 @@ void* doWorkTimer(void *arg) {
 
 Timer::Timer() {
 	ThreadAttributes threadAttributes;
+	threadAttributes.setJoinable();
 	continue_lock_.lock();
 	continue_ = true;
 	continue_lock_.unlock();
