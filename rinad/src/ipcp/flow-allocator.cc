@@ -91,7 +91,6 @@ QoSCubeRIBObject::QoSCubeRIBObject(IPCProcess* ipc_process,
 std::string QoSCubeRIBObject::get_displayable_value() {
     const rina::QoSCube * cube = (const rina::QoSCube *) get_value();
     std::stringstream ss;
-    LOG_DBG("Aqui");
     ss<<"Name: "<<name_<<"; Id: "<<cube->id_;
     ss<<"; Jitter: "<<cube->jitter_<<"; Delay: "<<cube->delay_<<std::endl;
     ss<<"In oder delivery: "<<cube->ordered_delivery_;

@@ -664,7 +664,6 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 				ipc_process_->get_name().processName);
 
 		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
-		delete cdapMessage;
 		port_id_ = portId;
 
 		//Set timer
@@ -675,9 +674,10 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 		state_ = STATE_WAIT_CONNECT_RESPONSE;
 	}catch(Exception &e){
 		LOG_ERR("Problems sending M_CONNECT message: %s", e.what());
-		delete cdapMessage;
 		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true, false);
 	}
+
+	delete cdapMessage;
 }
 
 void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage,

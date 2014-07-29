@@ -78,12 +78,16 @@ void TaskScheduler::runTasks() {
 	lock();
 	Time now;
 	for (std::map<Time, TimerTask*>::iterator iter = tasks_.begin();
-		iter != tasks_.upper_bound(now); ++iter) {
-		ThreadAttributes threadAttributes;
-		Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
-		delete t;
-		t = 0;
-		tasks_.erase(iter);
+			iter != tasks_.upper_bound(now); ++iter) {
+		try {
+			ThreadAttributes threadAttributes;
+			Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
+			delete t;
+			t = 0;
+			tasks_.erase(iter);
+		} catch (Exception &e) {
+			LOG_ERR("Problems creating thread: %s", e.what());
+		}
 	}
 	unlock();
 }
