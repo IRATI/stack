@@ -77,12 +77,10 @@ void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 void TaskScheduler::runTasks() {
 	lock();
 	Time now;
-	LOG_DBG("RunTask time sec %d and microsec %d", now.get_time_seconds(), now.get_only_milliseconds());
 	for (std::map<Time, TimerTask*>::iterator iter = tasks_.begin();
 		iter != tasks_.upper_bound(now); ++iter) {
 		ThreadAttributes threadAttributes;
 		Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
-		LOG_DBG("Thread with ID %d started ", t);
 		delete t;
 		t = 0;
 		tasks_.erase(iter);
@@ -109,7 +107,6 @@ void* doWorkTimer(void *arg) {
 	while(timer->is_continue())
 	{
 		sleep.sleepForMili(500);
-		LOG_DBG("Run tasks");
 		timer->get_task_scheduler()->runTasks();
 	}
 	return (void *) 0;
@@ -134,11 +131,9 @@ Timer::~Timer() {
 void Timer::scheduleTask(TimerTask* task, long delay_ms) {
 	Time executeTime;
 	timeval t;
-	LOG_DBG("Task scheduled at time %d and microsec %d", executeTime.get_time_seconds(), executeTime.get_only_milliseconds());
 	t.tv_sec = executeTime.get_time_seconds() + (delay_ms / 1000);
 	t.tv_usec = executeTime.get_only_milliseconds() + ((delay_ms % 1000) * 1000);
 	executeTime.set_timeval(t);
-	LOG_DBG("Task will be executed at time %d and microsec %d", executeTime.get_time_seconds(), executeTime.get_only_milliseconds());
 	task_scheduler->insert(executeTime, task);
 }
 void Timer::cancelTask(TimerTask* task) {

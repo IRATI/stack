@@ -78,6 +78,7 @@ public:
 			const std::string& object_name,
 			const std::string* dif_name);
 	std::string get_displayable_value();
+	void deleteObject(const void* objectValue);
 };
 
 class DIFRegistrationSetRIBObject: public BaseRIBObject {

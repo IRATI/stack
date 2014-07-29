@@ -254,8 +254,9 @@ void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProces
 			std::stringstream ss;
 			ss<<EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME;
 			ss<<EncoderConstants::SEPARATOR<<event.getDIFName().processName;
+			std::string * dif_name = new std::string(event.getDIFName().processName);
 			rib_daemon_->createObject(EncoderConstants::DIF_REGISTRATION_RIB_OBJECT_CLASS, ss.str(),
-					&(event.getDIFName().processName), 0);
+					dif_name, 0);
 		}catch(Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());;
 		}
@@ -372,6 +373,15 @@ std::string DIFRegistrationRIBObject::get_displayable_value() {
     ss << "N-1 DIF name: " << *dif_name;
 
     return ss.str();
+}
+
+void DIFRegistrationRIBObject::deleteObject(const void* objectValue) {
+        (void) objectValue; // Stop compiler barfs
+
+	parent_->remove_child(name_);
+	rib_daemon_->removeRIBObject(name_);
+	const std::string * value = (const std::string *) get_value();
+	delete value;
 }
 
 // Class DIF registration set RIB Object
