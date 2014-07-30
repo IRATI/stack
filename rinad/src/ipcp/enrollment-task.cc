@@ -715,7 +715,6 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 			}
 		}
 
-		LOG_DBG("Aqui");
 		if (ipc_process_->get_address() != 0) {
 			was_dif_member_before_enrollment_ = true;
 			eiRequest.address_ = ipc_process_->get_address();
@@ -726,10 +725,9 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 		}
 
 		serializedObject = encoder_->encode(&eiRequest, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
-		LOG_DBG("Aqui3");
 		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
 				*serializedObject);
-		LOG_DBG("Aqui4");
+		LOG_DBG("%d", port_id_);
 		requestMessage = cdap_session_manager_->getStartObjectRequestMessage(port_id_, 0,
 				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 				&objectValue, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);

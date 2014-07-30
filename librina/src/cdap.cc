@@ -204,7 +204,9 @@ CDAPException::ErrorCode CDAPException::get_result() const {
 
 /* CLASS CDAPMessageValidator */
 void CDAPMessageValidator::validate(const CDAPMessage *message) {
+	LOG_DBG("1");
 	validateAbsSyntax(message);
+	LOG_DBG("1");
 	validateAuthMech(message);
 	validateAuthValue(message);
 	validateDestAEInst(message);
@@ -216,7 +218,9 @@ void CDAPMessageValidator::validate(const CDAPMessage *message) {
 	validateObjClass(message);
 	validateObjInst(message);
 	validateObjName(message);
+	LOG_DBG("1");
 	validateObjValue(message);
+	LOG_DBG("1");
 	validateOpcode(message);
 	validateResult(message);
 	validateResultReason(message);
@@ -551,10 +555,15 @@ CDAPMessage::CDAPMessage() {
 	version_ = 0;
 }
 CDAPMessage::~CDAPMessage() {
-	delete obj_value_;
-	obj_value_ = 0;
-	delete filter_;
-	filter_ = 0;
+	if (obj_value_) {
+		delete obj_value_;
+		obj_value_ = 0;
+	}
+
+	if (filter_) {
+		delete filter_;
+		filter_ = 0;
+	}
 }
 const CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 		AuthTypes auth_mech, const AuthValue &auth_value,
@@ -991,8 +1000,6 @@ const ObjectValueInterface* CDAPMessage::get_obj_value() const {
 	return obj_value_;
 }
 void CDAPMessage::set_obj_value(ObjectValueInterface *arg0) {
-	if (!obj_value_->is_empty() || obj_value_->isType() != arg0->isType())
-		delete obj_value_;
 	obj_value_ = arg0;
 }
 CDAPMessage::Opcode CDAPMessage::get_op_code() const {

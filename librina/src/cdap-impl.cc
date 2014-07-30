@@ -1050,10 +1050,14 @@ const CDAPMessage* CDAPSessionManager::getCancelReadResponseMessage(
 }
 void CDAPSessionManager::assignInvokeId(CDAPMessage &cdap_message,
 		bool invoke_id, int port_id) {
+	CDAPSessionImpl *cdap_session = 0;
+
 	if (invoke_id) {
-		CDAPSessionImpl *cdap_session = get_cdap_session(port_id);
-		cdap_message.set_invoke_id(
-				cdap_session->get_invoke_id_manager()->newInvokeId());
+		 cdap_session = get_cdap_session(port_id);
+		if (cdap_session) {
+			cdap_message.set_invoke_id(
+					cdap_session->get_invoke_id_manager()->newInvokeId());
+		}
 	}
 }
 
