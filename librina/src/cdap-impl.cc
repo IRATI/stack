@@ -847,7 +847,7 @@ const CDAPMessage* CDAPSessionManager::messageReceived(
 	}
 	switch (cdap_message->get_op_code()) {
 	case CDAPMessage::M_CONNECT:
-		if (cdap_session != 0) {
+		if (cdap_session == 0) {
 			cdap_session = createCDAPSession(port_id);
 			cdap_session->messageReceived(*cdap_message);
 			LOG_DBG("Created a new CDAP session for port %d", port_id);
