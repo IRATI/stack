@@ -1079,8 +1079,8 @@ EnrollerStateMachine::~EnrollerStateMachine() {
 void EnrollerStateMachine::connect(const rina::CDAPMessage * cdapMessage, int portId) {
 	rina::AccessGuard g(*lock_);
 
-	if (state_ != STATE_WAIT_START) {
-		abortEnrollment(remote_peer_->name_, port_id_,
+	if (state_ != STATE_NULL) {
+		abortEnrollment(remote_peer_->name_, portId,
 				CONNECT_IN_NOT_NULL, false, true);
 		return;
 	}

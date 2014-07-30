@@ -830,21 +830,6 @@ const CDAPMessage* CDAPSessionManager::messageReceived(
 		const SerializedObject &encoded_cdap_message, int port_id) {
 	const CDAPMessage *cdap_message = decodeCDAPMessage(encoded_cdap_message);
 	CDAPSessionImpl *cdap_session = get_cdap_session(port_id);
-	if (cdap_session != 0) {
-		std::stringstream ss;
-		ss << "Received CDAP message from "
-				<< (cdap_session->get_session_descriptor()->get_destination_application_process_naming_info()).toString()
-				<< " through underlying portId " << port_id
-				<< ". Decoded contents: " << cdap_message->to_string();
-		LOG_DBG( "%s", ss.str().c_str());
-	} else {
-		std::stringstream ss;
-		ss << "Received CDAP message from " << cdap_message->get_dest_ap_name()
-				<< " through underlying portId " << port_id
-				<< ". Decoded contents: " << cdap_message->to_string();
-
-		LOG_DBG( "%s", ss.str().c_str());
-	}
 	switch (cdap_message->get_op_code()) {
 	case CDAPMessage::M_CONNECT:
 		if (cdap_session == 0) {
