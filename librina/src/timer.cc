@@ -129,11 +129,18 @@ Timer::Timer() {
 }
 Timer::~Timer() {
 	cancel();
-	delete task_scheduler;
-	task_scheduler = 0;
-	delete thread_;
-	thread_ = 0;
+
+	if (task_scheduler) {
+		delete task_scheduler;
+		task_scheduler = 0;
+	}
+
+	if (thread_) {
+		delete thread_;
+		thread_ = 0;
+	}
 }
+
 void Timer::scheduleTask(TimerTask* task, long delay_ms) {
 	Time executeTime;
 	timeval t;
