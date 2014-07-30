@@ -605,8 +605,10 @@ SerializedObject::SerializedObject(char* message, int size){
 	message_ = message;
 }
 SerializedObject::~SerializedObject(){
-	delete message_;
-	message_ = 0;
+	if (message_) {
+		delete message_;
+		message_ = 0;
+	}
 }
 
 int SerializedObject::get_size() const {

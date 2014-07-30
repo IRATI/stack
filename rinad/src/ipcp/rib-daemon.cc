@@ -793,7 +793,6 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 		throw e;
 	}
 
-	delete sdu->get_message();
     delete sdu;
 
     if (cdapMessage.get_invoke_id() != 0

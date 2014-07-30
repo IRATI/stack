@@ -677,9 +677,7 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true, false);
 	}
 
-	LOG_DBG("CDAP message pointer: %p", cdapMessage);
 	delete cdapMessage;
-	LOG_DBG("Deleted CDAP message");
 }
 
 void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage,
@@ -1126,9 +1124,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage * cdapMessage, int po
 						std::string(e.what()), false, true);
 	}
 
-	LOG_DBG("CDAP message pointer: %p", responseMessage);
 	delete responseMessage;
-	LOG_DBG("Deleted response message");
 }
 
 void EnrollerStateMachine::sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
