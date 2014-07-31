@@ -34,6 +34,8 @@
 #include "dtcp.h"
 #include "dtcp-utils.h"
 
+#define DTP_INACTIVITY_TIMERS_ENABLE 0
+
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         spinlock_t          lock;
@@ -246,6 +248,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 
         dtcp = dt_dtcp(dt);
 
+#if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start SenderInactivityTimer */
         if (dtcp &&
             rtimer_restart(dtp->timers.sender_inactivity,
@@ -253,7 +256,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                 LOG_ERR("Failed to start sender_inactiviy timer");
                 return 0;
         }
-
+#endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
         return rmt_send(dtp->rmt,
@@ -274,6 +277,7 @@ static int default_initial_seq_number(struct dtp * dtp)
         get_random_bytes(&seq_num, sizeof(seq_num_t));
         nxt_seq_reset(dtp->sv, seq_num);
 
+        LOG_DBG("initial_seq_number reset");
         return seq_num;
 }
 
@@ -282,6 +286,8 @@ static int default_receiver_inactivity(struct dtp * dtp)
         struct dt *          dt;
         struct dtcp *        dtcp;
         struct dtcp_config * cfg;
+
+        LOG_DBG("default_receiver_inactivity launched");
 
         if (!dtp) return 0;
 
@@ -330,6 +336,8 @@ static int default_sender_inactivity(struct dtp * dtp)
         struct dt *          dt;
         struct dtcp *        dtcp;
         struct dtcp_config * cfg;
+
+        LOG_DBG("default_sender_inactivity launched");
 
         if (!dtp) return 0;
 
@@ -667,6 +675,7 @@ static void tf_receiver_inactivity(void * data)
                 LOG_ERR("No DTP policies");
                 return;
         }
+#if DTP_INACTIVITY_TIMERS_ENABLE        
         if (!dtp->policies->receiver_inactivity_timer) {
                 LOG_ERR("No DTP sender inactivity policy");
                 return;
@@ -674,7 +683,7 @@ static void tf_receiver_inactivity(void * data)
 
         if (dtp->policies->receiver_inactivity_timer(dtp))
                 LOG_ERR("Problems executing receiver inactivity policy");
-
+#endif
         return;
 }
 
@@ -1091,13 +1100,14 @@ int dtp_write(struct dtp * instance,
 
         dtcp = dt_dtcp(dt);
 
+#if DTP_INACTIVITY_TIMERS_ENABLE        
         /* Stop SenderInactivityTimer */
         if (dtcp && rtimer_stop(instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /* sdu_destroy(sdu);
                    return -1; */
         }
-
+#endif
         pci = pci_create_ni();
         if (!pci) {
                 sdu_destroy(sdu);
@@ -1209,6 +1219,7 @@ int dtp_write(struct dtp * instance,
                         return -1;
                 }
 
+#if DTP_INACTIVITY_TIMERS_ENABLE        
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
                                    2 * (dt_sv_mpl(dt) +
@@ -1217,7 +1228,7 @@ int dtp_write(struct dtp * instance,
                         LOG_ERR("Failed to start sender_inactiviy timer");
                         return -1;
                 }
-
+#endif
                 return 0;
         }
 
@@ -1348,12 +1359,14 @@ int dtp_receive(struct dtp * instance,
         LWE         = dt_sv_rcv_lft_win(dt);
         in_order    = sv->connection->policies_params->in_order_delivery;
         max_sdu_gap = sv->connection->policies_params->max_sdu_gap;
+#if DTP_INACTIVITY_TIMERS_ENABLE        
         /* Stop ReceiverInactivityTimer */
         if (dtcp && rtimer_stop(instance->timers.receiver_inactivity)) {
                 LOG_ERR("Failed to stop timer");
                 /*pdu_destroy(pdu);
                   return -1;*/
         }
+#endif        
         seq_num = pci_sequence_number_get(pci);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
@@ -1391,6 +1404,7 @@ int dtp_receive(struct dtp * instance,
                                         "control pdu");
                                 return -1;
                         }
+#if DTP_INACTIVITY_TIMERS_ENABLE        
                         /* Start ReceiverInactivityTimer */
                         if (rtimer_restart(instance->
                                            timers.receiver_inactivity,
@@ -1398,6 +1412,7 @@ int dtp_receive(struct dtp * instance,
                                                 dt_sv_r(dt)   +
                                                 dt_sv_a(dt))))
                                 LOG_ERR("Failed restart RcvrInactivity timer");
+#endif                                
                 }
                 return 0;
         }
@@ -1465,6 +1480,7 @@ int dtp_receive(struct dtp * instance,
         spin_unlock(&instance->seqq->lock);
 
  exit:
+#if DTP_INACTIVITY_TIMERS_ENABLE        
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
                                    3 * (dt_sv_mpl(dt) +
@@ -1473,5 +1489,6 @@ int dtp_receive(struct dtp * instance,
                 LOG_ERR("Failed to start Receiver Inactivity timer");
                 return -1;
         }
+#endif        
         return 0;
 }
