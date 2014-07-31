@@ -12,3 +12,4 @@
 /test-librina
 /test-syscalls
 /test-cdap
+/test-timer
