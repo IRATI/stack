@@ -79,7 +79,6 @@ private:
 	void init_resource_allocator();
 	void init_security_manager();
 	void init_rib_daemon();
-	void populate_rib();
 
 	rina::ApplicationProcessNamingInformation name_;
 	IPCProcessOperationalState state_;

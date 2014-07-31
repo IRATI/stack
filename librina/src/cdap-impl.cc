@@ -966,7 +966,7 @@ const CDAPMessage* CDAPSessionManager::getDeleteObjectResponseMessage(
 			obj_inst, obj_name, result, result_reason, invoke_id);
 }
 const CDAPMessage* CDAPSessionManager::getStartObjectRequestMessage(int port_id,
-		char filter[], CDAPMessage::Flags flags, const std::string &obj_class,
+		char * filter, CDAPMessage::Flags flags, const std::string &obj_class,
 		ObjectValueInterface *obj_value, long obj_inst,
 		const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getStartObjectRequestMessage(

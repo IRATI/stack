@@ -727,13 +727,10 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 		serializedObject = encoder_->encode(&eiRequest, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
 		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
 				*serializedObject);
-		LOG_DBG("%d", port_id_);
 		requestMessage = cdap_session_manager_->getStartObjectRequestMessage(port_id_, 0,
 				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 				&objectValue, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
-		LOG_DBG("Aqui5");
 		rib_daemon_->sendMessage(*requestMessage, port_id_, this);
-		LOG_DBG("Aqui6");
 
 		//Set timer
 		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT, true);

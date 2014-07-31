@@ -74,8 +74,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	flow_allocator_->set_ipc_process(this);
 	security_manager_->set_ipc_process(this);
 
-	populate_rib();
-
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
 	} catch (Exception &e) {
@@ -196,10 +194,6 @@ void IPCProcessImpl::init_security_manager() {
 
 void IPCProcessImpl::init_rib_daemon() {
 	rib_daemon_ = new RIBDaemon();
-}
-
-void IPCProcessImpl::populate_rib() {
-	//TODO Create RIB objects not created by IPC Process components
 }
 
 unsigned short IPCProcessImpl::get_id() {

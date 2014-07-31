@@ -204,9 +204,7 @@ CDAPException::ErrorCode CDAPException::get_result() const {
 
 /* CLASS CDAPMessageValidator */
 void CDAPMessageValidator::validate(const CDAPMessage *message) {
-	LOG_DBG("1");
 	validateAbsSyntax(message);
-	LOG_DBG("1");
 	validateAuthMech(message);
 	validateAuthValue(message);
 	validateDestAEInst(message);
@@ -218,9 +216,7 @@ void CDAPMessageValidator::validate(const CDAPMessage *message) {
 	validateObjClass(message);
 	validateObjInst(message);
 	validateObjName(message);
-	LOG_DBG("1");
 	validateObjValue(message);
-	LOG_DBG("1");
 	validateOpcode(message);
 	validateResult(message);
 	validateResultReason(message);
