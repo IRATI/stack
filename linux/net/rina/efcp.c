@@ -4,6 +4,7 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,10 +39,6 @@
 #include "dtcp-utils.h"
 #include "rmt.h"
 #include "dt-utils.h"
-
-#ifndef DTCP_TEST_ENABLE
-#define DTCP_TEST_ENABLE 0
-#endif
 
 struct efcp {
         struct connection *     connection;
@@ -78,6 +75,11 @@ static int efcp_destroy(struct efcp * instance)
         }
 
         if (instance->dt) {
+                /*
+                 * FIXME:
+                 *   Shouldn't we check for flows running, before
+                 *   unbinding dtp, dtcp, cwq and rtxw ???
+                 */
                 struct dtp *  dtp  = dt_dtp_unbind(instance->dt);
                 struct dtcp * dtcp = dt_dtcp_unbind(instance->dt);
                 struct cwq *  cwq  = dt_cwq_unbind(instance->dt);
@@ -173,6 +175,22 @@ struct efcp * efcp_container_find(struct efcp_container * container,
         return efcp_imap_find(container->instances, id);
 }
 EXPORT_SYMBOL(efcp_container_find);
+
+struct efcp_config * efcp_container_config(struct efcp_container * container)
+{
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return NULL;
+        }
+
+        if (!container->config) {
+                LOG_ERR("No container config set!");
+                return NULL;
+        }
+
+        return container->config;
+}
+EXPORT_SYMBOL(efcp_container_config);
 
 int efcp_container_set_config(struct efcp_config *    efcp_config,
                               struct efcp_container * container)
@@ -404,23 +422,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: We change the connection cep-id and we return cep-id ... */
         connection->source_cep_id = cep_id;
         tmp->connection           = connection;
-
-#if DTCP_TEST_ENABLE
-        connection->policies_params->dtcp_present = true;
-        if (!connection->policies_params->dtcp_cfg) {
-                LOG_ERR("DTCP config was not there for DTCP_TEST_ENABLE");
-                efcp_destroy(tmp);
-                return cep_id_bad();
-        }
-        dtcp_max_closed_winq_length_set(connection->policies_params->dtcp_cfg,
-                                        20);
-        dtcp_flow_ctrl_set(connection->policies_params->dtcp_cfg, true);
-        dtcp_rtx_ctrl_set(connection->policies_params->dtcp_cfg, false);
-        dtcp_window_based_fctrl_set(connection->policies_params->dtcp_cfg,
-                                    true);
-        dtcp_rate_based_fctrl_set(connection->policies_params->dtcp_cfg,
-                                  false);
-#endif
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,

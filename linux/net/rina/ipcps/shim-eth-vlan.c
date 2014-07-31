@@ -1024,8 +1024,8 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
 
-        LOG_DBG("Worker finished for now, processed %d frames", num_frames);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
+        LOG_DBG("Worker finished for now, processed %d frames", num_frames);
 }
 
 static int eth_vlan_rcv(struct sk_buff *     skb,

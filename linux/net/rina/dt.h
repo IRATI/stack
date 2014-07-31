@@ -75,5 +75,8 @@ bool          dt_sv_window_closed(struct dt * dt);
 int           dt_sv_window_closed_set(struct dt * dt, bool closed);
 seq_num_t     dt_sv_last_seq_num_sent(struct dt * dt);
 timeout_t     dt_sv_tr(struct dt * dt);
+bool          dt_sv_drf_flag(struct dt * dt);
+void          dt_sv_drf_flag_set(struct dt * dt, bool flag);
+
 
 #endif

@@ -31,6 +31,7 @@
 #endif
 
 #include <linux/hardirq.h>
+
 #define IRQ_BARRIER                                                     \
         do {                                                            \
                 if (in_interrupt()) {                                   \

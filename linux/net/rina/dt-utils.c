@@ -21,9 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "dt-utils"
-
 #include <linux/list.h>
+
+#define RINA_PREFIX "dt-utils"
 
 #include "logs.h"
 #include "utils.h"
@@ -154,6 +154,27 @@ bool cwq_is_empty(struct cwq * queue)
         spin_unlock(&queue->lock);
 
         return ret;
+}
+
+int cwq_flush(struct cwq * queue)
+{
+        struct pdu * tmp;
+
+        if (!queue)
+                return -1;
+
+        spin_lock(&queue->lock);
+        while (!rqueue_is_empty(queue->q)) {
+                tmp = (struct pdu *) rqueue_head_pop(queue->q);
+                if (!tmp) {
+                        LOG_ERR("Failed to retrieve PDU");
+                        return -1;
+                }
+                pdu_destroy(tmp);
+        }
+        spin_unlock(&queue->lock);
+
+        return 0;
 }
 
 ssize_t cwq_size(struct cwq * queue)
@@ -351,7 +372,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
                     seq_num) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
@@ -441,26 +462,13 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         return 0;
 }
 
-static int rtxqueue_drop(struct rtxqueue * q,
-                         seq_num_t          from,
-                         seq_num_t          to)
+static int rtxqueue_flush(struct rtxqueue * q)
 {
         struct rtxq_entry * cur, * n;
-        seq_num_t           tsn;
-        const struct pci *  pci;
 
-        if (!q)
-                return -1;
+        ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-
-                pci = pdu_pci_get_ro(cur->pdu);
-                tsn = pci_sequence_number_get((struct pci *) pci);
-
-                if (tsn < from && from !=0)
-                        continue;
-                if (tsn > to && to !=0)
-                        break;
                 list_del(&cur->next);
                 rtxq_entry_destroy(cur);
         }
@@ -632,17 +640,15 @@ int rtxq_push_ni(struct rtxq * q,
         return 0;
 }
 
-int rtxq_drop(struct rtxq * q,
-              seq_num_t     from,
-              seq_num_t     to)
+int rtxq_flush(struct rtxq * q)
 {
-        if (!q)
+        if (!q || !q->queue)
                 return -1;
 
         rtimer_stop(q->r_timer);
 
         spin_lock(&q->lock);
-        rtxqueue_drop(q->queue, from, to);
+        rtxqueue_flush(q->queue);
         spin_unlock(&q->lock);
         return 0;
 

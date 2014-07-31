@@ -1883,6 +1883,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 {
         IRQ_BARRIER;
 
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
         /* The SDU is theirs now */
 
         if (kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
@@ -2034,7 +2039,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 
         KIPCM_UNLOCK(kipcm);
 
-        pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 name_destroy(process_name);
                 return port_id_bad();

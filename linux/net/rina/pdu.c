@@ -56,7 +56,7 @@ bool pdu_is_ok(const struct pdu * p)
 { return (p && pci_is_ok(p->pci) && buffer_is_ok(p->buffer)) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
-static struct pdu * pdu_create_gfp(gfp_t flags)
+struct pdu * pdu_create_gfp(gfp_t flags)
 {
         struct pdu * tmp;
 
