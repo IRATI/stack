@@ -1114,6 +1114,7 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 		cdapMessage->set_obj_value(new StringObjectValue(obj_val_t.strval()));
 
 	if (obj_val_t.has_byteval()) {
+		//TODO FIXME potential ugly bug, why a string? is an encoded array of bytes
 		char *byte_val = new char[obj_val_t.byteval().size() + 1];
 		SerializedObject sr_message (byte_val ,obj_val_t.byteval().size() + 1);
 		strcpy(byte_val, obj_val_t.byteval().c_str());

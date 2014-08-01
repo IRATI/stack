@@ -456,7 +456,7 @@ private:
 class FlowStateObjectEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 	static void convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
 			FlowStateObject * fso);
 	static FlowStateObject * convertGPBToModel(
@@ -467,7 +467,7 @@ public:
 class FlowStateObjectListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 }

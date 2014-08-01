@@ -78,11 +78,18 @@ bool test_flow (rinad::Encoder * encoder) {
 
 	// Encode
 	pflow_to_encode = &flow_to_encode;
-	const rina::SerializedObject *serialized_object = encoder->encode((void*)pflow_to_encode,
+	const rina::SerializedObject *encoded_object = encoder->encode((void*)pflow_to_encode,
 			rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS;
+
 	// Decode
-	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(*serialized_object,
-			rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(&cdapMessage);
 
 	// Assert
 	if (pflow_to_encode->source_naming_info_.processName != pflow_decoded->source_naming_info_.processName)
@@ -150,6 +157,10 @@ bool test_flow (rinad::Encoder * encoder) {
 	}
 
 	LOG_INFO("Flow Encoder tested successfully");
+
+	delete encoded_object;
+	delete pflow_decoded;
+
 	return true;
 }
 
@@ -170,14 +181,22 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&dtc,
 			rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::DataTransferConstants*) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS;
+
+	recovered_obj = (rina::DataTransferConstants*) encoder->decode(&cdapMessage);
 
 	if (dtc.address_length_ != recovered_obj->address_length_) {
 		return false;
 	}
 
 	if (dtc.cep_id_length_ != recovered_obj->cep_id_length_) {
+		LOG_DBG("Aqui");
 		return false;
 	}
 
@@ -213,6 +232,7 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	delete encoded_object;
 
 	LOG_INFO("Data Transfer Constants Encoder tested successfully");
+
 	return true;
 }
 
@@ -230,8 +250,15 @@ bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&dfte,
 			rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::DirectoryForwardingTableEntry*) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS;
+
+	recovered_obj = (rina::DirectoryForwardingTableEntry*) encoder->decode(&cdapMessage);
 
 	if (dfte.address_ != recovered_obj->address_) {
 		return false;
@@ -292,8 +319,15 @@ bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&dfte_list,
 			rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::DirectoryForwardingTableEntry*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS;
+
+	recovered_obj = (std::list<rina::DirectoryForwardingTableEntry*> *) encoder->decode(&cdapMessage);
 
 	if (dfte_list.size() != recovered_obj->size()) {
 		return false;
@@ -321,8 +355,15 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&request,
 			rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
-	recovered_obj = (rinad::EnrollmentInformationRequest *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS;
+
+	recovered_obj = (rinad::EnrollmentInformationRequest *) encoder->decode(&cdapMessage);
 
 	if (request.address_ != recovered_obj->address_) {
 		return false;
@@ -362,8 +403,15 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&cube,
 			rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::QoSCube *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS;
+
+	recovered_obj = (rina::QoSCube *) encoder->decode(&cdapMessage);
 
 	if (cube.average_bandwidth_ != recovered_obj->average_bandwidth_) {
 		return false;
@@ -445,8 +493,15 @@ bool test_qos_cube_list(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&cube_list,
 			rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::QoSCube*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS;
+
+	recovered_obj = (std::list<rina::QoSCube*> *) encoder->decode(&cdapMessage);
 
 	if (cube_list.size() != recovered_obj->size()) {
 		return false;
@@ -471,8 +526,15 @@ bool test_whatevercast_name(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&name,
 			rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::WhatevercastName *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
+
+	recovered_obj = (rina::WhatevercastName *) encoder->decode(&cdapMessage);
 
 	if (name.name_.compare(recovered_obj->name_) != 0) {
 		return false;
@@ -505,8 +567,15 @@ bool test_whatevercast_name_list(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&name_list,
 			rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::WhatevercastName*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
+
+	recovered_obj = (std::list<rina::WhatevercastName*> *) encoder->decode(&cdapMessage);
 
 	if (name_list.size() != recovered_obj->size()) {
 		return false;
@@ -532,8 +601,15 @@ bool test_neighbor(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&nei,
 			rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::Neighbor *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS;
+
+	recovered_obj = (rina::Neighbor *) encoder->decode(&cdapMessage);
 
 	if (nei.name_.processName.compare(recovered_obj->name_.processName) != 0) {
 		return false;
@@ -570,8 +646,15 @@ bool test_neighbor_list(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&nei_list,
 			rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::Neighbor*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS;
+
+	recovered_obj = (std::list<rina::Neighbor*> *) encoder->decode(&cdapMessage);
 
 	if (nei_list.size() != recovered_obj->size()) {
 		return false;
@@ -591,8 +674,15 @@ bool test_flow_state_object(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&fso,
 			rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS);
-	recovered_obj = (rinad::FlowStateObject *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS;
+
+	recovered_obj = (rinad::FlowStateObject *) encoder->decode(&cdapMessage);
 
 	if (fso.address_ != recovered_obj->address_) {
 		return false;
@@ -640,8 +730,15 @@ bool test_flow_state_object_list(rinad::Encoder * encoder) {
 
 	encoded_object = encoder->encode(&fso_list,
 			rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rinad::FlowStateObject*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+
+	rina::ByteArrayObjectValue * obj_value =
+			new rina::ByteArrayObjectValue(*encoded_object);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_value_ = obj_value;
+	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
+
+	recovered_obj = (std::list<rinad::FlowStateObject*> *) encoder->decode(&cdapMessage);
 
 	if (fso_list.size() != recovered_obj->size()) {
 		return false;

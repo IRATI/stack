@@ -222,14 +222,10 @@ void NeighborSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMess
 	(void) cdapSessionDescriptor; // Stop compiler barfs
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-
 		if (cdapMessage->get_obj_name().compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
 			std::list<rina::Neighbor *> * neighbors =
 					(std::list<rina::Neighbor *> *)
-					encoder_->decode(*serializedObject,
-							EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+					encoder_->decode(cdapMessage);
 			std::list<rina::Neighbor *>::const_iterator iterator;
 			for(iterator = neighbors->begin(); iterator != neighbors->end(); ++iterator) {
 				populateNeighborsToCreateList(*iterator, &neighborsToCreate);
@@ -238,8 +234,7 @@ void NeighborSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMess
 			delete neighbors;
 		} else {
 			rina::Neighbor * neighbor = (rina::Neighbor *)
-									encoder_->decode(*serializedObject,
-											EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
+									encoder_->decode(cdapMessage);
 			populateNeighborsToCreateList(neighbor, &neighborsToCreate);
 		}
 	} catch (Exception &e) {
@@ -771,10 +766,8 @@ void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
 
 	//Update address
 	if (cdapMessage->obj_value_) {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 		EnrollmentInformationRequest * response = (EnrollmentInformationRequest *)
-						encoder_->decode(*serializedObject, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+						encoder_->decode(cdapMessage);
 
 		unsigned int address = response->address_;
 		delete response;
@@ -986,10 +979,8 @@ void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
 
 	if (cdapMessage->obj_name_.compare(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME) == 0){
 		try{
-			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 			rina::DataTransferConstants * constants = (rina::DataTransferConstants *)
-					encoder_->decode(*serializedObject, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+					encoder_->decode(cdapMessage);
 			rib_daemon_->createObject(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 					EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, constants, 0);
 		}catch(Exception &e){
@@ -997,10 +988,8 @@ void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
 		}
 	}else if (cdapMessage->obj_name_.compare(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME) == 0){
 		try{
-			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 			std::list<rina::QoSCube *> * cubes = (std::list<rina::QoSCube *> *)
-					encoder_->decode(*serializedObject, EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
+					encoder_->decode(cdapMessage);
 			rib_daemon_->createObject(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 					EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME, cubes, 0);
 		}catch(Exception &e){
@@ -1008,10 +997,8 @@ void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
 		}
 	}else if (cdapMessage->obj_name_.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0){
 		try{
-			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 			std::list<rina::Neighbor *> * neighbors = (std::list<rina::Neighbor *> *)
-					encoder_->decode(*serializedObject, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+					encoder_->decode(cdapMessage);
 			rib_daemon_->createObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 					EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, neighbors, 0);
 		}catch(Exception &e){
@@ -1177,10 +1164,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		requiresInitialization = true;
 	} else {
 		try {
-			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-			eiRequest = (EnrollmentInformationRequest *) encoder_->decode(*serializedObject,
-					EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+			eiRequest = (EnrollmentInformationRequest *) encoder_->decode(cdapMessage);
 
 			if (!namespace_manager_->isValidAddress(eiRequest->address_, remote_peer_->name_.processName,
 					remote_peer_->name_.processInstance)) {
@@ -2126,9 +2110,13 @@ const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const 
 	return serialized_object;
 }
 
-void* EnrollmentInformationRequestEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::enrollmentInformation_t gpb_eir;
-	gpb_eir.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_eir.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
 	request->address_ = gpb_eir.address();

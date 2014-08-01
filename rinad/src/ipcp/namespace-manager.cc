@@ -54,13 +54,9 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(const rina::CDAPMessage * 
 	std::list<rina::WhatevercastName *> namesToCreate;
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-
 		if (cdapMessage->get_obj_name().compare(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS) == 0) {
 			std::list<rina::WhatevercastName *> * names =
-					(std::list<rina::WhatevercastName *> *) encoder_->decode(*serializedObject,
-							EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+					(std::list<rina::WhatevercastName *> *) encoder_->decode(cdapMessage);
 			std::list<rina::WhatevercastName *>::const_iterator iterator;
 			for(iterator = names->begin(); iterator != names->end(); ++iterator) {
 				namesToCreate.push_back((*iterator));
@@ -68,8 +64,7 @@ void WhateverCastNameSetRIBObject::remoteCreateObject(const rina::CDAPMessage * 
 
 			delete names;
 		} else {
-			rina::WhatevercastName * name = (rina::WhatevercastName *) encoder_->decode(*serializedObject,
-						EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
+			rina::WhatevercastName * name = (rina::WhatevercastName *) encoder_->decode(cdapMessage);
 			namesToCreate.push_back(name);
 		}
 	} catch (Exception &e) {
@@ -138,10 +133,8 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(const rina::CDAP
 	rina::DirectoryForwardingTableEntry * currentEntry;
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
 		entry = (rina::DirectoryForwardingTableEntry *)
-					encoder_->decode(*serializedObject, EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+					encoder_->decode(cdapMessage);
 	} catch (Exception & e){
 		LOG_ERR("Problems decoding message: %s", e.what());
 		return;
@@ -244,14 +237,10 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(
 	std::list<rina::DirectoryForwardingTableEntry *> entriesToCreateOrUpdate;
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-
 		if (cdapMessage->get_obj_name().compare(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) == 0) {
 			std::list<rina::DirectoryForwardingTableEntry *> * entries =
 					(std::list<rina::DirectoryForwardingTableEntry *> *)
-						encoder_->decode(*serializedObject,
-								EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
+						encoder_->decode(cdapMessage);
 			std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
 			for(iterator = entries->begin(); iterator != entries->end(); ++iterator) {
 				populateEntriesToCreateList(*iterator, &entriesToCreateOrUpdate);
@@ -260,8 +249,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(
 			delete entries;
 		} else {
 			rina::DirectoryForwardingTableEntry * receivedEntry = (rina::DirectoryForwardingTableEntry *)
-						encoder_->decode(*serializedObject,
-							EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+						encoder_->decode(cdapMessage);
 			populateEntriesToCreateList(receivedEntry, &entriesToCreateOrUpdate);
 		}
 	} catch (Exception &e) {
@@ -339,14 +327,10 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteDeleteObject(const rina::C
 	std::list<rina::DirectoryForwardingTableEntry *> entriesToDelete;
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-
 		if (cdapMessage->get_obj_name().compare(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) == 0) {
 			std::list<rina::DirectoryForwardingTableEntry *> * entries =
 					(std::list<rina::DirectoryForwardingTableEntry *> *)
-						encoder_->decode(*serializedObject,
-								EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
+						encoder_->decode(cdapMessage);
 			std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
 			for(iterator = entries->begin(); iterator != entries->end(); ++iterator) {
 				populateEntriesToDeleteList(*iterator, &entriesToDelete);
@@ -355,8 +339,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteDeleteObject(const rina::C
 			delete entries;
 		} else {
 			rina::DirectoryForwardingTableEntry * receivedEntry = (rina::DirectoryForwardingTableEntry *)
-								encoder_->decode(*serializedObject,
-										EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+								encoder_->decode(cdapMessage);
 			populateEntriesToDeleteList(receivedEntry, &entriesToDelete);
 		}
 	} catch (Exception &e) {

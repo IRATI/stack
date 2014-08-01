@@ -986,10 +986,8 @@ void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 	}
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-		std::list<FlowStateObject *> * objects = (std::list<FlowStateObject *> *) encoder_->decode(*serializedObject,
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+		std::list<FlowStateObject *> * objects =
+				(std::list<FlowStateObject *> *) encoder_->decode(cdapMessage);
 		db_->updateObjects(*objects, portId, ipc_process_->get_address());
 		delete objects;
 	} catch (Exception &e) {
@@ -1040,10 +1038,13 @@ const rina::SerializedObject* FlowStateObjectEncoder::encode(const void* object)
 }
 
 void* FlowStateObjectEncoder::decode(
-		const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	rina::messages::flowStateObject_t gpb_fso;
 
-	gpb_fso.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_fso.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	return (void*) FlowStateObjectEncoder::convertGPBToModel(gpb_fso);
 }
@@ -1091,9 +1092,13 @@ const rina::SerializedObject* FlowStateObjectListEncoder::encode(const void* obj
 	return serialized_object;
 }
 
-void* FlowStateObjectListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* FlowStateObjectListEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::flowStateObjectGroup_t gpb_list;
-	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_list.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	std::list<FlowStateObject*> * list = new std::list<FlowStateObject*>();
 

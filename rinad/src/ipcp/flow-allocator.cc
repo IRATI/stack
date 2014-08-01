@@ -210,13 +210,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 	int portId = 0;
 
 	try {
-		rina::ByteArrayObjectValue * value =
-				(rina::ByteArrayObjectValue*) cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject =
-				(rina::SerializedObject *) value->get_value();
-
-		flow = (Flow *) encoder_->decode(*serializedObject,
-				EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+		flow = (Flow *) encoder_->decode(cdapMessage);
 	} catch (Exception &e) {
 		LOG_ERR("Problems decoding object value: %s", e.what());
 		return;
@@ -1123,9 +1117,7 @@ void FlowAllocatorInstance::createResponse(
 	//Update the EFCP connection with the destination cep-id
 	try {
 		if (cdapMessage->get_obj_value()) {
-			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-			Flow * receivedFlow = (Flow *) encoder_->decode(*serializedObject, EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+			Flow * receivedFlow = (Flow *) encoder_->decode(cdapMessage);
 			flow_->destination_port_id_ = receivedFlow->destination_port_id_;
 			flow_->getActiveConnection()->setDestCepId(receivedFlow->getActiveConnection()->getDestCepId());
 
@@ -1286,11 +1278,14 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 }
 
 void* FlowEncoder::decode(
-const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	Flow *flow = new Flow();
 	rina::messages::Flow gpf_flow;
 
-	gpf_flow.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpf_flow.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	rina::ApplicationProcessNamingInformation *src_app =
 			Encoder::get_ApplicationProcessNamingInformation(gpf_flow.sourcenaminginfo());
