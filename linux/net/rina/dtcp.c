@@ -884,6 +884,8 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
         if (last_snd_data_ack(dtcp) < LWE)
                 update_rt_wind_edge(dtcp);
 
+        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
+
         return 0;
 }
 

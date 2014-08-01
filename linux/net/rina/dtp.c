@@ -755,9 +755,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
 
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                spin_unlock(&seqq->lock);
-
-                                return 0;
+                                LOG_ERR("Could not update LWE while A timer");
                         }
                         pos->pdu = NULL;
                         list_del(&pos->next);
@@ -765,8 +763,9 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         spin_unlock(&seqq->lock);
                         if (pdu_post(dtp, pdu)) {
-
-                                return 0;
+                                LOG_ERR("Could not post PDU %u while A timer"
+                                        "(in-order)", seq_num);
+                                return -1;
                         }
 
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
@@ -792,15 +791,18 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-                                return 0;
+                                return -1;
                         }
                         pos->pdu = NULL;
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
                         spin_unlock(&seqq->lock);
-                        if (pdu_post(dtp, pdu))
-                                return 0;
+                        if (pdu_post(dtp, pdu)) {
+                                LOG_ERR("Could not post PDU %u while A timer"
+                                        "(expiration)", seq_num);
+                                return -1;
+                        }
 
                         spin_lock(&seqq->lock);
 
@@ -836,19 +838,21 @@ static int post_worker(void * o)
 
         /* Invoke delimiting and update left window edge */
 
+        a = dt_sv_a(dtp->parent);
         seq_num_sv_update =  process_A_expiration(dtp, dtcp);
         if (dtcp) {
-                if (!seq_num_sv_update) {
+                if ((int) seq_num_sv_update < 0) {
                         LOG_ERR("ULWE returned no seq num to update");
+                        rtimer_start(dtp->timers.a, a/AF);
                         return -1;
                 }
 
                 if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
                         LOG_ERR("Failed to update dtcp sv");
+                        rtimer_start(dtp->timers.a, a/AF);
                         return -1;
                 }
         }
-        a = dt_sv_a(dtp->parent);
         LOG_DBG("Going to restart A timer with a = %d and a/AF = %d", a, a/AF);
         rtimer_start(dtp->timers.a, a/AF);
 
