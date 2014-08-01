@@ -82,12 +82,12 @@ const void* WatchdogRIBObject::get_value() const {
 void WatchdogRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
-	const rina::CDAPMessage * responseMessage = 0;
+	rina::CDAPMessage * responseMessage = 0;
 
 	//1 Send M_READ_R message
 	try {
 		responseMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				class_, instance_, name_, 0, 0, "", cdapMessage->invoke_id_);
+				class_, instance_, name_, 0, "", cdapMessage->invoke_id_);
 		rib_daemon_->sendMessage(*responseMessage, cdapSessionDescriptor->port_id_, 0);
 		delete responseMessage;
 	} catch(Exception &e) {
@@ -551,8 +551,7 @@ void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
 	rina::Neighbor * myself = 0;
 	std::vector<rina::ApplicationRegistration *> registrations;
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
-	const rina::CDAPMessage * cdapMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 	try {
 		neighborSet = rib_daemon_->readObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME);
@@ -572,12 +571,10 @@ void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
 			}
 		}
 
-		serializedObject = encoder_->encode(&neighbors, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-				*serializedObject);
 		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(
 				port_id_, 0, rina::CDAPMessage::NONE_FLAGS, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
-				0, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, &objectValue, 0, false);
+				0, EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, 0, false);
+		encoder_->encode(&neighbors, cdapMessage);
 		rib_daemon_->sendMessage(*cdapMessage, port_id_, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending neighbors: %s", e.what());
@@ -585,14 +582,12 @@ void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
 
 	delete myself;
 	delete cdapMessage;
-	delete serializedObject;
 }
 
 void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& objectClass,
 		const std::string& objectName) {
 	BaseRIBObject * ribObject = 0;
-	const rina::CDAPMessage * cdapMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 
 	try {
 		ribObject = rib_daemon_->readObject(objectClass, objectName);
@@ -602,20 +597,16 @@ void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& object
 	}
 
 	try {
-		serializedObject = encoder_->encode(ribObject->get_value(), objectClass);
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-				*serializedObject);
 		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(
 				port_id_, 0, rina::CDAPMessage::NONE_FLAGS, objectClass, 0, objectName,
-				&objectValue, 0, false);
+				0, false);
+		encoder_->encode(ribObject->get_value(), cdapMessage);
 		rib_daemon_->sendMessage(*cdapMessage, port_id_, 0);
-		delete cdapMessage;
-		delete serializedObject;
 	} catch (Exception &e) {
 		LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
-		delete cdapMessage;
-		delete serializedObject;
 	}
+
+	delete cdapMessage;
 }
 
 // Class EnrolleeStateMachine
@@ -696,8 +687,7 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 	}
 
 	//Send M_START with EnrollmentInformation object
-	const rina::CDAPMessage * requestMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * requestMessage = 0;
 	try{
 		EnrollmentInformationRequest eiRequest;
 		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
@@ -719,12 +709,10 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 			ipc_process_->set_dif_information(difInformation);
 		}
 
-		serializedObject = encoder_->encode(&eiRequest, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-				*serializedObject);
 		requestMessage = cdap_session_manager_->getStartObjectRequestMessage(port_id_, 0,
 				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
-				&objectValue, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
+				0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
+		encoder_->encode(&eiRequest, requestMessage);
 		rib_daemon_->sendMessage(*requestMessage, port_id_, this);
 
 		//Set timer
@@ -739,7 +727,6 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 	}
 
 	delete requestMessage;
-	delete serializedObject;
 }
 
 void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
@@ -1183,8 +1170,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		}
 	}
 
-	const rina::CDAPMessage * responseMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * responseMessage = 0;;
 	if (requiresInitialization){
 		unsigned int address = namespace_manager_->getValidAddress(remote_peer_->name_.processName,
 				remote_peer_->name_.processInstance);
@@ -1195,24 +1181,16 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		}
 
 		eiRequest->address_ = address;
-		try {
-			serializedObject = encoder_->encode(&eiRequest, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
-		} catch (Exception &e) {
-			LOG_ERR("Problems encoding object: %s", e.what());
-			sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), cdapMessage);
-			return;
-		}
 	}
 
 	try {
 		if (requiresInitialization) {
-			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-					*serializedObject);
 			responseMessage = cdap_session_manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-					cdapMessage->obj_class_, &objectValue, 0, cdapMessage->obj_name_, 0, "", cdapMessage->invoke_id_);
+					cdapMessage->obj_class_, 0, cdapMessage->obj_name_, 0, "", cdapMessage->invoke_id_);
+			encoder_->encode(&eiRequest, responseMessage);
 		} else {
 			responseMessage = cdap_session_manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-					cdapMessage->obj_class_, 0, 0, cdapMessage->obj_name_, 0, "", cdapMessage->invoke_id_);
+					cdapMessage->obj_class_, 0, cdapMessage->obj_name_, 0, "", cdapMessage->invoke_id_);
 		}
 
 		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
@@ -1220,14 +1198,12 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 		delete responseMessage;
-		delete serializedObject;
 		delete eiRequest;
 		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), cdapMessage);
 		return;
 	}
 
 	delete responseMessage;
-	delete serializedObject;
 	delete eiRequest;
 
 	//If initialization is required send the M_CREATEs
@@ -1242,7 +1218,8 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		rina::BooleanObjectValue objectValue = rina::BooleanObjectValue(true);
 		responseMessage = cdap_session_manager_->getStopObjectRequestMessage(port_id_,
 				0, rina::CDAPMessage::NONE_FLAGS, EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
-				&objectValue, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
+				0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
+		responseMessage->obj_value_ = &objectValue;
 
 		rib_daemon_->sendMessage(*responseMessage, port_id_, this);
 		delete responseMessage;
@@ -1287,7 +1264,7 @@ void EnrollerStateMachine::stopResponse(const rina::CDAPMessage * cdapMessage,
 	try{
 		startMessage = cdap_session_manager_->getStartObjectRequestMessage(port_id_,
 				0, rina::CDAPMessage::NONE_FLAGS, EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS,
-				0, 0, EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME, 0, false);
+				0, EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME, 0, false);
 
 		rib_daemon_->sendMessage(*startMessage, port_id_, 0);
 	}catch(Exception &e){

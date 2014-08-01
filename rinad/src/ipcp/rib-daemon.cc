@@ -351,19 +351,8 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
 	std::vector<int> peers;
 	cdap_session_manager_->getAllCDAPSessionIds(peers);
-	rina::ObjectValueInterface * encodedObjectValue;
 
-	const rina::SerializedObject * serializedObject = 0;
-	try {
-		serializedObject = encoder_->encode(objectValue, objectClass);
-		encodedObjectValue = new rina::ByteArrayObjectValue(*serializedObject);
-	} catch(Exception & e) {
-		LOG_ERR("Error encoding object value: %s", e.what());
-		delete serializedObject;
-		return;
-	}
-
-	const rina::CDAPMessage * cdapMessage = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 
 	for (std::vector<int>::size_type i = 0; i < peers.size(); i++) {
 		if (!isOnList(peers[i], peersToIgnore)) {
@@ -374,20 +363,17 @@ void RIBDaemon::createObject(const std::string& objectClass,
                                                                       objectClass,
                                                                       0,
                                                                       objectName,
-                                                                      encodedObjectValue,
                                                                       0,
                                                                       false);
+				encoder_->encode(objectValue, cdapMessage);
 				sendMessage(*cdapMessage, peers[i], 0);
-				delete cdapMessage;
 			} catch(Exception & e) {
 				LOG_ERR("Problems notifying neighbors: %s", e.what());
-				delete cdapMessage;
 			}
+
+			delete cdapMessage;
 		}
 	}
-
-	delete serializedObject;
-	delete encodedObjectValue;
 }
 
 void RIBDaemon::deleteObject(const std::string& objectClass,
@@ -420,7 +406,6 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                                                                       objectClass,
                                                                       0,
                                                                       objectName,
-                                                                      0,
                                                                       0, false);
 				sendMessage(*cdapMessage, peers[i], 0);
 				delete cdapMessage;

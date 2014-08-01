@@ -156,8 +156,7 @@ public:
 	/// @param object
 	/// @return
 
-	const rina::SerializedObject* encode(const void* object,
-			const std::string& object_class);
+	void encode(const void* object, rina::CDAPMessage * cdapMessage);
 
 	/// Converts a byte array to an object of the type specified by "className"
 	/// @param serializedObject

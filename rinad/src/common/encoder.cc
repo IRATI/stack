@@ -128,9 +128,24 @@ Encoder::~Encoder() {
 void Encoder::addEncoder(const std::string& object_class, EncoderInterface *encoder) {
 	encoders_.insert(std::pair<std::string,EncoderInterface*> (object_class, encoder));
 }
-const rina::SerializedObject* Encoder::encode(const void* object, const std::string& object_class) {
-	EncoderInterface* encoder = get_encoder(object_class);
-	return encoder->encode(object);
+
+void Encoder::encode(const void* object, rina::CDAPMessage * cdapMessage) {
+	EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
+	if (!encoder) {
+		throw Exception("Could not find encoder");
+	}
+
+	const rina::SerializedObject * encodedObject =  encoder->encode(object);
+	if (!encodedObject) {
+		throw Exception("The encoder returned a null pointer");
+	}
+
+	cdapMessage->obj_value_ =  new rina::ByteArrayObjectValue(
+			*encodedObject);
+
+	delete encodedObject;
+
+	return;
 }
 void* Encoder::decode(const rina::CDAPMessage * cdapMessage) {
 	if (!cdapMessage->obj_value_) {
@@ -138,6 +153,9 @@ void* Encoder::decode(const rina::CDAPMessage * cdapMessage) {
 	}
 
 	EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
+	if (!encoder) {
+		throw Exception("Could not find encoder");
+	}
 	return encoder->decode(cdapMessage->obj_value_);
 }
 

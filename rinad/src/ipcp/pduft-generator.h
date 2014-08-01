@@ -236,7 +236,6 @@ public:
 	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
 			flow_state_rib_object_group, rina::Timer * timer);
 	bool isEmpty() const;
-	const rina::SerializedObject * encode();
 	void setAvoidPort(int avoidPort);
 	void addObjectToGroup(unsigned int address, int portId,
 			unsigned int neighborAddress, int neighborPortId);
