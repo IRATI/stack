@@ -101,7 +101,7 @@ check_PROGRAMS =				\
 	test-netlink-parsers			\
 	test-concurrency			\
 	test-syscalls				\
-	test-timer                 \
+	test-timer				\
 	test-cdap
 
 XFAIL_TESTS =					\
@@ -118,14 +118,14 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-parsers			\
 	test-concurrency			\
 	test-syscalls				\
-	test-timer                  \
+	test-timer				\
 	test-cdap
 
 FUNCTIONAL_XFAIL_TESTS =
 
 FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
 
-KERNEL_DEBUG_PASS_TESTS =				\
+KERNEL_DEBUG_PASS_TESTS =			\
 	test-syscalls
 
 KERNEL_DEBUG_XFAIL_TESTS =

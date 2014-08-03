@@ -21,10 +21,11 @@ edit = $(SED)						\
 	-e 's|@prefix[@]|$(prefix)|g'			\
         -e 's|@LIBRINA_VERSION[@]|$(LIBRINA_VERSION)|g'
 
-CLEANFILES    =
-BUILT_SOURCES =
-EXTRA_DIST    =
-bin_SCRIPTS   =
+CLEANFILES                         =
+BUILT_SOURCES                      =
+EXTRA_DIST                         =
+bin_SCRIPTS                        =
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server: \
 	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server.in \
@@ -42,6 +43,8 @@ BUILT_SOURCES += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband
 EXTRA_DIST    += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server.in
 bin_SCRIPTS   += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server
 
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-server
+
 applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client: \
 	applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client.in \
 	Makefile
@@ -57,6 +60,8 @@ CLEANFILES    += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband
 BUILT_SOURCES += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client
 EXTRA_DIST    += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client.in
 bin_SCRIPTS   += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client
+
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += applications/rina.utils.apps.rinaband/src/main/scripts/rinaband-client
 
 applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties: \
 	applications/rina.utils.apps.rinaband/src/main/resources/log4j.properties.in \
@@ -88,6 +93,7 @@ CLEANFILES    += applications/rina.utils.apps.echo/src/main/scripts/echo-server
 BUILT_SOURCES += applications/rina.utils.apps.echo/src/main/scripts/echo-server
 EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/scripts/echo-server.in
 bin_SCRIPTS   += applications/rina.utils.apps.echo/src/main/scripts/echo-server
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += applications/rina.utils.apps.echo/src/main/scripts/echo-server
 
 applications/rina.utils.apps.echo/src/main/scripts/echo-client: \
 	applications/rina.utils.apps.echo/src/main/scripts/echo-client.in \
@@ -104,6 +110,7 @@ CLEANFILES    += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 BUILT_SOURCES += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 EXTRA_DIST    += applications/rina.utils.apps.echo/src/main/scripts/echo-client.in
 bin_SCRIPTS   += applications/rina.utils.apps.echo/src/main/scripts/echo-client
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += applications/rina.utils.apps.echo/src/main/scripts/echo-client
 
 applications/rina.utils.apps.echo/src/main/resources/log4j.properties: \
 	applications/rina.utils.apps.echo/src/main/resources/log4j.properties.in \
@@ -134,6 +141,7 @@ CLEANFILES    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf
 BUILT_SOURCES += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server
 EXTRA_DIST    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server.in
 bin_SCRIPTS   += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-server
 
 applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client: \
 	applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client.in \
@@ -150,6 +158,7 @@ CLEANFILES    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf
 BUILT_SOURCES += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client
 EXTRA_DIST    += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client.in
 bin_SCRIPTS   += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += applications/rina.utils.apps.rinaperf/src/main/scripts/rinaperf-client
 
 applications/rina.utils.apps.rinaperf/src/main/resources/log4j.properties: \
 	applications/rina.utils.apps.rinaperf/src/main/resources/log4j.properties.in \
