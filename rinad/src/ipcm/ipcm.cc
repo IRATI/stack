@@ -111,13 +111,21 @@ IPCManager::start_console_worker()
         return 0;
 }
 
-void
+bool
 IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
 {
         event_waiting = true;
         event_ty = ty;
         event_sn = seqnum;
-        doWait();
+
+        try {
+                timedwait(5, 0);
+        } catch (rina::ConcurrentException) {
+            event_waiting = false;
+            return false;
+        }
+
+        return true;
 }
 
 void
@@ -182,8 +190,13 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
         }
 
         if (wait) {
-                concurrency.wait_for_event(
-                        rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT, 0);
+                bool arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT, 0);
+
+                if (!arrived) {
+                        cerr << "Timed out while waiting for IPC process daemon"
+                                "to initialize" << endl;
+                }
         }
 
         concurrency.unlock();
@@ -249,6 +262,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         rinad::DIFProperties dif_props;
         rina::DIFInformation dif_info;
         rina::DIFConfiguration dif_config;
+        bool arrived = true;
         bool found;
         int ret = -1;
 
@@ -317,8 +331,8 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 cout << "Requested DIF assignment of IPC process " <<
                         ipcp->name.toString() << " to DIF " <<
                         dif_name.toString() << endl;
-                concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-                                           seqnum);
+                arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
+                                seqnum);
         } catch (rina::AssignToDIFException) {
                 cerr << "Error while assigning " <<
                         ipcp->name.toString() <<
@@ -327,8 +341,14 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         }
 
         ret = 0;
+
 out:
         concurrency.unlock();
+
+        if (!arrived) {
+                cerr << __func__ << ": Timed out" << endl;
+                return -1;
+        }
 
         return ret;
 }
@@ -341,6 +361,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
         // Select a slave (N-1) IPC process.
         rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
         unsigned int seqnum;
+        bool arrived = true;
 
         if (!slave_ipcp) {
                 cerr << "Cannot find any IPC process belonging "
@@ -363,7 +384,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                         dif_name.toString() << " through IPC process "
                         << slave_ipcp->name.toString() << endl;
 
-                concurrency.wait_for_event(
+                arrived = concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);
         } catch (Exception) {
                 cerr << __func__ << ": Error while requesting "
@@ -371,6 +392,11 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
         }
 
         concurrency.unlock();
+
+        if (!arrived) {
+                cerr << __func__ << ": Timed out" << endl;
+                return -1;
+        }
 
         return 0;
 }
@@ -391,6 +417,8 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor,
                           bool sync)
 {
+        bool arrived = true;
+
         concurrency.lock();
 
         try {
@@ -407,7 +435,7 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                         " and neighbor IPC process " <<
                         neighbor.apName.toString() << endl;
                 if (sync) {
-                        concurrency.wait_for_event(
+                        arrived = concurrency.wait_for_event(
                                 rina::ENROLL_TO_DIF_RESPONSE_EVENT, seqnum);
                 }
         } catch (rina::EnrollException) {
@@ -417,6 +445,11 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
         }
 
         concurrency.unlock();
+
+        if (!arrived) {
+                cerr << __func__ << ": Timed out" << endl;
+                return -1;
+        }
 
         return 0;
 }
@@ -466,6 +499,8 @@ int
 IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                                      const rina::DIFConfiguration& dif_config)
 {
+        bool arrived = true;
+
         concurrency.lock();
 
         try {
@@ -484,7 +519,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                 cout << "Requested configuration update for IPC process " <<
                         ipcp->name.toString() << endl;
 
-                concurrency.wait_for_event(
+                arrived = concurrency.wait_for_event(
                         rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum);
         } catch (rina::UpdateDIFConfigurationException) {
                 cerr << __func__ << ": Error while updating DIF configuration "
@@ -492,6 +527,11 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
         }
 
         concurrency.unlock();
+
+        if (!arrived) {
+                cerr << __func__ << ": Timed out" << endl;
+                return -1;
+        }
 
         return 0;
 }
@@ -504,6 +544,7 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
         }
 
         std::string ret = "Query RIB operation was not successful";
+        bool arrived = true;
 
         concurrency.lock();
 
@@ -515,7 +556,7 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
                 pending_ipcp_query_rib_responses[seqnum] = ipcp;
                 cout << "Requested query RIB of IPC process " <<
                         ipcp->name.toString() << endl;
-                concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
+                arrived = concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
                                            seqnum);
 
                 std::map<unsigned int, std::string >::iterator mit;
@@ -528,11 +569,13 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
         } catch (rina::QueryRIBException) {
                 cerr << "Error while querying RIB of IPC Process " <<
                         ipcp->name.toString() << endl;
-                goto out;
         }
 
-out:
         concurrency.unlock();
+
+        if (!arrived) {
+                cerr << __func__ << ": Timed out" << endl;
+        }
 
         return ret;
 }
