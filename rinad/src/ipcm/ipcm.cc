@@ -60,17 +60,7 @@ script_function(void *opaque)
 }
 
 IPCManager::IPCManager() : script(NULL), console(NULL)
-{
-        // Initialize the IPC manager infrastructure in librina.
-        try {
-                rina::initializeIPCManager(1, config.local.installationPath,
-                                           config.local.libraryPath,
-                                           LOG_LEVEL_INFO, IPCM_LOG_FILE);
-        } catch (rina::InitializationException) {
-                cerr << "Cannot initialize librina-ipc-manager" << endl;
-                exit(EXIT_FAILURE);
-        }
-}
+{}
 
 IPCManager::~IPCManager()
 {
@@ -81,6 +71,19 @@ IPCManager::~IPCManager()
                 // Maybe we should join here
                 delete script;
         }
+}
+
+void IPCManager::initIPCManager() {
+    // Initialize the IPC manager infrastructure in librina.
+    try {
+            rina::initializeIPCManager(1, config.local.installationPath,
+                                       config.local.libraryPath,
+                                       LOG_LEVEL_DBG, IPCM_LOG_FILE);
+            cout<<"Initialized IPCManager, installation path: "<< config.local.installationPath << "; library path: "<<  config.local.libraryPath <<"; log file: " <<IPCM_LOG_FILE <<std::endl;
+    } catch (rina::InitializationException) {
+            cerr << "Cannot initialize librina-ipc-manager" << endl;
+            exit(EXIT_FAILURE);
+    }
 }
 
 int
