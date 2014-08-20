@@ -71,6 +71,7 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
                                       rina::IPCProcess *slave_ipcp)
 {
         unsigned int seqnum;
+        bool arrived = true;
 
         try {
                 // Forward the unregistration request to the IPC process
@@ -83,13 +84,18 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
                         ipcp->name.toString() << " from IPC "
                         "process " << slave_ipcp->name.toString() << endl;
 
-                concurrency.wait_for_event(
+                arrived = concurrency.wait_for_event(
                                 rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
                                 seqnum);
         } catch (rina::IpcmUnregisterApplicationException) {
                 cerr << __func__ << ": Error while unregistering IPC process "
                         << ipcp->name.toString() << " from IPC "
                         "process " << slave_ipcp->name.toString() << endl;
+                return -1;
+        }
+
+        if (!arrived) {
+                cerr << __func__ << ": Timed out" << endl;
                 return -1;
         }
 
