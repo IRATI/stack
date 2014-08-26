@@ -506,28 +506,30 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 }
 
 struct rtxq {
-        spinlock_t        lock;
-        struct rtimer *   r_timer;
-        struct dt *       parent;
-        struct rmt *      rmt;
-        struct rtxqueue * queue;
+        spinlock_t                lock;
+        struct rtimer *           r_timer;
+        struct dt *               parent;
+        struct rmt *              rmt;
+        struct rtxqueue *         queue;
+        struct workqueue_struct * twq;
 };
 
-static void Rtimer_handler(void * data)
+static int rtx_worker(void * o)
 {
+
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
 
-        q = (struct rtxq *) data;
+        q = (struct rtxq *) o;
         if (!q) {
                 LOG_ERR("No RTXQ to work with");
-                return;
+                return -1;
         }
 
         dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
         if (!dtcp_cfg) {
                 LOG_ERR("RTX failed");
-                return;
+                return -1;
         }
 
         if (rtxqueue_rtx(q->queue,
@@ -537,6 +539,34 @@ static void Rtimer_handler(void * data)
                 LOG_ERR("RTX failed");
 
         rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+
+        LOG_DBG("RTX timer worker OK...");
+        return 0;
+}
+
+static void Rtimer_handler(void * data)
+{
+        struct rtxq *          q;
+        struct rwq_work_item * item;
+
+        q = (struct rtxq *) data;
+        if (!q) {
+                LOG_ERR("No RTXQ to work with");
+                return;
+        }
+
+        item = rwq_work_create_ni(rtx_worker, q);
+        if (!item) {
+                LOG_ERR("Could not create twq item");
+                return;
+        }
+
+        if (rwq_work_post(q->twq, item)) {
+                LOG_ERR("Could not add twq item to the wq");
+                return;
+        }
+
+        return;
 }
 
 int rtxq_destroy(struct rtxq * q)
@@ -550,15 +580,36 @@ int rtxq_destroy(struct rtxq * q)
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
+        if (q->twq)  rwq_destroy(q->twq);
+
         rkfree(q);
 
         return 0;
+}
+
+#define MAX_NAME_SIZE 128
+
+static const char * create_twq_name(const char *        prefix,
+                                    const struct rtxq * instance)
+{
+        static char name[MAX_NAME_SIZE];
+
+        ASSERT(prefix);
+        ASSERT(instance);
+
+        if (snprintf(name, sizeof(name), RINA_PREFIX "-%s-%pK",
+                     prefix, instance) >=
+            sizeof(name))
+                return NULL;
+
+        return name;
 }
 
 struct rtxq * rtxq_create(struct dt *  dt,
                           struct rmt * rmt)
 {
         struct rtxq * tmp;
+        const char *  twq_name;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -578,6 +629,17 @@ struct rtxq * rtxq_create(struct dt *  dt,
                 return NULL;
         }
 
+        twq_name = create_twq_name("twq", tmp);
+        if (!twq_name) {
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+        tmp->twq = rwq_create(twq_name);
+        if (!tmp->twq) {
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
         ASSERT(dt);
         ASSERT(rmt);
 
@@ -593,6 +655,7 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
                              struct rmt * rmt)
 {
         struct rtxq * tmp;
+        const char *  twq_name;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
@@ -608,6 +671,17 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         tmp->queue = rtxqueue_create_ni();
         if (!tmp->queue) {
                 LOG_ERR("Failed to create retransmission queue");
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
+        twq_name = create_twq_name("twq", tmp);
+        if (!twq_name) {
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+        tmp->twq = rwq_create(twq_name);
+        if (!tmp->twq) {
                 rtxq_destroy(tmp);
                 return NULL;
         }
