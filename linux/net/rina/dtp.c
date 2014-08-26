@@ -252,7 +252,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
         /* Start SenderInactivityTimer */
         if (dtcp &&
             rtimer_restart(dtp->timers.sender_inactivity,
-                           2 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start sender_inactiviy timer");
                 return 0;
         }
@@ -1375,7 +1375,8 @@ int dtp_receive(struct dtp * instance,
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
-                dt_sv_drf_flag_set(dt, true);
+                /* This is wrong after discussions with John */
+                /* dt_sv_drf_flag_set(dt, true); */
                 policies->initial_sequence_number(instance);
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, seq_num)) {
@@ -1487,7 +1488,7 @@ int dtp_receive(struct dtp * instance,
 #if DTP_INACTIVITY_TIMERS_ENABLE        
         /* Start ReceiverInactivityTimer */
         if (dtcp && rtimer_restart(instance->timers.receiver_inactivity,
-                                   3 * (dt_sv_mpl(dt) +
+                                   2 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
                                         dt_sv_a(dt)))) {
                 LOG_ERR("Failed to start Receiver Inactivity timer");
