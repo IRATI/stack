@@ -46,7 +46,7 @@ select_ipcp_by_dif(const rina::ApplicationProcessNamingInformation& dif_name)
         	rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->name;
 
 			//FIXME: Dif name is not app name but when you have a dummy, how to register an application to a specific dif, only way right now is using a ipcname as a difname
-			if (ipcps[i]->name.processName.compare(dif_name.processName) || ipcps[i]->getDIFInformation().dif_name_ == dif_name)
+			if (ipcps[i]->name.processName.compare(dif_name.processName) == 0 || ipcps[i]->getDIFInformation().dif_name_ == dif_name)
 			{
 				return ipcps[i];
 			}
