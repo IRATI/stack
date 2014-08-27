@@ -49,7 +49,7 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		if (event.getFlowSpecification().getMaxAllowableGap() == -1) {
 			connectionPolicies.setMaxSduGap(Integer.MAX_VALUE);
 		} else {
-			connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+			connectionPolicies.setMaxSduGap(event.getFlowSpecification().getMaxAllowableGap());
 		}
 		
 		connection.setPolicies(connectionPolicies);
