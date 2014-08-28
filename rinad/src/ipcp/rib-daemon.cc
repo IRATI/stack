@@ -757,7 +757,7 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 					cdapMessage.to_string().c_str());
 		} else {
 			rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu->get_message(), sdu->get_size(), sessionId);
-			LOG_DBG("Sent CDAP message through port-id %d: %s" , sessionId,
+			LOG_DBG("Sent CDAP message of size %d through port-id %d: %s" , sdu->get_size(), sessionId,
 					cdapMessage.to_string().c_str());
 		}
 
