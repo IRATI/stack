@@ -625,12 +625,17 @@ void initialize(const std::string& logLevel,
 class SerializedObject {
 public:
 	SerializedObject();
+	SerializedObject( const SerializedObject& other );
 	SerializedObject(char* message, int size);
 	~SerializedObject();
+	SerializedObject& operator=(const SerializedObject &other);
 	int get_size() const;
 	char* get_message() const;
 	int size_;
 	char* message_;
+
+private:
+	void initialize(const SerializedObject& other );
 };
 
 }

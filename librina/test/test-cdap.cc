@@ -148,7 +148,6 @@ bool connect(CDAPSessionManagerInterface &session_manager, int port_A,
 	int int_assert = 0;
 
 	session_manager.createCDAPSession(port_A);
-	session_manager.createCDAPSession(port_B);
 
 	bool_assert = bool_assert && m_Connect(session_manager, port_A, port_B, invoke_id);
 	int_assert = m_Connect_R(session_manager, port_A, port_B, invoke_id);
@@ -164,7 +163,6 @@ bool connectTimeout(CDAPSessionManagerInterface &session_manager, int port_A,
 	Sleep sleep;
 
 	session_manager.createCDAPSession(port_A);
-	session_manager.createCDAPSession(port_B);
 
 	bool_assert = bool_assert && m_Connect(session_manager, port_A, port_B, invoke_id);
 	sleep.sleepForSec(3);

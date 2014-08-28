@@ -462,11 +462,6 @@ bool FlowStateDatabase::isEmpty() const {
 	return flow_state_objects_.size() == 0;
 }
 
-const rina::SerializedObject * FlowStateDatabase::encode() {
-	return encoder_->encode(&flow_state_objects_,
-			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
-}
-
 void FlowStateDatabase::setAvoidPort(int avoidPort) {
 	std::list<FlowStateObject *>::iterator it;
 	for(it=flow_state_objects_.begin(); it!=flow_state_objects_.end(); ++it) {
@@ -892,24 +887,20 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 	}
 
 	int portId = event->neighbor_->get_underlying_port_id();
-	const rina::CDAPMessage * cdapMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 
 	try{
-		serializedObject = db_->encode();
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
 		cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(portId, 0,
 				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
-				&objectValue, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
+				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
+		encoder_->encode(&(db_->flow_state_objects_), cdapMessage);
 		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
 		db_->setAvoidPort(portId);
-		delete cdapMessage;
-		delete serializedObject;
 	}catch(Exception &e){
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
-		delete cdapMessage;
-		delete serializedObject;
 	}
+
+	delete cdapMessage;
 }
 
 void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
@@ -927,28 +918,23 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 
 	std::list<FlowStateObject *> fsos;
 	std::list<rina::FlowInformation>::iterator it;
-	const rina::CDAPMessage * cdapMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 	int i = 0;
 	for (it = nMinusOneFlows.begin(); it != nMinusOneFlows.end(); ++it) {
 		fsos = groupsToSend[i];
 		if (fsos.size() > 0) {
 			try {
-				serializedObject = db_->encode();
-				rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
 				cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(it->portId, 0,
 						rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
-						&objectValue, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
+						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
+				encoder_->encode(&(db_->flow_state_objects_), cdapMessage);
 				rib_daemon_->sendMessage(*cdapMessage, it->portId, 0);
-				delete cdapMessage;
-				delete serializedObject;
 			} catch (Exception &e) {
 				LOG_ERR("Errors sending message: %s", e.what());
-				delete cdapMessage;
-				delete serializedObject;
 			}
 		}
 
+		delete cdapMessage;
 		i++;
 	}
 }
@@ -986,10 +972,8 @@ void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 	}
 
 	try {
-		rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-		std::list<FlowStateObject *> * objects = (std::list<FlowStateObject *> *) encoder_->decode(*serializedObject,
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+		std::list<FlowStateObject *> * objects =
+				(std::list<FlowStateObject *> *) encoder_->decode(cdapMessage);
 		db_->updateObjects(*objects, portId, ipc_process_->get_address());
 		delete objects;
 	} catch (Exception &e) {
@@ -1006,22 +990,18 @@ void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
 		return;
 	}
 
-	const rina::CDAPMessage * responseMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * responseMessage = 0;
 	try {
-		serializedObject = db_->encode();
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(*serializedObject);
 		responseMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				fs_rib_group_->class_, fs_rib_group_->instance_, fs_rib_group_->name_, &objectValue,
+				fs_rib_group_->class_, fs_rib_group_->instance_, fs_rib_group_->name_,
 				0, "", cdapMessage->get_invoke_id());
+		encoder_->encode(&(db_->flow_state_objects_), responseMessage);
 		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
-		delete responseMessage;
-		delete serializedObject;
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
-		delete responseMessage;
-		delete serializedObject;
 	}
+
+	delete responseMessage;
 }
 
 //Class FlowStateObjectEncoder
@@ -1040,10 +1020,13 @@ const rina::SerializedObject* FlowStateObjectEncoder::encode(const void* object)
 }
 
 void* FlowStateObjectEncoder::decode(
-		const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	rina::messages::flowStateObject_t gpb_fso;
 
-	gpb_fso.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_fso.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	return (void*) FlowStateObjectEncoder::convertGPBToModel(gpb_fso);
 }
@@ -1091,9 +1074,13 @@ const rina::SerializedObject* FlowStateObjectListEncoder::encode(const void* obj
 	return serialized_object;
 }
 
-void* FlowStateObjectListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* FlowStateObjectListEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::flowStateObjectGroup_t gpb_list;
-	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_list.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	std::list<FlowStateObject*> * list = new std::list<FlowStateObject*>();
 

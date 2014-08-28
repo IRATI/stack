@@ -236,7 +236,6 @@ public:
 	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
 			flow_state_rib_object_group, rina::Timer * timer);
 	bool isEmpty() const;
-	const rina::SerializedObject * encode();
 	void setAvoidPort(int avoidPort);
 	void addObjectToGroup(unsigned int address, int portId,
 			unsigned int neighborAddress, int neighborPortId);
@@ -456,7 +455,7 @@ private:
 class FlowStateObjectEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 	static void convertModelToGPB(rina::messages::flowStateObject_t * gpb_fso,
 			FlowStateObject * fso);
 	static FlowStateObject * convertGPBToModel(
@@ -467,7 +466,7 @@ public:
 class FlowStateObjectListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 }

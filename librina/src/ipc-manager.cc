@@ -841,15 +841,13 @@ IPCProcess * IPCProcessFactory::create(
 			char * argv[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
-				stringToCharArray("."+_installationPath +
-					          "/ipcp"),
+				stringToCharArray(_installationPath +"/ipcp"),
 				stringToCharArray(ipcProcessName.processName),
 				stringToCharArray(ipcProcessName.processInstance),
 				intToCharArray(ipcProcessId),
 				intToCharArray(getNelinkPortId()),
 				0
 			};
-
 			char * envp[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
@@ -859,9 +857,10 @@ IPCProcess * IPCProcessFactory::create(
 				(char*) 0
 			};
 
+			LOG_DBG("argv[0]: %s", argv[0]);
 			execve(argv[0], &argv[0], envp);
 
-			LOG_ERR("Problems loading IPC Process program, finalizing OS Process");
+			LOG_ERR("Problems loading IPC Process program, finalizing OS Process with error %s", strerror(errno));
 
 			//Destroy the IPC Process in the kernel
 			syscallDestroyIPCProcess(ipcProcessId);

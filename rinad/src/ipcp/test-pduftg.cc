@@ -37,8 +37,8 @@ public:
 		return result;
 	}
 
-	void* decode(const rina::SerializedObject &serialized_object) const {
-		LOG_DBG("%d", serialized_object.size_);
+	void* decode(const rina::ObjectValueInterface * object_value) const {
+		LOG_DBG("%p", object_value);
 		return 0;
 	}
 };

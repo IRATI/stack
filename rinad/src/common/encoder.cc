@@ -20,6 +20,10 @@
 
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
+#define RINA_PREFIX "encoder"
+
+#include <librina/logs.h>
+
 #include "common/encoder.h"
 #include "common/encoders/DataTransferConstantsMessage.pb.h"
 #include "common/encoders/DirectoryForwardingTableEntryArrayMessage.pb.h"
@@ -124,13 +128,35 @@ Encoder::~Encoder() {
 void Encoder::addEncoder(const std::string& object_class, EncoderInterface *encoder) {
 	encoders_.insert(std::pair<std::string,EncoderInterface*> (object_class, encoder));
 }
-const rina::SerializedObject* Encoder::encode(const void* object, const std::string& object_class) {
-	EncoderInterface* encoder = get_encoder(object_class);
-	return encoder->encode(object);
+
+void Encoder::encode(const void* object, rina::CDAPMessage * cdapMessage) {
+	EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
+	if (!encoder) {
+		throw Exception("Could not find encoder");
+	}
+
+	const rina::SerializedObject * encodedObject =  encoder->encode(object);
+	if (!encodedObject) {
+		throw Exception("The encoder returned a null pointer");
+	}
+
+	cdapMessage->obj_value_ =  new rina::ByteArrayObjectValue(
+			*encodedObject);
+
+	delete encodedObject;
+
+	return;
 }
-void* Encoder::decode(const rina::SerializedObject &serialized_object, const std::string& object_class) {
-	EncoderInterface* encoder = get_encoder(object_class);
-	return encoder->decode(serialized_object);
+void* Encoder::decode(const rina::CDAPMessage * cdapMessage) {
+	if (!cdapMessage->obj_value_) {
+		throw Exception ("Object value is null");
+	}
+
+	EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
+	if (!encoder) {
+		throw Exception("Could not find encoder");
+	}
+	return encoder->decode(cdapMessage->obj_value_);
 }
 
 EncoderInterface * Encoder::get_encoder(const std::string& object_class) {
@@ -140,6 +166,22 @@ EncoderInterface * Encoder::get_encoder(const std::string& object_class) {
 	}
 
 	return it->second;
+}
+
+rina::SerializedObject * Encoder::get_serialized_object(
+		const rina::ObjectValueInterface * object_value) {
+	if (!object_value) {
+		throw Exception ("Object value is null");
+	}
+
+	rina::ByteArrayObjectValue * value =
+			(rina::ByteArrayObjectValue*) object_value;
+
+	if (!value) {
+		throw Exception("Object value is not of type Byte Array Object Value");
+	}
+
+	return (rina::SerializedObject *) value->get_value();
 }
 
 rina::messages::applicationProcessNamingInfo_t* Encoder::get_applicationProcessNamingInfo_t(
@@ -555,11 +597,14 @@ const rina::SerializedObject* DataTransferConstantsEncoder::encode(const void* o
 }
 
 void* DataTransferConstantsEncoder::decode(
-const rina::SerializedObject &serialized_object) const {
+	const rina::ObjectValueInterface * object_value) const {
 	rina::DataTransferConstants *dtc = new rina::DataTransferConstants();
 	rina::messages::dataTransferConstants_t gpb_dtc;
 
-	gpb_dtc.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_dtc.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	dtc->address_length_ = gpb_dtc.addresslength();
 	dtc->cep_id_length_ = gpb_dtc.cepidlength();
@@ -590,10 +635,13 @@ const rina::SerializedObject* DirectoryForwardingTableEntryEncoder::encode(const
 }
 
 void* DirectoryForwardingTableEntryEncoder::decode(
-		const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	rina::messages::directoryForwardingTableEntry_t gpb_dtfe;
 
-	gpb_dtfe.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_dtfe.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	return (void*) DirectoryForwardingTableEntryEncoder::convertGPBToModel(gpb_dtfe);
 }
@@ -644,9 +692,13 @@ const rina::SerializedObject* DirectoryForwardingTableEntryListEncoder::encode(c
 	return serialized_object;
 }
 
-void* DirectoryForwardingTableEntryListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* DirectoryForwardingTableEntryListEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::directoryForwardingTableEntrySet_t gpb_list;
-	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_list.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	std::list<rina::DirectoryForwardingTableEntry*> * list = new std::list<rina::DirectoryForwardingTableEntry*>();
 
@@ -674,10 +726,13 @@ const rina::SerializedObject* QoSCubeEncoder::encode(const void* object) {
 }
 
 void* QoSCubeEncoder::decode(
-		const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	rina::messages::qosCube_t gpb_cube;
 
-	gpb_cube.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_cube.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	return (void*) QoSCubeEncoder::convertGPBToModel(gpb_cube);
 }
@@ -748,12 +803,15 @@ const rina::SerializedObject* QoSCubeListEncoder::encode(const void* object) {
 	return serialized_object;
 }
 
-void* QoSCubeListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* QoSCubeListEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::qosCubes_t gpb_list;
-	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_list.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	std::list<rina::QoSCube*> * list = new std::list<rina::QoSCube*>();
-
 	for (int i = 0; i < gpb_list.qoscube_size(); ++i) {
 		list->push_back(QoSCubeEncoder::convertGPBToModel(
 				gpb_list.qoscube(i)));
@@ -778,10 +836,13 @@ const rina::SerializedObject* WhatevercastNameEncoder::encode(const void* object
 }
 
 void* WhatevercastNameEncoder::decode(
-		const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	rina::messages::whatevercastName_t gpb_name;
 
-	gpb_name.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_name.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	return (void*) WhatevercastNameEncoder::convertGPBToModel(gpb_name);
 }
@@ -832,9 +893,13 @@ const rina::SerializedObject* WhatevercastNameListEncoder::encode(const void* ob
 	return serialized_object;
 }
 
-void* WhatevercastNameListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* WhatevercastNameListEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::whatevercastNames_t gpb_list;
-	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_list.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	std::list<rina::WhatevercastName*> * list = new std::list<rina::WhatevercastName*>();
 
@@ -862,10 +927,13 @@ const rina::SerializedObject* NeighborEncoder::encode(const void* object) {
 }
 
 void* NeighborEncoder::decode(
-		const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	rina::messages::neighbor_t gpb_nei;
 
-	gpb_nei.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_nei.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	return (void*) NeighborEncoder::convertGPBToModel(gpb_nei);
 }
@@ -920,9 +988,13 @@ const rina::SerializedObject* NeighborListEncoder::encode(const void* object) {
 	return serialized_object;
 }
 
-void* NeighborListEncoder::decode(const rina::SerializedObject &serialized_object) const {
+void* NeighborListEncoder::decode(const rina::ObjectValueInterface * object_value) const {
 	rina::messages::neighbors_t gpb_list;
-	gpb_list.ParseFromArray(serialized_object.message_, serialized_object.size_);
+
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpb_list.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	std::list<rina::Neighbor*> * list = new std::list<rina::Neighbor*>();
 

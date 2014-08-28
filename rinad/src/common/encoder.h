@@ -130,7 +130,7 @@ public:
 	 /// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
 	 /// byte array value doesn't correspond to an object of the type "className"
 	 /// @return
-	virtual void* decode(const rina::SerializedObject &serialized_object) const = 0;
+	virtual void* decode(const rina::ObjectValueInterface * serialized_object) const = 0;
 };
 
 /// Factory that provides and Encoder instance
@@ -156,8 +156,7 @@ public:
 	/// @param object
 	/// @return
 
-	const rina::SerializedObject* encode(const void* object,
-			const std::string& object_class);
+	void encode(const void* object, rina::CDAPMessage * cdapMessage);
 
 	/// Converts a byte array to an object of the type specified by "className"
 	/// @param serializedObject
@@ -165,9 +164,9 @@ public:
 	/// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
 	/// byte array value doesn't correspond to an object of the type "className"
 	/// @return
-	void* decode(const rina::SerializedObject &serialized_object,
-			const std::string& object_class);
+	void* decode(const rina::CDAPMessage * cdapMessage);
 
+	static rina::SerializedObject * get_serialized_object(const rina::ObjectValueInterface * object_value);
 	static rina::messages::applicationProcessNamingInfo_t* get_applicationProcessNamingInfo_t(
 			const rina::ApplicationProcessNamingInformation &name);
 	static rina::ApplicationProcessNamingInformation* get_ApplicationProcessNamingInformation(
@@ -210,14 +209,14 @@ private:
 class DataTransferConstantsEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of DirectoryForwardingTableEntry object
 class DirectoryForwardingTableEntryEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 	static void convertModelToGPB(rina::messages::directoryForwardingTableEntry_t * gpb_dfte,
 			rina::DirectoryForwardingTableEntry * dfte);
 	static rina::DirectoryForwardingTableEntry * convertGPBToModel(
@@ -228,14 +227,14 @@ public:
 class DirectoryForwardingTableEntryListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of QoSCube object
 class QoSCubeEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 	static void convertModelToGPB(rina::messages::qosCube_t * gpb_cube,
 			rina::QoSCube * cube);
 	static rina::QoSCube * convertGPBToModel(
@@ -246,14 +245,14 @@ public:
 class QoSCubeListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of WhatevercastName object
 class WhatevercastNameEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 	static void convertModelToGPB(rina::messages::whatevercastName_t * gpb_name,
 			rina::WhatevercastName * name);
 	static rina::WhatevercastName * convertGPBToModel(
@@ -264,14 +263,14 @@ public:
 class WhatevercastNameListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of Neighbor object
 class NeighborEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 	static void convertModelToGPB(rina::messages::neighbor_t * gpb_nei,
 			rina::Neighbor * nei);
 	static rina::Neighbor * convertGPBToModel(
@@ -282,7 +281,7 @@ public:
 class NeighborListEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 }

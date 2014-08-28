@@ -561,7 +561,8 @@ CDAPMessage::~CDAPMessage() {
 		filter_ = 0;
 	}
 }
-const CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
+
+CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 		AuthTypes auth_mech, const AuthValue &auth_value,
 		const std::string &dest_ae_inst, const std::string &dest_ae_name,
 		const std::string &dest_ap_inst, const std::string &dest_ap_name,
@@ -586,7 +587,8 @@ const CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getOpenConnectionResponseMessage(
+
+CDAPMessage* CDAPMessage::getOpenConnectionResponseMessage(
 		AuthTypes auth_mech, const AuthValue &auth_value,
 		const std::string &dest_ae_inst, const std::string &dest_ae_name,
 		const std::string &dest_ap_inst, const std::string &dest_ap_name,
@@ -614,6 +616,7 @@ const CDAPMessage* CDAPMessage::getOpenConnectionResponseMessage(
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getReleaseConnectionRequestMessage(Flags flags) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -621,7 +624,8 @@ CDAPMessage* CDAPMessage::getReleaseConnectionRequestMessage(Flags flags) {
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getReleaseConnectionResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getReleaseConnectionResponseMessage(Flags flags,
 		int result, const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -632,9 +636,10 @@ const CDAPMessage* CDAPMessage::getReleaseConnectionResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getCreateObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
-		const std::string &obj_name, ObjectValueInterface *obj_value,
+		const std::string &obj_name,
 		int scope) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_filter(filter);
@@ -642,15 +647,15 @@ CDAPMessage* CDAPMessage::getCreateObjectRequestMessage(char * filter,
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_op_code(M_CREATE);
 	cdap_message->set_scope(scope);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getCreateObjectResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getCreateObjectResponseMessage(Flags flags,
 		const std::string &obj_class, long obj_inst, const std::string &obj_name,
-		ObjectValueInterface *obj_value, int result,
+		int result,
 		const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -658,30 +663,29 @@ const CDAPMessage* CDAPMessage::getCreateObjectResponseMessage(Flags flags,
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_op_code(M_CREATE_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getDeleteObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
-		const std::string &obj_name, ObjectValueInterface *obj_value,
-		int scope) {
+		const std::string &obj_name, int scope) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_filter(filter);
 	cdap_message->set_flags(flags);
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_op_code(M_DELETE);
 	cdap_message->set_scope(scope);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getDeleteObjectResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getDeleteObjectResponseMessage(Flags flags,
 		const std::string &obj_class, long obj_inst, const std::string &obj_name,
 		int result, const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
@@ -696,9 +700,9 @@ const CDAPMessage* CDAPMessage::getDeleteObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getStartObjectRequestMessage(char * filter,
-		Flags flags, const std::string &obj_class,
-		ObjectValueInterface *objValue, long obj_inst,
+		Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, int scope) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_filter(filter);
@@ -706,13 +710,13 @@ CDAPMessage* CDAPMessage::getStartObjectRequestMessage(char * filter,
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(objValue);
 	cdap_message->set_op_code(M_START);
 	cdap_message->set_scope(scope);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
 		int result, const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -723,8 +727,9 @@ const CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
-		const std::string &object_class, ObjectValueInterface *obj_value,
+
+CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
+		const std::string &object_class,
 		long obj_inst, const std::string &obj_name, int result,
 		const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
@@ -734,15 +739,14 @@ const CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
 	cdap_message->set_obj_class(object_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getStopObjectRequestMessage(char * filter,
-		Flags flags, const std::string &obj_class,
-		ObjectValueInterface *obj_value, long obj_inst,
+		Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, int scope) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_filter(filter);
@@ -750,13 +754,13 @@ CDAPMessage* CDAPMessage::getStopObjectRequestMessage(char * filter,
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_op_code(M_STOP);
 	cdap_message->set_scope(scope);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getStopObjectResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getStopObjectResponseMessage(Flags flags,
 		int result, const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -767,6 +771,7 @@ const CDAPMessage* CDAPMessage::getStopObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getReadObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, int scope) {
@@ -781,9 +786,10 @@ CDAPMessage* CDAPMessage::getReadObjectRequestMessage(char * filter,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getReadObjectResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getReadObjectResponseMessage(Flags flags,
 		const std::string &obj_class, long obj_inst, const std::string &obj_name,
-		ObjectValueInterface *obj_value, int result,
+		int result,
 		const std::string &result_reason, int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -791,16 +797,16 @@ const CDAPMessage* CDAPMessage::getReadObjectResponseMessage(Flags flags,
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_op_code(M_READ_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 CDAPMessage* CDAPMessage::getWriteObjectRequestMessage(char * filter,
 		Flags flags, const std::string &obj_class, long obj_inst,
-		ObjectValueInterface *obj_value, const std::string &obj_name,
+		const std::string &obj_name,
 		int scope) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_filter(filter);
@@ -808,13 +814,13 @@ CDAPMessage* CDAPMessage::getWriteObjectRequestMessage(char * filter,
 	cdap_message->set_obj_class(obj_class);
 	cdap_message->set_obj_inst(obj_inst);
 	cdap_message->set_obj_name(obj_name);
-	cdap_message->set_obj_value(obj_value);
 	cdap_message->set_op_code(M_WRITE);
 	cdap_message->set_scope(scope);
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getWriteObjectResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getWriteObjectResponseMessage(Flags flags,
 		int result, int invoke_id, const std::string &result_reason) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -825,7 +831,8 @@ const CDAPMessage* CDAPMessage::getWriteObjectResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getCancelReadRequestMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getCancelReadRequestMessage(Flags flags,
 		int invoke_id) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -834,7 +841,8 @@ const CDAPMessage* CDAPMessage::getCancelReadRequestMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
-const CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
+
+CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
 		int invoke_id, int result, const std::string &result_reason) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
@@ -845,6 +853,7 @@ const CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
 	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
+
 std::string CDAPMessage::to_string() const {
 	std::stringstream ss;
 	ss << std::endl << op_code_ << std::endl;

@@ -78,11 +78,12 @@ bool test_flow (rinad::Encoder * encoder) {
 
 	// Encode
 	pflow_to_encode = &flow_to_encode;
-	const rina::SerializedObject *serialized_object = encoder->encode((void*)pflow_to_encode,
-			rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+		cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS;
+	encoder->encode((void*)pflow_to_encode, &cdapMessage);
+
 	// Decode
-	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(*serialized_object,
-			rinad::EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(&cdapMessage);
 
 	// Assert
 	if (pflow_to_encode->source_naming_info_.processName != pflow_decoded->source_naming_info_.processName)
@@ -150,13 +151,15 @@ bool test_flow (rinad::Encoder * encoder) {
 	}
 
 	LOG_INFO("Flow Encoder tested successfully");
+
+	delete pflow_decoded;
+
 	return true;
 }
 
 bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	rina::DataTransferConstants dtc;
 	rina::DataTransferConstants * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	dtc.address_length_ = 23;
 	dtc.cep_id_length_ = 15;
@@ -168,16 +171,17 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	dtc.qos_id_lenght_ = 3414;
 	dtc.sequence_number_length_ = 123;
 
-	encoded_object = encoder->encode(&dtc,
-			rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::DataTransferConstants*) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS;
+	encoder->encode(&dtc, &cdapMessage);
+	recovered_obj = (rina::DataTransferConstants*) encoder->decode(&cdapMessage);
 
 	if (dtc.address_length_ != recovered_obj->address_length_) {
 		return false;
 	}
 
 	if (dtc.cep_id_length_ != recovered_obj->cep_id_length_) {
+		LOG_DBG("Aqui");
 		return false;
 	}
 
@@ -210,16 +214,15 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Data Transfer Constants Encoder tested successfully");
+
 	return true;
 }
 
 bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
 	rina::DirectoryForwardingTableEntry dfte;
 	rina::DirectoryForwardingTableEntry * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	dfte.address_ = 232;
 	dfte.timestamp_ = 5265235;
@@ -228,10 +231,11 @@ bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
 	dfte.ap_naming_info_.entityName = "ae";
 	dfte.ap_naming_info_.entityInstance = "1";
 
-	encoded_object = encoder->encode(&dfte,
-			rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::DirectoryForwardingTableEntry*) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS;
+
+	encoder->encode(&dfte, &cdapMessage);
+	recovered_obj = (rina::DirectoryForwardingTableEntry*) encoder->decode(&cdapMessage);
 
 	if (dfte.address_ != recovered_obj->address_) {
 		return false;
@@ -262,7 +266,6 @@ bool test_directory_forwarding_table_entry(rinad::Encoder * encoder) {
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Directory Forwarding Table Entry Encoder tested successfully");
 	return true;
@@ -273,7 +276,6 @@ bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
 	rina::DirectoryForwardingTableEntry dfte1;
 	rina::DirectoryForwardingTableEntry dfte2;
 	std::list<rina::DirectoryForwardingTableEntry*> * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	dfte1.address_ = 232;
 	dfte1.timestamp_ = 5265235;
@@ -290,17 +292,18 @@ bool test_directory_forwarding_table_entry_list(rinad::Encoder * encoder) {
 	dfte2.ap_naming_info_.entityInstance = "2";
 	dfte_list.push_back(&dfte2);
 
-	encoded_object = encoder->encode(&dfte_list,
-			rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::DirectoryForwardingTableEntry*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS;
+
+	encoder->encode(&dfte_list, &cdapMessage);
+
+	recovered_obj = (std::list<rina::DirectoryForwardingTableEntry*> *) encoder->decode(&cdapMessage);
 
 	if (dfte_list.size() != recovered_obj->size()) {
 		return false;
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Directory Forwarding Table Entry List Encoder tested successfully");
 	return true;
@@ -311,7 +314,6 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 	rina::ApplicationProcessNamingInformation name1;
 	rina::ApplicationProcessNamingInformation name2;
 	rinad::EnrollmentInformationRequest * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	name1.processName = "dif1";
 	name2.processName = "dif2";
@@ -319,10 +321,13 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 	request.supporting_difs_.push_back(name2);
 	request.address_ = 141234;
 
-	encoded_object = encoder->encode(&request,
-			rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
-	recovered_obj = (rinad::EnrollmentInformationRequest *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS);
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS;
+
+	encoder->encode(&request, &cdapMessage);
+
+	recovered_obj = (rinad::EnrollmentInformationRequest *) encoder->decode(&cdapMessage);
 
 	if (request.address_ != recovered_obj->address_) {
 		return false;
@@ -333,7 +338,6 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Enrollment Information Request Encoder tested successfully");
 	return true;
@@ -342,7 +346,6 @@ bool test_enrollment_information_request(rinad::Encoder * encoder) {
 bool test_qos_cube(rinad::Encoder * encoder) {
 	rina::QoSCube cube;
 	rina::QoSCube * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	cube.average_bandwidth_ = 12134;
 	cube.average_sdu_bandwidth_ = 3141234;
@@ -360,10 +363,12 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 	cube.efcp_policies_.initial_a_timer_ = 23;
 	cube.efcp_policies_.initial_seq_num_policy_.name_ = "test-policy";
 
-	encoded_object = encoder->encode(&cube,
-			rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::QoSCube *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS;
+
+	encoder->encode(&cube, &cdapMessage);
+
+	recovered_obj = (rina::QoSCube *) encoder->decode(&cdapMessage);
 
 	if (cube.average_bandwidth_ != recovered_obj->average_bandwidth_) {
 		return false;
@@ -427,7 +432,6 @@ bool test_qos_cube(rinad::Encoder * encoder) {
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("QoS Cube Encoder tested successfully");
 	return true;
@@ -438,22 +442,22 @@ bool test_qos_cube_list(rinad::Encoder * encoder) {
 	rina::QoSCube cube1;
 	rina::QoSCube cube2;
 	std::list<rina::QoSCube*> * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	cube_list.push_back(&cube1);
 	cube_list.push_back(&cube2);
 
-	encoded_object = encoder->encode(&cube_list,
-			rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::QoSCube*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS;
+
+	encoder->encode(&cube_list, &cdapMessage);
+
+	recovered_obj = (std::list<rina::QoSCube*> *) encoder->decode(&cdapMessage);
 
 	if (cube_list.size() != recovered_obj->size()) {
 		return false;
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("QoS Cube List Encoder tested successfully");
 	return true;
@@ -462,17 +466,18 @@ bool test_qos_cube_list(rinad::Encoder * encoder) {
 bool test_whatevercast_name(rinad::Encoder * encoder) {
 	rina::WhatevercastName name;
 	rina::WhatevercastName * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	name.name_ = "all members";
 	name.rule_ = "fancy rule";
 	name.set_members_.push_back("member1");
 	name.set_members_.push_back("member2");
 
-	encoded_object = encoder->encode(&name,
-			rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::WhatevercastName *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
+
+	encoder->encode(&name, &cdapMessage);
+
+	recovered_obj = (rina::WhatevercastName *) encoder->decode(&cdapMessage);
 
 	if (name.name_.compare(recovered_obj->name_) != 0) {
 		return false;
@@ -487,7 +492,6 @@ bool test_whatevercast_name(rinad::Encoder * encoder) {
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Whatevercast Name Encoder tested successfully");
 	return true;
@@ -498,22 +502,22 @@ bool test_whatevercast_name_list(rinad::Encoder * encoder) {
 	rina::WhatevercastName name1;
 	rina::WhatevercastName name2;
 	std::list<rina::WhatevercastName*> * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	name_list.push_back(&name1);
 	name_list.push_back(&name2);
 
-	encoded_object = encoder->encode(&name_list,
-			rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::WhatevercastName*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS;
+
+	encoder->encode(&name_list, &cdapMessage);
+
+	recovered_obj = (std::list<rina::WhatevercastName*> *) encoder->decode(&cdapMessage);
 
 	if (name_list.size() != recovered_obj->size()) {
 		return false;
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Whatevercast Name List Encoder tested successfully");
 	return true;
@@ -522,7 +526,6 @@ bool test_whatevercast_name_list(rinad::Encoder * encoder) {
 bool test_neighbor(rinad::Encoder * encoder) {
 	rina::Neighbor nei;
 	rina::Neighbor * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	nei.name_.processName = "test1.IRATI",
 	nei.name_.processInstance = "1";
@@ -530,10 +533,12 @@ bool test_neighbor(rinad::Encoder * encoder) {
 	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("test2.IRATI", "1"));
 	nei.supporting_difs_.push_back(rina::ApplicationProcessNamingInformation("Castefa.i2CAT", "1"));
 
-	encoded_object = encoder->encode(&nei,
-			rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
-	recovered_obj = (rina::Neighbor *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS;
+
+	encoder->encode(&nei, &cdapMessage);
+
+	recovered_obj = (rina::Neighbor *) encoder->decode(&cdapMessage);
 
 	if (nei.name_.processName.compare(recovered_obj->name_.processName) != 0) {
 		return false;
@@ -552,7 +557,6 @@ bool test_neighbor(rinad::Encoder * encoder) {
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Neighbor Encoder tested successfully");
 	return true;
@@ -563,22 +567,22 @@ bool test_neighbor_list(rinad::Encoder * encoder) {
 	rina::Neighbor nei1;
 	rina::Neighbor nei2;
 	std::list<rina::Neighbor*> * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	nei_list.push_back(&nei1);
 	nei_list.push_back(&nei2);
 
-	encoded_object = encoder->encode(&nei_list,
-			rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rina::Neighbor*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS;
+
+	encoder->encode(&nei_list, &cdapMessage);
+
+	recovered_obj = (std::list<rina::Neighbor*> *) encoder->decode(&cdapMessage);
 
 	if (nei_list.size() != recovered_obj->size()) {
 		return false;
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Neighbor List Encoder tested successfully");
 	return true;
@@ -587,12 +591,13 @@ bool test_neighbor_list(rinad::Encoder * encoder) {
 bool test_flow_state_object(rinad::Encoder * encoder) {
 	rinad::FlowStateObject fso = rinad::FlowStateObject(23, 1, 34, 2, true, 123, 434);
 	rinad::FlowStateObject * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
-	encoded_object = encoder->encode(&fso,
-			rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS);
-	recovered_obj = (rinad::FlowStateObject *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS;
+
+	encoder->encode(&fso, &cdapMessage);
+
+	recovered_obj = (rinad::FlowStateObject *) encoder->decode(&cdapMessage);
 
 	if (fso.address_ != recovered_obj->address_) {
 		return false;
@@ -622,7 +627,6 @@ bool test_flow_state_object(rinad::Encoder * encoder) {
 		return false;
 	}
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Flow State Object Encoder tested successfully");
 	return true;
@@ -633,22 +637,22 @@ bool test_flow_state_object_list(rinad::Encoder * encoder) {
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(23, 1, 34, 2, true, 123, 434);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(34, 2, 23, 1, true, 223, 434);
 	std::list<rinad::FlowStateObject*> * recovered_obj = 0;
-	const rina::SerializedObject * encoded_object;
 
 	fso_list.push_back(&fso1);
 	fso_list.push_back(&fso2);
 
-	encoded_object = encoder->encode(&fso_list,
-			rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
-	recovered_obj = (std::list<rinad::FlowStateObject*> *) encoder->decode(*encoded_object,
-			rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS);
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS;
+
+	encoder->encode(&fso_list, &cdapMessage);
+
+	recovered_obj = (std::list<rinad::FlowStateObject*> *) encoder->decode(&cdapMessage);
 
 	if (fso_list.size() != recovered_obj->size()) {
 		return false;
 	}
 
 	delete recovered_obj;
-	delete encoded_object;
 
 	LOG_INFO("Flow State Object List Encoder tested successfully");
 	return true;

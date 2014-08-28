@@ -376,7 +376,7 @@ private:
 class FlowEncoder: public EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
-	void* decode(const rina::SerializedObject &serialized_object) const;
+	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 }

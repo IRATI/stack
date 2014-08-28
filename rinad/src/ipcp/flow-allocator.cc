@@ -210,13 +210,7 @@ void FlowAllocator::createFlowRequestMessageReceived(
 	int portId = 0;
 
 	try {
-		rina::ByteArrayObjectValue * value =
-				(rina::ByteArrayObjectValue*) cdapMessage->get_obj_value();
-		rina::SerializedObject * serializedObject =
-				(rina::SerializedObject *) value->get_value();
-
-		flow = (Flow *) encoder_->decode(*serializedObject,
-				EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+		flow = (Flow *) encoder_->decode(cdapMessage);
 	} catch (Exception &e) {
 		LOG_ERR("Problems decoding object value: %s", e.what());
 		return;
@@ -673,8 +667,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 	LOG_DBG("Created connection with cep-id %d", event.getCepId());
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
-	const rina::CDAPMessage * cdapMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 	try {
 		//5 get the portId of any open CDAP session
 		std::vector<int> cdapSessions;
@@ -682,14 +675,11 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 		int cdapSessionId = cdapSessions[0];
 
 		//6 Encode the flow object and send it to the destination IPC process
-		serializedObject = encoder_->encode(flow_,
-				EncoderConstants::FLOW_RIB_OBJECT_CLASS);
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-				*serializedObject);
 		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(
 				cdapSessionId, 0, rina::CDAPMessage::NONE_FLAGS,
 				EncoderConstants::FLOW_RIB_OBJECT_CLASS, 0, object_name_,
-				&objectValue, 0, true);
+				0, true);
+		encoder_->encode(flow_, cdapMessage);
 
 		underlying_port_id_ = cdapSessionId;
 		request_message_ = cdapMessage;
@@ -697,12 +687,10 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 
 		rib_daemon_->sendMessageToAddress(*request_message_, cdapSessionId, flow_->destination_address_, this);
 		delete cdapMessage;
-		delete serializedObject;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
 				e.what());
 		delete cdapMessage;
-		delete serializedObject;
 		replyToIPCManager(flow_request_event_, -1);
 		releaseUnlockRemove();
 		return;
@@ -740,19 +728,15 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 		LOG_WARN("Security Manager denied incoming flow request from application %s",
 				flow_->source_naming_info_.getEncodedString().c_str());
 
-		const rina::CDAPMessage * responseMessage = 0;
-		const rina::SerializedObject * serializedObject = 0;
+	    rina::CDAPMessage * responseMessage = 0;
 		try {
-			serializedObject = encoder_->encode(flow_,
-					EncoderConstants::FLOW_RIB_OBJECT_CLASS);
-			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-					*serializedObject);
 			responseMessage = cdap_session_manager_->getCreateObjectResponseMessage(
 					rina::CDAPMessage::NONE_FLAGS,
 					request_message_->get_obj_class(), 0,
-					request_message_->get_obj_name(), &objectValue, -1,
+					request_message_->get_obj_name(), -1,
 					"IPC Process rejected the flow",
 					request_message_->get_invoke_id());
+			encoder_->encode(flow_, responseMessage);
 
 			rib_daemon_->sendMessageToAddress(*responseMessage, underlying_port_id_,
 					flow_->source_address_, 0);
@@ -761,7 +745,6 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 		}
 
 		delete responseMessage;
-		delete serializedObject;
 		releaseUnlockRemove();
 		return;
 	}
@@ -833,30 +816,24 @@ void FlowAllocatorInstance::submitAllocateResponse(
 		return;
 	}
 
-	const rina::CDAPMessage * cdapMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 	if (event.result == 0) {
 		//Flow has been accepted
 		try {
-			serializedObject = encoder_->encode(flow_,
-					EncoderConstants::FLOW_RIB_OBJECT_CLASS);
-			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-					*serializedObject);
 			cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
 					rina::CDAPMessage::NONE_FLAGS,
 					request_message_->get_obj_class(), 0,
-					request_message_->get_obj_name(), &objectValue, 0, 0,
+					request_message_->get_obj_name(), 0, 0,
 					request_message_->get_invoke_id());
+			encoder_->encode(flow_, cdapMessage);
 
 			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
 					flow_->source_address_, 0);
 			delete cdapMessage;
-			delete serializedObject;
 		} catch (Exception &e) {
 			LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 					e.what());
 			delete cdapMessage;
-			delete serializedObject;
 
 			try {
 				rina::extendedIPCManager->flowDeallocated(port_id_);
@@ -883,27 +860,22 @@ void FlowAllocatorInstance::submitAllocateResponse(
 
 	//Flow has been rejected
 	try {
-		serializedObject = encoder_->encode(flow_,
-				EncoderConstants::FLOW_RIB_OBJECT_CLASS);
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-				*serializedObject);
 		cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
 				rina::CDAPMessage::NONE_FLAGS,
 				request_message_->get_obj_class(), 0,
-				request_message_->get_obj_name(), &objectValue, -1,
+				request_message_->get_obj_name(), -1,
 				"Application rejected the flow",
 				request_message_->get_invoke_id());
+		encoder_->encode(flow_, cdapMessage);
 
 		rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
 				flow_->source_address_, 0);
 		delete cdapMessage;
-		delete serializedObject;
 		cdapMessage = 0;
 	} catch (Exception &e) {
 		LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 				e.what());
 		delete cdapMessage;
-		delete serializedObject;
 	}
 
 	releaseUnlockRemove();
@@ -979,17 +951,13 @@ void FlowAllocatorInstance::submitDeallocate(
 		state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 		//2 Send M_DELETE
-		const rina::CDAPMessage * cdapMessage = 0;
-		const rina::SerializedObject * serializedObject = 0;
+		rina::CDAPMessage * cdapMessage = 0;
 		try {
-			serializedObject = encoder_->encode(flow_,
-					EncoderConstants::FLOW_RIB_OBJECT_CLASS);
-			rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-					*serializedObject);
 			cdapMessage = cdap_session_manager_->getDeleteObjectRequestMessage(
 					underlying_port_id_, 0, rina::CDAPMessage::NONE_FLAGS,
 					EncoderConstants::FLOW_RIB_OBJECT_CLASS, 0, object_name_,
-					&objectValue, 0, false);
+					0, false);
+			encoder_->encode(flow_, cdapMessage);
 
 			unsigned int address = 0;
 			if (ipc_process_->get_address() == flow_->source_address_) {
@@ -1001,11 +969,9 @@ void FlowAllocatorInstance::submitDeallocate(
 			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
 					address, 0);
 			delete cdapMessage;
-			delete serializedObject;
 		} catch (Exception &e) {
 			LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
 			delete cdapMessage;
-			delete serializedObject;
 		}
 
 		//3 Wait 2*MPL before tearing down the flow
@@ -1123,9 +1089,7 @@ void FlowAllocatorInstance::createResponse(
 	//Update the EFCP connection with the destination cep-id
 	try {
 		if (cdapMessage->get_obj_value()) {
-			rina::ByteArrayObjectValue * value = (rina::ByteArrayObjectValue*)  cdapMessage->get_obj_value();
-			rina::SerializedObject * serializedObject = (rina::SerializedObject *) value->get_value();
-			Flow * receivedFlow = (Flow *) encoder_->decode(*serializedObject, EncoderConstants::FLOW_RIB_OBJECT_CLASS);
+			Flow * receivedFlow = (Flow *) encoder_->decode(cdapMessage);
 			flow_->destination_port_id_ = receivedFlow->destination_port_id_;
 			flow_->getActiveConnection()->setDestCepId(receivedFlow->getActiveConnection()->getDestCepId());
 
@@ -1180,22 +1144,19 @@ DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(IPCProcess * ipc_
 
 void DataTransferConstantsRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	const rina::CDAPMessage * respMessage = 0;
-	const rina::SerializedObject * serializedObject = 0;
+	rina::CDAPMessage * respMessage = 0;
 	try {
-		serializedObject = encoder_->encode(get_value(),
-				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS);
-		rina::ByteArrayObjectValue objectValue = rina::ByteArrayObjectValue(
-				*serializedObject);
 		respMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				class_, instance_, name_, &objectValue, 0, "", cdapMessage->invoke_id_);
+				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+				0, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME,
+				0, "", cdapMessage->invoke_id_);
+		encoder_->encode(get_value(), respMessage);
 		rib_daemon_->sendMessage(*respMessage, cdapSessionDescriptor->port_id_, 0);
 	}catch (Exception &e) {
 		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
 	}
 
 	delete respMessage;
-	delete serializedObject;
 }
 
 void DataTransferConstantsRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
@@ -1286,11 +1247,14 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 }
 
 void* FlowEncoder::decode(
-const rina::SerializedObject &serialized_object) const {
+		const rina::ObjectValueInterface * object_value) const {
 	Flow *flow = new Flow();
 	rina::messages::Flow gpf_flow;
 
-	gpf_flow.ParseFromArray(serialized_object.message_, serialized_object.size_);
+	rina::SerializedObject * serializedObject =
+			Encoder::get_serialized_object(object_value);
+
+	gpf_flow.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	rina::ApplicationProcessNamingInformation *src_app =
 			Encoder::get_ApplicationProcessNamingInformation(gpf_flow.sourcenaminginfo());
