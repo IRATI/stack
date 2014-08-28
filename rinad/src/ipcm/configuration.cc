@@ -340,7 +340,7 @@ void parse_dif_configs(const Json::Value   &root,
                 		props.difName.processName.c_str(),
                 		props.difType.c_str());
                 // Data transfer constants
-                Json::Value dt_const = dif_configs[i]["difProperties"];
+                Json::Value dt_const = dif_configs[i]["dataTransferConstants"];
                 if (dt_const != 0) {
                         rina::DataTransferConstants dt;
 
