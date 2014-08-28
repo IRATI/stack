@@ -359,7 +359,7 @@ void parse_dif_configs(const Json::Value   &root,
                                 ("maxPduSize", 0).asUInt();
                         dt.port_id_length_ = static_cast<unsigned short>
                                 (dt_const.get("portIdLength", 0).asUInt());
-                        dt.qos_id_lenght_ = static_cast<unsigned short>
+                        dt.qos_id_length_ = static_cast<unsigned short>
                                 (dt_const.get("qosIdLength", 0).asUInt());
                         dt.sequence_number_length_ = static_cast<unsigned short>
                                 (dt_const.get

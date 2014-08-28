@@ -3518,7 +3518,7 @@ int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
 
 int putDataTransferConstantsObject(nl_msg* netlinkMessage,
                 const DataTransferConstants& object) {
-        NLA_PUT_U16(netlinkMessage, DTC_ATTR_QOS_ID, object.get_qos_id_lenght());
+        NLA_PUT_U16(netlinkMessage, DTC_ATTR_QOS_ID, object.get_qos_id_length());
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_PORT_ID,
                         object.get_port_id_length());
         NLA_PUT_U16(netlinkMessage, DTC_ATTR_CEP_ID, object.get_cep_id_length());
@@ -5943,7 +5943,7 @@ DataTransferConstants * parseDataTransferConstantsObject(nlattr *nested) {
         DataTransferConstants * result = new DataTransferConstants();
 
         if (attrs[DTC_ATTR_QOS_ID]) {
-                result->set_qos_id_lenght(nla_get_u16(attrs[DTC_ATTR_QOS_ID]));
+                result->set_qos_id_length(nla_get_u16(attrs[DTC_ATTR_QOS_ID]));
         }
 
         if (attrs[DTC_ATTR_PORT_ID]) {

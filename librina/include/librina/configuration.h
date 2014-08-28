@@ -553,8 +553,8 @@ public:
         void set_max_pdu_size(unsigned int max_pdu_size);
         unsigned short get_port_id_length() const;
         void set_port_id_length(unsigned short port_id_length);
-        unsigned short get_qos_id_lenght() const;
-        void set_qos_id_lenght(unsigned short qos_id_lenght);
+        unsigned short get_qos_id_length() const;
+        void set_qos_id_length(unsigned short qos_id_length);
         unsigned short get_sequence_number_length() const;
         void set_sequence_number_length(unsigned short sequence_number_length);
 #endif
@@ -562,7 +562,7 @@ public:
         const std::string toString();
 
         /// The length of QoS-id field in the DTP PCI, in bytes
-        unsigned short qos_id_lenght_;
+        unsigned short qos_id_length_;
 
         /// The length of the Port-id field in the DTP PCI, in bytes
         unsigned short port_id_length_;
