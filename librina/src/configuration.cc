@@ -838,7 +838,7 @@ const std::string QoSCube::toString() {
 
 // CLASS DATA TRANSFER CONSTANTS
 DataTransferConstants::DataTransferConstants() {
-	qos_id_lenght_ = 0;
+	qos_id_length_ = 0;
 	port_id_length_ = 0;
 	cep_id_length_ = 0;
 	sequence_number_length_ = 0;
@@ -905,12 +905,12 @@ void DataTransferConstants::set_port_id_length(unsigned short port_id_length) {
 	port_id_length_ = port_id_length;
 }
 
-unsigned short DataTransferConstants::get_qos_id_lenght() const {
-	return qos_id_lenght_;
+unsigned short DataTransferConstants::get_qos_id_length() const {
+	return qos_id_length_;
 }
 
-void DataTransferConstants::set_qos_id_lenght(unsigned short qos_id_lenght) {
-	qos_id_lenght_ = qos_id_lenght;
+void DataTransferConstants::set_qos_id_length(unsigned short qos_id_length) {
+	qos_id_length_ = qos_id_length;
 }
 
 unsigned short DataTransferConstants::get_sequence_number_length() const {
@@ -922,7 +922,7 @@ void DataTransferConstants::set_sequence_number_length(unsigned short sequence_n
 }
 
 bool DataTransferConstants::isInitialized() {
-	if (qos_id_lenght_ == 0 || address_length_ == 0 || cep_id_length_ == 0 ||
+	if (qos_id_length_ == 0 || address_length_ == 0 || cep_id_length_ == 0 ||
 			port_id_length_ == 0 || length_length_ == 0 ){
 		return false;
 	}
@@ -937,7 +937,7 @@ const std::string DataTransferConstants::toString(){
 	ss<<"; CEP-id length (bytes): "<<cep_id_length_;
 	ss<<"; Length length (bytes): "<<length_length_<<std::endl;
 	ss<<"Port-id length (bytes): "<<port_id_length_;
-	ss<<"; Qos-id length (bytes): "<<qos_id_lenght_;
+	ss<<"; Qos-id length (bytes): "<<qos_id_length_;
 	ss<<"; Seq number length(bytes): "<<sequence_number_length_<<std::endl;
 	ss<<"Max PDU lifetime: "<<max_pdu_lifetime_;
 	ss<<"; Max PDU size: "<<max_pdu_size_;

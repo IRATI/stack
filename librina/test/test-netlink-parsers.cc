@@ -1387,16 +1387,16 @@ int testIpcmAssignToDIFRequestMessage() {
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
-        		get_data_transfer_constants().get_port_id_length() !=
+                        get_data_transfer_constants().get_port_id_length() !=
                                         recoveredMessage->getDIFInformation().get_dif_configuration().
                                         get_efcp_configuration().get_data_transfer_constants().get_port_id_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.portIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
-        		get_data_transfer_constants().get_qos_id_lenght() !=
+                        get_data_transfer_constants().get_qos_id_length() !=
                                         recoveredMessage->getDIFInformation().get_dif_configuration().
-                                        get_efcp_configuration().get_data_transfer_constants().get_qos_id_lenght()) {
+                                        get_efcp_configuration().get_data_transfer_constants().get_qos_id_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.qosIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;

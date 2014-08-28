@@ -585,7 +585,7 @@ const rina::SerializedObject* DataTransferConstantsEncoder::encode(const void* o
 	gpb_dtc.set_maxpdulifetime(dtc->max_pdu_lifetime_);
 	gpb_dtc.set_maxpdusize(dtc->max_pdu_size_);
 	gpb_dtc.set_portidlength(dtc->port_id_length_);
-	gpb_dtc.set_qosidlength(dtc->qos_id_lenght_);
+	gpb_dtc.set_qosidlength(dtc->qos_id_length_);
 	gpb_dtc.set_sequencenumberlength(dtc->sequence_number_length_);
 
 	int size = gpb_dtc.ByteSize();
@@ -613,7 +613,7 @@ void* DataTransferConstantsEncoder::decode(
 	dtc->max_pdu_lifetime_ = gpb_dtc.maxpdulifetime();
 	dtc->max_pdu_size_ = gpb_dtc.maxpdusize();
 	dtc->port_id_length_ = gpb_dtc.portidlength();
-	dtc->qos_id_lenght_ = gpb_dtc.qosidlength();
+	dtc->qos_id_length_ = gpb_dtc.qosidlength();
 	dtc->sequence_number_length_ = gpb_dtc.sequencenumberlength();
 
 	return (void*) dtc;

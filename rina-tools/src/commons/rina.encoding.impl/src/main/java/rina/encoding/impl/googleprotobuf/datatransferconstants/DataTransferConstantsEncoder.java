@@ -22,7 +22,7 @@ public class DataTransferConstantsEncoder implements Encoder{
 		dataTransferConstants.setMaxPduLifetime(gpbDataTransferConstants.getMaxPDULifetime());
 		dataTransferConstants.setMaxPduSize(gpbDataTransferConstants.getMaxPDUSize());
 		dataTransferConstants.setPortIdLength(gpbDataTransferConstants.getPortIdLength());
-		dataTransferConstants.setQosIdLenght(gpbDataTransferConstants.getQosidLength());
+		dataTransferConstants.setQosIdLength(gpbDataTransferConstants.getQosidLength());
 		dataTransferConstants.setSequenceNumberLength(gpbDataTransferConstants.getSequenceNumberLength());
 		
 		return dataTransferConstants;
@@ -46,7 +46,7 @@ public class DataTransferConstantsEncoder implements Encoder{
 										setMaxPDULifetime((int)dataTransferConstants.getMaxPduLifetime()).
 										setMaxPDUSize((int)dataTransferConstants.getMaxPduSize()).
 										setPortIdLength(dataTransferConstants.getPortIdLength()).
-										setQosidLength(dataTransferConstants.getQosIdLenght()).
+										setQosidLength(dataTransferConstants.getQosIdLength()).
 										setSequenceNumberLength(dataTransferConstants.getSequenceNumberLength()).
 										build();
 		
