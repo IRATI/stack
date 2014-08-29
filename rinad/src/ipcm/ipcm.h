@@ -68,7 +68,7 @@ class IPCManager : public EventLoopData {
         IPCManager();
         ~IPCManager();
 
-        void initIPCManager();
+        void init();
 
         int start_script_worker();
         int start_console_worker();

@@ -73,15 +73,19 @@ IPCManager::~IPCManager()
         }
 }
 
-void IPCManager::initIPCManager() {
+void IPCManager::init()
+{
     // Initialize the IPC manager infrastructure in librina.
     try {
             rina::initializeIPCManager(1, config.local.installationPath,
                                        config.local.libraryPath,
                                        LOG_LEVEL_DBG, IPCM_LOG_FILE);
-            cout<<"Initialized IPCManager, installation path: "<< config.local.installationPath << "; library path: "<<  config.local.libraryPath <<"; log file: " <<IPCM_LOG_FILE <<std::endl;
+            cout << "Initialized IPCManager, installation path: " <<
+                        config.local.installationPath << "; library path: "
+                        <<  config.local.libraryPath << "; log file: "
+                        << IPCM_LOG_FILE << endl;
     } catch (rina::InitializationException) {
-            cerr << "Cannot initialize librina-ipc-manager" << endl;
+            cerr << "Error while initializing librina-ipc-manager" << endl;
             exit(EXIT_FAILURE);
     }
 }
