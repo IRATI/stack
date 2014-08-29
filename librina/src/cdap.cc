@@ -23,6 +23,8 @@
 #include "librina/cdap.h"
 #include "cdap-impl.h"
 
+#include <iostream>
+
 namespace rina {
 
 // CLASS AuthValue
@@ -345,7 +347,7 @@ void CDAPMessageValidator::validateInvokeID(const CDAPMessage *message) {
 
 void CDAPMessageValidator::validateObjClass(const CDAPMessage *message) {
 	if (!message->get_obj_class().empty()) {
-		if (!message->get_obj_name().empty()) {
+		if (message->get_obj_name().empty()) {
 			throw CDAPException(
 					"If the objClass parameter is set, the objName parameter also has to be set");
 		}
