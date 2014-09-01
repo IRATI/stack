@@ -1044,19 +1044,19 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 EnrollerStateMachine::~EnrollerStateMachine() {
 }
 
-void EnrollerStateMachine::connect(const rina::CDAPMessage * cdapMessage, int portId) {
+void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 
 	if (state_ != STATE_NULL) {
-		abortEnrollment(remote_peer_->name_, portId,
+		abortEnrollment(remote_peer_->name_, session_descriptor->port_id_,
 				CONNECT_IN_NOT_NULL, false, true);
 		return;
 	}
 
-	LOG_DBG("Authenticating IPC process %s-%s ...", cdapMessage->src_ap_name_.c_str(),
-			cdapMessage->src_ap_inst_.c_str());
-	remote_peer_->name_.processName = cdapMessage->src_ap_name_;
-	remote_peer_->name_.processInstance = cdapMessage->src_ap_inst_;
+	LOG_DBG("Authenticating IPC process %s-%s ...", session_descriptor->dest_ap_name_.c_str(),
+			session_descriptor->dest_ap_inst_.c_str());
+	remote_peer_->name_.processName = session_descriptor->dest_ap_name_;
+	remote_peer_->name_.processInstance = session_descriptor->dest_ap_inst_;
 
 	//TODO Authenticate sender
 	LOG_DBG("Authentication successful, deciding if new member can join the DIF...");
@@ -1070,13 +1070,13 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage * cdapMessage, int po
 
 	//Send M_CONNECT_R
 	const rina::CDAPMessage * responseMessage = 0;
-	port_id_ = portId;
+	port_id_ = session_descriptor->port_id_;
 	try{
 		responseMessage = cdap_session_manager_->getOpenConnectionResponseMessage(rina::CDAPMessage::AUTH_NONE,
-				rina::AuthValue(), cdapMessage->src_ae_inst_, IPCProcess::MANAGEMENT_AE,
-				cdapMessage->src_ap_inst_, cdapMessage->src_ap_name_, 0, "", cdapMessage->dest_ae_inst_,
-				IPCProcess::MANAGEMENT_AE, cdapMessage->dest_ap_inst_, cdapMessage->dest_ap_name_,
-				cdapMessage->invoke_id_);
+				rina::AuthValue(), session_descriptor->dest_ae_inst_, IPCProcess::MANAGEMENT_AE,
+				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, 0, "", session_descriptor->src_ae_inst_,
+				IPCProcess::MANAGEMENT_AE, session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_,
+				invoke_id);
 
 		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
 
@@ -1611,29 +1611,29 @@ BaseEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(
 	}
 }
 
-void EnrollmentTask::connect(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrollmentTask::connect(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	LOG_DBG("Received M_CONNECT CDAP message from port-id %d",
-			cdapSessionDescriptor->port_id_);
+			session_descriptor->port_id_);
 
 	//1 Find out if the sender is really connecting to us
-	if(cdapMessage->dest_ap_name_.compare(ipc_process_->get_name().processName)!= 0){
-		LOG_WARN("Received an M_CONNECT message whose destination was not this IPC Process, ignoring it: %s",
-				cdapMessage->to_string().c_str());
+	if(session_descriptor->src_ap_name_.compare(ipc_process_->get_name().processName)!= 0){
+		LOG_WARN("Received an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}
 
 	//2 Find out if we are already enrolled to the remote IPC process
-	if (isEnrolledTo(cdapSessionDescriptor->dest_ap_name_)){
+	if (isEnrolledTo(session_descriptor->dest_ap_name_)){
 		const rina::CDAPMessage * errorMessage = 0;
 
 		std::string message = "Received an enrollment request for an IPC process I'm already enrolled to";
 		LOG_ERR("%s", message.c_str());
 		errorMessage = cdap_session_manager_->getOpenConnectionResponseMessage(rina::CDAPMessage::AUTH_NONE,
-				rina::AuthValue(), cdapMessage->src_ae_inst_, cdapMessage->src_ae_name_, cdapMessage->src_ap_inst_,
-				cdapMessage->src_ap_name_, -2, message, cdapMessage->dest_ae_inst_, cdapMessage->dest_ae_name_,
-				cdapMessage->dest_ap_inst_, cdapMessage->dest_ap_name_, cdapMessage->invoke_id_);
-		sendErrorMessageAndDeallocateFlow(errorMessage, cdapSessionDescriptor->port_id_);
+				rina::AuthValue(), session_descriptor->dest_ae_inst_, session_descriptor->dest_ae_name_,
+				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, -2, message,
+				session_descriptor->src_ae_inst_, session_descriptor->src_ae_name_,
+				session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_, invoke_id);
+		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
 		delete errorMessage;
 		return;
@@ -1642,20 +1642,21 @@ void EnrollmentTask::connect(const rina::CDAPMessage * cdapMessage,
 	//3 Initiate the enrollment
 	try{
 		rina::FlowInformation flowInformation = resource_allocator_->get_n_minus_one_flow_manager()->
-				getNMinus1FlowInformation(cdapSessionDescriptor->port_id_);
+				getNMinus1FlowInformation(session_descriptor->port_id_);
 		EnrollerStateMachine * enrollmentStateMachine = (EnrollerStateMachine *) createEnrollmentStateMachine(
-				cdapSessionDescriptor->get_destination_application_process_naming_info(),
-				cdapSessionDescriptor->port_id_, false, flowInformation.difName);
-		enrollmentStateMachine->connect(cdapMessage, cdapSessionDescriptor->port_id_);
+				session_descriptor->get_destination_application_process_naming_info(),
+				session_descriptor->port_id_, false, flowInformation.difName);
+		enrollmentStateMachine->connect(invoke_id, session_descriptor);
 	}catch(Exception &e){
 		LOG_ERR("Problems: %s", e.what());
 		const rina::CDAPMessage * errorMessage = 0;
 
 		errorMessage = cdap_session_manager_->getOpenConnectionResponseMessage(rina::CDAPMessage::AUTH_NONE,
-				rina::AuthValue(), cdapMessage->src_ae_inst_, cdapMessage->src_ae_name_, cdapMessage->src_ap_inst_,
-				cdapMessage->src_ap_name_, -2, std::string(e.what()), cdapMessage->dest_ae_inst_, cdapMessage->dest_ae_name_,
-				cdapMessage->dest_ap_inst_, cdapMessage->dest_ap_name_, cdapMessage->invoke_id_);
-		sendErrorMessageAndDeallocateFlow(errorMessage, cdapSessionDescriptor->port_id_);
+				rina::AuthValue(), session_descriptor->dest_ae_inst_, session_descriptor->dest_ae_name_,
+				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, -2,
+				std::string(e.what()), session_descriptor->src_ae_inst_, session_descriptor->src_ae_name_,
+				session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_, invoke_id);
+		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
 		delete errorMessage;
 	}

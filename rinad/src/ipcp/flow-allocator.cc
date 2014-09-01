@@ -1022,10 +1022,10 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 	releaseUnlockRemove();
 }
 
-void FlowAllocatorInstance::createResponse(
-		const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	(void) cdapSessionDescriptor; // Stop compiler barfs
+void FlowAllocatorInstance::createResponse( int result, const std::string& result_reason,
+		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) result_reason; // Stop compiler barfs
+	(void) session_descriptor; // Stop compiler barfs
 
 	lock_->lock();
 
@@ -1037,25 +1037,17 @@ void FlowAllocatorInstance::createResponse(
 		return;
 	}
 
-	if (cdapMessage->get_obj_name().compare(object_name_) != 0) {
-		LOG_ERR(
-				"Expected create flow response message for flow %s, but received create flow response message for flow %s ",
-				object_name_.c_str(), cdapMessage->get_obj_name().c_str());
-		lock_->unlock();
-		return;
-	}
-
 	//Flow allocation unsuccessful
-	if (cdapMessage->get_result() != 0) {
+	if (result != 0) {
 		LOG_DBG(
 				"Unsuccessful create flow response message received for flow %s",
-				cdapMessage->get_obj_name().c_str());
+				object_name_.c_str());
 
 		//Answer IPC Manager
 		try {
 			flow_request_event_.portId = -1;
 			rina::extendedIPCManager->allocateFlowRequestResult(
-					flow_request_event_, cdapMessage->get_result());
+					flow_request_event_, result);
 		} catch (Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s",
 					e.what());
@@ -1069,8 +1061,8 @@ void FlowAllocatorInstance::createResponse(
 	//Flow allocation successful
 	//Update the EFCP connection with the destination cep-id
 	try {
-		if (cdapMessage->get_obj_value()) {
-			Flow * receivedFlow = (Flow *) encoder_->decode(cdapMessage);
+		if (object_value) {
+			Flow * receivedFlow = (Flow *) object_value;
 			flow_->destination_port_id_ = receivedFlow->destination_port_id_;
 			flow_->getActiveConnection()->setDestCepId(receivedFlow->getActiveConnection()->getDestCepId());
 
@@ -1088,7 +1080,7 @@ void FlowAllocatorInstance::createResponse(
 		try {
 			flow_request_event_.portId = -1;
 			rina::extendedIPCManager->allocateFlowRequestResult(
-					flow_request_event_, cdapMessage->get_result());
+					flow_request_event_, result);
 		} catch (Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s",
 					e.what());

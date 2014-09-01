@@ -574,7 +574,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMessage,
                                                rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	ICDAPResponseMessageHandler * handler;
+	ICDAPResponseMessageHandler * handler = 0;
+	void * decodedObject = 0;
 
 	handler = getCDAPMessageHandler(cdapMessage);
 	if (!handler) {
@@ -586,10 +587,15 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
 	try {
 		switch (cdapMessage->get_op_code()) {
 		case rina::CDAPMessage::M_CREATE_R:
-			handler->createResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->createResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_DELETE_R:
-			handler->deleteResponse(cdapMessage, cdapSessionDescriptor);
+			handler->deleteResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START_R:
 			handler->startResponse(cdapMessage, cdapSessionDescriptor);
@@ -601,7 +607,8 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
 			handler->readResponse(cdapMessage, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD_R:
-			handler->cancelReadResponse(cdapMessage, cdapSessionDescriptor);
+			handler->cancelReadResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_WRITE_R:
 			handler->writeResponse(cdapMessage, cdapSessionDescriptor);
@@ -651,7 +658,7 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
 	try {
 		switch (opcode) {
 		case rina::CDAPMessage::M_CONNECT:
-			enrollmentTask->connect(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->connect(cdapMessage->invoke_id_, cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_CONNECT_R:

@@ -309,9 +309,9 @@ public:
 	/// An M_CONNECT message has been received.  Handle the transition from the
 	/// NULL to the WAIT_START_ENROLLMENT state.
 	/// Authenticate the remote peer and issue a connect response
-	/// @param cdapMessage
+	/// @param invoke_id
     /// @param portId
-	void connect(const rina::CDAPMessage * cdapMessage, int portId);
+	void connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the Enrollment object when it receives an M_START message from
 	/// the enrolling member. Have to look at the enrollment information request,
@@ -364,8 +364,8 @@ public:
 	const std::list<std::string> get_enrolled_ipc_process_names() const;
 	void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event);
 	void initiateEnrollment(EnrollmentRequest * request);
-	void connect(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void connect(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
 	void connectResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void release(const rina::CDAPMessage * cdapMessage,

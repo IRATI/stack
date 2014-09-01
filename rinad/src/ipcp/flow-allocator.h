@@ -291,8 +291,8 @@ public:
 	/// with this connection-endpoint-id to the requesting Application and invokes a
 	/// Allocate_Request.submit primitive to notify the requesting Application that its allocation
 	/// request has been satisfied.
-	void createResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void createResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
 	IPCProcess * ipc_process_;
