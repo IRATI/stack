@@ -22,6 +22,9 @@
 #include <sstream>
 #include <vector>
 
+//FIXME: Remove include
+#include <iostream>
+
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 #define RINA_PREFIX "enrollment-task"
@@ -448,13 +451,12 @@ bool BaseEnrollmentStateMachine::isValidPortId(const rina::CDAPSessionDescriptor
 
 void BaseEnrollmentStateMachine::release(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
 	LOG_DBG("Releasing the CDAP connection");
 
 	if (!isValidPortId(cdapSessionDescriptor)) {
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	createOrUpdateNeighborInformation(false);
 
@@ -482,6 +484,7 @@ void BaseEnrollmentStateMachine::release(const rina::CDAPMessage * cdapMessage,
 
 void BaseEnrollmentStateMachine::releaseResponse(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
 	if (!cdapMessage) {
 		return;
 	}
@@ -490,22 +493,19 @@ void BaseEnrollmentStateMachine::releaseResponse(const rina::CDAPMessage * cdapM
 		return;
 	}
 
-	rina::AccessGuard g(*lock_);
-
 	if (state_ != STATE_NULL) {
 		state_ = STATE_NULL;
 	}
 }
 
 void BaseEnrollmentStateMachine::flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
 	LOG_INFO("The flow supporting the CDAP session identified by %d has been deallocated.",
 			cdapSessionDescriptor->port_id_);
 
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	createOrUpdateNeighborInformation(false);
 
@@ -667,9 +667,9 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 
 void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	(void) cdapSessionDescriptor; // Stop compiler barfs
-
 	rina::AccessGuard g(*lock_);
+
+	(void) cdapSessionDescriptor; // Stop compiler barfs
 
 	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -713,6 +713,7 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 				0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, 0, true);
 		encoder_->encode(&eiRequest, requestMessage);
 		rib_daemon_->sendMessage(*requestMessage, port_id_, this);
+		LOG_DBG("Sent a M_START Message to portid: %d", port_id_);
 
 		//Set timer
 		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT, true);
@@ -730,11 +731,11 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 
 void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
+
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	if (state_ != STATE_WAIT_START_ENROLLMENT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -776,11 +777,11 @@ void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
 
 void EnrolleeStateMachine::stop(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
+
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	if (state_ != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -943,11 +944,11 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 
 void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
+
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	if (state_ != STATE_WAIT_READ_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -1001,11 +1002,12 @@ void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
 
 void EnrolleeStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
+
+
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	if (state_ == STATE_ENROLLED) {
 		return;
@@ -1088,7 +1090,7 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage * cdapMessage, int po
 		//Set timer
 		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT, true);
 		timer_->scheduleTask(last_scheduled_task_, timeout_);
-		LOG_DBG("Waiting for start enrollment request message");
+		LOG_DBG("M_CONNECT_R sent to portID %d. Waiting for start enrollment request message", port_id_);
 
 		state_ = STATE_WAIT_START_ENROLLMENT;
 	}catch(Exception &e){
@@ -1129,11 +1131,12 @@ void EnrollerStateMachine::sendDIFStaticInformation() {
 
 void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 			const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
+
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
 
-	rina::AccessGuard g(*lock_);
 
 	if (state_ != STATE_WAIT_START_ENROLLMENT) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -1239,11 +1242,10 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 
 void EnrollerStateMachine::stopResponse(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	rina::AccessGuard g(*lock_);
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
-	rina::AccessGuard g(*lock_);
 
 	if (state_ != STATE_WAIT_STOP_ENROLLMENT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
