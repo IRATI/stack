@@ -537,7 +537,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 		case rina::CDAPMessage::M_READ:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteReadObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteReadObject(cdapMessage->invoke_id_,
+					cdapSessionDescriptor->port_id_);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),

@@ -210,9 +210,10 @@ void BaseRIBObject::remoteDeleteObject(int invoke_id, int session_id) {
 	operation_not_supported();
 }
 
-void BaseRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteReadObject(int invoke_id, int session_id) {
+	(void) invoke_id;
+	(void) session_id;
+	operation_not_supported();
 }
 
 void BaseRIBObject::remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
