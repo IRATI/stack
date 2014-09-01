@@ -26,11 +26,8 @@
 #include <map>
 #include <vector>
 
-#define RINA_PREFIX "ipcm"
-
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
-#include <librina/logs.h>
 
 #include "common/event-loop.h"
 #include "common/rina-configuration.h"
@@ -45,6 +42,8 @@ using namespace TCLAP;
 int main(int argc, char * argv[])
 {
         std::string conf;
+        std::string logfile;
+        std::string loglevel;
 
         // Wrap everything in a try block.  Do this every time,
         // because exceptions will be thrown for problems.
@@ -54,19 +53,35 @@ int main(int argc, char * argv[])
                 TCLAP::CmdLine cmd("IPC Manager", ' ', "0.1");
 
                 TCLAP::ValueArg<std::string> conf_arg("c",
-                                                      "config",
-                                                      "Configuration file to load",
-                                                      true,
-                                                      "ipcmanager.conf",
-                                                      "string");
+                                        "config",
+                                        "Configuration file to load",
+                                        true,
+                                        "ipcmanager.conf",
+                                        "string");
+                TCLAP::ValueArg<std::string> logfile_arg("f",
+                                        "logfile",
+                                        "File to use for logging",
+                                        false,
+                                        "",
+                                        "string");
+                TCLAP::ValueArg<std::string> loglevel_arg("l",
+                                        "loglevel",
+                                        "Log level",
+                                        false,
+                                        "INFO",
+                                        "string");
 
                 cmd.add(conf_arg);
+                cmd.add(logfile_arg);
+                cmd.add(loglevel_arg);
 
                 // Parse the args.
                 cmd.parse(argc, argv);
 
                 // Get the value parsed by each arg.
                 conf = conf_arg.getValue();
+                logfile = logfile_arg.getValue();
+                loglevel = loglevel_arg.getValue();
 
                 LOG_DBG("Config file is: %s", conf.c_str());
 
@@ -83,7 +98,7 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        ipcm.init();
+        ipcm.init(logfile, loglevel);
 
         cout << ipcm.config.toString() << endl;
 
