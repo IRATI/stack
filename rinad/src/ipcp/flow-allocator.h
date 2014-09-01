@@ -125,7 +125,7 @@ public:
 	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			const std::string& object_class,
 			IFlowAllocatorInstance * flow_allocator_instance);
-	void remoteDeleteObject(int invoke_id, int session_id);
+	void remoteDeleteObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	std::string get_displayable_value();
 
 private:
@@ -137,7 +137,7 @@ class FlowSetRIBObject: public BaseRIBObject {
 public:
 	FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
@@ -161,7 +161,7 @@ class QoSCubeSetRIBObject: public BaseRIBObject {
 public:
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
@@ -354,10 +354,10 @@ private:
 class DataTransferConstantsRIBObject: public BaseRIBObject {
 public:
 	DataTransferConstantsRIBObject(IPCProcess * ipc_process);
-	void remoteReadObject(const rina::CDAPMessage * cdapMessage,
+	void remoteReadObject(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);

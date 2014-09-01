@@ -40,9 +40,9 @@ FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process,
 	flow_allocator_instance_ = flow_allocator_instance;
 }
 
-void FlowRIBObject::remoteDeleteObject(int invoke_id, int session_id) {
+void FlowRIBObject::remoteDeleteObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	(void) invoke_id;
-	(void) session_id;
+	(void) session_descriptor;
 	flow_allocator_instance_->deleteFlowRequestMessageReceived();
 }
 
@@ -60,9 +60,9 @@ FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process,
 }
 
 void FlowSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, int session_id) {
+		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	flow_allocator_->createFlowRequestMessageReceived((Flow *) object_value, object_name,
-			invoke_id, session_id);
+			invoke_id, session_descriptor->port_id_);
 }
 
 void FlowSetRIBObject::createObject(const std::string& objectClass,
@@ -115,12 +115,13 @@ QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process) :
 }
 
 void QoSCubeSetRIBObject::remoteCreateObject(void * object_value,
-		const std::string& object_name, int invoke_id, int session_id) {
+		const std::string& object_name, int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	//TODO, depending on IEncoder
 	(void) object_value;
 	(void) object_name;
 	(void) invoke_id;
-	(void) session_id;
+	(void) session_descriptor;
 	LOG_ERR("Missing code");
 }
 
@@ -1122,14 +1123,14 @@ DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(IPCProcess * ipc_
 	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
 }
 
-void DataTransferConstantsRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
+void DataTransferConstantsRIBObject::remoteReadObject(int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::CDAPMessage * respMessage = 0;
 	try {
 		respMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
 				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 				0, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME,
-				0, "", cdapMessage->invoke_id_);
+				0, "", invoke_id);
 		encoder_->encode(get_value(), respMessage);
 		rib_daemon_->sendMessage(*respMessage, cdapSessionDescriptor->port_id_, 0);
 	}catch (Exception &e) {
@@ -1140,12 +1141,12 @@ void DataTransferConstantsRIBObject::remoteReadObject(const rina::CDAPMessage * 
 }
 
 void DataTransferConstantsRIBObject::remoteCreateObject(void * object_value,
-		const std::string& object_name, int invoke_id, int session_id) {
+		const std::string& object_name, int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	//Ignore, since Data Transfer Constants must be set before enrollment (via assign to DIF)
 	(void) object_value;
 	(void) object_name;
 	(void) invoke_id;
- 	(void) session_id;
+ 	(void) session_descriptor;
 }
 
 void DataTransferConstantsRIBObject::createObject(const std::string& objectClass,

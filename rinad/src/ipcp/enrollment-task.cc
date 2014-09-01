@@ -82,16 +82,15 @@ const void* WatchdogRIBObject::get_value() const {
 	return 0;
 }
 
-void WatchdogRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 	rina::CDAPMessage * responseMessage = 0;
 
 	//1 Send M_READ_R message
 	try {
 		responseMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				class_, instance_, name_, 0, "", cdapMessage->invoke_id_);
-		rib_daemon_->sendMessage(*responseMessage, cdapSessionDescriptor->port_id_, 0);
+				class_, instance_, name_, 0, "", invoke_id);
+		rib_daemon_->sendMessage(*responseMessage, session_descriptor->port_id_, 0);
 		delete responseMessage;
 	} catch(Exception &e) {
 		LOG_ERR("Problems creating or sending CDAP Message: %s", e.what());
@@ -102,7 +101,7 @@ void WatchdogRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
 	std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
 	std::list<rina::Neighbor*>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		if ((*it)->name_.processName.compare(cdapSessionDescriptor->dest_ap_name_) == 0) {
+		if ((*it)->name_.processName.compare(session_descriptor->dest_ap_name_) == 0) {
 			rina::Time currentTime;
 			(*it)->last_heard_from_time_in_ms_ = currentTime.get_current_time_in_ms();
 			break;
@@ -218,12 +217,12 @@ const void* NeighborSetRIBObject::get_value() const {
 }
 
 void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, int session_id) {
+		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 	std::list<rina::Neighbor *> neighborsToCreate;
 
 	(void) invoke_id;  // Stop compiler barfs
-	(void) session_id; // Stop compiler barfs
+	(void) session_descriptor; // Stop compiler barfs
 
 	try {
 		if (object_name.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {

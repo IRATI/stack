@@ -196,23 +196,25 @@ void BaseRIBObject::stopObject(const void* object) {
 }
 
 void BaseRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, int session_id) {
+		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	(void) object_value;
 	(void) object_name;
 	(void) invoke_id;
-	(void) session_id;
+	(void) session_descriptor;
 	operation_not_supported();
 }
 
-void BaseRIBObject::remoteDeleteObject(int invoke_id, int session_id) {
+void BaseRIBObject::remoteDeleteObject(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	(void) invoke_id;
-	(void) session_id;
+	(void) session_descriptor;
 	operation_not_supported();
 }
 
-void BaseRIBObject::remoteReadObject(int invoke_id, int session_id) {
+void BaseRIBObject::remoteReadObject(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	(void) invoke_id;
-	(void) session_id;
+	(void) session_descriptor;
 	operation_not_supported();
 }
 

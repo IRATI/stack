@@ -48,9 +48,10 @@ const void* WhateverCastNameSetRIBObject::get_value() const {
 }
 
 void WhateverCastNameSetRIBObject::remoteCreateObject(void * object_value,
-		const std::string& object_name, int invoke_id, int session_id) {
+		const std::string& object_name, int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
-	(void) session_id;
+	(void) session_descriptor;
 	(void) invoke_id;
 	std::list<rina::WhatevercastName *> namesToCreate;
 
@@ -129,7 +130,7 @@ DirectoryForwardingTableEntryRIBObject::DirectoryForwardingTableEntryRIBObject(I
 }
 
 void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, int session_id) {
+		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::DirectoryForwardingTableEntry * entry;
 	rina::DirectoryForwardingTableEntry * currentEntry;
 
@@ -152,7 +153,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 	if (currentEntry->get_address() != entry->get_address()) {
 		currentEntry->set_address(entry->get_address());
 		std::list<int> cdapSessionIds;
-		cdapSessionIds.push_back(session_id);
+		cdapSessionIds.push_back(session_descriptor->port_id_);
 		NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
 		try {
 			rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS, object_name,
@@ -177,12 +178,12 @@ void DirectoryForwardingTableEntryRIBObject::createObject(const std::string& obj
 }
 
 void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
-		int session_id) {
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	std::list<int> cdapSessionIds;
 
 	(void) invoke_id;
 
-	cdapSessionIds.push_back(session_id);
+	cdapSessionIds.push_back(session_descriptor->port_id_);
 	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
 	try {
 		rib_daemon_->deleteObject(class_, name_, 0, &notificationPolicy);
@@ -237,7 +238,7 @@ void DirectoryForwardingTableEntrySetRIBObject::eventHappened(Event * event) {
 }
 
 void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object_value,
-		const std::string& object_name, int invoke_id, int session_id) {
+		const std::string& object_name, int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
 	std::list<rina::DirectoryForwardingTableEntry *> entriesToCreateOrUpdate;
 
 	(void) invoke_id;
@@ -267,7 +268,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 	}
 
 	std::list<int> cdapSessionIds;
-	cdapSessionIds.push_back(session_id);
+	cdapSessionIds.push_back(session_descriptor->port_id_);
 	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
 
 	try {

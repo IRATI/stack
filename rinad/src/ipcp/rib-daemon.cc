@@ -503,7 +503,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 											cdapMessage->get_obj_name(), true);
 				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
-						cdapMessage->invoke_id_, cdapSessionDescriptor->port_id_);
+						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
                                 std::string::size_type position =
@@ -514,7 +514,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 				std::string parentObjectName = cdapMessage->get_obj_name().substr(0, position);
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, true);
 				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
-						cdapMessage->invoke_id_, cdapSessionDescriptor->port_id_);
+						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			}
 
 			break;
@@ -522,7 +522,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
 			ribObject->remoteDeleteObject(cdapMessage->invoke_id_,
-					cdapSessionDescriptor->port_id_);
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
@@ -538,7 +538,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
 			ribObject->remoteReadObject(cdapMessage->invoke_id_,
-					cdapSessionDescriptor->port_id_);
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),

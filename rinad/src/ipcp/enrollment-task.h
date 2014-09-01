@@ -67,8 +67,7 @@ public:
 	WatchdogRIBObject(IPCProcess * ipc_process, const rina::DIFConfiguration& dif_configuration);
 	~WatchdogRIBObject();
 	const void* get_value() const;
-	void remoteReadObject(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Send watchdog messages to the IPC processes that are our neighbors and we're enrolled to
 	void sendMessages();
@@ -102,7 +101,7 @@ public:
 	~NeighborSetRIBObject();
 	const void* get_value() const;
 	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);

@@ -488,9 +488,11 @@ public:
 
 	/// Remote invocations, resulting from CDAP messages
 	virtual void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
-	virtual void remoteDeleteObject(int invoke_id, int session_id);
-	virtual void remoteReadObject(int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteDeleteObject(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteReadObject(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
 	virtual void remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteWriteObject(const rina::CDAPMessage * cdapMessage,

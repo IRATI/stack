@@ -36,7 +36,8 @@ public:
 	~WhateverCastNameSetRIBObject();
 	const void* get_value() const;
 	void remoteCreateObject(void * object_value,
-			const std::string& object_name, int invoke_id, int session_id);
+			const std::string& object_name, int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);
@@ -51,8 +52,8 @@ public:
 	DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			rina::DirectoryForwardingTableEntry * entry);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
-	void remoteDeleteObject(int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
+	void remoteDeleteObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue);
 	void deleteObject(const void* objectValue);
@@ -75,7 +76,7 @@ public:
 	/// RIB Daemon about them (will create/update the objects and notify my neighbors
 	/// except for the one that has sent me the update)
 	void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, int session_id);
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// One or more local applications have registered to this DIF or a routing update
 	/// has been received
