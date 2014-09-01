@@ -1290,7 +1290,7 @@ int testIpcmAssignToDIFRequestMessage() {
 	dataTransferConstants.set_max_pdu_lifetime(4);
 	dataTransferConstants.set_max_pdu_size(5);
 	dataTransferConstants.set_port_id_length(6);
-	dataTransferConstants.set_qos_id_lenght(7);
+	dataTransferConstants.set_qos_id_length(7);
 	dataTransferConstants.set_sequence_number_length(8);
 	efcpConfiguration.set_data_transfer_constants(dataTransferConstants);
 	QoSCube * qosCube = new QoSCube("cube 1", 1);
