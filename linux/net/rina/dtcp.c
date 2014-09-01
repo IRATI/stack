@@ -419,7 +419,7 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 }
 
 /* This is 0x8803 PDU type */
-/* specs do not detail it structure */
+/* NOTE: Specs do not detail it structure */
 static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
                                         seq_num_t     last_ctrl_seq_rcvd,
                                         seq_num_t     snd_left_wind_edge,
@@ -777,8 +777,10 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                 return -1;
         }
 
-        /* FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
-         * PDU_TYPE_NACK_AND_FC? */
+        /*
+	 * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
+	 * PDU_TYPE_NACK_AND_FC ?
+	 */
         if (dtcp_flow_ctrl(dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
@@ -876,7 +878,7 @@ static void update_rt_wind_edge(struct dtcp * dtcp)
 
 static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
-        seq_num_t    LWE;
+        seq_num_t LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
