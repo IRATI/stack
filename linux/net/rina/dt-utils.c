@@ -296,6 +296,7 @@ static int rtxq_entry_destroy(struct rtxq_entry * entry)
                 return -1;
 
         pdu_destroy(entry->pdu);
+        list_del(&entry->next);
         rkfree(entry);
 
         return 0;
@@ -352,7 +353,6 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
                     seq_num) {
-                        list_del(&cur->next);
                         rtxq_entry_destroy(cur);
                 } else
                         return 0;
@@ -469,7 +469,6 @@ static int rtxqueue_flush(struct rtxqueue * q)
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                list_del(&cur->next);
                 rtxq_entry_destroy(cur);
         }
 
