@@ -172,7 +172,7 @@ void IPCMConsole::body()
                 return;
         }
 
-        LOG_DBG("Console starts [fd=%s]\n", sfd);
+        LOG_DBG("Console starts [fd=%d]\n", sfd);
 
         for (;;) {
                 int cfd;

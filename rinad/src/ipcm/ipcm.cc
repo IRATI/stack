@@ -76,7 +76,7 @@ void IPCManager::init()
         try {
                 rina::initializeIPCManager(1, config.local.installationPath,
                                 config.local.libraryPath,
-                                LOG_LEVEL_DBG, IPCM_LOG_FILE);
+                                LOG_LEVEL_INFO, string());
                 LOG_DBG("IPC Manager daemon initialized");
                 LOG_DBG("       installation path: %s",
                         config.local.installationPath.c_str());
