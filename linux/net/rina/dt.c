@@ -131,7 +131,7 @@ int dt_destroy(struct dt * dt)
                         LOG_ERR("Failed to destroy rexmsn queue");
                         return -1;
                 }
-                dt->rtxq = NULL; /* Useless */
+                dt->rtxq = NULL; /* Useful */
         }
 
         rkfree(dt->sv);

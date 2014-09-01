@@ -86,10 +86,10 @@ static int efcp_destroy(struct efcp * instance)
                 struct rtxq * rtxq = dt_rtxq_unbind(instance->dt);
 
                 /* FIXME: We should watch for memleaks here ... */
+                if (rtxq) rtxq_destroy(rtxq);
                 if (dtp)  dtp_destroy(dtp);
                 if (dtcp) dtcp_destroy(dtcp);
                 if (cwq)  cwq_destroy(cwq);
-                if (rtxq) rtxq_destroy(rtxq);
 
                 dt_destroy(instance->dt);
         } else
