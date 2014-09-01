@@ -109,6 +109,7 @@ IPCMConsole::~IPCMConsole() throw()
 int
 IPCMConsole::init()
 {
+        ostringstream ss;
         struct sockaddr_in server_address;
         int sfd = -1;
         int optval = 1;
@@ -121,31 +122,35 @@ IPCMConsole::init()
 
         sfd = socket(AF_INET, SOCK_STREAM, 0);
         if (sfd < 0) {
-                cerr << __func__ << " Error [" << errno <<
+                ss << __func__ << " Error [" << errno <<
                         "] calling socket() " << endl;
+                FLUSH_LOG(ERR, ss);
                 goto err;
         }
 
         ret = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR,
                          &optval, sizeof(optval));
         if (ret < 0) {
-                cerr << __func__ << " Error [" << errno <<
+                ss << __func__ << " Error [" << errno <<
                         "] calling setsockopt(SOL_SOCKET, "
                         "SO_REUSEADDR, 1)" << endl;
+                FLUSH_LOG(ERR, ss);
         }
 
         ret = bind(sfd, reinterpret_cast<struct sockaddr *>(&server_address),
                    sizeof(server_address));
         if (ret < 0) {
-                cerr << __func__ << " Error [" << errno <<
+                        ss << __func__ << " Error [" << errno <<
                         "] calling bind() " << endl;
+                FLUSH_LOG(ERR, ss);
                 goto err;
         }
 
         ret = listen(sfd, 5);
         if (ret < 0) {
-                cerr << __func__ << " Error [" << errno <<
+                ss << __func__ << " Error [" << errno <<
                         "] calling listen() " << endl;
+                FLUSH_LOG(ERR, ss);
                 goto err;
         }
 
@@ -160,13 +165,14 @@ err:
 
 void IPCMConsole::body()
 {
+        ostringstream ss;
         int sfd = init();
 
         if (sfd < 0) {
                 return;
         }
 
-        cout << "Console starts: " << sfd << endl;
+        LOG_DBG("Console starts [fd=%s]\n", sfd);
 
         for (;;) {
                 int cfd;
@@ -179,8 +185,9 @@ void IPCMConsole::body()
                 cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
                              &client_address), &address_len);
                 if (cfd < 0) {
-                        cerr << __func__ << " Error [" << errno <<
+                        ss << __func__ << " Error [" << errno <<
                                 "] calling accept() " << endl;
+                        FLUSH_LOG(ERR, ss);
                         continue;
                 }
 
@@ -190,8 +197,9 @@ void IPCMConsole::body()
 
                         n = read(cfd, cmdbuf, sizeof(cmdbuf));
                         if (n < 0) {
-                                cerr << __func__ << " Error [" << errno <<
+                                ss << __func__ << " Error [" << errno <<
                                         "] calling read() " << endl;
+                                FLUSH_LOG(ERR, ss);
                                 close(cfd);
                                 continue;
                         }
@@ -204,8 +212,7 @@ void IPCMConsole::body()
                 }
         }
 
-        cout << "Console stops" << endl;
-
+        LOG_DBG("Console stops\n");
 }
 
 int
@@ -213,11 +220,13 @@ IPCMConsole::flush_output(int cfd)
 {
         int n;
         const string& str = outstream.str();
+        ostringstream ss;
 
         n = write(cfd, str.c_str(), str.size());
         if (n < 0) {
-                cerr << __func__ << " Error [" << errno <<
+                ss << __func__ << " Error [" << errno <<
                         "] calling write() " << endl;
+                FLUSH_LOG(ERR, ss);
                 return -1;
         }
 
