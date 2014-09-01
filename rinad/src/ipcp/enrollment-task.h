@@ -263,7 +263,7 @@ public:
 	/// Have to check if I can start operating (if not wait
 	/// until M_START operationStatus). If I can start and have enough information,
 	/// create or update all the objects received during the enrollment phase.
-	void stop(const rina::CDAPMessage * cdapMessage,
+	void stop(bool * start_early, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	/// See if the response is valid and contains an object. See if more objects
@@ -294,7 +294,7 @@ private:
 
 	bool was_dif_member_before_enrollment_;
 	bool allowed_to_start_early_;
-	const rina::CDAPMessage * stop_enrollment_request_message_;
+	int stop_request_invoke_id_;
 };
 
 /// The state machine of the party that is a member of the DIF
@@ -320,10 +320,11 @@ public:
 	/// the DIF, send a new address with the M_START_R, send the M_CREATEs to provide
 	/// the DIF initialization information and state, and send M_STOP_R. If it is a
 	/// valid member, just send M_START_R with no address and M_STOP_R
-	/// @param cdapMessage
+	/// @param eiRequest
+	/// @param invoke_id to reply to the message
     /// @param cdapSessionDescriptor
-    void start(const rina::CDAPMessage * cdapMessage,
-			const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+    void start(EnrollmentInformationRequest * eiRequest, int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
     /// The response of the stop operation has been received, send M_START operation without
     /// waiting for an answer and consider the process enrolled
@@ -338,7 +339,7 @@ private:
     /// @param resultReason the reason of the bad result
     /// @param requestMessage the received M_START enrollment message
     void sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
-    		resultReason, const rina::CDAPMessage * requestMessage);
+    		resultReason, int invoke_id);
 
     /// Send all the information required to start operation to
     /// the IPC process that is enrolling to me
@@ -441,9 +442,9 @@ class EnrollmentRIBObject: public BaseRIBObject {
 public:
 	EnrollmentRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
-	void remoteStartObject(const rina::CDAPMessage * cdapMessage,
+	void remoteStartObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void remoteStopObject(const rina::CDAPMessage * cdapMessage,
+	void remoteStopObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 private:
@@ -458,7 +459,7 @@ class OperationalStatusRIBObject: public BaseRIBObject {
 public:
 	OperationalStatusRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
-	void remoteStartObject(const rina::CDAPMessage * cdapMessage,
+	void remoteStartObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void startObject(const void* object);
 	void stopObject(const void* object);

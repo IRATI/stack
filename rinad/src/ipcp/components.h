@@ -493,13 +493,13 @@ public:
 			rina::CDAPSessionDescriptor * session_descriptor);
 	virtual void remoteReadObject(int invoke_id,
 			rina::CDAPSessionDescriptor * session_descriptor);
-	virtual void remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteCancelReadObject(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteWriteObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteStartObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteStartObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteStopObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteStopObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	std::string class_;

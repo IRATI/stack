@@ -433,9 +433,14 @@ const void* FlowStateRIBObjectGroup::get_value() const {
 	return 0;
 }
 
-void FlowStateRIBObjectGroup::remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	pduft_generator_policy_->writeMessageReceived(cdapMessage, cdapSessionDescriptor->get_port_id());
+void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value, int invoke_id,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	(void) invoke_id;
+
+	std::list<FlowStateObject *> * objects =
+			(std::list<FlowStateObject *> *) object_value;
+	pduft_generator_policy_->writeMessageReceived(*objects, cdapSessionDescriptor->get_port_id());
+	delete objects;
 }
 
 void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
@@ -642,7 +647,10 @@ LinkStatePDUFTCDAPMessageHandler::LinkStatePDUFTCDAPMessageHandler(
 
 void LinkStatePDUFTCDAPMessageHandler::readResponse(const rina::CDAPMessage * cdapMessage,
 				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	pduft_generator_policy_->writeMessageReceived(cdapMessage, cdapSessionDescriptor->get_port_id());
+	std::list<FlowStateObject *> * objects =
+			(std::list<FlowStateObject *> *) cdapMessage->obj_value_;
+	pduft_generator_policy_->writeMessageReceived(*objects, cdapSessionDescriptor->get_port_id());
+	delete objects;
 }
 
 //Class ComputePDUFTTimerTask
@@ -963,19 +971,11 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate() {
 }
 
 void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
-		const rina::CDAPMessage * cdapMessage, int portId){
+		const std::list<FlowStateObject *> & flow_state_objects, int portId){
 	rina::AccessGuard g(*lock_);
 
-	if (cdapMessage->get_obj_class().compare(
-			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
-		return;
-	}
-
 	try {
-		std::list<FlowStateObject *> * objects =
-				(std::list<FlowStateObject *> *) encoder_->decode(cdapMessage);
-		db_->updateObjects(*objects, portId, ipc_process_->get_address());
-		delete objects;
+		db_->updateObjects(flow_state_objects, portId, ipc_process_->get_address());
 	} catch (Exception &e) {
 		LOG_ERR("Problems decoding Flow State Object Group: %s", e.what());
 	}

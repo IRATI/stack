@@ -616,13 +616,10 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 	enrollment_request_ = 0;
 	last_scheduled_task_ = 0;
 	allowed_to_start_early_ = false;
-	stop_enrollment_request_message_ = 0;
+	stop_request_invoke_id_ = 0;
 }
 
 EnrolleeStateMachine::~EnrolleeStateMachine() {
-	if (stop_enrollment_request_message_) {
-		delete stop_enrollment_request_message_;
-	}
 }
 
 void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId) {
@@ -774,7 +771,7 @@ void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 }
 
-void EnrolleeStateMachine::stop(const rina::CDAPMessage * cdapMessage,
+void EnrolleeStateMachine::stop(bool * start_early, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 
@@ -790,14 +787,13 @@ void EnrolleeStateMachine::stop(const rina::CDAPMessage * cdapMessage,
 
 	timer_->cancelTask(last_scheduled_task_);
 	//Check if I'm allowed to start early
-	if (!cdapMessage->obj_value_){
+	if (!start_early){
 		abortEnrollment(remote_peer_->name_, port_id_, STOP_WITH_NO_OBJECT_VALUE, true, true);
 		return;
 	}
 
-	rina::BooleanObjectValue * value = (rina::BooleanObjectValue*) cdapMessage->get_obj_value();
-	allowed_to_start_early_ = *((bool*)value->get_value());
-	stop_enrollment_request_message_ = cdapMessage;
+	allowed_to_start_early_ = *start_early;
+	stop_request_invoke_id_ = invoke_id;
 
 	//Request more information or start
 	try{
@@ -839,33 +835,31 @@ void EnrolleeStateMachine::requestMoreInformationOrStart() {
 		try{
 			commitEnrollment();
 			stopResponseMessage = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-					0, "", stop_enrollment_request_message_->invoke_id_);
+					0, "", stop_request_invoke_id_);
 			rib_daemon_->sendMessage(*stopResponseMessage, port_id_, 0);
 			enrollmentCompleted();
 		}catch(Exception &e){
 			LOG_ERR("Problems sending CDAP message: %s", e.what());
 			delete stopResponseMessage;
 			stopResponseMessage = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-					-1,PROBLEMS_COMMITTING_ENROLLMENT_INFO, stop_enrollment_request_message_->invoke_id_);
+					-1,PROBLEMS_COMMITTING_ENROLLMENT_INFO, stop_request_invoke_id_);
 			rib_daemon_->sendMessage(*stopResponseMessage, port_id_, 0);
 			abortEnrollment(remote_peer_->name_, port_id_, PROBLEMS_COMMITTING_ENROLLMENT_INFO, true, true);
 		}
 
 		delete stopResponseMessage;
-		delete stop_enrollment_request_message_;
 		return;
 	}
 
 	try {
 		stopResponseMessage = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				0, "", stop_enrollment_request_message_->invoke_id_);
+				0, "", stop_request_invoke_id_);
 		rib_daemon_->sendMessage(*stopResponseMessage, port_id_, 0);
 	}catch(Exception &e){
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 	}
 
 	delete stopResponseMessage;
-	delete stop_enrollment_request_message_;
 
 	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_TIMEOUT, true);
 	timer_->scheduleTask(last_scheduled_task_, timeout_);
@@ -1102,12 +1096,12 @@ void EnrollerStateMachine::connect(const rina::CDAPMessage * cdapMessage, int po
 }
 
 void EnrollerStateMachine::sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
-		resultReason, const rina::CDAPMessage * requestMessage) {
+		resultReason, int invoke_id) {
 	const rina::CDAPMessage * responseMessage = 0;
 
 	try{
 		responseMessage = cdap_session_manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS, result,
-				resultReason, requestMessage->invoke_id_);
+				resultReason, invoke_id);
 		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
 		abortEnrollment(remote_peer_->name_, port_id_, resultReason, false, true);
 	}catch(Exception &e){
@@ -1128,8 +1122,8 @@ void EnrollerStateMachine::sendDIFStaticInformation() {
 			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
 }
 
-void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
-			const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int invoke_id,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 
 	if (!isValidPortId(cdapSessionDescriptor)){
@@ -1146,14 +1140,11 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 	timer_->cancelTask(last_scheduled_task_);
 
 	bool requiresInitialization = false;
-	EnrollmentInformationRequest * eiRequest = 0;
 
-	if (!cdapMessage->obj_value_) {
+	if (!eiRequest) {
 		requiresInitialization = true;
 	} else {
 		try {
-			eiRequest = (EnrollmentInformationRequest *) encoder_->decode(cdapMessage);
-
 			if (!namespace_manager_->isValidAddress(eiRequest->address_, remote_peer_->name_.processName,
 					remote_peer_->name_.processInstance)) {
 				requiresInitialization = true;
@@ -1166,7 +1157,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 			}
 		}catch (Exception &e) {
 			LOG_ERR("%s", e.what());
-			sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), cdapMessage);
+			sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
 			return;
 		}
 	}
@@ -1177,7 +1168,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 				remote_peer_->name_.processInstance);
 
 		if (address == 0){
-			sendNegativeStartResponseAndAbortEnrollment(-1, "Could not assign a valid address", cdapMessage);
+			sendNegativeStartResponseAndAbortEnrollment(-1, "Could not assign a valid address", invoke_id);
 			return;
 		}
 
@@ -1187,11 +1178,13 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 	try {
 		if (requiresInitialization) {
 			responseMessage = cdap_session_manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-					cdapMessage->obj_class_, 0, cdapMessage->obj_name_, 0, "", cdapMessage->invoke_id_);
+					EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME,
+					0, "", invoke_id);
 			encoder_->encode(&eiRequest, responseMessage);
 		} else {
 			responseMessage = cdap_session_manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-					cdapMessage->obj_class_, 0, cdapMessage->obj_name_, 0, "", cdapMessage->invoke_id_);
+					EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS, 0, EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME,
+					0, "", invoke_id);
 		}
 
 		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
@@ -1200,7 +1193,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 		delete responseMessage;
 		delete eiRequest;
-		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), cdapMessage);
+		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
 		return;
 	}
 
@@ -1227,7 +1220,7 @@ void EnrollerStateMachine::start(const rina::CDAPMessage * cdapMessage,
 	} catch(Exception &e) {
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 		delete responseMessage;
-		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), cdapMessage);
+		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
 		return;
 	}
 
@@ -1931,7 +1924,7 @@ const void* EnrollmentRIBObject::get_value() const {
 	return 0;
 }
 
-void EnrollmentRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessage,
+void EnrollmentRIBObject::remoteStartObject(void * object_value, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	EnrollerStateMachine * stateMachine = 0;
 
@@ -1945,15 +1938,19 @@ void EnrollmentRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessag
 	}
 
 	if (!stateMachine) {
-		LOG_ERR("Got a CDAP message that is not for me: %s", cdapMessage->to_string().c_str());
+		LOG_ERR("Got a CDAP message that is not for me ");
 		return;
 	}
 
-	stateMachine->start(cdapMessage, cdapSessionDescriptor);
+	EnrollmentInformationRequest * eiRequest = 0;
+	if (object_value) {
+		eiRequest = (EnrollmentInformationRequest *) object_value;
+	}
+	stateMachine->start(eiRequest, invoke_id, cdapSessionDescriptor);
 }
 
-void EnrollmentRIBObject::remoteStopObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrollmentRIBObject::remoteStopObject(void * object_value, int invoke_id,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	EnrolleeStateMachine * stateMachine = 0;
 
 	try {
@@ -1966,11 +1963,16 @@ void EnrollmentRIBObject::remoteStopObject(const rina::CDAPMessage * cdapMessage
 	}
 
 	if (!stateMachine) {
-		LOG_ERR("Got a CDAP message that is not for me: %s", cdapMessage->to_string().c_str());
+		LOG_ERR("Got a CDAP message that is not for me");
 		return;
 	}
 
-	stateMachine->stop(cdapMessage, cdapSessionDescriptor);
+	bool * start_early = 0;
+	if (object_value) {
+		rina::BooleanObjectValue * value = (rina::BooleanObjectValue*) object_value;
+		start_early = ((bool*)value->get_value());
+	}
+	stateMachine->stop(start_early, invoke_id , cdapSessionDescriptor);
 }
 
 void EnrollmentRIBObject::sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
@@ -1996,12 +1998,15 @@ OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process)
 	cdap_session_manager_ = ipc_process->get_cdap_session_manager();
 }
 
-void OperationalStatusRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessage,
+void OperationalStatusRIBObject::remoteStartObject(void * object_value, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	(void) object_value;
+	(void) invoke_id;
+
 	try {
 		if (!enrollment_task_->getEnrollmentStateMachine(
 				cdapSessionDescriptor->dest_ap_name_, cdapSessionDescriptor->port_id_, false)) {
-			LOG_ERR("Got a CDAP message that is not for me: %s", cdapMessage->to_string().c_str());
+			LOG_ERR("Got a CDAP message that is not for me: %s");
 			return;
 		}
 	} catch (Exception &e) {

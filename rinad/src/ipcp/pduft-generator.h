@@ -209,8 +209,8 @@ public:
 	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 			LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
 	const void* get_value() const;
-	void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteWriteObject(void * object_value, int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue);
 
@@ -382,10 +382,10 @@ public:
 	/// it is added to the FSDB and marked to be propagated through all the N-1 management flows
 	/// except the one through which the FSO was received. If, while processing the event,
 	/// existing FSOs in the FSDB were modified, or new ones were created, the FSDB is marked as
-	/// ÒmodifiedÓ - if it wasnÕt already -.
-	/// @param cdapMessage the M_WRITE message received from a neighbor IPC Process
+	/// modified - if it wasn't already -.
+	/// @param objects the flow_state_objects received from a neighbor IPC Process
 	/// @param portId the identifier of the N-1 flow through which the CDAP message was received
-	void writeMessageReceived(const rina::CDAPMessage * cdapMessage, int portId);
+	void writeMessageReceived(const std::list<FlowStateObject *> & flow_state_objects, int portId);
 
 	/// If the IPC Process just enrolled to the neighbor IPC Process that has sent the
 	/// CDAP message, and the PDU Forwarding Table Generator still has not sent a CDAP

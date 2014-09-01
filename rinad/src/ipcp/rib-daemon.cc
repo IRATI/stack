@@ -525,14 +525,22 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START:
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteStartObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteStartObject(decodedObject, cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_STOP:
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteStopObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteStopObject(decodedObject, cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_READ:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
@@ -543,12 +551,15 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 		case rina::CDAPMessage::M_CANCELREAD:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteCancelReadObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteCancelReadObject(cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_WRITE:
+			decodedObject = encoder_->decode(cdapMessage);
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteWriteObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteWriteObject(decodedObject, cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		default:
 			LOG_ERR("Invalid operation code for a request message: %d", cdapMessage->get_op_code());
