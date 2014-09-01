@@ -76,7 +76,7 @@ class IPCManager : public EventLoopData {
         IPCManager();
         ~IPCManager();
 
-        void init();
+        void init(const std::string& logfile, const std::string& loglevel);
 
         int start_script_worker();
         int start_console_worker();
