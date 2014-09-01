@@ -40,10 +40,10 @@ FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process,
 	flow_allocator_instance_ = flow_allocator_instance;
 }
 
-void FlowRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	flow_allocator_instance_->deleteFlowRequestMessageReceived(cdapMessage,
-			cdapSessionDescriptor->get_port_id());
+void FlowRIBObject::remoteDeleteObject(int invoke_id, int session_id) {
+	(void) invoke_id;
+	(void) session_id;
+	flow_allocator_instance_->deleteFlowRequestMessageReceived();
 }
 
 std::string FlowRIBObject::get_displayable_value() {
@@ -969,11 +969,7 @@ void FlowAllocatorInstance::submitDeallocate(
 
 }
 
-void FlowAllocatorInstance::deleteFlowRequestMessageReceived(
-		const rina::CDAPMessage * requestMessage, int underlyingPortId) {
-	(void) underlyingPortId; // Stop compiler barfs
-	(void) requestMessage; // Stop compiler barfs
-
+void FlowAllocatorInstance::deleteFlowRequestMessageReceived() {
 	rina::AccessGuard g(*lock_);
 
 	if (state_ != FLOW_ALLOCATED) {

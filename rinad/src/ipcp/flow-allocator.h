@@ -109,8 +109,7 @@ public:
 	/// a Deallocate.deliver to notify the local Application,
 	/// deletes the binding between the Application and the local DTP-instance,
 	/// and sends a Delete_Response indicating the result.
-	virtual void deleteFlowRequestMessageReceived(
-			const rina::CDAPMessage * requestMessage, int underlyingPortId) = 0;
+	virtual void deleteFlowRequestMessageReceived() = 0;
 
 	virtual void destroyFlowAllocatorInstance(const std::string& flowObjectName,
 			bool requestor) = 0;
@@ -126,8 +125,7 @@ public:
 	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			const std::string& object_class,
 			IFlowAllocatorInstance * flow_allocator_instance);
-	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteDeleteObject(int invoke_id, int session_id);
 	std::string get_displayable_value();
 
 private:
@@ -277,8 +275,7 @@ public:
 	void processUpdateConnectionResponseEvent(
 			const rina::UpdateConnectionResponseEvent& event);
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
-	void deleteFlowRequestMessageReceived(
-			const rina::CDAPMessage * requestMessage, int underlyingPortId);
+	void deleteFlowRequestMessageReceived();
 	void destroyFlowAllocatorInstance(const std::string& flowObjectName,
 			bool requestor);
 

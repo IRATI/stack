@@ -52,8 +52,7 @@ public:
 			rina::DirectoryForwardingTableEntry * entry);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
 			int invoke_id, int session_id);
-	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteDeleteObject(int invoke_id, int session_id);
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue);
 	void deleteObject(const void* objectValue);
@@ -82,10 +81,6 @@ public:
 	/// has been received
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue);
-
-	/// A routing update has been received
-	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	/// One or more local applications have unregistered from this DIF or a routing
 	/// update has been received

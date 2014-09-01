@@ -176,14 +176,16 @@ void DirectoryForwardingTableEntryRIBObject::createObject(const std::string& obj
 	//Do nothing
 }
 
-void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
+		int session_id) {
 	std::list<int> cdapSessionIds;
-	cdapSessionIds.push_back(cdapSessionDescriptor->get_port_id());
+
+	(void) invoke_id;
+
+	cdapSessionIds.push_back(session_id);
 	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
 	try {
-		rib_daemon_->deleteObject(cdapMessage->get_obj_class(), cdapMessage->get_obj_name(),
-				0, &notificationPolicy);
+		rib_daemon_->deleteObject(class_, name_, 0, &notificationPolicy);
 	} catch (Exception &e) {
 		LOG_ERR("Problems deleting RIB object: %s", e.what());
 	}
@@ -322,48 +324,6 @@ void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& 
 		} catch(Exception &e){
 			LOG_ERR("Problems adding object to the RIB: %s", e.what());
 		}
-	}
-}
-
-void DirectoryForwardingTableEntrySetRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	std::list<rina::DirectoryForwardingTableEntry *> entriesToDelete;
-
-	try {
-		if (cdapMessage->get_obj_name().compare(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) == 0) {
-			std::list<rina::DirectoryForwardingTableEntry *> * entries =
-					(std::list<rina::DirectoryForwardingTableEntry *> *)
-						encoder_->decode(cdapMessage);
-			std::list<rina::DirectoryForwardingTableEntry *>::const_iterator iterator;
-			for(iterator = entries->begin(); iterator != entries->end(); ++iterator) {
-				populateEntriesToDeleteList(*iterator, &entriesToDelete);
-			}
-
-			delete entries;
-		} else {
-			rina::DirectoryForwardingTableEntry * receivedEntry = (rina::DirectoryForwardingTableEntry *)
-								encoder_->decode(cdapMessage);
-			populateEntriesToDeleteList(receivedEntry, &entriesToDelete);
-		}
-	} catch (Exception &e) {
-		LOG_ERR("Error decoding CDAP object value: %s", e.what());
-	}
-
-	if (entriesToDelete.size() == 0) {
-		LOG_DBG("No DFT entries to delete");
-		return;
-	}
-
-	std::list<int> cdapSessionIds;
-	cdapSessionIds.push_back(cdapSessionDescriptor->get_port_id());
-	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
-
-	try {
-		rib_daemon_->deleteObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, &entriesToDelete,
-				&notificationPolicy);
-	} catch (Exception &e) {
-		LOG_ERR("Problems creating RIB object: %s", e.what());
 	}
 }
 
