@@ -24,11 +24,8 @@
 #include <vector>
 #include <utility>
 
-#define RINA_PREFIX     "ipcm"
-
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
-#include <librina/logs.h>
 
 #include "event-loop.h"
 #include "rina-configuration.h"

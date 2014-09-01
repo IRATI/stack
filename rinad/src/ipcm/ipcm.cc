@@ -24,11 +24,8 @@
 #include <map>
 #include <vector>
 
-#define RINA_PREFIX     "ipcm"
-
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
-#include <librina/logs.h>
 
 #include "event-loop.h"
 #include "rina-configuration.h"
@@ -40,11 +37,6 @@
 
 using namespace std;
 
-#define FLUSH_LOG(_lev_, _ss_)                                          \
-                do {                                                    \
-                        LOG_##_lev_ ("%s", (_ss_).str().c_str());       \
-                        ss.str(string());                               \
-                } while (0)
 
 namespace rinad {
 
