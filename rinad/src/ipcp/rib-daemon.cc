@@ -485,13 +485,16 @@ ICDAPResponseMessageHandler * RIBDaemon::getCDAPMessageHandler(const rina::CDAPM
 void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMessage,
                                               rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	BaseRIBObject * ribObject;
+	BaseRIBObject * ribObject = 0;
+	void * decodedObject = 0;
 
 	LOG_DBG("Remote operation %d called on object %s", cdapMessage->get_op_code(),
 			cdapMessage->get_obj_name().c_str());
 	try {
 		switch (cdapMessage->get_op_code()) {
 		case rina::CDAPMessage::M_CREATE:
+			decodedObject = encoder_->decode(cdapMessage);
+
 			// Creation is delegated to the parent objects if the object doesn't exist.
 			// Create semantics are CREATE or UPDATE. If the object exists it is an
 			// update, therefore the message is handled to the object. If the object
@@ -499,7 +502,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			try {
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 											cdapMessage->get_obj_name(), true);
-				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
+				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
+						cdapMessage->invoke_id_, cdapSessionDescriptor->port_id_);
 			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
                                 std::string::size_type position =
@@ -509,7 +513,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 				}
 				std::string parentObjectName = cdapMessage->get_obj_name().substr(0, position);
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, true);
-				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
+				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
+						cdapMessage->invoke_id_, cdapSessionDescriptor->port_id_);
 			}
 
 			break;

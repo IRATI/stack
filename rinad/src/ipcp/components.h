@@ -272,8 +272,8 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
-                                                      int                       underlyingPortId) = 0;
+	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
+			int invoke_id, int underlying_port_id) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
@@ -486,9 +486,9 @@ public:
 	virtual void startObject(const void* object);
 	virtual void stopObject(const void* object);
 
-	/// Remote invocations via CDAP messages
-	virtual void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	/// Remote invocations, resulting from CDAP messages
+	virtual void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 	virtual void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	virtual void remoteReadObject(const rina::CDAPMessage * cdapMessage,

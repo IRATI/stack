@@ -72,8 +72,8 @@ public:
 	/// @param portId the destination portid as decided by the Flow allocator
 	/// @param requestMessate the CDAP request message
 	/// @param underlyingPortId the port id to reply later on
-	virtual void createFlowRequestMessageReceived(Flow * flow,
-			const rina::CDAPMessage * requestMessage, int underlyingPortId) = 0;
+	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
+			int invoke_id, int underlyingPortId) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
 	/// it formulates a Create_Response on the flow object requested.If the
@@ -138,8 +138,8 @@ private:
 class FlowSetRIBObject: public BaseRIBObject {
 public:
 	FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator);
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
@@ -162,8 +162,8 @@ public:
 class QoSCubeSetRIBObject: public BaseRIBObject {
 public:
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 	using BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
@@ -178,8 +178,8 @@ public:
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
-			int underlyingPortId);
+	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
+			int invoke_id, int underlying_port_id);
 	void submitAllocateRequest(rina::FlowRequestEvent * flowRequestEvent);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
@@ -269,8 +269,8 @@ public:
 	void submitAllocateRequest(const rina::FlowRequestEvent& event);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
-	void createFlowRequestMessageReceived(Flow * flow,
-			const rina::CDAPMessage * requestMessage, int underlyingPortId);
+	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
+			int invoke_id, int underlyingPortId);
 	void processCreateConnectionResultEvent(
 			const rina::CreateConnectionResultEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
@@ -323,7 +323,7 @@ private:
 	std::string object_name_;
 
 	unsigned int allocate_response_message_handle_;
-	const rina::CDAPMessage * request_message_;
+	int invoke_id_;
 	int underlying_port_id_;
 	rina::Lockable * lock_;
 	rina::Timer * timer_;
@@ -359,8 +359,8 @@ public:
 	DataTransferConstantsRIBObject(IPCProcess * ipc_process);
 	void remoteReadObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);

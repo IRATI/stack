@@ -101,8 +101,8 @@ public:
 	NeighborSetRIBObject(IPCProcess * ipc_process);
 	~NeighborSetRIBObject();
 	const void* get_value() const;
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);

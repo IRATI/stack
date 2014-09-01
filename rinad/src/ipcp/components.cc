@@ -195,9 +195,13 @@ void BaseRIBObject::stopObject(const void* object) {
 	operation_not_supported(object);
 }
 
-void BaseRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
+		int invoke_id, int session_id) {
+	(void) object_value;
+	(void) object_name;
+	(void) invoke_id;
+	(void) session_id;
+	operation_not_supported();
 }
 
 void BaseRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,

@@ -214,18 +214,18 @@ const void* NeighborSetRIBObject::get_value() const {
 	return 0;
 }
 
-void NeighborSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void NeighborSetRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
+		int invoke_id, int session_id) {
 	rina::AccessGuard g(*lock_);
 	std::list<rina::Neighbor *> neighborsToCreate;
 
-	(void) cdapSessionDescriptor; // Stop compiler barfs
+	(void) invoke_id;  // Stop compiler barfs
+	(void) session_id; // Stop compiler barfs
 
 	try {
-		if (cdapMessage->get_obj_name().compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
+		if (object_name.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0) {
 			std::list<rina::Neighbor *> * neighbors =
-					(std::list<rina::Neighbor *> *)
-					encoder_->decode(cdapMessage);
+					(std::list<rina::Neighbor *> *) object_value;
 			std::list<rina::Neighbor *>::const_iterator iterator;
 			for(iterator = neighbors->begin(); iterator != neighbors->end(); ++iterator) {
 				populateNeighborsToCreateList(*iterator, &neighborsToCreate);
@@ -233,8 +233,7 @@ void NeighborSetRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMess
 
 			delete neighbors;
 		} else {
-			rina::Neighbor * neighbor = (rina::Neighbor *)
-									encoder_->decode(cdapMessage);
+			rina::Neighbor * neighbor = (rina::Neighbor *) object_value;
 			populateNeighborsToCreateList(neighbor, &neighborsToCreate);
 		}
 	} catch (Exception &e) {

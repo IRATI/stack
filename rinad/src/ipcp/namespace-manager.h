@@ -35,8 +35,8 @@ public:
 	WhateverCastNameSetRIBObject(IPCProcess * ipc_process);
 	~WhateverCastNameSetRIBObject();
 	const void* get_value() const;
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value,
+			const std::string& object_name, int invoke_id, int session_id);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);
@@ -50,8 +50,8 @@ class DirectoryForwardingTableEntryRIBObject: public SimpleSetMemberRIBObject {
 public:
 	DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			rina::DirectoryForwardingTableEntry * entry);
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 	void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass, const std::string& objectName,
@@ -75,8 +75,8 @@ public:
 	/// during enrollment-. See what parts of the update we didn't now, and tell the
 	/// RIB Daemon about them (will create/update the objects and notify my neighbors
 	/// except for the one that has sent me the update)
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-					rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, int session_id);
 
 	/// One or more local applications have registered to this DIF or a routing update
 	/// has been received
