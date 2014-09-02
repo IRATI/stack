@@ -123,7 +123,7 @@ static int base_pci_size(const struct dt_cons * dt_cons)
 
 static int fc_pci_size(const struct dt_cons * dt_cons)
 {
-        return 2 * dt_cons->seq_num_length +
+        return 3 * dt_cons->seq_num_length +
                 2 * RATE_LEN               +
                 TIME_LEN;
 }
