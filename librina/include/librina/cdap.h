@@ -732,7 +732,6 @@ public:
 	/// @param src_ae_name
 	/// @param src_ap_inst
 	/// @param src_ap_name
-	/// @param invoke_id true if one is requested, false otherwise
 	/// @return
 	/// @throws CDAPException
 	virtual CDAPMessage* getOpenConnectionRequestMessage(int port_id,

@@ -6,6 +6,8 @@
 #include "cdap-impl.h"
 #include "CDAP.pb.h"
 
+#include <iostream>
+
 namespace rina {
 
 // CLASS ResetStablishmentTimerTask
@@ -15,11 +17,13 @@ ResetStablishmentTimerTask::ResetStablishmentTimerTask(
 }
 void ResetStablishmentTimerTask::run() {
 	con_state_machine_->lock();
-	if(con_state_machine_->connection_state_ == ConnectionStateMachine::AWAITCON) {
-		LOG_ERR("M_CONNECT_R message not received within %d ms. Reseting the connection", con_state_machine_->timeout_);
+	if (con_state_machine_->connection_state_
+			== ConnectionStateMachine::AWAITCON) {
+		LOG_ERR(
+				"M_CONNECT_R message not received within %d ms. Reseting the connection",
+				con_state_machine_->timeout_);
 		con_state_machine_->resetConnection();
-	}
-	else
+	} else
 		con_state_machine_->unlock();
 }
 
@@ -30,11 +34,13 @@ ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(
 }
 void ReleaseConnectionTimerTask::run() {
 	con_state_machine_->lock();
-	if(con_state_machine_->connection_state_ == ConnectionStateMachine::AWAITCLOSE) {
-		LOG_ERR("M_RELEASE_R message not received within %d ms. Reseting the connection", con_state_machine_->timeout_);
+	if (con_state_machine_->connection_state_
+			== ConnectionStateMachine::AWAITCLOSE) {
+		LOG_ERR(
+				"M_RELEASE_R message not received within %d ms. Reseting the connection",
+				con_state_machine_->timeout_);
 		con_state_machine_->resetConnection();
-	}
-	else
+	} else
 		con_state_machine_->unlock();
 }
 
@@ -153,7 +159,8 @@ void ConnectionStateMachine::connectReceived() {
 	lock();
 	if (connection_state_ != NONE) {
 		std::stringstream ss;
-		ss << "Cannot open a new connection because this CDAP session is currently in"
+		ss
+				<< "Cannot open a new connection because this CDAP session is currently in"
 				<< connection_state_ << " state";
 		unlock();
 		throw CDAPException(ss.str());
@@ -526,10 +533,12 @@ void CDAPSessionImpl::checkIsConnected() const {
 void CDAPSessionImpl::checkInvokeIdNotExists(
 		const CDAPMessage &cdap_message) const {
 	if (pending_messages_.find(cdap_message.get_invoke_id())
-			== pending_messages_.end()) {
+			!= pending_messages_.end()) {
+		std::cout << "[TMP_DEBUG] Pending_Messages size: "
+				<< pending_messages_.size() << std::endl;
 		std::stringstream ss;
 		ss << cdap_message.get_invoke_id();
-		throw CDAPException("The invokeid " + ss.str() + " is already in use");
+		throw CDAPException("The invokeid " + ss.str() + " already exists");
 	}
 }
 void CDAPSessionImpl::checkCanSendOrReceiveCancelReadRequest(
@@ -727,7 +736,8 @@ CDAPSessionManager::CDAPSessionManager() {
 CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0) {
 	wire_message_provider_factory_ = arg0;
 	timeout_ = DEFAULT_TIMEOUT_IN_MS;
-	wire_message_provider_ = wire_message_provider_factory_->createWireMessageProvider();
+	wire_message_provider_ =
+			wire_message_provider_factory_->createWireMessageProvider();
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
 }
 
@@ -735,7 +745,8 @@ CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0,
 		long arg1) {
 	wire_message_provider_factory_ = arg0;
 	timeout_ = arg1;
-	wire_message_provider_ = wire_message_provider_factory_->createWireMessageProvider();
+	wire_message_provider_ =
+			wire_message_provider_factory_->createWireMessageProvider();
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
 }
 
@@ -744,7 +755,7 @@ CDAPSessionImpl* CDAPSessionManager::createCDAPSession(int port_id) {
 		return cdap_sessions_.find(port_id)->second;
 	} else {
 		CDAPSessionImpl *cdap_session = new CDAPSessionImpl(this, timeout_,
-				wire_message_provider_,	invoke_id_manager_);
+				wire_message_provider_, invoke_id_manager_);
 		CDAPSessionDescriptor *descriptor = new CDAPSessionDescriptor(port_id);
 		cdap_session->set_session_descriptor(descriptor);
 		cdap_sessions_.insert(
@@ -889,21 +900,20 @@ int CDAPSessionManager::get_port_id(
 	throw CDAPException(ss.str());
 }
 
-CDAPMessage* CDAPSessionManager::getOpenConnectionRequestMessage(
-		int port_id, CDAPMessage::AuthTypes auth_mech,
-		const AuthValue &auth_value, const std::string &dest_ae_inst,
-		const std::string &dest_ae_name, const std::string &dest_ap_inst,
-		const std::string &dest_ap_name, const std::string &src_ae_inst,
-		const std::string &src_ae_name, const std::string &src_ap_inst,
-		const std::string &src_ap_name) {
+CDAPMessage* CDAPSessionManager::getOpenConnectionRequestMessage(int port_id,
+		CDAPMessage::AuthTypes auth_mech, const AuthValue &auth_value,
+		const std::string &dest_ae_inst, const std::string &dest_ae_name,
+		const std::string &dest_ap_inst, const std::string &dest_ap_name,
+		const std::string &src_ae_inst, const std::string &src_ae_name,
+		const std::string &src_ap_inst, const std::string &src_ap_name) {
 	CDAPSessionImpl *cdap_session = get_cdap_session(port_id);
 	if (cdap_session == 0) {
 		cdap_session = createCDAPSession(port_id);
 	}
-	cdap_session->get_invoke_id_manager()->newInvokeId();
 	return CDAPMessage::getOpenConnectionRequestMessage(auth_mech, auth_value,
 			dest_ae_inst, dest_ae_name, dest_ap_inst, dest_ap_name, src_ae_inst,
-			src_ae_name, src_ap_inst, src_ap_name, 1);
+			src_ae_name, src_ap_inst, src_ap_name,
+			cdap_session->get_invoke_id_manager()->newInvokeId());
 }
 
 CDAPMessage* CDAPSessionManager::getOpenConnectionResponseMessage(
@@ -920,8 +930,8 @@ CDAPMessage* CDAPSessionManager::getOpenConnectionResponseMessage(
 			invoke_id);
 }
 
-CDAPMessage* CDAPSessionManager::getReleaseConnectionRequestMessage(
-		int port_id, CDAPMessage::Flags flags, bool invoke_id) {
+CDAPMessage* CDAPSessionManager::getReleaseConnectionRequestMessage(int port_id,
+		CDAPMessage::Flags flags, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getReleaseConnectionRequestMessage(
 			flags);
 	assignInvokeId(*cdap_message, invoke_id, port_id);
@@ -934,11 +944,9 @@ CDAPMessage* CDAPSessionManager::getReleaseConnectionResponseMessage(
 	return CDAPMessage::getReleaseConnectionResponseMessage(flags, result,
 			result_reason, invoke_id);
 }
-CDAPMessage* CDAPSessionManager::getCreateObjectRequestMessage(
-		int port_id, char * filter, CDAPMessage::Flags flags,
-		const std::string &obj_class, long obj_inst,
-		const std::string &obj_name, int scope,
-		bool invoke_id) {
+CDAPMessage* CDAPSessionManager::getCreateObjectRequestMessage(int port_id,
+		char * filter, CDAPMessage::Flags flags, const std::string &obj_class,
+		long obj_inst, const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getCreateObjectRequestMessage(
 			filter, flags, obj_class, obj_inst, obj_name, scope);
 	assignInvokeId(*cdap_message, invoke_id, port_id);
@@ -948,17 +956,15 @@ CDAPMessage* CDAPSessionManager::getCreateObjectRequestMessage(
 
 CDAPMessage* CDAPSessionManager::getCreateObjectResponseMessage(
 		CDAPMessage::Flags flags, const std::string &obj_class, long obj_inst,
-		const std::string &obj_name,
-		int result, const std::string &result_reason, int invoke_id) {
+		const std::string &obj_name, int result,
+		const std::string &result_reason, int invoke_id) {
 	return CDAPMessage::getCreateObjectResponseMessage(flags, obj_class,
 			obj_inst, obj_name, result, result_reason, invoke_id);
 }
 
-CDAPMessage* CDAPSessionManager::getDeleteObjectRequestMessage(
-		int port_id, char* filter, CDAPMessage::Flags flags,
-		const std::string &obj_class, long obj_inst,
-		const std::string &obj_name,
-		int scope, bool invoke_id) {
+CDAPMessage* CDAPSessionManager::getDeleteObjectRequestMessage(int port_id,
+		char* filter, CDAPMessage::Flags flags, const std::string &obj_class,
+		long obj_inst, const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getDeleteObjectRequestMessage(
 			filter, flags, obj_class, obj_inst, obj_name, scope);
 	assignInvokeId(*cdap_message, invoke_id, port_id);
@@ -975,8 +981,7 @@ CDAPMessage* CDAPSessionManager::getDeleteObjectResponseMessage(
 
 CDAPMessage* CDAPSessionManager::getStartObjectRequestMessage(int port_id,
 		char * filter, CDAPMessage::Flags flags, const std::string &obj_class,
-		long obj_inst,
-		const std::string &obj_name, int scope, bool invoke_id) {
+		long obj_inst, const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getStartObjectRequestMessage(
 			filter, flags, obj_class, obj_inst, obj_name, scope);
 	assignInvokeId(*cdap_message, invoke_id, port_id);
@@ -991,8 +996,7 @@ CDAPMessage* CDAPSessionManager::getStartObjectResponseMessage(
 }
 
 CDAPMessage* CDAPSessionManager::getStartObjectResponseMessage(
-		CDAPMessage::Flags flags, const std::string &obj_class,
-		long obj_inst,
+		CDAPMessage::Flags flags, const std::string &obj_class, long obj_inst,
 		const std::string &obj_name, int result,
 		const std::string &result_reason, int invoke_id) {
 	return CDAPMessage::getStartObjectResponseMessage(flags, obj_class,
@@ -1001,8 +1005,7 @@ CDAPMessage* CDAPSessionManager::getStartObjectResponseMessage(
 
 CDAPMessage* CDAPSessionManager::getStopObjectRequestMessage(int port_id,
 		char* filter, CDAPMessage::Flags flags, const std::string &obj_class,
-		long obj_inst,
-		const std::string &obj_name, int scope, bool invoke_id) {
+		long obj_inst, const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getStopObjectRequestMessage(filter,
 			flags, obj_class, obj_inst, obj_name, scope);
 	assignInvokeId(*cdap_message, invoke_id, port_id);
@@ -1016,8 +1019,8 @@ CDAPMessage* CDAPSessionManager::getStopObjectResponseMessage(
 			result_reason, invoke_id);
 }
 
-CDAPMessage* getStopObjectResponseMessage(CDAPMessage::Flags flags,
-		int result, const std::string &result_reason, int invoke_id) {
+CDAPMessage* getStopObjectResponseMessage(CDAPMessage::Flags flags, int result,
+		const std::string &result_reason, int invoke_id) {
 	return CDAPMessage::getStopObjectResponseMessage(flags, result,
 			result_reason, invoke_id);
 }
@@ -1033,16 +1036,15 @@ CDAPMessage* CDAPSessionManager::getReadObjectRequestMessage(int port_id,
 
 CDAPMessage* CDAPSessionManager::getReadObjectResponseMessage(
 		CDAPMessage::Flags flags, const std::string &obj_class, long obj_inst,
-		const std::string &obj_name,
-		int result, const std::string &result_reason, int invoke_id) {
+		const std::string &obj_name, int result,
+		const std::string &result_reason, int invoke_id) {
 	return CDAPMessage::getReadObjectResponseMessage(flags, obj_class, obj_inst,
 			obj_name, result, result_reason, invoke_id);
 }
 
 CDAPMessage* CDAPSessionManager::getWriteObjectRequestMessage(int port_id,
 		char * filter, CDAPMessage::Flags flags, const std::string &obj_class,
-		long obj_inst,
-		const std::string &obj_name, int scope, bool invoke_id) {
+		long obj_inst, const std::string &obj_name, int scope, bool invoke_id) {
 	CDAPMessage *cdap_message = CDAPMessage::getWriteObjectRequestMessage(
 			filter, flags, obj_class, obj_inst, obj_name, scope);
 	assignInvokeId(*cdap_message, invoke_id, port_id);
@@ -1072,11 +1074,13 @@ void CDAPSessionManager::assignInvokeId(CDAPMessage &cdap_message,
 	CDAPSessionImpl *cdap_session = 0;
 
 	if (invoke_id) {
-		 cdap_session = get_cdap_session(port_id);
+		cdap_session = get_cdap_session(port_id);
 		if (cdap_session) {
 			cdap_message.set_invoke_id(
 					cdap_session->get_invoke_id_manager()->newInvokeId());
 		}
+		std::cout << "[TMP_DEBUG] Asigned Invoke id: "
+				<< cdap_message.get_invoke_id() << std::endl;
 	}
 }
 
@@ -1135,7 +1139,7 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 	if (obj_val_t.has_byteval()) {
 		//TODO FIXME potential ugly bug, why a string? is an encoded array of bytes
 		char *byte_val = new char[obj_val_t.byteval().size() + 1];
-		SerializedObject sr_message (byte_val ,obj_val_t.byteval().size() + 1);
+		SerializedObject sr_message(byte_val, obj_val_t.byteval().size() + 1);
 		strcpy(byte_val, obj_val_t.byteval().c_str());
 		cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
 	}
