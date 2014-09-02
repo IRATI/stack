@@ -388,7 +388,6 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                                      pci_qos_id(pdu_pci_get_ro(tmp)),
                                      tmp)) {
                                 LOG_ERR("Could not send NACKed PDU to RMT");
-                                pdu_destroy(tmp);
                                 continue;
                         }
                 } else
@@ -494,8 +493,8 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         }
                         tmp = pdu_dup_ni(cur->pdu);
                         if (rmt_send(rmt,
-                                     pci_destination(pdu_pci_get_ro(cur->pdu)),
-                                     pci_qos_id(pdu_pci_get_ro(cur->pdu)),
+                                     pci_destination(pdu_pci_get_ro(tmp)),
+                                     pci_qos_id(pdu_pci_get_ro(tmp)),
                                      tmp)) {
                                 LOG_ERR("Could not send rtxed PDU to RMT");
                                 continue;
