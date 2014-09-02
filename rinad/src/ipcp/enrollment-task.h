@@ -383,8 +383,7 @@ public:
 private:
 	void populateRIB();
 	void subscribeToEvents();
-	void sendErrorMessageAndDeallocateFlow(const rina::CDAPMessage * cdapMessage,
-			int portId);
+	void deallocateFlow(int portId);
 
 	/// Creates an enrollment state machine with the remote IPC process identified by the apNamingInfo
 	/// @param apNamingInfo

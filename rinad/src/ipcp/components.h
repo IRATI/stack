@@ -777,6 +777,31 @@ public:
 
 	virtual std::list<BaseRIBObject *> getRIBObjects() = 0;
 
+	/// Request the establishment of an application connection with another IPC Process
+	/// @param auth_mech
+	/// @param auth_value
+	/// @param dest_ae_inst
+	/// @param dest_ae_name
+	/// @param dest_ap_inst
+	/// @param dest_ap_name
+	/// @param src_ae_inst
+	/// @param src_ae_name
+	/// @param src_ap_inst
+	/// @param src_ap_name
+	/// @param remote_id
+	virtual void openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
+			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+			const std::string &dest_ae_name, const std::string &dest_ap_inst,
+			const std::string &dest_ap_name, const std::string &src_ae_inst,
+			const std::string &src_ae_name, const std::string &src_ap_inst,
+			const std::string &src_ap_name, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Request an application connection to be closed
+	/// @param remote_id
+	/// @param response_handler
+	virtual void closeApplicationConnection(const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
 	/// Invoke a create operation on an object in the RIB of a remote IPC Process
 	/// @param object_class
 	/// @param object_name
@@ -840,6 +865,38 @@ public:
 	virtual void remoteStopObject(const std::string& object_class, const std::string& object_name,
 			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
 			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Causes the RIB Daemon to send an open connection response message to the IPC Process identified
+	/// by remote_id
+	/// @param auth_mech
+	/// @param auth_value
+	/// @param dest_ae_inst
+	/// @param dest_ae_name
+	/// @param dest_ap_inst
+	/// @param dest_ap_name
+	/// @param result
+	/// @param result_reason
+	/// @param src_ae_inst
+	/// @param src_ae_name
+	/// @param src_ap_inst
+	/// @param src_ap_name
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
+			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+			const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
+			int result, const std::string &result_reason, const std::string &src_ae_inst,
+			const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
+			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to terminate an application connection with an IPC Process identified
+	/// by remote_id
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void closeApplicationConnectionResponse(int result, const std::string result_reason,
+			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
 
 	/// Causes the RIB Daemon to send a create response message to the IPC Process identified
 	/// by remote_id

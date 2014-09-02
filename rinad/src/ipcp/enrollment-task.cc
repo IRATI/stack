@@ -471,15 +471,13 @@ void BaseEnrollmentStateMachine::release(int invoke_id,
 		return;
 	}
 
-	const rina::CDAPMessage * responseMessage = 0;
 	try {
-		responseMessage = cdap_session_manager_->getReleaseConnectionResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				0, "", invoke_id);
-		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
-		delete responseMessage;
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = port_id_;
+
+		rib_daemon_->closeApplicationConnectionResponse(0, "", invoke_id, remote_id);
 	} catch (Exception &e) {
 		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
-		delete responseMessage;
 	}
 }
 
@@ -638,15 +636,15 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 		throw Exception("Enrollee state machine not in NULL state");
 	}
 
-	const rina::CDAPMessage * cdapMessage = 0;
 	try{
-		cdapMessage = cdap_session_manager_->getOpenConnectionRequestMessage(portId,
-				rina::CDAPMessage::AUTH_NONE, rina::AuthValue(), "", IPCProcess::MANAGEMENT_AE,
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = portId;
+
+		rib_daemon_->openApplicationConnection(rina::CDAPMessage::AUTH_NONE, rina::AuthValue(), "", IPCProcess::MANAGEMENT_AE,
 				remote_peer_->name_.processInstance, remote_peer_->name_.processName, "",
 				IPCProcess::MANAGEMENT_AE, ipc_process_->get_name().processInstance,
-				ipc_process_->get_name().processName);
+				ipc_process_->get_name().processName, remote_id);
 
-		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
 		port_id_ = portId;
 
 		//Set timer
@@ -659,8 +657,6 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 		LOG_ERR("Problems sending M_CONNECT message: %s", e.what());
 		abortEnrollment(remote_peer_->name_, port_id_, std::string(e.what()), true, false);
 	}
-
-	delete cdapMessage;
 }
 
 void EnrolleeStateMachine::connectResponse(int result,
@@ -1067,16 +1063,16 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 
 
 	//Send M_CONNECT_R
-	const rina::CDAPMessage * responseMessage = 0;
 	port_id_ = session_descriptor->port_id_;
 	try{
-		responseMessage = cdap_session_manager_->getOpenConnectionResponseMessage(rina::CDAPMessage::AUTH_NONE,
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = port_id_;
+
+		rib_daemon_->openApplicationConnectionResponse(rina::CDAPMessage::AUTH_NONE,
 				rina::AuthValue(), session_descriptor->dest_ae_inst_, IPCProcess::MANAGEMENT_AE,
 				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, 0, "", session_descriptor->src_ae_inst_,
 				IPCProcess::MANAGEMENT_AE, session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_,
-				invoke_id);
-
-		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
+				invoke_id, remote_id);
 
 		//Set timer
 		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT, true);
@@ -1089,8 +1085,6 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 		abortEnrollment(remote_peer_->name_, port_id_,
 						std::string(e.what()), false, true);
 	}
-
-	delete responseMessage;
 }
 
 void EnrollerStateMachine::sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
@@ -1547,14 +1541,7 @@ void EnrollmentTask::initiateEnrollment(EnrollmentRequest * request) {
 	port_ids_pending_to_be_allocated_.put(handle, request);
 }
 
-void EnrollmentTask::sendErrorMessageAndDeallocateFlow(const rina::CDAPMessage * cdapMessage,
-			int portId) {
-	try {
-		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
-	} catch (Exception &e) {
-		LOG_ERR("Problems sending CDAP message: %s", e.what());
-	}
-
+void EnrollmentTask::deallocateFlow(int portId) {
 	try {
 		resource_allocator_->get_n_minus_one_flow_manager()->deallocateNMinus1Flow(portId);
 	} catch (Exception &e) {
@@ -1621,18 +1608,25 @@ void EnrollmentTask::connect(int invoke_id,
 
 	//2 Find out if we are already enrolled to the remote IPC process
 	if (isEnrolledTo(session_descriptor->dest_ap_name_)){
-		const rina::CDAPMessage * errorMessage = 0;
 
 		std::string message = "Received an enrollment request for an IPC process I'm already enrolled to";
 		LOG_ERR("%s", message.c_str());
-		errorMessage = cdap_session_manager_->getOpenConnectionResponseMessage(rina::CDAPMessage::AUTH_NONE,
-				rina::AuthValue(), session_descriptor->dest_ae_inst_, session_descriptor->dest_ae_name_,
-				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, -2, message,
-				session_descriptor->src_ae_inst_, session_descriptor->src_ae_name_,
-				session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_, invoke_id);
-		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
-		delete errorMessage;
+		try {
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->openApplicationConnectionResponse(rina::CDAPMessage::AUTH_NONE,
+					rina::AuthValue(), session_descriptor->dest_ae_inst_, session_descriptor->dest_ae_name_,
+					session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, -2, message,
+					session_descriptor->src_ae_inst_, session_descriptor->src_ae_name_,
+					session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_, invoke_id, remote_id);
+		} catch (Exception &e) {
+			LOG_ERR("Problems sending CDAP message: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
+
 		return;
 	}
 
@@ -1646,16 +1640,21 @@ void EnrollmentTask::connect(int invoke_id,
 		enrollmentStateMachine->connect(invoke_id, session_descriptor);
 	}catch(Exception &e){
 		LOG_ERR("Problems: %s", e.what());
-		const rina::CDAPMessage * errorMessage = 0;
 
-		errorMessage = cdap_session_manager_->getOpenConnectionResponseMessage(rina::CDAPMessage::AUTH_NONE,
-				rina::AuthValue(), session_descriptor->dest_ae_inst_, session_descriptor->dest_ae_name_,
-				session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, -2,
-				std::string(e.what()), session_descriptor->src_ae_inst_, session_descriptor->src_ae_name_,
-				session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_, invoke_id);
-		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
+		try {
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
 
-		delete errorMessage;
+			rib_daemon_->openApplicationConnectionResponse(rina::CDAPMessage::AUTH_NONE,
+					rina::AuthValue(), session_descriptor->dest_ae_inst_, session_descriptor->dest_ae_name_,
+					session_descriptor->dest_ap_inst_, session_descriptor->dest_ap_name_, -2,
+					std::string(e.what()), session_descriptor->src_ae_inst_, session_descriptor->src_ae_name_,
+					session_descriptor->src_ap_inst_, session_descriptor->src_ap_name_, invoke_id, remote_id);
+		} catch (Exception &e) {
+			LOG_ERR("Problems sending CDAP message: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
 	}
 }
 
@@ -1670,12 +1669,17 @@ void EnrollmentTask::connectResponse(int result, const std::string& result_reaso
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
-		const rina::CDAPMessage * errorMessage;
-		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				session_descriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
-		delete errorMessage;
+		try {
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
 	}
 }
 
@@ -1690,12 +1694,17 @@ void EnrollmentTask::release(int invoke_id,
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
-		const rina::CDAPMessage * errorMessage;
-		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				session_descriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
-		delete errorMessage;
+		try {
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
 	}
 }
 
@@ -1710,12 +1719,17 @@ void EnrollmentTask::releaseResponse(int result, const std::string& result_reaso
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
-		const rina::CDAPMessage * errorMessage;
-		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				session_descriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
-		delete errorMessage;
+		try {
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = session_descriptor->port_id_;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(session_descriptor->port_id_);
 	}
 }
 
@@ -1880,11 +1894,16 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 
 	//2 Send message and deallocate flow if required
 	if(sendReleaseMessage){
-		const rina::CDAPMessage * errorMessage = 0;
-		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				portId, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, portId);
-		delete errorMessage;
+		try {
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = portId;
+
+			rib_daemon_->closeApplicationConnection(remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems closing application connection: %s", e.what());
+		}
+
+		deallocateFlow(portId);
 	}
 
 	//3 In the case of the enrollee state machine, reply to the IPC Manager
@@ -1974,17 +1993,14 @@ void EnrollmentRIBObject::remoteStopObject(void * object_value, int invoke_id,
 }
 
 void EnrollmentRIBObject::sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	const rina::CDAPMessage * cdapMessage = 0;
-
 	try{
-		cdapMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(cdapSessionDescriptor->port_id_,
-				rina::CDAPMessage::NONE_FLAGS, false);
-		rib_daemon_->sendMessage(*cdapMessage, cdapSessionDescriptor->port_id_, 0);
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = cdapSessionDescriptor->port_id_;
+
+		rib_daemon_->closeApplicationConnection(remote_id, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 	}
-
-	delete cdapMessage;
 }
 
 // Class Operational Status RIB Object
@@ -2033,17 +2049,14 @@ void OperationalStatusRIBObject::stopObject(const void* object) {
 }
 
 void OperationalStatusRIBObject::sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	const rina::CDAPMessage * cdapMessage = 0;
-
 	try{
-		cdapMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(cdapSessionDescriptor->port_id_,
-				rina::CDAPMessage::NONE_FLAGS, false);
-		rib_daemon_->sendMessage(*cdapMessage, cdapSessionDescriptor->port_id_, 0);
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = cdapSessionDescriptor->port_id_;
+
+		rib_daemon_->closeApplicationConnection(remote_id, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
 	}
-
-	delete cdapMessage;
 }
 
 const void* OperationalStatusRIBObject::get_value() const {

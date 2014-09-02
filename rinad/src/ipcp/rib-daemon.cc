@@ -911,6 +911,50 @@ void RIBDaemon::encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * m
 	}
 }
 
+void RIBDaemon::openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
+			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+			const std::string &dest_ae_name, const std::string &dest_ap_inst,
+			const std::string &dest_ap_name, const std::string &src_ae_inst,
+			const std::string &src_ae_name, const std::string &src_ap_inst,
+			const std::string &src_ap_name, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getOpenConnectionRequestMessage(remote_id.port_id_,
+				auth_mech, auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst,
+				dest_ap_name, src_ae_inst, src_ae_name, src_ap_inst, src_ap_name);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::closeApplicationConnection(const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getReleaseConnectionRequestMessage(remote_id.port_id_,
+				rina::CDAPMessage::NONE_FLAGS, invoke_id);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
 void RIBDaemon::remoteCreateObject(const std::string& object_class, const std::string& object_name,
 			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
 			ICDAPResponseMessageHandler * response_handler) {
@@ -1055,6 +1099,46 @@ void RIBDaemon::remoteStopObject(const std::string& object_class, const std::str
 		encodeObject(object_value, message);
 
 		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
+				const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+				const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
+				int result, const std::string &result_reason, const std::string &src_ae_inst,
+				const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
+				int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getOpenConnectionResponseMessage(auth_mech,
+				auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst, dest_ap_name,
+				result, result_reason, src_ae_inst, src_ae_name, src_ap_inst,
+				src_ap_name, invoke_id);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::closeApplicationConnectionResponse(int result, const std::string result_reason,
+			int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getReleaseConnectionResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				result, result_reason, invoke_id);
+
+		sendMessage(*message, remote_id, 0);
 	} catch (Exception &e) {
 		delete message;
 		throw e;
