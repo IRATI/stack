@@ -481,6 +481,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur, * n;
+        struct pdu *        tmp;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 if (cur->time_stamp < tr) {
@@ -491,10 +492,11 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }
+                        tmp = pdu_dup_ni(cur->pdu);
                         if (rmt_send(rmt,
                                      pci_destination(pdu_pci_get_ro(cur->pdu)),
                                      pci_qos_id(pdu_pci_get_ro(cur->pdu)),
-                                     cur->pdu)) {
+                                     tmp)) {
                                 LOG_ERR("Could not send rtxed PDU to RMT");
                                 continue;
                         }
