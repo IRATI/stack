@@ -393,7 +393,7 @@ public:
 	/// M_WRITE message with the contents of the FSDB, then the PDU Forwarding table generator
 	/// will reply with one or more M_READ_R messages containing the FSOs in its FSDB.
 	/// Otherwise it will ignore the request.
-	void readMessageRecieved(const rina::CDAPMessage * cdapMessage, int srcPort) const;
+	void readMessageRecieved(int invoke_id, int srcPort) const;
 
 	bool test_;
 	FlowStateDatabase * db_;

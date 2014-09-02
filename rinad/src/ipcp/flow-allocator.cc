@@ -657,29 +657,28 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 	LOG_DBG("Created connection with cep-id %d", event.getCepId());
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
-	rina::CDAPMessage * cdapMessage = 0;
 	try {
 		//5 get the portId of any open CDAP session
 		std::vector<int> cdapSessions;
 		cdap_session_manager_->getAllCDAPSessionIds(cdapSessions);
-		int cdapSessionId = cdapSessions[0];
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = cdapSessions[0];
+		remote_id.use_address_ = true;
+		remote_id.address_ = flow_->destination_address_;
+
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = flow_;
 
 		//6 Encode the flow object and send it to the destination IPC process
-		cdapMessage = cdap_session_manager_->getCreateObjectRequestMessage(
-				cdapSessionId, 0, rina::CDAPMessage::NONE_FLAGS,
-				EncoderConstants::FLOW_RIB_OBJECT_CLASS, 0, object_name_,
-				0, true);
-		encoder_->encode(flow_, cdapMessage);
+		rib_daemon_->remoteCreateObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+				object_name_, robject_value, 0, remote_id, this);
 
-		underlying_port_id_ = cdapSessionId;
+		underlying_port_id_ = cdapSessions[0];
 		state_ = MESSAGE_TO_PEER_FAI_SENT;
-
-		rib_daemon_->sendMessageToAddress(*cdapMessage, cdapSessionId, flow_->destination_address_, this);
-		delete cdapMessage;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
 				e.what());
-		delete cdapMessage;
 		replyToIPCManager(flow_request_event_, -1);
 		releaseUnlockRemove();
 		return;
@@ -718,23 +717,23 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 		LOG_WARN("Security Manager denied incoming flow request from application %s",
 				flow_->source_naming_info_.getEncodedString().c_str());
 
-	    rina::CDAPMessage * responseMessage = 0;
 		try {
-			responseMessage = cdap_session_manager_->getCreateObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS,
-					EncoderConstants::FLOW_RIB_OBJECT_CLASS, 0,
-					object_name_, -1,
-					"IPC Process rejected the flow",
-					invoke_id_);
-			encoder_->encode(flow_, responseMessage);
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = underlying_port_id_;
+			remote_id.use_address_ = true;
+			remote_id.address_ = flow_->source_address_;
 
-			rib_daemon_->sendMessageToAddress(*responseMessage, underlying_port_id_,
-					flow_->source_address_, 0);
+			RIBObjectValue robject_value;
+			robject_value.type_ = RIBObjectValue::complextype;
+			robject_value.complex_value_ = flow_;
+
+			rib_daemon_->remoteCreateObjectResponse(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+					object_name_, robject_value, -1, "EncoderConstants::FLOW_RIB_OBJECT_CLASS",
+					invoke_id_, remote_id);
 		} catch (Exception &e){
 			LOG_ERR("Problems sending CDAP message: %s", e.what());
 		}
 
-		delete responseMessage;
 		releaseUnlockRemove();
 		return;
 	}
@@ -806,22 +805,23 @@ void FlowAllocatorInstance::submitAllocateResponse(
 		return;
 	}
 
-	rina::CDAPMessage * cdapMessage = 0;
 	if (event.result == 0) {
 		//Flow has been accepted
 		try {
-			cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
-					rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_RIB_OBJECT_CLASS,
-					0, object_name_, 0, 0, invoke_id_);
-			encoder_->encode(flow_, cdapMessage);
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = underlying_port_id_;
+			remote_id.use_address_ = true;
+			remote_id.address_ = flow_->source_address_;
 
-			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
-					flow_->source_address_, 0);
-			delete cdapMessage;
+			RIBObjectValue robject_value;
+			robject_value.type_ = RIBObjectValue::complextype;
+			robject_value.complex_value_ = flow_;
+
+			rib_daemon_->remoteCreateObjectResponse(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+					object_name_, robject_value, 0, "", invoke_id_, remote_id);
 		} catch (Exception &e) {
 			LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 					e.what());
-			delete cdapMessage;
 
 			try {
 				rina::extendedIPCManager->flowDeallocated(port_id_);
@@ -848,20 +848,21 @@ void FlowAllocatorInstance::submitAllocateResponse(
 
 	//Flow has been rejected
 	try {
-		cdapMessage = cdap_session_manager_->getCreateObjectResponseMessage(
-				rina::CDAPMessage::NONE_FLAGS,
-				EncoderConstants::FLOW_RIB_OBJECT_CLASS, 0, object_name_, -1,
-				"Application rejected the flow", invoke_id_);
-		encoder_->encode(flow_, cdapMessage);
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = underlying_port_id_;
+		remote_id.use_address_ = true;
+		remote_id.address_ = flow_->source_address_;
 
-		rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
-				flow_->source_address_, 0);
-		delete cdapMessage;
-		cdapMessage = 0;
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = flow_;
+
+		rib_daemon_->remoteCreateObjectResponse(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+				object_name_, robject_value, -1, "Application rejected the flow",
+				invoke_id_, remote_id);
 	} catch (Exception &e) {
 		LOG_ERR("Problems requesting RIB Daemon to send CDAP Message: %s",
 				e.what());
-		delete cdapMessage;
 	}
 
 	releaseUnlockRemove();
@@ -937,27 +938,20 @@ void FlowAllocatorInstance::submitDeallocate(
 		state_ = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 		//2 Send M_DELETE
-		rina::CDAPMessage * cdapMessage = 0;
 		try {
-			cdapMessage = cdap_session_manager_->getDeleteObjectRequestMessage(
-					underlying_port_id_, 0, rina::CDAPMessage::NONE_FLAGS,
-					EncoderConstants::FLOW_RIB_OBJECT_CLASS, 0, object_name_,
-					0, false);
-			encoder_->encode(flow_, cdapMessage);
-
-			unsigned int address = 0;
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = underlying_port_id_;
+			remote_id.use_address_ = true;
 			if (ipc_process_->get_address() == flow_->source_address_) {
-				address = flow_->destination_address_;
+				remote_id.address_ = flow_->destination_address_;
 			} else {
-				address = flow_->source_address_;
+				remote_id.address_ = flow_->source_address_;
 			}
 
-			rib_daemon_->sendMessageToAddress(*cdapMessage, underlying_port_id_,
-					address, 0);
-			delete cdapMessage;
+			rib_daemon_->remoteDeleteObject(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+					object_name_, 0, remote_id, 0);;
 		} catch (Exception &e) {
 			LOG_ERR("Problems sending M_DELETE flow request: %s", e.what());
-			delete cdapMessage;
 		}
 
 		//3 Wait 2*MPL before tearing down the flow
@@ -1117,19 +1111,20 @@ DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(IPCProcess * ipc_
 
 void DataTransferConstantsRIBObject::remoteReadObject(int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	rina::CDAPMessage * respMessage = 0;
 	try {
-		respMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
-				0, EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME,
-				0, "", invoke_id);
-		encoder_->encode(get_value(), respMessage);
-		rib_daemon_->sendMessage(*respMessage, cdapSessionDescriptor->port_id_, 0);
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = cdapSessionDescriptor->port_id_;
+
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = const_cast<void*> (get_value());
+
+		rib_daemon_->remoteReadObjectResponse(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, robject_value, 0, "", invoke_id,
+				false, remote_id);
 	}catch (Exception &e) {
 		LOG_ERR("Problems generating or sending CDAP Message: %s", e.what());
 	}
-
-	delete respMessage;
 }
 
 void DataTransferConstantsRIBObject::remoteCreateObject(void * object_value,

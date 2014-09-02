@@ -902,20 +902,21 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 	}
 
 	int portId = event->neighbor_->get_underlying_port_id();
-	rina::CDAPMessage * cdapMessage = 0;
 
 	try{
-		cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(portId, 0,
-				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
-		encoder_->encode(&(db_->flow_state_objects_), cdapMessage);
-		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = &(db_->flow_state_objects_);
+
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = portId;
+
+		rib_daemon_->remoteWriteObject(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, robject_value, 0, remote_id, 0);
 		db_->setAvoidPort(portId);
 	}catch(Exception &e){
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
-
-	delete cdapMessage;
 }
 
 void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
@@ -931,25 +932,28 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 		return;
 	}
 
+	RIBObjectValue robject_value;
+	robject_value.type_ = RIBObjectValue::complextype;
+	robject_value.complex_value_ = &(db_->flow_state_objects_);
+
+	RemoteIPCProcessId remote_id;
+
 	std::list<FlowStateObject *> fsos;
 	std::list<rina::FlowInformation>::iterator it;
-	rina::CDAPMessage * cdapMessage = 0;
 	int i = 0;
 	for (it = nMinusOneFlows.begin(); it != nMinusOneFlows.end(); ++it) {
 		fsos = groupsToSend[i];
 		if (fsos.size() > 0) {
 			try {
-				cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(it->portId, 0,
-						rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
-						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
-				encoder_->encode(&(db_->flow_state_objects_), cdapMessage);
-				rib_daemon_->sendMessage(*cdapMessage, it->portId, 0);
+				remote_id.port_id_ = it->portId;
+				rib_daemon_->remoteWriteObject(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, robject_value, 0,
+						remote_id, 0);
 			} catch (Exception &e) {
 				LOG_ERR("Errors sending message: %s", e.what());
 			}
 		}
 
-		delete cdapMessage;
 		i++;
 	}
 }
@@ -989,26 +993,23 @@ void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
 }
 
 void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
-		const rina::CDAPMessage * cdapMessage, int portId) const {
+		int invoke_id, int portId) const {
 	rina::AccessGuard g(*lock_);
 
-	if (cdapMessage->get_obj_class().compare(
-			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
-		return;
-	}
-
-	rina::CDAPMessage * responseMessage = 0;
 	try {
-		responseMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				fs_rib_group_->class_, fs_rib_group_->instance_, fs_rib_group_->name_,
-				0, "", cdapMessage->get_invoke_id());
-		encoder_->encode(&(db_->flow_state_objects_), responseMessage);
-		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = &(db_->flow_state_objects_);
+
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = portId;
+
+		rib_daemon_->remoteReadObjectResponse(fs_rib_group_->class_,
+				fs_rib_group_->name_, robject_value, 0, "", invoke_id,
+				false, remote_id);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
-
-	delete responseMessage;
 }
 
 //Class FlowStateObjectEncoder
