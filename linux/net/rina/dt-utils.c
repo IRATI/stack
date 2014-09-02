@@ -483,7 +483,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         struct pdu *        tmp;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (cur->time_stamp < tr) {
+                if (cur->time_stamp < msecs_to_jiffies(tr)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
