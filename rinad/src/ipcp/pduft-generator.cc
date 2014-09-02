@@ -645,11 +645,18 @@ LinkStatePDUFTCDAPMessageHandler::LinkStatePDUFTCDAPMessageHandler(
 	pduft_generator_policy_ = pduft_generator_policy;
 }
 
-void LinkStatePDUFTCDAPMessageHandler::readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void LinkStatePDUFTCDAPMessageHandler::readResponse(int result,
+		const std::string& result_reason, void * object_value,
+		const std::string& object_name, rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) object_name;
+
+	if (result != 0) {
+		LOG_ERR("Problems reading Flow State Objects from neighbor: %s", result_reason.c_str());
+	}
+
 	std::list<FlowStateObject *> * objects =
-			(std::list<FlowStateObject *> *) cdapMessage->obj_value_;
-	pduft_generator_policy_->writeMessageReceived(*objects, cdapSessionDescriptor->get_port_id());
+			(std::list<FlowStateObject *> *) object_value;
+	pduft_generator_policy_->writeMessageReceived(*objects, session_descriptor->port_id_);
 	delete objects;
 }
 

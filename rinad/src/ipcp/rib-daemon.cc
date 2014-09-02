@@ -598,20 +598,36 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
 					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START_R:
-			handler->startResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->startResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_STOP_R:
-			handler->stopResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->stopResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_READ_R:
-			handler->readResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->result_ == 0) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->readResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapMessage->obj_name_, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD_R:
 			handler->cancelReadResponse(cdapMessage->result_, cdapMessage->result_reason_,
 					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_WRITE_R:
-			handler->writeResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->writeResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		default:
 			LOG_ERR("Invalid operation code for a response message %d", cdapMessage->get_op_code());
@@ -662,15 +678,17 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_CONNECT_R:
-			enrollmentTask->connectResponse(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->connectResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_RELEASE:
-			enrollmentTask->release(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->release(cdapMessage->invoke_id_, cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_RELEASE_R:
-			enrollmentTask->releaseResponse(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->releaseResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_CREATE:

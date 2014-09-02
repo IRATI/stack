@@ -107,28 +107,30 @@ public:
 	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
 
 	/// A remote IPC process Connect request has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
+	/// @param invoke_id the id of the connect message
+	/// @param session_descriptor
 	virtual void connect(int invoke_id,
 			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// A remote IPC process Connect response has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	virtual void connectResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// A remote IPC process Release request has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescripton
-	virtual void release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param invoke_id the id of the release message
+	/// @param session_descriptor
+	virtual void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// A remote IPC process Release response has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void releaseResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	virtual void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
@@ -535,16 +537,17 @@ public:
 			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
 	virtual void deleteResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
+	virtual void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
 			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 	virtual void cancelReadResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void writeResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void startResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void stopResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
 };
 
 class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
@@ -562,10 +565,14 @@ public:
 				(void) result_reason; //Stop compiler barfs
 				(void) session_descriptor; // Stop compiler barfs
 	}
-	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; //Stop compiler barfs
+				(void) object_value; //Stop compiler barfs
+				(void) object_name; //Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
 	}
 	virtual void cancelReadResponse(int result, const std::string& result_reason,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
@@ -573,20 +580,26 @@ public:
 				(void) result_reason; //Stop compiler barfs
                 (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
-	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void writeResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+                (void) result; // Stop compiler barfs
+                (void) result_reason; // Stop compiler barfs
+                (void) object_value; // Stop compiler barfs
+                (void) session_descriptor; // Stop compiler barfs
 	}
-	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void startResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; // Stop compiler barfs
+				(void) object_value; // Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
 	}
-	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void stopResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; // Stop compiler barfs
+				(void) object_value; // Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
 	}
 };
 

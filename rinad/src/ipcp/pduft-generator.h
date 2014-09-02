@@ -260,8 +260,9 @@ private:
 class LinkStatePDUFTCDAPMessageHandler: public BaseCDAPResponseMessageHandler {
 public:
 	LinkStatePDUFTCDAPMessageHandler(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
 	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;

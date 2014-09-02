@@ -74,8 +74,9 @@ public:
 
 	/// Take advantadge of the watchdog message responses to measure the RTT,
 	/// and store it in the neighbor object (average of the last 4 RTTs)
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
@@ -179,16 +180,17 @@ public:
 	~BaseEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
-	/// @param cdapMessage
+	/// @param invoke_id the invoke_id of the release message
 	/// @param cdapSessionDescriptor
-	void release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	void releaseResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
@@ -250,13 +252,12 @@ public:
 	void initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId);
 
 	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	void connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	/// @param result
+	/// @param result_reason
+	void connectResponse(int result, const std::string& result_reason);
 
-	void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void startResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Stop enrollment request received. Check if I have enough information, if not
 	/// ask for more with M_READs.
@@ -268,11 +269,12 @@ public:
 
 	/// See if the response is valid and contains an object. See if more objects
 	/// are required. If not, start
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
-	void start(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void start(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 	EnrollmentRequest * enrollment_request_;
 
@@ -328,10 +330,12 @@ public:
 
     /// The response of the stop operation has been received, send M_START operation without
     /// waiting for an answer and consider the process enrolled
-    /// @param cdapMessage
+    /// @param result
+    /// @param result_reason
+    /// @param object_value
     /// @param cdapSessionDescriptor
-	void stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void stopResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
     /// Send a negative response to the M_START enrollment message
@@ -366,12 +370,12 @@ public:
 	void initiateEnrollment(EnrollmentRequest * request);
 	void connect(int invoke_id,
 			rina::CDAPSessionDescriptor * session_descriptor);
-	void connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void releaseResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void connectResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
 	void eventHappened(Event * event);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage);

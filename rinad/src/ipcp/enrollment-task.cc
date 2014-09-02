@@ -150,15 +150,17 @@ void WatchdogRIBObject::sendMessages() {
 	}
 }
 
-void WatchdogRIBObject::readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void WatchdogRIBObject::readResponse(int result, const std::string& result_reason,
+		void * object_value, const std::string& object_name,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 
-	if (!cdapMessage) {
-		return;
-	}
+	(void) result;
+	(void) result_reason;
+	(void) object_value;
+	(void) object_name;
 
-	std::map<std::string, int>::iterator it = neighbor_statistics_.find(cdapSessionDescriptor->dest_ap_name_);
+	std::map<std::string, int>::iterator it = neighbor_statistics_.find(session_descriptor->dest_ap_name_);
 	if (it == neighbor_statistics_.end()) {
 		return;
 	}
@@ -170,7 +172,7 @@ void WatchdogRIBObject::readResponse(const rina::CDAPMessage * cdapMessage,
 	std::list<rina::Neighbor*> neighbors = ipc_process_->get_neighbors();
 	std::list<rina::Neighbor*>::const_iterator it2;
 	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
-		if ((*it2)->name_.processName.compare(cdapSessionDescriptor->dest_ap_name_) == 0) {
+		if ((*it2)->name_.processName.compare(session_descriptor->dest_ap_name_) == 0) {
 			(*it2)->average_rtt_in_ms_ = currentTimeInMs - storedTime;
 			(*it2)->last_heard_from_time_in_ms_ = currentTimeInMs;
 			break;
@@ -448,12 +450,12 @@ bool BaseEnrollmentStateMachine::isValidPortId(const rina::CDAPSessionDescriptor
 	return true;
 }
 
-void BaseEnrollmentStateMachine::release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void BaseEnrollmentStateMachine::release(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 	LOG_DBG("Releasing the CDAP connection");
 
-	if (!isValidPortId(cdapSessionDescriptor)) {
+	if (!isValidPortId(session_descriptor)) {
 		return;
 	}
 
@@ -465,14 +467,14 @@ void BaseEnrollmentStateMachine::release(const rina::CDAPMessage * cdapMessage,
 		timer_ = 0;
 	}
 
-	if (cdapMessage->get_invoke_id() == 0) {
+	if (invoke_id == 0) {
 		return;
 	}
 
 	const rina::CDAPMessage * responseMessage = 0;
 	try {
 		responseMessage = cdap_session_manager_->getReleaseConnectionResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				0, "", cdapMessage->invoke_id_);
+				0, "", invoke_id);
 		rib_daemon_->sendMessage(*responseMessage, port_id_, 0);
 		delete responseMessage;
 	} catch (Exception &e) {
@@ -481,14 +483,14 @@ void BaseEnrollmentStateMachine::release(const rina::CDAPMessage * cdapMessage,
 	}
 }
 
-void BaseEnrollmentStateMachine::releaseResponse(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void BaseEnrollmentStateMachine::releaseResponse(int result, const std::string& result_reason,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
-	if (!cdapMessage) {
-		return;
-	}
 
-	if (!isValidPortId(cdapSessionDescriptor)) {
+	(void) result;
+	(void) result_reason;
+
+	if (!isValidPortId(session_descriptor)) {
 		return;
 	}
 
@@ -661,23 +663,21 @@ void EnrolleeStateMachine::initiateEnrollment(EnrollmentRequest * enrollmentRequ
 	delete cdapMessage;
 }
 
-void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrolleeStateMachine::connectResponse(int result,
+		const std::string& result_reason) {
 	rina::AccessGuard g(*lock_);
-
-	(void) cdapSessionDescriptor; // Stop compiler barfs
 
 	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
 		abortEnrollment(remote_peer_->name_, port_id_,
-				"Message received in wroing order", true, true);
+				"Message received in wrong order", true, true);
 		return;
 	}
 
 	timer_->cancelTask(last_scheduled_task_);
-	if (cdapMessage->result_ != 0) {
+	if (result != 0) {
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
-				cdapMessage->result_reason_, true, true);
+				result_reason, true, true);
 		return;
 	}
 
@@ -725,11 +725,11 @@ void EnrolleeStateMachine::connectResponse(const rina::CDAPMessage * cdapMessage
 	delete requestMessage;
 }
 
-void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrolleeStateMachine::startResponse(int result, const std::string& result_reason,
+		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 
-	if (!isValidPortId(cdapSessionDescriptor)){
+	if (!isValidPortId(session_descriptor)){
 		return;
 	}
 
@@ -740,17 +740,17 @@ void EnrolleeStateMachine::startResponse(const rina::CDAPMessage * cdapMessage,
 	}
 
 	timer_->cancelTask(last_scheduled_task_);
-	if (cdapMessage->result_ != 0) {
+	if (result != 0) {
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->get_name(), port_id_,
-				cdapMessage->result_reason_, true, true);
+				result_reason, true, true);
 		return;
 	}
 
 	//Update address
-	if (cdapMessage->obj_value_) {
-		EnrollmentInformationRequest * response = (EnrollmentInformationRequest *)
-						encoder_->decode(cdapMessage);
+	if (object_value) {
+		EnrollmentInformationRequest * response =
+				(EnrollmentInformationRequest *) object_value;
 
 		unsigned int address = response->address_;
 		delete response;
@@ -935,11 +935,12 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 	LOG_INFO("Remote IPC Process enrolled!");
 }
 
-void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrolleeStateMachine::readResponse(int result, const std::string& result_reason,
+		void * object_value, const std::string& object_name,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 
-	if (!isValidPortId(cdapSessionDescriptor)){
+	if (!isValidPortId(session_descriptor)){
 		return;
 	}
 
@@ -951,54 +952,52 @@ void EnrolleeStateMachine::readResponse(const rina::CDAPMessage * cdapMessage,
 
 	timer_->cancelTask(last_scheduled_task_);
 
-	if (cdapMessage->result_ != 0 || cdapMessage->obj_value_== 0){
+	if (result != 0 || object_value == 0){
 		abortEnrollment(remote_peer_->name_, port_id_,
-				UNSUCCESSFULL_READ_RESPONSE, true, true);
+				result_reason, true, true);
 		return;
 	}
 
-	if (cdapMessage->obj_name_.compare(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME) == 0){
+	if (object_name.compare(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME) == 0){
 		try{
-			rina::DataTransferConstants * constants = (rina::DataTransferConstants *)
-					encoder_->decode(cdapMessage);
+			rina::DataTransferConstants * constants =
+					(rina::DataTransferConstants *) object_value;
 			rib_daemon_->createObject(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 					EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME, constants, 0);
 		}catch(Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());
 		}
-	}else if (cdapMessage->obj_name_.compare(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME) == 0){
+	}else if (object_name.compare(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME) == 0){
 		try{
-			std::list<rina::QoSCube *> * cubes = (std::list<rina::QoSCube *> *)
-					encoder_->decode(cdapMessage);
+			std::list<rina::QoSCube *> * cubes =
+					(std::list<rina::QoSCube *> *) object_value;
 			rib_daemon_->createObject(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 					EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME, cubes, 0);
 		}catch(Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());
 		}
-	}else if (cdapMessage->obj_name_.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0){
+	}else if (object_name.compare(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME) == 0){
 		try{
-			std::list<rina::Neighbor *> * neighbors = (std::list<rina::Neighbor *> *)
-					encoder_->decode(cdapMessage);
+			std::list<rina::Neighbor *> * neighbors =
+					(std::list<rina::Neighbor *> *) object_value;
 			rib_daemon_->createObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 					EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME, neighbors, 0);
 		}catch(Exception &e){
 			LOG_ERR("Problems creating RIB object: %s", e.what());
 		}
 	}else{
-		LOG_WARN("The object to be created is not required for enrollment: %s",
-				cdapMessage->to_string().c_str());
+		LOG_WARN("The object to be created is not required for enrollment");
 	}
 
 	//Request more information or proceed with the enrollment program
 	requestMoreInformationOrStart();
 }
 
-void EnrolleeStateMachine::start(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrolleeStateMachine::start(int result, const std::string& result_reason,
+		rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
 
-
-	if (!isValidPortId(cdapSessionDescriptor)){
+	if (!isValidPortId(session_descriptor)){
 		return;
 	}
 
@@ -1014,9 +1013,9 @@ void EnrolleeStateMachine::start(const rina::CDAPMessage * cdapMessage,
 
 	timer_->cancelTask(last_scheduled_task_);
 
-	if (cdapMessage->result_ != 0){
+	if (result != 0){
 		abortEnrollment(remote_peer_->name_, port_id_,
-				UNSUCCESSFULL_START, true, true);
+				result_reason, true, true);
 		return;
 	}
 
@@ -1232,10 +1231,13 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 }
 
-void EnrollerStateMachine::stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrollerStateMachine::stopResponse(int result, const std::string& result_reason,
+		void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
 	rina::AccessGuard g(*lock_);
-	if (!isValidPortId(cdapSessionDescriptor)){
+
+	(void) object_value;
+
+	if (!isValidPortId(session_descriptor)){
 		return;
 	}
 
@@ -1246,10 +1248,10 @@ void EnrollerStateMachine::stopResponse(const rina::CDAPMessage * cdapMessage,
 	}
 
 	timer_->cancelTask(last_scheduled_task_);
-	if (cdapMessage->result_ != 0){
+	if (result != 0){
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_->name_, port_id_,
-				cdapMessage->result_reason_, false, true);
+				result_reason, false, true);
 		return;
 	}
 
@@ -1662,61 +1664,61 @@ void EnrollmentTask::connect(int invoke_id,
 	}
 }
 
-void EnrollmentTask::connectResponse(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	LOG_DBG("Received M_CONNECT_R cdapMessage from portId %d", cdapSessionDescriptor->port_id_);
+void EnrollmentTask::connectResponse(int result, const std::string& result_reason,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	LOG_DBG("Received M_CONNECT_R cdapMessage from portId %d", session_descriptor->port_id_);
 
 	try{
 		EnrolleeStateMachine * stateMachine = (EnrolleeStateMachine*)
-				getEnrollmentStateMachine(cdapSessionDescriptor, false);
-		stateMachine->connectResponse(cdapMessage, cdapSessionDescriptor);
+				getEnrollmentStateMachine(session_descriptor, false);
+		stateMachine->connectResponse(result, result_reason);
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
 		const rina::CDAPMessage * errorMessage;
 		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				cdapSessionDescriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, cdapSessionDescriptor->port_id_);
+				session_descriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
+		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
 		delete errorMessage;
 	}
 }
 
-void EnrollmentTask::release(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	LOG_DBG("Received M_RELEASE cdapMessage from portId %d", cdapSessionDescriptor->port_id_);
+void EnrollmentTask::release(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	LOG_DBG("Received M_RELEASE cdapMessage from portId %d", session_descriptor->port_id_);
 
 	try{
 		BaseEnrollmentStateMachine * stateMachine = (BaseEnrollmentStateMachine*)
-						getEnrollmentStateMachine(cdapSessionDescriptor, false);
-		stateMachine->release(cdapMessage, cdapSessionDescriptor);
+						getEnrollmentStateMachine(session_descriptor, false);
+		stateMachine->release(invoke_id, session_descriptor);
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
 		const rina::CDAPMessage * errorMessage;
 		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				cdapSessionDescriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, cdapSessionDescriptor->port_id_);
+				session_descriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
+		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
 		delete errorMessage;
 	}
 }
 
-void EnrollmentTask::releaseResponse(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	LOG_DBG("Received M_RELEASE_R cdapMessage from portId %d", cdapSessionDescriptor->port_id_);
+void EnrollmentTask::releaseResponse(int result, const std::string& result_reason,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	LOG_DBG("Received M_RELEASE_R cdapMessage from portId %d", session_descriptor->port_id_);
 
 	try{
 		BaseEnrollmentStateMachine * stateMachine = (BaseEnrollmentStateMachine*)
-						getEnrollmentStateMachine(cdapSessionDescriptor, false);
-		stateMachine->releaseResponse(cdapMessage, cdapSessionDescriptor);
+						getEnrollmentStateMachine(session_descriptor, false);
+		stateMachine->releaseResponse(result, result_reason, session_descriptor);
 	}catch(Exception &e){
 		//Error getting the enrollment state machine
 		LOG_ERR("Problems getting enrollment state machine: %s", e.what());
 		const rina::CDAPMessage * errorMessage;
 		errorMessage = cdap_session_manager_->getReleaseConnectionRequestMessage(
-				cdapSessionDescriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
-		sendErrorMessageAndDeallocateFlow(errorMessage, cdapSessionDescriptor->port_id_);
+				session_descriptor->port_id_, rina::CDAPMessage::NONE_FLAGS, false);
+		sendErrorMessageAndDeallocateFlow(errorMessage, session_descriptor->port_id_);
 
 		delete errorMessage;
 	}
