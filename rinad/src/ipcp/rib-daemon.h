@@ -108,6 +108,42 @@ public:
 	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 				const IUpdateStrategy& updateStrategy);
 
+	void remoteCreateObject(const std::string& object_class, const std::string& object_name,
+				RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+				ICDAPResponseMessageHandler * response_handler);
+	void remoteDeleteObject(const std::string& object_class, const std::string& object_name,
+				int scope, const RemoteIPCProcessId& remote_id,
+				ICDAPResponseMessageHandler * response_handler);
+	void remoteReadObject(const std::string& object_class, const std::string& object_name,
+				int scope, const RemoteIPCProcessId& remote_id,
+				ICDAPResponseMessageHandler * response_handler);
+	void remoteWriteObject(const std::string& object_class, const std::string& object_name,
+				RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+				ICDAPResponseMessageHandler * response_handler);
+	void remoteStartObject(const std::string& object_class, const std::string& object_name,
+				RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+				ICDAPResponseMessageHandler * response_handler);
+	void remoteStopObject(const std::string& object_class, const std::string& object_name,
+				RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+				ICDAPResponseMessageHandler * response_handler);
+	void remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id);
+	void remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
+			int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id);
+	void remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, bool read_incomplete,
+			int invoke_id, const RemoteIPCProcessId& remote_id);
+	void remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
+				int result, const std::string result_reason, int invoke_id, const RemoteIPCProcessId& remote_id);
+	void remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id);
+	void remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id);
+
 private:
 	RIB rib_;
 	IPCProcess * ipc_process_;
@@ -157,6 +193,11 @@ private:
 	/// @param list
 	/// @return true if candidate is on list, false otherwise
 	bool isOnList(int candidate, std::list<int> list);
+
+	void sendMessage(const rina::CDAPMessage & cdapMessage, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler);
+
+	void encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * message);
 };
 
 }

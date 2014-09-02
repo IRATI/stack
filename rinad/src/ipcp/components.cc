@@ -281,6 +281,25 @@ void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
 	throw Exception(ss.str().c_str());
 }
 
+
+///Class RemoteIPCProcessId
+RemoteIPCProcessId::RemoteIPCProcessId() {
+	use_address_ = false;
+	port_id_ = 0;
+	address_ = 0;
+}
+
+/// Class RIBObjectValue
+RIBObjectValue::RIBObjectValue() {
+	type_ = notype;
+	bool_value_ = false;
+	complex_value_ = 0;
+	int_value_ = 0;
+	double_value_ = 0;
+	long_value_ = 0;
+	float_value_ = 0;
+}
+
 // CLASS IPC Process
 const std::string IPCProcess::MANAGEMENT_AE = "Management";
 const std::string IPCProcess::DATA_TRANSFER_AE = "Data Transfer";

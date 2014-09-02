@@ -610,7 +610,42 @@ public:
 	std::list<int> cdap_session_ids_;
 };
 
-/// Interface that provides de RIB Daemon API
+///Identifies a remote IPC Process by address
+///or N-1 port-id of a flow we have in common with him
+class RemoteIPCProcessId {
+public:
+	RemoteIPCProcessId();
+	bool use_address_;
+	int port_id_;
+	unsigned int address_;
+};
+
+class RIBObjectValue {
+public:
+	enum objectType{
+		notype,
+		inttype,
+		longtype,
+		stringtype,
+		complextype,
+		floattype,
+		doubletype,
+		booltype,
+	};
+
+	RIBObjectValue();
+
+	objectType type_;
+	int int_value_;
+	bool bool_value_;
+	long long_value_;
+	double double_value_;
+	float float_value_;
+	std::string string_value_;
+	void * complex_value_;
+};
+
+/// Interface that provides the RIB Daemon API
 class IRIBDaemon : public IPCProcessComponent, public EventManager {
 public:
 	virtual ~IRIBDaemon(){};
@@ -741,6 +776,146 @@ public:
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 
 	virtual std::list<BaseRIBObject *> getRIBObjects() = 0;
+
+	/// Invoke a create operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteCreateObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a delete operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteDeleteObject(const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a read operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteReadObject(const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a write operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteWriteObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a start operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteStartObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a stop operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteStopObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Causes the RIB Daemon to send a create response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a delete response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
+			int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a read response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param read_incomplete
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, bool read_incomplete,
+			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
+			int result, const std::string result_reason, int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
 };
 
 /// IPC Process interface

@@ -285,9 +285,8 @@ private:
 
 	/// Checks if more information is required for enrollment
 	/// (At least there must be DataTransferConstants, a QoS cube and a DAF Member). If there is,
-	/// it returns a CDAP READ message requesting the next object to be read. If not, it returns null
-	/// @return A CDAP READ message requesting the next object to be read. If not, it returns null
-	const rina::CDAPMessage * nextObjectRequired() const;
+	/// it sends a read request message and returns tru
+	bool sendNextObjectRequired();
 
 	/// Create the objects in the RIB
 	void commitEnrollment();
