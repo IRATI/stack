@@ -238,7 +238,7 @@ void cwq_deliver(struct cwq * queue,
                                 spin_unlock(&queue->lock);
                                 return;
                         }
-                        rtxq_push_ni(rtxq, tmp)
+                        rtxq_push_ni(rtxq, tmp);
                 }
                 pci = pdu_pci_get_ro(pdu);
                 if (dtcp_snd_lf_win_set(dtcp,
