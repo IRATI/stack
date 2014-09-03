@@ -199,6 +199,7 @@ void cwq_deliver(struct cwq * queue,
 {
         struct rtxq * rtxq;
         struct dtcp * dtcp;
+        struct pdu  * tmp;
 
         if (!queue)
                 return;
@@ -232,7 +233,10 @@ void cwq_deliver(struct cwq * queue,
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        rtxq_push_ni(rtxq, pdu);
+                        tmp = pdu_dup_ni(cur->pdu);
+                        if (rtxq_push_ni(rtxq, tmp)) {
+                                pdu_destroy(tmp);
+                        }
                 }
                 pci = pdu_pci_get_ro(pdu);
                 if (dtcp_snd_lf_win_set(dtcp,
@@ -575,10 +579,8 @@ int rtxq_destroy(struct rtxq * q)
                 return -1;
 
         if (q->twq)  rwq_destroy(q->twq);
-
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
-
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
