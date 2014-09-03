@@ -234,9 +234,11 @@ void cwq_deliver(struct cwq * queue,
                                 return;
                         }
                         tmp = pdu_dup_ni(pdu);
-                        if (rtxq_push_ni(rtxq, tmp)) {
-                                pdu_destroy(tmp);
+                        if (!tmp) {
+                                spin_unlock(&queue->lock);
+                                return;
                         }
+                        rtxq_push_ni(rtxq, tmp)
                 }
                 pci = pdu_pci_get_ro(pdu);
                 if (dtcp_snd_lf_win_set(dtcp,
