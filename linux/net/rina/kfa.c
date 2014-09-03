@@ -512,8 +512,8 @@ int kfa_flow_sdu_write(struct kfa * instance,
                                 LOG_DBG("A signal is pending");
 #if 0
                                 LOG_DBG("A signal is pending "
-                                        "(sig = 0x%08zx%08zx)", 
-                                        current->pending.signal.sig[0], 
+                                        "(sig = 0x%08zx%08zx)",
+                                        current->pending.signal.sig[0],
                                         current->pending.signal.sig[1]);
 #endif
                         }
@@ -650,8 +650,8 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                                 LOG_DBG("A signal is pending");
 #if 0
                                 LOG_DBG("A signal is pending "
-                                        "(sig = 0x%08zx%08zx)", 
-                                        current->pending.signal.sig[0], 
+                                        "(sig = 0x%08zx%08zx)",
+                                        current->pending.signal.sig[0],
                                         current->pending.signal.sig[1]);
 #endif
                         }

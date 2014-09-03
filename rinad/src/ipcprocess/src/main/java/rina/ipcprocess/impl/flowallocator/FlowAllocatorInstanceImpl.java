@@ -319,10 +319,16 @@ public class FlowAllocatorInstanceImpl implements FlowAllocatorInstance, CDAPMes
 		this.underlyingPortId = underlyingPortId;
 		this.objectName = requestMessage.getObjName();
 		flow.setDestinationPortId(portId);
+
 		
 		//1 Reverse connection source/dest addresses and CEP-ids
 		Connection connection = flow.getConnections().remove(0);
 		connection.setPortId(portId);
+		if (flow.getFlowSpec().getMaxAllowableGap() == -1) {
+			connection.getPolicies().setMaxSduGap(Integer.MAX_VALUE);
+		} else {
+			connection.getPolicies().setMaxSduGap(flow.getFlowSpec().getMaxAllowableGap());
+		}
 		long aux = connection.getSourceAddress();
 		connection.setSourceAddress(connection.getDestAddress());
 		connection.setDestAddress(aux);

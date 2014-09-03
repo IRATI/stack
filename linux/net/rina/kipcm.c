@@ -101,13 +101,12 @@ message_handler_cb kipcm_handlers[RINA_C_MAX];
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
-static int
-alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
-                              ipc_process_id_t      id,
-                              uint_t                res,
-                              uint_t                seq_num,
-                              uint_t                port_id,
-                              port_id_t             pid)
+static int alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
+					 ipc_process_id_t      id,
+					 uint_t                res,
+					 uint_t                seq_num,
+					 uint_t                port_id,
+					 port_id_t             pid)
 {
         rnl_msg_destroy(msg);
 
