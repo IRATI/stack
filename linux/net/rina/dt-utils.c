@@ -233,7 +233,7 @@ void cwq_deliver(struct cwq * queue,
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        tmp = pdu_dup_ni(cur->pdu);
+                        tmp = pdu_dup_ni(pdu);
                         if (rtxq_push_ni(rtxq, tmp)) {
                                 pdu_destroy(tmp);
                         }
