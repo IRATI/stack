@@ -1,5 +1,5 @@
 /*
-* Echo time main
+* Echo Server
 *
 * Addy Bombeke <addy.bombeke@ugent.be>
 *
@@ -18,14 +18,26 @@
 * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <librina/librina.h>
-#include "ApplicationBuilder.hpp"
+#ifndef SERVER_HPP
+#define SERVER_HPP
 
-int main(int argc, char** argv)
+#include <librina/librina.h>
+
+#include "Application.hpp"
+
+class Server: public Application
 {
-    rina::initialize("DBG", "testprog.log");
-    ApplicationBuilder ab;
-    ab.configure(argc, argv);
-    ab.runApplication();
-    return 0;
-}
+public:
+    Server(const std::string& app_name_, const std::string& app_instance_,
+           bool debug_mes_);
+
+    void run();
+
+protected:
+    void init();
+    void runFlow(rina::Flow* f);
+private:
+    bool debug_mes;
+};
+
+#endif//SERVER_HPP

@@ -1,5 +1,5 @@
 /*
-* Echo time main
+* Echo Application Builder
 *
 * Addy Bombeke <addy.bombeke@ugent.be>
 *
@@ -18,14 +18,29 @@
 * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <librina/librina.h>
-#include "ApplicationBuilder.hpp"
+#ifndef APPLICATIONBUILDER_HPP
+#define APPLICATIONBUILDER_HPP
 
-int main(int argc, char** argv)
+#include <string>
+
+class ApplicationBuilder
 {
-    rina::initialize("DBG", "testprog.log");
-    ApplicationBuilder ab;
-    ab.configure(argc, argv);
-    ab.runApplication();
-    return 0;
-}
+public:
+    ApplicationBuilder();
+    void configure(int argc, char** argv);
+    void runApplication();
+private:
+    std::string client_name;
+    std::string client_instance;
+    std::string server_name;
+    std::string server_instance;
+    bool time_flow_creation;
+    ulong echo_times;// -1 is infinit
+    bool client_app_reg;
+    uint data_size;
+    bool debug_mes;
+    bool server;
+    bool help;
+};
+
+#endif//APPLICATIONBUILDER_HPP

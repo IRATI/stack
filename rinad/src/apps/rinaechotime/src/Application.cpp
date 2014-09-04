@@ -1,5 +1,5 @@
 /*
-* Echo time main
+* Echo Application
 *
 * Addy Bombeke <addy.bombeke@ugent.be>
 *
@@ -18,14 +18,31 @@
 * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <librina/librina.h>
-#include "ApplicationBuilder.hpp"
+#include "Application.hpp"
 
-int main(int argc, char** argv)
+#include <iostream>
+#include <librina/librina.h>
+
+using namespace std;
+using namespace rina;
+
+Application::Application(const string& app_name_,
+                         const string& app_instance_): app_name(app_name_),
+						       app_instance(app_instance_)
 {
-    rina::initialize("DBG", "testprog.log");
-    ApplicationBuilder ab;
-    ab.configure(argc, argv);
-    ab.runApplication();
-    return 0;
 }
+
+void Application::applicationRegister()
+{
+    ApplicationRegistrationInformation ari(
+        ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF);
+    ari.setApplicationName(ApplicationProcessNamingInformation(app_name,
+                           app_instance));
+    try {
+        ipcManager->requestApplicationRegistration(ari);
+    } catch(ApplicationRegistrationException e) {
+        cerr << e.what() << endl;
+    }
+}
+
+const uint Application::max_buffer_size = 1024;
