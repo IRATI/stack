@@ -168,7 +168,7 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 	dtc.max_pdu_lifetime_ = 45243;
 	dtc.max_pdu_size_ = 1233;
 	dtc.port_id_length_ = 541;
-	dtc.qos_id_lenght_ = 3414;
+	dtc.qos_id_length_ = 3414;
 	dtc.sequence_number_length_ = 123;
 
 	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
@@ -205,7 +205,7 @@ bool test_data_transfer_constants(rinad::Encoder * encoder) {
 		return false;
 	}
 
-	if (dtc.qos_id_lenght_ != recovered_obj->qos_id_lenght_) {
+	if (dtc.qos_id_length_ != recovered_obj->qos_id_length_) {
 		return false;
 	}
 

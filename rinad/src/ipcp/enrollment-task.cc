@@ -693,7 +693,6 @@ void EnrolleeStateMachine::connectResponse(int result,
 		if (ipc_process_->get_address() != 0) {
 			was_dif_member_before_enrollment_ = true;
 			eiRequest.address_ = ipc_process_->get_address();
-			LOG_DBG("My address %u", eiRequest.address_);
 		} else {
 			rina::DIFInformation difInformation;
 			difInformation.dif_name_ = enrollment_request_->event_->difName;
@@ -2093,6 +2092,8 @@ const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const 
 
 	gpb_eir.set_address(eir->address_);
 
+	LOG_DBG("Address to encode: %u", gpb_eir.address());
+
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 	for(it = eir->supporting_difs_.begin(); it != eir->supporting_difs_.end(); ++it) {
 		gpb_eir.add_supportingdifs(it->processName);
@@ -2116,6 +2117,8 @@ void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterfa
 
 	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
 	request->address_ = gpb_eir.address();
+
+	LOG_DBG("Address decoded: %u", gpb_eir.address());
 
 	for (int i = 0; i < gpb_eir.supportingdifs_size(); ++i) {
 		request->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
