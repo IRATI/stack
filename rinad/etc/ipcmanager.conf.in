@@ -52,7 +52,7 @@
     	"cepIdLength" : 2,
     	"lengthLength" : 2,
     	"portIdLength" : 2,
-    	"qosIdLenght" : 2,
+    	"qosIdLength" : 2,
     	"sequenceNumberLength" : 4,
     	"maxPduSize" : 10000,
     	"maxPduLifetime" : 30

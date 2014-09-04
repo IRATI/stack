@@ -1049,7 +1049,8 @@ static int receive_worker(void * o)
                     !is_address_ok(dst_addr)  ||
                     !is_qos_id_ok(qos_id)) {
                         LOG_ERR("Wrong PDU type, dst address or qos_id,"
-                                " dropping SDU!");
+                                " dropping SDU! %u, %u, %u",
+                                pdu_type, dst_addr, qos_id);
                         pdu_destroy(pdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
