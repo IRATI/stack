@@ -410,7 +410,7 @@ unsigned int IPCManager::requestApplicationRegistration(
 #endif
 }
 
-ApplicationRegistration * IPCManager::commitPendingResitration(
+ApplicationRegistration * IPCManager::commitPendingRegistration(
                         unsigned int seqNumber,
                         const ApplicationProcessNamingInformation& DIFName) {
         ApplicationRegistrationInformation appRegInfo;
