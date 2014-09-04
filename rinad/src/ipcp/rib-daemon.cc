@@ -126,8 +126,6 @@ void * doManagementSDUReaderWork(void* arg)
 		}
 
 		data->rib_daemon_->cdapMessageDelivered(sdu, result.getBytesRead(), result.getPortId());
-
-		delete sdu;
 	}
 
 	delete buffer;
