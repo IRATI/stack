@@ -28,15 +28,15 @@
 class Server: public Application
 {
 public:
-        Server(const std::string& app_name_,
-               const std::string& app_instance_,
-               bool debug_mes_);
+        Server(const std::string & app_name_,
+               const std::string & app_instance_,
+               bool                debug_mes_);
 
         void run();
 
 protected:
         void init();
-        void runFlow(rina::Flow* f);
+        void runFlow(rina::Flow * f);
 private:
         bool debug_mes;
 };
