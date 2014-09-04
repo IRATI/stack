@@ -18,10 +18,10 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include "Server.hpp"
-
 #include <iostream>
 #include <thread>
+
+#include "server.h"
 
 using namespace std;
 using namespace rina;
@@ -43,7 +43,7 @@ void Server::run()
                         return;
                 switch(event->eventType) {
                 case REGISTER_APPLICATION_RESPONSE_EVENT:
-                        ipcManager->commitPendingResitration(event->sequenceNumber,
+                        ipcManager->commitPendingRegistration(event->sequenceNumber,
                                                              reinterpret_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
                         break;
                 case UNREGISTER_APPLICATION_RESPONSE_EVENT:

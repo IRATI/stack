@@ -18,12 +18,12 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#include "Client.hpp"
-
 #include <cstring>
 #include <iostream>
 #include <random>
 #include <thread>
+
+#include "client.h"
 
 using namespace std;
 using namespace rina;

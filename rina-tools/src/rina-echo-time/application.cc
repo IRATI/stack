@@ -18,10 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "Application.hpp"
-
 #include <iostream>
 #include <librina/librina.h>
+
+#include "application.h"
 
 using namespace std;
 using namespace rina;
