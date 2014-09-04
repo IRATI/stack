@@ -20,7 +20,7 @@
 
 #include <librina/librina.h>
 
-#include "ApplicationBuilder.hpp"
+#include "application-builder.h"
 
 int main(int argc, char** argv)
 {

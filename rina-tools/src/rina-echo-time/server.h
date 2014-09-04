@@ -23,7 +23,7 @@
 
 #include <librina/librina.h>
 
-#include "Application.hpp"
+#include "application.h"
 
 class Server: public Application
 {
