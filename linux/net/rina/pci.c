@@ -183,8 +183,6 @@ int pci_qos_id_set(struct pci * pci,
 
         pci->connection_id.qos_id = qos_id;
 
-        LOG_DBG("QoS-id: %u", pci->connection_id.qos_id);
-
         return 0;
 }
 EXPORT_SYMBOL(pci_qos_id_set);
