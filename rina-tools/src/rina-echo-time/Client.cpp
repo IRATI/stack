@@ -56,19 +56,25 @@ Flow* Client::makeConnection()
     std::chrono::high_resolution_clock::time_point begintp =
         std::chrono::high_resolution_clock::now();
     FlowSpecification qosspec;
+#if 0
     uint handle = ipcManager->requestFlowAllocation(
-                      ApplicationProcessNamingInformation(app_name, app_instance),
-                      ApplicationProcessNamingInformation(server_name, server_instance), qosspec);
+                      ApplicationProcessNamingInformation(app_name,
+                                                          app_instance),
+                      ApplicationProcessNamingInformation(server_name,
+                                                          server_instance),
+                      qosspec);
+#endif
     IPCEvent* event = ipcEventProducer->eventWait();
-    while(event && event->getType() != ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
+    while(event && event->eventType != ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
         if(debug_mes)
-            cerr << "[DEBUG] Client got new event " << event->getType() << endl;
+            cerr << "[DEBUG] Client got new event " << event->eventType << endl;
         event = ipcEventProducer->eventWait();//todo this can make us wait forever
     }
     AllocateFlowRequestResultEvent* afrrevent =
         reinterpret_cast<AllocateFlowRequestResultEvent*>(event);
-    Flow* hulpflow = ipcManager->commitPendingFlow(afrrevent->getSequenceNumber(),
-                     afrrevent->getPortId(), afrrevent->getDIFName());
+    Flow* hulpflow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
+                                                   afrrevent->portId,
+                                                   afrrevent->difName);
     if(hulpflow->getPortId() == -1) {
         cerr << "Host not found" << endl;
     } else {
@@ -96,13 +102,13 @@ void Client::sendEcho(Flow* flow)
     while(flow) {
         IPCEvent* event = ipcEventProducer->eventPoll();
         if(event) {
-            switch(event->getType()) {
+            switch(event->eventType) {
             case FLOW_DEALLOCATED_EVENT:
                 flow = nullptr;
                 break;
             default:
                 if(debug_mes)
-                    cerr << "[DEBUG] Client got new event " << event->getType() << endl;
+                        cerr << "[DEBUG] Client got new event " << event->eventType << endl;
                 break;
             }
         } else {
@@ -111,7 +117,7 @@ void Client::sendEcho(Flow* flow)
                     buffer[i] = dis(ran);
                 std::chrono::high_resolution_clock::time_point begintp =
                     std::chrono::high_resolution_clock::now();
-                int bytesreaded;
+                int bytesreaded = 0;
                 try {
                     flow->writeSDU(buffer, data_size);
                     bytesreaded = flow->readSDU(buffer2, data_size);
@@ -123,7 +129,8 @@ void Client::sendEcho(Flow* flow)
                 std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
                 cout << "sdu_size=" << data_size << " seq=" << n << " time=";
                 printDuration(dur);
-                if(!((data_size == bytesreaded) && (memcmp(buffer, buffer2, data_size) == 0)))
+                if (!((data_size == (uint) bytesreaded) &&
+                     (memcmp(buffer, buffer2, data_size) == 0)))
                     cout << " bad check";
                 cout << endl;
                 n++;

@@ -38,14 +38,14 @@ void Server::run()
         IPCEvent* event = ipcEventProducer->eventWait();
         if(!event)
             return;
-        switch(event->getType()) {
+        switch(event->eventType) {
         case REGISTER_APPLICATION_RESPONSE_EVENT:
-            ipcManager->commitPendingResitration(event->getSequenceNumber(),
-		reinterpret_cast<RegisterApplicationResponseEvent*>(event)->getDIFName());
+            ipcManager->commitPendingResitration(event->sequenceNumber,
+                                                 reinterpret_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
             break;
         case UNREGISTER_APPLICATION_RESPONSE_EVENT:
-            ipcManager->appUnregistrationResult(event->getSequenceNumber(),
-                reinterpret_cast<UnregisterApplicationResponseEvent*>(event)->getResult() == 0);
+            ipcManager->appUnregistrationResult(event->sequenceNumber,
+                                                reinterpret_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
             break;
         case FLOW_ALLOCATION_REQUESTED_EVENT: {
             Flow* flow = ipcManager->allocateFlowResponse(
@@ -56,11 +56,11 @@ void Server::run()
         }
         case FLOW_DEALLOCATED_EVENT:
             ipcManager->requestFlowDeallocation(reinterpret_cast<FlowDeallocatedEvent*>
-                                                (event)->getPortId());
+                                                (event)->portId);
             break;
         default:
             if(debug_mes)
-                cerr << "[DEBUG] Server got new event " << event->getType() << endl;
+                    cerr << "[DEBUG] Server got new event " << event->eventType << endl;
             break;
         }
     }

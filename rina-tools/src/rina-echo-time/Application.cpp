@@ -36,8 +36,8 @@ void Application::applicationRegister()
 {
     ApplicationRegistrationInformation ari(
         ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF);
-    ari.setApplicationName(ApplicationProcessNamingInformation(app_name,
-                           app_instance));
+
+    ari.appName = ApplicationProcessNamingInformation(app_name, app_instance);
     try {
         ipcManager->requestApplicationRegistration(ari);
     } catch(ApplicationRegistrationException e) {
