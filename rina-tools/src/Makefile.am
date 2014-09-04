@@ -10,13 +10,6 @@ bin_PROGRAMS                       =
 bin_SCRIPTS                        =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
-rina_wrap_SOURCES  = rina-wrap.c
-rina_wrap_LDFLAGS  =
-rina_wrap_LDADD    =
-rina_wrap_CPPFLAGS = $(CPPFLAGS_EXTRA)
-bin_PROGRAMS       += rina-wrap
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-wrap
-
 edit = $(SED)							\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
         -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'		\
