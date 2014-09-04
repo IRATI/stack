@@ -130,7 +130,7 @@ AC_CONFIG_FILES([
 
     src/Makefile
     src/apps/Makefile
-    src/apps/rina-echo-time/Makefile
+    src/rina-echo-time/Makefile
 
     doc/Makefile
 ])
