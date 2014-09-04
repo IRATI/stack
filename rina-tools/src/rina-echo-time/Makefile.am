@@ -8,10 +8,10 @@ bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rina_echo_time_SOURCES  =				\
-	application.cc        application.h		\
-	applicationbuilder.cc applicationbuilder.h	\
-	server.cc             server.h			\
-	client.cc             client.h			\
+	application.cc         application.h		\
+	application-builder.cc application-builder.h	\
+	server.cc              server.h			\
+	client.cc              client.h			\
 	main.cc
 rina_echo_time_LDADD    = $(LIBRINA_LIBS)
 rina_echo_time_CPPFLAGS = $(LIBRINA_CFLAGS) $(CPPFLAGS_EXTRA) -std=c++11
