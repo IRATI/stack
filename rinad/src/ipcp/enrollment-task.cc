@@ -1089,7 +1089,6 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 
 void EnrollerStateMachine::sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
 		resultReason, int invoke_id) {
-
 	try{
 		RIBObjectValue robject_value;
 		RemoteIPCProcessId remote_id;
@@ -1119,10 +1118,12 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 
+	LOG_DBG("Address: %u", eiRequest->address_);
+	LOG_DBG("My address: %u", ipc_process_->get_address());
+
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
-
 
 	if (state_ != STATE_WAIT_START_ENROLLMENT) {
 		abortEnrollment(remote_peer_->name_, port_id_,
@@ -1158,6 +1159,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	if (requiresInitialization){
 		unsigned int address = namespace_manager_->getValidAddress(remote_peer_->name_.processName,
 				remote_peer_->name_.processInstance);
+		LOG_DBG("Address: %u", address);
 
 		if (address == 0){
 			sendNegativeStartResponseAndAbortEnrollment(-1, "Could not assign a valid address", invoke_id);

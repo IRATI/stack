@@ -214,7 +214,7 @@ public class TestController implements SDUListener, FlowAcceptor,
 		}
 		
 		try{
-			dataAERegistration = rina.getIpcManager().commitPendingResitration(event.getSequenceNumber(), 
+			dataAERegistration = rina.getIpcManager().commitPendingRegistration(event.getSequenceNumber(), 
 					event.getDIFName());
 		} catch(Exception ex){
 			log.error(ex.getMessage());

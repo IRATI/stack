@@ -293,6 +293,8 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         // Fill in the DIFConfiguration object.
         if (ipcp->type == rina::NORMAL_IPC_PROCESS) {
                 rina::EFCPConfiguration efcp_config;
+                rina::NamespaceManagerConfiguration nsm_config;
+                rina::AddressingConfiguration address_config;
                 unsigned int address;
 
                 // FIll in the EFCPConfiguration object.
@@ -307,6 +309,28 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                         efcp_config.add_qos_cube(qosCube);
                 }
 
+                for (list<AddressPrefixConfiguration>::iterator
+                				ait = dif_props.addressPrefixes.begin();
+                				ait != dif_props.addressPrefixes.end();
+                				ait ++) {
+                	rina::AddressPrefixConfiguration prefix;
+                	prefix.address_prefix_ = ait->addressPrefix;
+                	prefix.organization_ = ait->organization;
+                	address_config.address_prefixes_.push_back(prefix);
+                }
+
+                for (list<rinad::KnownIPCProcessAddress>::iterator
+                		kit = dif_props.knownIPCProcessAddresses.begin();
+                		kit != dif_props.knownIPCProcessAddresses.end();
+                		kit ++) {
+                	rina::StaticIPCProcessAddress static_address;
+                	static_address.ap_name_ = kit->name.processName;
+                	static_address.ap_instance_ = kit->name.processInstance;
+                	static_address.address_ = kit->address;
+                	address_config.static_address_.push_back(static_address);
+                }
+                nsm_config.addressing_configuration_ = address_config;
+
                 found = dif_props.
                         lookup_ipcp_address(ipcp->name,
                                         address);
@@ -318,6 +342,10 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                         goto out;
                 }
                 dif_config.set_efcp_configuration(efcp_config);
+                dif_config.nsm_configuration_ = nsm_config;
+                dif_config.pduft_generator_configuration_ =
+                		dif_props.pdufTableGeneratorConfiguration;
+                dif_config.rmt_configuration_ = dif_props.rmtConfiguration;
                 dif_config.set_address(address);
         }
 

@@ -153,7 +153,7 @@ int main() {
 	info.difName = difName;
 	info.appName = sourceName;
 	seqNumber = ipcManager->requestApplicationRegistration(info);
-	ipcManager->commitPendingResitration(seqNumber, difName);
+	ipcManager->commitPendingRegistration(seqNumber, difName);
 	if (!checkRegisteredApplications(1)) {
 	        return -1;
 	}

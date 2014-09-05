@@ -356,7 +356,7 @@ public:
 	 * registering the application
 	 * @return the information on the application registration
 	 */
-	ApplicationRegistration * commitPendingResitration(
+	ApplicationRegistration * commitPendingRegistration(
 	                unsigned int seqNumber,
 	                const ApplicationProcessNamingInformation& DIFName);
 

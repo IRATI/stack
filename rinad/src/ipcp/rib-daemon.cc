@@ -789,7 +789,7 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 	}
 
 	atomic_send_lock_.lock();
-        sdu = 0;
+    sdu = 0;
 	try {
 		sdu = cdap_session_manager_->encodeNextMessageToBeSent(cdapMessage, sessionId);
 		if (useAddress) {
@@ -805,7 +805,6 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 		cdap_session_manager_->messageSent(cdapMessage, sessionId);
 	} catch (Exception &e) {
 		if (sdu) {
-			delete sdu->get_message();
 			delete sdu;
 		}
 

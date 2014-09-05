@@ -28,8 +28,8 @@ ipcp_SOURCES  =						\
 	namespace-manager.cc	namespace-manager.h	\
 	pduft-generator.cc      pduft-generator.h	\
 	resource-allocator.cc	resource-allocator.h	\
-	flow-allocator.cc       flow-allocator.h   \
-	security-manager.cc     security-manager.h \
+	flow-allocator.cc       flow-allocator.h   	\
+	security-manager.cc     security-manager.h 	\
 	ipc-process.cc          ipc-process.h
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)

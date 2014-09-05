@@ -325,6 +325,8 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	rina::AssignToDIFRequestEvent requestEvent = it->second;
 	dif_information_ = requestEvent.difInformation;
+	LOG_DBG("Known addresses: %d",
+			dif_information_.dif_configuration_.nsm_configuration_.addressing_configuration_.static_address_.size());
 	pending_events_.erase(it);
 	if (event.result != 0) {
 		LOG_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
