@@ -21,6 +21,9 @@
 #include <iostream>
 #include <librina/librina.h>
 
+#define RINA_PREFIX     "rina-echo-time"
+#include <librina/logs.h>
+
 #include "application.h"
 
 using namespace std;
@@ -43,7 +46,7 @@ void Application::applicationRegister()
         try {
                 ipcManager->requestApplicationRegistration(ari);
         } catch(ApplicationRegistrationException e) {
-                cerr << e.what() << endl;
+                LOG_ERR("%s", e.what());
         }
 }
 

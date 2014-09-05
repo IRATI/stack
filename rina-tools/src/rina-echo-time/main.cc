@@ -24,7 +24,7 @@
 
 int main(int argc, char** argv)
 {
-        rina::initialize("DBG", "testprog.log");
+        rina::initialize("INFO", "");
 
         ApplicationBuilder ab;
 
