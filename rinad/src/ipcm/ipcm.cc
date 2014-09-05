@@ -122,7 +122,7 @@ IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
         event_sn = seqnum;
 
         try {
-                timedwait(60, 0);
+                timedwait(180, 0);
         } catch (rina::ConcurrentException) {
             event_waiting = false;
             return false;
