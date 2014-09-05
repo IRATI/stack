@@ -2094,7 +2094,6 @@ const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const 
 
 	gpb_eir.set_address(eir->address_);
 	gpb_eir.set_startearly(eir->allowed_to_start_early_);
-	LOG_DBG("Start early: %d", eir->allowed_to_start_early_);
 
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 	for(it = eir->supporting_difs_.begin(); it != eir->supporting_difs_.end(); ++it) {
@@ -2119,9 +2118,8 @@ void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterfa
 
 	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
 	request->address_ = gpb_eir.address();
-	request->allowed_to_start_early_ = gpb_eir.startearly();
-
-	LOG_DBG("Start early: %d", gpb_eir.startearly());
+	//FIXME that should read gpb_eir.startearly() but always returns false
+	request->allowed_to_start_early_ = true;
 
 	for (int i = 0; i < gpb_eir.supportingdifs_size(); ++i) {
 		request->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
