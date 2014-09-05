@@ -91,17 +91,18 @@ check-local: test-linking
 EXTRA_DIST +=					\
 	librina.pc.in
 
-edit = $(SED)							\
-        -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
-	-e 's|@LIBNL_MIN_VERSION[@]|$(LIBNL_MIN_VERSION)|g'	\
-	-e 's|@LIBNL3_LIBS[@]|$(LIBNL3_LIBS)|g'			\
-	-e 's|@LIBNLGENL3_LIBS[@]|$(LIBNLGENL3_LIBS)|g'		\
-	-e 's|@LIBPROTOBUF_LIBS[@]|$(LIBPROTOBUF_LIBS)|g'	\
-	-e 's|@LIBNL3_CFLAGS[@]|$(LIBNL3_CFLAGS)|g'		\
-	-e 's|@LIBNLGENL3_CFLAGS[@]|$(LIBNLGENL3_CFLAGS)|g'	\
-	-e 's|@LIBPROTOBUF_CFLAGS[@]|$(LIBPROTOBUF_CFLAGS)|g'	\
-        -e 's|@prefix[@]|$(prefix)|g'				\
-        -e 's|@includedir[@]|$(includedir)|g'			\
+edit = $(SED)								\
+        -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
+	-e 's|@LIBNL_MIN_VERSION[@]|$(LIBNL_MIN_VERSION)|g'		\
+	-e 's|@LIBNL3_CFLAGS[@]|$(LIBNL3_CFLAGS)|g'			\
+	-e 's|@LIBNL3_LIBS[@]|$(LIBNL3_LIBS)|g'				\
+	-e 's|@LIBNLGENL3_CFLAGS[@]|$(LIBNLGENL3_CFLAGS)|g'		\
+	-e 's|@LIBNLGENL3_LIBS[@]|$(LIBNLGENL3_LIBS)|g'			\
+	-e 's|@LIBPROTOBUF_MIN_VERSION[@]|$(LIBPROTOBUF_MIN_VERSION)|g'	\
+	-e 's|@LIBPROTOBUF_CFLAGS[@]|$(LIBPROTOBUF_CFLAGS)|g'		\
+	-e 's|@LIBPROTOBUF_LIBS[@]|$(LIBPROTOBUF_LIBS)|g'		\
+        -e 's|@prefix[@]|$(prefix)|g'					\
+        -e 's|@includedir[@]|$(includedir)|g'				\
         -e 's|@libdir[@]|$(libdir)|g'
 
 librina.pc: Makefile librina.pc.in
