@@ -744,7 +744,7 @@ CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0) {
 CDAPSessionManager::CDAPSessionManager(WireMessageProviderFactory *arg0,
 		long arg1) {
 	wire_message_provider_factory_ = arg0;
-	timeout_ = 180000;
+	timeout_ = arg1;
 	wire_message_provider_ =
 			wire_message_provider_factory_->createWireMessageProvider();
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
