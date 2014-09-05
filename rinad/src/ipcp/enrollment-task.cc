@@ -1118,9 +1118,6 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 
-	LOG_DBG("Address: %u", eiRequest->address_);
-	LOG_DBG("My address: %u", ipc_process_->get_address());
-
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
@@ -1134,6 +1131,8 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	timer_->cancelTask(last_scheduled_task_);
 
 	bool requiresInitialization = false;
+
+	LOG_DBG("Remote IPC Process address: %u", eiRequest->address_);
 
 	if (!eiRequest) {
 		requiresInitialization = true;
@@ -1159,13 +1158,13 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	if (requiresInitialization){
 		unsigned int address = namespace_manager_->getValidAddress(remote_peer_->name_.processName,
 				remote_peer_->name_.processInstance);
-		LOG_DBG("Address: %u", address);
 
 		if (address == 0){
 			sendNegativeStartResponseAndAbortEnrollment(-1, "Could not assign a valid address", invoke_id);
 			return;
 		}
 
+		LOG_DBG("Remote IPC Process requires initialization, assigning address %u", address);
 		eiRequest->address_ = address;
 	}
 
