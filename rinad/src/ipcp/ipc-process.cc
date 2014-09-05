@@ -137,7 +137,7 @@ void IPCProcessImpl::init_delimiter() {
 void IPCProcessImpl::init_cdap_session_manager() {
 	rina::WireMessageProviderFactory wire_factory_;
 	rina::CDAPSessionManagerFactory cdap_manager_factory_;
-	long timeout = 10000;
+	long timeout = 60000;
 	cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(
 			&wire_factory_, timeout);
 }
