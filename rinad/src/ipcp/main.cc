@@ -27,7 +27,7 @@
 #include <librina/logs.h>
 #include "ipcp/ipc-process.h"
 
-int inner_main(int argc, char * argv[])
+int main(int argc, char * argv[])
 {
         if (argc != 5) {
                 LOG_ERR("Wrong number of arguments: expected 5, got %d", argc);
