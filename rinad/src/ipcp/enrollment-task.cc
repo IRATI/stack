@@ -39,6 +39,7 @@ namespace rinad {
 //	CLASS EnrollmentInformationRequest
 EnrollmentInformationRequest::EnrollmentInformationRequest() {
 	address_ = 0;
+	allowed_to_start_early_ = false;
 }
 
 //Class WatchdogTimerTask
@@ -768,7 +769,7 @@ void EnrolleeStateMachine::startResponse(int result, const std::string& result_r
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 }
 
-void EnrolleeStateMachine::stop(bool * start_early, int invoke_id,
+void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 
@@ -784,12 +785,12 @@ void EnrolleeStateMachine::stop(bool * start_early, int invoke_id,
 
 	timer_->cancelTask(last_scheduled_task_);
 	//Check if I'm allowed to start early
-	if (!start_early){
+	if (!eiRequest->allowed_to_start_early_){
 		abortEnrollment(remote_peer_->name_, port_id_, STOP_WITH_NO_OBJECT_VALUE, true, true);
 		return;
 	}
 
-	allowed_to_start_early_ = *start_early;
+	allowed_to_start_early_ = eiRequest->allowed_to_start_early_;
 	stop_request_invoke_id_ = invoke_id;
 
 	//Request more information or start
@@ -1118,9 +1119,6 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
 	rina::AccessGuard g(*lock_);
 
-	LOG_DBG("Address: %u", eiRequest->address_);
-	LOG_DBG("My address: %u", ipc_process_->get_address());
-
 	if (!isValidPortId(cdapSessionDescriptor)){
 		return;
 	}
@@ -1134,6 +1132,8 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	timer_->cancelTask(last_scheduled_task_);
 
 	bool requiresInitialization = false;
+
+	LOG_DBG("Remote IPC Process address: %u", eiRequest->address_);
 
 	if (!eiRequest) {
 		requiresInitialization = true;
@@ -1159,13 +1159,13 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	if (requiresInitialization){
 		unsigned int address = namespace_manager_->getValidAddress(remote_peer_->name_.processName,
 				remote_peer_->name_.processInstance);
-		LOG_DBG("Address: %u", address);
 
 		if (address == 0){
 			sendNegativeStartResponseAndAbortEnrollment(-1, "Could not assign a valid address", invoke_id);
 			return;
 		}
 
+		LOG_DBG("Remote IPC Process requires initialization, assigning address %u", address);
 		eiRequest->address_ = address;
 	}
 
@@ -1191,8 +1191,6 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 		return;
 	}
 
-	delete eiRequest;
-
 	//If initialization is required send the M_CREATEs
 	if (requiresInitialization){
 		sendDIFStaticInformation();
@@ -1204,14 +1202,19 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 	try {
 		RemoteIPCProcessId remote_id;
 		remote_id.port_id_ = port_id_;
+
+		eiRequest->allowed_to_start_early_ = true;
 		RIBObjectValue object_value;
-		object_value.type_ = RIBObjectValue::booltype;
-		object_value.bool_value_ = true;
+		object_value.type_ = RIBObjectValue::complextype;
+		object_value.complex_value_ = eiRequest;
 
 		rib_daemon_->remoteStopObject(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 				EncoderConstants::ENROLLMENT_INFO_OBJECT_NAME, object_value, 0, remote_id, this);
+
+		delete eiRequest;
 	} catch(Exception &e) {
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
+		delete eiRequest;
 		sendNegativeStartResponseAndAbortEnrollment(-1, std::string(e.what()), invoke_id);
 		return;
 	}
@@ -1986,12 +1989,11 @@ void EnrollmentRIBObject::remoteStopObject(void * object_value, int invoke_id,
 		return;
 	}
 
-	bool * start_early = 0;
+	EnrollmentInformationRequest * eiRequest = 0;
 	if (object_value) {
-		rina::BooleanObjectValue * value = (rina::BooleanObjectValue*) object_value;
-		start_early = ((bool*)value->get_value());
+		eiRequest = (EnrollmentInformationRequest *) object_value;
 	}
-	stateMachine->stop(start_early, invoke_id , cdapSessionDescriptor);
+	stateMachine->stop(eiRequest, invoke_id , cdapSessionDescriptor);
 }
 
 void EnrollmentRIBObject::sendErrorMessage(const rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
@@ -2091,6 +2093,7 @@ const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const 
 	rina::messages::enrollmentInformation_t gpb_eir;
 
 	gpb_eir.set_address(eir->address_);
+	gpb_eir.set_startearly(eir->allowed_to_start_early_);
 
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 	for(it = eir->supporting_difs_.begin(); it != eir->supporting_difs_.end(); ++it) {
@@ -2115,6 +2118,8 @@ void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterfa
 
 	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
 	request->address_ = gpb_eir.address();
+	//FIXME that should read gpb_eir.startearly() but always returns false
+	request->allowed_to_start_early_ = true;
 
 	for (int i = 0; i < gpb_eir.supportingdifs_size(); ++i) {
 		request->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(

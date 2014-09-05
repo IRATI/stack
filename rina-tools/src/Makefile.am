@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS                            = apps rina-echo-time
+SUBDIRS                            = rina-echo-time
 EXTRA_DIST                         =
 bin_PROGRAMS                       =
 bin_SCRIPTS                        =
