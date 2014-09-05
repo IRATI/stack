@@ -108,7 +108,6 @@ AC_CONFIG_FILES([
     Makefile
 
     src/Makefile
-    src/apps/Makefile
     src/rina-echo-time/Makefile
 
     doc/Makefile
