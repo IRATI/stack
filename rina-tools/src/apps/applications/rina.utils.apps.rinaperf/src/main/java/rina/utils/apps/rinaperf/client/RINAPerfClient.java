@@ -151,7 +151,7 @@ FlowAllocationListener, FlowDeallocationListener {
 			RegisterApplicationResponseEvent event) {
 		if (event.getResult() == 0) {
 			try {
-				rina.getIpcManager().commitPendingResitration(
+				rina.getIpcManager().commitPendingRegistration(
 						event.getSequenceNumber(), event.getDIFName());
 				log.info("Succesfully registered AE " + event.getApplicationName().toString() 
 						+ " to DIF" + event.getDIFName().getProcessName());

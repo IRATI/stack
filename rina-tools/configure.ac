@@ -13,7 +13,7 @@ AC_INIT([RINA Tools],
 AC_PREREQ([2.68])
 
 AC_CONFIG_HEADERS([src/config.h])
-AC_CONFIG_SRCDIR([src/rina-wrap.c])
+AC_CONFIG_SRCDIR([src/rina-bug-report.in])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -37,12 +37,35 @@ AC_PROG_CPP
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+AC_PROG_CXXCPP
+AC_PROG_CXX
+AC_PROG_CXX_C_O
+
+# Just to avoid warning from libtool 1.14
+AM_PROG_AR
+LT_INIT
+
 CPPFLAGS_EXTRA=""
-AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall -Werror"
+AX_CHECK_COMPILE_FLAG([ -Wall ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wformat ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
+])
+AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wnon-virtual-dtor"
+])
+AX_CHECK_COMPILE_FLAG([ -Woverloaded-virtual ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Woverloaded-virtual"
+])
+AX_CHECK_COMPILE_FLAG([ -Wextra ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wextra"
+])
+AX_CHECK_COMPILE_FLAG([ -Werror ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Werror"
+])
+AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
@@ -115,6 +138,7 @@ AC_CONFIG_FILES([
 
     src/Makefile
     src/apps/Makefile
+    src/rina-echo-time/Makefile
 
     doc/Makefile
 ])

@@ -11,6 +11,8 @@
 Makefile
 Makefile.in
 
+TAGS
+
 /.version
 /.tarball-version
 

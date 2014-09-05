@@ -28,13 +28,13 @@ echo "$ME: Starting librina phase"
 }
 
 echo "$ME: Starting rinad phase"
-(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
+(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH ./configure --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete rinad phase"
     exit 1
 }
 
 echo "$ME: Starting rina-tools phase"
-(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX --disable-java-support && make $MAKEFLAGS clean all install installcheck) || {
+(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH ./configure --prefix=$PREFIX --disable-java-support && make $MAKEFLAGS clean all install installcheck) || {
     echo "$ME: Cannot complete rina-tools phase"
     exit 1
 }

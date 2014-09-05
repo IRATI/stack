@@ -101,7 +101,7 @@ public class RINAPerfServer implements FlowAcceptor, ApplicationRegistrationList
 			RegisterApplicationResponseEvent event) {
 		if (event.getResult() == 0) {
 			try {
-				rina.getIpcManager().commitPendingResitration(
+				rina.getIpcManager().commitPendingRegistration(
 						event.getSequenceNumber(), event.getDIFName());
 				difName = event.getDIFName();
 				log.info("Succesfully registered AE " + event.getApplicationName().toString() 
