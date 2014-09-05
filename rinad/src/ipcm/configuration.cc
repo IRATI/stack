@@ -586,44 +586,46 @@ void parse_dif_configs(const Json::Value   &root,
                         dif_configs[i]["pdufTableGeneratorConfiguration"];
                 if (pft != 0) {
                         rina::PDUFTableGeneratorConfiguration pf;
-                        
-                        parse_policy(pft, "pduftGeneratorPolicy", 
+
+                        parse_policy(pft, "pduFtGeneratorPolicy",
                                      pf.pduft_generator_policy_);
+
+                        Json::Value lsr_config = pft["linkStateRoutingConfiguration"];
 
                         rina::LinkStateRoutingConfiguration lsr;
 
                         lsr.object_maximum_age_ = 
-                                pft.get("objectMaximumAge",
+                                lsr_config.get("objectMaximumAge",
                                         lsr.object_maximum_age_)
                                 .asInt();
 
                         lsr.wait_until_read_cdap_ =
-                                pft.get("waitUntilReadCdap",
+                        		lsr_config.get("waitUntilReadCdap",
                                         lsr.wait_until_read_cdap_)
                                 .asInt();
                       
                         lsr.wait_until_error_ =
-                                pft.get("waitUntilError",
+                        		lsr_config.get("waitUntilError",
                                         lsr.wait_until_error_)
                                 .asInt();
 
                         lsr.wait_until_pduft_computation_ =
-                                pft.get("waitUntilPduftComputation",
+                        		lsr_config.get("waitUntilPduftComputation",
                                         lsr.wait_until_pduft_computation_)
                                 .asInt();
 
                         lsr.wait_until_fsodb_propagation_ =
-                                pft.get("waitUntilFsodbPropagation",
+                        		lsr_config.get("waitUntilFsodbPropagation",
                                         lsr.wait_until_fsodb_propagation_)
                                 .asInt();
 
                         lsr.wait_until_age_increment_ =
-                                pft.get("waitUntilAgeIncrement",
+                        		lsr_config.get("waitUntilAgeIncrement",
                                         lsr.wait_until_age_increment_)
                                 .asInt();
 
                         lsr.routing_algorithm_ =
-                                pft.get("routingAlgorithm",
+                        		lsr_config.get("routingAlgorithm",
                                         string())
                                 .asString();
 

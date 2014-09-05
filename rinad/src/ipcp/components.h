@@ -700,6 +700,9 @@ public:
 	/// tasks data structures. It may be the case that the CDAP message is not addressed to an application
 	/// entity within this IPC process, then the RMT may decide to rely the message to the right destination
 	/// (after consulting an adequate forwarding table).
+	///
+	/// This operation takes ownership of the message argument.
+	///
 	/// @param message the encoded CDAP message
 	/// @param length the length of the encoded message
 	/// @param portId the portId the message came from

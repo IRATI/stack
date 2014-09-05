@@ -713,7 +713,7 @@ void CDAPSessionImpl::populateSessionDescriptor(const CDAPMessage &cdap_message,
 		session_descriptor_->set_dest_ap_name(&cdap_message.get_src_ap_name());
 		session_descriptor_->set_src_ae_inst(&cdap_message.get_dest_ae_inst());
 		session_descriptor_->set_src_ae_name(&cdap_message.get_dest_ae_name());
-		session_descriptor_->set_src_ap_inst(&cdap_message.get_dest_ae_name());
+		session_descriptor_->set_src_ap_inst(&cdap_message.get_dest_ap_inst());
 		session_descriptor_->set_src_ap_name(&cdap_message.get_dest_ap_name());
 	}
 	session_descriptor_->set_version(cdap_message.get_version());
