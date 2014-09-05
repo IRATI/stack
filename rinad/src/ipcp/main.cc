@@ -27,7 +27,7 @@
 #include <librina/logs.h>
 #include "ipcp/ipc-process.h"
 
-int main(int argc, char * argv[])
+int wrapped_main(int argc, char * argv[])
 {
         if (argc != 5) {
                 LOG_ERR("Wrong number of arguments: expected 5, got %d", argc);
@@ -67,4 +67,18 @@ int main(int argc, char * argv[])
         loop.run();
 
         return EXIT_SUCCESS;
+}
+
+int main(int argc, char * argv[])
+{
+        int retval;
+
+        try {
+                retval = wrapped_main(argc, argv);
+        } catch (std::exception & e) {
+                LOG_ERR("Got unhandled exception (%s)", e.what());
+                retval = EXIT_FAILURE;
+        }
+
+        return retval;
 }
