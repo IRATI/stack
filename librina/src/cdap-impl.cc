@@ -254,7 +254,7 @@ CDAPMessage::Opcode CDAPOperationState::get_op_code() const {
 	return op_code_;
 }
 bool CDAPOperationState::is_sender() const {
-	return is_sender();
+	return sender_;
 }
 
 // CLASS CDAPSessionInvokeIdManagerImpl
@@ -396,6 +396,7 @@ const SerializedObject* CDAPSessionImpl::encodeNextMessageToBeSent(
 		ss << "Unrecognized operation code: " << cdap_message.get_op_code();
 		throw CDAPException(ss.str());
 	}
+
 	return serializeMessage(cdap_message);
 }
 void CDAPSessionImpl::messageSent(const CDAPMessage &cdap_message) {
@@ -599,15 +600,15 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 		const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code,
 		bool send) const {
 	bool validation_failed = false;
-	if (pending_messages_.find(cdap_message.get_invoke_id())
-			== pending_messages_.map::end()) {
+	std::map<int, CDAPOperationState*>::const_iterator iterator;
+	iterator = pending_messages_.find(cdap_message.invoke_id_);
+	if (iterator == pending_messages_.end()) {
 		std::stringstream ss;
 		ss << "Cannot send a response for the " << op_code
 				<< " operation with invokeId " << cdap_message.get_invoke_id();
 		throw CDAPException(ss.str());
 	}
-	CDAPOperationState* state = pending_messages_.find(
-			cdap_message.get_invoke_id())->second;
+	CDAPOperationState* state = iterator->second;
 	if (state->get_op_code() != op_code) {
 		validation_failed = true;
 	}
@@ -835,6 +836,7 @@ const SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
 	} else {
 		cdap_session = it->second;
 	}
+
 	return cdap_session->encodeNextMessageToBeSent(cdap_message);
 }
 const CDAPMessage* CDAPSessionManager::messageReceived(

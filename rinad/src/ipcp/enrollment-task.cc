@@ -2098,10 +2098,8 @@ const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const 
 
 	int size = gpb_eir.ByteSize();
 	char *serialized_message = new char[size];
-	bool result = gpb_eir.SerializeToArray(serialized_message, size);
+	gpb_eir.SerializeToArray(serialized_message, size);
 	rina::SerializedObject *serialized_object =  new rina::SerializedObject(serialized_message,size);
-	LOG_DBG("Result of encoding: %d", result);
-	LOG_DBG("Encoded message size: %d", size);
 
 	return serialized_object;
 }
@@ -2112,11 +2110,7 @@ void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterfa
 	rina::SerializedObject * serializedObject =
 			Encoder::get_serialized_object(object_value);
 
-	LOG_DBG("Serialized object size: %d", serializedObject->size_);
-
-	bool result = gpb_eir.ParseFromArray(serializedObject->message_, serializedObject->size_);
-
-	LOG_DBG("Decoding result: %d", result);
+	gpb_eir.ParseFromArray(serializedObject->message_, serializedObject->size_);
 
 	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
 	request->address_ = gpb_eir.address();
