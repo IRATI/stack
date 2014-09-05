@@ -2092,8 +2092,6 @@ const rina::SerializedObject* EnrollmentInformationRequestEncoder::encode(const 
 
 	gpb_eir.set_address(eir->address_);
 
-	LOG_DBG("Address to encode: %u", gpb_eir.address());
-
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 	for(it = eir->supporting_difs_.begin(); it != eir->supporting_difs_.end(); ++it) {
 		gpb_eir.add_supportingdifs(it->processName);
@@ -2117,8 +2115,6 @@ void* EnrollmentInformationRequestEncoder::decode(const rina::ObjectValueInterfa
 
 	EnrollmentInformationRequest * request = new EnrollmentInformationRequest();
 	request->address_ = gpb_eir.address();
-
-	LOG_DBG("Address decoded: %u", gpb_eir.address());
 
 	for (int i = 0; i < gpb_eir.supportingdifs_size(); ++i) {
 		request->supporting_difs_.push_back(rina::ApplicationProcessNamingInformation(
