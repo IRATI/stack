@@ -778,9 +778,9 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
         }
 
         /*
-	 * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
-	 * PDU_TYPE_NACK_AND_FC ?
-	 */
+         * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
+         * PDU_TYPE_NACK_AND_FC ?
+         */
         if (dtcp_flow_ctrl(dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
