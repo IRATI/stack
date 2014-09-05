@@ -25,7 +25,6 @@
 #include <fstream>
 #include <map>
 #include <vector>
-#include <stdexcept>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>

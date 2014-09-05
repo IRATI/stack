@@ -45,6 +45,7 @@ public:
 	///to join a DIF
 	unsigned int address_;
 	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
+	bool allowed_to_start_early_;
 };
 
 class WatchdogRIBObject;
@@ -264,7 +265,7 @@ public:
 	/// Have to check if I can start operating (if not wait
 	/// until M_START operationStatus). If I can start and have enough information,
 	/// create or update all the objects received during the enrollment phase.
-	void stop(bool * start_early, int invoke_id,
+	void stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	/// See if the response is valid and contains an object. See if more objects
