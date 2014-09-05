@@ -48,7 +48,6 @@ int wrapped_main(int argc, char * argv[])
         // because exceptions will be thrown for problems.
 
         try {
-
                 // Define the command line object.
                 TCLAP::CmdLine cmd("IPC Manager", ' ', PACKAGE_VERSION);
 
