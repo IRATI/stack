@@ -61,14 +61,14 @@ Flow* Client::makeConnection()
         std::chrono::high_resolution_clock::time_point begintp =
                 std::chrono::high_resolution_clock::now();
         FlowSpecification qosspec;
-#if 0
-        uint handle = ipcManager->requestFlowAllocation(
-                                                        ApplicationProcessNamingInformation(app_name,
+        uint handle;
+
+        handle = ipcManager->requestFlowAllocation(ApplicationProcessNamingInformation(app_name,
                                                                                             app_instance),
                                                         ApplicationProcessNamingInformation(server_name,
                                                                                             server_instance),
                                                         qosspec);
-#endif
+        (void) handle;
         IPCEvent* event = ipcEventProducer->eventWait();
         while(event && event->eventType != ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
                 if(debug_mes)
