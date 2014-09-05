@@ -565,10 +565,8 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 unsigned int NamespaceManager::getIPCProcessAddress(const std::string& process_name,
 			const std::string& process_instance, const rina::AddressingConfiguration& address_conf) {
 	std::list<rina::StaticIPCProcessAddress>::const_iterator it;
-	LOG_DBG("I know %d addresses", address_conf.static_address_.size());
 	for (it = address_conf.static_address_.begin();
 			it != address_conf.static_address_.end(); ++it) {
-		LOG_DBG("Candidate: %s, %s", it->ap_name_.c_str(), it->ap_instance_.c_str());
 		if (it->ap_name_.compare(process_name) == 0 &&
 				it->ap_instance_.compare(process_instance) == 0) {
 			return it->address_;
