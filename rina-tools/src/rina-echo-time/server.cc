@@ -85,7 +85,9 @@ void Server::runFlow(Flow* flow)
                                                         max_buffer_size);
                         flow->writeSDU(buffer, bytesreaded);
                 }
-        } catch(...) {
-                LOG_ERR("SDU write/read failed");
+        } catch(rina::IPCException e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets dellocated
+                LOG_INFO("Flow torn down by remote application");
         }
 }
