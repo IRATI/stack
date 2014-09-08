@@ -126,8 +126,6 @@ void * doManagementSDUReaderWork(void* arg)
 		}
 
 		data->rib_daemon_->cdapMessageDelivered(sdu, result.getBytesRead(), result.getPortId());
-
-		delete sdu;
 	}
 
 	delete buffer;
@@ -485,13 +483,16 @@ ICDAPResponseMessageHandler * RIBDaemon::getCDAPMessageHandler(const rina::CDAPM
 void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMessage,
                                               rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	BaseRIBObject * ribObject;
+	BaseRIBObject * ribObject = 0;
+	void * decodedObject = 0;
 
 	LOG_DBG("Remote operation %d called on object %s", cdapMessage->get_op_code(),
 			cdapMessage->get_obj_name().c_str());
 	try {
 		switch (cdapMessage->get_op_code()) {
 		case rina::CDAPMessage::M_CREATE:
+			decodedObject = encoder_->decode(cdapMessage);
+
 			// Creation is delegated to the parent objects if the object doesn't exist.
 			// Create semantics are CREATE or UPDATE. If the object exists it is an
 			// update, therefore the message is handled to the object. If the object
@@ -499,7 +500,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			try {
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 											cdapMessage->get_obj_name(), true);
-				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
+				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
+						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
                                 std::string::size_type position =
@@ -509,39 +511,53 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 				}
 				std::string parentObjectName = cdapMessage->get_obj_name().substr(0, position);
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, true);
-				ribObject->remoteCreateObject(cdapMessage, cdapSessionDescriptor);
+				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
+						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			}
 
 			break;
 		case rina::CDAPMessage::M_DELETE:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteDeleteObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteDeleteObject(cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START:
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteStartObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteStartObject(decodedObject, cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_STOP:
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteStopObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteStopObject(decodedObject, cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_READ:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteReadObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteReadObject(cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD:
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteCancelReadObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteCancelReadObject(cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_WRITE:
+			decodedObject = encoder_->decode(cdapMessage);
 			ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 							cdapMessage->get_obj_name(), true);
-			ribObject->remoteWriteObject(cdapMessage, cdapSessionDescriptor);
+			ribObject->remoteWriteObject(decodedObject, cdapMessage->invoke_id_,
+					cdapSessionDescriptor);
 			break;
 		default:
 			LOG_ERR("Invalid operation code for a request message: %d", cdapMessage->get_op_code());
@@ -556,7 +572,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMessage,
                                                rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
-	ICDAPResponseMessageHandler * handler;
+	ICDAPResponseMessageHandler * handler = 0;
+	void * decodedObject = 0;
 
 	handler = getCDAPMessageHandler(cdapMessage);
 	if (!handler) {
@@ -568,25 +585,47 @@ void RIBDaemon::processIncomingResponseMessage(const rina::CDAPMessage * cdapMes
 	try {
 		switch (cdapMessage->get_op_code()) {
 		case rina::CDAPMessage::M_CREATE_R:
-			handler->createResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->createResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_DELETE_R:
-			handler->deleteResponse(cdapMessage, cdapSessionDescriptor);
+			handler->deleteResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_START_R:
-			handler->startResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->startResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_STOP_R:
-			handler->stopResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->stopResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_READ_R:
-			handler->readResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->result_ == 0) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->readResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapMessage->obj_name_, cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_CANCELREAD_R:
-			handler->cancelReadResponse(cdapMessage, cdapSessionDescriptor);
+			handler->cancelReadResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			break;
 		case rina::CDAPMessage::M_WRITE_R:
-			handler->writeResponse(cdapMessage, cdapSessionDescriptor);
+			if (cdapMessage->obj_value_) {
+				decodedObject = encoder_->decode(cdapMessage);
+			}
+			handler->writeResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					decodedObject, cdapSessionDescriptor);
 			break;
 		default:
 			LOG_ERR("Invalid operation code for a response message %d", cdapMessage->get_op_code());
@@ -633,19 +672,21 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
 	try {
 		switch (opcode) {
 		case rina::CDAPMessage::M_CONNECT:
-			enrollmentTask->connect(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->connect(cdapMessage->invoke_id_, cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_CONNECT_R:
-			enrollmentTask->connectResponse(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->connectResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_RELEASE:
-			enrollmentTask->release(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->release(cdapMessage->invoke_id_, cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_RELEASE_R:
-			enrollmentTask->releaseResponse(cdapMessage, cdapSessionDescriptor);
+			enrollmentTask->releaseResponse(cdapMessage->result_, cdapMessage->result_reason_,
+					cdapSessionDescriptor);
 			delete cdapMessage;
 			break;
 		case rina::CDAPMessage::M_CREATE:
@@ -748,7 +789,7 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 	}
 
 	atomic_send_lock_.lock();
-        sdu = 0;
+    sdu = 0;
 	try {
 		sdu = cdap_session_manager_->encodeNextMessageToBeSent(cdapMessage, sessionId);
 		if (useAddress) {
@@ -764,7 +805,6 @@ void RIBDaemon::sendMessage(bool useAddress, const rina::CDAPMessage& cdapMessag
 		cdap_session_manager_->messageSent(cdapMessage, sessionId);
 	} catch (Exception &e) {
 		if (sdu) {
-			delete sdu->get_message();
 			delete sdu;
 		}
 
@@ -806,6 +846,426 @@ RIBDaemon::sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
         (void) updateStrategy; // Stop compiler barfs
 
 	//TODO
+}
+
+void RIBDaemon::sendMessage(const rina::CDAPMessage & message, const RemoteIPCProcessId& remote_id,
+		ICDAPResponseMessageHandler * response_handler) {
+	if (remote_id.use_address_) {
+		sendMessageToAddress(message, remote_id.port_id_, remote_id.address_, response_handler);
+	} else {
+		sendMessage(message, remote_id.port_id_, response_handler);
+	}
+}
+
+void RIBDaemon::encodeObject(RIBObjectValue& object_value, rina::CDAPMessage * message) {
+	switch(object_value.type_) {
+	case RIBObjectValue::notype :
+		break;
+	case RIBObjectValue::complextype : {
+		if (object_value.complex_value_) {
+			encoder_->encode(object_value.complex_value_, message);
+		}
+		break;
+	}
+	case RIBObjectValue::booltype : {
+		rina::BooleanObjectValue * bool_value =
+				new rina::BooleanObjectValue(object_value.bool_value_);
+		message->obj_value_ = bool_value;
+		break;
+	}
+	case RIBObjectValue::stringtype : {
+		rina::StringObjectValue * string_value =
+				new rina::StringObjectValue(object_value.string_value_);
+		message->obj_value_ = string_value;
+		break;
+	}
+	case RIBObjectValue::inttype : {
+		rina::IntObjectValue * int_value =
+				new rina::IntObjectValue(object_value.int_value_);
+		message->obj_value_ = int_value;
+		break;
+	}
+	case RIBObjectValue::longtype : {
+		rina::LongObjectValue * long_value =
+				new rina::LongObjectValue(object_value.long_value_);
+		message->obj_value_ = long_value;
+		break;
+	}
+	case RIBObjectValue::floattype : {
+		rina::FloatObjectValue * float_value =
+				new rina::FloatObjectValue(object_value.float_value_);
+		message->obj_value_ = float_value;
+		break;
+	}
+	case RIBObjectValue::doubletype : {
+		rina::DoubleObjectValue * double_value =
+				new rina::DoubleObjectValue(object_value.double_value_);
+		message->obj_value_ = double_value;
+		break;
+	}
+	default :
+		break;
+	}
+}
+
+void RIBDaemon::openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
+			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+			const std::string &dest_ae_name, const std::string &dest_ap_inst,
+			const std::string &dest_ap_name, const std::string &src_ae_inst,
+			const std::string &src_ae_name, const std::string &src_ap_inst,
+			const std::string &src_ap_name, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getOpenConnectionRequestMessage(remote_id.port_id_,
+				auth_mech, auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst,
+				dest_ap_name, src_ae_inst, src_ae_name, src_ap_inst, src_ap_name);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::closeApplicationConnection(const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getReleaseConnectionRequestMessage(remote_id.port_id_,
+				rina::CDAPMessage::NONE_FLAGS, invoke_id);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteCreateObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getCreateObjectRequestMessage(remote_id.port_id_,
+				0, rina::CDAPMessage::NONE_FLAGS, object_class,
+				0, object_name, scope, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteDeleteObject(const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getDeleteObjectRequestMessage(remote_id.port_id_,
+				0, rina::CDAPMessage::NONE_FLAGS, object_class,
+				0, object_name, scope, invoke_id);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteReadObject(const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getReadObjectRequestMessage(remote_id.port_id_,
+				0, rina::CDAPMessage::NONE_FLAGS, object_class, 0, object_name,
+				scope, invoke_id);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteWriteObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getWriteObjectRequestMessage(remote_id.port_id_,
+				0, rina::CDAPMessage::NONE_FLAGS, object_class,
+				0, object_name, scope, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteStartObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getStartObjectRequestMessage(remote_id.port_id_,
+				0, rina::CDAPMessage::NONE_FLAGS, object_class,
+				0, object_name, scope, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteStopObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) {
+	rina::CDAPMessage * message = 0;
+
+	bool invoke_id = false;
+	if (response_handler) {
+		invoke_id = true;
+	}
+
+	try {
+		message = cdap_session_manager_->getStopObjectRequestMessage(remote_id.port_id_,
+				0, rina::CDAPMessage::NONE_FLAGS, object_class,
+				0, object_name, scope, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, response_handler);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
+				const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+				const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
+				int result, const std::string &result_reason, const std::string &src_ae_inst,
+				const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
+				int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getOpenConnectionResponseMessage(auth_mech,
+				auth_value, dest_ae_inst, dest_ae_name, dest_ap_inst, dest_ap_name,
+				result, result_reason, src_ae_inst, src_ae_name, src_ap_inst,
+				src_ap_name, invoke_id);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::closeApplicationConnectionResponse(int result, const std::string result_reason,
+			int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getReleaseConnectionResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				result, result_reason, invoke_id);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
+		RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+		const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getCreateObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				object_class, 0, object_name, result, result_reason, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
+		int result, const std::string result_reason, int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getDeleteObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				object_class, 0, object_name, result, result_reason, invoke_id);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
+		RIBObjectValue& object_value, int result, const std::string result_reason, bool read_incomplete,
+		int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+	rina::CDAPMessage::Flags flags;
+	if (read_incomplete) {
+		flags = rina::CDAPMessage::F_RD_INCOMPLETE;
+	} else {
+		flags = rina::CDAPMessage::NONE_FLAGS;
+	}
+
+	try {
+		message = cdap_session_manager_->getReadObjectResponseMessage(flags,
+				object_class, 0, object_name, result, result_reason, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
+		int result, const std::string result_reason, int invoke_id, const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		(void) object_class;
+		(void) object_name;
+		message = cdap_session_manager_->getWriteObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				result, result_reason, invoke_id);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
+		RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+		const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		message = cdap_session_manager_->getStartObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				object_class, 0, object_name, result, result_reason, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
+}
+
+void RIBDaemon::remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
+		RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+		const RemoteIPCProcessId& remote_id) {
+	rina::CDAPMessage * message = 0;
+
+	try {
+		(void) object_class;
+		(void) object_name;
+		message = cdap_session_manager_->getStopObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
+				result, result_reason, invoke_id);
+
+		encodeObject(object_value, message);
+
+		sendMessage(*message, remote_id, 0);
+	} catch (Exception &e) {
+		delete message;
+		throw e;
+	}
+
+	delete message;
 }
 
 }

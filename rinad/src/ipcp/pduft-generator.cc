@@ -433,9 +433,14 @@ const void* FlowStateRIBObjectGroup::get_value() const {
 	return 0;
 }
 
-void FlowStateRIBObjectGroup::remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	pduft_generator_policy_->writeMessageReceived(cdapMessage, cdapSessionDescriptor->get_port_id());
+void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value, int invoke_id,
+		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+	(void) invoke_id;
+
+	std::list<FlowStateObject *> * objects =
+			(std::list<FlowStateObject *> *) object_value;
+	pduft_generator_policy_->writeMessageReceived(*objects, cdapSessionDescriptor->get_port_id());
+	delete objects;
 }
 
 void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
@@ -640,9 +645,19 @@ LinkStatePDUFTCDAPMessageHandler::LinkStatePDUFTCDAPMessageHandler(
 	pduft_generator_policy_ = pduft_generator_policy;
 }
 
-void LinkStatePDUFTCDAPMessageHandler::readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	pduft_generator_policy_->writeMessageReceived(cdapMessage, cdapSessionDescriptor->get_port_id());
+void LinkStatePDUFTCDAPMessageHandler::readResponse(int result,
+		const std::string& result_reason, void * object_value,
+		const std::string& object_name, rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) object_name;
+
+	if (result != 0) {
+		LOG_ERR("Problems reading Flow State Objects from neighbor: %s", result_reason.c_str());
+	}
+
+	std::list<FlowStateObject *> * objects =
+			(std::list<FlowStateObject *> *) object_value;
+	pduft_generator_policy_->writeMessageReceived(*objects, session_descriptor->port_id_);
+	delete objects;
 }
 
 //Class ComputePDUFTTimerTask
@@ -887,20 +902,21 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 	}
 
 	int portId = event->neighbor_->get_underlying_port_id();
-	rina::CDAPMessage * cdapMessage = 0;
 
 	try{
-		cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(portId, 0,
-				rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
-				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
-		encoder_->encode(&(db_->flow_state_objects_), cdapMessage);
-		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = &(db_->flow_state_objects_);
+
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = portId;
+
+		rib_daemon_->remoteWriteObject(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, robject_value, 0, remote_id, 0);
 		db_->setAvoidPort(portId);
 	}catch(Exception &e){
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
-
-	delete cdapMessage;
 }
 
 void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
@@ -916,25 +932,28 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 		return;
 	}
 
+	RIBObjectValue robject_value;
+	robject_value.type_ = RIBObjectValue::complextype;
+	robject_value.complex_value_ = &(db_->flow_state_objects_);
+
+	RemoteIPCProcessId remote_id;
+
 	std::list<FlowStateObject *> fsos;
 	std::list<rina::FlowInformation>::iterator it;
-	rina::CDAPMessage * cdapMessage = 0;
 	int i = 0;
 	for (it = nMinusOneFlows.begin(); it != nMinusOneFlows.end(); ++it) {
 		fsos = groupsToSend[i];
 		if (fsos.size() > 0) {
 			try {
-				cdapMessage = cdap_session_manager_->getWriteObjectRequestMessage(it->portId, 0,
-						rina::CDAPMessage::NONE_FLAGS, EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS, 0,
-						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, 0, false);
-				encoder_->encode(&(db_->flow_state_objects_), cdapMessage);
-				rib_daemon_->sendMessage(*cdapMessage, it->portId, 0);
+				remote_id.port_id_ = it->portId;
+				rib_daemon_->remoteWriteObject(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME, robject_value, 0,
+						remote_id, 0);
 			} catch (Exception &e) {
 				LOG_ERR("Errors sending message: %s", e.what());
 			}
 		}
 
-		delete cdapMessage;
 		i++;
 	}
 }
@@ -963,45 +982,34 @@ void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate() {
 }
 
 void LinkStatePDUFTGeneratorPolicy::writeMessageReceived(
-		const rina::CDAPMessage * cdapMessage, int portId){
+		const std::list<FlowStateObject *> & flow_state_objects, int portId){
 	rina::AccessGuard g(*lock_);
 
-	if (cdapMessage->get_obj_class().compare(
-			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
-		return;
-	}
-
 	try {
-		std::list<FlowStateObject *> * objects =
-				(std::list<FlowStateObject *> *) encoder_->decode(cdapMessage);
-		db_->updateObjects(*objects, portId, ipc_process_->get_address());
-		delete objects;
+		db_->updateObjects(flow_state_objects, portId, ipc_process_->get_address());
 	} catch (Exception &e) {
 		LOG_ERR("Problems decoding Flow State Object Group: %s", e.what());
 	}
 }
 
 void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(
-		const rina::CDAPMessage * cdapMessage, int portId) const {
+		int invoke_id, int portId) const {
 	rina::AccessGuard g(*lock_);
 
-	if (cdapMessage->get_obj_class().compare(
-			EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS) != 0) {
-		return;
-	}
-
-	rina::CDAPMessage * responseMessage = 0;
 	try {
-		responseMessage = cdap_session_manager_->getReadObjectResponseMessage(rina::CDAPMessage::NONE_FLAGS,
-				fs_rib_group_->class_, fs_rib_group_->instance_, fs_rib_group_->name_,
-				0, "", cdapMessage->get_invoke_id());
-		encoder_->encode(&(db_->flow_state_objects_), responseMessage);
-		rib_daemon_->sendMessage(*cdapMessage, portId, 0);
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = &(db_->flow_state_objects_);
+
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = portId;
+
+		rib_daemon_->remoteReadObjectResponse(fs_rib_group_->class_,
+				fs_rib_group_->name_, robject_value, 0, "", invoke_id,
+				false, remote_id);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 	}
-
-	delete responseMessage;
 }
 
 //Class FlowStateObjectEncoder

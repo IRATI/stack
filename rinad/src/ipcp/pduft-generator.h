@@ -209,8 +209,8 @@ public:
 	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 			LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
 	const void* get_value() const;
-	void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteWriteObject(void * object_value, int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue);
 
@@ -260,8 +260,9 @@ private:
 class LinkStatePDUFTCDAPMessageHandler: public BaseCDAPResponseMessageHandler {
 public:
 	LinkStatePDUFTCDAPMessageHandler(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
 	LinkStatePDUFTGeneratorPolicy * pduft_generator_policy_;
@@ -382,17 +383,17 @@ public:
 	/// it is added to the FSDB and marked to be propagated through all the N-1 management flows
 	/// except the one through which the FSO was received. If, while processing the event,
 	/// existing FSOs in the FSDB were modified, or new ones were created, the FSDB is marked as
-	/// ÒmodifiedÓ - if it wasnÕt already -.
-	/// @param cdapMessage the M_WRITE message received from a neighbor IPC Process
+	/// modified - if it wasn't already -.
+	/// @param objects the flow_state_objects received from a neighbor IPC Process
 	/// @param portId the identifier of the N-1 flow through which the CDAP message was received
-	void writeMessageReceived(const rina::CDAPMessage * cdapMessage, int portId);
+	void writeMessageReceived(const std::list<FlowStateObject *> & flow_state_objects, int portId);
 
 	/// If the IPC Process just enrolled to the neighbor IPC Process that has sent the
 	/// CDAP message, and the PDU Forwarding Table Generator still has not sent a CDAP
 	/// M_WRITE message with the contents of the FSDB, then the PDU Forwarding table generator
 	/// will reply with one or more M_READ_R messages containing the FSOs in its FSDB.
 	/// Otherwise it will ignore the request.
-	void readMessageRecieved(const rina::CDAPMessage * cdapMessage, int srcPort) const;
+	void readMessageRecieved(int invoke_id, int srcPort) const;
 
 	bool test_;
 	FlowStateDatabase * db_;

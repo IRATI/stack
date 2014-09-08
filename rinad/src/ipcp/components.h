@@ -107,28 +107,30 @@ public:
 	virtual const std::list<std::string> get_enrolled_ipc_process_names() const = 0;
 
 	/// A remote IPC process Connect request has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void connect(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param invoke_id the id of the connect message
+	/// @param session_descriptor
+	virtual void connect(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// A remote IPC process Connect response has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	virtual void connectResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// A remote IPC process Release request has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescripton
-	virtual void release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param invoke_id the id of the release message
+	/// @param session_descriptor
+	virtual void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// A remote IPC process Release response has been received.
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	virtual void releaseResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	virtual void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
@@ -272,8 +274,8 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(const rina::CDAPMessage * cdapMessage,
-                                                      int                       underlyingPortId) = 0;
+	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
+			int invoke_id, int underlying_port_id) = 0;
 
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
@@ -486,20 +488,20 @@ public:
 	virtual void startObject(const void* object);
 	virtual void stopObject(const void* object);
 
-	/// Remote invocations via CDAP messages
-	virtual void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
+	/// Remote invocations, resulting from CDAP messages
+	virtual void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteDeleteObject(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteReadObject(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteCancelReadObject(int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteWriteObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteReadObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteStartObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteStartObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteStopObject(const rina::CDAPMessage * cdapMessage,
+	virtual void remoteStopObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	std::string class_;
@@ -531,58 +533,73 @@ public:
 class ICDAPResponseMessageHandler {
 public:
 	virtual ~ICDAPResponseMessageHandler(){};
-	virtual void createResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
-	virtual void deleteResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
-	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
-	virtual void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
-	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
-	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
-	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) = 0;
+	virtual void createResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void deleteResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void cancelReadResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void writeResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void startResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
+	virtual void stopResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
 };
 
 class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
 public:
-	virtual void createResponse(const rina::CDAPMessage * cdapMessage,
-                                    rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
+	virtual void createResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+                (void) result; // Stop compiler barfs
+                (void) result_reason; //Stop compiler barfs
+                (void) object_value; //Stop compiler barfs
+                (void) session_descriptor; // Stop compiler barfs
+	}
+	virtual void deleteResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; //Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
+	}
+	virtual void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; //Stop compiler barfs
+				(void) object_value; //Stop compiler barfs
+				(void) object_name; //Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
+	}
+	virtual void cancelReadResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; //Stop compiler barfs
                 (void) cdapSessionDescriptor; // Stop compiler barfs
 	}
-	virtual void deleteResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void writeResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+                (void) result; // Stop compiler barfs
+                (void) result_reason; // Stop compiler barfs
+                (void) object_value; // Stop compiler barfs
+                (void) session_descriptor; // Stop compiler barfs
 	}
-	virtual void readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void startResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; // Stop compiler barfs
+				(void) object_value; // Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
 	}
-	virtual void cancelReadResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
-	}
-	virtual void writeResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
-	}
-	virtual void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
-	}
-	virtual void stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-                (void) cdapMessage; // Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
+	virtual void stopResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
+				(void) result; // Stop compiler barfs
+				(void) result_reason; // Stop compiler barfs
+				(void) object_value; // Stop compiler barfs
+				(void) session_descriptor; // Stop compiler barfs
 	}
 };
 
@@ -593,7 +610,42 @@ public:
 	std::list<int> cdap_session_ids_;
 };
 
-/// Interface that provides de RIB Daemon API
+///Identifies a remote IPC Process by address
+///or N-1 port-id of a flow we have in common with him
+class RemoteIPCProcessId {
+public:
+	RemoteIPCProcessId();
+	bool use_address_;
+	int port_id_;
+	unsigned int address_;
+};
+
+class RIBObjectValue {
+public:
+	enum objectType{
+		notype,
+		inttype,
+		longtype,
+		stringtype,
+		complextype,
+		floattype,
+		doubletype,
+		booltype,
+	};
+
+	RIBObjectValue();
+
+	objectType type_;
+	int int_value_;
+	bool bool_value_;
+	long long_value_;
+	double double_value_;
+	float float_value_;
+	std::string string_value_;
+	void * complex_value_;
+};
+
+/// Interface that provides the RIB Daemon API
 class IRIBDaemon : public IPCProcessComponent, public EventManager {
 public:
 	virtual ~IRIBDaemon(){};
@@ -648,6 +700,9 @@ public:
 	/// tasks data structures. It may be the case that the CDAP message is not addressed to an application
 	/// entity within this IPC process, then the RMT may decide to rely the message to the right destination
 	/// (after consulting an adequate forwarding table).
+	///
+	/// This operation takes ownership of the message argument.
+	///
 	/// @param message the encoded CDAP message
 	/// @param length the length of the encoded message
 	/// @param portId the portId the message came from
@@ -724,6 +779,203 @@ public:
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
 
 	virtual std::list<BaseRIBObject *> getRIBObjects() = 0;
+
+	/// Request the establishment of an application connection with another IPC Process
+	/// @param auth_mech
+	/// @param auth_value
+	/// @param dest_ae_inst
+	/// @param dest_ae_name
+	/// @param dest_ap_inst
+	/// @param dest_ap_name
+	/// @param src_ae_inst
+	/// @param src_ae_name
+	/// @param src_ap_inst
+	/// @param src_ap_name
+	/// @param remote_id
+	virtual void openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
+			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+			const std::string &dest_ae_name, const std::string &dest_ap_inst,
+			const std::string &dest_ap_name, const std::string &src_ae_inst,
+			const std::string &src_ae_name, const std::string &src_ap_inst,
+			const std::string &src_ap_name, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Request an application connection to be closed
+	/// @param remote_id
+	/// @param response_handler
+	virtual void closeApplicationConnection(const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a create operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteCreateObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a delete operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteDeleteObject(const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a read operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteReadObject(const std::string& object_class, const std::string& object_name,
+			int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a write operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteWriteObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a start operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteStartObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Invoke a stop operation on an object in the RIB of a remote IPC Process
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param scope
+	/// @param remote_id
+	/// @param response_handler
+	virtual void remoteStopObject(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
+			ICDAPResponseMessageHandler * response_handler) = 0;
+
+	/// Causes the RIB Daemon to send an open connection response message to the IPC Process identified
+	/// by remote_id
+	/// @param auth_mech
+	/// @param auth_value
+	/// @param dest_ae_inst
+	/// @param dest_ae_name
+	/// @param dest_ap_inst
+	/// @param dest_ap_name
+	/// @param result
+	/// @param result_reason
+	/// @param src_ae_inst
+	/// @param src_ae_name
+	/// @param src_ap_inst
+	/// @param src_ap_name
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
+			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
+			const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
+			int result, const std::string &result_reason, const std::string &src_ae_inst,
+			const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
+			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to terminate an application connection with an IPC Process identified
+	/// by remote_id
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void closeApplicationConnectionResponse(int result, const std::string result_reason,
+			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a create response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a delete response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
+			int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a read response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param read_incomplete
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, bool read_incomplete,
+			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
+			int result, const std::string result_reason, int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
+
+	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
+	/// by remote_id
+	/// @param object_class
+	/// @param object_name
+	/// @param object_value
+	/// @param result
+	/// @param result_reason
+	/// @param invoke_id
+	/// @param remote_id
+	virtual void remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
+			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+			const RemoteIPCProcessId& remote_id) = 0;
 };
 
 /// IPC Process interface

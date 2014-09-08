@@ -195,39 +195,58 @@ void BaseRIBObject::stopObject(const void* object) {
 	operation_not_supported(object);
 }
 
-void BaseRIBObject::remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
+		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) object_value;
+	(void) object_name;
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();
 }
 
-void BaseRIBObject::remoteDeleteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteDeleteObject(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();
 }
 
-void BaseRIBObject::remoteReadObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteReadObject(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();
 }
 
-void BaseRIBObject::remoteCancelReadObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteCancelReadObject(int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();
 }
 
-void BaseRIBObject::remoteWriteObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteWriteObject(void * object_value, int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) object_value;
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();;
 }
 
-void BaseRIBObject::remoteStartObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteStartObject(void * object_value, int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) object_value;
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();;
 }
 
-void BaseRIBObject::remoteStopObject(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	operation_not_supported(cdapMessage, cdapSessionDescriptor);
+void BaseRIBObject::remoteStopObject(void * object_value, int invoke_id,
+		rina::CDAPSessionDescriptor * session_descriptor) {
+	(void) object_value;
+	(void) invoke_id;
+	(void) session_descriptor;
+	operation_not_supported();;
 }
 
 void BaseRIBObject::operation_not_supported() {
@@ -260,6 +279,25 @@ void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
 	ss<<"; Value memory @: "<<objectValue;
 
 	throw Exception(ss.str().c_str());
+}
+
+
+///Class RemoteIPCProcessId
+RemoteIPCProcessId::RemoteIPCProcessId() {
+	use_address_ = false;
+	port_id_ = 0;
+	address_ = 0;
+}
+
+/// Class RIBObjectValue
+RIBObjectValue::RIBObjectValue() {
+	type_ = notype;
+	bool_value_ = false;
+	complex_value_ = 0;
+	int_value_ = 0;
+	double_value_ = 0;
+	long_value_ = 0;
+	float_value_ = 0;
 }
 
 // CLASS IPC Process

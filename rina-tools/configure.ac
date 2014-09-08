@@ -13,7 +13,7 @@ AC_INIT([RINA Tools],
 AC_PREREQ([2.68])
 
 AC_CONFIG_HEADERS([src/config.h])
-AC_CONFIG_SRCDIR([src/rina-wrap.c])
+AC_CONFIG_SRCDIR([src/rina-bug-report.in])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -37,12 +37,39 @@ AC_PROG_CPP
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+AC_PROG_CXXCPP
+AC_PROG_CXX
+AC_PROG_CXX_C_O
+
+AC_CXX_HAVE_SSTREAM
+AC_CXX_HAVE_STRSTREAM
+AC_CXX_HAVE_LONG_LONG
+
+# Just to avoid warning from libtool 1.14
+AM_PROG_AR
+LT_INIT
+
 CPPFLAGS_EXTRA=""
-AX_CHECK_COMPILE_FLAG([ -Wall -Werror ], [
-    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall -Werror"
+AX_CHECK_COMPILE_FLAG([ -Wall ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
 ])
 AX_CHECK_COMPILE_FLAG([ -Wformat ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wformat"
+])
+AX_CHECK_COMPILE_FLAG([ -Wnon-virtual-dtor ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wnon-virtual-dtor"
+])
+AX_CHECK_COMPILE_FLAG([ -Woverloaded-virtual ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Woverloaded-virtual"
+])
+AX_CHECK_COMPILE_FLAG([ -Wextra ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wextra"
+])
+AX_CHECK_COMPILE_FLAG([ -Werror ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Werror"
+])
+AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
+    CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
 ])
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
 
@@ -73,35 +100,6 @@ AM_PATH_PYTHON([2.0],[
 AM_CONDITIONAL([HAVE_PYTHON], [ test "$ax_cv_have_python" != "no" ])
 AM_CONDITIONAL([HAVE_PYTHON_MATPLOT_LIB], [ test "$ax_cv_have_matplotlib" != "no" ])
 
-build_tools_java=no
-AX_SELECTOR_ENABLE([java-support],[
-    build_tools_java=yes
-],[
-    build_tools_java=no
-])
-
-AS_IF([test "$build_tools_java" = "yes"],[
-    AX_PROG_JAVAC
-    AX_JNI_INCLUDE_DIR
-
-    # FIXME: Ugly as hell ...
-
-    JNI_CPPFLAGS=""
-    for JNI_INCLUDE_DIR in $JNI_INCLUDE_DIRS ;
-    do
-        JNI_CPPFLAGS="$JNI_CPPFLAGS -I$JNI_INCLUDE_DIR" ;
-    done
-    AC_SUBST(JNI_CPPFLAGS, $JNI_CPPFLAGS)
-    AX_PROG_JAR
-])
-AM_CONDITIONAL(BUILD_TOOLS_JAVA, [test $build_tools_java = yes])
-
-AC_PATH_PROG([MVN],[mvn],[])
-AS_IF([test x"$MVN" != x""],[
-    AC_MSG_WARN([Your system lacks of maven support, Java parts will not be built/installed])
-])
-AM_CONDITIONAL(BUILD_MAVEN_SUPPORT, [test x"$MVN" != x""])
-
 PKG_PROG_PKG_CONFIG([0.26])
 
 PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
@@ -114,7 +112,8 @@ AC_CONFIG_FILES([
     Makefile
 
     src/Makefile
-    src/apps/Makefile
+    src/common/Makefile
+    src/rina-echo-time/Makefile
 
     doc/Makefile
 ])

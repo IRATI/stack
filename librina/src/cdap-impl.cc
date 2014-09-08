@@ -254,7 +254,7 @@ CDAPMessage::Opcode CDAPOperationState::get_op_code() const {
 	return op_code_;
 }
 bool CDAPOperationState::is_sender() const {
-	return is_sender();
+	return sender_;
 }
 
 // CLASS CDAPSessionInvokeIdManagerImpl
@@ -396,6 +396,7 @@ const SerializedObject* CDAPSessionImpl::encodeNextMessageToBeSent(
 		ss << "Unrecognized operation code: " << cdap_message.get_op_code();
 		throw CDAPException(ss.str());
 	}
+
 	return serializeMessage(cdap_message);
 }
 void CDAPSessionImpl::messageSent(const CDAPMessage &cdap_message) {
@@ -599,15 +600,15 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 		const CDAPMessage &cdap_message, CDAPMessage::Opcode op_code,
 		bool send) const {
 	bool validation_failed = false;
-	if (pending_messages_.find(cdap_message.get_invoke_id())
-			== pending_messages_.map::end()) {
+	std::map<int, CDAPOperationState*>::const_iterator iterator;
+	iterator = pending_messages_.find(cdap_message.invoke_id_);
+	if (iterator == pending_messages_.end()) {
 		std::stringstream ss;
 		ss << "Cannot send a response for the " << op_code
 				<< " operation with invokeId " << cdap_message.get_invoke_id();
 		throw CDAPException(ss.str());
 	}
-	CDAPOperationState* state = pending_messages_.find(
-			cdap_message.get_invoke_id())->second;
+	CDAPOperationState* state = iterator->second;
 	if (state->get_op_code() != op_code) {
 		validation_failed = true;
 	}
@@ -713,7 +714,7 @@ void CDAPSessionImpl::populateSessionDescriptor(const CDAPMessage &cdap_message,
 		session_descriptor_->set_dest_ap_name(&cdap_message.get_src_ap_name());
 		session_descriptor_->set_src_ae_inst(&cdap_message.get_dest_ae_inst());
 		session_descriptor_->set_src_ae_name(&cdap_message.get_dest_ae_name());
-		session_descriptor_->set_src_ap_inst(&cdap_message.get_dest_ae_name());
+		session_descriptor_->set_src_ap_inst(&cdap_message.get_dest_ap_inst());
 		session_descriptor_->set_src_ap_name(&cdap_message.get_dest_ap_name());
 	}
 	session_descriptor_->set_version(cdap_message.get_version());
@@ -835,6 +836,7 @@ const SerializedObject* CDAPSessionManager::encodeNextMessageToBeSent(
 	} else {
 		cdap_session = it->second;
 	}
+
 	return cdap_session->encodeNextMessageToBeSent(cdap_message);
 }
 const CDAPMessage* CDAPSessionManager::messageReceived(
@@ -1125,31 +1127,37 @@ const CDAPMessage* GPBWireMessageProvider::deserializeMessage(
 		cdapMessage->set_obj_name(gpfCDAPMessage.objname());
 
 	cdap::impl::googleprotobuf::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
-	if (obj_val_t.has_intval())
+	if (obj_val_t.has_intval()) {
 		cdapMessage->set_obj_value(new IntObjectValue(obj_val_t.intval()));
-	if (obj_val_t.has_sintval())
+	}
+	if (obj_val_t.has_sintval()) {
 		cdapMessage->set_obj_value(new SIntObjectValue(obj_val_t.sintval()));
-	if (obj_val_t.has_int64val())
+	}
+	if (obj_val_t.has_int64val()) {
 		cdapMessage->set_obj_value(new LongObjectValue(obj_val_t.int64val()));
-	if (obj_val_t.has_sint64val())
+	}
+	if (obj_val_t.has_sint64val()) {
 		cdapMessage->set_obj_value(new SLongObjectValue(obj_val_t.sint64val()));
-	if (obj_val_t.has_strval())
+	}
+	if (obj_val_t.has_strval()) {
 		cdapMessage->set_obj_value(new StringObjectValue(obj_val_t.strval()));
-
+	}
+	if (obj_val_t.has_floatval()) {
+		cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
+	}
+	if (obj_val_t.has_doubleval()) {
+		cdapMessage->set_obj_value(new DoubleObjectValue(obj_val_t.doubleval()));
+	}
+	if (obj_val_t.has_boolval()) {
+		cdapMessage->set_obj_value(new BooleanObjectValue(obj_val_t.boolval()));
+	}
 	if (obj_val_t.has_byteval()) {
-		//TODO FIXME potential ugly bug, why a string? is an encoded array of bytes
-		char *byte_val = new char[obj_val_t.byteval().size() + 1];
-		SerializedObject sr_message(byte_val, obj_val_t.byteval().size() + 1);
-		strcpy(byte_val, obj_val_t.byteval().c_str());
+		char *byte_val = new char[obj_val_t.byteval().size()];
+		SerializedObject sr_message(byte_val, obj_val_t.byteval().size());
+		memcpy(byte_val, obj_val_t.byteval().data(), obj_val_t.byteval().size());
 		cdapMessage->set_obj_value(new ByteArrayObjectValue(sr_message));
 	}
-	if (obj_val_t.has_floatval())
-		cdapMessage->set_obj_value(new FloatObjectValue(obj_val_t.floatval()));
-	if (obj_val_t.has_doubleval())
-		cdapMessage->set_obj_value(
-				new DoubleObjectValue(obj_val_t.doubleval()));
-	if (obj_val_t.has_boolval())
-		cdapMessage->set_obj_value(new BooleanObjectValue(obj_val_t.boolval()));
+
 	int opcode_val = gpfCDAPMessage.opcode();
 	CDAPMessage::Opcode opcode = static_cast<CDAPMessage::Opcode>(opcode_val);
 	cdapMessage->set_op_code(opcode);
@@ -1223,10 +1231,12 @@ const SerializedObject* GPBWireMessageProvider::serializeMessage(
 			gpb_obj_val->set_strval(
 					*(std::string*) cdapMessage.get_obj_value()->get_value());
 			break;
-		case ObjectValueInterface::bytetype:
-			gpb_obj_val->set_byteval(
-					(char*) cdapMessage.get_obj_value()->get_value());
+		case ObjectValueInterface::bytetype: {
+			SerializedObject * serialized_object =
+					(SerializedObject*) cdapMessage.get_obj_value()->get_value();
+			gpb_obj_val->set_byteval(serialized_object->message_, serialized_object->size_);
 			break;
+		}
 		case ObjectValueInterface::floattype:
 			gpb_obj_val->set_floatval(
 					*(float*) cdapMessage.get_obj_value()->get_value());

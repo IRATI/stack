@@ -45,6 +45,7 @@ public:
 	///to join a DIF
 	unsigned int address_;
 	std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
+	bool allowed_to_start_early_;
 };
 
 class WatchdogRIBObject;
@@ -67,16 +68,16 @@ public:
 	WatchdogRIBObject(IPCProcess * ipc_process, const rina::DIFConfiguration& dif_configuration);
 	~WatchdogRIBObject();
 	const void* get_value() const;
-	void remoteReadObject(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteReadObject(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Send watchdog messages to the IPC processes that are our neighbors and we're enrolled to
 	void sendMessages();
 
 	/// Take advantadge of the watchdog message responses to measure the RTT,
 	/// and store it in the neighbor object (average of the last 4 RTTs)
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
@@ -101,8 +102,8 @@ public:
 	NeighborSetRIBObject(IPCProcess * ipc_process);
 	~NeighborSetRIBObject();
 	const void* get_value() const;
-	void remoteCreateObject(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void remoteCreateObject(void * object_value, const std::string& object_name,
+			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 	void createObject(const std::string& objectClass,
 			const std::string& objectName,
 			const void* objectValue);
@@ -180,16 +181,17 @@ public:
 	~BaseEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
-	/// @param cdapMessage
+	/// @param invoke_id the invoke_id of the release message
 	/// @param cdapSessionDescriptor
-	void release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE_R message
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	void releaseResponse(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	/// @param result
+	/// @param result_reason
+	/// @param session_descriptor
+	void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
@@ -251,29 +253,29 @@ public:
 	void initiateEnrollment(EnrollmentRequest * enrollmentRequest, int portId);
 
 	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
-	/// @param cdapMessage
-	/// @param cdapSessionDescriptor
-	void connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	/// @param result
+	/// @param result_reason
+	void connectResponse(int result, const std::string& result_reason);
 
-	void startResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void startResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Stop enrollment request received. Check if I have enough information, if not
 	/// ask for more with M_READs.
 	/// Have to check if I can start operating (if not wait
 	/// until M_START operationStatus). If I can start and have enough information,
 	/// create or update all the objects received during the enrollment phase.
-	void stop(const rina::CDAPMessage * cdapMessage,
+	void stop(EnrollmentInformationRequest * eiRequest, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 	/// See if the response is valid and contains an object. See if more objects
 	/// are required. If not, start
-	void readResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void readResponse(int result, const std::string& result_reason,
+			void * object_value, const std::string& object_name,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
-	void start(const rina::CDAPMessage * cdapMessage,
-				rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void start(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
 
 	EnrollmentRequest * enrollment_request_;
 
@@ -284,9 +286,8 @@ private:
 
 	/// Checks if more information is required for enrollment
 	/// (At least there must be DataTransferConstants, a QoS cube and a DAF Member). If there is,
-	/// it returns a CDAP READ message requesting the next object to be read. If not, it returns null
-	/// @return A CDAP READ message requesting the next object to be read. If not, it returns null
-	const rina::CDAPMessage * nextObjectRequired() const;
+	/// it sends a read request message and returns tru
+	bool sendNextObjectRequired();
 
 	/// Create the objects in the RIB
 	void commitEnrollment();
@@ -295,7 +296,7 @@ private:
 
 	bool was_dif_member_before_enrollment_;
 	bool allowed_to_start_early_;
-	const rina::CDAPMessage * stop_enrollment_request_message_;
+	int stop_request_invoke_id_;
 };
 
 /// The state machine of the party that is a member of the DIF
@@ -310,9 +311,9 @@ public:
 	/// An M_CONNECT message has been received.  Handle the transition from the
 	/// NULL to the WAIT_START_ENROLLMENT state.
 	/// Authenticate the remote peer and issue a connect response
-	/// @param cdapMessage
+	/// @param invoke_id
     /// @param portId
-	void connect(const rina::CDAPMessage * cdapMessage, int portId);
+	void connect(int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
 
 	/// Called by the Enrollment object when it receives an M_START message from
 	/// the enrolling member. Have to look at the enrollment information request,
@@ -321,17 +322,20 @@ public:
 	/// the DIF, send a new address with the M_START_R, send the M_CREATEs to provide
 	/// the DIF initialization information and state, and send M_STOP_R. If it is a
 	/// valid member, just send M_START_R with no address and M_STOP_R
-	/// @param cdapMessage
+	/// @param eiRequest
+	/// @param invoke_id to reply to the message
     /// @param cdapSessionDescriptor
-    void start(const rina::CDAPMessage * cdapMessage,
-			const rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+    void start(EnrollmentInformationRequest * eiRequest, int invoke_id,
+			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
     /// The response of the stop operation has been received, send M_START operation without
     /// waiting for an answer and consider the process enrolled
-    /// @param cdapMessage
+    /// @param result
+    /// @param result_reason
+    /// @param object_value
     /// @param cdapSessionDescriptor
-	void stopResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void stopResponse(int result, const std::string& result_reason,
+			void * object_value, rina::CDAPSessionDescriptor * session_descriptor);
 
 private:
     /// Send a negative response to the M_START enrollment message
@@ -339,7 +343,7 @@ private:
     /// @param resultReason the reason of the bad result
     /// @param requestMessage the received M_START enrollment message
     void sendNegativeStartResponseAndAbortEnrollment(int result, const std::string&
-    		resultReason, const rina::CDAPMessage * requestMessage);
+    		resultReason, int invoke_id);
 
     /// Send all the information required to start operation to
     /// the IPC process that is enrolling to me
@@ -364,14 +368,14 @@ public:
 	const std::list<std::string> get_enrolled_ipc_process_names() const;
 	void processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent * event);
 	void initiateEnrollment(EnrollmentRequest * request);
-	void connect(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void connectResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void release(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void releaseResponse(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	void connect(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	void connectResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	void release(int invoke_id,
+			rina::CDAPSessionDescriptor * session_descriptor);
+	void releaseResponse(int result, const std::string& result_reason,
+			rina::CDAPSessionDescriptor * session_descriptor);
 	void eventHappened(Event * event);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool enrolle, bool sendReleaseMessage);
@@ -380,8 +384,7 @@ public:
 private:
 	void populateRIB();
 	void subscribeToEvents();
-	void sendErrorMessageAndDeallocateFlow(const rina::CDAPMessage * cdapMessage,
-			int portId);
+	void deallocateFlow(int portId);
 
 	/// Creates an enrollment state machine with the remote IPC process identified by the apNamingInfo
 	/// @param apNamingInfo
@@ -442,9 +445,9 @@ class EnrollmentRIBObject: public BaseRIBObject {
 public:
 	EnrollmentRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
-	void remoteStartObject(const rina::CDAPMessage * cdapMessage,
+	void remoteStartObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void remoteStopObject(const rina::CDAPMessage * cdapMessage,
+	void remoteStopObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
 private:
@@ -459,7 +462,7 @@ class OperationalStatusRIBObject: public BaseRIBObject {
 public:
 	OperationalStatusRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
-	void remoteStartObject(const rina::CDAPMessage * cdapMessage,
+	void remoteStartObject(void * object_value, int invoke_id,
 			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 	void startObject(const void* object);
 	void stopObject(const void* object);
