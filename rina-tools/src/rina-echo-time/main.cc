@@ -19,6 +19,7 @@
 //
 
 #include <cstdlib>
+#include <string>
 
 #include <librina/librina.h>
 
@@ -29,6 +30,11 @@
 
 #include "config.h"
 #include "application-builder.h"
+#include "client.h"
+#include "server.h"
+
+using namespace std;
+
 
 int wrapped_main(int argc, char** argv)
 {
@@ -37,6 +43,10 @@ int wrapped_main(int argc, char** argv)
         bool time;
         unsigned int count;
         unsigned int size;
+        string server_apn = "rina.apps.echotime.server";
+        string server_api = "1";
+        string client_apn = "rina.apps.echotime.client";
+        string client_api = "";
 
         try {
                 TCLAP::CmdLine cmd("rina-echo-time", ' ', PACKAGE_VERSION);
@@ -88,14 +98,20 @@ int wrapped_main(int argc, char** argv)
 
         rina::initialize("INFO", "");
 
-        ApplicationBuilder ab;
+        ApplicationBuilder ab;  // TODO remove
 
-        (void)listen;
-        (void)count;
-        (void)registration;
-        (void)time;
-        (void)size;
-        ab.runApplication();
+        if (listen) {
+                // Server mode
+                Server s(server_apn, server_api);
+
+                s.run();
+        } else {
+                // Client mode
+                Client c(client_apn, client_api, server_apn, server_api,
+                        time, count, registration, size);
+
+                c.run();
+        }
 
         return EXIT_SUCCESS;
 }
