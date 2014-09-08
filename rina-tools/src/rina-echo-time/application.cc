@@ -39,12 +39,29 @@ void Application::applicationRegister()
 {
         ApplicationRegistrationInformation
                 ari(ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF);
+        unsigned int seqnum;
+        IPCEvent *event;
 
         ari.appName = ApplicationProcessNamingInformation(app_name,
                                                           app_instance);
 
         try {
-                ipcManager->requestApplicationRegistration(ari);
+                // Request the registration
+                seqnum = ipcManager->requestApplicationRegistration(ari);
+
+                // Wait for the response to come
+                for (;;) {
+                        event = ipcEventProducer->eventWait();
+                        if (event && event->eventType ==
+                                REGISTER_APPLICATION_RESPONSE_EVENT &&
+                                event->sequenceNumber == seqnum) {
+                                break;
+                        }
+                }
+
+                // Update librina state
+                ipcManager->commitPendingRegistration(seqnum,
+                                dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
         } catch(ApplicationRegistrationException e) {
                 LOG_ERR("%s", e.what());
         }
