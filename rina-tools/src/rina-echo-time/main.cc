@@ -32,7 +32,7 @@ int wrapped_main(int argc, char** argv)
         // Just for testing, has to be rearranged
         TCLAP::CmdLine cmd("RINA-echo-time", ' ', PACKAGE_VERSION);
 
-        rina::initialize("DBG", "testprog.log");
+        rina::initialize("INFO", "");
 
         ApplicationBuilder ab;
 
