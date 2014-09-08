@@ -107,13 +107,14 @@ Flow* Client::createFlow()
                 LOG_DBG("Client got new event %d", event->eventType);
         }
 
-        afrrevent = reinterpret_cast<AllocateFlowRequestResultEvent*>(event);
+        afrrevent = dynamic_cast<AllocateFlowRequestResultEvent*>(event);
 
         flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
                                               afrrevent->portId,
                                               afrrevent->difName);
         if (!flow || flow->getPortId() == -1) {
-                LOG_ERR("Host not found");
+                LOG_ERR("Failed to allocate a flow");
+                return nullptr;
         } else {
                 LOG_DBG("[DEBUG] Port id = %d", flow->getPortId());
         }
