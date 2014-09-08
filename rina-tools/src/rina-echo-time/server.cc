@@ -60,7 +60,7 @@ void Server::run()
                         break;
                 }
                 case FLOW_DEALLOCATED_EVENT:
-                        ipcManager->requestFlowDeallocation(reinterpret_cast<FlowDeallocatedEvent*>
+                        ipcManager->flowDeallocated(reinterpret_cast<FlowDeallocatedEvent*>
                                                             (event)->portId);
                         break;
                 default:
