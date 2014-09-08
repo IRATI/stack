@@ -2,6 +2,7 @@
 // Echo time main
 // 
 // Addy Bombeke <addy.bombeke@ugent.be>
+// Vincenzo Maffione <v.maffione@nextworks.it>
 // 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,7 +30,6 @@
 #include "tclap/CmdLine.h"
 
 #include "config.h"
-#include "application-builder.h"
 #include "client.h"
 #include "server.h"
 
@@ -97,8 +97,6 @@ int wrapped_main(int argc, char** argv)
         }
 
         rina::initialize("INFO", "");
-
-        ApplicationBuilder ab;  // TODO remove
 
         if (listen) {
                 // Server mode
