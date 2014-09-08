@@ -22,6 +22,9 @@
 
 #include <librina/librina.h>
 
+#define RINA_PREFIX     "rina-echo-time"
+#include <librina/logs.h>
+
 #include "tclap/CmdLine.h"
 
 #include "config.h"
@@ -29,14 +32,69 @@
 
 int wrapped_main(int argc, char** argv)
 {
-        // Just for testing, has to be rearranged
-        TCLAP::CmdLine cmd("RINA-echo-time", ' ', PACKAGE_VERSION);
+        bool listen;
+        bool registration;
+        bool time;
+        unsigned int count;
+        unsigned int size;
+
+        try {
+                TCLAP::CmdLine cmd("rina-echo-time", ' ', PACKAGE_VERSION);
+                TCLAP::SwitchArg listen_arg("l",
+                                            "listen",
+                                            "Run in server mode",
+                                            false);
+                TCLAP::SwitchArg registration_arg("r",
+                                                  "register",
+                                                  "Register the application",
+                                                  false);
+                TCLAP::SwitchArg time_arg("t",
+                                                  "time",
+                                                  "Time flow allocation",
+                                                  true);
+                TCLAP::ValueArg<unsigned int> count_arg("c",
+                                                        "count",
+                                                        "Number of packets to send",
+                                                        false,
+                                                        1,
+                                                        "unsigned integer");
+                TCLAP::ValueArg<unsigned int> size_arg("s",
+                                                       "size",
+                                                       "Size of the packets to send",
+                                                       false,
+                                                       20,
+                                                       "unsigned integer");
+
+                cmd.add(listen_arg);
+                cmd.add(count_arg);
+                cmd.add(registration_arg);
+                cmd.add(time_arg);
+                cmd.add(size_arg);
+
+                cmd.parse(argc, argv);
+
+                listen = listen_arg.getValue();
+                count = count_arg.getValue();
+                registration = registration_arg.getValue();
+                time = time_arg.getValue();
+                size = size_arg.getValue();
+
+        } catch (TCLAP::ArgException &e) {
+                LOG_ERR("Error: %s for arg %d",
+                        e.error().c_str(),
+                        e.argId().c_str());
+                return EXIT_FAILURE;
+        }
 
         rina::initialize("INFO", "");
 
         ApplicationBuilder ab;
 
-        ab.configure(argc, argv);
+        (void)listen;
+        (void)count;
+        (void)registration;
+        (void)time;
+        (void)size;
         ab.runApplication();
 
         return EXIT_SUCCESS;
