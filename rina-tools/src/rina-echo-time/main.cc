@@ -40,7 +40,7 @@ int wrapped_main(int argc, char** argv)
 {
         bool listen;
         bool registration;
-        bool time;
+        bool quiet;
         unsigned int count;
         unsigned int size;
         string server_apn = "rina.apps.echotime.server";
@@ -58,10 +58,10 @@ int wrapped_main(int argc, char** argv)
                                                   "register",
                                                   "Register the application",
                                                   false);
-                TCLAP::SwitchArg time_arg("t",
-                                                  "time",
-                                                  "Time flow allocation",
-                                                  true);
+                TCLAP::SwitchArg quiet_arg("q",
+                                                  "quiet",
+                                                  "Suppress some output",
+                                                  false);
                 TCLAP::ValueArg<unsigned int> count_arg("c",
                                                         "count",
                                                         "Number of packets to send",
@@ -78,7 +78,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
                 cmd.add(registration_arg);
-                cmd.add(time_arg);
+                cmd.add(quiet_arg);
                 cmd.add(size_arg);
 
                 cmd.parse(argc, argv);
@@ -86,7 +86,7 @@ int wrapped_main(int argc, char** argv)
                 listen = listen_arg.getValue();
                 count = count_arg.getValue();
                 registration = registration_arg.getValue();
-                time = time_arg.getValue();
+                quiet = quiet_arg.getValue();
                 size = size_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
@@ -111,7 +111,7 @@ int wrapped_main(int argc, char** argv)
         } else {
                 // Client mode
                 Client c(client_apn, client_api, server_apn, server_api,
-                        time, count, registration, size);
+                         quiet, count, registration, size);
 
                 c.run();
         }

@@ -61,12 +61,12 @@ durationToString(const std::chrono::high_resolution_clock::duration&
 
 Client::Client(const string& app_name_, const string& app_instance_,
                const string& server_name_, const string& server_instance_,
-               bool time_flow_creation_, ulong echo_times_,
+               bool quiet_, ulong echo_times_,
                bool client_app_reg_,
                uint data_size_) :
         Application(app_name_, app_instance_),
         server_name(server_name_), server_instance(server_instance_),
-        time_flow_creation(time_flow_creation_), echo_times(echo_times_),
+        quiet(quiet_), echo_times(echo_times_),
         client_app_reg(client_app_reg_), data_size(data_size_)
 { }
 
@@ -112,8 +112,8 @@ Flow* Client::makeConnection()
         std::chrono::high_resolution_clock::time_point eindtp =
                 std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
-        if(time_flow_creation) {
-                cout << "flow_creation_time = " << durationToString(dur) << endl;
+        if (!quiet) {
+                cout << "Flow allocation time = " << durationToString(dur) << endl;
         }
         return flow;
 }

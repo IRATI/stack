@@ -35,7 +35,7 @@ public:
            const std::string& app_instance_,
            const std::string& server_name_,
            const std::string& server_instance_,
-           bool  time_flow_creation_,
+           bool  quiet_,
            ulong echo_times_,
            bool  client_app_reg_,
            uint  data_size_);
@@ -47,7 +47,7 @@ protected:
 private:
     std::string server_name;
     std::string server_instance;
-    bool time_flow_creation;
+    bool quiet;
     ulong echo_times;// -1 is infinit
     bool client_app_reg;
     uint data_size;
