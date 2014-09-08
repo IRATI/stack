@@ -18,12 +18,20 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <cstdlib>
+
 #include <librina/librina.h>
 
+#include "tclap/CmdLine.h"
+
+#include "config.h"
 #include "application-builder.h"
 
-int main(int argc, char** argv)
+int wrapped_main(int argc, char** argv)
 {
+        // Just for testing, has to be rearranged
+        TCLAP::CmdLine cmd("RINA-echo-time", ' ', PACKAGE_VERSION);
+
         rina::initialize("DBG", "testprog.log");
 
         ApplicationBuilder ab;
@@ -31,5 +39,18 @@ int main(int argc, char** argv)
         ab.configure(argc, argv);
         ab.runApplication();
 
-        return 0;
+        return EXIT_SUCCESS;
+}
+
+int main(int argc, char * argv[])
+{
+        int retval;
+
+        try {
+                retval = wrapped_main(argc, argv);
+        } catch (std::exception & e) {
+                return EXIT_FAILURE;
+        }
+
+        return retval;
 }
