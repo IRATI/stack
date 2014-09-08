@@ -89,6 +89,11 @@ int wrapped_main(int argc, char** argv)
                 time = time_arg.getValue();
                 size = size_arg.getValue();
 
+                if (size > Application::max_buffer_size) {
+                        size = Application::max_buffer_size;
+                        LOG_INFO("Packet size truncated to %u", size);
+                }
+
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
                         e.error().c_str(),
