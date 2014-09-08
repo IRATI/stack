@@ -602,16 +602,18 @@ void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& object
 		return;
 	}
 
-	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
-		robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
-		RemoteIPCProcessId remote_id;
-		remote_id.port_id_ = port_id_;
+	if (ribObject->get_value()) {
+		try {
+			RIBObjectValue robject_value;
+			robject_value.type_ = RIBObjectValue::complextype;
+			robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = port_id_;
 
-		rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
-	} catch (Exception &e) {
-		LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
+			rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
+		}
 	}
 }
 
