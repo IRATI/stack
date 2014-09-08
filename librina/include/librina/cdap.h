@@ -245,7 +245,6 @@ class CDAPMessage {
 
 public:
 	enum Opcode {
-		NONE_OPCODE,
 		M_CONNECT,
 		M_CONNECT_R,
 		M_RELEASE,
@@ -263,7 +262,8 @@ public:
 		M_START,
 		M_START_R,
 		M_STOP,
-		M_STOP_R
+		M_STOP_R,
+		NONE_OPCODE
 	};
 	enum AuthTypes {
 		AUTH_NONE, AUTH_PASSWD, AUTH_SSHRSA, AUTH_SSHDSA
