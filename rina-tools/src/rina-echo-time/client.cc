@@ -85,22 +85,27 @@ Flow* Client::createFlow()
         Flow* flow = nullptr;
         std::chrono::high_resolution_clock::time_point begintp =
                 std::chrono::high_resolution_clock::now();
+        AllocateFlowRequestResultEvent* afrrevent;
         FlowSpecification qosspec;
-        uint handle;
+        IPCEvent* event;
+        uint seqnum;
 
-        handle = ipcManager->requestFlowAllocation(ApplicationProcessNamingInformation(app_name,
-                                                                                            app_instance),
-                                                        ApplicationProcessNamingInformation(server_name,
-                                                                                            server_instance),
-                                                        qosspec);
-        (void) handle;
-        IPCEvent* event = ipcEventProducer->eventWait();
-        while(event && event->eventType != ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
-                LOG_INFO("Client got new event %d", event->eventType);
-                event = ipcEventProducer->eventWait();//todo this can make us wait forever
+        seqnum = ipcManager->requestFlowAllocation(
+                        ApplicationProcessNamingInformation(app_name, app_instance),
+                        ApplicationProcessNamingInformation(server_name, server_instance),
+                        qosspec);
+
+        for (;;) {
+                event = ipcEventProducer->eventWait();
+                if (event && event->eventType == ALLOCATE_FLOW_REQUEST_RESULT_EVENT
+                                && event->sequenceNumber == seqnum) {
+                        break;
+                }
+                LOG_DBG("Client got new event %d", event->eventType);
         }
-        AllocateFlowRequestResultEvent* afrrevent =
-                reinterpret_cast<AllocateFlowRequestResultEvent*>(event);
+
+        afrrevent = reinterpret_cast<AllocateFlowRequestResultEvent*>(event);
+
         flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
                                               afrrevent->portId,
                                               afrrevent->difName);
@@ -109,12 +114,15 @@ Flow* Client::createFlow()
         } else {
                 LOG_DBG("[DEBUG] Port id = %d", flow->getPortId());
         }
+
         std::chrono::high_resolution_clock::time_point eindtp =
                 std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
+
         if (!quiet) {
                 cout << "Flow allocation time = " << durationToString(dur) << endl;
         }
+
         return flow;
 }
 void Client::sendEcho(Flow* flow)
