@@ -262,16 +262,19 @@ void NeighborSetRIBObject::populateNeighborsToCreateList(rina::Neighbor* neighbo
 		std::list<rina::Neighbor *> * list) {
 	const rina::Neighbor * candidate;
 	std::list<BaseRIBObject*>::const_iterator it;
+	bool found = false;
 
 	for(it = get_children().begin(); it != get_children().end(); ++it) {
 		candidate = (const rina::Neighbor *) (*it)->get_value();
 		if (candidate->get_name().processName.compare(neighbor->name_.processName) == 0) {
 			list->push_back(neighbor);
-			return;
+			found = true;
 		}
 	}
-
-	delete neighbor;
+	if (!found)
+		list->push_back(neighbor);
+	else
+		delete neighbor;
 }
 
 void NeighborSetRIBObject::createObject(const std::string& objectClass,
@@ -568,6 +571,7 @@ void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
 				myself->add_supporting_dif((*it2));
 			}
 		}
+		neighbors.push_back(myself);
 
 		RIBObjectValue robject_value;
 		robject_value.type_ = RIBObjectValue::complextype;
@@ -595,16 +599,18 @@ void BaseEnrollmentStateMachine::sendCreateInformation(const std::string& object
 		return;
 	}
 
-	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
-		robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
-		RemoteIPCProcessId remote_id;
-		remote_id.port_id_ = port_id_;
+	if (ribObject->get_value()) {
+		try {
+			RIBObjectValue robject_value;
+			robject_value.type_ = RIBObjectValue::complextype;
+			robject_value.complex_value_ = const_cast<void*> (ribObject->get_value());
+			RemoteIPCProcessId remote_id;
+			remote_id.port_id_ = port_id_;
 
-		rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
-	} catch (Exception &e) {
-		LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
+			rib_daemon_->remoteCreateObject(objectClass, objectName, robject_value, 0, remote_id, 0);
+		} catch (Exception &e) {
+			LOG_ERR("Problems generating or sending CDAP message: %s", e.what());
+		}
 	}
 }
 
