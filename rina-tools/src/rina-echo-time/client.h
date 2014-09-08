@@ -42,7 +42,8 @@ public:
                void run();
 protected:
         rina::Flow* createFlow();
-        void pingFlow(rina::Flow* flow);
+        void pingFlow(rina::Flow *flow);
+        void destroyFlow(rina::Flow *flow);
 
 private:
         std::string server_name;

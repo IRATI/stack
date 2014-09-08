@@ -22,6 +22,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <cassert>
 #include <random>
 #include <thread>
 
@@ -72,12 +73,14 @@ Client::Client(const string& apn, const string& api,
 
 void Client::run()
 {
+        Flow *flow;
+
         applicationRegister();
-
-        Flow* flow = createFlow();
-
+        flow = createFlow();
         if (flow)
                 pingFlow(flow);
+        if (flow)
+                destroyFlow(flow);
 }
 
 Flow* Client::createFlow()
@@ -172,8 +175,36 @@ void Client::pingFlow(Flow* flow)
 
                                 n++;
                                 this_thread::sleep_for(std::chrono::milliseconds(wait));
-                } else
-                        flow = nullptr;
+                } else {
+                        break;
+                }
         }
 }
 
+void Client::destroyFlow(Flow *flow)
+{
+        DeallocateFlowResponseEvent *resp = nullptr;
+        unsigned int seqnum;
+        IPCEvent* event;
+        int port_id = flow->getPortId();
+
+        try {
+                seqnum = ipcManager->requestFlowDeallocation(port_id);
+
+                for (;;) {
+                        event = ipcEventProducer->eventWait();
+                        if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
+                                        && event->sequenceNumber == seqnum) {
+                                break;
+                        }
+                        LOG_DBG("Client got new event %d", event->eventType);
+                }
+                resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+                assert(resp);
+
+                ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+        } catch (FlowDeallocationException) {
+                LOG_ERR("Failed to deallocate flow");
+                return;
+        }
+}
