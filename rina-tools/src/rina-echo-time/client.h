@@ -28,28 +28,29 @@
 #include "application.h"
 
 
-class Client: public Application
-{
+class Client: public Application {
 public:
-    Client(const std::string& app_name_,
-           const std::string& app_instance_,
-           const std::string& server_name_,
-           const std::string& server_instance_,
-           bool  quiet_,
-           ulong echo_times_,
-           bool  client_app_reg_,
-           uint  data_size_);
-    void run();
+        Client(const std::string& apn,
+               const std::string& api,
+               const std::string& server_apn,
+               const std::string& server_api,
+               bool  quiet,
+               unsigned long count,
+               bool  registration,
+               unsigned int size,
+               unsigned int wait);
+               void run();
 protected:
-    rina::Flow* createFlow();
-    void pingFlow(rina::Flow* flow);
+        rina::Flow* createFlow();
+        void pingFlow(rina::Flow* flow);
 
 private:
-    std::string server_name;
-    std::string server_instance;
-    bool quiet;
-    ulong echo_times; // -1 is infinite
-    bool client_app_reg;
-    uint data_size;
+        std::string server_name;
+        std::string server_instance;
+        bool quiet;
+        unsigned long echo_times; // -1 is infinite
+        bool client_app_reg;
+        unsigned int data_size;
+        unsigned int wait;
 };
 #endif//CLIENT_HPP

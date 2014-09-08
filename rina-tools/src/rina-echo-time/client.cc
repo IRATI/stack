@@ -2,6 +2,7 @@
 // Echo Client
 // 
 // Addy Bombeke <addy.bombeke@ugent.be>
+// Vincenzo Maffione <v.maffione@nextworks.it>
 // 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,7 +34,6 @@ using namespace std;
 using namespace rina;
 
 
-static std::chrono::seconds      wait_time = std::chrono::seconds(1);
 static std::chrono::seconds      thres_s   = std::chrono::seconds(9);
 static std::chrono::milliseconds thres_ms  = std::chrono::milliseconds(9);
 static std::chrono::microseconds thres_us  = std::chrono::microseconds(9);
@@ -59,15 +59,15 @@ durationToString(const std::chrono::high_resolution_clock::duration&
         return ss.str();
 }
 
-Client::Client(const string& app_name_, const string& app_instance_,
-               const string& server_name_, const string& server_instance_,
-               bool quiet_, ulong echo_times_,
-               bool client_app_reg_,
-               uint data_size_) :
-        Application(app_name_, app_instance_),
-        server_name(server_name_), server_instance(server_instance_),
-        quiet(quiet_), echo_times(echo_times_),
-        client_app_reg(client_app_reg_), data_size(data_size_)
+Client::Client(const string& apn, const string& api,
+               const string& server_apn, const string& server_api,
+               bool q, unsigned long count,
+               bool registration, unsigned int size,
+               unsigned int w) :
+        Application(apn, api),
+        server_name(server_apn), server_instance(server_api),
+        quiet(q), echo_times(count),
+        client_app_reg(registration), data_size(size), wait(w)
 { }
 
 void Client::run()
@@ -171,7 +171,7 @@ void Client::pingFlow(Flow* flow)
                                 cout << endl;
 
                                 n++;
-                                this_thread::sleep_for(wait_time);
+                                this_thread::sleep_for(std::chrono::milliseconds(wait));
                 } else
                         flow = nullptr;
         }

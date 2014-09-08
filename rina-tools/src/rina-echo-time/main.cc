@@ -43,6 +43,7 @@ int wrapped_main(int argc, char** argv)
         bool quiet;
         unsigned int count;
         unsigned int size;
+        unsigned int wait;
         string server_apn = "rina.apps.echotime.server";
         string server_api = "1";
         string client_apn = "rina.apps.echotime.client";
@@ -74,12 +75,19 @@ int wrapped_main(int argc, char** argv)
                                                        false,
                                                        20,
                                                        "unsigned integer");
+                TCLAP::ValueArg<unsigned int> wait_arg("w",
+                                                       "wait-time",
+                                                       "Time to wait between two packets (ms)",
+                                                       false,
+                                                       1000,
+                                                       "unsigned integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
                 cmd.add(registration_arg);
                 cmd.add(quiet_arg);
                 cmd.add(size_arg);
+                cmd.add(wait_arg);
 
                 cmd.parse(argc, argv);
 
@@ -88,6 +96,7 @@ int wrapped_main(int argc, char** argv)
                 registration = registration_arg.getValue();
                 quiet = quiet_arg.getValue();
                 size = size_arg.getValue();
+                wait = wait_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -111,7 +120,7 @@ int wrapped_main(int argc, char** argv)
         } else {
                 // Client mode
                 Client c(client_apn, client_api, server_apn, server_api,
-                         quiet, count, registration, size);
+                         quiet, count, registration, size, wait);
 
                 c.run();
         }
