@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <random>
 #include <thread>
 
@@ -30,6 +31,33 @@
 
 using namespace std;
 using namespace rina;
+
+
+static std::chrono::seconds      wait_time = std::chrono::seconds(1);
+static std::chrono::seconds      thres_s   = std::chrono::seconds(9);
+static std::chrono::milliseconds thres_ms  = std::chrono::milliseconds(9);
+static std::chrono::microseconds thres_us  = std::chrono::microseconds(9);
+
+static string
+durationToString(const std::chrono::high_resolution_clock::duration&
+                           dur)
+{
+        std::stringstream ss;
+
+        if (dur > thres_s)
+                ss << std::chrono::duration_cast<std::chrono::seconds>(dur).count() << "s";
+        else if (dur > thres_ms)
+                ss << std::chrono::duration_cast<std::chrono::milliseconds>
+                        (dur).count() << "ms";
+        else if (dur > thres_us)
+                ss << std::chrono::duration_cast<std::chrono::microseconds>
+                        (dur).count() << "us";
+        else
+                ss << std::chrono::duration_cast<std::chrono::nanoseconds>
+                        (dur).count() << "ns";
+
+        return ss.str();
+}
 
 Client::Client(const string& app_name_, const string& app_instance_,
                const string& server_name_, const string& server_instance_,
@@ -85,9 +113,7 @@ Flow* Client::makeConnection()
                 std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
         if(time_flow_creation) {
-                cout << "flow_creation_time=";
-                printDuration(dur);
-                cout << endl;
+                cout << "flow_creation_time = " << durationToString(dur) << endl;
         }
         return flow;
 }
@@ -127,8 +153,8 @@ void Client::sendEcho(Flow* flow)
                                 std::chrono::high_resolution_clock::time_point eindtp =
                                         std::chrono::high_resolution_clock::now();
                                 std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
-                                cout << "sdu_size=" << data_size << " seq=" << n << " time=";
-                                printDuration(dur);
+                                cout << "sdu_size = " << data_size << " seq = " << n << " time = "
+                                        <<  durationToString(dur);
                                 if (!((data_size == (uint) bytesreaded) &&
                                       (memcmp(buffer, buffer2, data_size) == 0)))
                                         cout << " bad check";
@@ -143,25 +169,3 @@ void Client::sendEcho(Flow* flow)
         }
 }
 
-
-void Client::printDuration(const std::chrono::high_resolution_clock::duration&
-                           dur)
-{
-        if(dur > thres_s)
-                cout << std::chrono::duration_cast<std::chrono::seconds>(dur).count() << "s";
-        else if(dur > thres_ms)
-                cout << std::chrono::duration_cast<std::chrono::milliseconds>
-                        (dur).count() << "ms";
-        else if(dur > thres_us)
-                cout << std::chrono::duration_cast<std::chrono::microseconds>
-                        (dur).count() << "us";
-        else
-                cout << std::chrono::duration_cast<std::chrono::nanoseconds>
-                        (dur).count() << "ns";
-
-}
-
-std::chrono::seconds      Client::wait_time = std::chrono::seconds(1);
-std::chrono::seconds      Client::thres_s   = std::chrono::seconds(9);
-std::chrono::milliseconds Client::thres_ms  = std::chrono::milliseconds(9);
-std::chrono::microseconds Client::thres_us  = std::chrono::microseconds(9);

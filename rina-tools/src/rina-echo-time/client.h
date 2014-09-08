@@ -21,6 +21,7 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
+#include <string>
 #include <chrono>
 #include <librina/librina.h>
 
@@ -42,7 +43,6 @@ public:
 protected:
     rina::Flow* makeConnection();
     void sendEcho(rina::Flow* flow);
-    static  void printDuration(const std::chrono::high_resolution_clock::duration& dur);
 
 private:
     std::string server_name;
@@ -51,11 +51,5 @@ private:
     ulong echo_times;// -1 is infinit
     bool client_app_reg;
     uint data_size;
-
-    static std::chrono::seconds wait_time;
-  //threshold
-    static std::chrono::seconds thres_s;
-    static std::chrono::milliseconds thres_ms;
-    static std::chrono::microseconds thres_us;
 };
 #endif//CLIENT_HPP
