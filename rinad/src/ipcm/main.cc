@@ -43,6 +43,7 @@ int wrapped_main(int argc, char * argv[])
         std::string conf;
         std::string logfile;
         std::string loglevel;
+        unsigned int wait_time;
 
         // Wrap everything in a try block.  Do this every time,
         // because exceptions will be thrown for problems.
@@ -72,10 +73,18 @@ int wrapped_main(int argc, char * argv[])
                                      false,
                                      "INFO",
                                      "string");
+                TCLAP::ValueArg<unsigned int>
+                        wait_time_arg("w",
+                                     "wait-time",
+                                     "Maximum time (in seconds) to wait for an event response",
+                                     false,
+                                     10,
+                                     "unsigned int");
 
                 cmd.add(conf_arg);
                 cmd.add(logfile_arg);
                 cmd.add(loglevel_arg);
+                cmd.add(wait_time_arg);
 
                 // Parse the args.
                 cmd.parse(argc, argv);
@@ -84,6 +93,7 @@ int wrapped_main(int argc, char * argv[])
                 conf     = conf_arg.getValue();
                 logfile  = logfile_arg.getValue();
                 loglevel = loglevel_arg.getValue();
+                wait_time = wait_time_arg.getValue();
 
                 LOG_DBG("Config file is: %s", conf.c_str());
 
@@ -94,7 +104,7 @@ int wrapped_main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        rinad::IPCManager ipcm;
+        rinad::IPCManager ipcm(wait_time);
         rinad::EventLoop  loop(&ipcm);
 
         if (!parse_configuration(conf, &ipcm)) {
