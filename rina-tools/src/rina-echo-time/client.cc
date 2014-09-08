@@ -23,6 +23,9 @@
 #include <random>
 #include <thread>
 
+#define RINA_PREFIX     "rina-echo-time"
+#include <librina/logs.h>
+
 #include "client.h"
 
 using namespace std;
@@ -32,12 +35,11 @@ Client::Client(const string& app_name_, const string& app_instance_,
                const string& server_name_, const string& server_instance_,
                bool time_flow_creation_, ulong echo_times_,
                bool client_app_reg_,
-               uint data_size_, bool debug_mes_) :
+               uint data_size_) :
         Application(app_name_, app_instance_),
         server_name(server_name_), server_instance(server_instance_),
         time_flow_creation(time_flow_creation_), echo_times(echo_times_),
-        client_app_reg(client_app_reg_), data_size(data_size_),
-        debug_mes(debug_mes_)
+        client_app_reg(client_app_reg_), data_size(data_size_)
 { }
 
 void Client::run()
@@ -61,30 +63,28 @@ Flow* Client::makeConnection()
         std::chrono::high_resolution_clock::time_point begintp =
                 std::chrono::high_resolution_clock::now();
         FlowSpecification qosspec;
-#if 0
-        uint handle = ipcManager->requestFlowAllocation(
-                                                        ApplicationProcessNamingInformation(app_name,
+        uint handle;
+
+        handle = ipcManager->requestFlowAllocation(ApplicationProcessNamingInformation(app_name,
                                                                                             app_instance),
                                                         ApplicationProcessNamingInformation(server_name,
                                                                                             server_instance),
                                                         qosspec);
-#endif
+        (void) handle;
         IPCEvent* event = ipcEventProducer->eventWait();
         while(event && event->eventType != ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
-                if(debug_mes)
-                        cerr << "[DEBUG] Client got new event " << event->eventType << endl;
+                LOG_INFO("Client got new event %d", event->eventType);
                 event = ipcEventProducer->eventWait();//todo this can make us wait forever
         }
         AllocateFlowRequestResultEvent* afrrevent =
                 reinterpret_cast<AllocateFlowRequestResultEvent*>(event);
-        Flow* hulpflow =
-                ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
+        flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
                                               afrrevent->portId,
                                               afrrevent->difName);
-        if(hulpflow->getPortId() == -1) {
-                cerr << "Host not found" << endl;
+        if (!flow || flow->getPortId() == -1) {
+                LOG_ERR("Host not found");
         } else {
-                flow = hulpflow;
+                LOG_DBG("[DEBUG] Port id = %d", flow->getPortId());
         }
         std::chrono::high_resolution_clock::time_point eindtp =
                 std::chrono::high_resolution_clock::now();
@@ -113,8 +113,7 @@ void Client::sendEcho(Flow* flow)
                                 flow = nullptr;
                                 break;
                         default:
-                                if(debug_mes)
-                                        cerr << "[DEBUG] Client got new event " << event->eventType << endl;
+                                LOG_INFO("Client got new event %d", event->eventType);
                                 break;
                         }
                 } else {
@@ -128,7 +127,7 @@ void Client::sendEcho(Flow* flow)
                                         flow->writeSDU(buffer, data_size);
                                         bytesreaded = flow->readSDU(buffer2, data_size);
                                 } catch(...) {
-                                        cerr << "flow I/O fail" << endl;
+                                        LOG_ERR("SDU write/read failed");
                                 }
                                 std::chrono::high_resolution_clock::time_point eindtp =
                                         std::chrono::high_resolution_clock::now();

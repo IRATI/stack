@@ -30,7 +30,7 @@ ApplicationBuilder::ApplicationBuilder():
         client_name("rina.apps.echotime.client"), client_instance(""),
         server_name("rina.apps.echotime.server"), server_instance("1"),
         time_flow_creation(false), echo_times(-1), client_app_reg(false),
-        data_size(64), debug_mes(false), server(false), help(false)
+        data_size(64), server(false), help(false)
 { }
 
 void ApplicationBuilder::configure(int argc, char** argv)
@@ -43,12 +43,6 @@ void ApplicationBuilder::configure(int argc, char** argv)
                         break;
                 case 'L':
                         server = false;
-                        break;
-                case 'x':
-                        debug_mes = true;
-                        break;
-                case 'X':
-                        debug_mes = false;
                         break;
                 case 'r':
                         client_app_reg = true;
@@ -93,14 +87,14 @@ void ApplicationBuilder::configure(int argc, char** argv)
 void ApplicationBuilder::runApplication()
 {
         if (server) {
-                Server s(server_name, server_instance, debug_mes);
+                Server s(server_name, server_instance);
 
                 s.run();
         } else {
                 Client s(client_name, client_instance,
                          server_name, server_instance,
                          time_flow_creation, echo_times,
-                         client_app_reg, data_size, debug_mes);
+                         client_app_reg, data_size);
 
                 s.run();
         }

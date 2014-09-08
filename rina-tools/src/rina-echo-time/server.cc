@@ -21,16 +21,17 @@
 #include <iostream>
 #include <thread>
 
+#define RINA_PREFIX     "rina-echo-app"
+#include <librina/logs.h>
+
 #include "server.h"
 
 using namespace std;
 using namespace rina;
 
 Server::Server(const string & app_name_,
-               const string & app_instance_,
-               bool           debug_mes_) :
-        Application(app_name_, app_instance_),
-        debug_mes(debug_mes_)
+               const string & app_instance_) :
+        Application(app_name_, app_instance_)
 { }
 
 void Server::run()
@@ -54,6 +55,7 @@ void Server::run()
                         Flow* flow = ipcManager->
                                 allocateFlowResponse(*reinterpret_cast<FlowRequestEvent*>(event), 0, true);
                         thread t(&Server::runFlow, this, flow);
+                        LOG_DBG("port-id = %d", flow->getPortId());
                         t.detach();
                         break;
                 }
@@ -62,9 +64,8 @@ void Server::run()
                                                             (event)->portId);
                         break;
                 default:
-                        if (debug_mes)
-                                cerr << "[DEBUG] Server got new event "
-                                     << event->eventType << endl;
+                        LOG_INFO("Server got new event of type %d",
+                                        event->eventType);
                         break;
                 }
         }
@@ -82,7 +83,9 @@ void Server::runFlow(Flow* flow)
                                                         max_buffer_size);
                         flow->writeSDU(buffer, bytesreaded);
                 }
-        } catch(...) {
-                cerr << "flow I/O fail" << endl;
+        } catch(rina::IPCException e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets dellocated
+                LOG_INFO("Flow torn down by remote application");
         }
 }
