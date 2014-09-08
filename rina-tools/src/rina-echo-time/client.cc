@@ -35,12 +35,11 @@ Client::Client(const string& app_name_, const string& app_instance_,
                const string& server_name_, const string& server_instance_,
                bool time_flow_creation_, ulong echo_times_,
                bool client_app_reg_,
-               uint data_size_, bool debug_mes_) :
+               uint data_size_) :
         Application(app_name_, app_instance_),
         server_name(server_name_), server_instance(server_instance_),
         time_flow_creation(time_flow_creation_), echo_times(echo_times_),
-        client_app_reg(client_app_reg_), data_size(data_size_),
-        debug_mes(debug_mes_)
+        client_app_reg(client_app_reg_), data_size(data_size_)
 { }
 
 void Client::run()

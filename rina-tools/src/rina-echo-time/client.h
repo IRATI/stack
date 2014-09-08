@@ -37,8 +37,7 @@ public:
            bool  time_flow_creation_,
            ulong echo_times_,
            bool  client_app_reg_,
-           uint  data_size_,
-           bool  debug_mes_);
+           uint  data_size_);
     void run();
 protected:
     void init();
@@ -53,7 +52,6 @@ private:
     ulong echo_times;// -1 is infinit
     bool client_app_reg;
     uint data_size;
-    bool debug_mes;
 
     static std::chrono::seconds wait_time;
   //threshold

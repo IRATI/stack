@@ -38,7 +38,6 @@ private:
         ulong echo_times;// -1 is infinit
         bool client_app_reg;
         uint data_size;
-        bool debug_mes;
         bool server;
         bool help;
 };

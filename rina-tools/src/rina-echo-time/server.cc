@@ -30,10 +30,8 @@ using namespace std;
 using namespace rina;
 
 Server::Server(const string & app_name_,
-               const string & app_instance_,
-               bool           debug_mes_) :
-        Application(app_name_, app_instance_),
-        debug_mes(debug_mes_)
+               const string & app_instance_) :
+        Application(app_name_, app_instance_)
 { }
 
 void Server::run()
