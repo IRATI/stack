@@ -74,13 +74,13 @@ void Client::run()
 {
         applicationRegister();
 
-        Flow* flow = makeConnection();
+        Flow* flow = createFlow();
 
         if(flow)
                 sendEcho(flow);
 }
 
-Flow* Client::makeConnection()
+Flow* Client::createFlow()
 {
         Flow* flow = nullptr;
         std::chrono::high_resolution_clock::time_point begintp =
@@ -143,10 +143,10 @@ void Client::sendEcho(Flow* flow)
                                         buffer[i] = dis(ran);
                                 std::chrono::high_resolution_clock::time_point begintp =
                                         std::chrono::high_resolution_clock::now();
-                                int bytesreaded = 0;
+                                int bytes_read = 0;
                                 try {
                                         flow->writeSDU(buffer, data_size);
-                                        bytesreaded = flow->readSDU(buffer2, data_size);
+                                        bytes_read = flow->readSDU(buffer2, data_size);
                                 } catch(...) {
                                         LOG_ERR("SDU write/read failed");
                                 }
@@ -155,7 +155,7 @@ void Client::sendEcho(Flow* flow)
                                 std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
                                 cout << "sdu_size = " << data_size << " seq = " << n << " time = "
                                         <<  durationToString(dur);
-                                if (!((data_size == (uint) bytesreaded) &&
+                                if (!((data_size == (uint) bytes_read) &&
                                       (memcmp(buffer, buffer2, data_size) == 0)))
                                         cout << " bad check";
                                 cout << endl;

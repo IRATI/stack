@@ -34,7 +34,7 @@ public:
         void run();
 
 protected:
-        void runFlow(rina::Flow * f);
+        void serveFlow(rina::Flow * f);
 };
 
 #endif

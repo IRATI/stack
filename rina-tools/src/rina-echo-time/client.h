@@ -41,7 +41,7 @@ public:
            uint  data_size_);
     void run();
 protected:
-    rina::Flow* makeConnection();
+    rina::Flow* createFlow();
     void sendEcho(rina::Flow* flow);
 
 private:

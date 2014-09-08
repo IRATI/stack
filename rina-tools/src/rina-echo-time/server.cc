@@ -54,7 +54,7 @@ void Server::run()
                 case FLOW_ALLOCATION_REQUESTED_EVENT: {
                         Flow* flow = ipcManager->
                                 allocateFlowResponse(*reinterpret_cast<FlowRequestEvent*>(event), 0, true);
-                        thread t(&Server::runFlow, this, flow);
+                        thread t(&Server::serveFlow, this, flow);
                         LOG_DBG("port-id = %d", flow->getPortId());
                         t.detach();
                         break;
@@ -71,14 +71,14 @@ void Server::run()
         }
 }
 
-void Server::runFlow(Flow* flow)
+void Server::serveFlow(Flow* flow)
 {
         char buffer[max_buffer_size];
         try {
                 for(;;) {
-                        int bytesreaded = flow->readSDU(buffer,
+                        int bytes_read = flow->readSDU(buffer,
                                                         max_buffer_size);
-                        flow->writeSDU(buffer, bytesreaded);
+                        flow->writeSDU(buffer, bytes_read);
                 }
         } catch(rina::IPCException e) {
                 // This thread was blocked in the readSDU() function
