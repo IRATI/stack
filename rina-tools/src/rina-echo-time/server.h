@@ -35,6 +35,9 @@ public:
 
 protected:
         void serveFlow(rina::Flow * f);
+
+private:
+        void startWorker(rina::Flow * f);
 };
 
 #endif

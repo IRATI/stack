@@ -40,35 +40,48 @@ void Server::run()
 
         for(;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
+                Flow *flow = nullptr;
+                unsigned int port_id;
+
                 if (!event)
                         return;
-                switch(event->eventType) {
+
+                switch (event->eventType) {
+
                 case REGISTER_APPLICATION_RESPONSE_EVENT:
                         ipcManager->commitPendingRegistration(event->sequenceNumber,
-                                                             reinterpret_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
+                                                             dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
                         break;
+
                 case UNREGISTER_APPLICATION_RESPONSE_EVENT:
                         ipcManager->appUnregistrationResult(event->sequenceNumber,
-                                                            reinterpret_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
+                                                            dynamic_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
                         break;
-                case FLOW_ALLOCATION_REQUESTED_EVENT: {
-                        Flow* flow = ipcManager->
-                                allocateFlowResponse(*reinterpret_cast<FlowRequestEvent*>(event), 0, true);
-                        thread t(&Server::serveFlow, this, flow);
-                        LOG_DBG("port-id = %d", flow->getPortId());
-                        t.detach();
+
+                case FLOW_ALLOCATION_REQUESTED_EVENT:
+                        flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true);
+                        LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
+                        startWorker(flow);
                         break;
-                }
+
                 case FLOW_DEALLOCATED_EVENT:
-                        ipcManager->flowDeallocated(reinterpret_cast<FlowDeallocatedEvent*>
-                                                            (event)->portId);
+                        port_id = dynamic_cast<FlowDeallocatedEvent*>(event)->portId;
+                        ipcManager->flowDeallocated(port_id);
+                        LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
                         break;
+
                 default:
                         LOG_INFO("Server got new event of type %d",
                                         event->eventType);
                         break;
                 }
         }
+}
+
+void Server::startWorker(Flow *flow)
+{
+        thread t(&Server::serveFlow, this, flow);
+        t.detach();
 }
 
 void Server::serveFlow(Flow* flow)
@@ -83,6 +96,5 @@ void Server::serveFlow(Flow* flow)
         } catch(rina::IPCException e) {
                 // This thread was blocked in the readSDU() function
                 // when the flow gets dellocated
-                LOG_INFO("Flow torn down by remote application");
         }
 }
