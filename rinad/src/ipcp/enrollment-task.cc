@@ -551,23 +551,30 @@ void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
 	std::vector<rina::ApplicationRegistration *> registrations;
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
 	try {
+		LOG_DBG("[TMP_DEBUG] Create Neighbor set");
 		neighborSet = rib_daemon_->readObject(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 				EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_NAME);
 		for (it = neighborSet->get_children().begin();
 				it != neighborSet->get_children().end(); ++it) {
+			LOG_DBG("[TMP_DEBUG] Neighbor added");
 			neighbors.push_back((rina::Neighbor*) (*it)->get_value());
 		}
 
+		LOG_DBG("[TMP_DEBUG] Myself:");
 		myself = new rina::Neighbor();
 		myself->address_ = ipc_process_->get_address();
+		LOG_DBG("[TMP_DEBUG] Myself address: %d", ipc_process_->get_address());
 		myself->name_ = ipc_process_->get_name();
+		LOG_DBG("[TMP_DEBUG] Myself address: %s", ipc_process_->get_name().processName.c_str());
 		registrations = rina::extendedIPCManager->getRegisteredApplications();
 		for (unsigned int i=0; i<registrations.size(); i++) {
 			for(it2 = registrations[i]->DIFNames.begin();
 					it2 != registrations[i]->DIFNames.end(); ++it2) {
+				LOG_DBG("[TMP_DEBUG] Myself add one DIF: %s", it2->processName.c_str());
 				myself->add_supporting_dif((*it2));
 			}
 		}
+		neighbors.push_back(myself);
 
 		RIBObjectValue robject_value;
 		robject_value.type_ = RIBObjectValue::complextype;
@@ -1193,9 +1200,11 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest * eiRequest, int i
 
 	//If initialization is required send the M_CREATEs
 	if (requiresInitialization){
+		LOG_DBG("[TMP_DEBUG] sendDIFStaticInformation");
 		sendDIFStaticInformation();
 	}
 
+	LOG_DBG("[TMP_DEBUG] sendDIFDynamicInformation");
 	sendDIFDynamicInformation();
 
 	//Send the M_STOP request
