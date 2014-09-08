@@ -580,7 +580,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
         if (seq_num > (last_ctrl + 1))
-                return dtcp->policies->lost_control_pdu(dtcp);
+                dtcp->policies->lost_control_pdu(dtcp);
 
         if (seq_num <= last_ctrl) {
                 switch (type) {
@@ -710,6 +710,7 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         if (last_snd_data_ack(dtcp) < LWE) {
                 last_snd_data_ack_set(dtcp, LWE);
                 if (!a) {
+#if 0
                         if (seq > LWE) {
                                 LOG_DBG("This is a NACK, "
                                         "LWE couldn't be updated");
@@ -718,12 +719,14 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                                 }
                                 return PDU_TYPE_NACK;
                         }
+#endif
                         LOG_DBG("This is an ACK");
                         if (dtcp_flow_ctrl(dtcp_cfg)) {
                                 return PDU_TYPE_ACK_AND_FC;
                         }
                         return PDU_TYPE_ACK;
                 }
+#if 0
                 if (seq > LWE) {
                         /* FIXME: This should be a SEL ACK */
                         LOG_DBG("This is a NACK, "
@@ -733,6 +736,7 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                         }
                         return PDU_TYPE_NACK;
                 }
+#endif
                 LOG_DBG("This is an ACK");
                 if (dtcp_flow_ctrl(dtcp_cfg)) {
                         return PDU_TYPE_ACK_AND_FC;
@@ -1142,16 +1146,6 @@ int dtcp_destroy(struct dtcp * instance)
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
         return 0;
-}
-
-int dtcp_send(struct dtcp * instance,
-              struct sdu *  sdu)
-{
-        LOG_MISSING;
-
-        /* Takes the pdu and enqueue in its internal queues */
-
-        return -1;
 }
 
 int dtcp_sv_update(struct dtcp * instance,

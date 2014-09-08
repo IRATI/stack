@@ -1188,6 +1188,7 @@ int rmt_flush_work(struct rmt * rmt)
         }
 
         rwq_flush(rmt->ingress.wq);
+        LOG_DBG("RMT Ingress WQ  %p has been flushed", rmt->ingress.wq);
 
         return 0;
 }
@@ -1205,6 +1206,8 @@ int rmt_restart_work(struct rmt * rmt)
         if (!item)
                 return -1;
         rwq_work_post(rmt->ingress.wq, item);
+        LOG_DBG("RMT Ingress WQ  %p has been restarted with WI %p",
+                rmt->ingress.wq, item);
 
         return 0;
 }
