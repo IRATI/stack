@@ -498,10 +498,8 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 			// update, therefore the message is handled to the object. If the object
 			// doesn't exist it is a CREATE, therefore it is handled to the parent object
 			try {
-				LOG_DBG("M_CREATE received");
 				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
 											cdapMessage->get_obj_name(), true);
-				LOG_DBG("M_CREATE cdapMessage->get_obj_class() %s, cdapMessage->get_obj_name() %s", cdapMessage->get_obj_class().c_str(), cdapMessage->get_obj_name().c_str());
 				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
 						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			} catch (Exception &e) {
