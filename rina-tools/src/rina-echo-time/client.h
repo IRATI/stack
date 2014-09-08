@@ -40,7 +40,6 @@ public:
            uint  data_size_);
     void run();
 protected:
-    void init();
     rina::Flow* makeConnection();
     void sendEcho(rina::Flow* flow);
     static  void printDuration(const std::chrono::high_resolution_clock::duration& dur);

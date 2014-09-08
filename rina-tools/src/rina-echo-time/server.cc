@@ -36,7 +36,7 @@ Server::Server(const string & app_name_,
 
 void Server::run()
 {
-        init();
+        applicationRegister();
 
         for(;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
@@ -70,9 +70,6 @@ void Server::run()
                 }
         }
 }
-
-void Server::init()
-{ applicationRegister(); }
 
 void Server::runFlow(Flow* flow)
 {

@@ -44,17 +44,12 @@ Client::Client(const string& app_name_, const string& app_instance_,
 
 void Client::run()
 {
-        init();
+        applicationRegister();
 
         Flow* flow = makeConnection();
 
         if(flow)
                 sendEcho(flow);
-}
-
-void Client::init()
-{
-        applicationRegister();
 }
 
 Flow* Client::makeConnection()
