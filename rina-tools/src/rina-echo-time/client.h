@@ -42,13 +42,13 @@ public:
     void run();
 protected:
     rina::Flow* createFlow();
-    void sendEcho(rina::Flow* flow);
+    void pingFlow(rina::Flow* flow);
 
 private:
     std::string server_name;
     std::string server_instance;
     bool quiet;
-    ulong echo_times;// -1 is infinit
+    ulong echo_times; // -1 is infinite
     bool client_app_reg;
     uint data_size;
 };

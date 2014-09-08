@@ -76,8 +76,8 @@ void Client::run()
 
         Flow* flow = createFlow();
 
-        if(flow)
-                sendEcho(flow);
+        if (flow)
+                pingFlow(flow);
 }
 
 Flow* Client::createFlow()
@@ -125,18 +125,20 @@ Flow* Client::createFlow()
 
         return flow;
 }
-void Client::sendEcho(Flow* flow)
+
+void Client::pingFlow(Flow* flow)
 {
         char buffer[max_buffer_size];
         char buffer2[max_buffer_size];
         ulong n = 0;
-        ulong c = echo_times;
         random_device rd;
         default_random_engine ran(rd());
         uniform_int_distribution<int> dis(0, 255);
-        while(flow) {
+
+        while (flow) {
                 IPCEvent* event = ipcEventProducer->eventPoll();
-                if(event) {
+
+                if (event) {
                         switch(event->eventType) {
                         case FLOW_DEALLOCATED_EVENT:
                                 flow = nullptr;
@@ -145,35 +147,33 @@ void Client::sendEcho(Flow* flow)
                                 LOG_INFO("Client got new event %d", event->eventType);
                                 break;
                         }
-                } else {
-                        if(c != 0) {
-                                for(uint i = 0; i < data_size; ++i)
-                                        buffer[i] = dis(ran);
-                                std::chrono::high_resolution_clock::time_point begintp =
-                                        std::chrono::high_resolution_clock::now();
+                } else if (n < echo_times) {
+                                std::chrono::high_resolution_clock::time_point begintp, endtp;
                                 int bytes_read = 0;
+
+                                for (uint i = 0; i < data_size; i++) {
+                                        buffer[i] = dis(ran);
+                                }
+
                                 try {
+                                        begintp = std::chrono::high_resolution_clock::now();
                                         flow->writeSDU(buffer, data_size);
                                         bytes_read = flow->readSDU(buffer2, data_size);
-                                } catch(...) {
+                                        endtp = std::chrono::high_resolution_clock::now();
+                                } catch (...) {
                                         LOG_ERR("SDU write/read failed");
                                 }
-                                std::chrono::high_resolution_clock::time_point eindtp =
-                                        std::chrono::high_resolution_clock::now();
-                                std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
-                                cout << "sdu_size = " << data_size << " seq = " << n << " time = "
-                                        <<  durationToString(dur);
+                                cout << "SDU size = " << data_size << ", seq = " << n <<
+                                        ", RTT = " << durationToString(endtp - begintp);
                                 if (!((data_size == (uint) bytes_read) &&
                                       (memcmp(buffer, buffer2, data_size) == 0)))
-                                        cout << " bad check";
+                                        cout << " [bad response]";
                                 cout << endl;
+
                                 n++;
-                                if(c != static_cast<ulong>(-1))
-                                        c--;
                                 this_thread::sleep_for(wait_time);
-                        } else
-                                flow = nullptr;
-                }
+                } else
+                        flow = nullptr;
         }
 }
 
