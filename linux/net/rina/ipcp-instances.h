@@ -85,6 +85,8 @@ struct dt_cons {
         bool      dif_integrity;
 };
 
+struct dt_cons * dt_cons_dup(const struct dt_cons * dt_cons);
+
 /* Represents the configuration of the EFCP */
 struct efcp_config {
         /* The data transfer constants */

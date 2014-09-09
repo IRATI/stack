@@ -36,7 +36,6 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		QoSCube qosCube = selectQoSCube(event.getFlowSpecification(), qosCubes);
 		log.debug("Selected qosCube with name "+qosCube.getName()+ " and policies: + " +
 				"\n"+ qosCube.getEfcpPolicies().toString());
-		qosCube.getEfcpPolicies().setDtcpPresent(false);
 		
 		Connection connection = new Connection();
 		//TODO hardcoded value, we don't deal with QoS yet
@@ -47,10 +46,10 @@ public class NewFlowRequestPolicyImpl implements NewFlowRequestPolicy{
 		ConnectionPolicies connectionPolicies = qosCube.getEfcpPolicies();
 		connectionPolicies.setInOrderDelivery(qosCube.isOrderedDelivery());
 		connectionPolicies.setPartialDelivery(qosCube.isPartialDelivery());
-		if (qosCube.getMaxAllowableGap() == -1) {
+		if (event.getFlowSpecification().getMaxAllowableGap() == -1) {
 			connectionPolicies.setMaxSduGap(Integer.MAX_VALUE);
 		} else {
-			connectionPolicies.setMaxSduGap(qosCube.getMaxAllowableGap());
+			connectionPolicies.setMaxSduGap(event.getFlowSpecification().getMaxAllowableGap());
 		}
 		
 		connection.setPolicies(connectionPolicies);

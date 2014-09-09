@@ -178,41 +178,47 @@ public class NMinus1FlowManagerImpl implements NMinus1FlowManager{
 	 * Called by an N-1 DIF
 	 */
 	public synchronized void flowAllocationRequested(FlowRequestEvent event) throws IPCException {
-		if (event.getLocalApplicationName().getProcessName().equals(
+		if (!event.getLocalApplicationName().getProcessName().equals(
 				ipcProcess.getName().getProcessName())
-				&& event.getLocalApplicationName().getProcessInstance().equals(
+				|| !event.getLocalApplicationName().getProcessInstance().equals(
 						ipcProcess.getName().getProcessInstance())){
-			
-			//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-			//is both used for data transfer and management purposes
-			if (ipcManager.getFlowToRemoteApp(event.getRemoteApplicationName()) != null) {
-					log.info("Rejecting flow since we already have a" + 
-							" flow to the remote application: " + event.getRemoteApplicationName());
-					ipcManager.allocateFlowResponse(event, -1, true);
-					return;
-			}
-			
-			Flow flow = ipcManager.allocateFlowResponse(event, 0, true);
-			log.info("Accepted new flow from "+ flow.getRemoteApplcationName());
-			
-			try{
-				ribDaemon.create(NMinus1FlowRIBObject.N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, 
-						NMinus1FlowSetRIBObject.N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME + 
-						RIBObjectNames.SEPARATOR + event.getPortId(), 
-						flow.getFlowInformation());
-			}catch(RIBDaemonException ex){
-				log.warn("Error creating N Minus One Flow RIB Object", ex);
-			}
-			
-			//Notify about the event
-			NMinusOneFlowAllocatedEvent allocEvent = new NMinusOneFlowAllocatedEvent(
-					flow.getFlowInformation(), event.getSequenceNumber());
-			this.ribDaemon.deliverEvent(allocEvent);
-		}else{
 			log.error("Rejected flow from "+event.getRemoteApplicationName() + 
 					" since this IPC Process is not the intended destination of this flow");
 			ipcManager.allocateFlowResponse(event, -1, true);
+			return;
 		}
+		
+		if (ipcProcess.getOperationalState() != IPCProcess.State.ASSIGNED_TO_DIF) {
+			log.error("Rejected flow since this IPC Process is not assigned to a DIF yet");
+			ipcManager.allocateFlowResponse(event, -1, true);
+			return;
+		}
+
+		//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+		//is both used for data transfer and management purposes
+		if (ipcManager.getFlowToRemoteApp(event.getRemoteApplicationName()) != null) {
+			log.info("Rejecting flow since we already have a" + 
+					" flow to the remote application: " + event.getRemoteApplicationName());
+			ipcManager.allocateFlowResponse(event, -1, true);
+			return;
+		}
+
+		Flow flow = ipcManager.allocateFlowResponse(event, 0, true);
+		log.info("Accepted new flow from "+ flow.getRemoteApplcationName());
+
+		try{
+			ribDaemon.create(NMinus1FlowRIBObject.N_MINUS_ONE_FLOW_RIB_OBJECT_CLASS, 
+					NMinus1FlowSetRIBObject.N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME + 
+					RIBObjectNames.SEPARATOR + event.getPortId(), 
+					flow.getFlowInformation());
+		}catch(RIBDaemonException ex){
+			log.warn("Error creating N Minus One Flow RIB Object", ex);
+		}
+
+		//Notify about the event
+		NMinusOneFlowAllocatedEvent allocEvent = new NMinusOneFlowAllocatedEvent(
+				flow.getFlowInformation(), event.getSequenceNumber());
+		this.ribDaemon.deliverEvent(allocEvent);
 	}
 
 	/**
