@@ -1293,7 +1293,6 @@ void EnrollerStateMachine::enrollmentCompleted() {
 }
 
 //Main function of the Neighbor Enroller thread
-/** main function of the Netlink message reader thread */
 void * doNeighborsEnrollerWork(void * arg) {
 	IPCProcess * ipcProcess = (IPCProcess *) arg;
 	IEnrollmentTask * enrollmentTask = ipcProcess->get_enrollment_task();
@@ -1453,7 +1452,7 @@ bool EnrollmentTask::isEnrolledTo(const std::string& processName) const {
 	std::list<BaseEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it != machines.end(); ++it) {
 		if ((*it)->remote_peer_->name_.processName.compare(processName) == 0 &&
-				(*it)->state_ == BaseEnrollmentStateMachine::STATE_ENROLLED) {
+				(*it)->state_ != BaseEnrollmentStateMachine::STATE_NULL) {
 			return true;
 		}
 	}
