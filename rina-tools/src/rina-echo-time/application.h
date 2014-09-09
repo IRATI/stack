@@ -26,7 +26,8 @@
 class Application
 {
 public:
-        Application(const std::string & app_name_,
+        Application(const std::string& dif_name_,
+                    const std::string & app_name_,
                     const std::string & app_instance_);
 
         static const uint max_buffer_size;
@@ -34,6 +35,7 @@ public:
 protected:
         void applicationRegister();
 
+        std::string dif_name;
         std::string app_name;
         std::string app_instance;
 

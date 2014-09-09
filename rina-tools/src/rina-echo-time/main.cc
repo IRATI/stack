@@ -48,6 +48,7 @@ int wrapped_main(int argc, char** argv)
         string server_api;
         string client_apn;
         string client_api;
+        string dif_name;
 
         try {
                 TCLAP::CmdLine cmd("rina-echo-time", ' ', PACKAGE_VERSION);
@@ -105,6 +106,12 @@ int wrapped_main(int argc, char** argv)
                                                        false,
                                                        "1",
                                                        "string");
+                TCLAP::ValueArg<string> dif_arg("d",
+                                                "dif-to-register-at",
+                                                "The name of the DIF to register at (empty means 'any DIF')",
+                                                false,
+                                                "",
+                                                "string");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -116,6 +123,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(server_api_arg);
                 cmd.add(client_apn_arg);
                 cmd.add(client_api_arg);
+                cmd.add(dif_arg);
 
                 cmd.parse(argc, argv);
 
@@ -129,6 +137,7 @@ int wrapped_main(int argc, char** argv)
                 server_api = server_api_arg.getValue();
                 client_apn = client_apn_arg.getValue();
                 client_api = client_api_arg.getValue();
+                dif_name = dif_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -146,12 +155,12 @@ int wrapped_main(int argc, char** argv)
 
         if (listen) {
                 // Server mode
-                Server s(server_apn, server_api);
+                Server s(dif_name, server_apn, server_api);
 
                 s.run();
         } else {
                 // Client mode
-                Client c(client_apn, client_api, server_apn, server_api,
+                Client c(dif_name, client_apn, client_api, server_apn, server_api,
                          quiet, count, registration, size, wait);
 
                 c.run();

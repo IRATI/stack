@@ -29,21 +29,31 @@
 using namespace std;
 using namespace rina;
 
-Application::Application(const string& app_name_,
+Application::Application(const string& dif_name_,
+                         const string& app_name_,
                          const string& app_instance_) :
+        dif_name(dif_name_),
         app_name(app_name_),
         app_instance(app_instance_)
 { }
 
 void Application::applicationRegister()
 {
-        ApplicationRegistrationInformation
-                ari(ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF);
+        ApplicationRegistrationInformation ari;
         unsigned int seqnum;
         IPCEvent *event;
 
+        ari.ipcProcessId = 0;  // This is an application, not an IPC process
         ari.appName = ApplicationProcessNamingInformation(app_name,
                                                           app_instance);
+        if (dif_name == string()) {
+                ari.applicationRegistrationType =
+                        ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF;
+        } else {
+                ari.applicationRegistrationType =
+                        ApplicationRegistrationType::APPLICATION_REGISTRATION_SINGLE_DIF;
+                ari.difName = ApplicationProcessNamingInformation(dif_name, string());
+        }
 
         try {
                 // Request the registration

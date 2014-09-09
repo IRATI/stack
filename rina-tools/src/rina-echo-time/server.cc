@@ -29,9 +29,10 @@
 using namespace std;
 using namespace rina;
 
-Server::Server(const string & app_name_,
-               const string & app_instance_) :
-        Application(app_name_, app_instance_)
+Server::Server(const string& dif_name,
+               const string& app_name,
+               const string& app_instance) :
+        Application(dif_name, app_name, app_instance)
 { }
 
 void Server::run()

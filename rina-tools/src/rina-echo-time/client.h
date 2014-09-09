@@ -30,7 +30,8 @@
 
 class Client: public Application {
 public:
-        Client(const std::string& apn,
+        Client(const std::string& dif_name,
+               const std::string& apn,
                const std::string& api,
                const std::string& server_apn,
                const std::string& server_api,
