@@ -514,15 +514,21 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct pdu *  pdu)
 {
         struct cwq * q;
+        seq_num_t    seq;
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);
 
         LOG_DBG("Updating Window Edges");
+
+        seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+
+        /* This updates sender LWE */
+        if (dtcp->policies->sender_ack(dtcp, seq))
+                LOG_ERR("Could not update RTXQ and LWE");
+
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        snd_lft_win_set(dtcp, pci_control_new_left_wind_edge(pci));
         LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
-        LOG_DBG("Left Window Edge: %d", snd_lft_win(dtcp));
         pdu_destroy(pdu);
 
         push_pdus_rmt(dtcp);
@@ -606,7 +612,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         /* We are in seq_num == last_ctrl + 1 */
 
         last_rcv_ctrl_seq_set(dtcp, seq_num);
-        last_ctrl = last_rcv_ctrl_seq(dtcp);
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
