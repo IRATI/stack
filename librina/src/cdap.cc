@@ -586,7 +586,6 @@ CDAPMessage* CDAPMessage::getOpenConnectionRequestMessage(
 	cdap_message->set_src_ap_inst(src_ap_inst);
 	cdap_message->set_src_ap_name(src_ap_name);
 	cdap_message->set_version(1);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -615,7 +614,6 @@ CDAPMessage* CDAPMessage::getOpenConnectionResponseMessage(
 	cdap_message->set_src_ap_inst(src_ap_inst);
 	cdap_message->set_src_ap_name(src_ap_name);
 	cdap_message->set_version(1);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -623,7 +621,6 @@ CDAPMessage* CDAPMessage::getReleaseConnectionRequestMessage(Flags flags) {
 	CDAPMessage *cdap_message = new CDAPMessage();
 	cdap_message->set_flags(flags);
 	cdap_message->set_op_code(M_RELEASE);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -635,7 +632,6 @@ CDAPMessage* CDAPMessage::getReleaseConnectionResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_RELEASE_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -651,7 +647,6 @@ CDAPMessage* CDAPMessage::getCreateObjectRequestMessage(char * filter,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_op_code(M_CREATE);
 	cdap_message->set_scope(scope);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -668,7 +663,6 @@ CDAPMessage* CDAPMessage::getCreateObjectResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_CREATE_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -683,7 +677,6 @@ CDAPMessage* CDAPMessage::getDeleteObjectRequestMessage(char * filter,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_op_code(M_DELETE);
 	cdap_message->set_scope(scope);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -699,7 +692,6 @@ CDAPMessage* CDAPMessage::getDeleteObjectResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_DELETE_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -714,7 +706,6 @@ CDAPMessage* CDAPMessage::getStartObjectRequestMessage(char * filter,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_op_code(M_START);
 	cdap_message->set_scope(scope);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -726,7 +717,6 @@ CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_START_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -743,7 +733,6 @@ CDAPMessage* CDAPMessage::getStartObjectResponseMessage(Flags flags,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -758,7 +747,6 @@ CDAPMessage* CDAPMessage::getStopObjectRequestMessage(char * filter,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_op_code(M_STOP);
 	cdap_message->set_scope(scope);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -770,7 +758,6 @@ CDAPMessage* CDAPMessage::getStopObjectResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_STOP_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -785,7 +772,6 @@ CDAPMessage* CDAPMessage::getReadObjectRequestMessage(char * filter,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_op_code(M_READ);
 	cdap_message->set_scope(scope);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -802,7 +788,6 @@ CDAPMessage* CDAPMessage::getReadObjectResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_READ_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -818,7 +803,6 @@ CDAPMessage* CDAPMessage::getWriteObjectRequestMessage(char * filter,
 	cdap_message->set_obj_name(obj_name);
 	cdap_message->set_op_code(M_WRITE);
 	cdap_message->set_scope(scope);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -830,7 +814,6 @@ CDAPMessage* CDAPMessage::getWriteObjectResponseMessage(Flags flags,
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
 	cdap_message->set_invoke_id(invoke_id);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -840,7 +823,6 @@ CDAPMessage* CDAPMessage::getCancelReadRequestMessage(Flags flags,
 	cdap_message->set_flags(flags);
 	cdap_message->set_invoke_id(invoke_id);
 	cdap_message->set_op_code(M_CANCELREAD);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
@@ -852,7 +834,6 @@ CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
 	cdap_message->set_op_code(M_CANCELREAD_R);
 	cdap_message->set_result(result);
 	cdap_message->set_result_reason(result_reason);
-	CDAPMessageValidator::validate(cdap_message);
 	return cdap_message;
 }
 
