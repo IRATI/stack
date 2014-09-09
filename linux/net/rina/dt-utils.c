@@ -489,17 +489,17 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 {
         struct rtxq_entry * cur, * n;
         struct pdu *        tmp;
-        seq_num_t           seq = -1;
+        seq_num_t           seq = 0;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
+                seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
                 if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
                                 jiffies)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
-                                        "achieved. Can't maintain QoS");
-                                seq = pci_sequence_number_get(
-                                        pdu_pci_get_ro(cur->pdu));
+                                        "achieved for SeqN %u. Can't "
+                                        "maintain QoS", seq);
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }

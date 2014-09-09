@@ -1394,12 +1394,11 @@ int dtp_receive(struct dtp * instance,
          *   they are not, LWE is not updated and always 0
          */
         if (seq_num <= LWE) {
-                LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
-                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d",
-                        dropped_pdus(sv));
+                LOG_ERR("PDU SeqN %u, LWE: %u. Dropped PDUs: %d",
+                        seq_num, LWE, dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
