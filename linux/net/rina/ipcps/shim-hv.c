@@ -322,7 +322,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         slen = strlen(src_name);
         dlen = strlen(dst_name);
         msg_len = 1 + sizeof(ch) + slen + 1 + dlen + 1;
-        if (msg_len >= 2000) { /* XXX Temporary limitation */
+        if (msg_len >= 2000) {
                 LOG_ERR("%s: message too long %d", __func__, (int)msg_len);
                 goto msg_alloc;
         }
@@ -1116,7 +1116,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         priv->id = id;
         priv->assigned = 0;
         bzero(&priv->fspec, sizeof(priv->fspec));
-        priv->fspec.max_sdu_size      = 2000;   /* XXX Temporary limitation. */
+        priv->fspec.max_sdu_size      = 4096-8;
         priv->fspec.max_allowable_gap = -1;
 
         if (name_cpy(name, &priv->name)) {

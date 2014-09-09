@@ -22,6 +22,6 @@
 #define __VMPI_LIMITS_H__
 
 #define VMPI_MAX_CHANNELS_DEFAULT 64
-#define VMPI_BUF_SIZE   2048
+#define VMPI_BUF_SIZE   4096
 
 #endif   /* __VMPI_LIMITS_H__ */
