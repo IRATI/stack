@@ -26,10 +26,16 @@
 namespace rinad {
 
 //	CLASS EnrollmentRequest
+EnrollmentRequest::EnrollmentRequest(rina::Neighbor * neighbor) {
+	neighbor_ = neighbor;
+	ipcm_initiated_ = false;
+}
+
 EnrollmentRequest::EnrollmentRequest(
-		rina::Neighbor * neighbor, rina::EnrollToDIFRequestEvent * event) {
+		rina::Neighbor * neighbor, const rina::EnrollToDIFRequestEvent & event) {
 	neighbor_ = neighbor;
 	event_ = event;
+	ipcm_initiated_ = true;
 }
 
 //	CLASS Flow
