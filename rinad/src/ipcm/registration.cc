@@ -106,6 +106,30 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
         return 0;
 }
 
+static void application_registration_notify(
+        const rina::ApplicationRegistrationRequestEvent& req_event,
+        const rina::ApplicationProcessNamingInformation& app_name,
+        const rina::ApplicationProcessNamingInformation& slave_dif_name,
+        bool success)
+{
+        ostringstream ss;
+
+        try {
+                rina::applicationManager->applicationRegistered(req_event,
+                                slave_dif_name, success ? 0 : -1);
+                ss << "Application " << app_name.toString() <<
+                        " informed about its registration "
+                        "to N-1 DIF " << slave_dif_name.toString() <<
+                        " [success = " << success << "]" << endl;
+                FLUSH_LOG(INFO, ss);
+        } catch (rina::NotifyApplicationRegisteredException) {
+                ss << __func__ << "Error while notifying application "
+                        << app_name.toString() << " about registration "
+                        "to DIF " << slave_dif_name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+}
+
 void
 application_registration_request_event_handler(rina::IPCEvent *e,
                                                EventLoopData *opaque)
@@ -146,6 +170,10 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                 ss << __func__ << ": Unsupported registration type: "
                         << info.applicationRegistrationType << endl;
                 FLUSH_LOG(ERR, ss);
+
+                // Notify the application about the unsuccessful registration.
+                application_registration_notify(*event, app_name,
+                        rina::ApplicationProcessNamingInformation(), false);
                 return;
         }
 
@@ -153,6 +181,9 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                 ss << __func__ << ": Cannot find a suitable DIF to "
                         "register application " << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
+                // Notify the application about the unsuccessful registration.
+                application_registration_notify(*event, app_name,
+                        rina::ApplicationProcessNamingInformation(), false);
                 return;
         }
 
@@ -167,9 +198,13 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                         slave_ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmRegisterApplicationException) {
+                ipcm->pending_app_registrations.erase(seqnum);
                 ss << __func__ << ": Error while registering application "
                         << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
+                // Notify the application about the unsuccessful registration.
+                application_registration_notify(*event, app_name,
+                                                slave_ipcp->name, false);
         }
 }
 
@@ -269,21 +304,9 @@ static void ipcm_register_response_app(
         success = ipcm_register_response_common(event, app_name, slave_ipcp,
                                            slave_dif_name);
 
-        // Notify the application about the successful registration.
-        try {
-                rina::applicationManager->applicationRegistered(req_event,
-                                slave_dif_name, success ? 0 : -1);
-                ss << "Application " << app_name.toString() <<
-                        " informed about its registration "
-                        "to N-1 DIF " << slave_dif_name.toString() <<
-                        " [success = " << success << "]" << endl;
-                FLUSH_LOG(INFO, ss);
-        } catch (rina::NotifyApplicationRegisteredException) {
-                ss << __func__ << "Error while notifying application "
-                        << app_name.toString() << " about registration "
-                        "to DIF " << slave_dif_name.toString() << endl;
-                FLUSH_LOG(ERR, ss);
-        }
+        // Notify the application about the (un)successful registration.
+        application_registration_notify(req_event, app_name,
+                                        slave_dif_name, success);
 
         ipcm->pending_app_registrations.erase(mit);
 }

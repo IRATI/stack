@@ -56,6 +56,8 @@ void Application::applicationRegister()
         }
 
         try {
+                RegisterApplicationResponseEvent *resp;
+
                 // Request the registration
                 seqnum = ipcManager->requestApplicationRegistration(ari);
 
@@ -69,11 +71,19 @@ void Application::applicationRegister()
                         }
                 }
 
+                resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
+
                 // Update librina state
-                ipcManager->commitPendingRegistration(seqnum,
-                                dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
+                if (resp->result == 0) {
+                        ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
+                } else {
+                        ipcManager->withdrawPendingRegistration(seqnum);
+                        LOG_ERR("Failed to register application");
+                        exit(EXIT_FAILURE);
+                }
         } catch(ApplicationRegistrationException e) {
                 LOG_ERR("%s", e.what());
+                exit(EXIT_FAILURE);
         }
 }
 
