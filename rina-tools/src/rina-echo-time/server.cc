@@ -21,68 +21,81 @@
 #include <iostream>
 #include <thread>
 
+#define RINA_PREFIX     "rina-echo-app"
+#include <librina/logs.h>
+
 #include "server.h"
 
 using namespace std;
 using namespace rina;
 
-Server::Server(const string & app_name_,
-               const string & app_instance_,
-               bool           debug_mes_) :
-        Application(app_name_, app_instance_),
-        debug_mes(debug_mes_)
+Server::Server(const string& dif_name,
+               const string& app_name,
+               const string& app_instance) :
+        Application(dif_name, app_name, app_instance)
 { }
 
 void Server::run()
 {
-        init();
+        applicationRegister();
 
         for(;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
+                Flow *flow = nullptr;
+                unsigned int port_id;
+
                 if (!event)
                         return;
-                switch(event->eventType) {
+
+                switch (event->eventType) {
+
                 case REGISTER_APPLICATION_RESPONSE_EVENT:
                         ipcManager->commitPendingRegistration(event->sequenceNumber,
-                                                             reinterpret_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
+                                                             dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
                         break;
+
                 case UNREGISTER_APPLICATION_RESPONSE_EVENT:
                         ipcManager->appUnregistrationResult(event->sequenceNumber,
-                                                            reinterpret_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
+                                                            dynamic_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
                         break;
-                case FLOW_ALLOCATION_REQUESTED_EVENT: {
-                        Flow* flow = ipcManager->
-                                allocateFlowResponse(*reinterpret_cast<FlowRequestEvent*>(event), 0, true);
-                        thread t(&Server::runFlow, this, flow);
-                        t.detach();
+
+                case FLOW_ALLOCATION_REQUESTED_EVENT:
+                        flow = ipcManager->allocateFlowResponse(*dynamic_cast<FlowRequestEvent*>(event), 0, true);
+                        LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
+                        startWorker(flow);
                         break;
-                }
+
                 case FLOW_DEALLOCATED_EVENT:
-                        ipcManager->requestFlowDeallocation(reinterpret_cast<FlowDeallocatedEvent*>
-                                                            (event)->portId);
+                        port_id = dynamic_cast<FlowDeallocatedEvent*>(event)->portId;
+                        ipcManager->flowDeallocated(port_id);
+                        LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
                         break;
+
                 default:
-                        if (debug_mes)
-                                cerr << "[DEBUG] Server got new event "
-                                     << event->eventType << endl;
+                        LOG_INFO("Server got new event of type %d",
+                                        event->eventType);
                         break;
                 }
         }
 }
 
-void Server::init()
-{ applicationRegister(); }
+void Server::startWorker(Flow *flow)
+{
+        thread t(&Server::serveFlow, this, flow);
+        t.detach();
+}
 
-void Server::runFlow(Flow* flow)
+void Server::serveFlow(Flow* flow)
 {
         char buffer[max_buffer_size];
         try {
                 for(;;) {
-                        int bytesreaded = flow->readSDU(buffer,
+                        int bytes_read = flow->readSDU(buffer,
                                                         max_buffer_size);
-                        flow->writeSDU(buffer, bytesreaded);
+                        flow->writeSDU(buffer, bytes_read);
                 }
-        } catch(...) {
-                cerr << "flow I/O fail" << endl;
+        } catch(rina::IPCException e) {
+                // This thread was blocked in the readSDU() function
+                // when the flow gets dellocated
         }
 }

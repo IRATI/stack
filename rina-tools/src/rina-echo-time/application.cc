@@ -21,29 +21,59 @@
 #include <iostream>
 #include <librina/librina.h>
 
+#define RINA_PREFIX     "rina-echo-time"
+#include <librina/logs.h>
+
 #include "application.h"
 
 using namespace std;
 using namespace rina;
 
-Application::Application(const string& app_name_,
+Application::Application(const string& dif_name_,
+                         const string& app_name_,
                          const string& app_instance_) :
+        dif_name(dif_name_),
         app_name(app_name_),
         app_instance(app_instance_)
 { }
 
 void Application::applicationRegister()
 {
-        ApplicationRegistrationInformation
-                ari(ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF);
+        ApplicationRegistrationInformation ari;
+        unsigned int seqnum;
+        IPCEvent *event;
 
+        ari.ipcProcessId = 0;  // This is an application, not an IPC process
         ari.appName = ApplicationProcessNamingInformation(app_name,
                                                           app_instance);
+        if (dif_name == string()) {
+                ari.applicationRegistrationType =
+                        ApplicationRegistrationType::APPLICATION_REGISTRATION_ANY_DIF;
+        } else {
+                ari.applicationRegistrationType =
+                        ApplicationRegistrationType::APPLICATION_REGISTRATION_SINGLE_DIF;
+                ari.difName = ApplicationProcessNamingInformation(dif_name, string());
+        }
 
         try {
-                ipcManager->requestApplicationRegistration(ari);
+                // Request the registration
+                seqnum = ipcManager->requestApplicationRegistration(ari);
+
+                // Wait for the response to come
+                for (;;) {
+                        event = ipcEventProducer->eventWait();
+                        if (event && event->eventType ==
+                                REGISTER_APPLICATION_RESPONSE_EVENT &&
+                                event->sequenceNumber == seqnum) {
+                                break;
+                        }
+                }
+
+                // Update librina state
+                ipcManager->commitPendingRegistration(seqnum,
+                                dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
         } catch(ApplicationRegistrationException e) {
-                cerr << e.what() << endl;
+                LOG_ERR("%s", e.what());
         }
 }
 

@@ -56,7 +56,8 @@ script_function(void *opaque)
         return NULL;
 }
 
-IPCManager::IPCManager() : script(NULL), console(NULL)
+IPCManager::IPCManager(unsigned int wait_time) :
+                concurrency(wait_time), script(NULL), console(NULL)
 {}
 
 IPCManager::~IPCManager()
@@ -122,7 +123,7 @@ IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
         event_sn = seqnum;
 
         try {
-                timedwait(20, 0);
+                timedwait(wait_time, 0);
         } catch (rina::ConcurrentException) {
             event_waiting = false;
             return false;

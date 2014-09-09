@@ -6,8 +6,6 @@
 #include "cdap-impl.h"
 #include "CDAP.pb.h"
 
-#include <iostream>
-
 namespace rina {
 
 // CLASS ResetStablishmentTimerTask
@@ -535,8 +533,6 @@ void CDAPSessionImpl::checkInvokeIdNotExists(
 		const CDAPMessage &cdap_message) const {
 	if (pending_messages_.find(cdap_message.get_invoke_id())
 			!= pending_messages_.end()) {
-		std::cout << "[TMP_DEBUG] Pending_Messages size: "
-				<< pending_messages_.size() << std::endl;
 		std::stringstream ss;
 		ss << cdap_message.get_invoke_id();
 		throw CDAPException("The invokeid " + ss.str() + " already exists");
@@ -1081,8 +1077,6 @@ void CDAPSessionManager::assignInvokeId(CDAPMessage &cdap_message,
 			cdap_message.set_invoke_id(
 					cdap_session->get_invoke_id_manager()->newInvokeId());
 		}
-		std::cout << "[TMP_DEBUG] Asigned Invoke id: "
-				<< cdap_message.get_invoke_id() << std::endl;
 	}
 }
 

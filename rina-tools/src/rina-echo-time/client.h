@@ -21,44 +21,38 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
+#include <string>
 #include <chrono>
 #include <librina/librina.h>
 
 #include "application.h"
 
 
-class Client: public Application
-{
+class Client: public Application {
 public:
-    Client(const std::string& app_name_,
-           const std::string& app_instance_,
-           const std::string& server_name_,
-           const std::string& server_instance_,
-           bool  time_flow_creation_,
-           ulong echo_times_,
-           bool  client_app_reg_,
-           uint  data_size_,
-           bool  debug_mes_);
-    void run();
+        Client(const std::string& dif_name,
+               const std::string& apn,
+               const std::string& api,
+               const std::string& server_apn,
+               const std::string& server_api,
+               bool  quiet,
+               unsigned long count,
+               bool  registration,
+               unsigned int size,
+               unsigned int wait);
+               void run();
 protected:
-    void init();
-    rina::Flow* makeConnection();
-    void sendEcho(rina::Flow* flow);
-    static  void printDuration(const std::chrono::high_resolution_clock::duration& dur);
+        rina::Flow* createFlow();
+        void pingFlow(rina::Flow *flow);
+        void destroyFlow(rina::Flow *flow);
 
 private:
-    std::string server_name;
-    std::string server_instance;
-    bool time_flow_creation;
-    ulong echo_times;// -1 is infinit
-    bool client_app_reg;
-    uint data_size;
-    bool debug_mes;
-
-    static std::chrono::seconds wait_time;
-  //threshold
-    static std::chrono::seconds thres_s;
-    static std::chrono::milliseconds thres_ms;
-    static std::chrono::microseconds thres_us;
+        std::string server_name;
+        std::string server_instance;
+        bool quiet;
+        unsigned long echo_times; // -1 is infinite
+        bool client_app_reg;
+        unsigned int data_size;
+        unsigned int wait;
 };
 #endif//CLIENT_HPP

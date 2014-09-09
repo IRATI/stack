@@ -2,6 +2,7 @@
 // Echo Client
 // 
 // Addy Bombeke <addy.bombeke@ugent.be>
+// Vincenzo Maffione <v.maffione@nextworks.it>
 // 
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,154 +21,191 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
+#include <cassert>
 #include <random>
 #include <thread>
+
+#define RINA_PREFIX     "rina-echo-time"
+#include <librina/logs.h>
 
 #include "client.h"
 
 using namespace std;
 using namespace rina;
 
-Client::Client(const string& app_name_, const string& app_instance_,
-               const string& server_name_, const string& server_instance_,
-               bool time_flow_creation_, ulong echo_times_,
-               bool client_app_reg_,
-               uint data_size_, bool debug_mes_) :
-        Application(app_name_, app_instance_),
-        server_name(server_name_), server_instance(server_instance_),
-        time_flow_creation(time_flow_creation_), echo_times(echo_times_),
-        client_app_reg(client_app_reg_), data_size(data_size_),
-        debug_mes(debug_mes_)
+
+static std::chrono::seconds      thres_s   = std::chrono::seconds(9);
+static std::chrono::milliseconds thres_ms  = std::chrono::milliseconds(9);
+static std::chrono::microseconds thres_us  = std::chrono::microseconds(9);
+
+static string
+durationToString(const std::chrono::high_resolution_clock::duration&
+                           dur)
+{
+        std::stringstream ss;
+
+        if (dur > thres_s)
+                ss << std::chrono::duration_cast<std::chrono::seconds>(dur).count() << "s";
+        else if (dur > thres_ms)
+                ss << std::chrono::duration_cast<std::chrono::milliseconds>
+                        (dur).count() << "ms";
+        else if (dur > thres_us)
+                ss << std::chrono::duration_cast<std::chrono::microseconds>
+                        (dur).count() << "us";
+        else
+                ss << std::chrono::duration_cast<std::chrono::nanoseconds>
+                        (dur).count() << "ns";
+
+        return ss.str();
+}
+
+Client::Client(const string& dif_name, const string& apn, const string& api,
+               const string& server_apn, const string& server_api,
+               bool q, unsigned long count,
+               bool registration, unsigned int size,
+               unsigned int w) :
+        Application(dif_name, apn, api),
+        server_name(server_apn), server_instance(server_api),
+        quiet(q), echo_times(count),
+        client_app_reg(registration), data_size(size), wait(w)
 { }
 
 void Client::run()
 {
-        init();
+        Flow *flow;
 
-        Flow* flow = makeConnection();
-
-        if(flow)
-                sendEcho(flow);
-}
-
-void Client::init()
-{
         applicationRegister();
+        flow = createFlow();
+        if (flow)
+                pingFlow(flow);
+        if (flow)
+                destroyFlow(flow);
 }
 
-Flow* Client::makeConnection()
+Flow* Client::createFlow()
 {
         Flow* flow = nullptr;
         std::chrono::high_resolution_clock::time_point begintp =
                 std::chrono::high_resolution_clock::now();
+        AllocateFlowRequestResultEvent* afrrevent;
         FlowSpecification qosspec;
-#if 0
-        uint handle = ipcManager->requestFlowAllocation(
-                                                        ApplicationProcessNamingInformation(app_name,
-                                                                                            app_instance),
-                                                        ApplicationProcessNamingInformation(server_name,
-                                                                                            server_instance),
-                                                        qosspec);
-#endif
-        IPCEvent* event = ipcEventProducer->eventWait();
-        while(event && event->eventType != ALLOCATE_FLOW_REQUEST_RESULT_EVENT) {
-                if(debug_mes)
-                        cerr << "[DEBUG] Client got new event " << event->eventType << endl;
-                event = ipcEventProducer->eventWait();//todo this can make us wait forever
+        IPCEvent* event;
+        uint seqnum;
+
+        seqnum = ipcManager->requestFlowAllocation(
+                        ApplicationProcessNamingInformation(app_name, app_instance),
+                        ApplicationProcessNamingInformation(server_name, server_instance),
+                        qosspec);
+
+        for (;;) {
+                event = ipcEventProducer->eventWait();
+                if (event && event->eventType == ALLOCATE_FLOW_REQUEST_RESULT_EVENT
+                                && event->sequenceNumber == seqnum) {
+                        break;
+                }
+                LOG_DBG("Client got new event %d", event->eventType);
         }
-        AllocateFlowRequestResultEvent* afrrevent =
-                reinterpret_cast<AllocateFlowRequestResultEvent*>(event);
-        Flow* hulpflow =
-                ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
+
+        afrrevent = dynamic_cast<AllocateFlowRequestResultEvent*>(event);
+
+        flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
                                               afrrevent->portId,
                                               afrrevent->difName);
-        if(hulpflow->getPortId() == -1) {
-                cerr << "Host not found" << endl;
+        if (!flow || flow->getPortId() == -1) {
+                LOG_ERR("Failed to allocate a flow");
+                return nullptr;
         } else {
-                flow = hulpflow;
+                LOG_DBG("[DEBUG] Port id = %d", flow->getPortId());
         }
+
         std::chrono::high_resolution_clock::time_point eindtp =
                 std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
-        if(time_flow_creation) {
-                cout << "flow_creation_time=";
-                printDuration(dur);
-                cout << endl;
+
+        if (!quiet) {
+                cout << "Flow allocation time = " << durationToString(dur) << endl;
         }
+
         return flow;
 }
-void Client::sendEcho(Flow* flow)
+
+void Client::pingFlow(Flow* flow)
 {
         char buffer[max_buffer_size];
         char buffer2[max_buffer_size];
         ulong n = 0;
-        ulong c = echo_times;
         random_device rd;
         default_random_engine ran(rd());
         uniform_int_distribution<int> dis(0, 255);
-        while(flow) {
+
+        while (flow) {
                 IPCEvent* event = ipcEventProducer->eventPoll();
-                if(event) {
+
+                if (event) {
                         switch(event->eventType) {
                         case FLOW_DEALLOCATED_EVENT:
                                 flow = nullptr;
                                 break;
                         default:
-                                if(debug_mes)
-                                        cerr << "[DEBUG] Client got new event " << event->eventType << endl;
+                                LOG_INFO("Client got new event %d", event->eventType);
                                 break;
                         }
-                } else {
-                        if(c != 0) {
-                                for(uint i = 0; i < data_size; ++i)
+                } else if (n < echo_times) {
+                                std::chrono::high_resolution_clock::time_point begintp, endtp;
+                                int bytes_read = 0;
+
+                                for (uint i = 0; i < data_size; i++) {
                                         buffer[i] = dis(ran);
-                                std::chrono::high_resolution_clock::time_point begintp =
-                                        std::chrono::high_resolution_clock::now();
-                                int bytesreaded = 0;
-                                try {
-                                        flow->writeSDU(buffer, data_size);
-                                        bytesreaded = flow->readSDU(buffer2, data_size);
-                                } catch(...) {
-                                        cerr << "flow I/O fail" << endl;
                                 }
-                                std::chrono::high_resolution_clock::time_point eindtp =
-                                        std::chrono::high_resolution_clock::now();
-                                std::chrono::high_resolution_clock::duration dur = eindtp - begintp;
-                                cout << "sdu_size=" << data_size << " seq=" << n << " time=";
-                                printDuration(dur);
-                                if (!((data_size == (uint) bytesreaded) &&
+
+                                try {
+                                        begintp = std::chrono::high_resolution_clock::now();
+                                        flow->writeSDU(buffer, data_size);
+                                        bytes_read = flow->readSDU(buffer2, data_size);
+                                        endtp = std::chrono::high_resolution_clock::now();
+                                } catch (...) {
+                                        LOG_ERR("SDU write/read failed");
+                                }
+                                cout << "SDU size = " << data_size << ", seq = " << n <<
+                                        ", RTT = " << durationToString(endtp - begintp);
+                                if (!((data_size == (uint) bytes_read) &&
                                       (memcmp(buffer, buffer2, data_size) == 0)))
-                                        cout << " bad check";
+                                        cout << " [bad response]";
                                 cout << endl;
+
                                 n++;
-                                if(c != static_cast<ulong>(-1))
-                                        c--;
-                                this_thread::sleep_for(wait_time);
-                        } else
-                                flow = nullptr;
+                                this_thread::sleep_for(std::chrono::milliseconds(wait));
+                } else {
+                        break;
                 }
         }
 }
 
-
-void Client::printDuration(const std::chrono::high_resolution_clock::duration&
-                           dur)
+void Client::destroyFlow(Flow *flow)
 {
-        if(dur > thres_s)
-                cout << std::chrono::duration_cast<std::chrono::seconds>(dur).count() << "s";
-        else if(dur > thres_ms)
-                cout << std::chrono::duration_cast<std::chrono::milliseconds>
-                        (dur).count() << "ms";
-        else if(dur > thres_us)
-                cout << std::chrono::duration_cast<std::chrono::microseconds>
-                        (dur).count() << "us";
-        else
-                cout << std::chrono::duration_cast<std::chrono::nanoseconds>
-                        (dur).count() << "ns";
+        DeallocateFlowResponseEvent *resp = nullptr;
+        unsigned int seqnum;
+        IPCEvent* event;
+        int port_id = flow->getPortId();
 
+        try {
+                seqnum = ipcManager->requestFlowDeallocation(port_id);
+
+                for (;;) {
+                        event = ipcEventProducer->eventWait();
+                        if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
+                                        && event->sequenceNumber == seqnum) {
+                                break;
+                        }
+                        LOG_DBG("Client got new event %d", event->eventType);
+                }
+                resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+                assert(resp);
+
+                ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+        } catch (FlowDeallocationException) {
+                LOG_ERR("Failed to deallocate flow");
+                return;
+        }
 }
-
-std::chrono::seconds      Client::wait_time = std::chrono::seconds(1);
-std::chrono::seconds      Client::thres_s   = std::chrono::seconds(9);
-std::chrono::milliseconds Client::thres_ms  = std::chrono::milliseconds(9);
-std::chrono::microseconds Client::thres_us  = std::chrono::microseconds(9);

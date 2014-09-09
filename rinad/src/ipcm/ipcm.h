@@ -50,9 +50,11 @@ class IPCMConcurrency : public rina::ConditionVariable {
         bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum);
         void notify_event(rina::IPCEvent *event);
 
-        IPCMConcurrency() : event_waiting(false) { }
+        IPCMConcurrency(unsigned int wt) :
+                                wait_time(wt), event_waiting(false) { }
 
  private:
+        unsigned int wait_time;
         bool event_waiting;
         rina::IPCEventType event_ty;
         unsigned int event_sn;
@@ -73,7 +75,7 @@ struct PendingFlowAllocation {
 
 class IPCManager : public EventLoopData {
  public:
-        IPCManager();
+        IPCManager(unsigned int wait_time);
         ~IPCManager();
 
         void init(const std::string& logfile, const std::string& loglevel);
