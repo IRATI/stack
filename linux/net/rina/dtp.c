@@ -210,8 +210,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                                               dtcp_cfg);
         if (cwq_size(cwq) < max_len - 1) {
                 if (cwq_push(cwq, pdu)) {
-                        LOG_ERR("Failed to push to cwq");
-                        pdu_destroy(pdu);
+                        LOG_ERR("Failed to push into cwq");
                         return -1;
                 }
 
@@ -908,7 +907,8 @@ int dtp_sv_init(struct dtp * dtp,
 
 #define MAX_NAME_SIZE 128
 
-static const char * create_twq_name(const char *       prefix,
+/* FIXME: This function is not re-entrant */
+static const char * twq_name_format(const char *       prefix,
                                     const struct dtp * instance)
 {
         static char name[MAX_NAME_SIZE];
@@ -976,7 +976,7 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
-        twq_name = create_twq_name("twq", tmp);
+        twq_name = twq_name_format("twq", tmp);
         if (!twq_name) {
                 dtp_destroy(tmp);
                 return NULL;

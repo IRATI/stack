@@ -44,10 +44,11 @@ int wrapped_main(int argc, char** argv)
         unsigned int count;
         unsigned int size;
         unsigned int wait;
-        string server_apn = "rina.apps.echotime.server";
-        string server_api = "1";
-        string client_apn = "rina.apps.echotime.client";
-        string client_api = "";
+        string server_apn;
+        string server_api;
+        string client_apn;
+        string client_api;
+        string dif_name;
 
         try {
                 TCLAP::CmdLine cmd("rina-echo-time", ' ', PACKAGE_VERSION);
@@ -60,9 +61,9 @@ int wrapped_main(int argc, char** argv)
                                                   "Register the application",
                                                   false);
                 TCLAP::SwitchArg quiet_arg("q",
-                                                  "quiet",
-                                                  "Suppress some output",
-                                                  false);
+                                           "quiet",
+                                           "Suppress some output",
+                                           false);
                 TCLAP::ValueArg<unsigned int> count_arg("c",
                                                         "count",
                                                         "Number of packets to send",
@@ -81,6 +82,36 @@ int wrapped_main(int argc, char** argv)
                                                        false,
                                                        1000,
                                                        "unsigned integer");
+                TCLAP::ValueArg<string> server_apn_arg("",
+                                                       "server-apn",
+                                                       "Application process name for the server",
+                                                       false,
+                                                       "rina.apps.echotime.server",
+                                                       "string");
+                TCLAP::ValueArg<string> server_api_arg("",
+                                                       "server-api",
+                                                       "Application process instance for the server",
+                                                       false,
+                                                       "1",
+                                                       "string");
+                TCLAP::ValueArg<string> client_apn_arg("",
+                                                       "client-apn",
+                                                       "Application process name for the client",
+                                                       false,
+                                                       "rina.apps.echotime.client",
+                                                       "string");
+                TCLAP::ValueArg<string> client_api_arg("",
+                                                       "client-api",
+                                                       "Application process instance for the client",
+                                                       false,
+                                                       "1",
+                                                       "string");
+                TCLAP::ValueArg<string> dif_arg("d",
+                                                "dif-to-register-at",
+                                                "The name of the DIF to register at (empty means 'any DIF')",
+                                                false,
+                                                "",
+                                                "string");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -88,6 +119,11 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(quiet_arg);
                 cmd.add(size_arg);
                 cmd.add(wait_arg);
+                cmd.add(server_apn_arg);
+                cmd.add(server_api_arg);
+                cmd.add(client_apn_arg);
+                cmd.add(client_api_arg);
+                cmd.add(dif_arg);
 
                 cmd.parse(argc, argv);
 
@@ -97,6 +133,11 @@ int wrapped_main(int argc, char** argv)
                 quiet = quiet_arg.getValue();
                 size = size_arg.getValue();
                 wait = wait_arg.getValue();
+                server_apn = server_apn_arg.getValue();
+                server_api = server_api_arg.getValue();
+                client_apn = client_apn_arg.getValue();
+                client_api = client_api_arg.getValue();
+                dif_name = dif_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -114,12 +155,12 @@ int wrapped_main(int argc, char** argv)
 
         if (listen) {
                 // Server mode
-                Server s(server_apn, server_api);
+                Server s(dif_name, server_apn, server_api);
 
                 s.run();
         } else {
                 // Client mode
-                Client c(client_apn, client_api, server_apn, server_api,
+                Client c(dif_name, client_apn, client_api, server_apn, server_api,
                          quiet, count, registration, size, wait);
 
                 c.run();
