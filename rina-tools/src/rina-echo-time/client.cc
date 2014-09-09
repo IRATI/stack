@@ -189,23 +189,18 @@ void Client::destroyFlow(Flow *flow)
         IPCEvent* event;
         int port_id = flow->getPortId();
 
-        try {
-                seqnum = ipcManager->requestFlowDeallocation(port_id);
+        seqnum = ipcManager->requestFlowDeallocation(port_id);
 
-                for (;;) {
-                        event = ipcEventProducer->eventWait();
-                        if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
-                                        && event->sequenceNumber == seqnum) {
-                                break;
-                        }
-                        LOG_DBG("Client got new event %d", event->eventType);
+        for (;;) {
+                event = ipcEventProducer->eventWait();
+                if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
+                                && event->sequenceNumber == seqnum) {
+                        break;
                 }
-                resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-                assert(resp);
-
-                ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-        } catch (FlowDeallocationException) {
-                LOG_ERR("Failed to deallocate flow");
-                return;
+                LOG_DBG("Client got new event %d", event->eventType);
         }
+        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+        assert(resp);
+
+        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
 }

@@ -88,6 +88,7 @@ void Server::startWorker(Flow *flow)
 void Server::serveFlow(Flow* flow)
 {
         char buffer[max_buffer_size];
+
         try {
                 for(;;) {
                         int bytes_read = flow->readSDU(buffer,
