@@ -848,7 +848,6 @@ static int process_dt_pdu(struct rmt *       rmt,
 
         if (efcp_container_receive(rmt->efcpc, c, pdu)) {
                 LOG_ERR("EFCP container problems");
-                pdu_destroy(pdu);
                 return -1;
         }
 
