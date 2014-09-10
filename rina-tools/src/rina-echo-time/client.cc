@@ -132,8 +132,8 @@ Flow* Client::createFlow()
 
 void Client::pingFlow(Flow* flow)
 {
-        char buffer[max_buffer_size];
-        char buffer2[max_buffer_size];
+        char *buffer = new char[data_size];
+        char *buffer2 = new char[data_size];
         ulong n = 0;
         random_device rd;
         default_random_engine ran(rd());
@@ -180,6 +180,9 @@ void Client::pingFlow(Flow* flow)
                         break;
                 }
         }
+
+        delete [] buffer;
+        delete [] buffer2;
 }
 
 void Client::destroyFlow(Flow *flow)
@@ -189,23 +192,18 @@ void Client::destroyFlow(Flow *flow)
         IPCEvent* event;
         int port_id = flow->getPortId();
 
-        try {
-                seqnum = ipcManager->requestFlowDeallocation(port_id);
+        seqnum = ipcManager->requestFlowDeallocation(port_id);
 
-                for (;;) {
-                        event = ipcEventProducer->eventWait();
-                        if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
-                                        && event->sequenceNumber == seqnum) {
-                                break;
-                        }
-                        LOG_DBG("Client got new event %d", event->eventType);
+        for (;;) {
+                event = ipcEventProducer->eventWait();
+                if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
+                                && event->sequenceNumber == seqnum) {
+                        break;
                 }
-                resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-                assert(resp);
-
-                ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-        } catch (FlowDeallocationException) {
-                LOG_ERR("Failed to deallocate flow");
-                return;
+                LOG_DBG("Client got new event %d", event->eventType);
         }
+        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+        assert(resp);
+
+        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
 }

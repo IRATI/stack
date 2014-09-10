@@ -175,7 +175,12 @@ int main(int argc, char * argv[])
 
         try {
                 retval = wrapped_main(argc, argv);
-        } catch (std::exception & e) {
+        } catch (Exception& e) {
+                LOG_ERR("%s", e.what());
+                return EXIT_FAILURE;
+
+        } catch (std::exception& e) {
+                LOG_ERR("Uncaught exception");
                 return EXIT_FAILURE;
         }
 
