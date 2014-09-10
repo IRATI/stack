@@ -132,8 +132,8 @@ Flow* Client::createFlow()
 
 void Client::pingFlow(Flow* flow)
 {
-        char buffer[max_buffer_size];
-        char buffer2[max_buffer_size];
+        char *buffer = new char[data_size];
+        char *buffer2 = new char[data_size];
         ulong n = 0;
         random_device rd;
         default_random_engine ran(rd());
@@ -180,6 +180,9 @@ void Client::pingFlow(Flow* flow)
                         break;
                 }
         }
+
+        delete [] buffer;
+        delete [] buffer2;
 }
 
 void Client::destroyFlow(Flow *flow)

@@ -87,7 +87,7 @@ void Server::startWorker(Flow *flow)
 
 void Server::serveFlow(Flow* flow)
 {
-        char buffer[max_buffer_size];
+        char *buffer = new char[max_buffer_size];
 
         try {
                 for(;;) {
@@ -99,4 +99,6 @@ void Server::serveFlow(Flow* flow)
                 // This thread was blocked in the readSDU() function
                 // when the flow gets dellocated
         }
+
+        delete [] buffer;
 }

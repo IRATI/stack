@@ -80,4 +80,4 @@ void Application::applicationRegister()
         }
 }
 
-const uint Application::max_buffer_size = 1024;
+const uint Application::max_buffer_size = 1 << 18;
