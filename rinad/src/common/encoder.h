@@ -284,6 +284,13 @@ public:
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
+/// Encoder of Watchdog
+class WatchdogEncoder: public EncoderInterface {
+public:
+	const rina::SerializedObject* encode(const void* object);
+	void* decode(const rina::ObjectValueInterface * object_value) const;
+};
+
 }
 
 #endif
