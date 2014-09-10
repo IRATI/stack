@@ -127,7 +127,7 @@ vmpi_impl_read_buffer(struct vmpi_impl_info *vi)
                 buf->len = len;
                 newbuf = vmpi_buffer_create(VMPI_BUF_SIZE);
                 if (unlikely(newbuf == NULL)) {
-                        printk("Error: vmpi_buffer_create(%u) failed\n",
+                        printk("Error: vmpi_buffer_create(%lu) failed\n",
                                VMPI_BUF_SIZE);
                 } else {
                         sg_set_buf(q->sg, newbuf->p, newbuf->size);
