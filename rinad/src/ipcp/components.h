@@ -92,10 +92,12 @@ public:
 class EnrollmentRequest
 {
 public:
+	EnrollmentRequest(rina::Neighbor * neighbor);
 	EnrollmentRequest(rina::Neighbor * neighbor,
-                          rina::EnrollToDIFRequestEvent * event);
+                          const rina::EnrollToDIFRequestEvent & event);
 	rina::Neighbor * neighbor_;
-	rina::EnrollToDIFRequestEvent * event_;
+	rina::EnrollToDIFRequestEvent event_;
+	bool ipcm_initiated_;
 };
 
 /// Interface that must be implementing by classes that provide

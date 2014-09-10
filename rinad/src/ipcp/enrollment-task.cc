@@ -89,6 +89,8 @@ void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescrip
 	//1 Send M_READ_R message
 	try {
 		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::inttype;
+		robject_value.int_value_ = ipc_process_->get_address();
 		RemoteIPCProcessId remote_id;
 		remote_id.port_id_ = session_descriptor->port_id_;
 
@@ -702,7 +704,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 			eiRequest.address_ = ipc_process_->get_address();
 		} else {
 			rina::DIFInformation difInformation;
-			difInformation.dif_name_ = enrollment_request_->event_->difName;
+			difInformation.dif_name_ = enrollment_request_->event_.difName;
 			ipc_process_->set_dif_information(difInformation);
 		}
 
@@ -926,8 +928,8 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 	if (enrollment_request_){
 		try {
 			std::list<rina::Neighbor> neighbors;
-			neighbors.push_back(*(enrollment_request_->neighbor_));
-			rina::extendedIPCManager->enrollToDIFResponse(*(enrollment_request_->event_),
+			neighbors.push_back(*remote_peer_);
+			rina::extendedIPCManager->enrollToDIFResponse(enrollment_request_->event_,
 					0, neighbors, ipc_process_->get_dif_information());
 		} catch (Exception &e) {
 			LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
@@ -935,6 +937,8 @@ void EnrolleeStateMachine::enrollmentCompleted() {
 	}
 
 	LOG_INFO("Remote IPC Process enrolled!");
+
+	delete enrollment_request_;
 }
 
 void EnrolleeStateMachine::readResponse(int result, const std::string& result_reason,
@@ -1293,7 +1297,6 @@ void EnrollerStateMachine::enrollmentCompleted() {
 }
 
 //Main function of the Neighbor Enroller thread
-/** main function of the Netlink message reader thread */
 void * doNeighborsEnrollerWork(void * arg) {
 	IPCProcess * ipcProcess = (IPCProcess *) arg;
 	IEnrollmentTask * enrollmentTask = ipcProcess->get_enrollment_task();
@@ -1314,7 +1317,7 @@ void * doNeighborsEnrollerWork(void * arg) {
 			if ((*it)->number_of_enrollment_attempts_ <
 					configuration.max_number_of_enrollment_attempts_) {
 				(*it)->number_of_enrollment_attempts_++;
-				EnrollmentRequest * request = new EnrollmentRequest((*it), 0);
+				EnrollmentRequest * request = new EnrollmentRequest((*it));
 				enrollmentTask->initiateEnrollment(request);
 			} else {
 				try {
@@ -1453,7 +1456,7 @@ bool EnrollmentTask::isEnrolledTo(const std::string& processName) const {
 	std::list<BaseEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it != machines.end(); ++it) {
 		if ((*it)->remote_peer_->name_.processName.compare(processName) == 0 &&
-				(*it)->state_ == BaseEnrollmentStateMachine::STATE_ENROLLED) {
+				(*it)->state_ != BaseEnrollmentStateMachine::STATE_NULL) {
 			return true;
 		}
 	}
@@ -1513,7 +1516,7 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDIFRequestEvent
 		neighbor->address_ = address;
 	}
 
-	EnrollmentRequest * request = new EnrollmentRequest(neighbor, event);
+	EnrollmentRequest * request = new EnrollmentRequest(neighbor, *event);
 	initiateEnrollment(request);
 }
 
@@ -1537,9 +1540,9 @@ void EnrollmentTask::initiateEnrollment(EnrollmentRequest * request) {
 	} catch (Exception &e) {
 		LOG_ERR("Problems allocating N-1 flow: %s", e.what());
 
-		if (request->event_) {
+		if (request->ipcm_initiated_) {
 			try {
-				rina::extendedIPCManager->enrollToDIFResponse(*(request->event_), -1,
+				rina::extendedIPCManager->enrollToDIFResponse(request->event_, -1,
 						std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
 			} catch (Exception &e) {
 				LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
@@ -1861,8 +1864,6 @@ void EnrollmentTask::nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * flowEv
 	}catch(Exception &e){
 		LOG_ERR("Problems initiating enrollment: %s", e.what());
 	}
-
-	delete request;
 }
 
 void EnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event) {
@@ -1877,9 +1878,9 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailed
 			event->handle_, event->flow_information_.portId);
 
 	//TODO inform the one that triggered the enrollment?
-	if (request->event_) {
+	if (request->ipcm_initiated_) {
 		try {
-			rina::extendedIPCManager->enrollToDIFResponse(*(request->event_), -1,
+			rina::extendedIPCManager->enrollToDIFResponse(request->event_, -1,
 					std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
 		} catch(Exception &e) {
 			LOG_ERR("Could not send a message to the IPC Manager: %s", e.what());
@@ -1921,9 +1922,9 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	if (enrollee) {
 		EnrollmentRequest * request = ((EnrolleeStateMachine *) stateMachine)->enrollment_request_;
 		if (request) {
-			if (request->event_) {
+			if (request->ipcm_initiated_) {
 				try {
-					rina::extendedIPCManager->enrollToDIFResponse(*(request->event_), -1,
+					rina::extendedIPCManager->enrollToDIFResponse(request->event_, -1,
 							std::list<rina::Neighbor>(), ipc_process_->get_dif_information());
 				} catch (Exception &e) {
 					LOG_ERR("Problems sending message to IPC Manager: %s", e.what());
