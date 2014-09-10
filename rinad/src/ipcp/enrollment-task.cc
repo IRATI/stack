@@ -549,10 +549,44 @@ void BaseEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled
 
 void BaseEnrollmentStateMachine::sendDIFDynamicInformation() {
 	//Send DirectoryForwardingTableEntries
-	sendCreateInformation(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-			EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME);
+	sendDFTEntries();
 
 	//Send neighbors (including myself)
+	sendNeighbors();
+}
+
+void BaseEnrollmentStateMachine::sendDFTEntries() {
+	BaseRIBObject * dftEntrySet;
+	std::list<BaseRIBObject *>::const_iterator it;
+	std::list<rina::DirectoryForwardingTableEntry *> dftEntries;
+
+	try {
+		dftEntrySet = rib_daemon_->readObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME);
+		for (it = dftEntrySet->get_children().begin();
+				it != dftEntrySet->get_children().end(); ++it) {
+			dftEntries.push_back((rina::DirectoryForwardingTableEntry*) (*it)->get_value());
+		}
+
+		if (dftEntries.size() == 0) {
+			LOG_DBG("No DFT entries to be sent");
+			return;
+		}
+
+		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::complextype;
+		robject_value.complex_value_ = &dftEntries;
+		RemoteIPCProcessId remote_id;
+		remote_id.port_id_ = port_id_;
+
+		rib_daemon_->remoteCreateObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME, robject_value, 0, remote_id, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems sending DFT entries: %s", e.what());
+	}
+}
+
+void BaseEnrollmentStateMachine::sendNeighbors() {
 	BaseRIBObject * neighborSet;
 	std::list<BaseRIBObject *>::const_iterator it;
 	std::list<rina::Neighbor *> neighbors;

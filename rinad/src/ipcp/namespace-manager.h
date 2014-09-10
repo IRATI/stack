@@ -57,6 +57,7 @@ public:
 	void createObject(const std::string& objectClass, const std::string& objectName,
 			const void* objectValue);
 	void deleteObject(const void* objectValue);
+	std::string get_displayable_value();
 
 private:
 	INamespaceManager * namespace_manager_;

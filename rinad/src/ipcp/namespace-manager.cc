@@ -201,6 +201,17 @@ void DirectoryForwardingTableEntryRIBObject::deleteObject(const void* objectValu
 	rib_daemon_->removeRIBObject(name_);
 }
 
+std::string DirectoryForwardingTableEntryRIBObject::get_displayable_value() {
+    const rina::DirectoryForwardingTableEntry * dfte =
+    		(const rina::DirectoryForwardingTableEntry *) get_value();
+    std::stringstream ss;
+    ss << "App name: " << dfte->ap_naming_info_.getEncodedString();
+    ss << "; Address: " << dfte->address_;
+    ss << "; Timestamp: " << dfte->timestamp_;
+
+    return ss.str();
+}
+
 // Class DirectoryForwardingTableEntry Set RIB Object
 DirectoryForwardingTableEntrySetRIBObject::DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process):
 		BaseRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
