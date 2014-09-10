@@ -55,8 +55,9 @@ EventLoop::run()
         for (;;) {
                 rina::IPCEvent *event = rina::ipcEventProducer->eventWait();
                 rina::IPCEventType ty;
-                LOG_DBG("Got event of type %d and sequence number %u",
-                		event->eventType, event->sequenceNumber);
+                LOG_DBG("Got event of type %s and sequence number %u",
+                		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
+                		event->sequenceNumber);
 
                 if (!event) {
                         std::cerr << "Null event received" << std::endl;

@@ -219,6 +219,12 @@ protected:
 	/// Sends all the DIF dynamic information
 	void sendDIFDynamicInformation();
 
+	/// Send the entries in the DFT (if any)
+	void sendDFTEntries();
+
+	/// Send the neighbors (if any)
+	void sendNeighbors();
+
 	/// Gets the object value from the RIB and send it as a CDAP Mesage
 	/// @param objectClass the class of the object to be send
 	/// @param objectName the name of the object to be send

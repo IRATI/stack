@@ -61,6 +61,7 @@ public:
 	BaseEvent();
 	BaseEvent(const IPCProcessEventType& id);
 	IPCProcessEventType get_id() const;
+	static const std::string eventIdToString(IPCProcessEventType id);
 
 protected:
 	/// The identity of the event

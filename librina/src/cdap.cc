@@ -839,7 +839,7 @@ CDAPMessage* CDAPMessage::getCancelReadResponseMessage(Flags flags,
 
 std::string CDAPMessage::to_string() const {
 	std::stringstream ss;
-	ss << std::endl << op_code_ << std::endl;
+	ss << std::endl << opcodeToString(op_code_) << std::endl;
 	if (op_code_ == CDAPMessage::M_CONNECT
 			|| op_code_ == CDAPMessage::M_CONNECT_R) {
 		if (abs_syntax_ != 0)
@@ -1044,6 +1044,74 @@ long CDAPMessage::get_version() const {
 }
 void CDAPMessage::set_version(long arg0) {
 	version_ = arg0;
+}
+
+const std::string CDAPMessage::opcodeToString(Opcode opcode) {
+	std::string result;
+
+	switch(opcode) {
+	case M_CONNECT:
+		result = "0_M_CONNECT";
+		break;
+	case M_CONNECT_R:
+		result = "1_M_CONNECT_R";
+		break;
+	case M_RELEASE:
+		result = "2_M_RELEASE";
+		break;
+	case M_RELEASE_R:
+		result = "3_M_RELEASER";
+		break;
+	case M_CREATE:
+		result = "4_M_CREATE";
+		break;
+	case M_CREATE_R:
+		result = "5_M_CREATE_R";
+		break;
+	case M_DELETE:
+		result = "6_M_DELETE";
+		break;
+	case M_DELETE_R:
+		result = "7_M_DELETE_R";
+		break;
+	case M_READ:
+		result = "8_M_READ";
+		break;
+	case M_READ_R:
+		result = "9_M_READ_R";
+		break;
+	case M_CANCELREAD:
+		result = "10_M_CANCELREAD";
+		break;
+	case M_CANCELREAD_R:
+		result = "11_M_CANCELREAD_R";
+		break;
+	case M_WRITE:
+		result = "12_M_WRITE";
+		break;
+	case M_WRITE_R:
+		result = "13_M_WRITE_R";
+		break;
+	case M_START:
+		result = "14_M_START";
+		break;
+	case M_START_R:
+		result = "15_M_START_r";
+		break;
+	case M_STOP:
+		result = "16_M_STOP";
+		break;
+	case M_STOP_R:
+		result = "17_M_STOP_R";
+		break;
+	case NONE_OPCODE:
+		result = "18_NON_OPCODE";
+		break;
+	default:
+		result = "Wrong operation code";
+	}
+
+	return result;
 }
 
 /*	class CDAPSessionDescriptor	*/

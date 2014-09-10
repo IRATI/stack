@@ -47,7 +47,7 @@ select_ipcp_by_dif(const rina::ApplicationProcessNamingInformation& dif_name)
                 rina::DIFInformation dif_info = ipcps[i]->getDIFInformation();
                 rina::ApplicationProcessNamingInformation ipcp_name = ipcps[i]->name;
 
-                if (dif_info.dif_name_ == dif_name
+                if (dif_info.dif_name_.processName == dif_name.processName
                                 /* The following OR clause is a temporary hack useful
                                  * for testing with shim dummy. TODO It will go away. */
                                 || ipcp_name.processName == dif_name.processName) {

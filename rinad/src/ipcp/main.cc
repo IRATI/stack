@@ -64,7 +64,15 @@ int wrapped_main(int argc, char * argv[])
 
         rinad::register_handlers_all(loop);
 
-        loop.run();
+        try {
+        	loop.run();
+        } catch (Exception &e) {
+        	LOG_ERR("Problems running event loop: %s", e.what());
+        } catch (std::exception &e1) {
+        	LOG_ERR("Problems running event loop: %s", e1.what());
+        }
+
+        LOG_DBG("Exited event loop");
 
         return EXIT_SUCCESS;
 }

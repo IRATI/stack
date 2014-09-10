@@ -170,6 +170,8 @@ void IPCProcessImpl::init_encoder() {
 			new WhatevercastNameEncoder());
 	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
 			new WhatevercastNameListEncoder());
+	encoder_->addEncoder(EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
+			new WatchdogEncoder());
 }
 
 void IPCProcessImpl::init_enrollment_task() {

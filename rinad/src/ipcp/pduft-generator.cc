@@ -589,7 +589,7 @@ void FlowStateDatabase::updateObjects(const std::list<FlowStateObject*>& newObje
 				LOG_DBG("Found the object in the DB. Object: %s",
 						(*oldIt)->object_name_.c_str());
 
-				if ((*newIt)->sequence_number_ >= (*oldIt)->sequence_number_) {
+				if ((*newIt)->sequence_number_ > (*oldIt)->sequence_number_) {
 					if ((*newIt)->address_ == address) {
 						(*oldIt)->sequence_number_ = (*oldIt)->sequence_number_ + 1;
 						(*oldIt)->avoid_port_ = NO_AVOID_PORT;

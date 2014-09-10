@@ -34,6 +34,47 @@ IPCProcessEventType BaseEvent::get_id() const {
 	return id_;
 }
 
+const std::string BaseEvent::eventIdToString(IPCProcessEventType id){
+	std::string result;
+
+	switch(id) {
+	case IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST:
+		result = "0_CONNECTIVITY_TO_NEIGHBOR_LOST";
+		break;
+	case IPCP_EVENT_EFCP_CONNECTION_CREATED:
+		result = "1_EFCP_CONNECTION_CREATED";
+		break;
+	case IPCP_EVENT_EFCP_CONNECTION_DELETED:
+		result = "2_EFCP_CONNECTION_DELETED";
+		break;
+	case IPCP_EVENT_MANAGEMENT_FLOW_ALLOCATED:
+		result = "3_MANAGEMENT_FLOW_ALLOCATED";
+		break;
+	case IPCP_EVENT_MANAGEMENT_FLOW_DEALLOCATED:
+		result = "4_MANAGEMENT_FLOW_DEALLOCATED";
+		break;
+	case IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED:
+		result = "5_N_MINUS_1_FLOW_ALLOCATED";
+		break;
+	case IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATION_FAILED:
+		result = "6_N_MINUS_1_FLOW_ALLOCATION_FAILED";
+		break;
+	case IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED:
+		result = "7_N_MINUS_1_FLOW_DEALLOCATED";
+		break;
+	case IPCP_EVENT_NEIGHBOR_DECLARED_DEAD:
+		result = "8_NEIGHBOR_DECLARED_DEAD";
+		break;
+	case IPCP_EVENT_NEIGHBOR_ADDED:
+		result = "9_NEIGHBOR_ADDED";
+		break;
+	default:
+		result = "Unknown event";
+	}
+
+	return result;
+}
+
 //CLASS NMinusOneFlowAllocationFailedEvent
 NMinusOneFlowAllocationFailedEvent::NMinusOneFlowAllocationFailedEvent(unsigned int handle,
 			const rina::FlowInformation& flow_information,
