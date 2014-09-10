@@ -89,6 +89,8 @@ void WatchdogRIBObject::remoteReadObject(int invoke_id, rina::CDAPSessionDescrip
 	//1 Send M_READ_R message
 	try {
 		RIBObjectValue robject_value;
+		robject_value.type_ = RIBObjectValue::inttype;
+		robject_value.int_value_ = ipc_process_->get_address();
 		RemoteIPCProcessId remote_id;
 		remote_id.port_id_ = session_descriptor->port_id_;
 
