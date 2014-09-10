@@ -839,6 +839,11 @@ void EnrolleeStateMachine::stop(EnrollmentInformationRequest * eiRequest, int in
 	allowed_to_start_early_ = eiRequest->allowed_to_start_early_;
 	stop_request_invoke_id_ = invoke_id;
 
+	//If the enrollee is also a member of the DIF, send dynamic information to the enroller as well
+	if (ipc_process_->get_operational_state() == ASSIGNED_TO_DIF) {
+		sendDFTEntries();
+	}
+
 	//Request more information or start
 	try{
 		requestMoreInformationOrStart();

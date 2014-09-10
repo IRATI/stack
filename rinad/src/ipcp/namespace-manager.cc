@@ -324,8 +324,6 @@ void DirectoryForwardingTableEntrySetRIBObject::createObject(const std::string& 
 			continue;
 		}
 
-		namespace_manager_->addDFTEntry(currentEntry);
-
 		std::stringstream ss;
 		ss<<name_<<EncoderConstants::SEPARATOR<<currentEntry->getKey();
 		BaseRIBObject * ribObject = new DirectoryForwardingTableEntryRIBObject(ipc_process_,
