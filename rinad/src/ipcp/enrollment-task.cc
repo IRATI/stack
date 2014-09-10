@@ -160,8 +160,12 @@ void WatchdogRIBObject::readResponse(int result, const std::string& result_reaso
 
 	(void) result;
 	(void) result_reason;
-	(void) object_value;
 	(void) object_name;
+
+	if (object_value) {
+		int * address = (int *) object_value;
+		delete address;
+	}
 
 	std::map<std::string, int>::iterator it = neighbor_statistics_.find(session_descriptor->dest_ap_name_);
 	if (it == neighbor_statistics_.end()) {

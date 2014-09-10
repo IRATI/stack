@@ -162,7 +162,8 @@ void BaseRIBDaemon::subscribeToEvent(const IPCProcessEventType& eventId,
 		it->second.push_back(eventListener);
 	}
 
-	LOG_INFO("EventListener subscribed to event %d", eventId);
+	LOG_INFO("EventListener subscribed to event %s",
+			BaseEvent::eventIdToString(eventId).c_str());
 	events_lock_.unlock();
 }
 
@@ -184,7 +185,8 @@ void BaseRIBDaemon::unsubscribeFromEvent(const IPCProcessEventType& eventId,
 		event_listeners_.erase(it);
 	}
 
-	LOG_INFO("EventListener unsubscribed from event %d", eventId);
+	LOG_INFO("EventListener unsubscribed from event %s",
+			BaseEvent::eventIdToString(eventId).c_str());
 	events_lock_.unlock();
 }
 
@@ -193,7 +195,8 @@ void BaseRIBDaemon::deliverEvent(Event * event)
 	if (!event)
 		return;
 
-	LOG_INFO("Event %d has just happened. Notifying event listeners.", event->get_id());
+	LOG_INFO("Event %s has just happened. Notifying event listeners.",
+			BaseEvent::eventIdToString(event->get_id()).c_str());
 
 	events_lock_.lock();
 	std::map<IPCProcessEventType, std::list<EventListener*> >::iterator it = event_listeners_.find(event->get_id());

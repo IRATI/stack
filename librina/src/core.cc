@@ -443,8 +443,8 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			event = myRINAManager->osProcessFinalized(message->getPortId());
 			if (event) {
 				eventsQueue->put(event);
-				LOG_DBG("Added event of type %d and sequence number %u to events queue",
-				                (int)event->eventType,
+				LOG_DBG("Added event of type %s and sequence number %u to events queue",
+				                IPCEvent::eventTypeToString(event->eventType).c_str(),
 				                event->sequenceNumber);
 			}
 
@@ -454,9 +454,9 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			event = incomingMessage->toIPCEvent();
 			if (event) {
 			        eventsQueue->put(event);
-			        LOG_DBG("Added event of type %d and sequence number %u to events queue",
-			                        (int)event->eventType,
-			                        event->sequenceNumber);
+			        LOG_DBG("Added event of type %s and sequence number %u to events queue",
+			        			IPCEvent::eventTypeToString(event->eventType).c_str(),
+			                    event->sequenceNumber);
 			} else
 			        LOG_WARN("Event is null for message type %d",
 			                        incomingMessage->getOperationCode());
