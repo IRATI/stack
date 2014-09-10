@@ -343,7 +343,15 @@ void gha_dump(const struct gha * gha)
 EXPORT_SYMBOL(gha_dump);
 
 bool gha_is_ok(const struct gha * gha)
-{ return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; }
+{
+        if (!gha)
+                return false;
+        if (gha->type != MAC_ADDR_802_3)
+                return false;
+        return true;
+
+        /* return (!gha || gha->type != MAC_ADDR_802_3) ? false : true; */
+}
 EXPORT_SYMBOL(gha_is_ok);
 
 struct gha * gha_create_gfp(gfp_t           flags,
