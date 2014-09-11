@@ -269,8 +269,8 @@ CLEANFILES    += pom.xml
 BUILT_SOURCES += pom.xml
 EXTRA_DIST    += pom.xml.in
 
-rinaperf-loop: \
-	rinaperf-loop.in \
+rinaperf-client-loop: \
+	rinaperf-client-loop.in \
 	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -281,10 +281,10 @@ rinaperf-loop: \
 	mv $@.tmp $@
 
 
-CLEANFILES    += rinaperf-loop
-BUILT_SOURCES += rinaperf-loop
-EXTRA_DIST    += rinaperf-loop.in
-bin_SCRIPTS   += rinaperf-loop
+CLEANFILES    += rinaperf-client-loop
+BUILT_SOURCES += rinaperf-client-loop
+EXTRA_DIST    += rinaperf-client-loop.in
+bin_SCRIPTS   += rinaperf-client-loop
 
 all-local: pom.xml \
 	Makefile
