@@ -1,12 +1,12 @@
 #!@SHELL@
 
 #
-# echo-client
+# rinaper-client-loop
 #
 # Written by: Sander Vrijders <sander DOT vrijders AT intec DOT ugent DOT be>
 #
 
-ME="run-rinaperf-tests"
+ME="rinaper-client-loop"
 
 TIME="10"
 COUNT="50"
