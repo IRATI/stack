@@ -60,12 +60,12 @@ durationToString(const std::chrono::high_resolution_clock::duration&
         return ss.str();
 }
 
-Client::Client(const string& dif_name, const string& apn, const string& api,
+Client::Client(const string& dif_nm, const string& apn, const string& api,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
                unsigned int w) :
-        Application(dif_name, apn, api),
+        Application(dif_nm, apn, api), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w)
@@ -93,10 +93,18 @@ Flow* Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
-        seqnum = ipcManager->requestFlowAllocation(
+        if (dif_name != string()) {
+                seqnum = ipcManager->requestFlowAllocationInDIF(
+                        ApplicationProcessNamingInformation(app_name, app_instance),
+                        ApplicationProcessNamingInformation(server_name, server_instance),
+                        ApplicationProcessNamingInformation(dif_name, string()),
+                        qosspec);
+        } else {
+                seqnum = ipcManager->requestFlowAllocation(
                         ApplicationProcessNamingInformation(app_name, app_instance),
                         ApplicationProcessNamingInformation(server_name, server_instance),
                         qosspec);
+        }
 
         for (;;) {
                 event = ipcEventProducer->eventWait();
