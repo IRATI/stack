@@ -17,10 +17,12 @@ function dump_help() {
     echo "$ME [OPTIONS...]"
     echo " "
     echo "Options:"
-    echo "  -c, --count [NUMBER]        times to run each test"
-    echo "  -f, --file [STRING]         file to write results to"
-    echo "  -t, --time [NUMBER]         time to run a single test in seconds"
-    echo "  -h, --help                  print this help, then exit"
+    echo "  -c, --count [NUMBER]    times to run each test"
+    echo "  -f, --file [STRING]     file to write results to"
+    echo "  -t, --time [NUMBER]     time to run a single test in seconds"
+    echo "  -h, --help              print this help, then exit"
+    echo " "
+    echo "Report bugs to <@PACKAGE_BUGREPORT@>"
 }
 
 function dump_hint() {
