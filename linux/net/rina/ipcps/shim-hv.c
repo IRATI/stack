@@ -619,8 +619,6 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         port_id_t port_id;
         int ret = -1;
 
-        mutex_lock(&priv->vc_lock);
-
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
                 goto out;
@@ -639,6 +637,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 goto out;
         }
 
+        mutex_lock(&priv->vc_lock);
+
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
                         priv->vmpi.channels[ch].state);
@@ -646,10 +646,23 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         }
         port_id = priv->vmpi.channels[ch].port_id;
 
+        if (response == RESP_OK) {
+                /* Everything is ok: Let's do the transition to the ALLOCATED
+                 * state. This is done **before** invoking
+                 * kipcm_notify_alloc_req_result() so that we avoid a race
+                 * condition with the application invoking the lockless
+                 * sdu_write() when the channel is yet in the PENDING state.
+                 */
+                priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
+                LOG_DBGF("channel %d --> ALLOCATED", ch);
+
+                wmb();
+        }
+
         ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
         if (ret) {
                 LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
-                goto flow_commit;
+                goto resp_ko;
         }
 
         ret = kipcm_notify_flow_alloc_req_result(default_kipcm, priv->id,
@@ -658,25 +671,15 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         if (ret) {
                 LOG_ERR("%s: kipcm_notify_flow_alloc_req_result() failed",
                         __func__);
-                goto flow_commit;
         }
 
-        if (response == RESP_OK) {
-                /* Everything is ok: Let's do the transition to the ALLOCATED
-                 * state.
-                 */
-                ret = 0;
-                priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
-                LOG_DBGF("channel %d --> ALLOCATED", ch);
-        } else {
+ resp_ko:
+        if (ret || response == RESP_KO) {
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
-        }
 
- flow_commit:
-        if (ret) {
                 if (kfa_flow_deallocate(priv->kfa, port_id))
                         LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
@@ -989,6 +992,8 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
                 goto out;
         }
+
+        rmb();
 
         if (unlikely(priv->vmpi.channels[ch].state !=
                      CHANNEL_STATE_ALLOCATED)) {
