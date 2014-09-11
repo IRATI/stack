@@ -75,7 +75,9 @@ void Client::run()
 {
         Flow *flow;
 
-        applicationRegister();
+        if (client_app_reg) {
+                applicationRegister();
+        }
         flow = createFlow();
         if (flow)
                 pingFlow(flow);
