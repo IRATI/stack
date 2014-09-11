@@ -69,8 +69,8 @@ static struct rinarp_handle * handle_create(struct net_device * dev,
         if (!handle)
                 return NULL;
 
-        handle->pa = gpa_dup(pa);
-        handle->ha = gha_dup(ha);
+        handle->pa  = gpa_dup(pa);
+        handle->ha  = gha_dup(ha);
         handle->dev = dev;
         if (!handle->pa || !handle->ha || !handle->dev) {
                 handle_destroy(handle);

@@ -35,6 +35,7 @@ struct vmpi_ops {
         void *priv;
 };
 
-#include "vmpi-limits.h"
+unsigned int vmpi_get_num_channels(void);
+unsigned int vmpi_get_max_payload_size(void);
 
 #endif  /* __VMPI_OPS_H__ */

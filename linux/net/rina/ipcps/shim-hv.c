@@ -50,8 +50,7 @@
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm *default_kipcm;
 
-static unsigned int vmpi_max_channels = VMPI_MAX_CHANNELS_DEFAULT;
-module_param(vmpi_max_channels, uint, 0444);
+static unsigned int vmpi_num_channels = 0;
 
 /* Private data associated to shim IPC process factory. */
 static struct ipcp_factory_data {
@@ -119,7 +118,7 @@ port_id_to_channel(struct ipcp_instance_data *priv, port_id_t port_id)
 {
         int i;
 
-        for (i = 0; i < vmpi_max_channels; i++)
+        for (i = 0; i < vmpi_num_channels; i++)
                 if (priv->vmpi.channels[i].port_id == port_id)
                         return i;
 
@@ -294,11 +293,11 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         mutex_lock(&priv->vc_lock);
 
         /* Select an unused channel. */
-        for (ch = 1; ch < vmpi_max_channels; ch++)
+        for (ch = 1; ch < vmpi_num_channels; ch++)
                 if (priv->vmpi.channels[ch].state == CHANNEL_STATE_NULL)
                         break;
 
-        if (ch == vmpi_max_channels) {
+        if (ch == vmpi_num_channels) {
                 LOG_INFO("no free channels available, try later");
                 err = -EBUSY;
                 goto src_name_alloc;
@@ -322,7 +321,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         slen = strlen(src_name);
         dlen = strlen(dst_name);
         msg_len = 1 + sizeof(ch) + slen + 1 + dlen + 1;
-        if (msg_len >= 2000) { /* XXX Temporary limitation */
+        if (msg_len >= 2000) {
                 LOG_ERR("%s: message too long %d", __func__, (int)msg_len);
                 goto msg_alloc;
         }
@@ -438,7 +437,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
         int ret = 0;
         port_id_t port_id;
 
-        if (!ch || ch >= vmpi_max_channels) {
+        if (!ch || ch >= vmpi_num_channels) {
                 LOG_ERR("%s: invalid channel %u", __func__, ch);
                 return -1;
         }
@@ -495,7 +494,7 @@ shim_hv_flow_deallocate(struct ipcp_instance_data *priv, port_id_t port_id)
 
         mutex_unlock(&priv->vc_lock);
 
-        if (ch && ch < vmpi_max_channels)
+        if (ch && ch < vmpi_num_channels)
                 shim_hv_send_deallocate(priv, ch);
 
         return ret;
@@ -535,7 +534,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         LOG_DBGF("received ALLOCATE_REQ(ch = %u, src = %s, dst = %s)",
                  ch, src_name, dst_name);
 
-        if (ch >= vmpi_max_channels) {
+        if (ch >= vmpi_num_channels) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
                 goto out;
         }
@@ -620,8 +619,6 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         port_id_t port_id;
         int ret = -1;
 
-        mutex_lock(&priv->vc_lock);
-
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
                 goto out;
@@ -635,10 +632,12 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         LOG_DBGF("received ALLOCATE_RESP(ch = %d, resp = %u)",
                  ch, response);
 
-        if (ch >= vmpi_max_channels) {
+        if (ch >= vmpi_num_channels) {
                 LOG_ERR("%s: bogus channel %u", __func__, ch);
                 goto out;
         }
+
+        mutex_lock(&priv->vc_lock);
 
         if (priv->vmpi.channels[ch].state != CHANNEL_STATE_PENDING) {
                 LOG_ERR("%s: channel %u in invalid state %d", __func__, ch,
@@ -647,10 +646,23 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         }
         port_id = priv->vmpi.channels[ch].port_id;
 
+        if (response == RESP_OK) {
+                /* Everything is ok: Let's do the transition to the ALLOCATED
+                 * state. This is done **before** invoking
+                 * kipcm_notify_alloc_req_result() so that we avoid a race
+                 * condition with the application invoking the lockless
+                 * sdu_write() when the channel is yet in the PENDING state.
+                 */
+                priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
+                LOG_DBGF("channel %d --> ALLOCATED", ch);
+
+                wmb();
+        }
+
         ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
         if (ret) {
                 LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
-                goto flow_commit;
+                goto resp_ko;
         }
 
         ret = kipcm_notify_flow_alloc_req_result(default_kipcm, priv->id,
@@ -659,25 +671,15 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
         if (ret) {
                 LOG_ERR("%s: kipcm_notify_flow_alloc_req_result() failed",
                         __func__);
-                goto flow_commit;
         }
 
-        if (response == RESP_OK) {
-                /* Everything is ok: Let's do the transition to the ALLOCATED
-                 * state.
-                 */
-                ret = 0;
-                priv->vmpi.channels[ch].state = CHANNEL_STATE_ALLOCATED;
-                LOG_DBGF("channel %d --> ALLOCATED", ch);
-        } else {
+ resp_ko:
+        if (ret || response == RESP_KO) {
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
-        }
 
- flow_commit:
-        if (ret) {
                 if (kfa_flow_deallocate(priv->kfa, port_id))
                         LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
         }
@@ -752,7 +754,7 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
         }
 
         /* User data channel. */
-        if (unlikely(ch >= vmpi_max_channels)) {
+        if (unlikely(ch >= vmpi_num_channels)) {
                 LOG_ERR("%s: invalid channel %u", __func__, ch);
                 return;
         }
@@ -881,7 +883,7 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
                 rkfree(tmpstr);
 
         mutex_lock(&priv->vc_lock);
-        for (ch = 0; ch < vmpi_max_channels; ch++) {
+        for (ch = 0; ch < vmpi_num_channels; ch++) {
                 if (name_is_equal(application_name,
                                   &priv->vmpi.channels[ch].application_name)) {
                         shim_hv_flow_deallocate_common(priv, ch, 0);
@@ -990,6 +992,8 @@ shim_hv_sdu_write(struct ipcp_instance_data *priv, port_id_t port_id,
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
                 goto out;
         }
+
+        rmb();
 
         if (unlikely(priv->vmpi.channels[ch].state !=
                      CHANNEL_STATE_ALLOCATED)) {
@@ -1116,7 +1120,7 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         priv->id = id;
         priv->assigned = 0;
         bzero(&priv->fspec, sizeof(priv->fspec));
-        priv->fspec.max_sdu_size      = 2000;   /* XXX Temporary limitation. */
+        priv->fspec.max_sdu_size      = vmpi_get_max_payload_size();
         priv->fspec.max_allowable_gap = -1;
 
         if (name_cpy(name, &priv->name)) {
@@ -1134,13 +1138,13 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
         /* Initialize the VMPI-related data structure. */
         bzero(&priv->vmpi, sizeof(priv->vmpi));
         priv->vmpi.channels = rkzalloc(
-                                       sizeof(priv->vmpi.channels[0]) * vmpi_max_channels,
+                                       sizeof(priv->vmpi.channels[0]) * vmpi_num_channels,
                                        GFP_KERNEL);
         if (priv->vmpi.channels == NULL) {
                 LOG_ERR("%s: channels allocation failed", __func__);
                 goto alloc_channels;
         }
-        for (i = 0; i < vmpi_max_channels; i++) {
+        for (i = 0; i < vmpi_num_channels; i++) {
                 priv->vmpi.channels[i].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[i].port_id = port_id_bad();
                 name_init_with(&priv->vmpi.channels[i].application_name,
@@ -1212,6 +1216,8 @@ static struct ipcp_factory *shim_hv_ipcp_factory = NULL;
 
 static int __init shim_hv_init(void)
 {
+        vmpi_num_channels = vmpi_get_num_channels();
+
         shim_hv_ipcp_factory =
                 kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,
                                             &shim_hv_factory_data,
