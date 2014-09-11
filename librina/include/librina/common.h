@@ -254,6 +254,11 @@ enum IPCEventType {
  */
 class IPCEvent {
 public:
+	IPCEvent();
+	IPCEvent(IPCEventType eventType, unsigned int sequenceNumber);
+	virtual ~IPCEvent();
+	static const std::string eventTypeToString(IPCEventType eventType);
+
 	/** The type of event */
 	IPCEventType eventType;
 
@@ -262,18 +267,6 @@ public:
 	 * witht the response
 	 */
 	unsigned int sequenceNumber;
-
-	virtual ~IPCEvent(){}
-
-	IPCEvent() {
-		eventType = NO_EVENT;
-		sequenceNumber = 0;
-	}
-
-	IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
-		this->eventType = eventType;
-		this->sequenceNumber = sequenceNumber;
-	}
 };
 
 class BaseResponseEvent: public IPCEvent {

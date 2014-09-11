@@ -1,0 +1,93 @@
+#!@SHELL@
+
+#
+# rinaper-client-loop
+#
+# Written by: Sander Vrijders <sander DOT vrijders AT intec DOT ugent DOT be>
+#
+
+ME="rinaper-client-loop"
+
+TIME="10"
+COUNT="50"
+SDU_SIZES="1 10 100 250 500 750 1000 1250 1400 1480"
+RESULT_FILE="results.csv"
+
+function dump_help() {
+    echo "$ME [OPTIONS...]"
+    echo " "
+    echo "Options:"
+    echo "  -c, --count [NUMBER]    times to run each test"
+    echo "  -f, --file [STRING]     file to write results to"
+    echo "  -t, --time [NUMBER]     time to run a single test in seconds"
+    echo "  -h, --help              print this help, then exit"
+    echo " "
+    echo "Report bugs to <@PACKAGE_BUGREPORT@>"
+}
+
+function dump_hint() {
+    echo "$ME: $1"
+    echo "Try \`$0 --help' for more information."
+}
+
+(( $# > 1 )) || { dump_help; exit 1; }
+
+while test $# -gt 0; do
+    case "$1" in
+        -h|--help)
+            dump_help
+            exit 0
+            ;;
+
+        --count|-c)
+            shift
+            if test $# -gt 0; then
+                export COUNT=$1
+            else
+                dump_hint "No amount specified"
+                exit 1
+            fi
+            shift
+            ;;
+
+        --time|-t)
+            shift
+            if test $# -gt 0; then
+                export TIME=$1
+            else
+                dump_hint "No time specified"
+                exit 1
+            fi
+            shift
+            ;;
+
+        --file|-f)
+            shift
+            if test $# -gt 0; then
+                export RESULT_FILE=$1
+            else
+                dump_hint "No file specified"
+                exit 1
+            fi
+            shift
+            ;;
+
+        *)
+            dump_hint "Unknown option"
+            exit 1
+            ;;
+    esac
+done
+
+echo "Test number;Time in s;SDU size;SDUs" > $RESULT_FILE
+for size in $SDU_SIZES
+do
+    for (( try=1; try<=$COUNT; try++ ))
+    do
+        echo "Test nr: $try with sdus of $size bytes"
+        sdus=$(bash rinaperf-client -s $size -t $TIME -a 1000000 | grep "Server received" | cut -f9 -d " ")
+        echo "$try;$TIME;$size;$sdus" >> $RESULT_FILE
+        sleep 7
+    done
+done
+

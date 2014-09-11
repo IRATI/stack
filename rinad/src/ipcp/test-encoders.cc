@@ -658,6 +658,28 @@ bool test_flow_state_object_list(rinad::Encoder * encoder) {
 	return true;
 }
 
+bool test_watchdog(rinad::Encoder * encoder) {
+	int address = 23;
+	int * recovered_obj = 0;
+
+	rina::CDAPMessage cdapMessage = rina::CDAPMessage();
+	cdapMessage.obj_class_ = rinad::EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS;
+
+	rina::IntObjectValue * int_value = new rina::IntObjectValue(address);
+	cdapMessage.obj_value_ = int_value;
+
+	recovered_obj = (int*) encoder->decode(&cdapMessage);
+
+	if (*recovered_obj != address ) {
+		return false;
+	}
+
+	delete recovered_obj;
+
+	LOG_INFO("Watchdog Encoder tested successfully");
+	return true;
+}
+
 int main()
 {
 	rinad::Encoder encoder;
@@ -689,6 +711,8 @@ int main()
 			new rinad::WhatevercastNameEncoder());
 	encoder.addEncoder(rinad::EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
 			new rinad::WhatevercastNameListEncoder());
+	encoder.addEncoder(rinad::EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
+			new rinad::WatchdogEncoder());
 
 	bool result = test_data_transfer_constants(&encoder);
 	if (!result) {
@@ -765,6 +789,12 @@ int main()
 	result = test_whatevercast_name_list(&encoder);
 	if (!result) {
 		LOG_ERR("Problems testing Whatevercast Name List Encoder");
+		return -1;
+	}
+
+	result = test_watchdog(&encoder);
+	if (!result) {
+		LOG_ERR("Problems testing Watchdog Encoder");
 		return -1;
 	}
 

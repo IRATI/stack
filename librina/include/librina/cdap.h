@@ -488,6 +488,9 @@ public:
 	/// related behaviors that are subject to change over time. See text for details
 	/// of use.
 	long version_;
+
+private:
+	static const std::string opcodeToString(Opcode opcode);
 };
 
 ///Describes a CDAPSession, by identifying the source and destination application processes.

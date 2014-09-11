@@ -162,6 +162,9 @@ public:
 	bool isResponseMessage() const;
 	void setResponseMessage(bool responseMessage);
 	const std::string toString();
+
+private:
+	static const std::string operationCodeToString(RINANetlinkOperationCode operationCode);
 };
 
 class BaseNetlinkResponseMessage: public BaseNetlinkMessage {

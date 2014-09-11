@@ -1006,4 +1006,27 @@ void* NeighborListEncoder::decode(const rina::ObjectValueInterface * object_valu
 	return (void *) list;
 }
 
+// Class WatchdogEncoder
+const rina::SerializedObject* WatchdogEncoder::encode(const void* object) {
+	(void) object;
+	return 0;
+}
+
+void* WatchdogEncoder::decode(const rina::ObjectValueInterface * object_value) const {
+	rina::messages::neighbors_t gpb_list;
+	int * result = 0;
+
+	rina::IntObjectValue * value =
+				(rina::IntObjectValue*) object_value;
+
+	if (!value) {
+		LOG_ERR("Problems decoding watchdog RIB object value");
+		return 0;
+	}
+
+	result = new int;
+	*result = * ((int *) value->get_value());
+	return result;
+}
+
 }

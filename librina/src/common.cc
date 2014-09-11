@@ -290,6 +290,143 @@ DIFProperties::DIFProperties(
 	this->maxSDUSize = maxSDUSize;
 }
 
+/* CLASS IPC EVENT */
+IPCEvent::IPCEvent() {
+	eventType = NO_EVENT;
+	sequenceNumber = 0;
+}
+
+IPCEvent::IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
+	this->eventType = eventType;
+	this->sequenceNumber = sequenceNumber;
+}
+
+
+IPCEvent::~IPCEvent() {
+}
+
+const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
+	std::string result;
+
+	switch (eventType) {
+	case FLOW_ALLOCATION_REQUESTED_EVENT:
+		result = "0_FLOW_ALLOCATION_REQUESTED";
+		break;
+	case ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
+		result = "1_ALLOCATE_FLOW_REQUEST_RESULT";
+		break;
+	case ALLOCATE_FLOW_RESPONSE_EVENT:
+		result = "2_ALLOCATE_FLOW_RESPONSE";
+		break;
+	case FLOW_DEALLOCATION_REQUESTED_EVENT:
+		result = "3_FLOW_DEALLOCATION_REQUESTED";
+		break;
+	case DEALLOCATE_FLOW_RESPONSE_EVENT:
+		result = "4_DEALLOCATE_FLOW_RESPONSE";
+		break;
+	case APPLICATION_UNREGISTERED_EVENT:
+		result = "5_APPLICATION_UNREGISTERED";
+		break;
+	case FLOW_DEALLOCATED_EVENT:
+		result = "6_FLOW_DEALLOCATED";
+		break;
+	case APPLICATION_REGISTRATION_REQUEST_EVENT:
+		result = "7_APPLICATION_REGISTRATION_REQUEST";
+		break;
+	case REGISTER_APPLICATION_RESPONSE_EVENT:
+		result = "8_REGISTER_APP_RESPONSE";
+		break;
+	case APPLICATION_UNREGISTRATION_REQUEST_EVENT:
+		result = "9_APP_UNREGISTRATION_REQUEST";
+		break;
+	case UNREGISTER_APPLICATION_RESPONSE_EVENT:
+		result = "10_UNREGISTER_APP_RESPONSE";
+		break;
+	case APPLICATION_REGISTRATION_CANCELED_EVENT:
+		result = "11_APP_REGISTRATION_CANCELED";
+		break;
+	case ASSIGN_TO_DIF_REQUEST_EVENT:
+		result = "12_ASSIGN_TO_DIF_REQUEST";
+		break;
+	case ASSIGN_TO_DIF_RESPONSE_EVENT:
+		result = "13_ASSIGN_TO_DIF_RESPONSE";
+		break;
+	case UPDATE_DIF_CONFIG_REQUEST_EVENT:
+		result = "14_UPDATE_DIF_CONFIG_REQUEST";
+		break;
+	case UPDATE_DIF_CONFIG_RESPONSE_EVENT:
+		result = "15_UPDATE_DIF_CONFIG_RESPONSE";
+		break;
+	case ENROLL_TO_DIF_REQUEST_EVENT:
+		result = "16_ENROLL_TO_DIF_REQUEST";
+		break;
+	case ENROLL_TO_DIF_RESPONSE_EVENT:
+		result = "17_ENROLL_TO_DIF_RESONSE";
+		break;
+	case NEIGHBORS_MODIFIED_NOTIFICATION_EVENT:
+		result = "18_NEIGHBORS_MODIFIED_NOTIFICATION";
+		break;
+	case IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
+		result = "19_DIF_REGISTRATION_NOTIFICATION";
+		break;
+	case IPC_PROCESS_QUERY_RIB:
+		result = "20_QUERY_RIB";
+		break;
+	case GET_DIF_PROPERTIES:
+		result = "21_GET_DIF_PROPERTIES";
+		break;
+	case GET_DIF_PROPERTIES_RESPONSE_EVENT:
+		result = "22_GET_DIF_PROPERTIES_RESPONSE";
+		break;
+	case OS_PROCESS_FINALIZED:
+		result = "23_OS_PROCESS_FINALIZED";
+		break;
+	case IPCM_REGISTER_APP_RESPONSE_EVENT:
+		result = "24_IPCM_REGISTER_APP_RESPONSE";
+		break;
+	case IPCM_UNREGISTER_APP_RESPONSE_EVENT:
+		result = "25_IPCM_UNREGISTER_APP_RESPONSE";
+		break;
+	case IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
+		result = "26_IPCM_DEALLOCATE_FLOW_RESPONSE";
+		break;
+	case IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+		result = "27_IPCM_ALLOCATE_FLOW_RESULT";
+		break;
+	case QUERY_RIB_RESPONSE_EVENT:
+		result = "28_QUERY_RIB_RESPONSE";
+		break;
+	case IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
+		result = "29_IPC_PROCESS_DAEMON_INITIALIZED";
+		break;
+	case TIMER_EXPIRED_EVENT:
+		result = "30_TIMER_EXPIRED";
+		break;
+	case IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
+		result = "31_CREATE_EFCP_CONN_RESPONSE";
+		break;
+	case IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
+		result = "32_UPDATE_EFCP_CONN_RESPONSE";
+		break;
+	case IPC_PROCESS_CREATE_CONNECTION_RESULT:
+		result = "33_CREATE_EFCP_CONN_RESULT";
+		break;
+	case IPC_PROCESS_DESTROY_CONNECTION_RESULT:
+		result = "34_DESTROY_EFCP_CONN_RESULT";
+		break;
+	case IPC_PROCESS_DUMP_FT_RESPONSE:
+		result = "35_DUMP_FT_RESPONSE";
+		break;
+	case NO_EVENT:
+		result = "36_NO_EVENT";
+		break;
+	default:
+		result = "Unknown event";
+	}
+
+	return result;
+}
+
 /* CLASS BASE RESPONSE EVENT */
 BaseResponseEvent::BaseResponseEvent(
                         int result,

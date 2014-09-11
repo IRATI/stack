@@ -937,16 +937,15 @@ query_rib_response_event_handler(rina::IPCEvent *e,
 
                 ss << "Query RIB operation completed for IPC "
                         << "process " << ipcp->name.toString() << endl;
-                ss << "    Objects:" << endl;
+                FLUSH_LOG(INFO, ss);
                 for (lit = event->ribObjects.begin(); lit != event->ribObjects.end();
                                 ++lit){
-                        ss << "        Name: " << lit->name_ <<
+                        ss << "Name: " << lit->name_ <<
                                 "; Class: "<< lit->class_;
                         ss << "; Instance: "<< lit->instance_ << endl;
                         ss << "Value: " << lit->displayable_value_ <<endl;
                         ss << "" << endl;
                 }
-                FLUSH_LOG(INFO, ss);
                 ipcm->query_rib_responses[event->sequenceNumber] = ss.str();
         } else {
                 ss << __func__ << ": Error: Query RIB operation of "

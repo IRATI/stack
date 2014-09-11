@@ -76,7 +76,10 @@ PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
-AC_PATH_PROG([PROTOC], [protoc], [/bin/false])
+AC_PATH_PROG([PROTOC], [protoc], [no])
+AS_IF([test "x$PROTOC" = "xno"],[
+    AC_MSG_ERROR([Your system lacks of protoc support])
+])
 
 LIBPROTOBUF_MIN_VERSION=2.5.0
 AC_SUBST(LIBPROTOBUF_MIN_VERSION, $LIBPROTOBUF_MIN_VERSION)
