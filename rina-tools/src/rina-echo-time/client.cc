@@ -159,14 +159,10 @@ void Client::pingFlow(Flow* flow)
                                         buffer[i] = dis(ran);
                                 }
 
-                                try {
-                                        begintp = std::chrono::high_resolution_clock::now();
-                                        flow->writeSDU(buffer, data_size);
-                                        bytes_read = flow->readSDU(buffer2, data_size);
-                                        endtp = std::chrono::high_resolution_clock::now();
-                                } catch (...) {
-                                        LOG_ERR("SDU write/read failed");
-                                }
+                                begintp = std::chrono::high_resolution_clock::now();
+                                flow->writeSDU(buffer, data_size);
+                                bytes_read = flow->readSDU(buffer2, data_size);
+                                endtp = std::chrono::high_resolution_clock::now();
                                 cout << "SDU size = " << data_size << ", seq = " << n <<
                                         ", RTT = " << durationToString(endtp - begintp);
                                 if (!((data_size == (uint) bytes_read) &&
