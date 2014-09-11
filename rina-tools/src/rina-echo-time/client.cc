@@ -171,7 +171,9 @@ void Client::pingFlow(Flow* flow)
                                 cout << endl;
 
                                 n++;
-                                this_thread::sleep_for(std::chrono::milliseconds(wait));
+                                if (n < echo_times) {
+                                        this_thread::sleep_for(std::chrono::milliseconds(wait));
+                                }
                 } else {
                         break;
                 }
