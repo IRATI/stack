@@ -29,6 +29,7 @@ rina-mem-stats: rina-mem-stats.py Makefile
 	mv $@.tmp $@
 
 bin_SCRIPTS += rina-mem-stats
+EXTRA_DIST  += rina-mem-stats.py
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-mem-stats
 
 if HAVE_PYTHON_MATPLOT_LIB
@@ -42,6 +43,7 @@ rina-show-plots: rina-show-plots.py Makefile
 	mv $@.tmp $@
 
 bin_SCRIPTS += rina-show-plots
+EXTRA_DIST  += rina-show-plots.py
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-show-plots
 endif
 endif
@@ -56,4 +58,5 @@ rina-bug-report: rina-bug-report.in Makefile
 	mv $@.tmp $@
 
 bin_SCRIPTS += rina-bug-report
+EXTRA_DIST  += rina-bug-report.in
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-bug-report
