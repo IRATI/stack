@@ -5,6 +5,7 @@
 #
 
 edit = $(SED)						\
+	-e 's|@SHELL[@]|$(SHELL)|g'			\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
         -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'	\
         -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'		\
@@ -267,6 +268,23 @@ pom.xml: pom.xml.in \
 CLEANFILES    += pom.xml
 BUILT_SOURCES += pom.xml
 EXTRA_DIST    += pom.xml.in
+
+rinaperf-loop: \
+	rinaperf-loop.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	chmod a+x $@.tmp
+	mv $@.tmp $@
+
+
+CLEANFILES    += rinaperf-loop
+BUILT_SOURCES += rinaperf-loop
+EXTRA_DIST    += rinaperf-loop.in
+bin_SCRIPTS   += rinaperf-loop
 
 all-local: pom.xml \
 	Makefile
