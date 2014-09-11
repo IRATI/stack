@@ -6,6 +6,7 @@
 
 SUBDIRS                            = common rina-echo-time
 EXTRA_DIST                         =
+DISTCLEANFILES                     =
 bin_PROGRAMS                       =
 bin_SCRIPTS                        =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
@@ -28,8 +29,9 @@ rina-mem-stats: rina-mem-stats.py Makefile
 	chmod a+x $@.tmp
 	mv $@.tmp $@
 
-bin_SCRIPTS += rina-mem-stats
-EXTRA_DIST  += rina-mem-stats.py
+bin_SCRIPTS    += rina-mem-stats
+DISTCLEANFILES += rina-mem-stats
+EXTRA_DIST     += rina-mem-stats.py
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-mem-stats
 
 if HAVE_PYTHON_MATPLOT_LIB
@@ -42,8 +44,9 @@ rina-show-plots: rina-show-plots.py Makefile
 	chmod a+x $@.tmp
 	mv $@.tmp $@
 
-bin_SCRIPTS += rina-show-plots
-EXTRA_DIST  += rina-show-plots.py
+bin_SCRIPTS    += rina-show-plots
+DISTCLEANFILES += rina-show-plots
+EXTRA_DIST     += rina-show-plots.py
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-show-plots
 endif
 endif
@@ -57,6 +60,7 @@ rina-bug-report: rina-bug-report.in Makefile
 	chmod a+x $@.tmp
 	mv $@.tmp $@
 
-bin_SCRIPTS += rina-bug-report
-EXTRA_DIST  += rina-bug-report.in
+bin_SCRIPTS    += rina-bug-report
+DISTCLEANFILES += rina-bug-report
+EXTRA_DIST     += rina-bug-report.in
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-bug-report
