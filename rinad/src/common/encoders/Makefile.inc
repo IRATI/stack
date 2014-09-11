@@ -1,5 +1,5 @@
 protoSOURCES =
-
+DISTCLEANFILES =
 
 ApplicationProcessNamingInfoMessage.stamp: ApplicationProcessNamingInfoMessage.proto
 	rm -f ApplicationProcessNamingInfoMessage.tmp
@@ -22,12 +22,14 @@ ApplicationProcessNamingInfoMessage.pb.h ApplicationProcessNamingInfoMessage.pb.
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	ApplicationProcessNamingInfoMessage.tmp
+DISTCLEANFILES +=                               \
+        ApplicationProcessNamingInfoMessage.pb.h ApplicationProcessNamingInfoMessage.pb.cc ApplicationProcessNamingInfoMessage.stamp
 
-EXTRA_DIST +=					\
-	ApplicationProcessNamingInfoMessage.proto				\
-	ApplicationProcessNamingInfoMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        ApplicationProcessNamingInfoMessage.tmp
+
+EXTRA_DIST +=                                   \
+        ApplicationProcessNamingInfoMessage.proto
 
 protoSOURCES += ApplicationProcessNamingInfoMessage.pb.cc ApplicationProcessNamingInfoMessage.pb.h
 
@@ -53,12 +55,14 @@ CommonMessages.pb.h CommonMessages.pb.cc: CommonMessages.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	CommonMessages.tmp
+DISTCLEANFILES +=                               \
+        CommonMessages.pb.h CommonMessages.pb.cc CommonMessages.stamp
 
-EXTRA_DIST +=					\
-	CommonMessages.proto				\
-	CommonMessages.stamp
+MOSTLYCLEANFILES +=                             \
+        CommonMessages.tmp
+
+EXTRA_DIST +=                                   \
+        CommonMessages.proto
 
 protoSOURCES += CommonMessages.pb.cc CommonMessages.pb.h
 
@@ -84,12 +88,14 @@ ConnectionPoliciesMessage.pb.h ConnectionPoliciesMessage.pb.cc: ConnectionPolici
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	ConnectionPoliciesMessage.tmp
+DISTCLEANFILES +=                               \
+        ConnectionPoliciesMessage.pb.h ConnectionPoliciesMessage.pb.cc ConnectionPoliciesMessage.stamp
 
-EXTRA_DIST +=					\
-	ConnectionPoliciesMessage.proto				\
-	ConnectionPoliciesMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        ConnectionPoliciesMessage.tmp
+
+EXTRA_DIST +=                                   \
+        ConnectionPoliciesMessage.proto
 
 protoSOURCES += ConnectionPoliciesMessage.pb.cc ConnectionPoliciesMessage.pb.h
 
@@ -115,12 +121,14 @@ DataTransferConstantsMessage.pb.h DataTransferConstantsMessage.pb.cc: DataTransf
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	DataTransferConstantsMessage.tmp
+DISTCLEANFILES +=                               \
+        DataTransferConstantsMessage.pb.h DataTransferConstantsMessage.pb.cc DataTransferConstantsMessage.stamp
 
-EXTRA_DIST +=					\
-	DataTransferConstantsMessage.proto				\
-	DataTransferConstantsMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        DataTransferConstantsMessage.tmp
+
+EXTRA_DIST +=                                   \
+        DataTransferConstantsMessage.proto
 
 protoSOURCES += DataTransferConstantsMessage.pb.cc DataTransferConstantsMessage.pb.h
 
@@ -146,12 +154,14 @@ DirectoryForwardingTableEntryArrayMessage.pb.h DirectoryForwardingTableEntryArra
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	DirectoryForwardingTableEntryArrayMessage.tmp
+DISTCLEANFILES +=                               \
+        DirectoryForwardingTableEntryArrayMessage.pb.h DirectoryForwardingTableEntryArrayMessage.pb.cc DirectoryForwardingTableEntryArrayMessage.stamp
 
-EXTRA_DIST +=					\
-	DirectoryForwardingTableEntryArrayMessage.proto				\
-	DirectoryForwardingTableEntryArrayMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        DirectoryForwardingTableEntryArrayMessage.tmp
+
+EXTRA_DIST +=                                   \
+        DirectoryForwardingTableEntryArrayMessage.proto
 
 protoSOURCES += DirectoryForwardingTableEntryArrayMessage.pb.cc DirectoryForwardingTableEntryArrayMessage.pb.h
 
@@ -177,12 +187,14 @@ DirectoryForwardingTableEntryMessage.pb.h DirectoryForwardingTableEntryMessage.p
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	DirectoryForwardingTableEntryMessage.tmp
+DISTCLEANFILES +=                               \
+        DirectoryForwardingTableEntryMessage.pb.h DirectoryForwardingTableEntryMessage.pb.cc DirectoryForwardingTableEntryMessage.stamp
 
-EXTRA_DIST +=					\
-	DirectoryForwardingTableEntryMessage.proto				\
-	DirectoryForwardingTableEntryMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        DirectoryForwardingTableEntryMessage.tmp
+
+EXTRA_DIST +=                                   \
+        DirectoryForwardingTableEntryMessage.proto
 
 protoSOURCES += DirectoryForwardingTableEntryMessage.pb.cc DirectoryForwardingTableEntryMessage.pb.h
 
@@ -208,12 +220,14 @@ EnrollmentInformationMessage.pb.h EnrollmentInformationMessage.pb.cc: Enrollment
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	EnrollmentInformationMessage.tmp
+DISTCLEANFILES +=                               \
+        EnrollmentInformationMessage.pb.h EnrollmentInformationMessage.pb.cc EnrollmentInformationMessage.stamp
 
-EXTRA_DIST +=					\
-	EnrollmentInformationMessage.proto				\
-	EnrollmentInformationMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        EnrollmentInformationMessage.tmp
+
+EXTRA_DIST +=                                   \
+        EnrollmentInformationMessage.proto
 
 protoSOURCES += EnrollmentInformationMessage.pb.cc EnrollmentInformationMessage.pb.h
 
@@ -239,12 +253,14 @@ FlowMessage.pb.h FlowMessage.pb.cc: FlowMessage.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	FlowMessage.tmp
+DISTCLEANFILES +=                               \
+        FlowMessage.pb.h FlowMessage.pb.cc FlowMessage.stamp
 
-EXTRA_DIST +=					\
-	FlowMessage.proto				\
-	FlowMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        FlowMessage.tmp
+
+EXTRA_DIST +=                                   \
+        FlowMessage.proto
 
 protoSOURCES += FlowMessage.pb.cc FlowMessage.pb.h
 
@@ -270,12 +286,14 @@ FlowStateGroupMessage.pb.h FlowStateGroupMessage.pb.cc: FlowStateGroupMessage.st
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	FlowStateGroupMessage.tmp
+DISTCLEANFILES +=                               \
+        FlowStateGroupMessage.pb.h FlowStateGroupMessage.pb.cc FlowStateGroupMessage.stamp
 
-EXTRA_DIST +=					\
-	FlowStateGroupMessage.proto				\
-	FlowStateGroupMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        FlowStateGroupMessage.tmp
+
+EXTRA_DIST +=                                   \
+        FlowStateGroupMessage.proto
 
 protoSOURCES += FlowStateGroupMessage.pb.cc FlowStateGroupMessage.pb.h
 
@@ -301,12 +319,14 @@ FlowStateMessage.pb.h FlowStateMessage.pb.cc: FlowStateMessage.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	FlowStateMessage.tmp
+DISTCLEANFILES +=                               \
+        FlowStateMessage.pb.h FlowStateMessage.pb.cc FlowStateMessage.stamp
 
-EXTRA_DIST +=					\
-	FlowStateMessage.proto				\
-	FlowStateMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        FlowStateMessage.tmp
+
+EXTRA_DIST +=                                   \
+        FlowStateMessage.proto
 
 protoSOURCES += FlowStateMessage.pb.cc FlowStateMessage.pb.h
 
@@ -332,12 +352,14 @@ NeighborArrayMessage.pb.h NeighborArrayMessage.pb.cc: NeighborArrayMessage.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	NeighborArrayMessage.tmp
+DISTCLEANFILES +=                               \
+        NeighborArrayMessage.pb.h NeighborArrayMessage.pb.cc NeighborArrayMessage.stamp
 
-EXTRA_DIST +=					\
-	NeighborArrayMessage.proto				\
-	NeighborArrayMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        NeighborArrayMessage.tmp
+
+EXTRA_DIST +=                                   \
+        NeighborArrayMessage.proto
 
 protoSOURCES += NeighborArrayMessage.pb.cc NeighborArrayMessage.pb.h
 
@@ -363,12 +385,14 @@ NeighborMessage.pb.h NeighborMessage.pb.cc: NeighborMessage.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	NeighborMessage.tmp
+DISTCLEANFILES +=                               \
+        NeighborMessage.pb.h NeighborMessage.pb.cc NeighborMessage.stamp
 
-EXTRA_DIST +=					\
-	NeighborMessage.proto				\
-	NeighborMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        NeighborMessage.tmp
+
+EXTRA_DIST +=                                   \
+        NeighborMessage.proto
 
 protoSOURCES += NeighborMessage.pb.cc NeighborMessage.pb.h
 
@@ -394,12 +418,14 @@ PolicyDescriptorMessage.pb.h PolicyDescriptorMessage.pb.cc: PolicyDescriptorMess
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	PolicyDescriptorMessage.tmp
+DISTCLEANFILES +=                               \
+        PolicyDescriptorMessage.pb.h PolicyDescriptorMessage.pb.cc PolicyDescriptorMessage.stamp
 
-EXTRA_DIST +=					\
-	PolicyDescriptorMessage.proto				\
-	PolicyDescriptorMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        PolicyDescriptorMessage.tmp
+
+EXTRA_DIST +=                                   \
+        PolicyDescriptorMessage.proto
 
 protoSOURCES += PolicyDescriptorMessage.pb.cc PolicyDescriptorMessage.pb.h
 
@@ -425,12 +451,14 @@ QoSCubeArrayMessage.pb.h QoSCubeArrayMessage.pb.cc: QoSCubeArrayMessage.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	QoSCubeArrayMessage.tmp
+DISTCLEANFILES +=                               \
+        QoSCubeArrayMessage.pb.h QoSCubeArrayMessage.pb.cc QoSCubeArrayMessage.stamp
 
-EXTRA_DIST +=					\
-	QoSCubeArrayMessage.proto				\
-	QoSCubeArrayMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        QoSCubeArrayMessage.tmp
+
+EXTRA_DIST +=                                   \
+        QoSCubeArrayMessage.proto
 
 protoSOURCES += QoSCubeArrayMessage.pb.cc QoSCubeArrayMessage.pb.h
 
@@ -456,12 +484,14 @@ QoSCubeMessage.pb.h QoSCubeMessage.pb.cc: QoSCubeMessage.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	QoSCubeMessage.tmp
+DISTCLEANFILES +=                               \
+        QoSCubeMessage.pb.h QoSCubeMessage.pb.cc QoSCubeMessage.stamp
 
-EXTRA_DIST +=					\
-	QoSCubeMessage.proto				\
-	QoSCubeMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        QoSCubeMessage.tmp
+
+EXTRA_DIST +=                                   \
+        QoSCubeMessage.proto
 
 protoSOURCES += QoSCubeMessage.pb.cc QoSCubeMessage.pb.h
 
@@ -487,12 +517,14 @@ QoSSpecification.pb.h QoSSpecification.pb.cc: QoSSpecification.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	QoSSpecification.tmp
+DISTCLEANFILES +=                               \
+        QoSSpecification.pb.h QoSSpecification.pb.cc QoSSpecification.stamp
 
-EXTRA_DIST +=					\
-	QoSSpecification.proto				\
-	QoSSpecification.stamp
+MOSTLYCLEANFILES +=                             \
+        QoSSpecification.tmp
+
+EXTRA_DIST +=                                   \
+        QoSSpecification.proto
 
 protoSOURCES += QoSSpecification.pb.cc QoSSpecification.pb.h
 
@@ -518,12 +550,14 @@ WhatevercastNameArrayMessage.pb.h WhatevercastNameArrayMessage.pb.cc: Whateverca
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	WhatevercastNameArrayMessage.tmp
+DISTCLEANFILES +=                               \
+        WhatevercastNameArrayMessage.pb.h WhatevercastNameArrayMessage.pb.cc WhatevercastNameArrayMessage.stamp
 
-EXTRA_DIST +=					\
-	WhatevercastNameArrayMessage.proto				\
-	WhatevercastNameArrayMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        WhatevercastNameArrayMessage.tmp
+
+EXTRA_DIST +=                                   \
+        WhatevercastNameArrayMessage.proto
 
 protoSOURCES += WhatevercastNameArrayMessage.pb.cc WhatevercastNameArrayMessage.pb.h
 
@@ -549,12 +583,14 @@ WhatevercastNameMessage.pb.h WhatevercastNameMessage.pb.cc: WhatevercastNameMess
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	WhatevercastNameMessage.tmp
+DISTCLEANFILES +=                               \
+        WhatevercastNameMessage.pb.h WhatevercastNameMessage.pb.cc WhatevercastNameMessage.stamp
 
-EXTRA_DIST +=					\
-	WhatevercastNameMessage.proto				\
-	WhatevercastNameMessage.stamp
+MOSTLYCLEANFILES +=                             \
+        WhatevercastNameMessage.tmp
+
+EXTRA_DIST +=                                   \
+        WhatevercastNameMessage.proto
 
 protoSOURCES += WhatevercastNameMessage.pb.cc WhatevercastNameMessage.pb.h
 
