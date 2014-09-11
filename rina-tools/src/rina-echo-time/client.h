@@ -47,6 +47,7 @@ protected:
         void destroyFlow(rina::Flow *flow);
 
 private:
+        std::string dif_name;
         std::string server_name;
         std::string server_instance;
         bool quiet;
