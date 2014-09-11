@@ -83,7 +83,8 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
         dif_specified = ipcm->config.lookup_dif_by_application(event->
                                         localApplicationName, dif_name);
         if (!dif_specified) {
-                if (event->DIFName.toString().size()) {
+                if (event->DIFName !=
+                                rina::ApplicationProcessNamingInformation()) {
                         dif_name = event->DIFName;
                         dif_specified = true;
                 }
