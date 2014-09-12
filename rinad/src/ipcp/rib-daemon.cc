@@ -206,12 +206,11 @@ void BaseRIBDaemon::deliverEvent(Event * event)
 		return;
 	}
 
+	events_lock_.unlock();
 	std::list<EventListener *>::iterator listIterator;
 	for (listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
 		(*listIterator)->eventHappened(event);
 	}
-
-	events_lock_.unlock();
 
 	if (event) {
 		delete event;

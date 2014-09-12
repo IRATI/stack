@@ -242,6 +242,7 @@ void DirectoryForwardingTableEntrySetRIBObject::eventHappened(Event * event) {
 	std::list<BaseRIBObject *>::const_iterator iterator;
 	for (iterator = get_children().begin(); iterator != get_children().end(); ++iterator) {
 		entry = (rina::DirectoryForwardingTableEntry *) (*iterator)->get_value();
+		LOG_DBG("Entry pointer: %p", entry);
 		if (entry->get_address() == conEvent->neighbor_->get_address()) {
 			objectsToDelete.push_back((*iterator)->name_);
 		}
