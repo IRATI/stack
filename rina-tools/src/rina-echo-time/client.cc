@@ -60,12 +60,13 @@ durationToString(const std::chrono::high_resolution_clock::duration&
         return ss.str();
 }
 
-Client::Client(const string& dif_nm, const string& apn, const string& api,
+Client::Client(const string& t_type,
+               const string& dif_nm, const string& apn, const string& api,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
                unsigned int w) :
-        Application(dif_nm, apn, api), dif_name(dif_nm),
+        Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w)
@@ -75,10 +76,18 @@ void Client::run()
 {
         Flow *flow;
 
-        applicationRegister();
+        if (client_app_reg) {
+                applicationRegister();
+        }
         flow = createFlow();
-        if (flow)
-                pingFlow(flow);
+        if (flow) {
+                if (test_type == "ping")
+                        pingFlow(flow);
+                else if (test_type == "perf")
+                        perfFlow(flow);
+                else
+                        LOG_ERR("Unknown test type '%s'", test_type.c_str());
+        }
         if (flow)
                 destroyFlow(flow);
 }
@@ -189,6 +198,30 @@ void Client::pingFlow(Flow* flow)
 
         delete [] buffer;
         delete [] buffer2;
+}
+
+void Client::perfFlow(Flow* flow)
+{
+        char *buffer;
+        unsigned long n = 0;
+
+        buffer = new char[data_size];
+        if (!buffer) {
+                LOG_ERR("Allocation of the send buffer failed");
+
+                return;
+        }
+
+        for (unsigned int i = 0; i < data_size; i++) {
+                buffer[i] = static_cast<char>(i * i);
+        }
+
+        while (n < echo_times) {
+                flow->writeSDU(buffer, data_size);
+                n++;
+        }
+
+        delete [] buffer;
 }
 
 void Client::destroyFlow(Flow *flow)

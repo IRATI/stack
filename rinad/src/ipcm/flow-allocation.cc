@@ -70,6 +70,29 @@ IPCManager::deallocate_flow(rina::IPCProcess *ipcp,
 }
 
 static void
+application_flow_allocation_failed_notify(rina::FlowRequestEvent *event)
+{
+        ostringstream ss;
+
+        // Inform the Application Manager about the flow allocation
+        // failure
+        event->portId = -1;
+        try {
+                rina::applicationManager->flowAllocated(*event);
+                ss << "Flow allocation between " <<
+                        event->localApplicationName.toString()
+                        << " and " << event->remoteApplicationName.toString()
+                        << " failed: applications informed" << endl;
+                FLUSH_LOG(INFO, ss);
+        } catch (rina::NotifyFlowAllocatedException) {
+                ss << __func__ << ": Error while notifying the "
+                        "Application Manager about flow allocation "
+                        "result" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+}
+
+static void
 flow_allocation_requested_local(rina::FlowRequestEvent *event,
                                 IPCManager *ipcm)
 {
@@ -104,6 +127,9 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
                         "remote-app = " << event->remoteApplicationName.
                         toString() << endl;
                 FLUSH_LOG(ERR, ss);
+
+                application_flow_allocation_failed_notify(event);
+
                 return;
         }
 
@@ -128,22 +154,7 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
                         << endl;
                 FLUSH_LOG(ERR, ss);
 
-                // Inform the Application Manager about the flow allocation
-                // failure
-                event->portId = -1;
-                try {
-                        rina::applicationManager->flowAllocated(*event);
-                        ss << "Flow allocation between " <<
-                                event->localApplicationName.toString()
-                                << " and " << event->remoteApplicationName.toString()
-                                << " failed: applications informed" << endl;
-                        FLUSH_LOG(INFO, ss);
-                } catch (rina::NotifyFlowAllocatedException) {
-                        ss << __func__ << ": Error while notifying the "
-                                "Application Manager about flow allocation "
-                                "result" << endl;
-                        FLUSH_LOG(ERR, ss);
-                }
+                application_flow_allocation_failed_notify(event);
         }
 }
 
