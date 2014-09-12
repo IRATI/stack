@@ -178,7 +178,7 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
 			int invoke_id, int underlying_port_id);
-	void submitAllocateRequest(rina::FlowRequestEvent * flowRequestEvent);
+	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
@@ -214,9 +214,8 @@ public:
 	virtual ~INewFlowRequetPolicy() {
 	}
 	;
-	virtual Flow * generateFlowObject(
-			const rina::FlowRequestEvent& flowRequestEvent,
-			const std::list<rina::QoSCube*>& qosCubes) = 0;
+	virtual Flow * generateFlowObject(IPCProcess * ipc_process,
+			const rina::FlowRequestEvent& flowRequestEvent) = 0;
 };
 
 class SimpleNewFlowRequestPolicy: public INewFlowRequetPolicy {
@@ -227,12 +226,13 @@ public:
 	~SimpleNewFlowRequestPolicy() {
 	}
 	;
-	Flow * generateFlowObject(const rina::FlowRequestEvent& flowRequestEvent,
-			const std::list<rina::QoSCube*>& qosCubes);
+	Flow * generateFlowObject(IPCProcess * ipc_process,
+			const rina::FlowRequestEvent& flowRequestEvent);
 
 private:
-	rina::QoSCube * selectQoSCube(const rina::FlowSpecification& flowSpec,
-			const std::list<rina::QoSCube*>& qosCubes);
+	rina::QoSCube * selectQoSCube(IPCProcess * ipc_process,
+			const rina::FlowSpecification& flowSpec);
+	std::list<rina::QoSCube*> getQoSCubes(IPCProcess * ipc_process);
 };
 
 ///Implementation of the FlowAllocatorInstance
