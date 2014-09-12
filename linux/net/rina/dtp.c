@@ -774,8 +774,8 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         continue;
                 }
 
-                if (time_before_eq(jiffies,
-                                   pos->time_stamp + msecs_to_jiffies(a))) {
+                if (time_before_eq(pos->time_stamp + msecs_to_jiffies(a),
+                                   jiffies)) {
                         LOG_DBG("Processing A timer expired");
 
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {

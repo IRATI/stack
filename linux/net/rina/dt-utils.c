@@ -283,7 +283,7 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 
         tmp->pdu        = pdu;
         tmp->time_stamp = jiffies;
-        tmp->retries    = 1;
+        tmp->retries    = 0;
 
         INIT_LIST_HEAD(&tmp->next);
 
@@ -379,6 +379,9 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 
         ASSERT(q);
 
+        /* FIXME this should be change since we are sending in inverse order and
+         * it could be problematic because of gaps and A timer
+         */
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
                 if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
                     seq_num) {
@@ -493,6 +496,8 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
+                LOG_DBG("Checking RTX of PDU %u, now: %lu >?< %lu + %lu",
+                        seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr));
                 if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
                                 jiffies)) {
                         cur->retries++;
@@ -504,7 +509,6 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 continue;
                         }
                         tmp = pdu_dup_ni(cur->pdu);
-                        seq = pci_sequence_number_get(pdu_pci_get_ro(tmp));
                         if (rmt_send(rmt,
                                      pci_destination(pdu_pci_get_ro(tmp)),
                                      pci_qos_id(pdu_pci_get_ro(tmp)),
