@@ -434,6 +434,7 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(IPCProcess * ipc_process,
 	LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	rina::Connection * connection = new rina::Connection();
+	connection->setPortId(event.portId);
 	connection->setQosId(1);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
 	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
@@ -593,7 +594,7 @@ void FlowAllocatorInstance::submitAllocateRequest(
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(
 			flow_request_event_.remoteApplicationName);
-	LOG_DBG("The directory forwarding table returned address %ud",
+	LOG_DBG("The directory forwarding table returned address %u",
                 destinationAddress);
 	flow_->destination_address_ = destinationAddress;
 	if (destinationAddress == 0){
