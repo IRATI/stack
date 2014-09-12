@@ -606,7 +606,8 @@ int rtxq_destroy(struct rtxq * q)
 
 #define MAX_NAME_SIZE 128
 
-static const char * create_twq_name(const char *        prefix,
+/* FIXME: This function is not re-entrant */
+static const char * twq_name_format(const char *        prefix,
                                     const struct rtxq * instance)
 {
         static char name[MAX_NAME_SIZE];
@@ -646,7 +647,7 @@ struct rtxq * rtxq_create(struct dt *  dt,
                 return NULL;
         }
 
-        twq_name = create_twq_name("twq", tmp);
+        twq_name = twq_name_format("twq", tmp);
         if (!twq_name) {
                 rtxq_destroy(tmp);
                 return NULL;
@@ -692,7 +693,7 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
                 return NULL;
         }
 
-        twq_name = create_twq_name("twq", tmp);
+        twq_name = twq_name_format("twq", tmp);
         if (!twq_name) {
                 rtxq_destroy(tmp);
                 return NULL;

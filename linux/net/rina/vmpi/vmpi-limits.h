@@ -18,10 +18,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <asm/page.h>
+
 #ifndef __VMPI_LIMITS_H__
 #define __VMPI_LIMITS_H__
 
 #define VMPI_MAX_CHANNELS_DEFAULT 64
-#define VMPI_BUF_SIZE   2048
+#define VMPI_BUF_SIZE   PAGE_SIZE
+
+#if (PAGE_SIZE > 4096)
+#warning "Page size is greater than 4096: this situation has never been tested"
+#endif
 
 #endif   /* __VMPI_LIMITS_H__ */
