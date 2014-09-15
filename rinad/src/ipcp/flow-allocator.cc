@@ -1239,6 +1239,7 @@ const rina::SerializedObject* FlowEncoder::encode(const void* object) {
 void* FlowEncoder::decode(
 		const rina::ObjectValueInterface * object_value) const {
 	Flow *flow = new Flow();
+	rina::Connection * connection;
 	rina::messages::Flow gpf_flow;
 
 	rina::SerializedObject * serializedObject =
@@ -1262,8 +1263,13 @@ void* FlowEncoder::decode(
 	flow->destination_port_id_ = gpf_flow.destinationportid();
 	flow->source_address_ = gpf_flow.sourceaddress();
 	flow->destination_address_ = gpf_flow.destinationaddress();
-	for (int i = 0; i < gpf_flow.connectionids_size(); ++i)
-		flow->connections_.push_back(Encoder::get_Connection(gpf_flow.connectionids(i)));
+
+	for (int i = 0; i < gpf_flow.connectionids_size(); ++i) {
+		connection = Encoder::get_Connection(gpf_flow.connectionids(i));
+		connection->sourceAddress = flow->source_address_;
+		connection->destAddress = flow->destination_address_;
+		flow->connections_.push_back(connection);
+	}
 	flow->current_connection_index_ = gpf_flow.currentconnectionidindex();
 	flow->state_ = static_cast<rinad::Flow::IPCPFlowState>(gpf_flow.state());
 	rina::FlowSpecification *fs = Encoder::get_FlowSpecification(gpf_flow.qosparameters());
