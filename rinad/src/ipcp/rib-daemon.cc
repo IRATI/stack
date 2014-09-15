@@ -454,6 +454,7 @@ void RIBDaemon::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& ev
 
 	std::list<BaseRIBObject*>::iterator it;
 	for (it = ribObjects.begin(); it != ribObjects.end(); ++it) {
+		LOG_DBG("Object name: %s", (*it)->name_.c_str());
 		result.push_back((*it)->get_data());
 	}
 

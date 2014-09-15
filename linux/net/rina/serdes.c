@@ -157,6 +157,7 @@ static int serialize_base_pci(const struct serdes * instance,
         offset = 0;
         memcpy(data + offset, &version, VERSION_SIZE);
         offset += VERSION_SIZE;
+        LOG_DBG("Serialized version %d, with size %d", version, VERSION_SIZE);
 
         addr = pci_destination(pci);
         memcpy(data + offset, &addr, dt_cons->address_length);
@@ -562,6 +563,11 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
 
+        LOG_DBG("Data Transfer constants: %d %d %d %d %d %d",
+        		dt_cons->address_length, dt_cons->cep_id_length,
+        		dt_cons->length_length, dt_cons->port_id_length,
+        		dt_cons->qos_id_length, dt_cons->seq_num_length);
+
         buffer = pdu_buffer_get_ro(pdu);
         if (!buffer)
                 return NULL;
@@ -586,6 +592,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
 
         /* Base PCI size, fields present in all PDUs */
         pci_size = base_pci_size(dt_cons);
+        LOG_DBG("PCI Size: ", %d);
 
         /*
          * These are available in the stack at this point in time
@@ -746,6 +753,10 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
+        LOG_DBG("Data Transfer constants: %d %d %d %d %d %d",
+        		dt_cons->address_length, dt_cons->cep_id_length,
+        		dt_cons->length_length, dt_cons->port_id_length,
+        		dt_cons->qos_id_length, dt_cons->seq_num_length);
 
         tmp_buff = pdu_ser_buffer(pdu);
         ASSERT(tmp_buff);
