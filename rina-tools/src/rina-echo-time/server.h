@@ -28,16 +28,19 @@
 class Server: public Application
 {
 public:
-        Server(const std::string& dif_name,
+        Server(const std::string& test_type,
+               const std::string& dif_name,
                const std::string& app_name,
                const std::string& app_instance);
 
         void run();
 
 protected:
-        void serveFlow(rina::Flow * f);
+        void servePingFlow(rina::Flow * f);
+        void servePerfFlow(rina::Flow *f);
 
 private:
+        std::string test_type;
         void startWorker(rina::Flow * f);
 };
 

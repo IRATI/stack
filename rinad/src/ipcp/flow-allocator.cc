@@ -265,28 +265,28 @@ void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
 	}
 }
 
-void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent * event) {
+void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent& event) {
 	int portId = 0;
 	IFlowAllocatorInstance * flowAllocatorInstance;
 
 	try {
 		portId = rina::extendedIPCManager->allocatePortId(
-				event->localApplicationName);
+				event.localApplicationName);
 		LOG_DBG("Got assigned port-id %d", portId);
 	} catch (Exception &e) {
 		LOG_ERR(
 				"Problems requesting an available port-id to the Kernel IPC Manager: %s",
 				e.what());
-		replyToIPCManager(*event, -1);
+		replyToIPCManager(event, -1);
 	}
 
-	event->portId = portId;
+	event.portId = portId;
 	flowAllocatorInstance = new FlowAllocatorInstance(ipc_process_, this,
 			cdap_session_manager_, portId);
 	flow_allocator_instances_.put(portId, flowAllocatorInstance);
 
 	try {
-		flowAllocatorInstance->submitAllocateRequest(*event);
+		flowAllocatorInstance->submitAllocateRequest(event);
 	} catch (Exception &e) {
 		LOG_ERR("Problems allocating flow: %s", e.what());
 		flow_allocator_instances_.erase(portId);
@@ -298,7 +298,7 @@ void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent * event) {
 			LOG_ERR("Problems releasing port-id %d: %s", portId, e.what());
 		}
 
-		replyToIPCManager(*event, -1);
+		replyToIPCManager(event, -1);
 	}
 }
 
@@ -415,10 +415,11 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId) {
 }
 
 //Class Simple New flow Request Policy
-Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
-		const rina::FlowRequestEvent& event,
-		const std::list<rina::QoSCube*>& qosCubes) {
+Flow * SimpleNewFlowRequestPolicy::generateFlowObject(IPCProcess * ipc_process,
+		const rina::FlowRequestEvent& event) {
 	Flow* flow;
+	rina::QoSCube * qosCube = 0;
+
 
 	flow = new Flow();
 	flow->destination_naming_info_ = event.remoteApplicationName;
@@ -429,12 +430,12 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 	flow->state_ = Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
-	rina::QoSCube * qosCube = selectQoSCube(event.flowSpecification,
-			qosCubes);
-	LOG_DBG("Selected qos cube with name %s and policies: %s",
-			qosCube->get_name().c_str());
+	qosCube = selectQoSCube(ipc_process, event.flowSpecification);
+	LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	rina::Connection * connection = new rina::Connection();
+	connection->portId = event.portId;
+	connection->sourceAddress = ipc_process->get_address();
 	connection->setQosId(1);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
 	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
@@ -456,11 +457,11 @@ Flow * SimpleNewFlowRequestPolicy::generateFlowObject(
 	return flow;
 }
 
-rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
-		const rina::FlowSpecification& flowSpec,
-		const std::list<rina::QoSCube*>& qosCubes) {
+rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(IPCProcess * ipc_process,
+		const rina::FlowSpecification& flowSpec) {
+	std::list<rina::QoSCube*> qosCubes = getQoSCubes(ipc_process);
 	if (flowSpec.maxAllowableGap < 0) {
-		return qosCubes.front();
+		return *(qosCubes.begin());
 	}
 
 	std::list<rina::QoSCube*>::const_iterator iterator;
@@ -476,6 +477,24 @@ rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
 	}
 
 	throw Exception("Could not find a QoS Cube with Rtx control disabled!");
+}
+
+std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(IPCProcess * ipc_process) {
+	std::list<rina::QoSCube *> qosCubes;
+	std::list<BaseRIBObject *> children;
+
+	BaseRIBObject * ribObject = 0;
+	ribObject = ipc_process->get_rib_daemon()->readObject(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
+	if (ribObject != 0) {
+		children = ribObject->get_children();
+		for (std::list<BaseRIBObject *>::const_iterator it = children.begin();
+				it != children.end(); ++ it) {
+			qosCubes.push_back((rina::QoSCube *) (*it)->get_value());
+		}
+	}
+
+	return qosCubes;
 }
 
 //Class Flow Allocator Instance
@@ -566,19 +585,20 @@ void FlowAllocatorInstance::submitAllocateRequest(
 		const rina::FlowRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
 
-	flow_request_event_ = rina::FlowRequestEvent(event);
+	flow_request_event_ = event;
 	flow_ =
-			new_flow_request_policy_->generateFlowObject(event,
-					ipc_process_->get_dif_information().get_dif_configuration().get_efcp_configuration().get_qos_cubes());
+			new_flow_request_policy_->generateFlowObject(ipc_process_,
+					flow_request_event_);
 
 	LOG_DBG("Generated flow object");
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(
-			event.remoteApplicationName);
-	LOG_DBG("The directory forwarding table returned address %ud",
+			flow_request_event_.remoteApplicationName);
+	LOG_DBG("The directory forwarding table returned address %u",
                 destinationAddress);
 	flow_->destination_address_ = destinationAddress;
+	flow_->getActiveConnection()->destAddress = destinationAddress;
 	if (destinationAddress == 0){
 		std::stringstream ss;
 		ss << "Could not find entry in DFT for application ";

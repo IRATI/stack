@@ -446,7 +446,7 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
 
 	if (event->localRequest) {
 		//A local application is requesting this IPC Process to allocate a flow
-		ipcp->flow_allocator_->submitAllocateRequest(event);
+		ipcp->flow_allocator_->submitAllocateRequest(*event);
 	} else {
 		//A remote IPC process is requesting a flow to this IPC Process
 		ipcp->resource_allocator_->get_n_minus_one_flow_manager()->

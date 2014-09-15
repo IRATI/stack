@@ -206,12 +206,11 @@ void BaseRIBDaemon::deliverEvent(Event * event)
 		return;
 	}
 
+	events_lock_.unlock();
 	std::list<EventListener *>::iterator listIterator;
 	for (listIterator=it->second.begin(); listIterator != it->second.end(); ++listIterator) {
 		(*listIterator)->eventHappened(event);
 	}
-
-	events_lock_.unlock();
 
 	if (event) {
 		delete event;
@@ -507,13 +506,14 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
 						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			} catch (Exception &e) {
 				//Look for parent object, delegate creation there
-                                std::string::size_type position =
-                                        cdapMessage->get_obj_name().rfind(EncoderConstants::SEPARATOR);
+				std::string::size_type position =
+						cdapMessage->get_obj_name().rfind(EncoderConstants::SEPARATOR);
 				if (position == std::string::npos) {
 					throw e;
 				}
 				std::string parentObjectName = cdapMessage->get_obj_name().substr(0, position);
-				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, true);
+				LOG_DBG("Looking for parent object, with name %s", parentObjectName.c_str());
+				ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, false);
 				ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
 						cdapMessage->invoke_id_, cdapSessionDescriptor);
 			}

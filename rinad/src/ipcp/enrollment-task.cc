@@ -1865,6 +1865,8 @@ void EnrollmentTask::nMinusOneFlowDeallocated(rina::CDAPSessionDescriptor * cdap
 			rib_daemon_->deliverEvent(event2);
 
 			//Notify the IPC Manager that we've lost a neighbor
+			LOG_DBG("Notifying IPC Manager about dead neighbor %s",
+					cdapSessionDescriptor->dest_ap_name_.c_str());
 			std::list<rina::Neighbor> lostNeighbors;
 			lostNeighbors.push_back(*(*it2));
 			try {
