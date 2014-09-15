@@ -591,7 +591,7 @@ void FlowStateDatabase::updateObjects(const std::list<FlowStateObject*>& newObje
 
 				if ((*newIt)->sequence_number_ > (*oldIt)->sequence_number_) {
 					if ((*newIt)->address_ == address) {
-						(*oldIt)->sequence_number_ = (*oldIt)->sequence_number_ + 1;
+						(*oldIt)->sequence_number_ = (*newIt)->sequence_number_ + 1;
 						(*oldIt)->avoid_port_ = NO_AVOID_PORT;
 						LOG_DBG("Object is self generated, updating the sequence number of %s to %d",
 								(*oldIt)->object_name_.c_str(), (*oldIt)->sequence_number_);
