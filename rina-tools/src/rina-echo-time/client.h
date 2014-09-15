@@ -30,7 +30,8 @@
 
 class Client: public Application {
 public:
-        Client(const std::string& dif_name,
+        Client(const std::string& test_type,
+               const std::string& dif_name,
                const std::string& apn,
                const std::string& api,
                const std::string& server_apn,
@@ -44,9 +45,11 @@ public:
 protected:
         rina::Flow* createFlow();
         void pingFlow(rina::Flow *flow);
+        void perfFlow(rina::Flow *flow);
         void destroyFlow(rina::Flow *flow);
 
 private:
+        std::string test_type;
         std::string dif_name;
         std::string server_name;
         std::string server_instance;
