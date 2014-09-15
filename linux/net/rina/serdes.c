@@ -34,6 +34,7 @@
 #include "buffer.h"
 #include "pci.h"
 
+/* FIXME: This is wrong, use a version value and use sifeof later */
 #define VERSION_SIZE  1
 
 /* FIXME: Remove this useless variable, we have to have a define for that */
