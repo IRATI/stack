@@ -703,6 +703,11 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 return NULL;
         }
 
+        //TODO remove temporary debug ouptu
+        for (int i=0; i<size; i++){
+        	LOG_DBG("%d", data[i]);
+        }
+
         buf = buffer_create_with_gfp(flags, data, size);
         if (!buf) {
                 rkfree(data);
@@ -756,6 +761,11 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
 
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
+
+        //TODO remove temporary debug ouptu
+        for (int i=0; i<pdu->buf->size; i++){
+        	LOG_DBG("%d", pdu->buf->data[i]);
+        }
 
         new_pdu = pdu_create_gfp(flags);
         if (!new_pdu) {

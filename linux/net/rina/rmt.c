@@ -414,6 +414,7 @@ static int send_worker(void * o)
                 ASSERT(serdes);
 
                 pdu_ser = pdu_serialize(serdes, pdu);
+
                 if (!pdu_ser) {
                         LOG_ERR("Error creating serialized PDU");
                         spin_lock(&tmp->egress.queues->lock);
