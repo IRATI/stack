@@ -70,7 +70,7 @@ void FlowSetRIBObject::createObject(const std::string& objectClass,
 	FlowRIBObject * flowRIBObject;
 
 	void * fai = const_cast<void *>(objectValue);
-	flowRIBObject = new FlowRIBObject(ipc_process_, objectClass, objectName,
+	flowRIBObject = new FlowRIBObject(ipc_process_, objectName, objectClass,
 			(FlowAllocatorInstance *) fai);
 	add_child(flowRIBObject);
 	rib_daemon_->addRIBObject(flowRIBObject);
