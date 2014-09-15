@@ -553,6 +553,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         pdu_type_t            pdu_type;
         seq_num_t             seq;
         struct buffer *       buf;
+        int i = 0;
 
         if (!pdu_is_ok(pdu))
                 return NULL;
@@ -703,8 +704,8 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 return NULL;
         }
 
-        //TODO remove temporary debug ouptu
-        for (int i=0; i<size; i++){
+        //TODO remove
+        for (i=0; i<size; i++) {
         	LOG_DBG("%d", data[i]);
         }
 
@@ -743,6 +744,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         int                   offset;
         ssize_t               pdu_len;
         seq_num_t             seq;
+        int i = 0;
 
         if (!pdu_ser_is_ok(pdu))
                 return NULL;
@@ -762,9 +764,9 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
         ASSERT(ptr);
 
-        //TODO remove temporary debug ouptu
-        for (int i=0; i<pdu->buf->size; i++){
-        	LOG_DBG("%d", pdu->buf->data[i]);
+        //TODO remove
+        for (i=0; i<buffer_length(tmp_buff); i++) {
+        	LOG_DBG("%d", ptr[i]);
         }
 
         new_pdu = pdu_create_gfp(flags);

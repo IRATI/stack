@@ -606,11 +606,6 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        LOG_DBG("Going to send to the RMT:");
-        LOG_DBG("src_address %d", pci_source(pci));
-        LOG_DBG("dst_address: %d", pci_destination(pci));
-        LOG_DBG("port: %d", port_id);
-
         /*
          * NOTE:
          *   Decide on how to deliver to the RMT depending on
