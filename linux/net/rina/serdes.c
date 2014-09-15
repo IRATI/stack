@@ -592,7 +592,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
 
         /* Base PCI size, fields present in all PDUs */
         pci_size = base_pci_size(dt_cons);
-        LOG_DBG("PCI Size: ", %d);
+        LOG_DBG("PCI Size: %d", pci_size);
 
         /*
          * These are available in the stack at this point in time
