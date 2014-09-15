@@ -492,7 +492,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 					event.applicationRegistrationInformation.applicationRegistrationType);
 	registration->appName = event.applicationRegistrationInformation.appName;
 	registration->difName = event.applicationRegistrationInformation.difName;
-	registration->ipcProcessId = ipc_process_->get_id();
+	registration->ipcProcessId = event.applicationRegistrationInformation.ipcProcessId;
 	registrations_.put(appToRegister.getEncodedString(), registration);
 	LOG_INFO("Successfully registered application %s with IPC Process id %us",
 			appToRegister.getEncodedString().c_str(), ipc_process_->get_id());
