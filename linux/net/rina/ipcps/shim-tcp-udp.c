@@ -130,9 +130,9 @@ struct app_register_data {
         int                     port;
 };
 
-/* 
- * FIXME: Rename the function. 
- * It checks for an app that is expected to be registered in the DIF 
+/*
+ * FIXME: Rename the function.
+ * It checks for an app that is expected to be registered in the DIF
  * But ... it also holds the directory. D'Oh.
  * Needs to be separated into two distinct things
  */
@@ -240,15 +240,13 @@ find_app_by_socket(struct ipcp_instance_data * data,
 
         if (sock->type == SOCK_DGRAM) {
                 list_for_each_entry(app, &data->apps, list) {
-                        if (app->udpsock == sock) {
+                        if (app->udpsock == sock)
                                 return app;
-                        }
                 }
         } else {
                 list_for_each_entry(app, &data->apps, list) {
-                        if (app->lsock == sock) {
+                        if (app->lsock == sock)
                                 return app;
-                        }
                 }
         }
 
@@ -266,9 +264,8 @@ static struct app_data * find_app_by_name(struct ipcp_instance_data * data,
         /* FIXME: Locking to be added here */
 
         list_for_each_entry(app, &data->apps, list) {
-                if (name_is_equal(app->app_name, name)) {
+                if (name_is_equal(app->app_name, name))
                         return app;
-                }
         }
 
         return NULL;
@@ -281,9 +278,8 @@ static int flow_destroy(struct ipcp_instance_data * data,
         ASSERT(flow);
 
         spin_lock(&data->flow_lock);
-        if (!list_empty(&flow->list)) {
+        if (!list_empty(&flow->list))
                 list_del(&flow->list);
-        }
         spin_unlock(&data->flow_lock);
 
         rkfree(flow);
@@ -353,9 +349,9 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(source);
         ASSERT(dest);
 
-        /* 
-         * FIXME: app_data should be created here, not retrieved 
-         * Client applications should not register in the DIF to 
+        /*
+         * FIXME: app_data should be created here, not retrieved
+         * Client applications should not register in the DIF to
          * be able to issue flow allocation requests ...
          */
         app = find_app_by_name(data, source);
@@ -405,7 +401,10 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                                IPPROTO_TCP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("could not create tcp socket");
-                                /* FIXME: Is the flow already created in the KFA? */
+                                /*
+                                 * FIXME: Is the flow already created in the
+                                 *        KFA?
+                                 */
                                 deallocate_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -481,8 +480,8 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
         spin_lock(&data->flow_lock);
         if (flow->port_id_state != PORT_STATE_PENDING) {
-                LOG_ERR("Flow is not pending");
                 spin_unlock(&data->flow_lock);
+                LOG_ERR("Flow is not pending");
                 return -1;
         }
         spin_unlock(&data->flow_lock);
@@ -638,7 +637,8 @@ static int udp_process_msg(struct socket * sock)
         LOG_DBG("udp_process_msg");
 
         memset(&addr, 0, sizeof(struct sockaddr_in));
-        if ((size = recv_msg(sock, &addr, sizeof(addr), buf, BUFFER_SIZE))<0) {
+        if ((size = recv_msg(sock, &addr, sizeof(addr),
+                             buf, BUFFER_SIZE)) < 0) {
                 LOG_ERR("error during udp recv");
                 return -1;
         }
@@ -665,8 +665,8 @@ static int udp_process_msg(struct socket * sock)
 
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow) {
-                        LOG_ERR("could not allocate flow");
                         spin_unlock(&data->flow_lock);
+                        LOG_ERR("Could not allocate flow");
                         sdu_destroy(du);
                         return -1;
                 }
@@ -681,8 +681,9 @@ static int udp_process_msg(struct socket * sock)
                 flow->addr.sin_addr.s_addr = addr.sin_addr.s_addr;
 
                 if (!is_port_id_ok(flow->port_id)) {
-                        LOG_ERR("Port id is not ok");
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Port id is not ok");
                         sdu_destroy(du);
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Problems destroying shim-tcp-udp "
@@ -695,10 +696,12 @@ static int udp_process_msg(struct socket * sock)
                 LOG_DBG("added udp flow");
 
                 if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
-                        LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Could not create flow in KFA");
+
                         sdu_destroy(du);
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Problems destroying shim-tcp-udp "
@@ -708,10 +711,12 @@ static int udp_process_msg(struct socket * sock)
 
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
-                        LOG_ERR("Couldn't create the sdu queue "
-                                "for a new flow");
                         flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Couldn't create the sdu queue "
+                                "for a new flow");
+
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
@@ -721,10 +726,12 @@ static int udp_process_msg(struct socket * sock)
 
                 /* Store SDU in queue */
                 if (rfifo_push(flow->sdu_queue, du)) {
-                        LOG_ERR("Could not write %zd bytes into the fifo",
-                                sizeof(struct sdu *));
                         flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Could not write %zd bytes into the fifo",
+                                sizeof(struct sdu *));
+
                         sdu_destroy(du);
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
@@ -769,10 +776,12 @@ static int udp_process_msg(struct socket * sock)
                         LOG_DBG("Queueing frame");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
+                                spin_unlock(&data->flow_lock);
+
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
                                         sizeof(struct sdu *));
-                                spin_unlock(&data->flow_lock);
+
                                 sdu_destroy(du);
                                 return -1;
                         }
@@ -843,10 +852,12 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                         LOG_DBG("Queueing frame");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
+                                spin_unlock(&data->flow_lock);
+
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
                                         sizeof(struct sdu *));
-                                spin_unlock(&data->flow_lock);
+
                                 sdu_destroy(du);
                                 return -1;
                         }
@@ -915,10 +926,12 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                         LOG_DBG("Queueing frame");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
+                                spin_unlock(&data->flow_lock);
+
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
                                         sizeof(struct sdu *));
-                                spin_unlock(&data->flow_lock);
+
                                 sdu_destroy(du);
                                 return -1;
                         }
@@ -1009,8 +1022,10 @@ static int tcp_process(struct socket * sock)
 
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow) {
-                        LOG_ERR("could not allocate flow");
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Could not allocate flow");
+
                         sock_release(acsock);
                         return -1;
                 }
@@ -1028,9 +1043,11 @@ static int tcp_process(struct socket * sock)
                 memset(&flow->addr, 0, sizeof(struct sockaddr_in));
 
                 if (!is_port_id_ok(flow->port_id)) {
-                        LOG_ERR("Port id is not ok");
                         flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Port id is not ok");
+
                         sock_release(acsock);
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Problems destroying shim-tcp-udp "
@@ -1039,10 +1056,12 @@ static int tcp_process(struct socket * sock)
                 }
 
                 if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
-                        LOG_ERR("Could not create flow in KFA");
                         flow->port_id_state = PORT_STATE_NULL;
                         kfa_port_id_release(data->kfa, flow->port_id);
                         spin_unlock(&data->flow_lock);
+
+                        LOG_ERR("Could not create flow in KFA");
+
                         sock_release(acsock);
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Problems destroying shim-tcp-udp "
@@ -1054,16 +1073,18 @@ static int tcp_process(struct socket * sock)
 
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
+                        spin_unlock(&data->flow_lock);
+
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
-                        spin_unlock(&data->flow_lock);
+
                         tcp_deallocate_and_destroy_flow(data, flow);
                         return -1;
                 }
 
-                LOG_DBG("Created the queue");
-
                 spin_unlock(&data->flow_lock);
+
+                LOG_DBG("Queue has been created");
 
                 sname = name_create_ni();
                 if (!name_init_from_ni(sname, "Unknown app", "", "", "")) {
@@ -1346,7 +1367,7 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
         ASSERT(new_config);
 
         /* FIXME: Bind IPC process to NIC */
-        
+
         /* FIXME: Expected application registration to be parsed here */
 
         /* FIXME: Application directory to be parsed here if not using DNS */
@@ -1407,9 +1428,11 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         spin_lock(&data->flow_lock);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
-                LOG_ERR("Flow is not in the right state to call this");
                 sdu_destroy(sdu);
                 spin_unlock(&data->flow_lock);
+
+                LOG_ERR("Flow is not in the right state to call this");
+
                 return -1;
         }
         spin_unlock(&data->flow_lock);
@@ -1519,7 +1542,7 @@ static int tcp_udp_fini(struct ipcp_factory_data * data)
 }
 
 static struct ipcp_instance_data *
-find_instance(struct ipcp_factory_data * data, 
+find_instance(struct ipcp_factory_data * data,
               ipc_process_id_t           id)
 {
         struct ipcp_instance_data * pos;
