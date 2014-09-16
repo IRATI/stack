@@ -379,8 +379,9 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 
         ASSERT(q);
 
-        /* FIXME this should be change since we are sending in inverse order and
-         * it could be problematic because of gaps and A timer
+        /*
+         * FIXME: this should be change since we are sending in inverse order
+         * and it could be problematic because of gaps and A timer
          */
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
                 if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
@@ -499,7 +500,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                 LOG_DBG("Checking RTX of PDU %u, now: %lu >?< %lu + %lu",
                         seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr));
                 if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
-                                jiffies)) {
+                                   jiffies)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "

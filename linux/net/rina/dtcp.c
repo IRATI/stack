@@ -515,6 +515,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 {
         struct cwq * q;
         seq_num_t    seq;
+
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);

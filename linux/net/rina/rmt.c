@@ -1205,7 +1205,9 @@ int rmt_restart_work(struct rmt * rmt)
         item = rwq_work_create_ni(receive_worker, rmt);
         if (!item)
                 return -1;
+
         rwq_work_post(rmt->ingress.wq, item);
+
         LOG_DBG("RMT Ingress WQ  %p has been restarted with WI %p",
                 rmt->ingress.wq, item);
 
