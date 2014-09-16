@@ -253,6 +253,8 @@ void cwq_deliver(struct cwq * queue,
         }
         spin_unlock(&queue->lock);
 
+        LOG_DBG("CWQ has delivered until %u", dtcp_snd_lf_win(dtcp));
+
         if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
                 dt_sv_window_closed_set(dt, true);
                 return;
@@ -281,7 +283,7 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 
         tmp->pdu        = pdu;
         tmp->time_stamp = jiffies;
-        tmp->retries    = 1;
+        tmp->retries    = 0;
 
         INIT_LIST_HEAD(&tmp->next);
 
@@ -377,6 +379,10 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 
         ASSERT(q);
 
+        /*
+         * FIXME: this should be change since we are sending in inverse order
+         * and it could be problematic because of gaps and A timer
+         */
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
                 if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
                     seq_num) {
@@ -487,13 +493,19 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 {
         struct rtxq_entry * cur, * n;
         struct pdu *        tmp;
+        seq_num_t           seq = 0;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (cur->time_stamp < msecs_to_jiffies(tr)) {
+                seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
+                LOG_DBG("Checking RTX of PDU %u, now: %lu >?< %lu + %lu",
+                        seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr));
+                if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
+                                   jiffies)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
-                                        "achieved. Can't maintain QoS");
+                                        "achieved for SeqN %u. Can't "
+                                        "maintain QoS", seq);
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }
@@ -507,6 +519,8 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         }
                 }
         }
+
+        LOG_DBG("RTXQ has delivered until %u", seq);
 
         return 0;
 }

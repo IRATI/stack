@@ -514,15 +514,22 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct pdu *  pdu)
 {
         struct cwq * q;
+        seq_num_t    seq;
+
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);
 
         LOG_DBG("Updating Window Edges");
+
+        seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+
+        /* This updates sender LWE */
+        if (dtcp->policies->sender_ack(dtcp, seq))
+                LOG_ERR("Could not update RTXQ and LWE");
+
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        snd_lft_win_set(dtcp, pci_control_new_left_wind_edge(pci));
         LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
-        LOG_DBG("Left Window Edge: %d", snd_lft_win(dtcp));
         pdu_destroy(pdu);
 
         push_pdus_rmt(dtcp);
@@ -580,7 +587,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 
         if (seq_num > (last_ctrl + 1))
-                return dtcp->policies->lost_control_pdu(dtcp);
+                dtcp->policies->lost_control_pdu(dtcp);
 
         if (seq_num <= last_ctrl) {
                 switch (type) {
@@ -606,7 +613,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         /* We are in seq_num == last_ctrl + 1 */
 
         last_rcv_ctrl_seq_set(dtcp, seq_num);
-        last_ctrl = last_rcv_ctrl_seq(dtcp);
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
@@ -710,6 +716,7 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         if (last_snd_data_ack(dtcp) < LWE) {
                 last_snd_data_ack_set(dtcp, LWE);
                 if (!a) {
+#if 0
                         if (seq > LWE) {
                                 LOG_DBG("This is a NACK, "
                                         "LWE couldn't be updated");
@@ -718,12 +725,14 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                                 }
                                 return PDU_TYPE_NACK;
                         }
+#endif
                         LOG_DBG("This is an ACK");
                         if (dtcp_flow_ctrl(dtcp_cfg)) {
                                 return PDU_TYPE_ACK_AND_FC;
                         }
                         return PDU_TYPE_ACK;
                 }
+#if 0
                 if (seq > LWE) {
                         /* FIXME: This should be a SEL ACK */
                         LOG_DBG("This is a NACK, "
@@ -733,6 +742,7 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                         }
                         return PDU_TYPE_NACK;
                 }
+#endif
                 LOG_DBG("This is an ACK");
                 if (dtcp_flow_ctrl(dtcp_cfg)) {
                         return PDU_TYPE_ACK_AND_FC;
@@ -1142,16 +1152,6 @@ int dtcp_destroy(struct dtcp * instance)
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
         return 0;
-}
-
-int dtcp_send(struct dtcp * instance,
-              struct sdu *  sdu)
-{
-        LOG_MISSING;
-
-        /* Takes the pdu and enqueue in its internal queues */
-
-        return -1;
 }
 
 int dtcp_sv_update(struct dtcp * instance,
