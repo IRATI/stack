@@ -774,8 +774,8 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         continue;
                 }
 
-                if (time_before_eq(jiffies,
-                                   pos->time_stamp + msecs_to_jiffies(a))) {
+                if (time_before_eq(pos->time_stamp + msecs_to_jiffies(a),
+                                   jiffies)) {
                         LOG_DBG("Processing A timer expired");
 
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
@@ -1395,12 +1395,11 @@ int dtp_receive(struct dtp * instance,
          *   they are not, LWE is not updated and always 0
          */
         if (seq_num <= LWE) {
-                LOG_DBG("DTP Receive Duplicate");
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
-                LOG_ERR("PDU minor than LWE. Dropped PDUs: %d",
-                        dropped_pdus(sv));
+                LOG_ERR("PDU SeqN %u, LWE: %u. Dropped PDUs: %d",
+                        seq_num, LWE, dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {

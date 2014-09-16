@@ -1181,6 +1181,40 @@ int rmt_receive(struct rmt * instance,
         return 0;
 }
 
+int rmt_flush_work(struct rmt * rmt)
+{
+        if (!rmt) {
+                LOG_ERR("No RMT passed");
+                return -1;
+        }
+
+        rwq_flush(rmt->ingress.wq);
+        LOG_DBG("RMT Ingress WQ  %p has been flushed", rmt->ingress.wq);
+
+        return 0;
+}
+
+int rmt_restart_work(struct rmt * rmt)
+{
+        struct rwq_work_item * item;
+
+        if (!rmt) {
+                LOG_ERR("No RMT passed");
+                return -1;
+        }
+
+        item = rwq_work_create_ni(receive_worker, rmt);
+        if (!item)
+                return -1;
+
+        rwq_work_post(rmt->ingress.wq, item);
+
+        LOG_DBG("RMT Ingress WQ  %p has been restarted with WI %p",
+                rmt->ingress.wq, item);
+
+        return 0;
+}
+
 /* FIXME: To be rearranged */
 static bool is_rmt_pft_ok(struct rmt * instance)
 { return (instance && instance->pft) ? true : false; }
