@@ -717,7 +717,6 @@ void IPCManager::flowDeallocated(int portId) {
 }
 
 std::vector<Flow *> IPCManager::getAllocatedFlows() {
-	LOG_DBG("IPCManager.getAllocatedFlows called");
 	std::vector<Flow *> response;
 
 	lock();
