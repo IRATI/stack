@@ -244,6 +244,7 @@ public:
 	void incrementAge(int maximum_age);
 	void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
 	std::list<FlowStateObject*> getModifiedFSOs();
+	std::list<FlowStateObject*> getAllFSOs();
 
 	//Signals a modification in the FlowStateDB
 	bool modified_;

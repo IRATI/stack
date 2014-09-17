@@ -522,6 +522,16 @@ std::list<FlowStateObject*> FlowStateDatabase::getModifiedFSOs() {
 	return result;
 }
 
+std::list<FlowStateObject*> FlowStateDatabase::getAllFSOs() {
+	std::list<FlowStateObject*> result;
+	std::list<FlowStateObject *>::iterator it;
+	for(it=flow_state_objects_.begin(); it!=flow_state_objects_.end(); ++it) {
+		result.push_back((*it));
+	}
+
+	return result;
+}
+
 std::vector< std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagation(
 		const std::list<rina::FlowInformation>& flows) {
 	std::vector< std::list<FlowStateObject*> > result;
@@ -966,14 +976,13 @@ void LinkStatePDUFTGeneratorPolicy::updateAge() {
 void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate() {
 	rina::AccessGuard g(*lock_);
 
-	LOG_DBG("Forwarding Table Update called: is modifed? %d", db_->modified_);
 	if (!db_->modified_) {
 		return;
 	}
 
 	db_->modified_ = false;
 	std::list<rina::PDUForwardingTableEntry *> pduft = routing_algorithm_->computePDUTForwardingTable(
-			db_->getModifiedFSOs(), source_vertex_);
+			db_->getAllFSOs(), source_vertex_);
 	try {
 		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(pduft, 2);
 	} catch (Exception & e) {
