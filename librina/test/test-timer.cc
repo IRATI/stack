@@ -28,20 +28,95 @@ using namespace rina;
 
 class HelloWorldTimerTask: public TimerTask {
 public:
+	HelloWorldTimerTask(){
+		check_ = false;
+	};
 	void run() {
 		std::cout << "Hello world" <<std::endl;
+		check_ = true;
 	};
+bool check_;
+};
+class GoodbyeWorldTimerTask: public TimerTask {
+public:
+	GoodbyeWorldTimerTask(){
+		check_ = false;
+	};
+	void run() {
+		std::cout << "Goodbye world" <<std::endl;
+		check_ = true;
+	};
+	bool check_;
 };
 
 int main()
 {
+	bool result = true;
+	std::cout<<std::endl <<	"//////////////////////////////////////" << std::endl <<
+							"//// test-timer TEST 1 : one timer ///" << std::endl <<
+							"//////////////////////////////////////" << std::endl;
 	Timer * timer = new Timer();
-	timer->scheduleTask(new HelloWorldTimerTask(), 100);
+
+	HelloWorldTimerTask *hello = new HelloWorldTimerTask();
+	timer->scheduleTask(hello, 100);
 
 	Sleep sleep;
-	sleep.sleepForMili(2000);
+	sleep.sleepForMili(1000);
+
+	if (!hello->check_){
+		result = false;
+		std::cout<< "TEST 1 FAILED"<<std::endl;
+	}
 
 	delete timer;
 
+	std::cout<<std::endl <<	"//////////////////////////////////////" << std::endl <<
+							"//// test-timer TEST 2 : two timer not equal ///" << std::endl <<
+							"//////////////////////////////////////" << std::endl;
+	timer = new Timer();
+
+	hello = new HelloWorldTimerTask();
+	GoodbyeWorldTimerTask *bye = new GoodbyeWorldTimerTask();
+	timer->scheduleTask(hello, 100);
+	sleep.sleepForMili(100);
+	timer->scheduleTask(bye, 100);
+
 	sleep.sleepForMili(1000);
+
+	if (!hello->check_){
+		result = false;
+		std::cout<< "TEST 2 FAILED"<<std::endl;
+	}
+
+	delete timer;
+
+	std::cout<<std::endl <<	"//////////////////////////////////////" << std::endl <<
+							"/ test-timer TEST 2 : two timer equal/" << std::endl <<
+							"//////////////////////////////////////" << std::endl;
+	timer = new Timer();
+
+	hello = new HelloWorldTimerTask();
+	bye = new GoodbyeWorldTimerTask();
+	timer->scheduleTask(hello, 100);
+	timer->scheduleTask(bye, 100);
+
+	sleep.sleepForMili(1000);
+
+	if (!hello->check_){
+		result = false;
+		std::cout<< "TEST 3 FAILED"<<std::endl;
+	}
+
+	delete timer;
+
+	if (result) {
+		std::cout<<std::endl <<	"//////////////////////////////////////" << std::endl <<
+								"//////////////////////////////////////" << std::endl <<
+								"////////// TIMER TESTS PASSED ////////" << std::endl <<
+								"//////////////////////////////////////" << std::endl <<
+								"//////////////////////////////////////" << std::endl;
+		return 0;
+	}
+	else
+		return -1;
 }

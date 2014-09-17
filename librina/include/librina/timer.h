@@ -59,7 +59,7 @@ public:
 	void runTasks();
 	void cancelTask(TimerTask *task);
 private:
-	std::map<Time, TimerTask* > tasks_;
+	std::map<Time, std::list<TimerTask*>* > tasks_;
 };
 
 /// Class that implements a timer which contains a thread

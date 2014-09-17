@@ -37,19 +37,19 @@ Time::Time(timeval t) {
 	time_ = t;
 }
 int Time::get_current_time_in_ms() const {
-	return get_time_seconds()*1000 + get_only_milliseconds();
+	return get_time_seconds() * 1000 + get_only_milliseconds();
 }
 int Time::get_time_seconds() const {
-	return (int)time_.tv_sec;
+	return (int) time_.tv_sec;
 }
 int Time::get_only_milliseconds() const {
-	return (int)(time_.tv_usec/1000);
+	return (int) (time_.tv_usec / 1000);
 }
 bool Time::operator<(const Time &other) const {
-	if ((int)time_.tv_sec != (int)other.get_time_seconds())
-		return (int)time_.tv_sec < (int)other.get_time_seconds();
+	if ((int) time_.tv_sec != (int) other.get_time_seconds())
+		return (int) time_.tv_sec < (int) other.get_time_seconds();
 	else
-		return (int)time_.tv_usec < (int)other.get_only_milliseconds();
+		return (int) time_.tv_usec < (int) other.get_only_milliseconds();
 }
 void Time::set_timeval(timeval t) {
 	time_ = t;
@@ -64,53 +64,78 @@ void* doWorkTask(void *arg) {
 	return (void *) 0;
 }
 
-TaskScheduler::TaskScheduler() : Lockable() {
+TaskScheduler::TaskScheduler() :
+		Lockable() {
 }
-TaskScheduler::~TaskScheduler() throw() {
+TaskScheduler::~TaskScheduler() throw () {
 }
 void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 	lock();
-	std::pair<Time, TimerTask*> pair (time, timer_task);
-	tasks_.insert( pair );
+
+	std::map<Time, std::list<TimerTask*>* >::iterator iter = tasks_.find(time);
+	if (iter != tasks_.end()) {
+		iter->second->push_back(timer_task);
+	} else {
+		std::list<TimerTask*> *list = new std::list<TimerTask*>;
+		list->push_back(timer_task);
+		std::pair<Time, std::list<TimerTask*>* > pair(time, list);
+		tasks_.insert(pair);
+	}
+
 	unlock();
 }
+
 void TaskScheduler::runTasks() {
 	lock();
 	Time now;
-	for (std::map<Time, TimerTask*>::iterator iter = tasks_.begin();
-			iter != tasks_.upper_bound(now); ++iter) {
-		try {
-			ThreadAttributes threadAttributes;
-			threadAttributes.setDettached();
-			Thread *t = new Thread(&threadAttributes, &doWorkTask, (void *) iter->second);
-			delete t;
-			t = 0;
-			tasks_.erase(iter);
-		} catch (Exception &e) {
-			LOG_ERR("Problems creating thread: %s", e.what());
+	std::map<Time, std::list<TimerTask*>* >::iterator first = tasks_.begin();
+	std::map<Time, std::list<TimerTask*>* >::iterator last = tasks_.upper_bound(
+			now);
+	for (std::map<Time, std::list<TimerTask*>* >::iterator iter_map = first;
+			iter_map != last; ++iter_map) {
+		for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
+				iter_list != iter_map->second->end(); ++iter_list){
+			try {
+				ThreadAttributes threadAttributes;
+				threadAttributes.setDettached();
+				Thread *t = new Thread(&threadAttributes, &doWorkTask,
+						(void *) (*iter_list));
+				delete t;
+				t = 0;
+			} catch (Exception &e) {
+				LOG_ERR("Problems creating thread: %s", e.what());
+			}
 		}
+		delete iter_map->second;
 	}
+	tasks_.erase(first, last);
 	unlock();
 }
+
 void TaskScheduler::cancelTask(TimerTask *task) {
 	lock();
-	for (std::map<Time, TimerTask* >::iterator iter = tasks_.begin();
-			iter != tasks_.end(); ++iter) {
-		if (iter->second== task)	{
-			delete iter->second;
-			iter->second = 0;
-			tasks_.erase(iter);
+	for (std::map<Time, std::list<TimerTask*>* >::iterator iter_map =
+			tasks_.begin(); iter_map != tasks_.end(); ++iter_map) {
+		for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
+				iter_list != iter_map->second->end(); ++iter_list){
+			if (*iter_list == task){
+				delete *iter_list;
+				*iter_list = 0;
+				if (iter_map->second->size() == 0){
+					delete iter_map->second;
+					tasks_.erase(iter_map);
+				}
+			}
 		}
 	}
-	unlock();
+unlock();
 }
 
 // CLASS Timer
 void* doWorkTimer(void *arg) {
 	Timer *timer = (Timer*) arg;
 	Sleep sleep;
-	while(timer->is_continue())
-	{
+	while (timer->is_continue()) {
 		sleep.sleepForMili(500);
 		timer->get_task_scheduler()->runTasks();
 	}
@@ -123,7 +148,7 @@ Timer::Timer() {
 	continue_lock_.lock();
 	continue_ = true;
 	continue_lock_.unlock();
-	task_scheduler =  new TaskScheduler();
+	task_scheduler = new TaskScheduler();
 	thread_ = new Thread(&threadAttributes, &doWorkTimer, (void *) this);
 	LOG_DBG("Timer with ID %d started", thread_);
 }
@@ -145,7 +170,8 @@ void Timer::scheduleTask(TimerTask* task, long delay_ms) {
 	Time executeTime;
 	timeval t;
 	t.tv_sec = executeTime.get_time_seconds() + (delay_ms / 1000);
-	t.tv_usec = executeTime.get_only_milliseconds() + ((delay_ms % 1000) * 1000);
+	t.tv_usec = executeTime.get_only_milliseconds()
+			+ ((delay_ms % 1000) * 1000);
 	executeTime.set_timeval(t);
 	task_scheduler->insert(executeTime, task);
 }
@@ -164,7 +190,7 @@ void Timer::cancel() {
 TaskScheduler* Timer::get_task_scheduler() const {
 	return task_scheduler;
 }
-bool Timer::is_continue(){
+bool Timer::is_continue() {
 	bool result;
 	continue_lock_.lock();
 	result = continue_;
