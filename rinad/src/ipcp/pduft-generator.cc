@@ -79,7 +79,6 @@ FlowStateObject::FlowStateObject(unsigned int address, int port_id, unsigned int
 	modified_ = true;
 	being_erased_ = false;
 	avoid_port_ = 0;
-	LOG_DBG("Created object with id: %s", object_name_.c_str());
 }
 
 const std::string FlowStateObject::toString() {
@@ -537,7 +536,7 @@ std::vector< std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagat
 	int portId = 0;
 	for (fsosIterator = modifiedFSOs.begin(); fsosIterator != modifiedFSOs.end();
 			++fsosIterator) {
-		LOG_DBG("Check modified object: %s to be sent with age %d and status %d",
+		LOG_DBG("Propagation: Check modified object %s with age %d and status %d",
 				(*fsosIterator)->object_name_.c_str(), (*fsosIterator)->age_,
 				(*fsosIterator)->up_);
 
@@ -547,7 +546,7 @@ std::vector< std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagat
 				++flowsIterator) {
 			portId = (*flowsIterator).portId;
 			if ((*fsosIterator)->avoid_port_ != portId) {
-				LOG_DBG("To be sent to port %d", portId);
+				LOG_DBG("Object to be sent to port %d", portId);
 				group.push_back((*fsosIterator));
 			}
 		}
@@ -967,6 +966,7 @@ void LinkStatePDUFTGeneratorPolicy::updateAge() {
 void LinkStatePDUFTGeneratorPolicy::forwardingTableUpdate() {
 	rina::AccessGuard g(*lock_);
 
+	LOG_DBG("Forwarding Table Update called: is modifed? %d", db_->modified_);
 	if (!db_->modified_) {
 		return;
 	}
