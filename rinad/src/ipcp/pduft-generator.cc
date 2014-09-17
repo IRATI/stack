@@ -302,6 +302,10 @@ std::list<rina::PDUForwardingTableEntry *> DijkstraAlgorithm::computePDUTForward
 	}
 
 	delete graph_;
+	unsettled_nodes_.clear();
+	settled_nodes_.clear();
+	predecessors_.clear();
+	distances_.clear();
 
 	return result;
 }
