@@ -109,10 +109,17 @@ const std::string NMinusOneFlowAllocatedEvent::toString() {
 
 //CLASS NMinusOneFlowDeallocated Event
 NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id,
-			rina::CDAPSessionDescriptor * cdap_session_descriptor):
+			const rina::CDAPSessionDescriptor & cdap_session_descriptor):
 				BaseEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
 	port_id_ = port_id;
 	cdap_session_descriptor_ = cdap_session_descriptor;
+	management_flow_ = true;
+}
+
+NMinusOneFlowDeallocatedEvent::NMinusOneFlowDeallocatedEvent(int port_id):
+				BaseEvent(IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED) {
+	port_id_ = port_id;
+	management_flow_ = false;
 }
 
 const std::string NMinusOneFlowDeallocatedEvent::toString() {

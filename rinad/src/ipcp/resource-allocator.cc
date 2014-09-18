@@ -236,7 +236,7 @@ void NMinusOneFlowManager::cleanFlowAndNotify(int portId) {
 	}
 
 	NMinusOneFlowDeallocatedEvent * flowDeEvent =
-			new NMinusOneFlowDeallocatedEvent(portId, cdapSessionDescriptor);
+			new NMinusOneFlowDeallocatedEvent(portId, *cdapSessionDescriptor);
 	rib_daemon_->deliverEvent(flowDeEvent);
 }
 

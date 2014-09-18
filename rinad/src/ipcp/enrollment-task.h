@@ -415,8 +415,8 @@ private:
 
 	/// Called by the RIB Daemon when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
-	/// @param cdapSessionDescriptor
-	void nMinusOneFlowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
+	/// @param event
+	void nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event);
 
 	/// Called when a new N-1 flow has been allocated
 	// @param portId

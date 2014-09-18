@@ -498,6 +498,7 @@ private:
 ///the same role, because the CDAP session is bidirectional.
 class CDAPSessionDescriptor {
 public:
+	CDAPSessionDescriptor();
 	CDAPSessionDescriptor(int port_id);
 	CDAPSessionDescriptor(int abs_syntax, CDAPMessage::AuthTypes auth_mech,
 			AuthValue auth_value);
