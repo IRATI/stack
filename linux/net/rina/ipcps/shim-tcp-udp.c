@@ -179,16 +179,17 @@ find_tcp_flow_by_socket(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
 
-        if (!data)
-                return NULL;
-
-        /* FIXME: Add locking */
+        ASSERT(data);
+        
+        spin_lock(&data->flow_lock);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock) {
                         return flow;
                 }
         }
+
+        spin_unlock(&data->flow_lock);
 
         return NULL;
 }
@@ -204,6 +205,7 @@ static bool compare_addr(const struct sockaddr_in * f,
                 f->sin_addr.s_addr == s->sin_addr.s_addr;
 }
 
+/* No lock needed here, called only when holding a lock */
 static struct shim_tcp_udp_flow *
 find_udp_flow(struct ipcp_instance_data * data,
               const struct sockaddr_in *  addr,
@@ -214,8 +216,6 @@ find_udp_flow(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(addr);
         ASSERT(sock);
-
-        /* FIXME: Locking has to be added */
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock &&
@@ -236,7 +236,7 @@ find_app_by_socket(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(sock);
 
-        /* FIXME: Locking to be added here */
+        spin_lock(&data->flow_lock);
 
         if (sock->type == SOCK_DGRAM) {
                 list_for_each_entry(app, &data->apps, list) {
@@ -250,6 +250,8 @@ find_app_by_socket(struct ipcp_instance_data * data,
                 }
         }
 
+        spin_unlock(&data->flow_lock);
+
         return NULL;
 }
 
@@ -261,12 +263,14 @@ static struct app_data * find_app_by_name(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
-        /* FIXME: Locking to be added here */
+        spin_lock(&data->app_lock);
 
         list_for_each_entry(app, &data->apps, list) {
                 if (name_is_equal(app->app_name, name))
                         return app;
         }
+
+        spin_unlock(&data->app_lock);
 
         return NULL;
 }
