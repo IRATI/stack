@@ -658,11 +658,14 @@ void parse_dif_configs(const Json::Value   &root,
                 // configParameters;
                 Json::Value confParams = dif_configs[i]["configParameters"];
                 if (confParams != 0) {
-                	for (unsigned int i = 0; i < confParams.size(); i++) {
-                        props.configParameters.insert
-                                (pair<string, string>
-                                 (confParams[i].get("name", string()).asString(),
-                                		 confParams[i].get("value", string()).asString()));
+                        Json::Value::Members members =
+                                confParams.getMemberNames();
+                	for (unsigned int i = 0; i < members.size(); i++) {
+                                string value = confParams.get
+                                        (members[i], string()).asString();
+                                props.configParameters.insert
+                                        (pair<string, string>
+                                         (members[i], value));
                 	}
                 }
 
