@@ -180,7 +180,7 @@ find_tcp_flow_by_socket(struct ipcp_instance_data * data,
         struct shim_tcp_udp_flow * flow;
 
         ASSERT(data);
-        
+
         spin_lock(&data->flow_lock);
 
         list_for_each_entry(flow, &data->flows, list) {
