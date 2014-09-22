@@ -488,6 +488,7 @@ static void dump_we(struct dtcp * dtcp,
         struct dtp * dtp;
         seq_num_t    snd_rt_we;
         seq_num_t    snd_lf_we;
+        seq_num_t    cwq_lf_we;
         seq_num_t    rcv_rt_we;
         seq_num_t    rcv_lf_we;
         seq_num_t    new_rt_we;
@@ -503,7 +504,8 @@ static void dump_we(struct dtcp * dtcp,
         ASSERT(dtp);
 
         snd_rt_we = snd_rt_wind_edge(dtcp);
-        snd_lf_we = cwq_peek(dt_cwq(dtcp->parent));
+        snd_lf_we = dtcp_snd_lf_win(dtcp);
+        cwq_lf_we = cwq_peek(dt_cwq(dtcp->parent));
         rcv_rt_we = rcvr_rt_wind_edge(dtcp);
         rcv_lf_we = dt_sv_rcv_lft_win(dtcp->parent);
         new_rt_we = pci_control_new_rt_wind_edge(pci);
@@ -513,9 +515,9 @@ static void dump_we(struct dtcp * dtcp,
         pci_seqn  = pci_sequence_number_get(pci);
 
         LOG_INFO("SEQN: %u SndRWE: %u SndLWE: %u RcvRWE: %u RcvLWE: %u"
-                 " newRWE: %u newLWE: %u myRWE: %u myLWE: %u", pci_seqn,
-                 snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we, new_rt_we,
-                 new_lf_we, my_rt_we, my_lf_we);
+                 " newRWE: %u newLWE: %u myRWE: %u myLWE: %u cwqLWE: %u",
+                 pci_seqn, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
+                 new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
 
 }
 
