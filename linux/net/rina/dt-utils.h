@@ -47,6 +47,7 @@ void            cwq_deliver(struct cwq * queue,
                             struct rmt * rmt,
                             address_t    address,
                             qos_id_t     qos_id);
+seq_num_t        cwq_peek(struct cwq * queue);
 
 struct rtxq;
 

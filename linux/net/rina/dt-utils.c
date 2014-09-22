@@ -265,6 +265,43 @@ void cwq_deliver(struct cwq * queue,
         return;
 }
 
+seq_num_t cwq_peek(struct cwq * queue)
+{
+        seq_num_t          ret;
+        struct pdu *       pdu;
+        const struct pci * pci;
+
+        if (!queue)
+                return -1;
+
+        spin_lock(&queue->lock);
+        if (rqueue_is_empty(queue->q)){
+                spin_unlock(&queue->lock);
+                return 0;
+        }
+        pdu = (struct pdu *) rqueue_head_pop(queue->q);
+        if (!pdu) {
+                spin_unlock(&queue->lock);
+                return -1;
+        }
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci) {
+                spin_unlock(&queue->lock);
+                pdu_destroy(pdu);
+                return -1;
+        }
+        ret = pci_sequence_number_get(pci);
+        if (rqueue_head_push_ni(queue->q, pdu)) {
+                spin_unlock(&queue->lock);
+                pdu_destroy(pdu);
+                return ret;
+        }
+        spin_unlock(&queue->lock);
+
+        return ret;
+}
+
+
 struct rtxq_entry {
         unsigned long    time_stamp;
         struct pdu *     pdu;
