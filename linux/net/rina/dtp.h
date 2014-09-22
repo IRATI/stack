@@ -55,4 +55,6 @@ int          dtp_receive(struct dtp * instance,
 /* DTP Policies called in DTCP */
 int dtp_initial_sequence_number(struct dtp * instance);
 
+seq_num_t    dtp_sv_last_seq_nr_sent(struct dtp * instance);
+
 #endif

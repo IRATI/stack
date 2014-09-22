@@ -487,6 +487,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pdu *  pdu)
 {
         struct cwq * q;
+        struct dtp * dtp;
 
         ASSERT(dtcp);
         ASSERT(pci);
@@ -496,13 +497,18 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         pdu_destroy(pdu);
         push_pdus_rmt(dtcp);
 
+        dtp = dt_dtp(dtcp->parent);
+        if (!dtp) {
+                LOG_ERR("No DTP");
+                return -1;
+        }
         q = dt_cwq(dtcp->parent);
         if (!q) {
                 LOG_ERR("No Closed Window Queue");
                 return -1;
         }
         if (cwq_is_empty(q) &&
-            (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
+            (dtp_sv_last_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
                 dt_sv_window_closed_set(dtcp->parent, false);
         }
 
@@ -513,15 +519,16 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct pci *  pci,
                                 struct pdu *  pdu)
 {
-        struct cwq * q;
-        seq_num_t    seq;
+        seq_num_t seq;
+
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);
 
-        LOG_DBG("Updating Window Edges");
+        LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
 
-        seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+        seq = pci_control_ack_seq_num(pci);
+        LOG_DBG("Ack/Nack SEQ NUM: %u", seq);
 
         /* This updates sender LWE */
         if (dtcp->policies->sender_ack(dtcp, seq))
@@ -531,16 +538,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
         pdu_destroy(pdu);
 
+        LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
-        q = dt_cwq(dtcp->parent);
-        if (!q) {
-                LOG_ERR("No Closed Window Queue");
-                return -1;
-        }
-        if (cwq_is_empty(q) &&
-            (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
-                dt_sv_window_closed_set(dtcp->parent, false);
-        }
 
         /* FIXME: Verify values for the receiver side */
 
@@ -620,7 +619,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_ACK:
-                seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+                seq = pci_control_ack_seq_num(pci);
 
                 return dtcp->policies->sender_ack(dtcp,
                                                   seq);
@@ -895,9 +894,9 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
         }
 
         LWE = dt_sv_rcv_lft_win(dtcp->parent);
-        if (last_snd_data_ack(dtcp) < LWE)
-                update_rt_wind_edge(dtcp);
+        update_rt_wind_edge(dtcp);
 
+        LOG_DBG("DTCP: %pK", dtcp);
         LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
 
         return 0;

@@ -35,7 +35,6 @@ struct dt_sv {
         timeout_t    tr;
         seq_num_t    rcv_left_window_edge;
         bool         window_closed;
-        seq_num_t    last_seq_num_sent;
         bool         drf_flag;
 };
 
@@ -515,20 +514,6 @@ int dt_sv_window_closed_set(struct dt * dt, bool closed)
         spin_unlock(&dt->lock);
 
         return 0;
-}
-
-seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
-{
-        seq_num_t tmp;
-
-        if (!dt || !dt->sv)
-                return -1;
-
-        spin_lock(&dt->lock);
-        tmp = dt->sv->last_seq_num_sent;
-        spin_unlock(&dt->lock);
-
-        return tmp;
 }
 
 timeout_t dt_sv_tr(struct dt * dt)
