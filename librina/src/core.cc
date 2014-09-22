@@ -502,9 +502,9 @@ void RINAManager::initialize(){
 	LOG_DBG("Initialized event queue");
 
 	//3 Start Netlink message reader thread
-	ThreadAttributes * threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
-	netlinkMessageReader = new Thread(threadAttributes,
+	ThreadAttributes threadAttributes;
+	threadAttributes.setJoinable();
+	netlinkMessageReader = new Thread(&threadAttributes,
 			&doNetlinkMessageReaderWork, (void *) this);
 	LOG_DBG("Started Netlink Message reader thread");
 }

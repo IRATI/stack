@@ -110,7 +110,8 @@ IPCManager::start_console_worker()
                 return -1;
         }
 
-        console = new IPCMConsole(*this);
+        rina::ThreadAttributes ta;
+        console = new IPCMConsole(*this, ta);
 
         return 0;
 }
