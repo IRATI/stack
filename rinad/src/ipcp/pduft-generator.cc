@@ -459,11 +459,12 @@ const int FlowStateDatabase::NO_AVOID_PORT = -1;
 const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
 FlowStateDatabase::FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
-		flow_state_rib_object_group, rina::Timer * timer) {
+		flow_state_rib_object_group, rina::Timer * timer, IRIBDaemon *rib_daemon) {
 	encoder_ = encoder;
 	flow_state_rib_object_group_ = flow_state_rib_object_group;
 	modified_ = false;
 	timer_ = timer;
+	rib_daemon_ = rib_daemon;
 }
 
 bool FlowStateDatabase::isEmpty() const {
@@ -580,8 +581,8 @@ void FlowStateDatabase::incrementAge(int maximum_age) {
 
 		if ((*it)->age_ >= maximum_age && !(*it)->being_erased_) {
 			LOG_DBG("Object to erase age: %d", (*it)->age_);
-			KillFlowStateObjectTimerTask * ksttask = new KillFlowStateObjectTimerTask(
-					flow_state_rib_object_group_, (*it), this);
+			KillFlowStateObjectTimerTask * ksttask = new KillFlowStateObjectTimerTask(rib_daemon_
+					, (*it), this);
 			timer_->scheduleTask(ksttask, WAIT_UNTIL_REMOVE_OBJECT);
 			(*it)->being_erased_ = true;
 		}
@@ -689,9 +690,9 @@ void ComputePDUFTTimerTask::run() {
 }
 
 //Class KillFlowStateObjectTimerTask
-KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(FlowStateRIBObjectGroup * fs_rib_group,
+KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(IRIBDaemon * rib_daemon,
 			FlowStateObject * fso, FlowStateDatabase * fs_db) {
-	fs_rib_group_ = fs_rib_group;
+	rib_daemon_ = rib_daemon;
 	fso_ = fso;
 	fs_db_ = fs_db;
 }
@@ -708,9 +709,8 @@ void KillFlowStateObjectTimerTask::run() {
 	}
 
 	try {
-		fs_rib_group_->deleteObject(fso_);
-		fs_db_->modified_ = true;
-		LOG_DBG("Old object removed: %s", fso_->object_name_.c_str());
+		SimpleSetMemberRIBObject *fs_rib_o = (SimpleSetMemberRIBObject*)rib_daemon_->readObject(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,fso_->object_name_);
+		fs_rib_o->deleteObject(fso_);
 	} catch (Exception &e) {
 		LOG_ERR("Object could not be removed from the RIB");
 	}
@@ -791,7 +791,7 @@ void LinkStatePDUFTGeneratorPolicy::set_ipc_process(IPCProcess * ipc_process) {
 	cdap_session_manager_ = ipc_process_->get_cdap_session_manager();
 	populateRIB();
 	subscribeToEvents();
-	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_);
+	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_);
 }
 
 void LinkStatePDUFTGeneratorPolicy::populateRIB() {

@@ -234,7 +234,7 @@ public:
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 
 	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
-			flow_state_rib_object_group, rina::Timer * timer);
+			flow_state_rib_object_group, rina::Timer * timer, IRIBDaemon *rib_daemon);
 	bool isEmpty() const;
 	void setAvoidPort(int avoidPort);
 	void addObjectToGroup(unsigned int address, int portId,
@@ -254,6 +254,7 @@ private:
 	Encoder * encoder_;
 	FlowStateRIBObjectGroup * flow_state_rib_object_group_;
 	rina::Timer * timer_;
+	IRIBDaemon *rib_daemon_;
 
 	FlowStateObject * getByPortId(int portId);
 };
@@ -283,13 +284,13 @@ private:
 
 class KillFlowStateObjectTimerTask : public rina::TimerTask {
 public:
-	KillFlowStateObjectTimerTask(FlowStateRIBObjectGroup * fs_rib_group,
+	KillFlowStateObjectTimerTask(IRIBDaemon * rib_daemon,
 			FlowStateObject * fso, FlowStateDatabase * fs_db);
 	~KillFlowStateObjectTimerTask() throw(){};
 	void run();
 
 private:
-	FlowStateRIBObjectGroup * fs_rib_group_;
+	IRIBDaemon * rib_daemon_;
 	FlowStateObject * fso_;
 	FlowStateDatabase * fs_db_;
 };

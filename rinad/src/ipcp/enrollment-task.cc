@@ -1793,7 +1793,7 @@ void EnrollmentTask::releaseResponse(int result, const std::string& result_reaso
 void EnrollmentTask::eventHappened(Event * event) {
 	if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_DEALLOCATED){
 		NMinusOneFlowDeallocatedEvent * flowEvent = (NMinusOneFlowDeallocatedEvent *) event;
-		nMinusOneFlowDeallocated(flowEvent->cdap_session_descriptor_);
+		nMinusOneFlowDeallocated(flowEvent);
 	}else if (event->get_id() == IPCP_EVENT_N_MINUS_1_FLOW_ALLOCATED){
 		NMinusOneFlowAllocatedEvent * flowEvent = (NMinusOneFlowAllocatedEvent *) event;
 		nMinusOneFlowAllocated(flowEvent);
@@ -1824,21 +1824,21 @@ void EnrollmentTask::neighborDeclaredDead(NeighborDeclaredDeadEvent * deadEvent)
 	}
 }
 
-void EnrollmentTask::nMinusOneFlowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
+void EnrollmentTask::nMinusOneFlowDeallocated(NMinusOneFlowDeallocatedEvent  * event) {
 	//1 Check if the flow deallocated was a management flow
-	if(!cdapSessionDescriptor){
+	if(!event->management_flow_){
 		return;
 	}
 
 	//2 Remove the enrollment state machine from the list
 	try{
 		BaseEnrollmentStateMachine * enrollmentStateMachine =
-				getEnrollmentStateMachine(cdapSessionDescriptor, true);
+				getEnrollmentStateMachine(&(event->cdap_session_descriptor_), true);
 		if (!enrollmentStateMachine){
 			//Do nothing, we had already cleaned up
 			return;
 		}else{
-			enrollmentStateMachine->flowDeallocated(cdapSessionDescriptor);
+			enrollmentStateMachine->flowDeallocated(&(event->cdap_session_descriptor_));
 			delete enrollmentStateMachine;
 		}
 	}catch(Exception &e){
@@ -1850,7 +1850,7 @@ void EnrollmentTask::nMinusOneFlowDeallocated(rina::CDAPSessionDescriptor * cdap
 	std::list<BaseEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it!= machines.end(); ++it) {
 		if ((*it)->remote_peer_->name_.processName.compare(
-				cdapSessionDescriptor->dest_ap_name_) == 0){
+				event->cdap_session_descriptor_.dest_ap_name_) == 0){
 			//We still have connectivity with the neighbor, return
 			return;
 		}
@@ -1860,13 +1860,13 @@ void EnrollmentTask::nMinusOneFlowDeallocated(rina::CDAPSessionDescriptor * cdap
 	std::list<rina::Neighbor *> neighbors = get_neighbors();
 	std::list<rina::Neighbor *>::const_iterator it2;
 	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
-		if ((*it2)->name_.processName.compare(cdapSessionDescriptor->dest_ap_name_) == 0) {
+		if ((*it2)->name_.processName.compare(event->cdap_session_descriptor_.dest_ap_name_) == 0) {
 			ConnectiviyToNeighborLostEvent * event2 = new ConnectiviyToNeighborLostEvent((*it2));
 			rib_daemon_->deliverEvent(event2);
 
 			//Notify the IPC Manager that we've lost a neighbor
 			LOG_DBG("Notifying IPC Manager about dead neighbor %s",
-					cdapSessionDescriptor->dest_ap_name_.c_str());
+					event->cdap_session_descriptor_.dest_ap_name_.c_str());
 			std::list<rina::Neighbor> lostNeighbors;
 			lostNeighbors.push_back(*(*it2));
 			try {

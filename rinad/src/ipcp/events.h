@@ -140,14 +140,18 @@ public:
 class NMinusOneFlowDeallocatedEvent: public BaseEvent {
 public:
 	NMinusOneFlowDeallocatedEvent(int port_id,
-			rina::CDAPSessionDescriptor * cdap_session_descriptor);
+			const rina::CDAPSessionDescriptor & cdap_session_descriptor);
+	NMinusOneFlowDeallocatedEvent(int port_id);
 	const std::string toString();
 
 	/// The portId of the flow deallocated
 	int port_id_;
 
+	// True if the flow deallocated was used for layer management
+	bool management_flow_;
+
 	/// The descriptor of the CDAP session
-	rina::CDAPSessionDescriptor * cdap_session_descriptor_;
+	rina::CDAPSessionDescriptor cdap_session_descriptor_;
 };
 
 /// The connectivity to a neighbor has been lost

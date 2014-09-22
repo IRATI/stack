@@ -1115,6 +1115,12 @@ const std::string CDAPMessage::opcodeToString(Opcode opcode) {
 }
 
 /*	class CDAPSessionDescriptor	*/
+CDAPSessionDescriptor::CDAPSessionDescriptor() {
+	port_id_ = 0;
+	version_ = 0;
+	auth_mech_ = CDAPMessage::AUTH_NONE;
+	abs_syntax_ = 0;
+}
 CDAPSessionDescriptor::CDAPSessionDescriptor(int port_id) {
 	port_id_ = port_id;
 	version_ = 0;
