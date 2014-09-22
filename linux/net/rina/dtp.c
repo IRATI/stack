@@ -46,7 +46,7 @@ struct dtp_sv {
         uint_t              seq_number_rollover_threshold;
         uint_t              dropped_pdus;
         seq_num_t           max_seq_nr_rcv;
-        seq_num_t           nxt_seq;
+        seq_num_t           last_seq_nr_sent;
 
         bool                window_based;
         bool                rexmsn_ctrl;
@@ -89,7 +89,7 @@ struct dtp {
 
 static struct dtp_sv default_sv = {
         .connection                    = NULL,
-        .nxt_seq                       = 0,
+        .last_seq_nr_sent              = 0,
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
@@ -104,7 +104,7 @@ static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        sv->nxt_seq = sn;
+        sv->last_seq_nr_sent = sn;
         spin_unlock(&sv->lock);
 
         return;
@@ -117,7 +117,26 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        tmp = ++sv->nxt_seq;
+        tmp = ++sv->last_seq_nr_sent;
+        spin_unlock(&sv->lock);
+
+        return tmp;
+}
+
+seq_num_t dtp_sv_last_seq_nr_sent(struct dtp * instance)
+{
+        seq_num_t       tmp;
+        struct dtp_sv * sv;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+        sv = instance->sv;
+        ASSERT(sv);
+
+        spin_lock(&sv->lock);
+        tmp = sv->last_seq_nr_sent;
         spin_unlock(&sv->lock);
 
         return tmp;
@@ -750,6 +769,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 }
 
                 seq_num = pci_sequence_number_get(pdu_pci_get_ro(pdu));
+                LOG_DBG("Seq number: %u", seq_num);
 
                 if (seq_num - LWE - 1 <= max_sdu_gap) {
 
@@ -818,6 +838,20 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         return LWE;
 }
 
+static bool seqq_is_empty(struct squeue * queue)
+{
+        bool ret;
+
+        if (!queue)
+                return false;
+
+        spin_lock(&queue->lock);
+        ret = list_empty(&queue->queue->head) ? true : false;
+        spin_unlock(&queue->lock);
+
+        return ret;
+}
+
 static int post_worker(void * o)
 {
         struct dtp *  dtp;
@@ -852,8 +886,12 @@ static int post_worker(void * o)
                         return -1;
                 }
         }
-        LOG_DBG("Going to restart A timer with a = %d and a/AF = %d", a, a/AF);
-        rtimer_start(dtp->timers.a, a/AF);
+
+        if (!seqq_is_empty(dtp->seqq)) {
+                LOG_DBG("Going to restart A timer with a = %d and a/AF = %d", a, a/AF);
+                rtimer_start(dtp->timers.a, a/AF);
+        }
+        LOG_DBG("Finished post worker for dtp: %pK", dtp);
 
         return 0;
 }
@@ -896,11 +934,6 @@ int dtp_sv_init(struct dtp * dtp,
         dtp->sv->window_based = window_based;
         dtp->sv->rate_based   = rate_based;
         dtp->sv->a            = a;
-
-        if (a) {
-                LOG_DBG("Going to start A timer with t = %d", a/AF);
-                rtimer_start(dtp->timers.a, a/AF);
-        }
 
         return 0;
 }
@@ -1483,6 +1516,10 @@ int dtp_receive(struct dtp * instance,
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
 
+        if (a) {
+                LOG_DBG("Going to start A timer with t = %d", a/AF);
+                rtimer_start(instance->timers.a, a/AF);
+        }
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */

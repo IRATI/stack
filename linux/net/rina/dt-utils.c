@@ -167,6 +167,7 @@ int cwq_flush(struct cwq * queue)
         while (!rqueue_is_empty(queue->q)) {
                 tmp = (struct pdu *) rqueue_head_pop(queue->q);
                 if (!tmp) {
+                        spin_unlock(&queue->lock);
                         LOG_ERR("Failed to retrieve PDU");
                         return -1;
                 }
@@ -359,8 +360,13 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
-                    seq_num) {
+                struct pci * pci;
+                seq_num_t    seq;
+
+                pci = pdu_pci_get_rw(cur->pdu);
+                seq = pci_sequence_number_get(pci);
+                if (seq <= seq_num) {
+                        LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
                 } else
                         return 0;
@@ -445,7 +451,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in "
                         "the rtx queue!");
-                return -1;
+                return 0;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
@@ -460,7 +466,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
-                        return -1;
+                        return 0;
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
@@ -469,6 +475,8 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                         return 0;
                 }
         }
+
+        LOG_DBG("PDU not pushed!");
 
         return 0;
 }
@@ -520,7 +528,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                 }
         }
 
-        LOG_DBG("RTXQ has delivered until %u", seq);
+        LOG_DBG("RTXQ %pK has delivered until %u", q, seq);
 
         return 0;
 }
