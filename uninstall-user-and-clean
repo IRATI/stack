@@ -1,0 +1,26 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=uninstall-user-and-clean
+
+echo "$ME: Uninstalling and cleaning rina-tools"
+(cd rina-tools && make uninstall && make maintainer-clean) || {
+    echo "$ME: Cannot uninstall or clean rina-tools"
+    exit 1
+}
+
+echo "$ME: Uninstalling and cleaning rinad"
+(cd rinad && make uninstall && make maintainer-clean) || {
+    echo "$ME: Cannot uninstall or clean rinad"
+    exit 1
+}
+
+echo "$ME: Uninstalling and cleaning librina"
+(cd librina && make uninstall && make maintainer-clean) || {
+    echo "$ME: Cannot uninstall or clean librina"
+    exit 1
+}

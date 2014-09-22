@@ -32,7 +32,7 @@
 
 #define RINA_PREFIX "ipc-manager"
 
-#include "logs.h"
+#include "librina/logs.h"
 
 #include "librina/ipc-manager.h"
 #include "librina/concurrency.h"
@@ -41,17 +41,17 @@
 #include "utils.h"
 #include "core.h"
 
-namespace rina{
+namespace rina {
 
 std::string _installationPath;
 std::string _libraryPath;
 
-void initializeIPCManager(unsigned int localPort,
-                const std::string& installationPath,
-                const std::string& libraryPath,
-                const std::string& logLevel,
-                const std::string& pathToLogFile)
-	throw (InitializationException){
+void initializeIPCManager(unsigned int        localPort,
+                          const std::string & installationPath,
+                          const std::string & libraryPath,
+                          const std::string & logLevel,
+                          const std::string & pathToLogFile)
+{
 	initialize(localPort, logLevel, pathToLogFile);
 
 	_installationPath = installationPath;
@@ -61,9 +61,9 @@ void initializeIPCManager(unsigned int localPort,
 	message.setDestPortId(0);
 	message.setNotificationMessage(true);
 
-	try{
+	try {
 		rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw InitializationException(e.what());
 	}
 }
@@ -87,9 +87,11 @@ const std::string IPCProcess::error_querying_rib =
 		"Error querying rib";
 
 /** Return the information of a registration request */
-ApplicationProcessNamingInformation IPCProcess::getPendingRegistration(
-                unsigned int seqNumber) throw (IPCException) {
-        std::map<unsigned int, ApplicationProcessNamingInformation>::iterator iterator;
+ApplicationProcessNamingInformation
+IPCProcess::getPendingRegistration(unsigned int seqNumber)
+{
+        std::map<unsigned int,
+                 ApplicationProcessNamingInformation>::iterator iterator;
 
         iterator = pendingRegistrations.find(seqNumber);
         if (iterator == pendingRegistrations.end()) {
@@ -100,7 +102,7 @@ ApplicationProcessNamingInformation IPCProcess::getPendingRegistration(
 }
 
 FlowInformation IPCProcess::getPendingFlowOperation(unsigned int seqNumber)
-throw (IPCException) {
+{
 	std::map<unsigned int, FlowInformation>::iterator iterator;
 
 	iterator = pendingFlowOperations.find(seqNumber);
@@ -122,8 +124,9 @@ IPCProcess::IPCProcess() {
 }
 
 IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
-		pid_t pid, const std::string& type,
-		const ApplicationProcessNamingInformation& name) {
+                       pid_t pid, const std::string& type,
+                       const ApplicationProcessNamingInformation& name)
+{
 	this->id = id;
 	this->portId = portId;
 	this->pid = pid;
@@ -135,65 +138,54 @@ IPCProcess::IPCProcess(unsigned short id, unsigned int portId,
 	configureInProcess = false;
 }
 
-bool IPCProcess::isDIFMember() const{
-	return difMember;
-}
+bool IPCProcess::isDIFMember() const
+{ return difMember; }
 
-void IPCProcess::setDIFMember(bool difMember){
-	this->difMember = difMember;
-}
+void IPCProcess::setDIFMember(bool difMember)
+{ this->difMember = difMember; }
 
-unsigned short IPCProcess::getId() const {
-	return id;
-}
+unsigned short IPCProcess::getId() const
+{ return id; }
 
-const std::string& IPCProcess::getType() const {
-	return type;
-}
+const std::string& IPCProcess::getType() const
+{ return type; }
 
-const ApplicationProcessNamingInformation& IPCProcess::getName() const {
-	return name;
-}
+const ApplicationProcessNamingInformation& IPCProcess::getName() const
+{ return name; }
 
-unsigned int IPCProcess::getPortId() const{
-	return portId;
-}
+unsigned int IPCProcess::getPortId() const
+{ return portId; }
 
-void IPCProcess::setPortId(unsigned int portId){
-	this->portId = portId;
-}
+void IPCProcess::setPortId(unsigned int portId)
+{ this->portId = portId; }
 
-pid_t IPCProcess::getPid() const{
-	return pid;
-}
+pid_t IPCProcess::getPid() const
+{ return pid; }
 
-void IPCProcess::setPid(pid_t pid){
-	this->pid = pid;
-}
+void IPCProcess::setPid(pid_t pid)
+{ this->pid = pid; }
 
-const DIFInformation& IPCProcess::getDIFInformation() const{
-	return difInformation;
-}
+const DIFInformation& IPCProcess::getDIFInformation() const
+{ return difInformation; }
 
-void IPCProcess::setDIFInformation(const DIFInformation& difInformation){
+void IPCProcess::setDIFInformation(const DIFInformation& difInformation)
+{
 	this->difInformation = difInformation;
 	this->difMember = true;
 }
 
-void IPCProcess::setInitialized() {
-        initialized = true;
-}
+void IPCProcess::setInitialized()
+{ initialized = true; }
 
-unsigned int IPCProcess::assignToDIF(
-                const DIFInformation& difInformation)
-throw (AssignToDIFException) {
+unsigned int IPCProcess::assignToDIF(const DIFInformation& difInformation)
+{
         unsigned int seqNum = 0;
 
         if (!initialized)
                 throw AssignToDIFException("IPC Process not yet initialized");
 
         std::string currentDIFName =
-                        this->difInformation.getDifName().getProcessName();
+                        this->difInformation.get_dif_name().processName;
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(difMember || assignInProcess) {
@@ -229,17 +221,19 @@ throw (AssignToDIFException) {
 	return seqNum;
 }
 
-void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
+void IPCProcess::assignToDIFResult(bool success)
+{
         if (!assignInProcess) {
-                throw AssignToDIFException(
-                                "There was no assignment operation in process");
+                throw AssignToDIFException("There was no assignment operation "
+                                           "in process");
         }
 
         if (!success) {
                 ApplicationProcessNamingInformation noDIF;
-                difInformation.setDifName(noDIF);
+                difInformation.set_dif_name(noDIF);
+
                 DIFConfiguration noConfig;
-                difInformation.setDifConfiguration(noConfig);
+                difInformation.set_dif_configuration(noConfig);
         } else {
                 difMember = true;
         }
@@ -247,14 +241,13 @@ void IPCProcess::assignToDIFResult(bool success) throw (AssignToDIFException) {
         assignInProcess = false;
 }
 
-unsigned int IPCProcess::updateDIFConfiguration(
-                        const DIFConfiguration& difConfiguration)
-        throw (UpdateDIFConfigurationException)
+unsigned int
+IPCProcess::updateDIFConfiguration(const DIFConfiguration& difConfiguration)
 {
         unsigned int seqNum=0;
 
         std::string currentDIFName =
-                        this->difInformation.getDifName().getProcessName();
+                        this->difInformation.get_dif_name().processName;
         LOG_DBG("Current DIF name is %s", currentDIFName.c_str());
 
         if(!difMember || configureInProcess) {
@@ -275,9 +268,9 @@ unsigned int IPCProcess::updateDIFConfiguration(
         message.setDestPortId(portId);
         message.setRequestMessage(true);
 
-        try{
+        try {
                 rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
                 throw UpdateDIFConfigurationException(e.what());
         }
 
@@ -291,15 +284,15 @@ unsigned int IPCProcess::updateDIFConfiguration(
 }
 
 void IPCProcess::updateDIFConfigurationResult(bool success)
-        throw (UpdateDIFConfigurationException) {
+{
 
-        if(!configureInProcess){
+        if(!configureInProcess) {
                 throw UpdateDIFConfigurationException(
                                 "No config operation in process");
         }
 
-        if (success){
-                difInformation.setDifConfiguration(newConfiguration);
+        if (success) {
+                difInformation.set_dif_configuration(newConfiguration);
         }
 
         newConfiguration = DIFConfiguration();
@@ -309,18 +302,19 @@ void IPCProcess::updateDIFConfigurationResult(bool success)
 void IPCProcess::notifyRegistrationToSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
-throw (NotifyRegistrationToDIFException) {
+{
         std::list<ApplicationProcessNamingInformation>::iterator it =
                         std::find(nMinusOneDIFs.begin(),
                                   nMinusOneDIFs.end(), difName);
         if (it != nMinusOneDIFs.end()) {
                 throw NotifyRegistrationToDIFException(
                                 "IPCProcess already registered to N-1 DIF"
-                                + difName.getProcessName());
+                                + difName.processName);
         }
 
 #if STUB_API
 	//Do nothing
+        (void)ipcProcessName;
 #else
 	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
@@ -330,9 +324,9 @@ throw (NotifyRegistrationToDIFException) {
 	message.setRegistered(true);
 	message.setNotificationMessage(true);
 
-	try{
+	try {
 		rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyRegistrationToDIFException(e.what());
 	}
 #endif
@@ -342,18 +336,19 @@ throw (NotifyRegistrationToDIFException) {
 void IPCProcess::notifyUnregistrationFromSupportingDIF(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName)
-throw (NotifyUnregistrationFromDIFException) {
+{
         std::list<ApplicationProcessNamingInformation>::iterator it =
                         std::find(nMinusOneDIFs.begin(),
                                         nMinusOneDIFs.end(), difName);
         if (it == nMinusOneDIFs.end()) {
                 throw NotifyRegistrationToDIFException(
                                 "IPCProcess not registered to N-1 DIF"
-                                + difName.getProcessName());
+                                + difName.processName);
         }
 
 #if STUB_API
 	//Do nothing
+        (void)ipcProcessName;
 #else
 	IpcmDIFRegistrationNotification message;
 	message.setIpcProcessName(ipcProcessName);
@@ -363,9 +358,9 @@ throw (NotifyUnregistrationFromDIFException) {
 	message.setRegistered(false);
 	message.setNotificationMessage(true);
 
-	try{
+	try {
 		rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyUnregistrationFromDIFException(e.what());
 	}
 #endif
@@ -373,19 +368,21 @@ throw (NotifyUnregistrationFromDIFException) {
 }
 
 std::list<ApplicationProcessNamingInformation>
-IPCProcess::getSupportingDIFs() {
-        return nMinusOneDIFs;
-}
+IPCProcess::getSupportingDIFs()
+{ return nMinusOneDIFs; }
 
 unsigned int IPCProcess::enroll(
         const ApplicationProcessNamingInformation& difName,
         const ApplicationProcessNamingInformation& supportingDifName,
         const ApplicationProcessNamingInformation& neighborName)
-throw (EnrollException) {
+{
         unsigned int seqNum=0;
 
 #if STUB_API
         //Do nothing
+        (void)difName;
+        (void)supportingDifName;
+        (void)neighborName;
 #else
         IpcmEnrollToDIFRequestMessage message;
         message.setDifName(difName);
@@ -407,7 +404,8 @@ throw (EnrollException) {
         return seqNum;
 }
 
-void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors) {
+void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors)
+{
         std::list<Neighbor>::const_iterator iterator;
         for (iterator = newNeighbors.begin();
                         iterator != newNeighbors.end(); ++iterator) {
@@ -415,7 +413,8 @@ void IPCProcess::addNeighbors(const std::list<Neighbor>& newNeighbors) {
         }
 }
 
-void IPCProcess::removeNeighbors(const std::list<Neighbor>& toRemove) {
+void IPCProcess::removeNeighbors(const std::list<Neighbor>& toRemove)
+{
         std::list<Neighbor>::const_iterator iterator;
         for (iterator = toRemove.begin();
                         iterator != toRemove.end(); ++iterator) {
@@ -423,22 +422,25 @@ void IPCProcess::removeNeighbors(const std::list<Neighbor>& toRemove) {
         }
 }
 
-std::list<Neighbor> IPCProcess::getNeighbors() {
+std::list<Neighbor> IPCProcess::getNeighbors()
+{
         return neighbors;
 }
 
 void IPCProcess::disconnectFromNeighbor(
 		const ApplicationProcessNamingInformation& neighbor)
-throw (DisconnectFromNeighborException) {
+{
 	LOG_DBG("IPCProcess::disconnect from neighbour called");
+	/* TODO: IMPLEMENT FUNCTIONALITY */
+	ApplicationProcessNamingInformation a = neighbor;
 	throw IPCException(IPCException::operation_not_implemented_error);
 }
 
 unsigned int IPCProcess::registerApplication(
 		const ApplicationProcessNamingInformation& applicationName,
 		unsigned short regIpcProcessId)
-throw (IpcmRegisterApplicationException) {
-	if (!difMember){
+{
+	if (!difMember) {
 		throw IpcmRegisterApplicationException(
 		                IPCProcess::error_not_a_dif_member);
 	}
@@ -447,18 +449,19 @@ throw (IpcmRegisterApplicationException) {
 
 #if STUB_API
 	//Do nothing
+        (void)regIpcProcessId;
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
-	message.setDifName(difInformation.getDifName());
+	message.setDifName(difInformation.get_dif_name());
 	message.setRegIpcProcessId(regIpcProcessId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
-	try{
+	try {
 	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 	        throw IpcmRegisterApplicationException(e.what());
 	}
 
@@ -470,8 +473,8 @@ throw (IpcmRegisterApplicationException) {
 
 void IPCProcess::registerApplicationResult(
                 unsigned int sequenceNumber, bool success)
-throw (IpcmRegisterApplicationException) {
-        if (!difMember){
+{
+        if (!difMember) {
                 throw IpcmRegisterApplicationException(
                                 IPCProcess::error_not_a_dif_member);
         }
@@ -479,25 +482,27 @@ throw (IpcmRegisterApplicationException) {
         ApplicationProcessNamingInformation appName;
         try {
                 appName = getPendingRegistration(sequenceNumber);
-        } catch(IPCException &e){
+        } catch(IPCException &e) {
                 throw IpcmRegisterApplicationException(e.what());
         }
 
         pendingRegistrations.erase(sequenceNumber);
-        if (success) {
+        if (success)
+{
                 registeredApplications.push_back(appName);
         }
 }
 
 std::list<ApplicationProcessNamingInformation>
-        IPCProcess::getRegisteredApplications() {
+        IPCProcess::getRegisteredApplications()
+{
         return registeredApplications;
 }
 
 unsigned int IPCProcess::unregisterApplication(
 		const ApplicationProcessNamingInformation& applicationName)
-throw (IpcmUnregisterApplicationException) {
-        if (!difMember){
+{
+        if (!difMember) {
                 throw IpcmUnregisterApplicationException(
                                 IPCProcess::error_not_a_dif_member);
         }
@@ -507,7 +512,7 @@ throw (IpcmUnregisterApplicationException) {
         for (iterator = registeredApplications.begin();
                         iterator != registeredApplications.end();
                         iterator++) {
-              if (*iterator == applicationName){
+              if (*iterator == applicationName) {
                       found = true;
                       break;
               }
@@ -524,14 +529,14 @@ throw (IpcmUnregisterApplicationException) {
 #else
         IpcmUnregisterApplicationRequestMessage message;
         message.setApplicationName(applicationName);
-        message.setDifName(difInformation.getDifName());
+        message.setDifName(difInformation.get_dif_name());
         message.setDestIpcProcessId(id);
         message.setDestPortId(portId);
         message.setRequestMessage(true);
 
-        try{
+        try {
         	rinaManager->sendMessage(&message);
-        }catch(NetlinkException &e){
+        } catch (NetlinkException &e) {
         	LOG_DBG("Error %s", e.what());
         	throw IpcmUnregisterApplicationException(e.what());
         }
@@ -543,8 +548,8 @@ throw (IpcmUnregisterApplicationException) {
 }
 
 void IPCProcess::unregisterApplicationResult(unsigned int sequenceNumber, bool success)
-throw (IpcmUnregisterApplicationException) {
-        if (!difMember){
+{
+        if (!difMember) {
                 throw IpcmRegisterApplicationException(
                                 IPCProcess::error_not_a_dif_member);
         }
@@ -552,20 +557,21 @@ throw (IpcmUnregisterApplicationException) {
         ApplicationProcessNamingInformation appName;
         try {
                 appName = getPendingRegistration(sequenceNumber);
-        } catch(IPCException &e){
+        } catch(IPCException &e) {
                 throw IpcmRegisterApplicationException(e.what());
         }
 
         pendingRegistrations.erase(sequenceNumber);
 
-        if (success) {
+        if (success)
+{
                 registeredApplications.remove(appName);
         }
 }
 
 unsigned int IPCProcess::allocateFlow(const FlowRequestEvent& flowRequest)
-throw (AllocateFlowException) {
-	if (!difMember){
+{
+	if (!difMember) {
 		throw AllocateFlowException(IPCProcess::error_not_a_dif_member);
 	}
 
@@ -575,19 +581,19 @@ throw (AllocateFlowException) {
 	//Do nothing
 #else
 	IpcmAllocateFlowRequestMessage message;
-	message.setSourceAppName(flowRequest.getLocalApplicationName());
-	message.setDestAppName(flowRequest.getRemoteApplicationName());
-	message.setFlowSpec(flowRequest.getFlowSpecification());
-	message.setDifName(flowRequest.getDIFName());
+	message.setSourceAppName(flowRequest.localApplicationName);
+	message.setDestAppName(flowRequest.remoteApplicationName);
+	message.setFlowSpec(flowRequest.flowSpecification);
+	message.setDifName(flowRequest.DIFName);
 	message.setSourceIpcProcessId(
-	                flowRequest.getFlowRequestorIPCProcessId());
+	                flowRequest.flowRequestorIpcProcessId);
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
-	try{
+	try {
 	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 	        throw AllocateFlowException(e.what());
 	}
 
@@ -595,11 +601,11 @@ throw (AllocateFlowException) {
 #endif
 
 	FlowInformation flowInformation;
-	flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
-	flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
-	flowInformation.setDifName(difInformation.getDifName());
-	flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
-	flowInformation.setPortId(flowRequest.getPortId());
+	flowInformation.localAppName = flowRequest.localApplicationName;
+	flowInformation.remoteAppName = flowRequest.remoteApplicationName;
+	flowInformation.difName = difInformation.dif_name_;
+	flowInformation.flowSpecification = flowRequest.flowSpecification;
+	flowInformation.portId = flowRequest.portId;
 
 	pendingFlowOperations[seqNum] = flowInformation;
 
@@ -608,8 +614,8 @@ throw (AllocateFlowException) {
 
 void IPCProcess::allocateFlowResult(
                 unsigned int sequenceNumber, bool success, int portId)
-	throw (AllocateFlowException) {
-	if (!difMember){
+{
+	if (!difMember) {
 		throw AllocateFlowException(
 				IPCProcess::error_not_a_dif_member);
 	}
@@ -617,8 +623,8 @@ void IPCProcess::allocateFlowResult(
 	FlowInformation flowInformation;
 	try {
 		flowInformation = getPendingFlowOperation(sequenceNumber);
-		flowInformation.setPortId(portId);
-	} catch(IPCException &e){
+		flowInformation.portId = portId;
+	} catch(IPCException &e) {
 		throw AllocateFlowException(e.what());
 	}
 
@@ -630,21 +636,23 @@ void IPCProcess::allocateFlowResult(
 
 void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 		int result, bool notifySource, int flowAcceptorIpcProcessId)
-		throw(AllocateFlowException){
+{
 
 	if (result == 0) {
 		FlowInformation flowInformation;
-		flowInformation.setLocalAppName(flowRequest.getLocalApplicationName());
-		flowInformation.setRemoteAppName(flowRequest.getRemoteApplicationName());
-		flowInformation.setDifName(difInformation.getDifName());
-		flowInformation.setFlowSpecification(flowRequest.getFlowSpecification());
-		flowInformation.setPortId(flowRequest.getPortId());
+		flowInformation.localAppName = flowRequest.localApplicationName;
+		flowInformation.remoteAppName = flowRequest.remoteApplicationName;
+		flowInformation.difName = difInformation.dif_name_;
+		flowInformation.flowSpecification = flowRequest.flowSpecification;
+		flowInformation.portId = flowRequest.portId;
 
 		allocatedFlows.push_back(flowInformation);
 	}
 
 #if STUB_API
 	//Do nothing
+        (void)notifySource;
+        (void)flowAcceptorIpcProcessId;
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
 	responseMessage.setResult(result);
@@ -652,42 +660,45 @@ void IPCProcess::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
 	responseMessage.setDestPortId(portId);
-	responseMessage.setSequenceNumber(flowRequest.getSequenceNumber());
+	responseMessage.setSequenceNumber(flowRequest.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw AllocateFlowException(e.what());
 	}
 #endif
 
 }
 
-std::list<FlowInformation> IPCProcess::getAllocatedFlows() {
+std::list<FlowInformation> IPCProcess::getAllocatedFlows()
+{
 	return allocatedFlows;
 }
 
-FlowInformation IPCProcess::getFlowInformation(int flowPortId)
-throw(IPCException) {
+bool IPCProcess::getFlowInformation(int flowPortId, FlowInformation& result) {
 	std::list<FlowInformation>::const_iterator iterator;
+
 	for (iterator = allocatedFlows.begin();
 			iterator != allocatedFlows.end(); ++iterator) {
-	    if (iterator->getPortId() == flowPortId)
-	    	return *iterator;
+                if (iterator->portId == flowPortId) {
+                        result = *iterator;
+                        return true;
+                }
 	}
 
-	throw IPCException("Unknown flow");
+        return false;
 }
 
 unsigned int IPCProcess::deallocateFlow(int flowPortId)
-	throw (IpcmDeallocateFlowException){
+{
 	unsigned int seqNum = 0;
 	FlowInformation flowInformation;
+        bool success;
 
-	try{
-		flowInformation = getFlowInformation(flowPortId);
-	}catch (IPCException &e) {
+	success = getFlowInformation(flowPortId, flowInformation);
+        if (!success) {
 		LOG_ERR("Could not find flow with port-id %d", flowPortId);
 		throw IpcmDeallocateFlowException("Unknown flow");
 	}
@@ -701,9 +712,9 @@ unsigned int IPCProcess::deallocateFlow(int flowPortId)
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
-	try{
+	try {
 	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 	        throw IpcmDeallocateFlowException(e.what());
 	}
 
@@ -715,12 +726,12 @@ unsigned int IPCProcess::deallocateFlow(int flowPortId)
 }
 
 void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
-	throw (IpcmDeallocateFlowException) {
+{
 	FlowInformation flowInformation;
 
 	try {
 		flowInformation = getPendingFlowOperation(sequenceNumber);
-	} catch(IPCException &e){
+	} catch(IPCException &e) {
 		throw IpcmDeallocateFlowException(e.what());
 	}
 
@@ -731,23 +742,29 @@ void IPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
 }
 
 FlowInformation IPCProcess::flowDeallocated(int flowPortId)
-throw (IpcmDeallocateFlowException) {
+{
 	FlowInformation flowInformation;
+        bool success;
 
-	try {
-		flowInformation = getFlowInformation(flowPortId);
-		allocatedFlows.remove(flowInformation);
-		return flowInformation;
-	} catch (IPCException &e) {
-		throw IpcmDeallocateFlowException(e.what());
-	}
+        success = getFlowInformation(flowPortId, flowInformation);
+        if (!success) {
+                throw IpcmDeallocateFlowException("No flow for such port-id");
+        }
+        allocatedFlows.remove(flowInformation);
+
+        return flowInformation;
 }
 
 unsigned int IPCProcess::queryRIB(const std::string& objectClass,
 		const std::string& objectName, unsigned long objectInstance,
 		unsigned int scope, const std::string& filter)
-			throw (QueryRIBException){
+{
 #if STUB_API
+        (void)objectClass;
+        (void)objectName;
+        (void)objectInstance;
+        (void)scope;
+        (void)filter;
 	return 0;
 #else
 	IpcmDIFQueryRIBRequestMessage message;
@@ -760,9 +777,9 @@ unsigned int IPCProcess::queryRIB(const std::string& objectClass,
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
 
-	try{
+	try {
 	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 	        throw QueryRIBException(e.what());
 	}
 
@@ -778,13 +795,13 @@ const std::string IPCProcessFactory::path_to_ipc_process_types =
 const std::string IPCProcessFactory::normal_ipc_process_type =
 		"normal";
 
-IPCProcessFactory::IPCProcessFactory(): Lockable(){
+IPCProcessFactory::IPCProcessFactory(): Lockable() {
 }
 
-IPCProcessFactory::~IPCProcessFactory() throw(){
+IPCProcessFactory::~IPCProcessFactory() throw() {
 }
 
-std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
+std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes() {
 	std::list<std::string> result;
 
 	DIR *dp;
@@ -798,7 +815,7 @@ std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 	std::string name;
 	while ((dirp = readdir(dp)) != 0) {
 		name = std::string(dirp->d_name);
-		if (name.compare(".") != 0 && name.compare("..") != 0){
+		if (name.compare(".") != 0 && name.compare("..") != 0) {
 			result.push_back(name);
 		}
 	}
@@ -810,7 +827,8 @@ std::list<std::string> IPCProcessFactory::getSupportedIPCProcessTypes(){
 
 IPCProcess * IPCProcessFactory::create(
 		const ApplicationProcessNamingInformation& ipcProcessName,
-		const std::string& difType) throw (CreateIPCProcessException) {
+		const std::string& difType)
+{
 	lock();
 	unsigned short ipcProcessId = 1;
 	unsigned int portId = 0;
@@ -836,7 +854,7 @@ IPCProcess * IPCProcessFactory::create(
 
 	if (difType.compare(NORMAL_IPC_PROCESS) == 0) {
 		pid = fork();
-		if (pid == 0){
+		if (pid == 0) {
 			//This is the OS process that has to execute the IPC Process
 			//program and then exit
 			LOG_DBG("New OS Process created, executing IPC Process ...");
@@ -844,17 +862,13 @@ IPCProcess * IPCProcessFactory::create(
 			char * argv[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
-				stringToCharArray("/usr/bin/java"),
-				stringToCharArray("-jar"),
-				stringToCharArray(_installationPath +
-					          "/ipcprocess/rina.ipcprocess.impl-1.0.0-irati-SNAPSHOT.jar"),
-				stringToCharArray(ipcProcessName.getProcessName()),
-				stringToCharArray(ipcProcessName.getProcessInstance()),
+				stringToCharArray(_installationPath +"/ipcp"),
+				stringToCharArray(ipcProcessName.processName),
+				stringToCharArray(ipcProcessName.processInstance),
 				intToCharArray(ipcProcessId),
 				intToCharArray(getNelinkPortId()),
 				0
 			};
-
 			char * envp[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
@@ -864,15 +878,16 @@ IPCProcess * IPCProcessFactory::create(
 				(char*) 0
 			};
 
+			LOG_DBG("argv[0]: %s", argv[0]);
 			execve(argv[0], &argv[0], envp);
 
-			LOG_ERR("Problems loading IPC Process program, finalizing OS Process");
+			LOG_ERR("Problems loading IPC Process program, finalizing OS Process with error %s", strerror(errno));
 
 			//Destroy the IPC Process in the kernel
 			syscallDestroyIPCProcess(ipcProcessId);
 
 			exit(-1);
-		}else if (pid < 0){
+		}else if (pid < 0) {
 			//This is the IPC Manager, and fork failed
 		        //Try to destroy the IPC Process in the kernel and return error
 		        syscallDestroyIPCProcess(ipcProcessId);
@@ -896,7 +911,7 @@ IPCProcess * IPCProcessFactory::create(
 }
 
 void IPCProcessFactory::destroy(unsigned short ipcProcessId)
-throw (DestroyIPCProcessException) {
+{
 	lock();
 
 	int resultUserSpace = 0;
@@ -938,7 +953,8 @@ throw (DestroyIPCProcessException) {
 	}
 }
 
-std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
+std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses()
+{
 	std::vector<IPCProcess *> response;
 
 	lock();
@@ -952,7 +968,6 @@ std::vector<IPCProcess *> IPCProcessFactory::listIPCProcesses() {
 }
 
 IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId)
-        throw (GetIPCProcessException)
 {
         std::map<unsigned short, IPCProcess*>::iterator iterator;
 
@@ -961,7 +976,7 @@ IPCProcess * IPCProcessFactory::getIPCProcess(unsigned short ipcProcessId)
         unlock();
 
         if (iterator == ipcProcesses.end())
-                throw GetIPCProcessException();
+                return NULL;
 
         return iterator->second;
 }
@@ -972,23 +987,25 @@ Singleton<IPCProcessFactory> ipcProcessFactory;
 void ApplicationManager::applicationRegistered(
 		const ApplicationRegistrationRequestEvent& event,
 		const ApplicationProcessNamingInformation& difName, int result)
-			throw (NotifyApplicationRegisteredException) {
+{
 	LOG_DBG("ApplicationManager::applicationRegistered called");
 
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)difName;
+        (void)result;
 #else
 	AppRegisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.
-	                getApplicationRegistrationInformation().
-	                getApplicationName());
+			applicationRegistrationInformation.appName);
 	responseMessage.setDifName(difName);
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyApplicationRegisteredException(e.what());
 	}
 #endif
@@ -997,41 +1014,44 @@ void ApplicationManager::applicationRegistered(
 void ApplicationManager::applicationUnregistered(
 		const ApplicationUnregistrationRequestEvent& event,
 		int result)
-			throw (NotifyApplicationUnregisteredException) {
+{
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
 
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)result;
 #else
 	AppUnregisterApplicationResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.getApplicationName());
+	responseMessage.setApplicationName(event.applicationName);
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyApplicationUnregisteredException(e.what());
 	}
 #endif
 }
 
 void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent)
-throw (NotifyFlowAllocatedException) {
+{
 	LOG_DBG("ApplicationManager::flowAllocated called");
 
 #if STUB_API
 	//Do nothing
+        (void)flowRequestEvent;
 #else
 	AppAllocateFlowRequestResultMessage responseMessage;
-	responseMessage.setPortId(flowRequestEvent.getPortId());
-	responseMessage.setSourceAppName(flowRequestEvent.getLocalApplicationName());
-	responseMessage.setDifName(flowRequestEvent.getDIFName());
-	responseMessage.setSequenceNumber(flowRequestEvent.getSequenceNumber());
+	responseMessage.setPortId(flowRequestEvent.portId);
+	responseMessage.setSourceAppName(flowRequestEvent.localApplicationName);
+	responseMessage.setDifName(flowRequestEvent.DIFName);
+	responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyFlowAllocatedException(e.what());
 	}
 #endif
@@ -1042,8 +1062,14 @@ unsigned int ApplicationManager::flowRequestArrived(
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpec,
 			const ApplicationProcessNamingInformation& difName,
-			int portId) throw (AppFlowArrivedException){
+			int portId)
+{
 #if STUB_API
+        (void)localAppName;
+        (void)remoteAppName;
+        (void)flowSpec;
+        (void)difName;
+        (void)portId;
 	return 0;
 #else
 	AppAllocateFlowRequestArrivedMessage message;
@@ -1054,9 +1080,9 @@ unsigned int ApplicationManager::flowRequestArrived(
 	message.setPortId(portId);
 	message.setRequestMessage(true);
 
-	try{
+	try {
 	        rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 	        throw AppFlowArrivedException(e.what());
 	}
 
@@ -1066,21 +1092,23 @@ unsigned int ApplicationManager::flowRequestArrived(
 
 void ApplicationManager::flowDeallocated(
 		const FlowDeallocateRequestEvent& event, int result)
-		throw (NotifyFlowDeallocatedException){
+{
 	LOG_DBG("ApplicationManager::flowdeallocated called");
 
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)result;
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.getApplicationName());
-	responseMessage.setPortId(event.getPortId());
+	responseMessage.setApplicationName(event.applicationName);
+	responseMessage.setPortId(event.portId);
 	responseMessage.setResult(result);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyFlowDeallocatedException(e.what());
 	}
 #endif
@@ -1089,19 +1117,22 @@ void ApplicationManager::flowDeallocated(
 void ApplicationManager::flowDeallocatedRemotely(
 		int portId, int code,
 		const ApplicationProcessNamingInformation& appName)
-	throw (NotifyFlowDeallocatedException){
+{
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
 #if STUB_API
 	//Do nothing
+        (void)portId;
+        (void)code;
+        (void)appName;
 #else
 	AppFlowDeallocatedNotificationMessage message;
 	message.setPortId(portId);
 	message.setCode(code);
 	message.setApplicationName(appName);
 	message.setNotificationMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&message);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw NotifyFlowDeallocatedException(e.what());
 	}
 #endif
@@ -1110,19 +1141,22 @@ void ApplicationManager::flowDeallocatedRemotely(
 void ApplicationManager::getDIFPropertiesResponse(
 		const GetDIFPropertiesRequestEvent &event,
 			int result, const std::list<DIFProperties>& difProperties)
-			throw (GetDIFPropertiesResponseException){
+{
 #if STUB_API
 	//Do nothing
+        (void)event;
+        (void)result;
+        (void)difProperties;
 #else
 	AppGetDIFPropertiesResponseMessage responseMessage;
 	responseMessage.setResult(result);
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDIFProperties(difProperties);
-	responseMessage.setSequenceNumber(event.getSequenceNumber());
+	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
-	try{
+	try {
 		rinaManager->sendMessage(&responseMessage);
-	}catch(NetlinkException &e){
+	} catch (NetlinkException &e) {
 		throw GetDIFPropertiesResponseException(e.what());
 	}
 #endif
@@ -1135,88 +1169,75 @@ GetDIFPropertiesRequestEvent::GetDIFPropertiesRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber):
-				IPCEvent(GET_DIF_PROPERTIES, sequenceNumber){
+        IPCEvent(GET_DIF_PROPERTIES, sequenceNumber)
+{
 	this->applicationName = appName;
 	this->DIFName = DIFName;
 }
 
 const ApplicationProcessNamingInformation&
-	GetDIFPropertiesRequestEvent::getApplicationName() const{
-	return applicationName;
-}
+	GetDIFPropertiesRequestEvent::getApplicationName() const
+{ return applicationName; }
 
 const ApplicationProcessNamingInformation&
-	GetDIFPropertiesRequestEvent::getDIFName() const{
-	return DIFName;
-}
+	GetDIFPropertiesRequestEvent::getDIFName() const
+{ return DIFName; }
 
 /* CLASS IPCM REGISTER APPLICATION RESPONSE EVENT */
 IpcmRegisterApplicationResponseEvent::IpcmRegisterApplicationResponseEvent(
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         IPCM_REGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber) {
-}
+                                        sequenceNumber)
+{ }
 
 /* CLASS IPCM UNREGISTER APPLICATION RESPONSE EVENT */
 IpcmUnregisterApplicationResponseEvent::IpcmUnregisterApplicationResponseEvent(
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber) {
-}
+                                        sequenceNumber)
+{ }
 
 /* CLASS IPCM DEALLOCATE FLOW RESPONSE EVENT */
 IpcmDeallocateFlowResponseEvent::IpcmDeallocateFlowResponseEvent(
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                        sequenceNumber) {
-}
+                                        sequenceNumber)
+{ }
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST RESULT EVENT */
 IpcmAllocateFlowRequestResultEvent::IpcmAllocateFlowRequestResultEvent(
                 int result, int portId, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                                        sequenceNumber) {
-        this->portId = portId;
-}
+                                        sequenceNumber)
+{ this->portId = portId; }
 
-int IpcmAllocateFlowRequestResultEvent::getPortId() const {
-        return portId;
-}
+int IpcmAllocateFlowRequestResultEvent::getPortId() const
+{ return portId; }
 
 /* CLASS QUERY RIB RESPONSE EVENT */
 QueryRIBResponseEvent::QueryRIBResponseEvent(
-                const std::list<RIBObject>& ribObjects,
+                const std::list<RIBObjectData>& ribObjects,
                 int result,
                 unsigned int sequenceNumber) :
-                BaseResponseEvent(result,
-                                QUERY_RIB_RESPONSE_EVENT,
-                                sequenceNumber){
-        this->ribObjects = ribObjects;
-}
+        BaseResponseEvent(result,
+                          QUERY_RIB_RESPONSE_EVENT,
+                          sequenceNumber)
+{ this->ribObjects = ribObjects; }
 
-const std::list<RIBObject>& QueryRIBResponseEvent::getRIBObject() const {
-        return ribObjects;
-}
-
-/* CLASS ASSIGN TO DIF RESPONSE EVENT */
-AssignToDIFResponseEvent::AssignToDIFResponseEvent(
-                int result, unsigned int sequenceNumber):
-                        BaseResponseEvent(result,
-                                        ASSIGN_TO_DIF_RESPONSE_EVENT,
-                                        sequenceNumber) {
-}
+const std::list<RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
+{ return ribObjects; }
 
 /* CLASS UPDATE DIF CONFIGURATION RESPONSE EVENT */
 UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         UPDATE_DIF_CONFIG_RESPONSE_EVENT,
-                                        sequenceNumber) {
-}
+                                        sequenceNumber)
+{ }
 
 /* CLASS ENROLL TO DIF RESPONSE EVENT */
 EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
@@ -1225,45 +1246,42 @@ EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
                 int result, unsigned int sequenceNumber):
                         BaseResponseEvent(result,
                                         ENROLL_TO_DIF_RESPONSE_EVENT,
-                                        sequenceNumber) {
+                                        sequenceNumber)
+{
         this->neighbors = neighbors;
         this->difInformation = difInformation;
 }
 
 const std::list<Neighbor>&
-EnrollToDIFResponseEvent::getNeighbors() const {
-        return neighbors;
-}
+EnrollToDIFResponseEvent::getNeighbors() const
+{ return neighbors; }
 
 const DIFInformation&
-EnrollToDIFResponseEvent::getDIFInformation() const {
-        return difInformation;
-}
+EnrollToDIFResponseEvent::getDIFInformation() const
+{ return difInformation; }
 
 /* CLASS NEIGHBORS MODIFIED NOTIFICATION EVENT */
 NeighborsModifiedNotificationEvent::NeighborsModifiedNotificationEvent(
                         unsigned short ipcProcessId,
                         const std::list<Neighbor> & neighbors,
                         bool added, unsigned int sequenceNumber) :
-                                IPCEvent(NEIGHBORS_MODIFIED_NOTIFICAITON_EVENT,
-                                                sequenceNumber) {
+                                IPCEvent(NEIGHBORS_MODIFIED_NOTIFICATION_EVENT,
+                                                sequenceNumber)
+{
         this->ipcProcessId = ipcProcessId;
         this->neighbors = neighbors;
         this->added = added;
 }
 
 const std::list<Neighbor>&
-NeighborsModifiedNotificationEvent::getNeighbors() const {
-        return neighbors;
-}
+NeighborsModifiedNotificationEvent::getNeighbors() const
+{ return neighbors; }
 
-bool NeighborsModifiedNotificationEvent::isAdded() const {
-        return added;
-}
+bool NeighborsModifiedNotificationEvent::isAdded() const
+{ return added; }
 
-unsigned short NeighborsModifiedNotificationEvent::getIpcProcessId() const {
-        return ipcProcessId;
-}
+unsigned short NeighborsModifiedNotificationEvent::getIpcProcessId() const
+{ return ipcProcessId; }
 
 /* CLASS IPC PROCESS DAEMON INITIALIZED EVENT */
 IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
@@ -1271,23 +1289,22 @@ IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
                 const ApplicationProcessNamingInformation&  name,
                 unsigned int sequenceNumber):
                         IPCEvent(IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-                                        sequenceNumber) {
+                                        sequenceNumber)
+{
         this->ipcProcessId = ipcProcessId;
         this->name = name;
 }
 
-unsigned short IPCProcessDaemonInitializedEvent::getIPCProcessId() const {
-        return ipcProcessId;
-}
+unsigned short IPCProcessDaemonInitializedEvent::getIPCProcessId() const
+{ return ipcProcessId; }
 
 const ApplicationProcessNamingInformation&
-IPCProcessDaemonInitializedEvent::getName() const {
-        return name;
-}
+IPCProcessDaemonInitializedEvent::getName() const
+{ return name; }
 
 /* CLASS TIMER EXPIRED EVENT */
 TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
-                IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber) {
-}
+                IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber)
+{ }
 
 }

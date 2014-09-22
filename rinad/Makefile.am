@@ -10,13 +10,20 @@ MAINTAINERCLEANFILES      =
 BUILT_SOURCES             =
 DISTCHECK_CONFIGURE_FLAGS =
 
-SUBDIRS = src
+SUBDIRS =					\
+	src					\
+	doc					\
+	etc
 
 EXTRA_DIST =					\
 	bootstrap				\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
 	LICENSE					\
+	LICENSE-jsoncpp				\
+	LICENSE-protobuf			\
+	LICENSE-tclap				\
+	INSTALL					\
 	README
 
 .PHONY: AUTHORS

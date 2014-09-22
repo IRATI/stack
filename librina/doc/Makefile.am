@@ -6,19 +6,26 @@
 
 include Makefile.inc
 
-EXTRA_DIST       = doxygen.cfg.in
-BUILT_SOURCES    =
-MOSTLYCLEANFILES =
+EXTRA_DIST	 =
+BUILT_SOURCES	 =
+MOSTLYCLEANFILES = $(DX_CLEANFILES)
+
+## FIXME: Remove this workaround
+##EXTRA_DIST += *.md
+
+EXTRA_DIST += doxygen.cfg.in
 
 if DX_COND_doc
 
 MOSTLYCLEANFILES += $(DX_CLEANFILES)
 
 edit = $(SED)							\
-        -e 's|@abs_top_srcdir[@]|$(abs_top_srcdir)|g'		\
-        -e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'
+	-e 's|@abs_top_srcdir[@]|$(abs_top_srcdir)|g'		\
+	-e 's|@abs_top_builddir[@]|$(abs_top_builddir)|g'	\
+        -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'		\
+        -e 's|@PACKAGE_NAME[@]|$(PACKAGE_NAME)|g'
 
-BUILT_SOURCES    += doxygen.cfg
+BUILT_SOURCES	 += doxygen.cfg
 MOSTLYCLEANFILES += doxygen.cfg
 
 doxygen.cfg: Makefile doxygen.cfg.in
@@ -29,8 +36,12 @@ doxygen.cfg: Makefile doxygen.cfg.in
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
+if DX_COND_pdf
 pdf-local: doxygen.cfg doxygen-run doxygen-pdf
+endif DX_COND_pdf
 
+if DX_COND_html
 html-local: doxygen.cfg doxygen-run
+endif DX_COND_html
 
 endif

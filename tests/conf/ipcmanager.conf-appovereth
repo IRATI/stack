@@ -23,9 +23,8 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "300",
-    "configParameters" : [ {
-     "name" : "interface-name", 
-     "value" : "eth1"
-      } ]
+    "configParameters" : {
+     "interface-name" : "eth1"
+      } 
    } ] 
 }

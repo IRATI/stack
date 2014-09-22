@@ -31,21 +31,21 @@ int testAppAllocateFlowRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("12");
-	sourceName.setEntityName("database");
-	sourceName.setEntityInstance("12");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "12";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "12";
 
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("12345");
-	destName.setEntityName("printer");
-	destName.setEntityInstance("12623456");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "12345";
+	destName.entityName = "printer";
+	destName.entityInstance = "12623456";
 
 	FlowSpecification flowSpec;
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("test.DIF");
+	difName.processName = "test.DIF";
 
 	AppAllocateFlowRequestMessage message;
 	message.setSourceAppName(sourceName);
@@ -115,14 +115,14 @@ int testAppAllocateFlowRequestResultMessage() {
 
 	ApplicationProcessNamingInformation * sourceName =
 			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	sourceName->processName = "/apps/source";
+	sourceName->processInstance = "12";
+	sourceName->entityName = "database";
+	sourceName->entityInstance = "12";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	difName->processName = "/difs/Test.DIF";
 
 	AppAllocateFlowRequestResultMessage * message =
 			new AppAllocateFlowRequestResultMessage();
@@ -197,21 +197,21 @@ int testAppAllocateFlowRequestArrivedMessage() {
 
 	ApplicationProcessNamingInformation * sourceName =
 			new ApplicationProcessNamingInformation();
-	sourceName->setProcessName("/apps/source");
-	sourceName->setProcessInstance("12");
-	sourceName->setEntityName("database");
-	sourceName->setEntityInstance("12");
+	sourceName->processName = "/apps/source";
+	sourceName->processInstance = "12";
+	sourceName->entityName = "database";
+	sourceName->entityInstance = "12";
 
 	ApplicationProcessNamingInformation * destName =
 			new ApplicationProcessNamingInformation();
-	destName->setProcessName("/apps/dest");
-	destName->setProcessInstance("12345");
-	destName->setEntityName("printer");
-	destName->setEntityInstance("12623456");
+	destName->processName = "/apps/dest";
+	destName->processInstance = "12345";
+	destName->entityName = "printer";
+	destName->entityInstance = "12623456";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test1.DIF");
+	difName->processName = "/difs/Test1.DIF";
 
 	FlowSpecification * flowSpec = new FlowSpecification();
 
@@ -348,10 +348,10 @@ int testAppDeallocateFlowRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("15");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("13");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	AppDeallocateFlowRequestMessage message;;
 	message.setPortId(47);
@@ -407,10 +407,10 @@ int testAppDeallocateFlowResponseMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source2");
-	applicationName.setProcessInstance("11");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("9");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	AppDeallocateFlowResponseMessage message;
 	message.setResult(0);
@@ -471,10 +471,10 @@ int testAppFlowDeallocatedNotificationMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("35");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("3");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	AppFlowDeallocatedNotificationMessage message;;
 	message.setPortId(47);
@@ -537,14 +537,14 @@ int testAppRegisterApplicationRequestMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("31");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test2.DIF");
+	difName->processName = "/difs/Test2.DIF";
 
 	AppRegisterApplicationRequestMessage * message =
 			new AppRegisterApplicationRequestMessage();
@@ -552,8 +552,8 @@ int testAppRegisterApplicationRequestMessage() {
 	ApplicationRegistrationInformation appRegInfo =
 		ApplicationRegistrationInformation(
 				APPLICATION_REGISTRATION_SINGLE_DIF);
-	appRegInfo.setDIFName(*difName);
-	appRegInfo.setApplicationName(*applicationName);
+	appRegInfo.difName = *difName;
+	appRegInfo.appName = *applicationName;
 
 	message->setApplicationRegistrationInformation(appRegInfo);
 
@@ -584,22 +584,22 @@ int testAppRegisterApplicationRequestMessage() {
 		std::cout << "Error parsing Register Application Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getApplicationRegistrationInformation().getApplicationName()
+	} else if (message->getApplicationRegistrationInformation().appName
 			!= recoveredMessage->getApplicationRegistrationInformation().
-			getApplicationName()) {
+			appName) {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	} else if (message->getApplicationRegistrationInformation().
-			getRegistrationType() !=
+			applicationRegistrationType !=
 			recoveredMessage->getApplicationRegistrationInformation().
-			getRegistrationType()) {
+			applicationRegistrationType) {
 		std::cout << "Application Registration Type on original and recovered "
 				<< "messages are different\n";
 		returnValue = -1;
-	}  else if (message->getApplicationRegistrationInformation().getDIFName()
+	}  else if (message->getApplicationRegistrationInformation().difName
 			!= recoveredMessage->getApplicationRegistrationInformation().
-			getDIFName()) {
+			difName) {
 		std::cout << "DIF name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
@@ -623,14 +623,14 @@ int testAppRegisterApplicationResponseMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("30");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	difName->processName = "/difs/Test.DIF";
 
 	AppRegisterApplicationResponseMessage * message =
 			new AppRegisterApplicationResponseMessage();
@@ -700,14 +700,14 @@ int testAppUnregisterApplicationRequestMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("5");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("3");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test2.DIF");
+	difName->processName = "/difs/Test2.DIF";
 
 	AppUnregisterApplicationRequestMessage * message =
 			new AppUnregisterApplicationRequestMessage();
@@ -771,10 +771,10 @@ int testAppUnregisterApplicationResponseMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("5");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("3");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	AppUnregisterApplicationResponseMessage * message =
 			new AppUnregisterApplicationResponseMessage();
@@ -834,13 +834,13 @@ int testAppGetDIFPropertiesRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("5");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("3");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test2.DIF");
+	difName.processName = "/difs/Test2.DIF";
 
 	AppGetDIFPropertiesRequestMessage message;
 	message.setDifName(difName);
@@ -896,19 +896,19 @@ int testIpcmQueryRIBResponseMessage() {
 
 	IpcmDIFQueryRIBResponseMessage message;
 	message.setResult(0);
-	RIBObject * ribObject = new RIBObject();
-	ribObject->setClazz("/test/clazz1");
-	ribObject->setName("/test/name1");
-	ribObject->setInstance(1234);
-	ribObject->setDisplayableValue("This is my value");
+	RIBObjectData * ribObject = new RIBObjectData();
+	ribObject->set_class("/test/clazz1");
+	ribObject->set_name("/test/name1");
+	ribObject->set_instance(1234);
+	ribObject->set_displayable_value("This is my value");
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
-	ribObject = new RIBObject();
-	ribObject->setClazz("/test/clazz2");
-	ribObject->setName("/test/name2");
-	ribObject->setInstance(343241);
-	ribObject->setDisplayableValue("This is my value2");
+	ribObject = new RIBObjectData();
+	ribObject->set_class("/test/clazz2");
+	ribObject->set_name("/test/name2");
+	ribObject->set_instance(343241);
+	ribObject->set_displayable_value("This is my value2");
 	message.addRIBObject(*ribObject);
 	delete ribObject;
 
@@ -947,29 +947,29 @@ int testIpcmQueryRIBResponseMessage() {
 				<< recoveredMessage->getRIBObjects().size() <<std::endl;
 		returnValue = -1;
 	} else {
-		std::list<RIBObject>::const_iterator iterator;
+		std::list<RIBObjectData>::const_iterator iterator;
 		int i = 0;
 		for (iterator = recoveredMessage->getRIBObjects().begin();
 				iterator != recoveredMessage->getRIBObjects().end();
 				++iterator) {
-			const RIBObject& ribObject = *iterator;
+			const RIBObjectData& ribObject = *iterator;
 			if (i == 0){
-				if (ribObject.getClazz().compare("/test/clazz1") != 0){
+				if (ribObject.get_class().compare("/test/clazz1") != 0){
 					std::cout << "RIB Object clazz on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getName().compare("/test/name1") != 0){
+				}else if (ribObject.get_name().compare("/test/name1") != 0){
 					std::cout << "RIB Object name on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getInstance() != 1234){
+				}else if (ribObject.get_instance() != 1234){
 					std::cout << "RIB Object instance on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				}else if (ribObject.getDisplayableValue().compare("This is my value") != 0){
+				}else if (ribObject.get_displayable_value().compare("This is my value") != 0){
                                         std::cout << "RIB Object display value on original and recovered messages"
                                                         << " are different\n";
                                         returnValue = -1;
@@ -978,22 +978,22 @@ int testIpcmQueryRIBResponseMessage() {
 
 				i++;
 			}else if (i == 1){
-				if (ribObject.getClazz().compare("/test/clazz2") != 0){
+				if (ribObject.get_class().compare("/test/clazz2") != 0){
 					std::cout << "RIB Object clazz on original and recovered messages"
 							<< " are different " <<std::endl;
 					returnValue = -1;
 					break;
-				} else if (ribObject.getName().compare("/test/name2") != 0){
+				} else if (ribObject.get_name().compare("/test/name2") != 0){
 					std::cout << "RIB Object name on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				} else if (ribObject.getInstance() != 343241){
+				} else if (ribObject.get_instance() != 343241){
 					std::cout << "RIB Object instance on original and recovered messages"
 							<< " are different\n";
 					returnValue = -1;
 					break;
-				} else if (ribObject.getDisplayableValue().compare("This is my value2") != 0){
+				} else if (ribObject.get_displayable_value().compare("This is my value2") != 0){
                                         std::cout << "RIB Object display value on original and recovered messages"
                                                         << " are different\n";
                                         returnValue = -1;
@@ -1018,14 +1018,14 @@ int testIpcmRegisterApplicationRequestMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("31");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test2.DIF");
+	difName->processName = "/difs/Test2.DIF";
 
 	IpcmRegisterApplicationRequestMessage * message =
 			new IpcmRegisterApplicationRequestMessage();
@@ -1095,14 +1095,14 @@ int testIpcmRegisterApplicationResponseMessage() {
 
 	ApplicationProcessNamingInformation * applicationName =
 			new ApplicationProcessNamingInformation();
-	applicationName->setProcessName("/apps/source");
-	applicationName->setProcessInstance("25");
-	applicationName->setEntityName("database");
-	applicationName->setEntityInstance("30");
+	applicationName->processName = "/apps/source";
+	applicationName->processInstance = "15";
+	applicationName->entityName = "database";
+	applicationName->entityInstance = "13";
 
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation();
-	difName->setProcessName("/difs/Test.DIF");
+	difName->processName = "/difs/Test.DIF";
 
 	IpcmRegisterApplicationResponseMessage * message =
 			new IpcmRegisterApplicationResponseMessage();
@@ -1159,13 +1159,13 @@ int testIpcmUnregisterApplicationRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation applicationName;
-	applicationName.setProcessName("/apps/source");
-	applicationName.setProcessInstance("25");
-	applicationName.setEntityName("database");
-	applicationName.setEntityInstance("31");
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test2.DIF");
+	difName.processName = "/difs/Test2.DIF";
 
 	IpcmUnregisterApplicationRequestMessage message;
 	message.setDifName(difName);
@@ -1267,41 +1267,48 @@ int testIpcmAssignToDIFRequestMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation  difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 
 	IpcmAssignToDIFRequestMessage message;
 	DIFInformation difInformation;
 	DIFConfiguration difConfiguration;
-	difInformation.setDifType(NORMAL_IPC_PROCESS);
-	difInformation.setDifName(difName);
+	difInformation.set_dif_type(NORMAL_IPC_PROCESS);
+	difInformation.set_dif_name(difName);
 	Parameter * parameter = new Parameter("interface", "eth0");
-	difConfiguration.addParameter(*parameter);
+	difConfiguration.add_parameter(*parameter);
 	delete parameter;
 	parameter = new Parameter("vlanid", "430");
-	difConfiguration.addParameter(*parameter);
-	difConfiguration.setAddress(34);
+	difConfiguration.add_parameter(*parameter);
+	difConfiguration.set_address(34);
 	delete parameter;
 	EFCPConfiguration efcpConfiguration;
 	DataTransferConstants dataTransferConstants;
-	dataTransferConstants.setAddressLength(1);
-	dataTransferConstants.setCepIdLength(2);
-	dataTransferConstants.setDifIntegrity(true);
-	dataTransferConstants.setLengthLength(3);
-	dataTransferConstants.setMaxPduLifetime(4);
-	dataTransferConstants.setMaxPduSize(5);
-	dataTransferConstants.setPortIdLength(6);
-	dataTransferConstants.setQosIdLenght(7);
-	dataTransferConstants.setSequenceNumberLength(8);
-	efcpConfiguration.setDataTransferConstants(dataTransferConstants);
+	dataTransferConstants.set_address_length(1);
+	dataTransferConstants.set_cep_id_length(2);
+	dataTransferConstants.set_dif_integrity(true);
+	dataTransferConstants.set_length_length(3);
+	dataTransferConstants.set_max_pdu_lifetime(4);
+	dataTransferConstants.set_max_pdu_size(5);
+	dataTransferConstants.set_port_id_length(6);
+	dataTransferConstants.set_qos_id_length(7);
+	dataTransferConstants.set_sequence_number_length(8);
+	efcpConfiguration.set_data_transfer_constants(dataTransferConstants);
 	QoSCube * qosCube = new QoSCube("cube 1", 1);
-	efcpConfiguration.addQoSCube(*qosCube);
-	delete qosCube;
+	efcpConfiguration.add_qos_cube(qosCube);
 	qosCube = new QoSCube("cube 2", 2);
-	efcpConfiguration.addQoSCube(*qosCube);
-	qosCube->setEfcpPolicies(ConnectionPolicies());
-	delete qosCube;
-	difConfiguration.setEfcpConfiguration(efcpConfiguration);
-	difInformation.setDifConfiguration(difConfiguration);
+	efcpConfiguration.add_qos_cube(qosCube);
+	qosCube->set_efcp_policies(ConnectionPolicies());
+	difConfiguration.set_efcp_configuration(efcpConfiguration);
+	difConfiguration.rmt_configuration_.rmt_scheduling_policy_.name_ = "FancySchedulingPolicy";
+	difConfiguration.pduft_generator_configuration_.pduft_generator_policy_.name_ = "LinkStateRouting";
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.object_maximum_age_ = 4;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.routing_algorithm_ = "FancyAlgorithm";
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_age_increment_ = 23;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_error_ = 11;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_fsodb_propagation_ = 10;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_pduft_computation_ = 2;
+	difConfiguration.pduft_generator_configuration_.link_state_routing_configuration_.wait_until_read_cdap_ = 3;
+	difInformation.set_dif_configuration(difConfiguration);
 	message.setDIFInformation(difInformation);
 
 	struct nl_msg* netlinkMessage;
@@ -1329,96 +1336,108 @@ int testIpcmAssignToDIFRequestMessage() {
 		std::cout << "Error parsing Ipcm Assign To DIF Request Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message.getDIFInformation().getDifType().compare(
-			recoveredMessage->getDIFInformation().getDifType()) != 0) {
+	} else if (message.getDIFInformation().get_dif_type().compare(
+			recoveredMessage->getDIFInformation().get_dif_type()) != 0) {
 		std::cout << "DIFInformation.difType on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getDIFInformation().getDifName() !=
-			recoveredMessage->getDIFInformation().getDifName()) {
+	} else if (message.getDIFInformation().get_dif_name() !=
+			recoveredMessage->getDIFInformation().get_dif_name()) {
 		std::cout << "DIFInformation.difName on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getDIFInformation().getDifConfiguration().getParameters().size() !=
-			recoveredMessage->getDIFInformation().getDifConfiguration().getParameters().size()){
+	} else if (message.getDIFInformation().get_dif_configuration().get_parameters().size() !=
+			recoveredMessage->getDIFInformation().get_dif_configuration().get_parameters().size()){
 		std::cout << "DIFInformation.DIFConfiguration.parameters.size on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
-	} else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-	                getDataTransferConstants().getAddressLength() !=
-	                                recoveredMessage->getDIFInformation().getDifConfiguration().
-	                                getEfcpConfiguration().getDataTransferConstants().getAddressLength()) {
+	} else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+			get_data_transfer_constants().get_address_length() !=
+	                                recoveredMessage->getDIFInformation().get_dif_configuration().
+	                                get_efcp_configuration().get_data_transfer_constants().get_address_length()) {
 	        std::cout << "DIFInformation.DIFConfiguration.dtc.addrLength on original and recovered messages"
 	                        << " are different\n";
 	        returnValue = -1;
-	} else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getCepIdLength() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getCepIdLength()) {
+	} else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+			get_data_transfer_constants().get_cep_id_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_cep_id_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.cepIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getLengthLength() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getLengthLength()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_length_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_length_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.lengthLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getMaxPduLifetime() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getMaxPduLifetime()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_max_pdu_lifetime() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_max_pdu_lifetime()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.maxPDULifetime on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getMaxPduSize() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getMaxPduSize()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_max_pdu_size() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_max_pdu_size()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.maxPDUSize on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getPortIdLength() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getPortIdLength()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+                        get_data_transfer_constants().get_port_id_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_port_id_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.portIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getQosIdLenght() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getQosIdLenght()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+                        get_data_transfer_constants().get_qos_id_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_qos_id_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.qosIdLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().getSequenceNumberLength() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().getSequenceNumberLength()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().get_sequence_number_length() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().get_sequence_number_length()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.seqNumLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().
-                        getDataTransferConstants().isDifIntegrity() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getEfcpConfiguration().getDataTransferConstants().isDifIntegrity()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().
+        		get_data_transfer_constants().is_dif_integrity() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_efcp_configuration().get_data_transfer_constants().is_dif_integrity()) {
                 std::cout << "DIFInformation.DIFConfiguration.dtc.difIntegrity on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getAddress() !=
-                                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                                        getAddress()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_address() !=
+                                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                                        get_address()) {
                 std::cout << "DIFInformation.DIFConfiguration.address original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDIFInformation().getDifConfiguration().getEfcpConfiguration().getQosCubes().size() !=
-                        recoveredMessage->getDIFInformation().getDifConfiguration().
-                        getEfcpConfiguration().getQosCubes().size()) {
+        } else if (message.getDIFInformation().get_dif_configuration().get_efcp_configuration().get_qos_cubes().size() !=
+                        recoveredMessage->getDIFInformation().get_dif_configuration().
+                        get_efcp_configuration().get_qos_cubes().size()) {
                 std::cout << "DIFInformation.DIFConfiguration.qosCubes.size original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.rmt_configuration_.
+        				rmt_scheduling_policy_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.rmt_configuration_.rmt_scheduling_policy_.name original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getDIFInformation().dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_.
+        		compare(recoveredMessage->getDIFInformation().dif_configuration_.pduft_generator_configuration_.
+        				pduft_generator_policy_.name_) != 0) {
+        	std::cout << "DIFInformation.dif_configuration_.pduft_generator_configuration_.pduft_generator_policy_.name_. original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
         }
 
 
@@ -1487,10 +1506,10 @@ int testIpcmUpdateDIFConfigurationRequestMessage() {
         IpcmUpdateDIFConfigurationRequestMessage message;
         DIFConfiguration difConfiguration;
         Parameter * parameter = new Parameter("interface", "eth0");
-        difConfiguration.addParameter(*parameter);
+        difConfiguration.add_parameter(*parameter);
         delete parameter;
         parameter = new Parameter("vlanid", "430");
-        difConfiguration.addParameter(*parameter);
+        difConfiguration.add_parameter(*parameter);
         delete parameter;
         message.setDIFConfiguration(difConfiguration);
 
@@ -1518,8 +1537,8 @@ int testIpcmUpdateDIFConfigurationRequestMessage() {
                 std::cout << "Error parsing Ipcm Update DIF Configuration Message "
                                 << "\n";
                 returnValue = -1;
-        } else if (message.getDIFConfiguration().getParameters().size() !=
-                        recoveredMessage->getDIFConfiguration().getParameters().size()){
+        } else if (message.getDIFConfiguration().get_parameters().size() !=
+                        recoveredMessage->getDIFConfiguration().get_parameters().size()){
                 std::cout << "DIFConfiguration.parameters.size on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
@@ -1589,12 +1608,12 @@ int testIpcmEnrollToDIFRequestMessage() {
 
         IpcmEnrollToDIFRequestMessage message;
         ApplicationProcessNamingInformation difName;
-        difName.setProcessName("normal.DIF");
+        difName.processName = "normal.DIF";
         ApplicationProcessNamingInformation supportingDifName;
-        supportingDifName.setProcessName("100");
+        supportingDifName.processName = "100";
         ApplicationProcessNamingInformation neighborName;
-        neighborName.setProcessName("test");
-        neighborName.setProcessInstance("1");
+        neighborName.processName = "test";
+        neighborName.processInstance = "1";
         message.setDifName(difName);
         message.setSupportingDifName(supportingDifName);
         message.setNeighborName(neighborName);
@@ -1654,12 +1673,12 @@ int testIpcmEnrollToDIFResponseMessage() {
         message.setResult(-25);
         Neighbor neighbor;
         ApplicationProcessNamingInformation name;
-        name.setProcessName("test");
-        name.setProcessInstance("1");
-        neighbor.setName(name);
+        name.processName = "test";
+        name.processInstance = "1";
+        neighbor.set_name(name);
         ApplicationProcessNamingInformation supportingDIF;
-        supportingDIF.setProcessName("100");
-        neighbor.setSupportingDifName(supportingDIF);
+        supportingDIF.processName = "100";
+        neighbor.set_supporting_dif_name(supportingDIF);
         message.addNeighbor(neighbor);
 
         struct nl_msg* netlinkMessage;
@@ -1714,12 +1733,12 @@ int testIpcmNeighborsModifiedNotificaiton() {
         message.setAdded(false);
         Neighbor neighbor;
         ApplicationProcessNamingInformation name;
-        name.setProcessName("test");
-        name.setProcessInstance("1");
-        neighbor.setName(name);
+        name.processName = "test";
+        name.processInstance = "1";
+        neighbor.set_name(name);
         ApplicationProcessNamingInformation supportingDIF;
-        supportingDIF.setProcessName("100");
-        neighbor.setSupportingDifName(supportingDIF);
+        supportingDIF.processName = "100";
+        neighbor.set_supporting_dif_name(supportingDIF);
         message.addNeighbor(neighbor);
 
         struct nl_msg* netlinkMessage;
@@ -1732,7 +1751,7 @@ int testIpcmNeighborsModifiedNotificaiton() {
 
         int result = putBaseNetlinkMessage(netlinkMessage, &message);
         if (result < 0) {
-                std::cout << "Error constructing Ipcm Modify Neighbors notificaiton "
+                std::cout << "Error constructing Ipcm Modify Neighbors notification "
                                 << "Message \n";
                 nlmsg_free(netlinkMessage);
                 return result;
@@ -1772,21 +1791,21 @@ int testIpcmAllocateFlowRequestMessage() {
 
 	IpcmAllocateFlowRequestMessage message;
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("1");
-	sourceName.setEntityName("database");
-	sourceName.setEntityName("1234");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "1";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "1234";
 	message.setSourceAppName(sourceName);
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("4");
-	destName.setEntityName("server");
-	destName.setEntityName("342");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "4";
+	destName.entityName = "server";
+	destName.entityInstance = "342";
 	message.setDestAppName(destName);
 	FlowSpecification flowSpec;
 	message.setFlowSpec(flowSpec);
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 	message.setDifName(difName);
 
 	struct nl_msg* netlinkMessage;
@@ -1895,19 +1914,19 @@ int testIpcmAllocateFlowRequestArrivedMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation sourceName;
-	sourceName.setProcessName("/apps/source");
-	sourceName.setProcessInstance("12");
-	sourceName.setEntityName("database");
-	sourceName.setEntityInstance("12");
+	sourceName.processName = "/apps/source";
+	sourceName.processInstance = "1";
+	sourceName.entityName = "database";
+	sourceName.entityInstance = "1234";
 
 	ApplicationProcessNamingInformation destName;
-	destName.setProcessName("/apps/dest");
-	destName.setProcessInstance("12345");
-	destName.setEntityName("printer");
-	destName.setEntityInstance("12623456");
+	destName.processName = "/apps/dest";
+	destName.processInstance = "4";
+	destName.entityName = "server";
+	destName.entityInstance = "342";
 
 	ApplicationProcessNamingInformation difName;;
-	difName.setProcessName("/difs/Test1.DIF");
+	difName.processName = "/difs/Test1.DIF";
 
 	FlowSpecification flowSpec;
 
@@ -2181,13 +2200,13 @@ int testIpcmIPCProcessDIFResgistrationNotification() {
 
 	IpcmDIFRegistrationNotification message;
 	ApplicationProcessNamingInformation ipcProcessName;
-	ipcProcessName.setProcessName("/ipcprocesses/Barcelona/i2CAT");
-	ipcProcessName.setProcessInstance("1");
-	ipcProcessName.setEntityName("Management");
-	ipcProcessName.setProcessInstance("1234");
+	ipcProcessName.processName = "/apps/dest";
+	ipcProcessName.processInstance = "4";
+	ipcProcessName.entityName = "server";
+	ipcProcessName.entityInstance = "342";
 	message.setIpcProcessName(ipcProcessName);
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 	message.setDifName(difName);
 	message.setRegistered(true);
 
@@ -2314,14 +2333,14 @@ int testAppGetDIFPropertiesResponseMessage() {
 	int returnValue = 0;
 
 	ApplicationProcessNamingInformation appName;
-	appName.setProcessName("/test/apps/rinaband");
-	appName.setProcessInstance("1");
-	appName.setEntityName("control");
-	appName.setEntityInstance("23");
+	appName.processName = "/test/apps/rinaband";
+	appName.processInstance = "1";
+	appName.entityName = "control";
+	appName.entityInstance = "23";
 	ApplicationProcessNamingInformation difName;
-	difName.setProcessName("/difs/Test.DIF");
+	difName.processName = "/difs/Test.DIF";
 	ApplicationProcessNamingInformation difName2;
-	difName2.setProcessName("/difs/shim-dummy.DIF");
+	difName2.processName = "/difs/shim-dummy.DIF";
 
 	AppGetDIFPropertiesResponseMessage message;
 	message.setResult(0);
@@ -2375,12 +2394,12 @@ int testAppGetDIFPropertiesResponseMessage() {
 				++iterator) {
 			const DIFProperties& difProperties = *iterator;
 			if (i == 0){
-				if (difProperties.getDifName() != difName){
+				if (difProperties.DIFName != difName){
 					std::cout << "DIF name on original and recovered messages"
 							<< " are different 1\n";
 					returnValue = -1;
 					break;
-				}else if (difProperties.getMaxSduSize()!= 9000){
+				}else if (difProperties.maxSDUSize != 9000){
 					std::cout << "Max SDU size on original and recovered messages"
 							<< " are different 1\n";
 					returnValue = -1;
@@ -2389,12 +2408,12 @@ int testAppGetDIFPropertiesResponseMessage() {
 
 				i++;
 			}else if (i == 1){
-				if (difProperties.getDifName() != difName2){
+				if (difProperties.DIFName != difName2){
 					std::cout << "DIF name on original and recovered messages"
 							<< " are different 2 \n";
 					returnValue = -1;
 					break;
-				}else if (difProperties.getMaxSduSize()!= 25000){
+				}else if (difProperties.maxSDUSize != 25000){
 					std::cout << "Max SDU size on original and recovered messages"
 							<< " are different 2 \n";
 					returnValue = -1;
@@ -2418,48 +2437,48 @@ int testIpcpCreateConnectionRequest() {
         int returnValue = 0;
 
         DTCPRateBasedFlowControlConfig rate;
-        rate.setSendingrate(345);
-        rate.setTimeperiod(12456);
+        rate.set_sending_rate(345);
+        rate.set_time_period(12456);
 
         DTCPWindowBasedFlowControlConfig window;
-        window.setInitialcredit(98);
-        window.setMaxclosedwindowqueuelength(23);
+        window.set_initial_credit(98);
+        window.set_max_closed_window_queue_length(23);
 
         DTCPFlowControlConfig dtcpFlowCtrlConfig;
-        dtcpFlowCtrlConfig.setRatebased(true);
-        dtcpFlowCtrlConfig.setRatebasedconfig(rate);
-        dtcpFlowCtrlConfig.setWindowbased(true);
-        dtcpFlowCtrlConfig.setWindowbasedconfig(window);
-        dtcpFlowCtrlConfig.setRcvbuffersthreshold(123);
-        dtcpFlowCtrlConfig.setRcvbytespercentthreshold(50);
-        dtcpFlowCtrlConfig.setRcvbytespercentthreshold(456);
-        dtcpFlowCtrlConfig.setSentbuffersthreshold(32);
-        dtcpFlowCtrlConfig.setSentbytespercentthreshold(23);
-        dtcpFlowCtrlConfig.setSentbytesthreshold(675);
+        dtcpFlowCtrlConfig.set_rate_based(true);
+        dtcpFlowCtrlConfig.set_rate_based_config(rate);
+        dtcpFlowCtrlConfig.set_window_based(true);
+        dtcpFlowCtrlConfig.set_window_based_config(window);
+        dtcpFlowCtrlConfig.set_rcv_buffers_threshold(123);
+        dtcpFlowCtrlConfig.set_rcv_bytes_threshold(50);
+        dtcpFlowCtrlConfig.set_rcv_bytes_percent_threshold(456);
+        dtcpFlowCtrlConfig.set_sent_buffers_threshold(32);
+        dtcpFlowCtrlConfig.set_sent_bytes_percent_threshold(23);
+        dtcpFlowCtrlConfig.set_sent_bytes_threshold(675);
         PolicyConfig closedWindowPolicy =
                         PolicyConfig("test-closed-window", "23");
-        dtcpFlowCtrlConfig.setClosedwindowpolicy(closedWindowPolicy);
+        dtcpFlowCtrlConfig.set_closed_window_policy(closedWindowPolicy);
 
         DTCPRtxControlConfig dtcpRtxConfig;
-        dtcpRtxConfig.setMaximumTimeToRetry(2312);
-        dtcpRtxConfig.setDatarxmsnmax(23424);
-        dtcpRtxConfig.setInitialRtxTime(20);
+        dtcpRtxConfig.set_max_time_to_retry(2312);
+        dtcpRtxConfig.set_data_rxmsn_max(23424);
+        dtcpRtxConfig.set_initial_rtx_time(20);
 
         DTCPConfig dtcpConfig;
-        dtcpConfig.setFlowcontrol(true);
-        dtcpConfig.setFlowcontrolconfig(dtcpFlowCtrlConfig);
-        dtcpConfig.setRtxcontrol(true);
-        dtcpConfig.setRtxcontrolconfig(dtcpRtxConfig);
+        dtcpConfig.set_flow_control(true);
+        dtcpConfig.set_flow_control_config(dtcpFlowCtrlConfig);
+        dtcpConfig.set_rtx_control(true);
+        dtcpConfig.set_rtx_control_config(dtcpRtxConfig);
 
         ConnectionPolicies connectionPolicies;
-        connectionPolicies.setDtcpPresent(true);
-        connectionPolicies.setDtcpConfiguration(dtcpConfig);
-        connectionPolicies.setSeqnumrolloverthreshold(123456);
-        connectionPolicies.setInitialATimer(34562);
-        connectionPolicies.setPartialDelivery(true);
-        connectionPolicies.setMaxSduGap(34);
-        connectionPolicies.setInOrderDelivery(true);
-        connectionPolicies.setIncompleteDelivery(true);
+        connectionPolicies.set_dtcp_present(true);
+        connectionPolicies.set_dtcp_configuration(dtcpConfig);
+        connectionPolicies.set_seq_num_rollover_threshold(123456);
+        connectionPolicies.set_initial_a_timer(34562);
+        connectionPolicies.set_partial_delivery(true);
+        connectionPolicies.set_max_sdu_gap(34);
+        connectionPolicies.set_in_order_delivery(true);
+        connectionPolicies.set_incomplete_delivery(true);
 
         IpcpConnectionCreateRequestMessage message;
         Connection connection;
@@ -2526,144 +2545,144 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "Dest CEP id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().isPartialDelivery()!=
-                        recoveredMessage->getConnection().getPolicies().isPartialDelivery()) {
+        } else if (message.getConnection().getPolicies().is_partial_delivery()!=
+                        recoveredMessage->getConnection().getPolicies().is_partial_delivery()) {
                 std::cout << "Partial delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().isInOrderDelivery()!=
-                        recoveredMessage->getConnection().getPolicies().isInOrderDelivery()) {
+        } else if (message.getConnection().getPolicies().is_in_order_delivery()!=
+                        recoveredMessage->getConnection().getPolicies().is_in_order_delivery()) {
                 std::cout << "In order delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().isIncompleteDelivery()!=
-                        recoveredMessage->getConnection().getPolicies().isIncompleteDelivery()) {
+        } else if (message.getConnection().getPolicies().is_incomplete_delivery()!=
+                        recoveredMessage->getConnection().getPolicies().is_incomplete_delivery()) {
                 std::cout << "Incomplete delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getMaxSduGap()!=
-                        recoveredMessage->getConnection().getPolicies().getMaxSduGap()) {
+        } else if (message.getConnection().getPolicies().get_max_sdu_gap()!=
+                        recoveredMessage->getConnection().getPolicies().get_max_sdu_gap()) {
                 std::cout << "Max SDU gap on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().isDtcpPresent() !=
-                        recoveredMessage->getConnection().getPolicies().isDtcpPresent()) {
+        } else if (message.getConnection().getPolicies().is_dtcp_present() !=
+                        recoveredMessage->getConnection().getPolicies().is_dtcp_present()) {
                 std::cout << "ConnPolicies.isDTCPPresent on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getSeqnumrolloverthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getSeqnumrolloverthreshold()) {
+        } else if (message.getConnection().getPolicies().get_seq_num_rollover_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_seq_num_rollover_threshold()) {
                 std::cout << "ConnPolicies.seqnumrolloverthreshold on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().isFlowcontrol() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().isFlowcontrol()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().is_flow_control() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().is_flow_control()){
                 std::cout << "ConnPolicies.dtcpconfig.isFlowcontrol on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().isRtxcontrol() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().isRtxcontrol()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().is_rtx_control() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().is_rtx_control()){
                 std::cout << "ConnPolicies.dtcpconfig.isRtxcontrol on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getRtxcontrolconfig().getDatarxmsnmax() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getRtxcontrolconfig().getDatarxmsnmax()){
-                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.datarnmsnmax on original and recovered messages"
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_rtx_control_config().get_max_time_to_retry() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_rtx_control_config().get_max_time_to_retry()){
+                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.maxtimetorety on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getRtxcontrolconfig().getInitialRtxTime() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getRtxcontrolconfig().getInitialRtxTime()){
-                std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.initialrxtime on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getPolicies().getInitialATimer() !=
-                        recoveredMessage->getConnection().getPolicies().getInitialATimer()){
-                std::cout << "ConnPolicies.initialAtimer on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().isRatebased() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().isRatebased()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_rtx_control_config().get_initial_rtx_time() !=
+        		recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+        		get_rtx_control_config().get_initial_rtx_time()){
+        	std::cout << "ConnPolicies.dtcpconfig.rtxctrlconfig.initialrtxtime on original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getConnection().getPolicies().get_initial_a_timer() !=
+        		recoveredMessage->getConnection().getPolicies().get_initial_a_timer()){
+        	std::cout << "ConnPolicies.initialAtimer on original and recovered messages"
+        			<< " are different\n";
+        	returnValue = -1;
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().is_rate_based() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().is_rate_based()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.ratebased on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().isWindowbased() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().isWindowbased()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().is_window_based() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().is_window_based()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.windowbased on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbuffersthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().getRcvbuffersthreshold()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_rcv_buffers_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().get_rcv_buffers_threshold()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.rcvbuffersthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbytespercentthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().getRcvbytespercentthreshold()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_rcv_bytes_percent_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().get_rcv_bytes_percent_threshold()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.rcvbytespercentthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getRcvbytesthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().getRcvbytesthreshold()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_rcv_bytes_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().get_rcv_bytes_threshold()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.rcvbytesthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getSentbuffersthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().getSentbuffersthreshold()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_sent_buffers_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().get_sent_buffers_threshold()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.sentbuffersthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getSentbytespercentthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().getSentbytespercentthreshold()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_sent_bytes_percent_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().get_sent_bytes_percent_threshold()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.sentbytespercentthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getSentbytesthreshold() !=
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().
-                        getFlowcontrolconfig().getSentbytesthreshold()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_sent_bytes_threshold() !=
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().
+                        get_flow_control_config().get_sent_bytes_threshold()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.sentbytesthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getClosedwindowpolicy().getName().
-                        compare(recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getClosedwindowpolicy().getName()) != 0 ){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_closed_window_policy().get_name().
+                        compare(recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().
+                        		get_closed_window_policy().get_name()) != 0 ){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.closedwindowpolicy.name on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().getClosedwindowpolicy().getVersion().compare(
-                        recoveredMessage->getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getClosedwindowpolicy().getVersion()) != 0){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().get_closed_window_policy().get_version().compare(
+                        recoveredMessage->getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().
+                        get_closed_window_policy().get_version()) != 0){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.closedwindowpolicy.version on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getRatebasedconfig().getSendingrate() != recoveredMessage->getConnection().getPolicies().
-                        getDtcpConfiguration().getFlowcontrolconfig().getRatebasedconfig().getSendingrate()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().
+                        get_rate_based_config().get_sending_rate() != recoveredMessage->getConnection().getPolicies().
+                        get_dtcp_configuration().get_flow_control_config().get_rate_based_config().get_sending_rate()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.ratebasedconfig.sendingrate on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getRatebasedconfig().getTimeperiod() != recoveredMessage->getConnection().getPolicies().
-                        getDtcpConfiguration().getFlowcontrolconfig().getRatebasedconfig().getTimeperiod()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().
+        		get_rate_based_config().get_time_period() != recoveredMessage->getConnection().getPolicies().
+                        get_dtcp_configuration().get_flow_control_config().get_rate_based_config().get_time_period()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.ratebasedconfig.timerperiod on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getWindowbasedconfig().getInitialcredit() != recoveredMessage->getConnection().getPolicies().
-                        getDtcpConfiguration().getFlowcontrolconfig().getWindowbasedconfig().getInitialcredit()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().
+                        get_window_based_config().get_initial_credit() != recoveredMessage->getConnection().getPolicies().
+                        get_dtcp_configuration().get_flow_control_config().get_window_based_config().get_initial_credit()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.windowbasedconfig.initialcredit on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPolicies().getDtcpConfiguration().getFlowcontrolconfig().
-                        getWindowbasedconfig().getMaxclosedwindowqueuelength() != recoveredMessage->getConnection().getPolicies().
-                        getDtcpConfiguration().getFlowcontrolconfig().getWindowbasedconfig().getMaxclosedwindowqueuelength()){
+        } else if (message.getConnection().getPolicies().get_dtcp_configuration().get_flow_control_config().
+        		get_window_based_config().get_maxclosed_window_queue_length() != recoveredMessage->getConnection().getPolicies().
+                        get_dtcp_configuration().get_flow_control_config().get_window_based_config().get_maxclosed_window_queue_length()){
                 std::cout << "ConnPolicies.dtcpconfig.flowctrlconfig.windowbasedconfig.maxclosedWindowQLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
@@ -3090,24 +3109,25 @@ int testIpcpDestroyConnectionResult() {
 int testRmtModifyPDUFTEntriesRequestMessage() {
         std::cout << "TESTING RMT MODIFY PDU FTE REQUEST MESSAGE\n";
         int returnValue = 0;
-        std::list<PDUForwardingTableEntry>::const_iterator iterator;
-        std::list<PDUForwardingTableEntry> entriesList;
+        std::list<PDUForwardingTableEntry *>::const_iterator iterator;
+        std::list<PDUForwardingTableEntry *> entriesList;
         std::list<unsigned int>::const_iterator iterator2;
         std::list<unsigned int> portIdsList;
 
         RmtModifyPDUFTEntriesRequestMessage message;
-        PDUForwardingTableEntry entry1, entry2;
-        entry1.setAddress(23);
-        entry1.addPortId(34);
-        entry1.addPortId(24);
-        entry1.addPortId(39);
-        entry1.setQosId(1);
+        PDUForwardingTableEntry * entry1 = new PDUForwardingTableEntry();
+        entry1->setAddress(23);
+        entry1->addPortId(34);
+        entry1->addPortId(24);
+        entry1->addPortId(39);
+        entry1->setQosId(1);
         message.addEntry(entry1);
-        entry2.setAddress(20);
-        entry2.addPortId(28);
-        entry2.addPortId(35);
-        entry2.addPortId(54);
-        entry2.setQosId(2);
+        PDUForwardingTableEntry * entry2 = new PDUForwardingTableEntry();
+        entry2->setAddress(20);
+        entry2->addPortId(28);
+        entry2->addPortId(35);
+        entry2->addPortId(54);
+        entry2->setQosId(2);
         message.addEntry(entry2);
         message.setMode(1);
 
@@ -3151,7 +3171,7 @@ int testRmtModifyPDUFTEntriesRequestMessage() {
         for (iterator = entriesList.begin();
                         iterator != entriesList.end();
                         ++iterator) {
-                portIdsList = iterator->getPortIds();
+                portIdsList = (*iterator)->getPortIds();
                 if (portIdsList.size() != 3) {
                         std::cout << "Size of portids in original and recovered messages"
                                         << " are different\n";
@@ -3261,7 +3281,7 @@ int testRmtDumpPDUFTResponseMessage() {
         return returnValue;
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
 	int result;

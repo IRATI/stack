@@ -22,7 +22,7 @@
 
 #include "librina/librina.h"
 
-int main(int argc, char * argv[])
+int main()
 {
         return 1;
 }

@@ -30,12 +30,11 @@
 class Exception : public std::exception {
 public:
         Exception() { }
-        Exception(const std::string & s) : description_(s) { }
+        Exception(const char* s) { description_ = s; }
 
         virtual ~Exception() throw() { }
 
-        virtual const char * what() const throw()
-        { return description_.c_str(); }
+        virtual const char * what() const throw();
 
 private:
         std::string description_;

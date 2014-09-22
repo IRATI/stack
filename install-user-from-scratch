@@ -7,6 +7,7 @@
 
 ME=install-user-from-scratch
 
+#MAKEFLAGS="-j"
 PREFIX=`echo "$1"|sed -e "s,\/$,,"`
 
 echo "$ME: Prefix is \`$PREFIX'"
@@ -21,19 +22,19 @@ fi
 #
 
 echo "$ME: Starting librina phase"
-(cd librina && ./bootstrap && ./configure --enable-java-bindings --prefix=$PREFIX && make CPPFLAGS="-I $PREFIX/usr/include" clean install installcheck) || {
+(cd librina && ./bootstrap && ./configure --enable-java-bindings --with-sysheaders=`pwd`/../linux/usr/include --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete librina phase"
     exit 1
 }
 
 echo "$ME: Starting rinad phase"
-(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX && make clean install installcheck) || {
+(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH ./configure --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete rinad phase"
     exit 1
 }
 
 echo "$ME: Starting rina-tools phase"
-(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PREFIX/lib ./configure --prefix=$PREFIX  && make clean install installcheck) || {
+(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH ./configure --prefix=$PREFIX && make $MAKEFLAGS clean all install installcheck) || {
     echo "$ME: Cannot complete rina-tools phase"
     exit 1
 }

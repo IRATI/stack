@@ -11,6 +11,8 @@
 Makefile
 Makefile.in
 
+TAGS
+
 /.version
 /.tarball-version
 
@@ -26,6 +28,7 @@ Makefile.in
 /confdefs.h
 /conftest.c
 /conftest.err
+
 /libtool
 
 /*.tar.gz

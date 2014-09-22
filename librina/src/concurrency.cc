@@ -21,12 +21,12 @@
 //
 
 #include <cerrno>
+#include <unistd.h>
 
 #define RINA_PREFIX "concurrency"
 
-#include "logs.h"
-
 #include "librina/concurrency.h"
+#include "librina/logs.h"
 
 namespace rina {
 
@@ -301,8 +301,11 @@ pthread_t Thread::getThreadType() const{
 }
 
 void Thread::join(void ** status){
-	if(pthread_join(thread_id_, status)){
-		LOG_CRIT("%s", ConcurrentException::error_join_thread.c_str());
+	int error = pthread_join(thread_id_, status);
+	if(error != 0){
+		LOG_CRIT("%s. Error is: %d",
+				ConcurrentException::error_join_thread.c_str(),
+				error);
 		throw ConcurrentException(ConcurrentException::error_join_thread);
 	}
 }
@@ -593,6 +596,17 @@ void ConditionVariable::timedwait(long seconds, long nanoseconds){
 	LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
 	throw ConcurrentException(
 			ConcurrentException::error_wait_cond);
+}
+
+// Class Sleep
+bool Sleep::sleep(int sec, int milisec) {
+	return usleep(sec * 1000000 + milisec * 1000);
+}
+bool Sleep::sleepForMili(int milisec) {
+	return usleep(milisec * 1000);
+}
+bool Sleep::sleepForSec(int sec) {
+	return usleep(sec * 1000000);
 }
 
 }

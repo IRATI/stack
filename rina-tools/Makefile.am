@@ -11,13 +11,15 @@ BUILT_SOURCES             =
 DISTCHECK_CONFIGURE_FLAGS =
 
 SUBDIRS =					\
-	src
+	src					\
+	doc
 
 EXTRA_DIST =					\
 	bootstrap				\
 	build-aux/git-version-gen		\
 	build-aux/gitlog-to-changelog		\
 	LICENSE					\
+	INSTALL					\
 	README
 
 .PHONY: AUTHORS

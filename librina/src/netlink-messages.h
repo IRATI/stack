@@ -25,7 +25,7 @@
 
 #ifdef __cplusplus
 
-#include "librina/common.h"
+#include "librina/configuration.h"
 #include "librina/ipc-process.h"
 
 namespace rina {
@@ -134,7 +134,7 @@ class BaseNetlinkMessage {
 	/** True if this is a response message */
 	bool responseMessage;
 
-	/** True if this is a notificaiton message */
+	/** True if this is a notification message */
 	bool notificationMessage;
 
 public:
@@ -162,6 +162,9 @@ public:
 	bool isResponseMessage() const;
 	void setResponseMessage(bool responseMessage);
 	const std::string toString();
+
+private:
+	static const std::string operationCodeToString(RINANetlinkOperationCode operationCode);
 };
 
 class BaseNetlinkResponseMessage: public BaseNetlinkMessage {
@@ -1003,13 +1006,13 @@ public:
 class IpcmDIFQueryRIBResponseMessage:
 		public BaseNetlinkResponseMessage {
 
-	std::list<RIBObject> ribObjects;
+	std::list<RIBObjectData> ribObjects;
 
 public:
 	IpcmDIFQueryRIBResponseMessage();
-	const std::list<RIBObject>& getRIBObjects() const;
-	void setRIBObjects(const std::list<RIBObject>& ribObjects);
-	void addRIBObject(const RIBObject& ribObject);
+	const std::list<RIBObjectData>& getRIBObjects() const;
+	void setRIBObjects(const std::list<RIBObjectData>& ribObjects);
+	void addRIBObject(const RIBObjectData& ribObject);
 	IPCEvent* toIPCEvent();
 };
 
@@ -1250,16 +1253,16 @@ public:
  */
 class RmtModifyPDUFTEntriesRequestMessage: public BaseNetlinkMessage {
         /** The entries to be added */
-        std::list<PDUForwardingTableEntry> entries;
+        std::list<PDUForwardingTableEntry *> entries;
 
         /** 0 add, 1 remove, 2 flush and add */
         int mode;
 
 public:
         RmtModifyPDUFTEntriesRequestMessage();
-        const std::list<PDUForwardingTableEntry>& getEntries() const;
-        void setEntries(const std::list<PDUForwardingTableEntry>& entries);
-        void addEntry(const PDUForwardingTableEntry& entry);
+        const std::list<PDUForwardingTableEntry *>& getEntries() const;
+        void setEntries(const std::list<PDUForwardingTableEntry *>& entries);
+        void addEntry(PDUForwardingTableEntry * entry);
         int getMode() const;
         void setMode(int mode);
         IPCEvent* toIPCEvent();
