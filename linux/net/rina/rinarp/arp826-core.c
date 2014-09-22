@@ -236,7 +236,7 @@ static bool regression_tests_table(void)
         struct table *      x;
         struct net_device * d;
 
-        d = NULL;
+        d = (struct net_device *) 0xdeadbeef; /* It can't be NULL */
 
         LOG_DBG("Table regression tests");
 

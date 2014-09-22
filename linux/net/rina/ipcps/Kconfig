@@ -63,7 +63,7 @@ config RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 
 config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
-	default n
+	default m
         depends on RINA_PERSONALITY_DEFAULT
 	help
 	  No help for the time being
