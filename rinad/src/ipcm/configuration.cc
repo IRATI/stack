@@ -660,12 +660,12 @@ void parse_dif_configs(const Json::Value   &root,
                 if (confParams != 0) {
                         Json::Value::Members members =
                                 confParams.getMemberNames();
-                	for (unsigned int i = 0; i < members.size(); i++) {
+                	for (unsigned int j = 0; j < members.size(); j++) {
                                 string value = confParams.get
-                                        (members[i], string()).asString();
+                                        (members[j], string()).asString();
                                 props.configParameters.insert
                                         (pair<string, string>
-                                         (members[i], value));
+                                         (members[j], value));
                 	}
                 }
 
