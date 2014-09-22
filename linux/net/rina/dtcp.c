@@ -482,6 +482,43 @@ static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
         return 0;
 }
 
+static void dump_we(struct dtcp * dtcp,
+                    struct pci *  pci)
+{
+        struct dtp * dtp;
+        seq_num_t    snd_rt_we;
+        seq_num_t    snd_lf_we;
+        seq_num_t    rcv_rt_we;
+        seq_num_t    rcv_lf_we;
+        seq_num_t    new_rt_we;
+        seq_num_t    new_lf_we;
+        seq_num_t    pci_seqn;
+        seq_num_t    my_rt_we;
+        seq_num_t    my_lf_we;
+
+        ASSERT(dtcp);
+        ASSERT(pci);
+
+        dtp = dt_dtp(dtcp->parent);
+        ASSERT(dtp);
+
+        snd_rt_we = snd_rt_wind_edge(dtcp);
+        snd_lf_we = cwq_peek(dt_cwq(dtcp->parent));
+        rcv_rt_we = rcvr_rt_wind_edge(dtcp);
+        rcv_lf_we = dt_sv_rcv_lft_win(dtcp->parent);
+        new_rt_we = pci_control_new_rt_wind_edge(pci);
+        new_lf_we = pci_control_new_left_wind_edge(pci);
+        my_lf_we  = pci_control_my_left_wind_edge(pci);
+        my_rt_we  = pci_control_my_rt_wind_edge(pci);
+        pci_seqn  = pci_sequence_number_get(pci);
+
+        LOG_INFO("SEQN: %u SndRWE: %u SndLWE: %u RcvRWE: %u RcvLWE: %u"
+                 " newRWE: %u newLWE: %u myRWE: %u myLWE: %u", pci_seqn,
+                 snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we, new_rt_we,
+                 new_lf_we, my_rt_we, my_lf_we);
+
+}
+
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pci *  pci,
                         struct pdu *  pdu)
@@ -493,6 +530,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         ASSERT(pci);
         ASSERT(pdu);
 
+        dump_we(dtcp, pci);
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
         pdu_destroy(pdu);
         push_pdus_rmt(dtcp);
@@ -527,6 +565,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
         LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
 
+        dump_we(dtcp, pci);
         seq = pci_control_ack_seq_num(pci);
         LOG_DBG("Ack/Nack SEQ NUM: %u", seq);
 
@@ -813,6 +852,7 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                         pdu_destroy(pdu);
                         return -1;
                 }
+                dump_we(dtcp,pci);
                 if (pdu_send(dtcp, pdu))
                         return -1;
 
