@@ -97,7 +97,8 @@ IPCManager::start_script_worker()
                 return -1;
         }
 
-        script = new rina::Thread(new rina::ThreadAttributes(),
+        rina::ThreadAttributes ta;
+        script = new rina::Thread(&ta,
                                    script_function, this);
 
         return 0;
