@@ -60,10 +60,9 @@
             "maxPduSize" : 10000,
             "maxPduLifetime" : 30
         },
-        "configParameters" : [ {
-            "name" : "bar", 
-            "value" : "foo"
-        } ],
+       "configParameters" : {
+         "bar" : "foo"
+        },
         "qosCubes" : [ {
             "name" : "reliable",
             "id" : 1, 
@@ -108,10 +107,9 @@
             "maxPduSize" : 10000,
             "maxPduLifetime" : 30
         },
-        "configParameters" : [ {
-            "name" : "bar", 
-            "value" : "foo"
-        } ],
+        "configParameters" : {
+          "bar" : "foo"
+         },
         "qosCubes" : [ {
             "name" : "reliable",
             "id" : 1, 
