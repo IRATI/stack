@@ -56,7 +56,7 @@ bool pdu_is_ok(const struct pdu * p)
 { return (p && pci_is_ok(p->pci) && buffer_is_ok(p->buffer)) ? true : false; }
 EXPORT_SYMBOL(pdu_is_ok);
 
-static struct pdu * pdu_create_gfp(gfp_t flags)
+struct pdu * pdu_create_gfp(gfp_t flags)
 {
         struct pdu * tmp;
 
@@ -189,7 +189,7 @@ struct pdu * pdu_dup(const struct pdu * pdu)
 EXPORT_SYMBOL(pdu_dup);
 
 struct pdu * pdu_dup_ni(const struct pdu * pdu)
-{ return pdu_dup_gfp(GFP_KERNEL, pdu); }
+{ return pdu_dup_gfp(GFP_ATOMIC, pdu); }
 EXPORT_SYMBOL(pdu_dup_ni);
 
 const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu)

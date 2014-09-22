@@ -21,9 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "dt-utils"
-
 #include <linux/list.h>
+
+#define RINA_PREFIX "dt-utils"
 
 #include "logs.h"
 #include "utils.h"
@@ -156,6 +156,28 @@ bool cwq_is_empty(struct cwq * queue)
         return ret;
 }
 
+int cwq_flush(struct cwq * queue)
+{
+        struct pdu * tmp;
+
+        if (!queue)
+                return -1;
+
+        spin_lock(&queue->lock);
+        while (!rqueue_is_empty(queue->q)) {
+                tmp = (struct pdu *) rqueue_head_pop(queue->q);
+                if (!tmp) {
+                        spin_unlock(&queue->lock);
+                        LOG_ERR("Failed to retrieve PDU");
+                        return -1;
+                }
+                pdu_destroy(tmp);
+        }
+        spin_unlock(&queue->lock);
+
+        return 0;
+}
+
 ssize_t cwq_size(struct cwq * queue)
 {
         ssize_t tmp;
@@ -178,6 +200,7 @@ void cwq_deliver(struct cwq * queue,
 {
         struct rtxq * rtxq;
         struct dtcp * dtcp;
+        struct pdu  * tmp;
 
         if (!queue)
                 return;
@@ -211,7 +234,12 @@ void cwq_deliver(struct cwq * queue,
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        rtxq_push_ni(rtxq, pdu);
+                        tmp = pdu_dup_ni(pdu);
+                        if (!tmp) {
+                                spin_unlock(&queue->lock);
+                                return;
+                        }
+                        rtxq_push_ni(rtxq, tmp);
                 }
                 pci = pdu_pci_get_ro(pdu);
                 if (dtcp_snd_lf_win_set(dtcp,
@@ -225,6 +253,8 @@ void cwq_deliver(struct cwq * queue,
                         LOG_ERR("Problems sending PDU");
         }
         spin_unlock(&queue->lock);
+
+        LOG_DBG("CWQ has delivered until %u", dtcp_snd_lf_win(dtcp));
 
         if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
                 dt_sv_window_closed_set(dt, true);
@@ -254,7 +284,7 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 
         tmp->pdu        = pdu;
         tmp->time_stamp = jiffies;
-        tmp->retries    = 1;
+        tmp->retries    = 0;
 
         INIT_LIST_HEAD(&tmp->next);
 
@@ -275,6 +305,7 @@ static int rtxq_entry_destroy(struct rtxq_entry * entry)
                 return -1;
 
         pdu_destroy(entry->pdu);
+        list_del(&entry->next);
         rkfree(entry);
 
         return 0;
@@ -329,9 +360,13 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) <=
-                    seq_num) {
-                        list_del(&cur->next);
+                struct pci * pci;
+                seq_num_t    seq;
+
+                pci = pdu_pci_get_rw(cur->pdu);
+                seq = pci_sequence_number_get(pci);
+                if (seq <= seq_num) {
+                        LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
                 } else
                         return 0;
@@ -350,8 +385,12 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 
         ASSERT(q);
 
+        /*
+         * FIXME: this should be change since we are sending in inverse order
+         * and it could be problematic because of gaps and A timer
+         */
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >
+                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
                     seq_num) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
@@ -367,7 +406,6 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                                      pci_qos_id(pdu_pci_get_ro(tmp)),
                                      tmp)) {
                                 LOG_ERR("Could not send NACKed PDU to RMT");
-                                pdu_destroy(tmp);
                                 continue;
                         }
                 } else
@@ -413,7 +451,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num is in "
                         "the rtx queue!");
-                return -1;
+                return 0;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
@@ -428,7 +466,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
-                        return -1;
+                        return 0;
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
@@ -438,30 +476,18 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                 }
         }
 
+        LOG_DBG("PDU not pushed!");
+
         return 0;
 }
 
-static int rtxqueue_drop(struct rtxqueue * q,
-                         seq_num_t          from,
-                         seq_num_t          to)
+static int rtxqueue_flush(struct rtxqueue * q)
 {
         struct rtxq_entry * cur, * n;
-        seq_num_t           tsn;
-        const struct pci *  pci;
 
-        if (!q)
-                return -1;
+        ASSERT(q);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-
-                pci = pdu_pci_get_ro(cur->pdu);
-                tsn = pci_sequence_number_get((struct pci *) pci);
-
-                if (tsn < from && from !=0)
-                        continue;
-                if (tsn > to && to !=0)
-                        break;
-                list_del(&cur->next);
                 rtxq_entry_destroy(cur);
         }
 
@@ -474,52 +500,64 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur, * n;
+        struct pdu *        tmp;
+        seq_num_t           seq = 0;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                if (cur->time_stamp < tr) {
+                seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
+                LOG_DBG("Checking RTX of PDU %u, now: %lu >?< %lu + %lu",
+                        seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr));
+                if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
+                                   jiffies)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
-                                        "achieved. Can't maintain QoS");
+                                        "achieved for SeqN %u. Can't "
+                                        "maintain QoS", seq);
                                 rtxq_entry_destroy(cur);
                                 continue;
                         }
+                        tmp = pdu_dup_ni(cur->pdu);
                         if (rmt_send(rmt,
-                                     pci_destination(pdu_pci_get_ro(cur->pdu)),
-                                     pci_qos_id(pdu_pci_get_ro(cur->pdu)),
-                                     cur->pdu)) {
+                                     pci_destination(pdu_pci_get_ro(tmp)),
+                                     pci_qos_id(pdu_pci_get_ro(tmp)),
+                                     tmp)) {
                                 LOG_ERR("Could not send rtxed PDU to RMT");
                                 continue;
                         }
                 }
         }
 
+        LOG_DBG("RTXQ %pK has delivered until %u", q, seq);
+
         return 0;
 }
 
 struct rtxq {
-        spinlock_t        lock;
-        struct rtimer *   r_timer;
-        struct dt *       parent;
-        struct rmt *      rmt;
-        struct rtxqueue * queue;
+        spinlock_t                lock;
+        struct rtimer *           r_timer;
+        struct dt *               parent;
+        struct rmt *              rmt;
+        struct rtxqueue *         queue;
+        struct workqueue_struct * twq;
 };
 
-static void Rtimer_handler(void * data)
+static int rtx_worker(void * o)
 {
+
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
 
-        q = (struct rtxq *) data;
+        q = (struct rtxq *) o;
         if (!q) {
                 LOG_ERR("No RTXQ to work with");
-                return;
+                return -1;
         }
 
         dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
         if (!dtcp_cfg) {
                 LOG_ERR("RTX failed");
-                return;
+                return -1;
         }
 
         if (rtxqueue_rtx(q->queue,
@@ -529,6 +567,34 @@ static void Rtimer_handler(void * data)
                 LOG_ERR("RTX failed");
 
         rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+
+        LOG_DBG("RTX timer worker OK...");
+        return 0;
+}
+
+static void Rtimer_handler(void * data)
+{
+        struct rtxq *          q;
+        struct rwq_work_item * item;
+
+        q = (struct rtxq *) data;
+        if (!q) {
+                LOG_ERR("No RTXQ to work with");
+                return;
+        }
+
+        item = rwq_work_create_ni(rtx_worker, q);
+        if (!item) {
+                LOG_ERR("Could not create twq item");
+                return;
+        }
+
+        if (rwq_work_post(q->twq, item)) {
+                LOG_ERR("Could not add twq item to the wq");
+                return;
+        }
+
+        return;
 }
 
 int rtxq_destroy(struct rtxq * q)
@@ -536,9 +602,9 @@ int rtxq_destroy(struct rtxq * q)
         if (!q)
                 return -1;
 
+        if (q->twq)  rwq_destroy(q->twq);
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
-
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
@@ -547,10 +613,30 @@ int rtxq_destroy(struct rtxq * q)
         return 0;
 }
 
+#define MAX_NAME_SIZE 128
+
+/* FIXME: This function is not re-entrant */
+static const char * twq_name_format(const char *        prefix,
+                                    const struct rtxq * instance)
+{
+        static char name[MAX_NAME_SIZE];
+
+        ASSERT(prefix);
+        ASSERT(instance);
+
+        if (snprintf(name, sizeof(name), RINA_PREFIX "-%s-%pK",
+                     prefix, instance) >=
+            sizeof(name))
+                return NULL;
+
+        return name;
+}
+
 struct rtxq * rtxq_create(struct dt *  dt,
                           struct rmt * rmt)
 {
         struct rtxq * tmp;
+        const char *  twq_name;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -570,6 +656,17 @@ struct rtxq * rtxq_create(struct dt *  dt,
                 return NULL;
         }
 
+        twq_name = twq_name_format("twq", tmp);
+        if (!twq_name) {
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+        tmp->twq = rwq_create(twq_name);
+        if (!tmp->twq) {
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
         ASSERT(dt);
         ASSERT(rmt);
 
@@ -585,6 +682,7 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
                              struct rmt * rmt)
 {
         struct rtxq * tmp;
+        const char *  twq_name;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
@@ -600,6 +698,17 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         tmp->queue = rtxqueue_create_ni();
         if (!tmp->queue) {
                 LOG_ERR("Failed to create retransmission queue");
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+
+        twq_name = twq_name_format("twq", tmp);
+        if (!twq_name) {
+                rtxq_destroy(tmp);
+                return NULL;
+        }
+        tmp->twq = rwq_create(twq_name);
+        if (!tmp->twq) {
                 rtxq_destroy(tmp);
                 return NULL;
         }
@@ -632,17 +741,15 @@ int rtxq_push_ni(struct rtxq * q,
         return 0;
 }
 
-int rtxq_drop(struct rtxq * q,
-              seq_num_t     from,
-              seq_num_t     to)
+int rtxq_flush(struct rtxq * q)
 {
-        if (!q)
+        if (!q || !q->queue)
                 return -1;
 
         rtimer_stop(q->r_timer);
 
         spin_lock(&q->lock);
-        rtxqueue_drop(q->queue, from, to);
+        rtxqueue_flush(q->queue);
         spin_unlock(&q->lock);
         return 0;
 

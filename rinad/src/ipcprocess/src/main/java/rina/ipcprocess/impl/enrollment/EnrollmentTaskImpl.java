@@ -274,6 +274,19 @@ public class EnrollmentTaskImpl implements EnrollmentTask, EventListener{
 	 */
 	public synchronized void processEnrollmentRequestEvent(
 			EnrollToDIFRequestEvent event, DIFInformation difInformation) {
+		if (ipcProcess.getOperationalState() != IPCProcess.State.ASSIGNED_TO_DIF) {
+			log.error("Rejected enroll to DIF request, since the IPC Process is not assigned to a DIF");
+			
+			try {
+				rina.getExtendedIPCManager().enrollToDIFResponse(
+						event, -1, new NeighborList(), new DIFInformation());
+			} catch(Exception ex){
+				log.error("Problems sending a message to the IPC Manager: "+ex.getMessage());
+			}
+			
+			return;
+		}
+		
 		if (difInformation != null) {
 			if (!difInformation.getDifName().getProcessName().equals(
 					event.getDifName().getProcessName())) {

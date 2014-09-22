@@ -52,6 +52,7 @@ struct pdu;
 struct sdu *          sdu_create_buffer_with(struct buffer * buffer);
 struct sdu *          sdu_create_buffer_with_ni(struct buffer * buffer);
 
+/* FIXME: To be removed after ser/des */
 struct sdu *          sdu_create_pdu_with(struct pdu * pdu);
 struct sdu *          sdu_create_pdu_with_ni(struct pdu * pdu);
 

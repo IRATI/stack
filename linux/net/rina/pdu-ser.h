@@ -1,7 +1,8 @@
 /*
- * VMPI common definitions and limits
+ * Serialized PDU
  *
- *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +19,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <asm/page.h>
+#ifndef RINA_PDU_SER_H
+#define RINA_PDU_SER_H
 
-#ifndef __VMPI_LIMITS_H__
-#define __VMPI_LIMITS_H__
+#include <linux/export.h>
+#include <linux/types.h>
 
-#define VMPI_MAX_CHANNELS_DEFAULT 64
-#define VMPI_BUF_SIZE   PAGE_SIZE
+#include "buffer.h"
+#include "common.h"
 
-#if (PAGE_SIZE > 4096)
-#warning "Page size is greater than 4096: this situation has never been tested"
+struct pdu_ser;
+
+struct pdu_ser * pdu_ser_create_buffer_with(struct buffer * buffer);
+int              pdu_ser_destroy(struct pdu_ser * pdu);
+
+bool             pdu_ser_is_ok(const struct pdu_ser * s);
+struct buffer *  pdu_ser_buffer(struct pdu_ser * pdu);
+int              pdu_ser_buffer_disown(struct pdu_ser * pdu);
+
 #endif
-
-#endif   /* __VMPI_LIMITS_H__ */

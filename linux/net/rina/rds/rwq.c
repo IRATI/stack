@@ -149,16 +149,31 @@ int rwq_work_post(struct workqueue_struct * wq,
 }
 EXPORT_SYMBOL(rwq_work_post);
 
-int rwq_destroy(struct workqueue_struct * wq)
+int rwq_flush(struct workqueue_struct * wq)
 {
         if (!wq) {
-                LOG_ERR("The passed workqueue is NULL, cannot destroy");
+                LOG_ERR("The passed workqueue is NULL, cannot flush");
                 return -1;
         }
 
-        LOG_DBG("Destroying workqueue %pK", wq);
+        LOG_DBG("Flushing workqueue %pK", wq);
 
         flush_workqueue(wq);
+
+        LOG_DBG("Workqueue %pK flushed successfully", wq);
+
+        return 0;
+}
+EXPORT_SYMBOL(rwq_flush);
+
+int rwq_destroy(struct workqueue_struct * wq)
+{
+
+        if (rwq_flush(wq)) {
+                LOG_ERR("The passed wq could not be destroyed");
+                return -1;
+        }
+
         destroy_workqueue(wq);
 
         LOG_DBG("Workqueue %pK destroyed successfully", wq);

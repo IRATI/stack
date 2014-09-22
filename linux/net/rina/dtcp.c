@@ -28,6 +28,7 @@
 #include "dtcp.h"
 #include "rmt.h"
 #include "connection.h"
+#include "dtp.h"
 #include "dt-utils.h"
 #include "dtcp-utils.h"
 
@@ -69,7 +70,7 @@ struct dtcp_sv {
         /*
          * Seq number of the lowest seq number expected to be
          * Acked. Seq number of the first PDU on the
-         * RetransmissionQ.
+         * RetransmissionQ. My LWE thus.
          */
         seq_num_t    snd_lft_win;
 
@@ -151,8 +152,6 @@ struct dtcp_policies {
         int (* rcvr_control_ack)(struct dtcp * instance);
         int (* no_rate_slow_down)(struct dtcp * instance);
         int (* no_override_default_peak)(struct dtcp * instance);
-        int (* receiver_inactivity_timer)(struct dtcp * instance);
-        int (* sender_inactivity_timer)(struct dtcp * instance);
 };
 
 struct dtcp {
@@ -323,6 +322,30 @@ static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
         return tmp;
 }
 
+static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
+{
+        seq_num_t tmp;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock(&dtcp->sv->lock);
+        tmp = dtcp->sv->last_snd_data_ack;
+        spin_unlock(&dtcp->sv->lock);
+
+        return tmp;
+}
+
+static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
+{
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock(&dtcp->sv->lock);
+        dtcp->sv->last_snd_data_ack = seq_num;
+        spin_unlock(&dtcp->sv->lock);
+}
+
 static int push_pdus_rmt(struct dtcp * dtcp)
 {
         struct cwq *  q;
@@ -396,6 +419,7 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 }
 
 /* This is 0x8803 PDU type */
+/* NOTE: Specs do not detail it structure */
 static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
                                         seq_num_t     last_ctrl_seq_rcvd,
                                         seq_num_t     snd_left_wind_edge,
@@ -420,63 +444,6 @@ static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
         return pdu;
 }
 
-/* This is 880C */
-static struct pdu * pdu_ctrl_ack_flow(struct dtcp * dtcp,
-                                      seq_num_t     ctrl_seq,
-                                      seq_num_t     ack_nack_seq,
-                                      seq_num_t     new_rt_wind_edge,
-                                      seq_num_t     left_wind_edge)
-{
-        struct pdu * pdu;
-        struct pci * pci;
-        seq_num_t    my_lf_win_edge;
-        seq_num_t    my_rt_win_edge;
-
-        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_ACK_AND_FC);
-        if (!pdu)
-                return NULL;
-
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        if (pci_control_ack_seq_num_set(pci, ack_nack_seq)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        if (pci_control_last_seq_num_rcvd_set(pci, ctrl_seq)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        if (pci_control_new_left_wind_edge_set(pci, left_wind_edge)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        if (pci_control_new_rt_wind_edge_set(pci, new_rt_wind_edge)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        my_lf_win_edge = dt_sv_rcv_lft_win(dtcp->parent);
-        if (pci_control_left_wind_edge_set(pci,my_lf_win_edge)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        my_rt_win_edge = rcvr_rt_wind_edge(dtcp);
-        if (pci_control_rt_wind_edge_set(pci, my_rt_win_edge)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        return pdu;
-}
-
 static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 {
         if (!dtcp) {
@@ -493,6 +460,7 @@ static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
                         return -1;
                 }
                 rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
+                snd_lft_win_set(dtcp, seq_num);
         }
 
         return 0;
@@ -519,6 +487,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pdu *  pdu)
 {
         struct cwq * q;
+        struct dtp * dtp;
 
         ASSERT(dtcp);
         ASSERT(pci);
@@ -528,13 +497,18 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         pdu_destroy(pdu);
         push_pdus_rmt(dtcp);
 
+        dtp = dt_dtp(dtcp->parent);
+        if (!dtp) {
+                LOG_ERR("No DTP");
+                return -1;
+        }
         q = dt_cwq(dtcp->parent);
         if (!q) {
                 LOG_ERR("No Closed Window Queue");
                 return -1;
         }
         if (cwq_is_empty(q) &&
-            (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
+            (dtp_sv_last_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
                 dt_sv_window_closed_set(dtcp->parent, false);
         }
 
@@ -545,28 +519,27 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct pci *  pci,
                                 struct pdu *  pdu)
 {
-        struct cwq * q;
+        seq_num_t seq;
+
         ASSERT(dtcp);
         ASSERT(pci);
         ASSERT(pdu);
 
-        LOG_DBG("Updating Window Edges");
+        LOG_DBG("Updating Window Edges for DTCP: %pK", dtcp);
+
+        seq = pci_control_ack_seq_num(pci);
+        LOG_DBG("Ack/Nack SEQ NUM: %u", seq);
+
+        /* This updates sender LWE */
+        if (dtcp->policies->sender_ack(dtcp, seq))
+                LOG_ERR("Could not update RTXQ and LWE");
+
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        snd_lft_win_set(dtcp, pci_control_new_left_wind_edge(pci));
         LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
-        LOG_DBG("Left Window Edge: %d", snd_lft_win(dtcp));
         pdu_destroy(pdu);
 
+        LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
-        q = dt_cwq(dtcp->parent);
-        if (!q) {
-                LOG_ERR("No Closed Window Queue");
-                return -1;
-        }
-        if (cwq_is_empty(q) &&
-            (dt_sv_last_seq_num_sent(dtcp->parent) < snd_rt_wind_edge(dtcp))) {
-                dt_sv_window_closed_set(dtcp->parent, false);
-        }
 
         /* FIXME: Verify values for the receiver side */
 
@@ -610,6 +583,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
+
+        if (seq_num > (last_ctrl + 1))
+                dtcp->policies->lost_control_pdu(dtcp);
+
         if (seq_num <= last_ctrl) {
                 switch (type) {
                 case PDU_TYPE_FC:
@@ -631,12 +608,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         }
 
-        if (seq_num > (last_ctrl + 1)) {
-                if (dtcp->policies->lost_control_pdu(dtcp))
-                        LOG_ERR("Failed lost control PDU policy");
-        }
+        /* We are in seq_num == last_ctrl + 1 */
+
         last_rcv_ctrl_seq_set(dtcp, seq_num);
-        last_ctrl = last_rcv_ctrl_seq(dtcp);
 
         /*
          * FIXME: Missing step described in the specs: retrieve the time
@@ -645,7 +619,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         switch (type) {
         case PDU_TYPE_ACK:
-                seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
+                seq = pci_control_ack_seq_num(pci);
 
                 return dtcp->policies->sender_ack(dtcp,
                                                   seq);
@@ -722,92 +696,208 @@ static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
         return 0;
 }
 
+static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
+{
+        struct dtcp_config * dtcp_cfg;
+        seq_num_t    LWE;
+        timeout_t    a;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->parent);
+
+        dtcp_cfg = dtcp_config_get(dtcp);
+        ASSERT(dtcp_cfg);
+
+        a = dt_sv_a(dtcp->parent);
+
+        LWE = dt_sv_rcv_lft_win(dtcp->parent);
+        if (last_snd_data_ack(dtcp) < LWE) {
+                last_snd_data_ack_set(dtcp, LWE);
+                if (!a) {
+#if 0
+                        if (seq > LWE) {
+                                LOG_DBG("This is a NACK, "
+                                        "LWE couldn't be updated");
+                                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                        return PDU_TYPE_NACK_AND_FC;
+                                }
+                                return PDU_TYPE_NACK;
+                        }
+#endif
+                        LOG_DBG("This is an ACK");
+                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                return PDU_TYPE_ACK_AND_FC;
+                        }
+                        return PDU_TYPE_ACK;
+                }
+#if 0
+                if (seq > LWE) {
+                        /* FIXME: This should be a SEL ACK */
+                        LOG_DBG("This is a NACK, "
+                                "LWE couldn't be updated");
+                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                return PDU_TYPE_NACK_AND_FC;
+                        }
+                        return PDU_TYPE_NACK;
+                }
+#endif
+                LOG_DBG("This is an ACK");
+                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                        return PDU_TYPE_ACK_AND_FC;
+                }
+                return PDU_TYPE_ACK;
+        }
+
+        return 0;
+}
+
 static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
+        struct pdu * pdu;
+        struct pci * pci;
+        struct dtcp_config * dtcp_cfg;
+        seq_num_t    LWE;
+        seq_num_t    snd_lft;
+        seq_num_t    snd_rt;
+        pdu_type_t   type;
+
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
 
-        if (!dt_sv_a(dtcp->parent))
-                return dtcp->policies->sending_ack(dtcp, seq);
+        dtcp_cfg = dtcp_config_get(dtcp);
+        if (!dtcp_cfg)
+                return -1;
 
-        return 0;
+        LWE  = dt_sv_rcv_lft_win(dtcp->parent);
+        type = pdu_ctrl_type_get(dtcp, seq);
+        if (!type)
+                return 0;
+
+        pdu  = pdu_ctrl_create_ni(dtcp, type);
+        if (!pdu)
+                return -1;
+
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        /*
+         * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
+         * PDU_TYPE_NACK_AND_FC ?
+         */
+        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                if (dtcp_window_based_fctrl(dtcp_cfg)) {
+                        snd_lft = snd_lft_win(dtcp);
+                        snd_rt  = snd_rt_wind_edge(dtcp);
+
+                        pci_control_new_left_wind_edge_set(pci, LWE);
+                        pci_control_new_rt_wind_edge_set(pci,
+                                                         rcvr_rt_wind_edge(dtcp));
+                        pci_control_my_left_wind_edge_set(pci, snd_lft);
+                        pci_control_my_rt_wind_edge_set(pci, snd_rt);
+                }
+
+                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
+                        LOG_MISSING;
+                }
+        }
+
+        switch (pci_type(pci)) {
+        case PDU_TYPE_ACK_AND_FC:
+        case PDU_TYPE_ACK:
+                if (pci_control_ack_seq_num_set(pci, LWE)) {
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                if (pdu_send(dtcp, pdu))
+                        return -1;
+
+                return 0;
+        case PDU_TYPE_NACK_AND_FC:
+        case PDU_TYPE_NACK:
+                if (pci_control_ack_seq_num_set(pci, LWE + 1)) {
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                if (pdu_send(dtcp, pdu))
+                        return -1;
+
+                return 0;
+        default:
+                LOG_ERR("A PDU type not considered here has been produced");
+                break;
+        }
+
+        return -1;
 }
 
 static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
-        /* FIXME: this is the same as default_sending_ack */
-        struct pdu * pdu_ctrl;
-        seq_num_t    last_rcv_ctrl, snd_lft, snd_rt;
+        struct pdu * pdu;
+        struct pci * pci;
+        seq_num_t    snd_lft, snd_rt, LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
-
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl)
+        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_FC);
+        if (!pdu)
                 return -1;
 
-        if (pdu_send(dtcp, pdu_ctrl))
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        snd_lft = snd_lft_win(dtcp);
+        snd_rt  = snd_rt_wind_edge(dtcp);
+        LWE     = dt_sv_rcv_lft_win(dtcp->parent);
+
+        pci_control_new_left_wind_edge_set(pci, LWE);
+        pci_control_new_rt_wind_edge_set(pci, rcvr_rt_wind_edge(dtcp));
+        pci_control_my_left_wind_edge_set(pci, snd_lft);
+        pci_control_my_rt_wind_edge_set(pci, snd_rt);
+
+        if (pdu_send(dtcp, pdu))
                 return -1;
 
         return 0;
 }
 
-static seq_num_t update_rt_wind_edge(struct dtcp * dtcp)
+static void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t seq;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
+        seq = dt_sv_rcv_lft_win(dtcp->parent);
         spin_lock(&dtcp->sv->lock);
-        seq = dtcp->sv->rcvr_credit + dtcp->sv->rcvr_rt_wind_edge;
+        seq += dtcp->sv->rcvr_credit;
         dtcp->sv->rcvr_rt_wind_edge = seq;
         spin_unlock(&dtcp->sv->lock);
-
-        return seq;
 }
 
 static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
-        struct pdu * pdu_ctrl;
-        seq_num_t    seq_ctl;
-        seq_num_t    rt_wind_edge;
-        seq_num_t    lf_wind_edge;
+        seq_num_t LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
 
-        /* FIXME: Missing update of right window edge */
+        LWE = dt_sv_rcv_lft_win(dtcp->parent);
+        update_rt_wind_edge(dtcp);
 
-        seq_ctl      = next_snd_ctl_seq(dtcp);
-        rt_wind_edge = update_rt_wind_edge(dtcp);
-        lf_wind_edge = dt_sv_rcv_lft_win(dtcp->parent);
-        pdu_ctrl     = pdu_ctrl_ack_flow(dtcp,
-                                         seq_ctl,
-                                         seq,
-                                         rt_wind_edge,
-                                         lf_wind_edge);
-        if (!pdu_ctrl) {
-                LOG_ERR("ERROR creating PDU for default rcvr flow control");
-                return -1;
-        }
-
-        if (pdu_send(dtcp, pdu_ctrl)) {
-                LOG_ERR("ERROR sending PDU for default rcvr flow control");
-                return -1;
-        }
+        LOG_DBG("DTCP: %pK", dtcp);
+        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
 
         return 0;
 }
@@ -841,6 +931,7 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         bool                 win_based;
         bool                 rate_based;
         bool                 rtx_ctrl;
+        seq_num_t            LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -857,11 +948,12 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
 
         if (flow_ctrl) {
-                if (win_based)
+                if (win_based) {
                         if (dtcp->policies->rcvr_flow_control(dtcp, seq)) {
                                 LOG_ERR("Failed Rcvr Flow Control policy");
                                 retval = -1;
                         }
+                }
 
                 if (rate_based) {
                         LOG_DBG("Rate based fctrl invoked");
@@ -870,20 +962,25 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                                 retval = -1;
                         }
                 }
+
+                if (!rtx_ctrl) {
+                        LOG_DBG("Receiving flow ctrl invoked");
+                        if (dtcp->policies->receiving_flow_control(dtcp,
+                                                                   seq)) {
+                                LOG_ERR("Failed Receiving Flow Control "
+                                        "policy");
+                                retval = -1;
+                        }
+
+                        return retval;
+                }
         }
+        LWE = dt_sv_rcv_lft_win(dtcp->parent);
 
         if (rtx_ctrl) {
                 LOG_DBG("Retransmission ctrl invoked");
                 if (dtcp->policies->rcvr_ack(dtcp, seq)) {
                         LOG_ERR("Failed Rcvr Ack policy");
-                        retval = -1;
-                }
-        }
-
-        if (flow_ctrl && !rtx_ctrl) {
-                LOG_DBG("Receiving flow ctrl invoked");
-                if (dtcp->policies->receiving_flow_control(dtcp, seq)) {
-                        LOG_ERR("Failed Receiving Flow Control policy");
                         retval = -1;
                 }
         }
@@ -933,8 +1030,6 @@ static struct dtcp_policies default_policies = {
         .rcvr_control_ack            = NULL,
         .no_rate_slow_down           = NULL,
         .no_override_default_peak    = NULL,
-        .receiver_inactivity_timer   = NULL,
-        .sender_inactivity_timer     = NULL,
 };
 
 /* FIXME: this should be completed with other parameters from the config */
@@ -1055,16 +1150,6 @@ int dtcp_destroy(struct dtcp * instance)
         LOG_DBG("Instance %pK destroyed successfully", instance);
 
         return 0;
-}
-
-int dtcp_send(struct dtcp * instance,
-              struct sdu *  sdu)
-{
-        LOG_MISSING;
-
-        /* Takes the pdu and enqueue in its internal queues */
-
-        return -1;
 }
 
 int dtcp_sv_update(struct dtcp * instance,

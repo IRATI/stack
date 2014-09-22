@@ -458,8 +458,8 @@ SYSCALL_DEFINE5(management_sdu_write,
                 return -EFAULT;
         }
 
-        LOG_DBG("Syscall write management SDU " \
-                "(size = %zd, ipcp-id %d, port-id = %d)",
+        LOG_DBG("Syscall write management SDU "
+                "(size = %zd, ipcp-id = %d, port-id = %d)",
                 size, ipcp_id, port_id);
 
         tmp_buffer = buffer_create(size);

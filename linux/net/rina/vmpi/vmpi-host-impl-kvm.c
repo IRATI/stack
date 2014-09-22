@@ -169,7 +169,7 @@ handle_guest_tx(struct vmpi_impl_info *vi)
                 len = iov_length(vq->iov, out);
                 buf = vmpi_buffer_create(VMPI_BUF_SIZE);
                 if (unlikely(buf == NULL)) {
-                        printk("vmpi_buffer_create(%u) failed\n",
+                        printk("vmpi_buffer_create(%lu) failed\n",
                                VMPI_BUF_SIZE);
                 } else {
                         IFV(printk("transmit (%u, %d)\n", out, (int)len));

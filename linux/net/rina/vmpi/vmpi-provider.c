@@ -26,6 +26,9 @@
 #include <linux/wait.h>
 #include <linux/slab.h>
 
+#include "vmpi-structs.h"       /* struct vmpi_hdr */
+#include "vmpi-limits.h"
+#include "vmpi-ops.h"
 #include "vmpi-provider.h"
 
 
@@ -135,6 +138,18 @@ int vmpi_provider_unregister(unsigned int provider, unsigned int id)
         return 0;
 }
 EXPORT_SYMBOL_GPL(vmpi_provider_unregister);
+
+unsigned int vmpi_get_num_channels(void)
+{
+        return VMPI_MAX_CHANNELS_DEFAULT;
+}
+EXPORT_SYMBOL_GPL(vmpi_get_num_channels);
+
+unsigned int vmpi_get_max_payload_size(void)
+{
+        return VMPI_BUF_SIZE - sizeof(struct vmpi_hdr);
+}
+EXPORT_SYMBOL_GPL(vmpi_get_max_payload_size);
 
 static int __init vmpi_provider_init(void)
 {

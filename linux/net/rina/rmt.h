@@ -52,6 +52,8 @@ int          rmt_destroy(struct rmt * instance);
 
 int          rmt_address_set(struct rmt * instance,
                              address_t    address);
+int          rmt_dt_cons_set(struct rmt *     instance,
+                             struct dt_cons * dt_cons);
 
 int          rmt_n1port_bind(struct rmt * instance,
                              port_id_t    id);
@@ -83,5 +85,8 @@ int          rmt_send_port_id(struct rmt *  instance,
 int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
+
+int          rmt_flush_work(struct rmt * rmt);
+int          rmt_restart_work(struct rmt * rmt);
 
 #endif

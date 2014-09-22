@@ -101,13 +101,12 @@ message_handler_cb kipcm_handlers[RINA_C_MAX];
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
-static int
-alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
-                              ipc_process_id_t      id,
-                              uint_t                res,
-                              uint_t                seq_num,
-                              uint_t                port_id,
-                              port_id_t             pid)
+static int alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
+                                         ipc_process_id_t      id,
+                                         uint_t                res,
+                                         uint_t                seq_num,
+                                         uint_t                port_id,
+                                         port_id_t             pid)
 {
         rnl_msg_destroy(msg);
 
@@ -1883,6 +1882,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 {
         IRQ_BARRIER;
 
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
         /* The SDU is theirs now */
 
         if (kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
@@ -2034,7 +2038,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 
         KIPCM_UNLOCK(kipcm);
 
-        pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 name_destroy(process_name);
                 return port_id_bad();

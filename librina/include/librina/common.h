@@ -492,6 +492,11 @@ public:
 class DTCPRtxControlConfig{
 
         /**
+         * Maximum time to attempt the retransmission of a packet, this is R.
+         */
+        unsigned int maximumTimeToRetry;
+
+        /**
          * the number of times the retransmission of a PDU will be attempted
          * before some other action must be taken.
          */
@@ -568,6 +573,8 @@ public:
         void setSenderackpolicy(const PolicyConfig& senderackpolicy);
         const PolicyConfig& getSendingackpolicy() const;
         void setSendingackpolicy(const PolicyConfig& sendingackpolicy);
+        unsigned int getMaximumTimeToRetry() const;
+        void setMaximumTimeToRetry(unsigned int maximumTimeToRetry);
         const std::string toString();
 };
 
@@ -587,34 +594,6 @@ class DTCPConfig {
 
         /** the rtx control configuration of a DTCP instance */
         DTCPRtxControlConfig rtxcontrolconfig;
-
-        /**
-         * should be approximately 2Δt. This must be bounded. A DIF
-         * specification may want to specify a maximum value.
-         */
-        int initialsenderinactivitytime;
-
-        /**
-         * should be approximately 3Δt. This must be bounded. A DIF
-         * specification may want to specify a maximum value.
-         */
-        int initialrecvrinactivitytime;
-
-        /**
-         * used when DTCP is in use. If no PDUs arrive in this time period,
-         * the receiver should expect a DRF in the next Transfer PDU. If not,
-         * something is very wrong. The timeout value should generally be set
-         * to 3(MPL+R+A).
-         */
-        PolicyConfig rcvrtimerinactivitypolicy;
-
-        /**
-         * used when DTCP is in use. This timer is used to detect long periods
-         * of no traffic, indicating that a DRF should be sent. If not,
-         * something is very wrong. The timeout value should generally be set
-         * to 2(MPL+R+A).
-         */
-        PolicyConfig sendertimerinactiviypolicy;
 
         /**
          * This policy determines what action to take when the PM detects that
@@ -639,23 +618,13 @@ public:
         const DTCPFlowControlConfig& getFlowcontrolconfig() const;
         void setFlowcontrolconfig(
                         const DTCPFlowControlConfig& flowcontrolconfig);
-        int getInitialrecvrinactivitytime() const;
-        void setInitialrecvrinactivitytime(int initialrecvrinactivitytime);
-        int getInitialsenderinactivitytime() const;
-        void setInitialsenderinactivitytime(int initialsenderinactivitytime);
         const PolicyConfig& getLostcontrolpdupolicy() const;
         void setLostcontrolpdupolicy(
                         const PolicyConfig& lostcontrolpdupolicy);
-        const PolicyConfig& getRcvrtimerinactivitypolicy() const;
-        void setRcvrtimerinactivitypolicy(
-                        const PolicyConfig& rcvrtimerinactivitypolicy);
         bool isRtxcontrol() const;
         void setRtxcontrol(bool rtxcontrol);
         const DTCPRtxControlConfig& getRtxcontrolconfig() const;
         void setRtxcontrolconfig(const DTCPRtxControlConfig& rtxcontrolconfig);
-        const PolicyConfig& getSendertimerinactiviypolicy() const;
-        void setSendertimerinactiviypolicy(
-                        const PolicyConfig& sendertimerinactiviypolicy);
         const PolicyConfig& getRttestimatorpolicy() const;
         void setRttestimatorpolicy(const PolicyConfig& rttestimatorpolicy);
         const std::string toString();
@@ -667,6 +636,22 @@ public:
 class ConnectionPolicies {
         /** Indicates if DTCP is required */
         bool DTCPpresent;
+
+        /**
+         * used when DTCP is in use. If no PDUs arrive in this time period,
+         * the receiver should expect a DRF in the next Transfer PDU. If not,
+         * something is very wrong. The timeout value should generally be set
+         * to 3(MPL+R+A).
+         */
+        PolicyConfig rcvrtimerinactivitypolicy;
+
+        /**
+         * used when DTCP is in use. This timer is used to detect long periods
+         * of no traffic, indicating that a DRF should be sent. If not,
+         * something is very wrong. The timeout value should generally be set
+         * to 2(MPL+R+A).
+         */
+        PolicyConfig sendertimerinactiviypolicy;
 
         /** The configuration of the DTCP instance */
         DTCPConfig dtcpConfiguration;
@@ -732,6 +717,12 @@ public:
         void setPartialDelivery(bool partialDelivery);
         bool isIncompleteDelivery() const;
         void setIncompleteDelivery(bool incompleteDelivery);
+        const PolicyConfig& getRcvrtimerinactivitypolicy() const;
+        void setRcvrtimerinactivitypolicy(
+                        const PolicyConfig& rcvrtimerinactivitypolicy);
+        const PolicyConfig& getSendertimerinactiviypolicy() const;
+        void setSendertimerinactiviypolicy(
+                        const PolicyConfig& sendertimerinactiviypolicy);
         const std::string toString();
 };
 
