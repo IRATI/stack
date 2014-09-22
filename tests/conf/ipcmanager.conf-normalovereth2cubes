@@ -39,10 +39,9 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "100",
-    "configParameters" : [ {
-    	"name" : "interface-name", 
-    	"value" : "eth1"
-      } ]
+    "configParameters" : {
+     "interface-name" : "eth1"
+      } 
   }, {
     "difName" : "normal.DIF",
     "dataTransferConstants" : {
