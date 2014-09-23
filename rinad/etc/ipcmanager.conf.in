@@ -40,10 +40,9 @@
   "difConfigurations" : [ {
     "difName" : "100",
     "difType" : "shim-eth-vlan",
-    "configParameters" : [ {
-    	"name" : "interface-name", 
-    	"value" : "eth1"
-      } ]
+    "configParameters" : {
+    	"interface-name" : "eth1"
+      }
   }, {
     "difName" : "normal.DIF",
     "difType" : "normal-ipc",
