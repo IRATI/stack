@@ -20,8 +20,8 @@
   }],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-dummy",
-    "applicationProcessName" : "test-dummy",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-dummy",
+    "apInstance" : "1",
     "difName" : "loopback.DIF"
    } ],
   "difConfigurations" : [ {

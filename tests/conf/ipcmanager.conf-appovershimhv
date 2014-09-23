@@ -20,8 +20,8 @@
   } ],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-hv",
-    "applicationProcessName" : "test-hv",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-hv",
+    "apInstance" : "1",
     "difName" : "test-shim-dif-hv"
    } ],
   "difConfigurations" : [ {

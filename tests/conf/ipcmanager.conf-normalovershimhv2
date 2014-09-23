@@ -20,13 +20,13 @@
   } ],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-hv",
-    "applicationProcessName" : "test-shim-hv.IPCP",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-shim-hv.IPCP",
+    "apInstance" : "1",
     "difName" : "test-shim-hv.DIF"
    }, {
     "type" : "normal-ipc",
-    "applicationProcessName" : "test-normal-2.IPCP",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-normal-2.IPCP",
+    "apInstance" : "1",
     "difName" : "test-normal.DIF",
     "difsToRegisterAt" : ["test-shim-hv.DIF"]
    } ],
