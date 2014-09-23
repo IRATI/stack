@@ -112,11 +112,26 @@ struct ipcp_instance_data {
         struct list_head    flows;
 
         spinlock_t          app_lock;
+        /* Holds app_data, e.g. socket related things */
         struct list_head    apps;
+
+        struct list_head    directory;
+        struct list_head    exp_regs;
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
         struct kfa *        kfa;
 };
+
+/* Note: Same as app_register_data below, to avoid a mess */
+struct dir_entry {
+        struct list_head        list;
+
+        struct name *           app_name;
+
+        int                     ip_address;
+        int                     port;
+};
+
 
 /* Holds applications that were registered in the DIF */
 static struct list_head applications;
@@ -138,7 +153,7 @@ struct app_register_data {
  */
 static struct app_register_data * find_app_data(const struct name * app_name)
 {
-        struct app_register_data *app;
+        struct app_register_data * app;
 
         ASSERT(app_name);
 
@@ -205,7 +220,7 @@ static bool compare_addr(const struct sockaddr_in * f,
                 f->sin_addr.s_addr == s->sin_addr.s_addr;
 }
 
-/* No lock needed here, called only when holding a lock */
+/* No lock needed here, called only when already holding a lock */
 static struct shim_tcp_udp_flow *
 find_udp_flow(struct ipcp_instance_data * data,
               const struct sockaddr_in *  addr,
@@ -1335,6 +1350,8 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                  const struct dif_info *     dif_information)
 {
+        struct ipcp_config * tmp;
+
         LOG_HBEAT;
         ASSERT(data);
         ASSERT(dif_information);
@@ -1358,6 +1375,21 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         /* FIXME: Expected application registration to be parsed here */
 
         /* FIXME: Application directory to be parsed here if not using DNS */
+
+
+        /* Retrieve configuration of IPC process from params */
+        list_for_each_entry(tmp, &(dif_information->
+                                   configuration->
+                                   ipcp_config_entries), next) {
+                const struct ipcp_config_entry * entry = tmp->entry;
+
+                /* 
+                 *  Want to get an interface name here, 
+                 *  directory entries and exp registrations 
+                 */
+
+                LOG_DBG("Got %s with value %s", entry->name, entry->value);
+        }
 
         return 0;
 }
