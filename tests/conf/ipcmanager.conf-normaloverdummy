@@ -48,10 +48,9 @@
     "difName" : "fantastic.DIF"
   }, {
     "difName" : "100",
-    "configParameters" : [ {
-     "name" : "interface-name", 
-     "value" : "eth0"
-      } ]
+    "configParameters" : {
+     "interface-name" : "eth0"
+      }
   }, {
     "difName" : "normal.DIF",
     "dataTransferConstants" : {
