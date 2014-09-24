@@ -53,9 +53,8 @@ console_function(void *opaque)
         return NULL;
 }
 
-IPCMConsole::IPCMConsole(IPCManager& r) :
-                rina::Thread(new rina::ThreadAttributes(),
-                             console_function, this),
+IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
+                rina::Thread(&ta, console_function, this),
                 ipcm(r)
 {
         commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,

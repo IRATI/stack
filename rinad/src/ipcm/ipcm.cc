@@ -97,7 +97,8 @@ IPCManager::start_script_worker()
                 return -1;
         }
 
-        script = new rina::Thread(new rina::ThreadAttributes(),
+        rina::ThreadAttributes ta;
+        script = new rina::Thread(&ta,
                                    script_function, this);
 
         return 0;
@@ -110,7 +111,8 @@ IPCManager::start_console_worker()
                 return -1;
         }
 
-        console = new IPCMConsole(*this);
+        rina::ThreadAttributes ta;
+        console = new IPCMConsole(*this, ta);
 
         return 0;
 }
