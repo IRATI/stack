@@ -27,3 +27,11 @@ $(POLICY_NAME).so: $(OBJECTS)
 
 clean:
 	rm -f $(OBJECTS)
+
+install:
+	@echo "This target has not been implemented yet"
+	@exit 1
+
+uninstall:
+	@echo "This target has not been implemented yet"
+	@exit 1

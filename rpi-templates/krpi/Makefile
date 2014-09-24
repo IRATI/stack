@@ -20,4 +20,12 @@ all:
 clean:
 	rm -r -f *.o *.ko *.mod.c *.mod.o Module.symvers .*.cmd .tmp_versions modules.order
 
+install:
+	@echo "This target has not been implemented yet"
+	@exit 1
+
+uninstall:
+	@echo "This target has not been implemented yet"
+	@exit 1
+
 endif
