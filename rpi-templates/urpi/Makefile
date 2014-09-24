@@ -10,8 +10,8 @@ SOURCES     =					\
 PKG_CONFIG_PATH =
 
 CXX        = g++
-CXXFLAGS   = -Wall -Werror
-LDFLAGS    =
+CXXFLAGS   = -Wall -Werror -fPIC
+LDFLAGS    = -shared
 LIBS       =
 PKG_CONFIG = pkg-config
 
