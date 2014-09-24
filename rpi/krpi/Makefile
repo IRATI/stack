@@ -14,7 +14,7 @@ skeleton-y := source1.o source2.o
 
 else
 
-default:
+all:
 	$(MAKE) -C $(KDIR) M=$$PWD
 
 clean:

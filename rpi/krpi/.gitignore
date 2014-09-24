@@ -1,3 +1,4 @@
+/*~
 /*.o
 /.*.cmd
 /.tmp_versions
@@ -5,4 +6,3 @@
 /modules.order
 /*.ko
 /*.mod.c
-/*~
