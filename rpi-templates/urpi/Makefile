@@ -7,13 +7,12 @@ SOURCES     =					\
 	source1.cc				\
 	source2.cc
 
-PKG_CONFIG_PATH =
-
 CXX        = g++
 CXXFLAGS   = -Wall -Werror -fPIC
 LDFLAGS    = -shared
 LIBS       =
-PKG_CONFIG = pkg-config
+PKG_CONFIG_PATH =
+PKG_CONFIG      = pkg-config
 
 OBJECTS    = $(SOURCES:.cc=.o)
 
