@@ -1474,7 +1474,6 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         LOG_DBG("Got interface name %s", data->interface_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
                         unsigned int       len, port_nr, ip_addr, nr, i; 
-                        int                result;
                         char               *val, *tmp, *copy;
                         char               *ap, *ae, *ip, *port, *ip_b;
                         struct name *      app_name;
@@ -1484,7 +1483,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
 
                         dir_entry = rkmalloc(sizeof(struct dir_entry), 
                                              GFP_KERNEL);
-                        app_name = name_create();
+                       
                         copy = rkstrdup(entry->value, GFP_KERNEL);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
@@ -1533,8 +1532,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ip_addr = 0;
                         for (i = 0; i < 4; i++) {
                                 tmp = strsep(&ip_b, ".");
-                                result = kstrtouint(tmp, 10, &nr);
-                                if (result) {
+                                if (kstrtouint(tmp, 10, &nr)) {
                                         LOG_ERR("Failed to convert int");
                                         remove_dif_name(data);
                                         rkfree(ip);
@@ -1560,8 +1558,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        result = kstrtouint(port, 10, &port_nr);
-                        if (result) {
+                        if (kstrtouint(port, 10, &port_nr)) {
                                 LOG_ERR("Failed to convert int");
                                 remove_dif_name(data);
                                 rkfree(port);
@@ -1574,6 +1571,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         rkfree(port);
 
                         INIT_LIST_HEAD(&dir_entry->list);
+                        app_name = name_create();
                         if (!name_init_with(app_name, 
                                             ap, rkstrdup("", GFP_KERNEL), 
                                             ae, rkstrdup("", GFP_KERNEL))) {
@@ -1594,9 +1592,93 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
 
                         LOG_DBG("Added a new dir entry");
                 } else if (!strcmp(entry->name, "expReg")) {
+                        struct exp_reg * exp_reg;
+                        char           * val, * copy;
+                        unsigned int     len, port_nr;
+                        char           * ap, * ae, * port;
+                        struct name    * app_name;
+
                         ASSERT(entry->value);
 
-                        
+                        exp_reg = rkmalloc(sizeof(struct exp_reg),
+                                           GFP_KERNEL);
+
+                        copy = rkstrdup(entry->value, GFP_KERNEL);
+                        if (!copy) {
+                                LOG_ERR("Failed to dup value");
+                                remove_dif_name(data);
+                                /* FIXME: Cleanup */
+                                return -1;
+                        }
+                        val = copy;
+
+                        /* len:aplen:aelen:port */
+                        /* Get AP name */
+                        len = 0;
+                        ap = 0;
+                        if (get_nxt_val(&ap, &val, &len)) {
+                                LOG_ERR("Failed to get next value");
+                                remove_dif_name(data);
+                                rkfree(copy);
+                                /* FIXME: Cleanup */
+                                return -1;
+                        }
+
+                        /* Get AE name */
+                        ae = 0;
+                        if (get_nxt_val(&ae, &val, &len)) {
+                                LOG_ERR("Failed to get next value");
+                                remove_dif_name(data);
+                                rkfree(ap);
+                                rkfree(copy);
+                                /* FIXME: Cleanup */
+                                return -1;
+                        }     
+
+                        /* Get port number */
+                        port = 0;
+                        if (get_nxt_val(&port, &val, &len)) {
+                                LOG_ERR("Failed to get next value");
+                                remove_dif_name(data);
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                /* FIXME: Cleanup */
+                                return -1;
+                        }
+
+                        if (kstrtouint(port, 10, &port_nr)) {
+                                LOG_ERR("Failed to convert int");
+                                remove_dif_name(data);
+                                rkfree(port);
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                /* FIXME: Cleanup */
+                                return -1;
+                        }
+                        rkfree(port);
+                   
+                        INIT_LIST_HEAD(&exp_reg->list);
+                        app_name = name_create();
+                        if (!name_init_with(app_name, 
+                                            ap, rkstrdup("", GFP_KERNEL), 
+                                            ae, rkstrdup("", GFP_KERNEL))) {
+                                LOG_ERR("Failed to init name");
+                                remove_dif_name(data);
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                /* FIXME: Cleanup */
+                                return -1;
+                        }
+                        exp_reg->app_name = app_name;
+                        exp_reg->port = port_nr;
+                        list_add(&exp_reg->list, &data->exp_regs);
+
+                        rkfree(copy);
+
+                        LOG_DBG("Added a new exp reg entry");
                 } else
                         LOG_WARN("Unknown config param: %s", entry->name);
         }
