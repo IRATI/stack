@@ -402,23 +402,6 @@ void rkfree(void * ptr)
 }
 EXPORT_SYMBOL(rkfree);
 
-char * rkstrdup(const char * s, gfp_t flags)
-{
-        size_t len;
-        char * buf;
-
-        if (!s)
-                return NULL;
-
-        len = strlen(s) + 1;
-        buf = rkmalloc(len, flags);
-        if (buf)
-                memcpy(buf, s, len);
-
-        return buf;
-}
-EXPORT_SYMBOL(rkstrdup);
-
 #ifdef CONFIG_RINA_RMEM_REGRESSION_TESTS
 bool regression_tests_rmem(void)
 {

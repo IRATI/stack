@@ -28,6 +28,31 @@
 #include "rstr.h"
 #include "rmem.h"
 
+char * rkstrdup_gfp(const char * s, gfp_t flags)
+{
+        size_t len;
+        char * buf;
+
+        if (!s)
+                return NULL;
+
+        len = strlen(s) + 1;
+        buf = rkmalloc(len, flags);
+        if (buf)
+                memcpy(buf, s, len);
+
+        return buf;
+}
+EXPORT_SYMBOL(rkstrdup_gfp);
+
+char * rkstrdup(const char * s)
+{ return rkstrdup_gfp(s, GFP_KERNEL); }
+EXPORT_SYMBOL(rkstrdup);
+
+char * rkstrdup_ni(const char * s)
+{ return rkstrdup_gfp(s, GFP_ATOMIC); }
+EXPORT_SYMBOL(rkstrdup_ni);
+
 string_t * string_from_user(const char __user * src)
 { return strdup_from_user(src); }
 EXPORT_SYMBOL(string_from_user);
@@ -46,7 +71,7 @@ int string_dup_gfp(gfp_t            flags,
          * provoke no consequeunces
          */
         if (src) {
-                *dst = rkstrdup(src, flags);
+                *dst = rkstrdup_gfp(src, flags);
                 if (!*dst) {
                         LOG_ERR("Cannot duplicate source string "
                                 "in kernel-space");
