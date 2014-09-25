@@ -144,6 +144,7 @@ struct exp_reg {
 
 
 /* Holds applications that were registered in the DIF */
+/* NOTE: Deprecated, do NOT use or the kernel will panic */
 static struct list_head applications;
 
 struct app_register_data {
@@ -1358,13 +1359,13 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int get_nxt_len(char ** enc, 
+static int get_nxt_len(char ** enc,
                        int *   len)
 {
         char * tmp;
 
         ASSERT(enc);
-        
+
         tmp = strsep(enc, ":");
         if (!enc) {
                 LOG_ERR("No separator found!");
@@ -1392,14 +1393,8 @@ static int eat_substr(char ** dst,
         memcpy(*dst, *src, *len);
         (*dst)[*len] = '\0';
         *src += *len;
-     
-        return 0;
-}
 
-static void remove_dif_name(struct ipcp_instance_data * data)
-{
-        name_destroy(data->dif_name);
-        data->dif_name = NULL;
+        return 0;
 }
 
 static int get_nxt_val(char ** dst,
@@ -1410,53 +1405,70 @@ static int get_nxt_val(char ** dst,
                 LOG_ERR("get_nxt_len failed");
                 return -1;
         }
-        
+
         if (eat_substr(dst, val, len)) {
                 LOG_ERR("eat_substr failed");
                 return -1;
         }
-                       
+
         return 0;
 }
 
-static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
-                                 const struct dif_info *     dif_information)
+static void remove_if_name(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+
+        if (data->interface_name) {
+                rkfree(data->interface_name);
+                data->interface_name = NULL;
+        }
+}
+
+static void clear_directory(struct ipcp_instance_data * data)
+{
+        struct dir_entry * entry, * next;
+
+        ASSERT(data);
+
+        list_for_each_entry_safe(entry, next, &data->directory, list) {
+                list_del(&entry->list);
+                name_destroy(entry->app_name);
+                rkfree(entry);
+        }
+}
+
+static void clear_exp_reg(struct ipcp_instance_data * data)
+{
+        struct exp_reg * entry, * next;
+
+        ASSERT(data);
+
+        list_for_each_entry_safe(entry, next, &data->exp_regs, list) {
+                list_del(&entry->list);
+                name_destroy(entry->app_name);
+                rkfree(entry);
+        }
+}
+
+static void undo_assignment(struct ipcp_instance_data * data)
+{
+        remove_if_name(data);
+        clear_directory(data);
+        clear_exp_reg(data);
+}
+
+static int parse_assign_conf(struct ipcp_instance_data * data,
+                             const struct dif_config *   config)
 {
         struct ipcp_config * tmp;
 
-        LOG_HBEAT;
         ASSERT(data);
-        ASSERT(dif_information);
+        ASSERT(config);
 
-        if (data->dif_name) {
-                ASSERT(data->dif_name->process_name);
-
-                LOG_ERR("This IPC Process is already assigned to the DIF %s. ",
-                        data->dif_name->process_name);
-                return -1;
-        }
-
-        data->dif_name = name_dup(dif_information->dif_name);
-        if (!data->dif_name) {
-                LOG_ERR("Error duplicating name, bailing out");
-                return -1;
-        }
-
-        /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp, &(dif_information->
-                                   configuration->
+        list_for_each_entry(tmp, &(config->
                                    ipcp_config_entries), next) {
                 const struct ipcp_config_entry * entry = tmp->entry;
-
-                /* 
-                 * Note: Cleanup in the fixmes means:
-                 *
-                 * - Delete all entries from the dir
-                 * - Delete all entries from exp reg
-                 * - Remove interface name (if any)
-                 */
-
-                /* 
+                /*
                  *  Want to get an interface name here
                  *  Directory entries and exp registrations
                  */
@@ -1467,13 +1479,11 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                 rkstrdup(entry->value, GFP_KERNEL);
                         if (!data->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
-                                remove_dif_name(data);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         LOG_DBG("Got interface name %s", data->interface_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
-                        unsigned int       len, port_nr, ip_addr, nr, i; 
+                        unsigned int       len, port_nr, ip_addr, nr, i;
                         char               *val, *tmp, *copy;
                         char               *ap, *ae, *ip, *port, *ip_b;
                         struct name *      app_name;
@@ -1481,14 +1491,12 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
 
                         ASSERT(entry->value);
 
-                        dir_entry = rkmalloc(sizeof(struct dir_entry), 
+                        dir_entry = rkmalloc(sizeof(struct dir_entry),
                                              GFP_KERNEL);
-                       
+
                         copy = rkstrdup(entry->value, GFP_KERNEL);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
-                                remove_dif_name(data);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         val = copy;
@@ -1499,9 +1507,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ap = 0;
                         if (get_nxt_val(&ap, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
@@ -1509,10 +1515,8 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ae = 0;
                         if (get_nxt_val(&ae, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
@@ -1520,26 +1524,22 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ip = 0;
                         if (get_nxt_val(&ip, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
-                        
+
                         ip_b = ip;
                         ip_addr = 0;
                         for (i = 0; i < 4; i++) {
                                 tmp = strsep(&ip_b, ".");
                                 if (kstrtouint(tmp, 10, &nr)) {
                                         LOG_ERR("Failed to convert int");
-                                        remove_dif_name(data);
                                         rkfree(ip);
                                         rkfree(ae);
                                         rkfree(ap);
                                         rkfree(copy);
-                                        /* FIXME: Cleanup */
                                         return -1;
                                 }
                                 ip_addr |= nr << (8 * (3-i));
@@ -1550,37 +1550,31 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         port = 0;
                         if (get_nxt_val(&port, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
                         if (kstrtouint(port, 10, &port_nr)) {
                                 LOG_ERR("Failed to convert int");
-                                remove_dif_name(data);
                                 rkfree(port);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         rkfree(port);
 
                         INIT_LIST_HEAD(&dir_entry->list);
                         app_name = name_create();
-                        if (!name_init_with(app_name, 
-                                            ap, rkstrdup("", GFP_KERNEL), 
+                        if (!name_init_with(app_name,
+                                            ap, rkstrdup("", GFP_KERNEL),
                                             ae, rkstrdup("", GFP_KERNEL))) {
                                 LOG_ERR("Failed to init name");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         dir_entry->app_name = app_name;
@@ -1606,8 +1600,6 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         copy = rkstrdup(entry->value, GFP_KERNEL);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
-                                remove_dif_name(data);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         val = copy;
@@ -1618,9 +1610,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ap = 0;
                         if (get_nxt_val(&ap, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
@@ -1628,48 +1618,40 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ae = 0;
                         if (get_nxt_val(&ae, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
-                        }     
+                        }
 
                         /* Get port number */
                         port = 0;
                         if (get_nxt_val(&port, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
                         if (kstrtouint(port, 10, &port_nr)) {
                                 LOG_ERR("Failed to convert int");
-                                remove_dif_name(data);
                                 rkfree(port);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         rkfree(port);
-                   
+
                         INIT_LIST_HEAD(&exp_reg->list);
                         app_name = name_create();
-                        if (!name_init_with(app_name, 
-                                            ap, rkstrdup("", GFP_KERNEL), 
+                        if (!name_init_with(app_name,
+                                            ap, rkstrdup("", GFP_KERNEL),
                                             ae, rkstrdup("", GFP_KERNEL))) {
                                 LOG_ERR("Failed to init name");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         exp_reg->app_name = app_name;
@@ -1686,8 +1668,39 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         /* Fail here if we didn't get an interface */
         if (!data->interface_name) {
                 LOG_ERR("Didn't get an interface name");
-                remove_dif_name(data);
-                /* FIXME: Cleanup */
+                return -1;
+        }
+
+        return 0;
+}
+
+static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
+                                 const struct dif_info *     dif_information)
+{
+        LOG_HBEAT;
+        ASSERT(data);
+        ASSERT(dif_information);
+
+        if (data->dif_name) {
+                ASSERT(data->dif_name->process_name);
+
+                LOG_ERR("This IPC Process is already assigned to the DIF %s. ",
+                        data->dif_name->process_name);
+                return -1;
+        }
+
+        data->dif_name = name_dup(dif_information->dif_name);
+        if (!data->dif_name) {
+                LOG_ERR("Error duplicating name, bailing out");
+                return -1;
+        }
+
+        if (parse_assign_conf(data,
+                              dif_information->configuration)) {
+                LOG_ERR("Failed to parse configuration");
+                name_destroy(data->dif_name);
+                data->dif_name = NULL;
+                undo_assignment(data);
                 return -1;
         }
 
@@ -1702,14 +1715,21 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(new_config);
 
-        /* 
+        /*
          * FIXME: Update configuration here
          *
-         * Close all sockets, destroy all flows 
+         * Close all sockets, destroy all flows
          *
-         * Update directory, update expected app reg 
-         * See assign to dif for parsing of args
-         */ 
+         */
+
+        undo_assignment(data);
+
+        if (parse_assign_conf(data, new_config)) {
+                LOG_ERR("Failed to update configuration");
+                undo_assignment(data);
+                /* FIXME: If this fails, DIF is no longer functional */
+                return -1;
+        }
 
         return 0;
 }
@@ -2077,10 +2097,6 @@ static struct ipcp_factory *shim = NULL;
 
 static int __init mod_init(void)
 {
-        struct app_register_data * app;
-
-        LOG_HBEAT;
-
         rcv_wq = alloc_workqueue(SHIM_NAME,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
         if (!rcv_wq) {
@@ -2093,43 +2109,12 @@ static int __init mod_init(void)
         if (!shim)
                 return -1;
 
-        /* FIXME: Remove this hardcoded code, fix in assign_to_dif */
-        INIT_LIST_HEAD(&applications);
-        app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
-
-        INIT_LIST_HEAD(&app->list);
-        app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (3);
-        app->port = 2325;
-        app->app_name = name_create_ni();
-        if (!name_init_from_ni(app->app_name,
-                               "rina.utils.apps.echo.server", "1", "", "")) {
-                name_destroy(app->app_name);
-                return -1;
-        }
-        list_add(&app->list, &applications);
-
-        app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
-
-        INIT_LIST_HEAD(&app->list);
-        app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (2);
-        app->port = 2325;
-        app->app_name = name_create_ni();
-        if (!name_init_from_ni(app->app_name,
-                               "rina.utils.apps.echo.client", "1", "", "")) {
-                name_destroy(app->app_name);
-                return -1;
-        }
-        list_add(&app->list, &applications);
-
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
         struct rcv_data * recvd, *nxt;
-        struct app_register_data * app, * next;
-
-        LOG_HBEAT;
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
@@ -2137,12 +2122,6 @@ static void __exit mod_exit(void)
         list_for_each_entry_safe(recvd, nxt, &rcv_wq_data, list) {
                 list_del(&recvd->list);
                 rkfree(recvd);
-        }
-
-        list_for_each_entry_safe(app, next, &applications, list) {
-                list_del(&app->list);
-                name_destroy(app->app_name);
-                rkfree(app);
         }
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim);
