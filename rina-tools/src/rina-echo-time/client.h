@@ -40,7 +40,8 @@ public:
                unsigned long count,
                bool  registration,
                unsigned int size,
-               unsigned int wait);
+               unsigned int wait,
+               int gap);
                void run();
 protected:
         rina::Flow* createFlow();
@@ -58,5 +59,6 @@ private:
         bool client_app_reg;
         unsigned int data_size;
         unsigned int wait;
+        int gap_;
 };
 #endif//CLIENT_HPP
