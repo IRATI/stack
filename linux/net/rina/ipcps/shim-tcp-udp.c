@@ -1476,7 +1476,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         ASSERT(entry->value);
 
                         data->interface_name =
-                                rkstrdup(entry->value, GFP_KERNEL);
+                                rkstrdup_ni(entry->value);
                         if (!data->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 return -1;
@@ -1494,7 +1494,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         dir_entry = rkmalloc(sizeof(struct dir_entry),
                                              GFP_KERNEL);
 
-                        copy = rkstrdup(entry->value, GFP_KERNEL);
+                        copy = rkstrdup_ni(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
@@ -1569,8 +1569,8 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         INIT_LIST_HEAD(&dir_entry->list);
                         app_name = name_create();
                         if (!name_init_with(app_name,
-                                            ap, rkstrdup("", GFP_KERNEL),
-                                            ae, rkstrdup("", GFP_KERNEL))) {
+                                            ap, rkstrdup_ni(""),
+                                            ae, rkstrdup_ni(""))) {
                                 LOG_ERR("Failed to init name");
                                 rkfree(ae);
                                 rkfree(ap);
@@ -1597,7 +1597,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         exp_reg = rkmalloc(sizeof(struct exp_reg),
                                            GFP_KERNEL);
 
-                        copy = rkstrdup(entry->value, GFP_KERNEL);
+                        copy = rkstrdup_ni(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
@@ -1646,8 +1646,8 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         INIT_LIST_HEAD(&exp_reg->list);
                         app_name = name_create();
                         if (!name_init_with(app_name,
-                                            ap, rkstrdup("", GFP_KERNEL),
-                                            ae, rkstrdup("", GFP_KERNEL))) {
+                                            ap, rkstrdup_ni(""),
+                                            ae, rkstrdup_ni(""))) {
                                 LOG_ERR("Failed to init name");
                                 rkfree(ae);
                                 rkfree(ap);

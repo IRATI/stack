@@ -73,7 +73,7 @@ static char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
 static char * nla_dup_string(struct nlattr * nla, gfp_t flags)
-{ return rkstrdup(nla_get_string(nla), flags); }
+{ return rkstrdup_gfp(nla_get_string(nla), flags); }
 
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
 rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
