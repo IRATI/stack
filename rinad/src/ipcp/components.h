@@ -987,20 +987,22 @@ public:
 	static const std::string DATA_TRANSFER_AE;
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
+	IDelimiter * delimiter;
+	Encoder * encoder;
+	rina::CDAPSessionManagerInterface* cdap_session_manager;
+	IEnrollmentTask * enrollment_task;
+	IFlowAllocator * flow_allocator;
+	INamespaceManager * namespace_manager;
+	IResourceAllocator * resource_allocator;
+	ISecurityManager * security_manager;
+	IRIBDaemon * rib_daemon;
+	rina::ApplicationProcessNamingInformation name;
+
+        IPCProcess();
 	virtual ~IPCProcess(){};
 	virtual unsigned short get_id() = 0;
-	virtual IDelimiter * get_delimiter() = 0;
-	virtual Encoder * get_encoder() = 0;
-	virtual rina::CDAPSessionManagerInterface* get_cdap_session_manager() = 0;
-	virtual IEnrollmentTask * get_enrollment_task() = 0;
-	virtual IFlowAllocator * get_flow_allocator() = 0;
-	virtual INamespaceManager * get_namespace_manager() = 0;
-	virtual IResourceAllocator * get_resource_allocator() = 0;
-	virtual ISecurityManager * get_security_manager() = 0;
-	virtual IRIBDaemon * get_rib_daemon() = 0;
 	virtual unsigned int get_address() const = 0;
 	virtual void set_address(unsigned int address) = 0;
-	virtual const rina::ApplicationProcessNamingInformation& get_name() const = 0;
 	virtual const IPCProcessOperationalState& get_operational_state() const = 0;
 	virtual void set_operational_state(const IPCProcessOperationalState& operational_state) = 0;
 	virtual const rina::DIFInformation& get_dif_information() const = 0;

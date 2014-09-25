@@ -36,16 +36,6 @@ public:
 			unsigned short id, unsigned int ipc_manager_port);
 	~IPCProcessImpl();
 	unsigned short get_id();
-	const rina::ApplicationProcessNamingInformation& get_name() const;
-	IDelimiter * get_delimiter();
-	Encoder * get_encoder();
-	rina::CDAPSessionManagerInterface* get_cdap_session_manager();
-	IEnrollmentTask * get_enrollment_task();
-	IFlowAllocator * get_flow_allocator();
-	INamespaceManager * get_namespace_manager();
-	IResourceAllocator * get_resource_allocator();
-	ISecurityManager * get_security_manager();
-	IRIBDaemon * get_rib_daemon();
 	const std::list<rina::Neighbor*> get_neighbors() const;
 	const IPCProcessOperationalState& get_operational_state() const;
 	void set_operational_state(const IPCProcessOperationalState& operational_state);
@@ -59,21 +49,10 @@ public:
 	void requestPDUFTEDump();
 	void logPDUFTE(const rina::DumpFTResponseEvent& event);
 
-	IDelimiter * delimiter_;
-	Encoder * encoder_;
-	rina::CDAPSessionManagerInterface* cdap_session_manager_;
-	IEnrollmentTask * enrollment_task_;
-	IFlowAllocator * flow_allocator_;
-	INamespaceManager * namespace_manager_;
-	IResourceAllocator * resource_allocator_;
-	ISecurityManager * security_manager_;
-	IRIBDaemon * rib_daemon_;
-
 private:
 	void init_cdap_session_manager();
 	void init_encoder();
 
-	rina::ApplicationProcessNamingInformation name_;
 	IPCProcessOperationalState state_;
 	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
 	rina::Lockable * lock_;
