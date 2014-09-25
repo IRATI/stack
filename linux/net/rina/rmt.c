@@ -715,7 +715,7 @@ static int rmt_queue_recv_delete(struct rmt * instance,
                 return -1;
         }
 
-        if (!instance->egress.queues) {
+        if (!instance->ingress.queues) {
                 LOG_ERR("Bogus egress instance passed");
                 return -1;
         }
