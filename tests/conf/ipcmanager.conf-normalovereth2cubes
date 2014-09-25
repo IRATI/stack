@@ -39,11 +39,13 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "100",
+    "difType" : "shim-eth-vlan",
     "configParameters" : {
      "interface-name" : "eth1"
       } 
   }, {
     "difName" : "normal.DIF",
+    "difType" : "normal-ipc",
     "dataTransferConstants" : {
     	"addressLength" : 2,
     	"cepIdLength" : 2,

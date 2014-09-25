@@ -32,11 +32,13 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "test-shim-hv.DIF",
+    "difType" : "shim-hv",
     "configParameters" : {
      "vmpi-id" : "0"
       } 
   }, {
     "difName" : "test-normal.DIF",
+    "difType" : "normal.DIF",
     "dataTransferConstants" : {
      "addressLength" : 2,
      "cepIdLength" : 2,
