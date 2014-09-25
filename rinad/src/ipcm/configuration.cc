@@ -340,7 +340,8 @@ void parse_dif_configs(const Json::Value   &root,
 
                 props.difType = dif_configs[i].get("difType",
                                                    string()).asString();
-                if (props.difType.empty())
+                if (props.difType.compare(SHIM_DUMMY_TYPE) != 0 && props.difType.compare(SHIM_ETH_TYPE) != 0&&
+                		props.difType.compare(SHIM_HV_TYPE) != 0 && props.difType.compare(NORMAL_TYPE) != 0)
                 {
                 	std::stringstream ss;
                 	ss << "difType parameter of DIF " << props.difName.processName <<"can not be empty, options are: "<<
