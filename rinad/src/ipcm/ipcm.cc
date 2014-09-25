@@ -118,20 +118,27 @@ IPCManager::start_console_worker()
 }
 
 bool
-IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum)
+IPCMConcurrency::wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
+                                int &result)
 {
+        bool arrived = false;
+
         event_waiting = true;
         event_ty = ty;
         event_sn = seqnum;
+        event_result = -1;
 
         try {
                 timedwait(wait_time, 0);
+                arrived = true;
         } catch (rina::ConcurrentException) {
-            event_waiting = false;
-            return false;
+                event_waiting = false;
+                event_result = -1;
         }
 
-        return true;
+        result = event_result;
+
+        return arrived;
 }
 
 void
@@ -191,22 +198,25 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                 ss << "IPC process " << name.toString() << " created "
                         "[id = " << ipcp->id << "]" << endl;
                 FLUSH_LOG(INFO, ss);
+
+                if (wait) {
+                        int ret;
+                        bool arrived = concurrency.wait_for_event(
+                                        rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
+                                        0, ret);
+
+                        if (!arrived) {
+                                ss << "Timed out while waiting for IPC process daemon"
+                                        "to initialize" << endl;
+                                FLUSH_LOG(ERR, ss);
+                        }
+                }
+
         } catch (rina::CreateIPCProcessException) {
                 ss << "Failed to create IPC process '" <<
                         name.toString() << "' of type '" <<
                         type << "'" << endl;
                 FLUSH_LOG(ERR, ss);
-        }
-
-        if (wait) {
-                bool arrived = concurrency.wait_for_event(
-                                rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT, 0);
-
-                if (!arrived) {
-                        ss << "Timed out while waiting for IPC process daemon"
-                                "to initialize" << endl;
-                        FLUSH_LOG(ERR, ss);
-                }
         }
 
         concurrency.unlock();
@@ -376,15 +386,13 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                         dif_name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
                 arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
-                                seqnum);
+                                                        seqnum, ret);
         } catch (rina::AssignToDIFException) {
                 cerr << "Error while assigning " <<
                         ipcp->name.toString() <<
                         " to DIF " << dif_name.toString() << endl;
                 goto out;
         }
-
-        ret = 0;
 
 out:
         concurrency.unlock();
@@ -407,6 +415,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
         ostringstream ss;
         unsigned int seqnum;
         bool arrived = true;
+        int ret = -1;
 
         if (!slave_ipcp) {
                 cerr << "Cannot find any IPC process belonging "
@@ -431,7 +440,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 FLUSH_LOG(INFO, ss);
 
                 arrived = concurrency.wait_for_event(
-                        rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum);
+                        rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
         } catch (Exception) {
                 cerr << __func__ << ": Error while requesting "
                         << "registration" << endl;
@@ -444,7 +453,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 return -1;
         }
 
-        return 0;
+        return ret;
 }
 
 int IPCManager::register_at_difs(rina::IPCProcess *ipcp,
@@ -465,6 +474,7 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
 {
         ostringstream ss;
         bool arrived = true;
+        int ret = -1;
 
         concurrency.lock();
 
@@ -484,7 +494,9 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                 FLUSH_LOG(INFO, ss);
                 if (sync) {
                         arrived = concurrency.wait_for_event(
-                                rina::ENROLL_TO_DIF_RESPONSE_EVENT, seqnum);
+                                rina::ENROLL_TO_DIF_RESPONSE_EVENT, seqnum, ret);
+                } else {
+                        ret = 0;
                 }
         } catch (rina::EnrollException) {
                 ss << __func__ << ": Error while enrolling "
@@ -500,7 +512,7 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                 return -1;
         }
 
-        return 0;
+        return ret;
 }
 
 int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
@@ -550,6 +562,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
 {
         ostringstream ss;
         bool arrived = true;
+        int ret = -1;
 
         concurrency.lock();
 
@@ -571,7 +584,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                 FLUSH_LOG(INFO, ss);
 
                 arrived = concurrency.wait_for_event(
-                        rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum);
+                        rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum, ret);
         } catch (rina::UpdateDIFConfigurationException) {
                 ss << __func__ << ": Error while updating DIF configuration "
                         " for IPC process " << ipcp->name.toString() << endl;
@@ -586,7 +599,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                 return -1;
         }
 
-        return 0;
+        return ret;
 }
 
 std::string
@@ -596,9 +609,10 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
                 return "Bogus input parameters";
         }
 
-        std::string ret = "Query RIB operation was not successful";
+        std::string retstr = "Query RIB operation was not successful";
         ostringstream ss;
         bool arrived = true;
+        int ret = -1;
 
         concurrency.lock();
 
@@ -612,12 +626,12 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
                         ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
                 arrived = concurrency.wait_for_event(rina::QUERY_RIB_RESPONSE_EVENT,
-                                           seqnum);
+                                           seqnum, ret);
 
                 std::map<unsigned int, std::string >::iterator mit;
                 mit = query_rib_responses.find(seqnum);
                 if (mit != query_rib_responses.end()) {
-                	ret = mit->second;
+                	retstr = mit->second;
                 	query_rib_responses.erase(seqnum);
                 }
 
@@ -634,7 +648,7 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
                 FLUSH_LOG(ERR, ss);
         }
 
-        return ret;
+        return retstr;
 }
 
 static void
@@ -660,6 +674,7 @@ assign_to_dif_response_event_handler(rina::IPCEvent *e,
         map<unsigned int, rina::IPCProcess*>::iterator mit;
         ostringstream ss;
         bool success = (event->result == 0);
+        int ret = -1;
 
         mit = ipcm->pending_ipcp_dif_assignments.find(
                                         event->sequenceNumber);
@@ -674,6 +689,7 @@ assign_to_dif_response_event_handler(rina::IPCEvent *e,
                                 << "process " << ipcp->name.toString() <<
                                 " [success=" << success << "]" << endl;
                         FLUSH_LOG(INFO, ss);
+                        ret = 0;
                 } catch (rina::AssignToDIFException) {
                         ss <<  __func__ << ": Error while reporting DIF "
                                 "assignment result for IPC process "
@@ -686,6 +702,8 @@ assign_to_dif_response_event_handler(rina::IPCEvent *e,
                         "received, but no pending DIF assignment" << endl;
                 FLUSH_LOG(WARN, ss);
         }
+
+        ipcm->concurrency.set_event_result(ret);
 }
 
 static void
@@ -753,6 +771,7 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         rina::IPCProcess *ipcp = NULL;
         bool success = (event->result == 0);
         ostringstream ss;
+        int ret = -1;
 
         mit = ipcm->pending_ipcp_enrollments.find(event->sequenceNumber);
         if (mit == ipcm->pending_ipcp_enrollments.end()) {
@@ -760,7 +779,7 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                         "response received, but no corresponding pending "
                         "request" << endl;
                 FLUSH_LOG(WARN, ss);
-                return;
+                goto out;
         }
 
         ipcp = mit->second;
@@ -770,6 +789,7 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                 ss << "Enrollment operation completed for IPC "
                         << "process " << ipcp->name.toString() <<  endl;
                 FLUSH_LOG(INFO, ss);
+                ret = 0;
         } else {
                 ss << __func__ << ": Error: Enrollment operation of "
                         "process " << ipcp->name.toString() << " failed"
@@ -778,6 +798,9 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
         }
 
         ipcm->pending_ipcp_enrollments.erase(mit);
+
+out:
+        ipcm->concurrency.set_event_result(ret);
 }
 
 static void
@@ -919,6 +942,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
         map<unsigned int, rina::IPCProcess *>::iterator mit;
         rina::IPCProcess *ipcp = NULL;
         bool success = (event->result == 0);
+        int ret = -1;
 
         ss << "Query RIB response event arrived" << endl;
         FLUSH_LOG(INFO, ss);
@@ -929,7 +953,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                         "response received, but no corresponding pending "
                         "request" << endl;
                 FLUSH_LOG(WARN, ss);
-                return;
+                goto out;
         }
 
         ipcp = mit->second;
@@ -949,6 +973,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                         ss << "" << endl;
                 }
                 ipcm->query_rib_responses[event->sequenceNumber] = ss.str();
+                ret = 0;
         } else {
                 ss << __func__ << ": Error: Query RIB operation of "
                         "process " << ipcp->name.toString() << " failed"
@@ -957,6 +982,9 @@ query_rib_response_event_handler(rina::IPCEvent *e,
         }
 
         ipcm->pending_ipcp_query_rib_responses.erase(mit);
+
+out:
+        ipcm->concurrency.set_event_result(ret);
 }
 
 static void
@@ -967,6 +995,7 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
         DOWNCAST_DECL(opaque, IPCManager, ipcm);
         map<unsigned short, rina::IPCProcess *>::iterator mit;
         ostringstream ss;
+        int ret = -1;
 
         // Perform deferred "setInitiatialized()" of a normal IPC process, if
         // needed.
@@ -977,12 +1006,15 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
                 ss << "IPC process daemon initialized [id = " <<
                         event->ipcProcessId<< "]" << endl;
                 FLUSH_LOG(INFO, ss);
+                ret = 0;
         } else {
                 ss <<  __func__ << ": Warning: IPCP daemon initialized, "
                         "but no pending normal IPC process initialization"
                         << endl;
                 FLUSH_LOG(WARN, ss);
         }
+
+        ipcm->concurrency.set_event_result(ret);
 }
 
 static void
