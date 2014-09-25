@@ -326,9 +326,7 @@ void parse_dif_configs(const Json::Value   &root,
                        list<DIFProperties> &difConfigurations)
 {
 		const std::string NORMAL_TYPE = "normal-ipc";
-		const std::string SHIM_ETH_TYPE = "shim-eth-vlan";
-		const std::string SHIM_HV_TYPE = "shim-hv";
-		const std::string SHIM_DUMMY_TYPE = "shim-dummy";
+		rina::IPCProcessFactory fact;
         Json::Value dif_configs = root["difConfigurations"];
         for (unsigned int i = 0; i < dif_configs.size(); i++) {
                 rinad::DIFProperties props;
@@ -340,13 +338,21 @@ void parse_dif_configs(const Json::Value   &root,
 
                 props.difType = dif_configs[i].get("difType",
                                                    string()).asString();
-                if (props.difType.compare(SHIM_DUMMY_TYPE) != 0 && props.difType.compare(SHIM_ETH_TYPE) != 0&&
-                		props.difType.compare(SHIM_HV_TYPE) != 0 && props.difType.compare(NORMAL_TYPE) != 0)
+                std::list<std::string> suportedDIFS = fact.getSupportedIPCProcessTypes();
+                bool difCorrect = false;
+            	std::string s;
+                for (std::list<std::string>::iterator it = suportedDIFS.begin(); it != suportedDIFS.end(); ++it) {
+                	if (props.difType.compare(*it) == 0)
+                		difCorrect = true;
+                	s.append(*it);
+                	s.append(", ");
+                }
+                if (!difCorrect)
                 {
+
                 	std::stringstream ss;
-                	ss << "difType parameter of DIF " << props.difName.processName <<"can not be empty, options are: "<<
-                			SHIM_DUMMY_TYPE << ", "<< SHIM_ETH_TYPE<< ", "<<SHIM_HV_TYPE<< ", "
-                			<< NORMAL_TYPE <<std::endl;
+                	ss << "difType parameter of DIF " << props.difName.processName <<" is wrong, options are: "
+                			<<s;
                 	throw Exception(ss.str().c_str());
                 }
                 LOG_INFO("Parsing configuration of DIF %s of type %s",
@@ -681,22 +687,17 @@ void parse_dif_configs(const Json::Value   &root,
                 }
                 // configParameters;
                 Json::Value confParams = dif_configs[i]["configParameters"];
-                if( props.difType.compare(SHIM_ETH_TYPE) == 0 || props.difType.compare(SHIM_HV_TYPE) == 0 ){
-					if (confParams != 0) {
-							Json::Value::Members members =
-									confParams.getMemberNames();
-						for (unsigned int j = 0; j < members.size(); j++) {
-									string value = confParams.get
-											(members[j], string()).asString();
-									props.configParameters.insert
-											(pair<string, string>
-											 (members[j], value));
-						}
+				if (confParams != 0) {
+						Json::Value::Members members =
+								confParams.getMemberNames();
+					for (unsigned int j = 0; j < members.size(); j++) {
+								string value = confParams.get
+										(members[j], string()).asString();
+								props.configParameters.insert
+										(pair<string, string>
+										 (members[j], value));
 					}
-					else
-						throw Exception("confParams parameter can not be empty");
-                }
-
+				}
                 difConfigurations.push_back(props);
         }
 }
