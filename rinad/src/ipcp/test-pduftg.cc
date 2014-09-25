@@ -405,7 +405,7 @@ public:
 		encoder_->addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 				new FakeEncoder());
 		rib_daemon_ = new FakeRIBDaemon();
-		state_= rinad::INITIALIZED;
+		state= rinad::INITIALIZED;
 		address_ = 0;
 		timeout_ = 2000;
 		cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(&wire_factory_,
@@ -428,10 +428,10 @@ public:
 		address_ = address;
 	}
 	const rinad::IPCProcessOperationalState& get_operational_state() const {
-		return state_;
+		return state;
 	}
 	void set_operational_state(const rinad::IPCProcessOperationalState& operational_state){
-		state_ = operational_state;
+		state = operational_state;
 	}
 	rina::DIFInformation& get_dif_information() const {
 		throw Exception();
@@ -448,7 +448,7 @@ private:
 	rinad::IRIBDaemon * rib_daemon_;
 	rinad::INamespaceManager * namespace_manager_;
 	rina::ApplicationProcessNamingInformation name_;
-	rinad::IPCProcessOperationalState state_;
+	rinad::IPCProcessOperationalState state;
 	rina::DIFInformation dif_information_;
 	std::list<rina::Neighbor*> neighbors_;
 	unsigned int address_;

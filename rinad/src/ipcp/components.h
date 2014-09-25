@@ -188,52 +188,52 @@ public:
 	std::string toString();
 
 	/// The application that requested the flow
-	rina::ApplicationProcessNamingInformation source_naming_info_;
+	rina::ApplicationProcessNamingInformation source_naming_info;
 
 	/// The destination application of the flow
-	rina::ApplicationProcessNamingInformation destination_naming_info_;
+	rina::ApplicationProcessNamingInformation destination_naming_info;
 
 	/// The port-id returned to the Application process that requested the flow. This port-id is used for
 	/// the life of the flow.
-	unsigned int source_port_id_;
+	unsigned int source_port_id;
 
 	/// The port-id returned to the destination Application process. This port-id is used for
 	// the life of the flow
-	unsigned int destination_port_id_;
+	unsigned int destination_port_id;
 
 	/// The address of the IPC process that is the source of this flow
-	unsigned int source_address_;
+	unsigned int source_address;
 
 	/// The address of the IPC process that is the destination of this flow
-	unsigned int destination_address_;
+	unsigned int destination_address;
 
 	/// All the possible connections of this flow
-	std::list<rina::Connection*> connections_;
+	std::list<rina::Connection*> connections;
 
 	/// The index of the connection that is currently Active in this flow
-	unsigned int current_connection_index_;
+	unsigned int current_connection_index;
 
 	/// The status of this flow
-	IPCPFlowState state_;
+	IPCPFlowState state;
 
 	/// The list of parameters from the AllocateRequest that generated this flow
-	rina::FlowSpecification flow_specification_;
+	rina::FlowSpecification flow_specification;
 
 	/// TODO this is just a placeHolder for this piece of data
-	char* access_control_;
+	char* access_control;
 
 	/// Maximum number of retries to create the flow before giving up.
-	unsigned int max_create_flow_retries_;
+	unsigned int max_create_flow_retries;
 
 	/// The current number of retries
-	unsigned int create_flow_retries_;
+	unsigned int create_flow_retries;
 
 	/// While the search rules that generate the forwarding table should allow for a
 	/// natural termination condition, it seems wise to have the means to enforce termination.
-	unsigned int hop_count_;
+	unsigned int hop_count;
 
 	///True if this IPC process is the source of the flow, false otherwise
-	bool source_;
+	bool source;
 };
 
 /// Interface that must be implementing by classes that provide

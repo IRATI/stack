@@ -53,7 +53,7 @@ private:
 	void init_cdap_session_manager();
 	void init_encoder();
 
-	IPCProcessOperationalState state_;
+	IPCProcessOperationalState state;
 	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;

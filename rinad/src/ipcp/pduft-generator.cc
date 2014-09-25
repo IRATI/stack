@@ -236,12 +236,12 @@ void Graph::init_edges() {
 		if (origin->connection_contains_address(dest->address_) &&
 				dest->connection_contains_address(origin->address_)) {
 			edges_.push_back(new Edge(origin->address_, (*flowIt)->port_id_, dest->address_, dest->port_id_, 1));
-			origin->connections_.remove(dest->address_);
-			dest->connections_.remove(origin->address_);
+			origin->connections.remove(dest->address_);
+			dest->connections.remove(origin->address_);
 		} else {
 			origin->port_id_ = (*flowIt)->port_id_;
-			origin->connections_.push_back(dest->address_);
-			dest->connections_.push_back(origin->address_);
+			origin->connections.push_back(dest->address_);
+			dest->connections.push_back(origin->address_);
 		}
 	}
 }

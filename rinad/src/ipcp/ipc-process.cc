@@ -54,7 +54,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	}
 
 	name = nm;
-	state_ = NOT_INITIALIZED;
+	state = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
 	// Initialize subcomponents
@@ -82,7 +82,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 		exit(EXIT_FAILURE);
 	}
 
-	state_ = INITIALIZED;
+	state = INITIALIZED;
 
 	LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
 			name.processName.c_str(), name.processInstance.c_str(), id);
@@ -180,12 +180,12 @@ const std::list<rina::Neighbor*> IPCProcessImpl::get_neighbors() const {
 
 const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const {
 	rina::AccessGuard g(*lock_);
-	return state_;
+	return state;
 }
 
 void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& operational_state) {
 	rina::AccessGuard g(*lock_);
-	state_ = operational_state;
+	state = operational_state;
 }
 
 const rina::DIFInformation& IPCProcessImpl::get_dif_information() const {
@@ -200,7 +200,7 @@ void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_informa
 
 unsigned int IPCProcessImpl::get_address() const {
 	rina::AccessGuard g(*lock_);
-	if (state_ != ASSIGNED_TO_DIF) {
+	if (state != ASSIGNED_TO_DIF) {
 		return 0;
 	}
 
@@ -215,10 +215,10 @@ void IPCProcessImpl::set_address(unsigned int address) {
 void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
 
-	if (state_ != INITIALIZED) {
+	if (state != INITIALIZED) {
 		//The IPC Process can only be assigned to a DIF once, reply with error message
 		LOG_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
-				state_);
+				state);
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 		return;
 	}
@@ -227,7 +227,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 		unsigned int handle = rina::kernelIPCProcess->assignToDIF(event.difInformation);
 		pending_events_.insert(std::pair<unsigned int,
 				rina::AssignToDIFRequestEvent>(handle, event));
-		state_ = ASSIGN_TO_DIF_IN_PROCESS;
+		state = ASSIGN_TO_DIF_IN_PROCESS;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
@@ -237,15 +237,15 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {
 	rina::AccessGuard g(*lock_);
 
-	if (state_ == ASSIGNED_TO_DIF ) {
+	if (state == ASSIGNED_TO_DIF ) {
 		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
 				event.result);
 		return;
 	}
 
-	if (state_ != ASSIGN_TO_DIF_IN_PROCESS) {
+	if (state != ASSIGN_TO_DIF_IN_PROCESS) {
 		LOG_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
-				state_);
+				state);
 		return;
 	}
 
@@ -265,7 +265,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 				event.result);
 		LOG_ERR("Could not assign IPC Process to DIF %s",
 				it->second.difInformation.dif_name_.processName.c_str());
-		state_ = INITIALIZED;
+		state = INITIALIZED;
 
 		try {
 			rina::extendedIPCManager->assignToDIFResponse(it->second, -1);
@@ -286,7 +286,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	flow_allocator->set_dif_configuration(dif_information_.dif_configuration_);
 	enrollment_task->set_dif_configuration(dif_information_.dif_configuration_);
 
-	state_ = ASSIGNED_TO_DIF;
+	state = ASSIGNED_TO_DIF;
 
 	try {
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);

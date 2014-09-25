@@ -40,23 +40,23 @@ EnrollmentRequest::EnrollmentRequest(
 
 //	CLASS Flow
 Flow::Flow() {
-	source_port_id_ = 0;
-	destination_port_id_ = 0;
-	source_address_ = 0;
-	destination_address_ = 0;
-	current_connection_index_ = 0;
-	max_create_flow_retries_ = 0;
-	create_flow_retries_ = 0;
-	hop_count_ = 0;
-	source_ = false;
-	state_ = EMPTY;
-	access_control_ = 0;
+	source_port_id = 0;
+	destination_port_id = 0;
+	source_address = 0;
+	destination_address = 0;
+	current_connection_index = 0;
+	max_create_flow_retries = 0;
+	create_flow_retries = 0;
+	hop_count = 0;
+	source = false;
+	state = EMPTY;
+	access_control = 0;
 }
 
 Flow::~Flow() {
 	std::list<rina::Connection*>::iterator iterator;
 
-	for (iterator = connections_.begin(); iterator != connections_.end();
+	for (iterator = connections.begin(); iterator != connections.end();
 			++iterator) {
 		delete *iterator;
 		*iterator = 0;
@@ -68,9 +68,9 @@ rina::Connection * Flow::getActiveConnection() {
 	std::list<rina::Connection*>::iterator iterator;
 
 	unsigned int i = 0;
-	for (iterator = connections_.begin(); iterator != connections_.end();
+	for (iterator = connections.begin(); iterator != connections.end();
 			++iterator) {
-		if (i == current_connection_index_) {
+		if (i == current_connection_index) {
 			return *iterator;
 		} else {
 			i++;
@@ -82,25 +82,25 @@ rina::Connection * Flow::getActiveConnection() {
 
 std::string Flow::toString() {
 	std::stringstream ss;
-	ss << "* State: " << state_ << std::endl;
-	ss << "* Is this IPC Process the requestor of the flow? " << source_
+	ss << "* State: " << state << std::endl;
+	ss << "* Is this IPC Process the requestor of the flow? " << source
 			<< std::endl;
-	ss << "* Max create flow retries: " << max_create_flow_retries_
+	ss << "* Max create flow retries: " << max_create_flow_retries
 			<< std::endl;
-	ss << "* Hop count: " << hop_count_ << std::endl;
-	ss << "* Source AP Naming Info: " << source_naming_info_.toString()
+	ss << "* Hop count: " << hop_count << std::endl;
+	ss << "* Source AP Naming Info: " << source_naming_info.toString()
 			<< std::endl;
 	;
-	ss << "* Source address: " << source_address_ << std::endl;
-	ss << "* Source port id: " << source_port_id_ << std::endl;
+	ss << "* Source address: " << source_address << std::endl;
+	ss << "* Source port id: " << source_port_id << std::endl;
 	ss << "* Destination AP Naming Info: "
-			<< destination_naming_info_.toString();
-	ss << "* Destination addres: " + destination_address_ << std::endl;
-	ss << "* Destination port id: " + destination_port_id_ << std::endl;
-	if (connections_.size() > 0) {
+			<< destination_naming_info.toString();
+	ss << "* Destination addres: " + destination_address << std::endl;
+	ss << "* Destination port id: " + destination_port_id << std::endl;
+	if (connections.size() > 0) {
 		ss << "* Connection ids of the connection supporting this flow: +\n";
 		for (std::list<rina::Connection*>::const_iterator iterator =
-				connections_.begin(), end = connections_.end(); iterator != end;
+				connections.begin(), end = connections.end(); iterator != end;
 				++iterator) {
 			ss << "Src CEP-id " << (*iterator)->getSourceCepId()
 					<< "; Dest CEP-id " << (*iterator)->getDestCepId()
@@ -108,7 +108,7 @@ std::string Flow::toString() {
 		}
 	}
 	ss << "* Index of the current active connection for this flow: "
-			<< current_connection_index_ << std::endl;
+			<< current_connection_index << std::endl;
 	return ss.str();
 }
 
