@@ -70,15 +70,8 @@ public:
 	IRIBDaemon * rib_daemon_;
 
 private:
-	void init_delimiter();
 	void init_cdap_session_manager();
 	void init_encoder();
-	void init_enrollment_task();
-	void init_flow_allocator();
-	void init_namespace_manager();
-	void init_resource_allocator();
-	void init_security_manager();
-	void init_rib_daemon();
 
 	rina::ApplicationProcessNamingInformation name_;
 	IPCProcessOperationalState state_;

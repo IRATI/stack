@@ -57,15 +57,16 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	state_ = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
-	init_delimiter();
+	// Initialize subcomponents
 	init_cdap_session_manager();
 	init_encoder();
-	init_enrollment_task();
-	init_flow_allocator();
-	init_namespace_manager();
-	init_resource_allocator();
-	init_security_manager();
-	init_rib_daemon();
+	delimiter_ = 0; //TODO initialize Delimiter once it is implemented
+	enrollment_task_ = new EnrollmentTask();
+	flow_allocator_ = new FlowAllocator();
+	namespace_manager_ = new NamespaceManager();
+	resource_allocator_ = new ResourceAllocator();
+	security_manager_ = new SecurityManager();
+	rib_daemon_ = new RIBDaemon();
 
 	rib_daemon_->set_ipc_process(this);
 	enrollment_task_->set_ipc_process(this);
@@ -129,11 +130,6 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 }
 
-void IPCProcessImpl::init_delimiter() {
-	//TODO initialize Delimiter once it is implemented
-	delimiter_ = 0;
-}
-
 void IPCProcessImpl::init_cdap_session_manager() {
 	rina::WireMessageProviderFactory wire_factory_;
 	rina::CDAPSessionManagerFactory cdap_manager_factory_;
@@ -172,30 +168,6 @@ void IPCProcessImpl::init_encoder() {
 			new WhatevercastNameListEncoder());
 	encoder_->addEncoder(EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
 			new WatchdogEncoder());
-}
-
-void IPCProcessImpl::init_enrollment_task() {
-	enrollment_task_ = new EnrollmentTask();
-}
-
-void IPCProcessImpl::init_flow_allocator() {
-	flow_allocator_ = new FlowAllocator();
-}
-
-void IPCProcessImpl::init_namespace_manager() {
-	namespace_manager_ = new NamespaceManager();
-}
-
-void IPCProcessImpl::init_resource_allocator() {
-	resource_allocator_ = new ResourceAllocator();
-}
-
-void IPCProcessImpl::init_security_manager() {
-	security_manager_ = new SecurityManager();
-}
-
-void IPCProcessImpl::init_rib_daemon() {
-	rib_daemon_ = new RIBDaemon();
 }
 
 unsigned short IPCProcessImpl::get_id() {
