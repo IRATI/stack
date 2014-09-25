@@ -1670,14 +1670,20 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        if (!factory_name)
-                factory_name = DEFAULT_FACTORY;
+        if (!name_is_ok(ipcp_name)) {
+                LOG_ERR("Bad IPC process name");
+                return -1;
+        }
+
+        ASSERT(ipcp_name);
 
         name = name_tostring(ipcp_name);
         if (!name)
                 return -1;
 
-        ASSERT(ipcp_name);
+        if (!factory_name)
+                factory_name = DEFAULT_FACTORY;
+
         ASSERT(factory_name);
 
         LOG_DBG("Creating IPC process:");

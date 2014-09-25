@@ -90,7 +90,7 @@ class IPCMConsole : public rina::Thread {
                 int enroll_to_dif(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(IPCManager& r);
+                IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta);
                 void body();
                 virtual ~IPCMConsole() throw();
 };
