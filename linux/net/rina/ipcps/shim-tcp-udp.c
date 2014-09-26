@@ -105,7 +105,7 @@ struct ipcp_instance_data {
         struct name *       name;
         struct name *       dif_name;
 
-        char *              interface_name;
+        __be32              host_name;
 
         struct flow_spec ** qos;
 
@@ -117,14 +117,16 @@ struct ipcp_instance_data {
         /* Holds app_data, e.g. socket related things */
         struct list_head    apps;
 
+        spinlock_t          dir_lock;
         struct list_head    directory;
+        spinlock_t          exp_lock;
         struct list_head    exp_regs;
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
         struct kfa *        kfa;
 };
 
-/* Note: Same as app_register_data below, to avoid a mess */
+/* Directory entry */
 struct dir_entry {
         struct list_head list;
 
@@ -142,40 +144,50 @@ struct exp_reg {
         int              port;
 };
 
-
-/* Holds applications that were registered in the DIF */
-/* NOTE: Deprecated, do NOT use or the kernel will panic */
-static struct list_head applications;
-
-struct app_register_data {
-        struct list_head        list;
-
-        struct name *           app_name;
-
-        int                     ip_address;
-        int                     port;
-};
-
-/*
- * FIXME: Rename the function.
- * It checks for an app that is expected to be registered in the DIF
- * But ... it also holds the directory. D'Oh.
- * Needs to be separated into two distinct things
- */
-static struct app_register_data * find_app_data(const struct name * app_name)
+static struct dir_entry * 
+find_dir_entry(struct ipcp_instance_data * data,
+               const struct name * app_name)
 {
-        struct app_register_data * app;
+        struct dir_entry * entry;
 
         ASSERT(app_name);
+        ASSERT(data);
 
-        list_for_each_entry(app, &applications, list) {
-                if (name_is_equal(app->app_name, app_name)) {
-                        return app;
+        spin_lock(&data->dir_lock);
+
+        list_for_each_entry(entry, &data->directory, list) {
+                if (name_is_equal(entry->app_name, app_name)) {
+                        return entry;
                 }
         }
 
+        spin_unlock(&data->dir_lock);
+
         return NULL;
 }
+
+static struct exp_reg * 
+find_exp_reg(struct ipcp_instance_data * data,
+             const struct name * app_name)
+{
+        struct exp_reg * exp;
+
+        ASSERT(app_name);
+        ASSERT(data);
+
+        spin_lock(&data->exp_lock);
+
+        list_for_each_entry(exp, &data->exp_regs, list) {
+                if (name_is_equal(exp->app_name, app_name)) {
+                        return exp;
+                }
+        }
+
+        spin_unlock(&data->exp_lock);
+        
+        return NULL;
+}
+
 
 static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data * data,
                                             port_id_t                   id)
@@ -370,7 +382,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct app_data *          app;
-        struct app_register_data * app_data;
+        struct dir_entry *         entry;
         int                        err;
 
         LOG_HBEAT;
@@ -409,16 +421,16 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 LOG_DBG("allocate request flow added");
 
                 /* this should be done with DNS or DHT */
-                app_data = find_app_data(dest);
-                if (!app_data) {
-                        LOG_ERR("application data not found");
+                entry = find_dir_entry(data, dest);
+                if (!entry) {
+                        LOG_ERR("Directory entry not found");
                 }
 
                 LOG_DBG("application data found");
 
-                flow->addr.sin_addr.s_addr = htonl(app_data->ip_address);
+                flow->addr.sin_addr.s_addr = htonl(entry->ip_address);
                 flow->addr.sin_family      = AF_INET;
-                flow->addr.sin_port        = htons(app_data->port);
+                flow->addr.sin_port        = htons(entry->port);
 
                 if (!fspec->ordered_delivery) {
                         LOG_DBG("unreliable flow requested");
@@ -1026,7 +1038,6 @@ static int tcp_process(struct socket * sock)
         data = inst_data;
         app = find_app_by_socket(data, sock);
 
-        /* FIXME: Seems weird... if it is NULL it will enter here */
         if (!app) {
                 //connection exists
                 err = tcp_process_msg(data, sock);
@@ -1198,7 +1209,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 {
         struct app_data *          app;
         struct sockaddr_in         sin;
-        struct app_register_data * app_data;
+        struct exp_reg *           exp_reg;
         int                        err;
 
         LOG_HBEAT;
@@ -1224,15 +1235,15 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        app_data = find_app_data(name);
-        if (!app_data) {
-                LOG_ERR("application data not found");
+        exp_reg = find_exp_reg(data, name);
+        if(!exp_reg) {
+                LOG_ERR("That application is not expected to register");
                 rkfree(app);
                 return -1;
         }
-        LOG_DBG("Application data found");
+        LOG_DBG("Application found in exp_reg");
 
-        app->port = app_data->port;
+        app->port = exp_reg->port;
 
         err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP,
                                &app->udpsock);
@@ -1243,8 +1254,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        /* FIXME: Bind to correct NIC */
-        sin.sin_addr.s_addr = htonl(INADDR_ANY);
+        sin.sin_addr.s_addr = htonl(data->host_name);
         sin.sin_family = AF_INET;
         sin.sin_port = htons(app->port);
 
@@ -1384,6 +1394,10 @@ static int eat_substr(char ** dst,
                       char ** src,
                       int *   len)
 {
+        ASSERT(len);
+        ASSERT(dst);
+        ASSERT(src);
+
         *dst = rkmalloc((*len) + 1, GFP_KERNEL);
         if (!*dst) {
                 LOG_ERR("Failed to get mem");
@@ -1401,6 +1415,10 @@ static int get_nxt_val(char ** dst,
                        char ** val,
                        int  *  len)
 {
+        ASSERT(len);
+        ASSERT(dst);
+        ASSERT(val);
+
         if (get_nxt_len(val, len)) {
                 LOG_ERR("get_nxt_len failed");
                 return -1;
@@ -1414,14 +1432,28 @@ static int get_nxt_val(char ** dst,
         return 0;
 }
 
-static void remove_if_name(struct ipcp_instance_data * data)
+/* Note: Assumes an IPv4 address */
+static int ip_string_to_int(char *   ip_s,
+                            __be32 * ip_a)
 {
-        ASSERT(data);
+        char         *tmp;
+        unsigned int nr, i;
 
-        if (data->interface_name) {
-                rkfree(data->interface_name);
-                data->interface_name = NULL;
+        ASSERT(ip_s);
+        ASSERT(ip_a);
+
+        *ip_a = 0;
+        nr = 0;
+        for (i = 0; i < 4; i++) {
+                tmp = strsep(&ip_s, ".");
+                if (kstrtouint(tmp, 10, &nr)) {
+                        LOG_ERR("Failed to convert int");
+                        return -1;
+                }
+                *ip_a |= nr << (8 * (3-i));
         }
+                        
+        return 0;
 }
 
 static void clear_directory(struct ipcp_instance_data * data)
@@ -1452,7 +1484,6 @@ static void clear_exp_reg(struct ipcp_instance_data * data)
 
 static void undo_assignment(struct ipcp_instance_data * data)
 {
-        remove_if_name(data);
         clear_directory(data);
         clear_exp_reg(data);
 }
@@ -1472,20 +1503,35 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                  *  Want to get an interface name here
                  *  Directory entries and exp registrations
                  */
-                if (!strcmp(entry->name, "interface")) {
+                if (!strcmp(entry->name, "hostname")) {
+                        char * copy;
+                        __be32 ip_addr;
+
                         ASSERT(entry->value);
 
-                        data->interface_name =
-                                rkstrdup_ni(entry->value);
-                        if (!data->interface_name) {
-                                LOG_ERR("Cannot copy interface name");
+                        copy = rkstrdup_ni(entry->value);
+                        if (!copy) {
+                                LOG_ERR("Failed to dup value");
                                 return -1;
                         }
-                        LOG_DBG("Got interface name %s", data->interface_name);
+
+                        ip_addr = 0;
+                        if (ip_string_to_int(copy, &ip_addr)) {
+                                LOG_ERR("Failed to convert ip to int");
+                                rkfree(copy);
+                                return -1;
+                        }
+
+                        data->host_name = ip_addr;
+
+                        rkfree(copy);
+
+                        LOG_DBG("Got hostname %d", data->host_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
-                        unsigned int       len, port_nr, ip_addr, nr, i;
-                        char               *val, *tmp, *copy;
-                        char               *ap, *ae, *ip, *port, *ip_b;
+                        unsigned int       len, port_nr;
+                        __be32             ip_addr;
+                        char               *val, *copy;
+                        char               *ap, *ae, *ip, *port;
                         struct name *      app_name;
                         struct dir_entry * dir_entry;
 
@@ -1530,19 +1576,13 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        ip_b = ip;
-                        ip_addr = 0;
-                        for (i = 0; i < 4; i++) {
-                                tmp = strsep(&ip_b, ".");
-                                if (kstrtouint(tmp, 10, &nr)) {
-                                        LOG_ERR("Failed to convert int");
-                                        rkfree(ip);
-                                        rkfree(ae);
-                                        rkfree(ap);
-                                        rkfree(copy);
-                                        return -1;
-                                }
-                                ip_addr |= nr << (8 * (3-i));
+                        if (ip_string_to_int(ip, &ip_addr)) {
+                                LOG_ERR("Failed to convert ip to int");
+                                rkfree(ip);
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                return -1;
                         }
                         rkfree(ip);
 
@@ -1580,7 +1620,10 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         dir_entry->app_name = app_name;
                         dir_entry->ip_address = ip_addr;
                         dir_entry->port = port_nr;
+
+                        spin_lock(&data->dir_lock);
                         list_add(&dir_entry->list, &data->directory);
+                        spin_unlock(&data->dir_lock);
 
                         rkfree(copy);
 
@@ -1656,19 +1699,16 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         }
                         exp_reg->app_name = app_name;
                         exp_reg->port = port_nr;
+
+                        spin_lock(&data->exp_lock);
                         list_add(&exp_reg->list, &data->exp_regs);
+                        spin_unlock(&data->exp_lock);
 
                         rkfree(copy);
 
                         LOG_DBG("Added a new exp reg entry");
                 } else
                         LOG_WARN("Unknown config param: %s", entry->name);
-        }
-
-        /* Fail here if we didn't get an interface */
-        if (!data->interface_name) {
-                LOG_ERR("Didn't get an interface name");
-                return -1;
         }
 
         return 0;
@@ -1869,7 +1909,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
 };
 
 static struct ipcp_factory_data {
-        /* FIXME: We might add a lock here */
+        spinlock_t lock;
         struct list_head instances;
 } tcp_udp_data;
 
@@ -1882,6 +1922,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&rcv_wq_data);
+
+        spin_lock_init(&data->lock);
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
 
@@ -1908,11 +1950,15 @@ find_instance(struct ipcp_factory_data * data,
 
         ASSERT(data);
 
+        spin_lock(&data->lock);
+
         list_for_each_entry(pos, &(data->instances), list) {
                 if (pos->id == id) {
                         return pos;
                 }
         }
+
+        spin_unlock(&data->lock);
 
         return NULL;
 
@@ -1990,6 +2036,8 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+        inst->data->host_name = INADDR_ANY;
+
         inst->data->qos[0]->average_bandwidth           = 0;
         inst->data->qos[0]->average_sdu_bandwidth       = 0;
         inst->data->qos[0]->delay                       = 0;
@@ -2025,6 +2073,8 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         spin_lock_init(&inst->data->flow_lock);
         spin_lock_init(&inst->data->app_lock);
+        spin_lock_init(&inst->data->dir_lock);
+        spin_lock_init(&inst->data->exp_lock);
 
         INIT_LIST_HEAD(&(inst->data->flows));
         INIT_LIST_HEAD(&(inst->data->apps));
@@ -2036,7 +2086,9 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
          * structures linked (somewhat) together
          */
         INIT_LIST_HEAD(&(inst->data->list));
+        spin_lock(&data->lock);
         list_add(&(inst->data->list), &(data->instances));
+        spin_unlock(&data->lock);
 
         return inst;
 }
@@ -2057,7 +2109,9 @@ static int tcp_udp_destroy(struct ipcp_factory_data *data,
                 if (pos->id == instance->data->id) {
 
                         /* Unbind from the instances set */
+                        spin_lock(&data->lock);
                         list_del(&pos->list);
+                        spin_unlock(&data->lock);
 
                         /* Destroy it */
                         if (pos->qos[0])
