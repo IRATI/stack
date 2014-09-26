@@ -1118,8 +1118,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 if (!strcmp(entry->name, "interface-name")) {
                         ASSERT(entry->value);
 
-                        info->interface_name =
-                                rkstrdup(entry->value, GFP_KERNEL);
+                        info->interface_name = rkstrdup_ni(entry->value);
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);

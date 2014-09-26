@@ -20,9 +20,9 @@ obj-y +=					\
 	syscalls.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
-	rina_personality_default.o
+	rina-personality-default.o
 
-rina_personality_default-y :=					\
+rina-personality-default-y :=					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pft.o rmt.o						\
@@ -31,7 +31,7 @@ rina_personality_default-y :=					\
 	default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
-rina_personality_default-y +=			\
+rina-personality-default-y +=			\
 	 utils-workarounds.o
 endif
 
