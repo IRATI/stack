@@ -390,9 +390,10 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 arrived = concurrency.wait_for_event(rina::ASSIGN_TO_DIF_RESPONSE_EVENT,
                                                         seqnum, ret);
         } catch (rina::AssignToDIFException) {
-                cerr << "Error while assigning " <<
+                ss << "Error while assigning " <<
                         ipcp->name.toString() <<
                         " to DIF " << dif_name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
         } catch (Exception) {
                 FLUSH_LOG(ERR, ss);
         }
@@ -400,7 +401,8 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         concurrency.unlock();
 
         if (!arrived) {
-                cerr << __func__ << ": Timed out" << endl;
+                ss << __func__ << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
                 return -1;
         }
 
@@ -420,8 +422,9 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
         int ret = -1;
 
         if (!slave_ipcp) {
-                cerr << "Cannot find any IPC process belonging "
+                ss << "Cannot find any IPC process belonging "
                         << "to DIF " << dif_name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
                 return -1;
         }
 
@@ -444,14 +447,16 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 arrived = concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
         } catch (Exception) {
-                cerr << __func__ << ": Error while requesting "
+                ss << __func__ << ": Error while requesting "
                         << "registration" << endl;
+                FLUSH_LOG(ERR, ss);
         }
 
         concurrency.unlock();
 
         if (!arrived) {
-                cerr << __func__ << ": Timed out" << endl;
+                ss << __func__ << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
                 return -1;
         }
 
@@ -510,7 +515,8 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
         concurrency.unlock();
 
         if (!arrived) {
-                cerr << __func__ << ": Timed out" << endl;
+                ss << __func__ << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
                 return -1;
         }
 
