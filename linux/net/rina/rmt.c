@@ -195,6 +195,7 @@ struct rmt {
         struct kfa *            kfa;
         struct efcp_container * efcpc;
         struct serdes *         serdes;
+        struct rmt_ps *         ps;
 
         struct {
                 struct workqueue_struct * wq;
@@ -294,6 +295,8 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
+
+        tmp->ps = NULL;
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
@@ -471,6 +474,7 @@ int rmt_send_port_id(struct rmt * instance,
 {
         struct rwq_work_item * item;
         struct rmt_queue *     s_queue;
+        struct rmt_ps *        ps;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus PDU passed");
@@ -482,6 +486,7 @@ int rmt_send_port_id(struct rmt * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
+        ps = instance->ps;
         if (!instance->egress.queues) {
                 LOG_ERR("No queues to push into");
 
@@ -503,6 +508,12 @@ int rmt_send_port_id(struct rmt * instance,
                 spin_unlock(&instance->egress.queues->lock);
                 pdu_destroy(pdu);
                 return -1;
+        }
+
+        if (ps && ps->max_q_policy) {
+                if (rfifo_length(s_queue->queue) >= ps->max_q) {
+                        ps->max_q_policy(ps);
+                }
         }
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
@@ -1113,6 +1124,7 @@ int rmt_receive(struct rmt * instance,
 {
         struct rwq_work_item * item;
         struct rmt_queue *     r_queue;
+        struct rmt_ps *        ps;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1124,6 +1136,7 @@ int rmt_receive(struct rmt * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+        ps = instance->ps;
         if (!is_port_id_ok(from)) {
                 LOG_ERR("Wrong port-id %d", from);
 
@@ -1153,6 +1166,12 @@ int rmt_receive(struct rmt * instance,
 
                 sdu_destroy(sdu);
                 return -1;
+        }
+
+        if (ps && ps->max_q_policy) {
+                if (rfifo_length(r_queue->queue) >= ps->max_q) {
+                        ps->max_q_policy(ps);
+                }
         }
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {
