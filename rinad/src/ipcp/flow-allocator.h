@@ -303,7 +303,7 @@ private:
 	INamespaceManager * namespace_manager_;
 	ISecurityManager * security_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;
-	FAIState state_;
+	FAIState state;
 
 	rina::Timer timer;
 

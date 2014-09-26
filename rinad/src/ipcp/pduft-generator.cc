@@ -236,12 +236,12 @@ void Graph::init_edges() {
 		if (origin->connection_contains_address(dest->address_) &&
 				dest->connection_contains_address(origin->address_)) {
 			edges_.push_back(new Edge(origin->address_, (*flowIt)->port_id_, dest->address_, dest->port_id_, 1));
-			origin->connections_.remove(dest->address_);
-			dest->connections_.remove(origin->address_);
+			origin->connections.remove(dest->address_);
+			dest->connections.remove(origin->address_);
 		} else {
 			origin->port_id_ = (*flowIt)->port_id_;
-			origin->connections_.push_back(dest->address_);
-			dest->connections_.push_back(origin->address_);
+			origin->connections.push_back(dest->address_);
+			dest->connections.push_back(origin->address_);
 		}
 	}
 }
@@ -786,9 +786,9 @@ LinkStatePDUFTGeneratorPolicy::~LinkStatePDUFTGeneratorPolicy() {
 
 void LinkStatePDUFTGeneratorPolicy::set_ipc_process(IPCProcess * ipc_process) {
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process_->get_rib_daemon();
-	encoder_ = ipc_process_->get_encoder();
-	cdap_session_manager_ = ipc_process_->get_cdap_session_manager();
+	rib_daemon_ = ipc_process_->rib_daemon;
+	encoder_ = ipc_process_->encoder;
+	cdap_session_manager_ = ipc_process_->cdap_session_manager;
 	populateRIB();
 	subscribeToEvents();
 	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_);
@@ -882,7 +882,7 @@ void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 	try
 	{
 		db_->addObjectToGroup(ipc_process_->get_address(), event->flow_information_.portId,
-				ipc_process_->get_namespace_manager()->
+				ipc_process_->namespace_manager->
 					getAdressByname(event->flow_information_.remoteAppName), 1);
 	} catch (Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
@@ -900,7 +900,7 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 			LOG_INFO("There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
-								ipc_process_->get_namespace_manager()->
+								ipc_process_->namespace_manager->
 								getAdressByname(it->remoteAppName), 1);
 				allocated_flows_.erase(it);
 				break;
@@ -935,7 +935,7 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(NeighborAddedEvent
 void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const {
 	rina::AccessGuard g(*lock_);
 
-	std::list<rina::FlowInformation> nMinusOneFlows = ipc_process_->get_resource_allocator()->
+	std::list<rina::FlowInformation> nMinusOneFlows = ipc_process_->resource_allocator->
 			get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
 
 	std::vector< std::list<FlowStateObject *> > groupsToSend =

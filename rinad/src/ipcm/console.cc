@@ -119,44 +119,43 @@ IPCMConsole::init()
         inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr);
         server_address.sin_port = htons(ipcm.config.local.consolePort);
 
-        sfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sfd < 0) {
-                ss << __func__ << " Error [" << errno <<
-                        "] calling socket() " << endl;
-                FLUSH_LOG(ERR, ss);
-                goto err;
-        }
-
-        ret = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR,
-                         &optval, sizeof(optval));
-        if (ret < 0) {
-                ss << __func__ << " Error [" << errno <<
-                        "] calling setsockopt(SOL_SOCKET, "
-                        "SO_REUSEADDR, 1)" << endl;
-                FLUSH_LOG(ERR, ss);
-        }
-
-        ret = bind(sfd, reinterpret_cast<struct sockaddr *>(&server_address),
-                   sizeof(server_address));
-        if (ret < 0) {
+        try {
+                sfd = socket(AF_INET, SOCK_STREAM, 0);
+                if (sfd < 0) {
                         ss << __func__ << " Error [" << errno <<
-                        "] calling bind() " << endl;
-                FLUSH_LOG(ERR, ss);
-                goto err;
-        }
+                                "] calling socket() " << endl;
+                        throw Exception();
+                }
 
-        ret = listen(sfd, 5);
-        if (ret < 0) {
-                ss << __func__ << " Error [" << errno <<
-                        "] calling listen() " << endl;
-                FLUSH_LOG(ERR, ss);
-                goto err;
-        }
+                ret = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR,
+                                &optval, sizeof(optval));
+                if (ret < 0) {
+                        ss << __func__ << " Error [" << errno <<
+                                "] calling setsockopt(SOL_SOCKET, "
+                                "SO_REUSEADDR, 1)" << endl;
+                        FLUSH_LOG(WARN, ss);
+                }
 
-        return sfd;
-err:
-        if (sfd >= 0) {
-                close(sfd);
+                ret = bind(sfd, reinterpret_cast<struct sockaddr *>(&server_address),
+                                sizeof(server_address));
+                if (ret < 0) {
+                        ss << __func__ << " Error [" << errno <<
+                                "] calling bind() " << endl;
+                        throw Exception();
+                }
+
+                ret = listen(sfd, 5);
+                if (ret < 0) {
+                        ss << __func__ << " Error [" << errno <<
+                                "] calling listen() " << endl;
+                        throw Exception();
+                }
+        } catch (Exception) {
+                FLUSH_LOG(ERR, ss);
+                if (sfd >= 0) {
+                        close(sfd);
+                        sfd = -1;
+                }
         }
 
         return sfd;

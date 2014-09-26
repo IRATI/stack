@@ -405,7 +405,7 @@ public:
 		encoder_->addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 				new FakeEncoder());
 		rib_daemon_ = new FakeRIBDaemon();
-		state_= rinad::INITIALIZED;
+		state= rinad::INITIALIZED;
 		address_ = 0;
 		timeout_ = 2000;
 		cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(&wire_factory_,
@@ -421,47 +421,17 @@ public:
 	unsigned short get_id() {
 		return 0;
 	}
-	rinad::IDelimiter* get_delimiter() {
-		return 0;
-	}
-	rinad::Encoder* get_encoder() {
-		return encoder_;
-	}
-	rina::CDAPSessionManagerInterface* get_cdap_session_manager() {
-		return cdap_session_manager_;
-	}
-	rinad::IEnrollmentTask* get_enrollment_task() {
-		return 0;
-	}
-	rinad::IFlowAllocator* get_flow_allocator() {
-		return 0;
-	}
-	rinad::INamespaceManager* get_namespace_manager() {
-		return namespace_manager_;
-	}
-	rinad::IResourceAllocator* get_resource_allocator() {
-		return 0;
-	}
-	rinad::ISecurityManager* get_security_manager() {
-		return 0;
-	}
-	rinad::IRIBDaemon* get_rib_daemon() {
-		return rib_daemon_;
-	}
 	unsigned int get_address() const{
 		return address_;
 	}
 	void set_address(unsigned int address){
 		address_ = address;
 	}
-	const rina::ApplicationProcessNamingInformation& get_name() const {
-		return name_;
-	}
 	const rinad::IPCProcessOperationalState& get_operational_state() const {
-		return state_;
+		return state;
 	}
 	void set_operational_state(const rinad::IPCProcessOperationalState& operational_state){
-		state_ = operational_state;
+		state = operational_state;
 	}
 	rina::DIFInformation& get_dif_information() const {
 		throw Exception();
@@ -478,7 +448,7 @@ private:
 	rinad::IRIBDaemon * rib_daemon_;
 	rinad::INamespaceManager * namespace_manager_;
 	rina::ApplicationProcessNamingInformation name_;
-	rinad::IPCProcessOperationalState state_;
+	rinad::IPCProcessOperationalState state;
 	rina::DIFInformation dif_information_;
 	std::list<rina::Neighbor*> neighbors_;
 	unsigned int address_;
@@ -500,7 +470,7 @@ int addObjectToGroup_NoObjectCheckModified_False() {
 int addObjectToGroup_AddObjectCheckModified_True() {
 	FakeIPCProcess ipcProcess;
 	rinad::FlowStateRIBObjectGroup group = rinad::FlowStateRIBObjectGroup(&ipcProcess, 0);
-	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.get_encoder(),
+	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.encoder,
 			&group,0);
 
 	fsdb.addObjectToGroup(1, 1, 1, 1);
@@ -514,7 +484,7 @@ int addObjectToGroup_AddObjectCheckModified_True() {
 int incrementAge_AddObjectCheckModified_False() {
 	FakeIPCProcess ipcProcess;
 	rinad::FlowStateRIBObjectGroup group = rinad::FlowStateRIBObjectGroup(&ipcProcess, 0);
-	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.get_encoder(),
+	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.encoder,
 			&group,0);
 
 	fsdb.addObjectToGroup(1, 1, 1, 1);

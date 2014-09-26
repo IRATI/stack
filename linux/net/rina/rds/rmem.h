@@ -26,8 +26,7 @@
 void * rkmalloc(size_t size, gfp_t flags);
 void * rkzalloc(size_t size, gfp_t flags);
 void   rkfree(void * ptr);
-char * rkstrdup(const char *s, gfp_t flags);
-void rms_dump(void);
+void   rms_dump(void);
 
 #include <linux/string.h>
 
