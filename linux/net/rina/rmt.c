@@ -43,6 +43,9 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
+
+static LIST_HEAD(policy_sets);
+
 struct rmt_queue {
         struct rfifo *    queue;
         port_id_t         port_id;
@@ -1262,17 +1265,61 @@ int rmt_pft_flush(struct rmt * instance)
 }
 EXPORT_SYMBOL(rmt_pft_flush);
 
-int publish_rmt_ps(const char *name, const struct rmt_ps_factory *factory)
+int publish_rmt_ps(struct rmt_ps_factory *f)
 {
-        LOG_ERR("%s not yet implemented", __func__);
+        struct base_ps_factory *factory;
+        struct base_ps_factory *cur;
 
-        return -1;
+        if (f == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        factory = &f->base;
+        if (factory->name == NULL) {
+                LOG_ERR("%s: NULL name", __func__);
+                return -1;
+        }
+
+        list_for_each_entry(cur, &policy_sets, node) {
+                if (strcmp(factory->name, cur->name) == 0) {
+                        LOG_ERR("%s: policy set '%s' already published",
+                                __func__, factory->name);
+                        return -1;
+                }
+        }
+
+        list_add(&factory->node, &policy_sets);
+
+        LOG_INFO("policy-set '%s' published successfully", factory->name);
+
+        return 0;
 }
 EXPORT_SYMBOL(publish_rmt_ps);
 
 int unpublish_rmt_ps(const char *name)
 {
-        LOG_ERR("%s not yet implemented", __func__);
+        struct base_ps_factory *cur;
+
+        if (name == NULL) {
+                LOG_ERR("%s: NULL name", __func__);
+                return -1;
+        }
+
+        list_for_each_entry(cur, &policy_sets, node) {
+                if (strcmp(name, cur->name) == 0) {
+                        /* Don't free here, the plug-in has the
+                         * ownership. */
+                        list_del(&cur->node);
+                        LOG_INFO("policy-set '%s' unpublished successfully",
+                                        cur->name);
+
+                        return 0;
+                }
+        }
+
+        LOG_ERR("%s: policy set '%s' has not been published",
+                __func__, name);
 
         return -1;
 }

@@ -21,12 +21,26 @@
 #ifndef RINA_KRPI_RMT_H
 #define RINA_KRPI_RMT_H
 
+#include <linux/list.h>
 #include "rmt.h"
 
 #define PARAMETER_DESC_MAX_LEN  32
+#define POLICY_SET_NAME_MAX_LEN 64
+
 struct parameter_desc {
         char type;
         char name[PARAMETER_DESC_MAX_LEN];
+};
+
+struct base_ps_factory {
+        /* A name for this policy-set. */
+        char name[POLICY_SET_NAME_MAX_LEN];
+
+        /* Policy-set-specific parameters. */
+        struct parameter_desc   *parameters;
+        unsigned int num_parameters;
+
+        struct list_head        node;
 };
 
 struct rmt_ps {
@@ -44,18 +58,17 @@ struct rmt_ps {
 };
 
 struct rmt_ps_factory {
+        /* Parent struct. */
+        struct base_ps_factory base;
+
         /* Factory callbacks. */
         struct rmt_ps (*create)(struct rmt *);
         void (*destroy)(struct rmt_ps *);
-
-        /* Policy-set-specific parameters. */
-        struct parameter_desc *parameters;
-        unsigned int num_parameters;
 };
 
 /* The ownership of @factory is not passed. Plugin module is therefore
  * in charge of deallocate its memory, if necessary. */
-int publish_rmt_ps(const char *name, const struct rmt_ps_factory *factory);
+int publish_rmt_ps(struct rmt_ps_factory *factory);
 
 int unpublish_rmt_ps(const char *name);
 
