@@ -1265,23 +1265,16 @@ int rmt_pft_flush(struct rmt * instance)
 }
 EXPORT_SYMBOL(rmt_pft_flush);
 
-int publish_rmt_ps(struct rmt_ps_factory *f)
+int publish_ps(struct list_head *head, struct base_ps_factory *factory)
 {
-        struct base_ps_factory *factory;
         struct base_ps_factory *cur;
 
-        if (f == NULL) {
-                LOG_ERR("%s: NULL factory", __func__);
-                return -1;
-        }
-
-        factory = &f->base;
         if (factory->name == NULL) {
                 LOG_ERR("%s: NULL name", __func__);
                 return -1;
         }
 
-        list_for_each_entry(cur, &policy_sets, node) {
+        list_for_each_entry(cur, head, node) {
                 if (strcmp(factory->name, cur->name) == 0) {
                         LOG_ERR("%s: policy set '%s' already published",
                                 __func__, factory->name);
@@ -1289,39 +1282,66 @@ int publish_rmt_ps(struct rmt_ps_factory *f)
                 }
         }
 
-        list_add(&factory->node, &policy_sets);
+        list_add(&factory->node, head);
 
         LOG_INFO("policy-set '%s' published successfully", factory->name);
 
         return 0;
 }
-EXPORT_SYMBOL(publish_rmt_ps);
 
-int unpublish_rmt_ps(const char *name)
+struct base_ps_factory *
+lookup_ps(struct list_head *head, const char *name)
 {
         struct base_ps_factory *cur;
 
         if (name == NULL) {
                 LOG_ERR("%s: NULL name", __func__);
-                return -1;
+                return NULL;
         }
 
-        list_for_each_entry(cur, &policy_sets, node) {
+        list_for_each_entry(cur, head, node) {
                 if (strcmp(name, cur->name) == 0) {
-                        /* Don't free here, the plug-in has the
-                         * ownership. */
-                        list_del(&cur->node);
-                        LOG_INFO("policy-set '%s' unpublished successfully",
-                                        cur->name);
-
-                        return 0;
+                        return cur;
                 }
         }
 
         LOG_ERR("%s: policy set '%s' has not been published",
                 __func__, name);
 
-        return -1;
+        return NULL;
+}
+
+int unpublish_ps(struct list_head *head, const char *name)
+{
+        struct base_ps_factory *factory = lookup_ps(head, name);
+
+        if (factory == NULL) {
+                return -1;
+        }
+
+        /* Don't free here, the plug-in has the
+         * ownership. */
+        list_del(&factory->node);
+        LOG_INFO("policy-set '%s' unpublished successfully",
+                        factory->name);
+
+        return 0;
+}
+
+int publish_rmt_ps(struct rmt_ps_factory *factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        return publish_ps(&policy_sets, &factory->base);
+}
+EXPORT_SYMBOL(publish_rmt_ps);
+
+int unpublish_rmt_ps(const char *name)
+{
+        return unpublish_ps(&policy_sets, name);
 }
 EXPORT_SYMBOL(unpublish_rmt_ps);
 
