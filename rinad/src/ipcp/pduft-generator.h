@@ -125,7 +125,7 @@ private:
 	struct CheckedVertex {
 		unsigned int address_;
 		int port_id_;
-		std::list<unsigned int> connections_;
+		std::list<unsigned int> connections;
 
 		CheckedVertex(unsigned int address) {
 			address_ = address;
@@ -134,7 +134,7 @@ private:
 
 		bool connection_contains_address(unsigned int address) {
 			std::list<unsigned int>::iterator it;
-			for(it = connections_.begin(); it != connections_.end(); ++it) {
+			for(it = connections.begin(); it != connections.end(); ++it) {
 				if ((*it) == address) {
 					return true;
 				}

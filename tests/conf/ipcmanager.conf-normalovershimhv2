@@ -34,9 +34,10 @@
     "difName" : "test-shim-hv.DIF",
     "configParameters" : {
      "vmpi-id" : "0"
-      } 
+      }
   }, {
     "difName" : "test-normal.DIF",
+    "difType" : "normal-ipc",
     "dataTransferConstants" : {
      "addressLength" : 2,
      "cepIdLength" : 2,
@@ -50,16 +51,50 @@
      "configParameters" : {
       "bar" : "foo"
       },
-     "qosCubes" : [ {
-         "name" : "reliable",
+    "qosCubes" : [ {
+         "name" : "unreliablewithflowcontrol",
          "id" : 1,
          "partialDelivery" : false,
-         "orderedDelivery" : true
-      }, {
-         "name" : "unreliable",
+         "orderedDelivery" : false,
+         "efcpPolicies" : {
+           "dtcpPresent" : true,
+           "dtcpConfiguration" : {
+             "rtxcontrol" : false,
+             "flowcontrol" : true,
+             "flowcontrolconfig" : {
+               "ratebased" : false,
+               "windowbased" : true,
+               "windowbasedconfig" : {
+                 "maxclosedwindowqueuelength" : 200,
+                 "initialcredit" : 50
+               }
+             }
+           }
+         }
+       }, {
+     	 "name" : "reliablewithflowcontrol",
          "id" : 2,
-         "partialDelivery" : true,
-         "orderedDelivery" : false
+         "partialDelivery" : false,
+         "orderedDelivery" : false,
+         "efcpPolicies" : {
+           "dtcpPresent" : true,
+           "dtcpConfiguration" : {
+             "rtxcontrol" : true,
+             "rtxcontrolconfig" : {
+               "datarxmsnmax" : 5,
+               "initialRtxTime" : 20
+             },
+             "flowcontrol" : true,
+             "flowcontrolconfig" : {
+               "ratebased" : false,
+               "windowbased" : true,
+               "windowbasedconfig" : {
+                 "maxclosedwindowqueuelength" : 200,
+                 "initialcredit" : 50
+               }
+             }
+           }
+         }
      } ],
      "knownIPCProcessAddresses" : [ {
       "apName" : "test-normal-1.IPCP",
@@ -69,6 +104,21 @@
       "apName" : "test-normal-2.IPCP",
       "apInstance" : "1",
       "address" : 17
-   } ]
+   } ],
+    "pdufTableGeneratorConfiguration" : {
+        "pduFtGeneratorPolicy" : {
+          "name" : "LinkState",
+          "version" : "0"
+        },
+        "linkStateRoutingConfiguration" : {
+          "objectMaximumAge" : 10000,
+          "waitUntilReadCDAP" : 5001,
+          "waitUntilError" : 5001,
+          "waitUntilPDUFTComputation" : 103,
+          "waitUntilFSODBPropagation" : 101,
+          "waitUntilAgeIncrement" : 997,
+          "routingAlgorithm" : "Dijkstra"
+        }
+     }
   } ]
 }

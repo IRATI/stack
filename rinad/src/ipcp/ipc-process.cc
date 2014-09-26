@@ -38,7 +38,7 @@ namespace rinad {
 #define IPCP_LOG_FILE_PREFIX "/tmp/ipcp-log-file"
 
 //Class IPCProcessImpl
-IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
 		unsigned short id, unsigned int ipc_manager_port) {
 	try {
 		std::stringstream ss;
@@ -53,38 +53,39 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         exit(EXIT_FAILURE);
 	}
 
-	name_ = name;
-	state_ = NOT_INITIALIZED;
+	name = nm;
+	state = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
-	init_delimiter();
+	// Initialize subcomponents
 	init_cdap_session_manager();
 	init_encoder();
-	init_enrollment_task();
-	init_flow_allocator();
-	init_namespace_manager();
-	init_resource_allocator();
-	init_security_manager();
-	init_rib_daemon();
+	delimiter = 0; //TODO initialize Delimiter once it is implemented
+	enrollment_task = new EnrollmentTask();
+	flow_allocator = new FlowAllocator();
+	namespace_manager = new NamespaceManager();
+	resource_allocator = new ResourceAllocator();
+	security_manager = new SecurityManager();
+	rib_daemon = new RIBDaemon();
 
-	rib_daemon_->set_ipc_process(this);
-	enrollment_task_->set_ipc_process(this);
-	resource_allocator_->set_ipc_process(this);
-	namespace_manager_->set_ipc_process(this);
-	flow_allocator_->set_ipc_process(this);
-	security_manager_->set_ipc_process(this);
+	rib_daemon->set_ipc_process(this);
+	enrollment_task->set_ipc_process(this);
+	resource_allocator->set_ipc_process(this);
+	namespace_manager->set_ipc_process(this);
+	flow_allocator->set_ipc_process(this);
+	security_manager->set_ipc_process(this);
 
 	try {
-		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
+		rina::extendedIPCManager->notifyIPCProcessInitialized(name);
 	} catch (Exception &e) {
 		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
 		exit(EXIT_FAILURE);
 	}
 
-	state_ = INITIALIZED;
+	state = INITIALIZED;
 
 	LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
-			name_.processName.c_str(), name_.processInstance.c_str(), id);
+			name.processName.c_str(), name.processInstance.c_str(), id);
 }
 
 IPCProcessImpl::~IPCProcessImpl() {
@@ -92,168 +93,99 @@ IPCProcessImpl::~IPCProcessImpl() {
 		delete lock_;
 	}
 
-	if (delimiter_) {
-		delete delimiter_;
+	if (delimiter) {
+		delete delimiter;
 	}
 
-	if (encoder_) {
-		delete encoder_;
+	if (encoder) {
+		delete encoder;
 	}
 
-	if (cdap_session_manager_) {
-		delete cdap_session_manager_;
+	if (cdap_session_manager) {
+		delete cdap_session_manager;
 	}
 
-	if (enrollment_task_) {
-		delete enrollment_task_;
+	if (enrollment_task) {
+		delete enrollment_task;
 	}
 
-	if (flow_allocator_) {
-		delete flow_allocator_;
+	if (flow_allocator) {
+		delete flow_allocator;
 	}
 
-	if (namespace_manager_) {
-		delete namespace_manager_;
+	if (namespace_manager) {
+		delete namespace_manager;
 	}
 
-	if (resource_allocator_) {
-		delete resource_allocator_;
+	if (resource_allocator) {
+		delete resource_allocator;
 	}
 
-	if (security_manager_) {
-		delete security_manager_;
+	if (security_manager) {
+		delete security_manager;
 	}
 
-	if (rib_daemon_) {
-		delete rib_daemon_;
+	if (rib_daemon) {
+		delete rib_daemon;
 	}
-}
-
-void IPCProcessImpl::init_delimiter() {
-	//TODO initialize Delimiter once it is implemented
-	delimiter_ = 0;
 }
 
 void IPCProcessImpl::init_cdap_session_manager() {
 	rina::WireMessageProviderFactory wire_factory_;
 	rina::CDAPSessionManagerFactory cdap_manager_factory_;
 	long timeout = 180000;
-	cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(
+	cdap_session_manager = cdap_manager_factory_.createCDAPSessionManager(
 			&wire_factory_, timeout);
 }
 
 void IPCProcessImpl::init_encoder() {
-	encoder_ = new rinad::Encoder();
-	encoder_->addEncoder(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
+	encoder = new rinad::Encoder();
+	encoder->addEncoder(EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
 			new DataTransferConstantsEncoder());
-	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 			new DirectoryForwardingTableEntryEncoder());
-	encoder_->addEncoder(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 			new DirectoryForwardingTableEntryListEncoder());
-	encoder_->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::ENROLLMENT_INFO_OBJECT_CLASS,
 			new EnrollmentInformationRequestEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::FLOW_RIB_OBJECT_CLASS,
 			new FlowEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 			new FlowStateObjectEncoder());
-	encoder_->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
 			new FlowStateObjectListEncoder());
-	encoder_->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::NEIGHBOR_RIB_OBJECT_CLASS,
 			new NeighborEncoder());
-	encoder_->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::NEIGHBOR_SET_RIB_OBJECT_CLASS,
 			new NeighborListEncoder());
-	encoder_->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
 			new QoSCubeEncoder());
-	encoder_->addEncoder(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 			new QoSCubeListEncoder());
-	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS,
 			new WhatevercastNameEncoder());
-	encoder_->addEncoder(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
 			new WhatevercastNameListEncoder());
-	encoder_->addEncoder(EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
+	encoder->addEncoder(EncoderConstants::WATCHDOG_RIB_OBJECT_CLASS,
 			new WatchdogEncoder());
-}
-
-void IPCProcessImpl::init_enrollment_task() {
-	enrollment_task_ = new EnrollmentTask();
-}
-
-void IPCProcessImpl::init_flow_allocator() {
-	flow_allocator_ = new FlowAllocator();
-}
-
-void IPCProcessImpl::init_namespace_manager() {
-	namespace_manager_ = new NamespaceManager();
-}
-
-void IPCProcessImpl::init_resource_allocator() {
-	resource_allocator_ = new ResourceAllocator();
-}
-
-void IPCProcessImpl::init_security_manager() {
-	security_manager_ = new SecurityManager();
-}
-
-void IPCProcessImpl::init_rib_daemon() {
-	rib_daemon_ = new RIBDaemon();
 }
 
 unsigned short IPCProcessImpl::get_id() {
 	return rina::extendedIPCManager->ipcProcessId;
 }
 
-const rina::ApplicationProcessNamingInformation& IPCProcessImpl::get_name() const {
-	return name_;
-}
-
-IDelimiter * IPCProcessImpl::get_delimiter() {
-	return delimiter_;
-}
-
-Encoder * IPCProcessImpl::get_encoder() {
-	return encoder_;
-}
-
-rina::CDAPSessionManagerInterface* IPCProcessImpl::get_cdap_session_manager() {
-	return cdap_session_manager_;
-}
-
-IEnrollmentTask * IPCProcessImpl::get_enrollment_task() {
-	return enrollment_task_;
-}
-
-IFlowAllocator * IPCProcessImpl::get_flow_allocator() {
-	return flow_allocator_;
-}
-
-INamespaceManager * IPCProcessImpl::get_namespace_manager() {
-	return namespace_manager_;
-}
-
-IResourceAllocator * IPCProcessImpl::get_resource_allocator() {
-	return resource_allocator_;
-}
-
-ISecurityManager * IPCProcessImpl::get_security_manager() {
-	return security_manager_;
-}
-
-IRIBDaemon * IPCProcessImpl::get_rib_daemon() {
-	return rib_daemon_;
-}
-
 const std::list<rina::Neighbor*> IPCProcessImpl::get_neighbors() const {
-	return enrollment_task_->get_neighbors();
+	return enrollment_task->get_neighbors();
 }
 
 const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const {
 	rina::AccessGuard g(*lock_);
-	return state_;
+	return state;
 }
 
 void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& operational_state) {
 	rina::AccessGuard g(*lock_);
-	state_ = operational_state;
+	state = operational_state;
 }
 
 const rina::DIFInformation& IPCProcessImpl::get_dif_information() const {
@@ -268,7 +200,7 @@ void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_informa
 
 unsigned int IPCProcessImpl::get_address() const {
 	rina::AccessGuard g(*lock_);
-	if (state_ != ASSIGNED_TO_DIF) {
+	if (state != ASSIGNED_TO_DIF) {
 		return 0;
 	}
 
@@ -283,10 +215,10 @@ void IPCProcessImpl::set_address(unsigned int address) {
 void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
 
-	if (state_ != INITIALIZED) {
+	if (state != INITIALIZED) {
 		//The IPC Process can only be assigned to a DIF once, reply with error message
 		LOG_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
-				state_);
+				state);
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
 		return;
 	}
@@ -295,7 +227,7 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 		unsigned int handle = rina::kernelIPCProcess->assignToDIF(event.difInformation);
 		pending_events_.insert(std::pair<unsigned int,
 				rina::AssignToDIFRequestEvent>(handle, event));
-		state_ = ASSIGN_TO_DIF_IN_PROCESS;
+		state = ASSIGN_TO_DIF_IN_PROCESS;
 	} catch (Exception &e) {
 		LOG_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
@@ -305,15 +237,15 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {
 	rina::AccessGuard g(*lock_);
 
-	if (state_ == ASSIGNED_TO_DIF ) {
+	if (state == ASSIGNED_TO_DIF ) {
 		LOG_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
 				event.result);
 		return;
 	}
 
-	if (state_ != ASSIGN_TO_DIF_IN_PROCESS) {
+	if (state != ASSIGN_TO_DIF_IN_PROCESS) {
 		LOG_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
-				state_);
+				state);
 		return;
 	}
 
@@ -333,7 +265,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 				event.result);
 		LOG_ERR("Could not assign IPC Process to DIF %s",
 				it->second.difInformation.dif_name_.processName.c_str());
-		state_ = INITIALIZED;
+		state = INITIALIZED;
 
 		try {
 			rina::extendedIPCManager->assignToDIFResponse(it->second, -1);
@@ -347,14 +279,14 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	//TODO do stuff
 	LOG_DBG("The kernel processed successfully the Assign to DIF request");
 
-	rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
-	resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
-	namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
-	security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
-	flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
-	enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
+	rib_daemon->set_dif_configuration(dif_information_.dif_configuration_);
+	resource_allocator->set_dif_configuration(dif_information_.dif_configuration_);
+	namespace_manager->set_dif_configuration(dif_information_.dif_configuration_);
+	security_manager->set_dif_configuration(dif_information_.dif_configuration_);
+	flow_allocator->set_dif_configuration(dif_information_.dif_configuration_);
+	enrollment_task->set_dif_configuration(dif_information_.dif_configuration_);
 
-	state_ = ASSIGNED_TO_DIF;
+	state = ASSIGNED_TO_DIF;
 
 	try {
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
@@ -402,7 +334,7 @@ ipc_process_dif_registration_notification_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::IPCProcessDIFRegistrationEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+	ipcp->resource_allocator->get_n_minus_one_flow_manager()->
 			processRegistrationNotification(*event);
 }
 
@@ -433,7 +365,7 @@ allocate_flow_request_result_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::AllocateFlowRequestResultEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+	ipcp->resource_allocator->get_n_minus_one_flow_manager()->
 			allocateRequestResult(*event);
 }
 
@@ -446,10 +378,10 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
 
 	if (event->localRequest) {
 		//A local application is requesting this IPC Process to allocate a flow
-		ipcp->flow_allocator_->submitAllocateRequest(*event);
+		ipcp->flow_allocator->submitAllocateRequest(*event);
 	} else {
 		//A remote IPC process is requesting a flow to this IPC Process
-		ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+		ipcp->resource_allocator->get_n_minus_one_flow_manager()->
 				flowAllocationRequested(*event);
 	}
 }
@@ -461,7 +393,7 @@ deallocate_flow_response_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::DeallocateFlowResponseEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+	ipcp->resource_allocator->get_n_minus_one_flow_manager()->
 					deallocateFlowResponse(*event);
 }
 
@@ -472,7 +404,7 @@ flow_deallocated_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::FlowDeallocatedEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+	ipcp->resource_allocator->get_n_minus_one_flow_manager()->
 					flowDeallocatedRemotely(*event);
 }
 
@@ -483,7 +415,7 @@ enroll_to_dif_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::EnrollToDIFRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->enrollment_task_->processEnrollmentRequestEvent(event);
+	ipcp->enrollment_task->processEnrollmentRequestEvent(event);
 }
 
 static void
@@ -493,7 +425,7 @@ ipc_process_query_rib_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::QueryRIBRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->rib_daemon_->processQueryRIBRequestEvent(*event);
+	ipcp->rib_daemon->processQueryRIBRequestEvent(*event);
 	ipcp->requestPDUFTEDump();
 }
 
@@ -504,7 +436,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->namespace_manager_->processApplicationRegistrationRequestEvent(*event);
+	ipcp->namespace_manager->processApplicationRegistrationRequestEvent(*event);
 }
 
 static void
@@ -514,7 +446,7 @@ application_unregistration_request_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->namespace_manager_->processApplicationUnregistrationRequestEvent(*event);
+	ipcp->namespace_manager->processApplicationUnregistrationRequestEvent(*event);
 }
 
 static void
@@ -524,7 +456,7 @@ ipc_process_create_connection_response_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::CreateConnectionResponseEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->flow_allocator_->processCreateConnectionResponseEvent(*event);
+	ipcp->flow_allocator->processCreateConnectionResponseEvent(*event);
 }
 
 static void
@@ -534,7 +466,7 @@ allocate_flow_response_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->flow_allocator_->submitAllocateResponse(*event);
+	ipcp->flow_allocator->submitAllocateResponse(*event);
 }
 
 static void
@@ -544,7 +476,7 @@ ipc_process_create_connection_result_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::CreateConnectionResultEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->flow_allocator_->processCreateConnectionResultEvent(*event);
+	ipcp->flow_allocator->processCreateConnectionResultEvent(*event);
 }
 
 static void
@@ -554,7 +486,7 @@ ipc_process_update_connection_response_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::UpdateConnectionResponseEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->flow_allocator_->processUpdateConnectionResponseEvent(*event);
+	ipcp->flow_allocator->processUpdateConnectionResponseEvent(*event);
 }
 
 static void
@@ -564,7 +496,7 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
 	DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
 	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
 
-	ipcp->flow_allocator_->submitDeallocate(*event);
+	ipcp->flow_allocator->submitDeallocate(*event);
 }
 
 static void

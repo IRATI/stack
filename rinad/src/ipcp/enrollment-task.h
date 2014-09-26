@@ -198,7 +198,7 @@ public:
 	/// @param cdapSessionDescriptor
 	void flowDeallocated(rina::CDAPSessionDescriptor * cdapSessionDescriptor);
 
-	State state_;
+	State state;
 	rina::Neighbor * remote_peer_;
 	bool enroller_;
 
