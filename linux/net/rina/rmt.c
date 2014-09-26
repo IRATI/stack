@@ -39,6 +39,7 @@
 #include "efcp-utils.h"
 #include "serdes.h"
 #include "pdu-ser.h"
+#include "rmt-ps.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
@@ -1260,6 +1261,22 @@ int rmt_pft_flush(struct rmt * instance)
         return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1;
 }
 EXPORT_SYMBOL(rmt_pft_flush);
+
+int publish_rmt_ps(const char *name, const struct rmt_ps_factory *factory)
+{
+        LOG_ERR("%s not yet implemented", __func__);
+
+        return -1;
+}
+EXPORT_SYMBOL(publish_rmt_ps);
+
+int unpublish_rmt_ps(const char *name)
+{
+        LOG_ERR("%s not yet implemented", __func__);
+
+        return -1;
+}
+EXPORT_SYMBOL(unpublish_rmt_ps);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 #if 0
