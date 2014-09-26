@@ -1129,6 +1129,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         LOG_WARN("Unknown config param for eth shim");
         }
 
+        /* Fail here if we didn't get an interface */
+        if (!info->interface_name) {
+                LOG_ERR("Didn't get an interface name");
+                name_destroy(data->dif_name);
+                data->dif_name = NULL;
+                return -1;
+        }
+
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
 
