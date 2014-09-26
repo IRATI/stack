@@ -21,27 +21,9 @@
 #ifndef RINA_KRPI_RMT_H
 #define RINA_KRPI_RMT_H
 
-#include <linux/list.h>
 #include "rmt.h"
+#include "ps-factory.h"
 
-#define PARAMETER_DESC_MAX_LEN  32
-#define POLICY_SET_NAME_MAX_LEN 64
-
-struct parameter_desc {
-        char type;
-        char name[PARAMETER_DESC_MAX_LEN];
-};
-
-struct base_ps_factory {
-        /* A name for this policy-set. */
-        char name[POLICY_SET_NAME_MAX_LEN];
-
-        /* Policy-set-specific parameters. */
-        struct parameter_desc   *parameters;
-        unsigned int num_parameters;
-
-        struct list_head        node;
-};
 
 struct rmt_ps {
         /* Behavioural policies. */
