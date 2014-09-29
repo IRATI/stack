@@ -25,7 +25,6 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/workqueue.h>
-
 #include <net/sock.h>
 
 #define SHIM_NAME   "shim-tcp-udp"
@@ -144,7 +143,7 @@ struct exp_reg {
         int              port;
 };
 
-static struct dir_entry * 
+static struct dir_entry *
 find_dir_entry(struct ipcp_instance_data * data,
                const struct name * app_name)
 {
@@ -166,7 +165,7 @@ find_dir_entry(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static struct exp_reg * 
+static struct exp_reg *
 find_exp_reg(struct ipcp_instance_data * data,
              const struct name * app_name)
 {
@@ -184,7 +183,7 @@ find_exp_reg(struct ipcp_instance_data * data,
         }
 
         spin_unlock(&data->exp_lock);
-        
+
         return NULL;
 }
 
@@ -341,8 +340,8 @@ static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
                 LOG_ERR("Failed to destroy shim-tcp-udp flow");
 }
 
-static void tcp_deallocate_and_destroy_flow(struct ipcp_instance_data *data,
-                                            struct shim_tcp_udp_flow *flow)
+static void tcp_deallocate_and_destroy_flow(struct ipcp_instance_data * data,
+                                            struct shim_tcp_udp_flow *  flow)
 {
         ASSERT(data);
         ASSERT(flow);
@@ -673,7 +672,7 @@ static int udp_process_msg(struct socket * sock)
         struct buffer *             sdubuf;
         struct name *               sname;
         struct sdu *                du;
-        char                        buf[BUFFER_SIZE];
+        char                        buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
         int                         size;
 
         LOG_DBG("udp_process_msg");
@@ -844,7 +843,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 {
         struct buffer * sdubuf;
         struct sdu *    du;
-        char            buf[BUFFER_SIZE];
+        char            buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
         int             size;
         __be16          nlen;
 
@@ -1153,7 +1152,7 @@ static int tcp_process(struct socket * sock)
         }
 }
 
-static int tcp_udp_rcv_process_msg(struct sock *sk)
+static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
         int res;
 
@@ -1168,7 +1167,7 @@ static int tcp_udp_rcv_process_msg(struct sock *sk)
         }
 }
 
-static void tcp_udp_rcv_worker(struct work_struct *work)
+static void tcp_udp_rcv_worker(struct work_struct * work)
 {
         struct rcv_data * recvd, * next;
         unsigned long     flags;
@@ -1452,7 +1451,7 @@ static int ip_string_to_int(char *   ip_s,
                 }
                 *ip_a |= nr << (8 * (3-i));
         }
-                        
+
         return 0;
 }
 
