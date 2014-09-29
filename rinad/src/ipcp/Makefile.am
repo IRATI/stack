@@ -69,15 +69,16 @@ PASS_TESTS  = test-encoders   \
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
 
-EXTRA_DIST +=					\
-        rinad-ipcp.pc.in
-
-edit = $(SED)								\
-	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
-	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'			\
-	-e 's|@prefix[@]|$(prefix)|g'					\
-	-e 's|@includedir[@]|$(includedir)|g'				\
-	-e 's|@pkgincludedir[@]|$(pkgincludedir)|g'			\
+edit = $(SED)						\
+	-e 's|@SHELL[@]|$(SHELL)|g'			\
+	-e 's|@PKG_CONFIG[@]|$(PKG_CONFIG)|g'		\
+        -e 's|@PKG_CONFIG_PATH[@]|$(PKG_CONFIG_PATH)|g' \
+	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
+	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'	\
+	-e 's|@prefix[@]|$(prefix)|g'			\
+	-e 's|@includedir[@]|$(includedir)|g'		\
+	-e 's|@pkgincludedir[@]|$(pkgincludedir)|g'	\
+	-e 's|@pkglibdir[@]|$(pkglibdir)|g'		\
 	-e 's|@libdir[@]|$(libdir)|g'
 
 rinad-ipcp.pc: Makefile rinad-ipcp.pc.in
@@ -88,7 +89,22 @@ rinad-ipcp.pc: Makefile rinad-ipcp.pc.in
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
+EXTRA_DIST += rinad-ipcp.pc.in
 CLEANFILES += rinad-ipcp.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = rinad-ipcp.pc
+
+bin_SCRIPTS = ipcp-plugins-dir
+
+ipcp-plugins-dir: Makefile ipcp-plugins-dir.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	chmod u+x $@.tmp
+	mv $@.tmp $@
+
+EXTRA_DIST += ipcp-plugins-dir.in
+CLEANFILES += ipcp-plugins-dir
