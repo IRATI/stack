@@ -72,6 +72,7 @@ TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
 edit = $(SED)						\
 	-e 's|@SHELL[@]|$(SHELL)|g'			\
 	-e 's|@PKG_CONFIG[@]|$(PKG_CONFIG)|g'		\
+        -e 's|@PKG_CONFIG_PATH[@]|$(PKG_CONFIG_PATH)|g' \
 	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'	\
 	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'	\
 	-e 's|@prefix[@]|$(prefix)|g'			\
