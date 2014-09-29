@@ -4,6 +4,9 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+EXTRA_DIST   =
+CLEAN_FILES  =
+
 bin_PROGRAMS = ipcm
 
 noinst_LTLIBRARIES = libjsoncpp.la
