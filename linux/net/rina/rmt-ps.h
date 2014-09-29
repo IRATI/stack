@@ -48,7 +48,7 @@ struct rmt_ps_factory {
         struct base_ps_factory base;
 
         /* Factory callbacks. */
-        struct rmt_ps (*create)(struct rmt *);
+        struct rmt_ps *(*create)(struct rmt *);
         void (*destroy)(struct rmt_ps *);
 };
 

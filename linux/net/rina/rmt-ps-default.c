@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/module.h>
+#include <linux/string.h>
 
 #define RINA_PREFIX "rmt-ps-default"
 
@@ -27,8 +28,40 @@
 #include "rmt-ps.h"
 
 
+#define DEFAULT_NAME    "default"
+
+static struct rmt_ps *
+rmt_ps_default_create(struct rmt *rmt)
+{
+        return NULL;
+}
+
+static void
+rmt_ps_default_destroy(struct rmt_ps *ps)
+{
+}
+
+static struct rmt_ps_factory factory = {
+        .base = {
+                .parameters = NULL,
+                .num_parameters = 0,
+        },
+        .create = rmt_ps_default_create,
+        .destroy = rmt_ps_default_destroy,
+};
+
 static int __init mod_init(void)
 {
+        int ret;
+
+        strcpy(factory.base.name, DEFAULT_NAME);
+
+        ret = publish_rmt_ps(&factory);
+        if (ret) {
+                LOG_ERR("Failed to publish policy set factory");
+                return -1;
+        }
+
         LOG_INFO("RMT default policy set loaded successfully");
 
         return 0;
@@ -36,6 +69,13 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
+        int ret = unpublish_rmt_ps(DEFAULT_NAME);
+
+        if (ret) {
+                LOG_ERR("Failed to unpublish policy set factory");
+                return;
+        }
+
         LOG_INFO("RMT default policy set unloaded successfully");
 }
 
