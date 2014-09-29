@@ -1,6 +1,6 @@
 prefix=@prefix@
 libdir=@libdir@
-includedir=@includedir@
+includedir=@pkgincludedir@/ipcm
 
 Name: RINAd IPCM
 Description: RINA IPC Manager Daemon

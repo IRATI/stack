@@ -78,6 +78,7 @@ edit = $(SED)								\
 	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'			\
 	-e 's|@prefix[@]|$(prefix)|g'					\
 	-e 's|@includedir[@]|$(includedir)|g'				\
+	-e 's|@pkgincludedir[@]|$(pkgincludedir)|g'			\
 	-e 's|@libdir[@]|$(libdir)|g'
 
 rinad-ipcm.pc: Makefile rinad-ipcm.pc.in

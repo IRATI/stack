@@ -1,6 +1,6 @@
 prefix=@prefix@
 libdir=@libdir@
-includedir=@includedir@
+includedir=@pkgincludedir@/ipcp
 
 Name: RINAd IPCP
 Description: RINA IPC Process Daemon
