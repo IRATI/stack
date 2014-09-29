@@ -5,7 +5,7 @@
 #
 
 EXTRA_DIST   =
-CLEAN_FILES  =
+CLEANFILES   =
 
 bin_PROGRAMS = ipcp
 
