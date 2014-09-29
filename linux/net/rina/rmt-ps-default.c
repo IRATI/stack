@@ -26,19 +26,47 @@
 
 #include "logs.h"
 #include "rmt-ps.h"
+#include "rds/rmem.h"
 
 
 #define DEFAULT_NAME    "default"
 
+static void
+default_max_q_policy_tx(struct rmt_ps *ps, struct pdu *pdu,
+                        struct rfifo *queue)
+{
+}
+
+static void
+default_max_q_policy_rx(struct rmt_ps *ps, struct sdu *sdu,
+                        struct rfifo *queue)
+{
+}
+
 static struct rmt_ps *
 rmt_ps_default_create(struct rmt *rmt)
 {
-        return NULL;
+        struct rmt_ps *ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+
+        if (!ps) {
+             return ps;
+        }
+
+        ps->dm = rmt;
+        ps->max_q = 256;
+        ps->priv = NULL;
+        ps->max_q_policy_tx = default_max_q_policy_tx;
+        ps->max_q_policy_rx = default_max_q_policy_rx;
+
+        return ps;
 }
 
 static void
 rmt_ps_default_destroy(struct rmt_ps *ps)
 {
+        if (ps) {
+                rkfree(ps);
+        }
 }
 
 static struct rmt_ps_factory factory = {
