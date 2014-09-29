@@ -510,10 +510,9 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
-        if (ps && ps->max_q_policy) {
-                if (rfifo_length(s_queue->queue) >= ps->max_q) {
-                        ps->max_q_policy(ps);
-                }
+        if (ps && ps->max_q_policy_tx &&
+                        rfifo_length(s_queue->queue) >= ps->max_q) {
+                ps->max_q_policy_tx(ps, pdu, s_queue->queue);
         }
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
@@ -1168,10 +1167,9 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        if (ps && ps->max_q_policy) {
-                if (rfifo_length(r_queue->queue) >= ps->max_q) {
-                        ps->max_q_policy(ps);
-                }
+        if (ps && ps->max_q_policy_rx &&
+                        rfifo_length(r_queue->queue) >= ps->max_q) {
+                ps->max_q_policy_rx(ps, sdu, r_queue->queue);
         }
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {

@@ -21,13 +21,17 @@
 #ifndef RINA_KRPI_RMT_H
 #define RINA_KRPI_RMT_H
 
+#include <linux/types.h>
 #include "rmt.h"
+#include "pdu.h"
+#include "rds/rfifo.h"
 #include "ps-factory.h"
 
 
 struct rmt_ps {
         /* Behavioural policies. */
-        void (*max_q_policy)(struct rmt_ps *);
+        void (*max_q_policy_tx)(struct rmt_ps *, struct pdu *, struct rfifo *);
+        void (*max_q_policy_rx)(struct rmt_ps *, struct sdu *, struct rfifo *);
 
         /* Parametric policies. */
         int max_q;
