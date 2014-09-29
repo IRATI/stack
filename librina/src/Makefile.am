@@ -93,6 +93,7 @@ EXTRA_DIST +=					\
 
 edit = $(SED)								\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
+        -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'				\
 	-e 's|@LIBNL_MIN_VERSION[@]|$(LIBNL_MIN_VERSION)|g'		\
 	-e 's|@LIBNL3_CFLAGS[@]|$(LIBNL3_CFLAGS)|g'			\
 	-e 's|@LIBNL3_LIBS[@]|$(LIBNL3_LIBS)|g'				\
