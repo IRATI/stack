@@ -8,3 +8,4 @@ Version: @PACKAGE_VERSION@
 URL: @PACKAGE_URL@
 Requires: LibRINA >= @PACKAGE_VERSION@
 Libs: -L${libdir} -lrina
+Plugins-dir: @pkglibdir@/ipcp
