@@ -65,3 +65,26 @@ XFAIL_TESTS =
 PASS_TESTS  = test-empty
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
+
+EXTRA_DIST +=					\
+        rinad-ipcm.pc.in
+
+edit = $(SED)								\
+	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
+	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'			\
+	-e 's|@prefix[@]|$(prefix)|g'					\
+	-e 's|@includedir[@]|$(includedir)|g'				\
+	-e 's|@libdir[@]|$(libdir)|g'
+
+rinad-ipcm.pc: Makefile rinad-ipcm.pc.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES += rinad-ipcm.pc
+
+pkgconfigdir   = $(libdir)/pkgconfig
+pkgconfig_DATA = rinad-ipcm.pc
