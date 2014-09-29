@@ -50,6 +50,7 @@
     } ],
     "difConfigurations" : [ {
         "difName" : "fantastic.DIF",
+    	"difType" : "normal-ipc",
         "dataTransferConstants" : {
             "addressLength" : 2,
             "cepIdLength" : 2,
@@ -92,11 +93,13 @@
         } ]
     }, {
         "difName" : "300",
+    	"difType" : "shim-eth-vlan",
         "configParameters" : {
           "interface-name" : "eth1"
         } 
     }, {
         "difName" : "normal.DIF",
+    	"difType" : "normal-ipc",
         "dataTransferConstants" : {
             "addressLength" : 2,
             "cepIdLength" : 2,

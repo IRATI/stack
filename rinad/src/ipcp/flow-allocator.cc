@@ -476,7 +476,7 @@ rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(IPCProcess * ipc_proce
 		}
 	}
 
-	throw Exception("Could not find a QoS Cube with Rtx control disabled!");
+	throw Exception("Could not find a QoS Cube");
 }
 
 std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(IPCProcess * ipc_process) {

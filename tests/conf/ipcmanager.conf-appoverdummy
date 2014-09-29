@@ -25,6 +25,7 @@
     "difName" : "loopback.DIF"
    } ],
   "difConfigurations" : [ {
-    "difName" : "loopback.DIF"
+    "difName" : "loopback.DIF",
+    "difType" : "shim-dummy"
   } ]
 }

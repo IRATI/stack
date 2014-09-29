@@ -50,6 +50,7 @@
     } ],
     "difConfigurations" : [ {
         "difName" : "fantastic.DIF",
+    	"difType" : "normal-ipc",
         "dataTransferConstants" : {
             "addressLength" : 2,
             "cepIdLength" : 2,
@@ -59,9 +60,6 @@
             "sequenceNumberLength" : 4,
             "maxPduSize" : 10000,
             "maxPduLifetime" : 30
-        },
-       "configParameters" : {
-         "bar" : "foo"
         },
         "qosCubes" : [ {
             "name" : "reliable",
@@ -92,11 +90,13 @@
         } ]
     }, {
         "difName" : "300",
-         "configParameters" : {
+   	"difType" : "shim-eth-vlan",
+        "configParameters" : {
            "interface-name" : "eth1"
          } 
     }, {
         "difName" : "normal.DIF",
+    	"difType" : "normal-ipc",
         "dataTransferConstants" : {
             "addressLength" : 2,
             "cepIdLength" : 2,

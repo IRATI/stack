@@ -43,16 +43,11 @@
     "difsToRegisterAt" : ["loopback.DIF"]
    } ],
   "difConfigurations" : [ {
-    "difName" : "loopback.DIF"
-  }, {
-    "difName" : "fantastic.DIF"
-  }, {
-    "difName" : "100",
-    "configParameters" : {
-     "interface-name" : "eth0"
-      }
+    "difName" : "loopback.DIF",
+    "difType" : "shim-dummy",
   }, {
     "difName" : "normal.DIF",
+    "difType" : "normal-ipc",
     "dataTransferConstants" : {
      "addressLength" : 2,
      "cepIdLength" : 2,
@@ -63,9 +58,6 @@
      "maxPduSize" : 10000,
      "maxPduLifetime" : 30
     },
-    "configParameters" : {
-      "bar" : "foo"
-      },
      "qosCubes" : [ {
          "name" : "reliable",
          "id" : 1, 
