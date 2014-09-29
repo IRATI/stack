@@ -675,6 +675,12 @@ static int udp_process_msg(struct socket * sock)
         char                        buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
         int                         size;
 
+        /*
+         * FIXME: Remove this compile-time assertion once the stack-overflow
+         *        potential problem is resolved
+         */
+        BUILD_BUG_ON((BUFFER_SIZE > 512));
+
         LOG_DBG("udp_process_msg");
 
         memset(&addr, 0, sizeof(struct sockaddr_in));
@@ -846,6 +852,12 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         char            buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
         int             size;
         __be16          nlen;
+
+        /*
+         * FIXME: Remove this compile-time assertion once the stack-overflow
+         *        potential problem is resolved
+         */
+        BUILD_BUG_ON((BUFFER_SIZE > 512));
 
         size = recv_msg(sock, NULL, 0, buf, 2);
         if (!size)
@@ -1040,7 +1052,7 @@ static int tcp_process(struct socket * sock)
         if (!app) {
                 //connection exists
                 err = tcp_process_msg(data, sock);
-                while(err > 0) {
+                while (err > 0) {
                         err = tcp_process_msg(data, sock);
                 }
                 return err;
@@ -1235,7 +1247,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         }
 
         exp_reg = find_exp_reg(data, name);
-        if(!exp_reg) {
+        if (!exp_reg) {
                 LOG_ERR("That application is not expected to register");
                 rkfree(app);
                 return -1;
@@ -1723,7 +1735,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         if (data->dif_name) {
                 ASSERT(data->dif_name->process_name);
 
-                LOG_ERR("This IPC Process is already assigned to the DIF %s. ",
+                LOG_ERR("This IPC Process is already assigned to the DIF %s",
                         data->dif_name->process_name);
                 return -1;
         }
