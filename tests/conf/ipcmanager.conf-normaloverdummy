@@ -44,7 +44,7 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "loopback.DIF",
-    "difType" : "shim-dummy",
+    "difType" : "shim-dummy"
   }, {
     "difName" : "normal.DIF",
     "difType" : "normal-ipc",
