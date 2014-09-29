@@ -73,6 +73,7 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
         unsigned int seqnum;
         bool arrived = true;
         ostringstream ss;
+        int ret = -1;
 
         try {
                 // Forward the unregistration request to the IPC process
@@ -88,7 +89,7 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
 
                 arrived = concurrency.wait_for_event(
                                 rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                seqnum);
+                                seqnum, ret);
         } catch (rina::IpcmUnregisterApplicationException) {
                 ss << __func__ << ": Error while unregistering IPC process "
                         << ipcp->name.toString() << " from IPC "
@@ -103,7 +104,7 @@ IPCManager::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
                 return -1;
         }
 
-        return 0;
+        return ret;
 }
 
 static void application_registration_notify(
@@ -233,7 +234,7 @@ static bool ipcm_register_response_common(
         return success;
 }
 
-static void ipcm_register_response_ipcp(
+static int ipcm_register_response_ipcp(
         rina::IpcmRegisterApplicationResponseEvent *event,
         IPCManager *ipcm,
         map<unsigned int,
@@ -247,6 +248,7 @@ static void ipcm_register_response_ipcp(
                 getDIFInformation().dif_name_;
         ostringstream ss;
         bool success;
+        int ret = -1;
 
         success = ipcm_register_response_common(event, ipcp->name,
                                         slave_ipcp, slave_dif_name);
@@ -262,6 +264,7 @@ static void ipcm_register_response_ipcp(
                                 "to N-1 DIF " <<
                                 slave_dif_name.toString() << endl;
                         FLUSH_LOG(INFO, ss);
+                        ret = 0;
                 } catch (rina::NotifyRegistrationToDIFException) {
                         ss << __func__ << ": Error while notifying "
                                 "IPC process " <<
@@ -278,9 +281,11 @@ static void ipcm_register_response_ipcp(
         }
 
         ipcm->pending_ipcp_registrations.erase(mit);
+
+        return ret;
 }
 
-static void ipcm_register_response_app(
+static int ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
         IPCManager *ipcm,
         map<unsigned int,
@@ -309,6 +314,8 @@ static void ipcm_register_response_app(
                                         slave_dif_name, success);
 
         ipcm->pending_app_registrations.erase(mit);
+
+        return success ? 0 : -1;
 }
 
 void
@@ -327,19 +334,22 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
                      >
            >::iterator jt;
         ostringstream ss;
+        int ret = -1;
 
         it = ipcm->pending_ipcp_registrations.find(event->sequenceNumber);
         jt = ipcm->pending_app_registrations.find(event->sequenceNumber);
 
         if (it != ipcm->pending_ipcp_registrations.end()) {
-                ipcm_register_response_ipcp(event, ipcm, it);
+                ret = ipcm_register_response_ipcp(event, ipcm, it);
         } else if (jt != ipcm->pending_app_registrations.end()) {
-                ipcm_register_response_app(event, ipcm, jt);
+                ret = ipcm_register_response_app(event, ipcm, jt);
         } else {
                 ss <<  __func__ << ": Warning: DIF assignment response "
                         "received, but no pending DIF assignment " << endl;
                 FLUSH_LOG(WARN, ss);
         }
+
+        ipcm->concurrency.set_event_result(ret);
 }
 
 static void
@@ -428,7 +438,7 @@ static bool ipcm_unregister_response_common(
         return success;
 }
 
-static void ipcm_unregister_response_ipcp(
+static int ipcm_unregister_response_ipcp(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         IPCManager *ipcm,
                         map<unsigned int,
@@ -441,6 +451,7 @@ static void ipcm_unregister_response_ipcp(
                                                 getDIFInformation().dif_name_;
         ostringstream ss;
         bool success;
+        int ret = -1;
 
         // Inform the supporting IPC process
         success = ipcm_unregister_response_common(event, slave_ipcp,
@@ -457,6 +468,7 @@ static void ipcm_unregister_response_ipcp(
                                 " informed about its unregistration from DIF "
                                 << slave_dif_name.toString() << endl;
                         FLUSH_LOG(INFO, ss);
+                        ret = 0;
                 } else {
                         ss << __func__ << ": Cannot unregister IPC Process "
                                 << ipcp->name.toString() << " from DIF " <<
@@ -471,9 +483,11 @@ static void ipcm_unregister_response_ipcp(
         }
 
         ipcm->pending_ipcp_unregistrations.erase(mit);
+
+        return ret;
 }
 
-static void ipcm_unregister_response_app(
+static int ipcm_unregister_response_app(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         IPCManager *ipcm,
                         map<unsigned int,
@@ -494,6 +508,8 @@ static void ipcm_unregister_response_app(
                                              event->result);
 
         ipcm->pending_app_unregistrations.erase(mit);
+
+        return 0;
 }
 
 void
@@ -510,18 +526,21 @@ ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
             std::pair<rina::IPCProcess *, rina::IPCProcess *>
            >::iterator jt;
         ostringstream ss;
+        int ret = -1;
 
         it = ipcm->pending_app_unregistrations.find(event->sequenceNumber);
         jt = ipcm->pending_ipcp_unregistrations.find(event->sequenceNumber);
         if (it != ipcm->pending_app_unregistrations.end()) {
-                ipcm_unregister_response_app(event, ipcm, it);
+                ret = ipcm_unregister_response_app(event, ipcm, it);
         } else if (jt != ipcm->pending_ipcp_unregistrations.end()) {
-                ipcm_unregister_response_ipcp(event, ipcm, jt);
+                ret = ipcm_unregister_response_ipcp(event, ipcm, jt);
         } else {
                 ss <<  __func__ << ": Warning: Unregistration response "
                         "received, but no pending DIF assignment " << endl;
                 FLUSH_LOG(WARN, ss);
         }
+
+        ipcm->concurrency.set_event_result(ret);
 }
 
 void
