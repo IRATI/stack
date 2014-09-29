@@ -64,14 +64,14 @@
          "efcpPolicies" : {
            "dtcpPresent" : true,
            "dtcpConfiguration" : {
-             "rtxcontrol" : false,
-             "flowcontrol" : true,
-             "flowcontrolconfig" : {
-               "ratebased" : false,
-               "windowbased" : true,
-               "windowbasedconfig" : {
-                 "maxclosedwindowqueuelength" : 200,
-                 "initialcredit" : 50
+             "rtxControl" : false,
+             "flowControl" : true,
+             "flowControlConfig" : {
+               "rateBased" : false,
+               "windowBased" : true,
+               "windowBasedConfig" : {
+                 "maxClosedWindowQueueLength" : 200,
+                 "initialCredit" : 50
                }
              }
            }
@@ -84,17 +84,17 @@
          "efcpPolicies" : {
            "dtcpPresent" : true,
            "dtcpConfiguration" : {
-             "rtxcontrol" : true,
-             "rtxcontrolconfig" : {
-               "datarxmsnmax" : 5
+             "rtxControl" : true,
+             "rtxControlConfig" : {
+               "dataRxmsNmax" : 5
              },
-             "flowcontrol" : true,
-             "flowcontrolconfig" : {
-               "ratebased" : false,
-               "windowbased" : true,
-               "windowbasedconfig" : {
-                 "maxclosedwindowqueuelength" : 200,
-                 "initialcredit" : 50
+             "flowControl" : true,
+             "flowControlConfig" : {
+               "rateBased" : false,
+               "windowBased" : true,
+               "windowBasedXonfig" : {
+                 "maxClosedWindowQueueLength" : 200,
+                 "initialCredit" : 50
                }
              }
            }

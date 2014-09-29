@@ -286,6 +286,8 @@ void parse_efcp_policies(const Json::Value root,
                         parse_policy(dtcp_conf,
                                      "rttEstimatorPolicy",
                                      dc.rtt_estimator_policy_);
+
+                        cp.dtcp_configuration_ = dc;
                 }
 
                 parse_policy(dtcp_conf,
