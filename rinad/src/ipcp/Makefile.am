@@ -63,3 +63,26 @@ PASS_TESTS  = test-encoders   \
               test-pduftg
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
+
+EXTRA_DIST +=					\
+        rinad-ipcp.pc.in
+
+edit = $(SED)								\
+	-e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
+	-e 's|@PACKAGE_URL[@]|$(PACKAGE_VERSION)|g'			\
+	-e 's|@prefix[@]|$(prefix)|g'					\
+	-e 's|@includedir[@]|$(includedir)|g'				\
+	-e 's|@libdir[@]|$(libdir)|g'
+
+rinad-ipcp.pc: Makefile rinad-ipcp.pc.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES += rinad-ipcp.pc
+
+pkgconfigdir   = $(libdir)/pkgconfig
+pkgconfig_DATA = rinad-ipcp.pc
