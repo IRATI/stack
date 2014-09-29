@@ -1,0 +1,20 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+ME=compile-kernel
+
+echo "$ME: Compiling kernel"
+(cd linux && make bzImage) || {
+    echo "$ME: Cannot complete kernel compilation"
+    exit 1
+}
+
+echo "$ME: Compiling modules"
+(cd linux && make modules) || {
+    echo "$ME: Cannot complete modules compilation"
+    exit 1
+}

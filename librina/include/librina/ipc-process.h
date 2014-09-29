@@ -29,11 +29,10 @@
 #include <string>
 #include <list>
 
-#include "librina/common.h"
+#include "librina/configuration.h"
 #include "librina/application.h"
-
-#define RINA_DEFAULT_POLICY_NAME "default"
-#define RINA_DEFAULT_POLICY_VERSION "0"
+#include "librina/cdap.h"
+#include "librina/ipc-daemons.h"
 
 namespace rina {
 
@@ -42,14 +41,15 @@ namespace rina {
  * DIF, and provides de related information
  */
 class AssignToDIFRequestEvent: public IPCEvent {
-
+public:
 	/** The information of the DIF the IPC Process is being assigned to*/
 	DIFInformation difInformation;
 
-public:
 	AssignToDIFRequestEvent(const DIFInformation& difInformation,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	const DIFInformation& getDIFInformation() const;
+#endif
 };
 
 /**
@@ -57,15 +57,16 @@ public:
  * of the DIF he is currently a member of
  */
 class UpdateDIFConfigurationRequestEvent: public IPCEvent {
-
+public:
         /** The new configuration of the DIF*/
         DIFConfiguration difConfiguration;
 
-public:
         UpdateDIFConfigurationRequestEvent(
                         const DIFConfiguration& difConfiguration,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         const DIFConfiguration& getDIFConfiguration() const;
+#endif
 };
 
 /**
@@ -74,7 +75,7 @@ public:
  * a flow through the supportingDIFName
  */
 class EnrollToDIFRequestEvent: public IPCEvent {
-
+public:
         /** The DIF to enroll to */
         ApplicationProcessNamingInformation difName;
 
@@ -84,23 +85,24 @@ class EnrollToDIFRequestEvent: public IPCEvent {
         /** The neighbor to contact */
         ApplicationProcessNamingInformation neighborName;
 
-public:
+        EnrollToDIFRequestEvent() {}
         EnrollToDIFRequestEvent(
                 const ApplicationProcessNamingInformation& difName,
                 const ApplicationProcessNamingInformation& supportingDIFName,
                 const ApplicationProcessNamingInformation& neighbourName,
                 unsigned int sequenceNumber);
+#ifndef SWIG
         const ApplicationProcessNamingInformation& getDifName() const;
         const ApplicationProcessNamingInformation& getNeighborName() const;
-        const ApplicationProcessNamingInformation&
-                getSupportingDifName() const;
+        const ApplicationProcessNamingInformation& getSupportingDifName() const;
+#endif
 };
 
 /**
  * Supporting class for IPC Process DIF Registration events
  */
 class IPCProcessDIFRegistrationEvent: public IPCEvent {
-
+public:
 	/** The name of the IPC Process registered to the N-1 DIF */
 	ApplicationProcessNamingInformation ipcProcessName;
 
@@ -110,22 +112,23 @@ class IPCProcessDIFRegistrationEvent: public IPCEvent {
 	/** True if the IPC Process has been registered in a DIF, false otherwise */
 	bool registered;
 
-public:
 	IPCProcessDIFRegistrationEvent(
 	                const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
 			bool registered,
 			unsigned int sequenceNumber);
+#ifndef SWIG
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
 	bool isRegistered() const;
+#endif
 };
 
 /**
  * The IPC Manager queries the RIB of the IPC Process
  */
 class QueryRIBRequestEvent: public IPCEvent {
-
+public:
 	/** The class of the object being queried*/
 	std::string objectClass;
 
@@ -147,15 +150,16 @@ class QueryRIBRequestEvent: public IPCEvent {
 	 */
 	std::string filter;
 
-public:
 	QueryRIBRequestEvent(const std::string& objectClass,
 			const std::string& objectName, long objectInstance, int scope,
 			const std::string& filter, unsigned int sequenceNumber);
+#ifndef SWIG
 	const std::string& getObjectClass() const;
 	const std::string& getObjectName() const;
 	long getObjectInstance() const;
 	int getScope() const;
 	const std::string& getFilter() const;
+#endif
 };
 
 /**
@@ -163,7 +167,7 @@ public:
  * create EFCP connection operation
  */
 class CreateConnectionResponseEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -174,11 +178,12 @@ class CreateConnectionResponseEvent: public IPCEvent {
          */
         int cepId;
 
-public:
         CreateConnectionResponseEvent(int portId, int cepId,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         int getCepId() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -186,7 +191,7 @@ public:
  * create EFCP connection operation
  */
 class UpdateConnectionResponseEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -195,11 +200,12 @@ class UpdateConnectionResponseEvent: public IPCEvent {
          */
         int result;
 
-public:
         UpdateConnectionResponseEvent(int portId, int result,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         int getResult() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -207,7 +213,7 @@ public:
  * create EFCP connection arrived operation
  */
 class CreateConnectionResultEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -221,27 +227,29 @@ class CreateConnectionResultEvent: public IPCEvent {
         /** The destination cep-id of the connection */
         int destCepId;
 
-public:
         CreateConnectionResultEvent(int portId, int sourceCepId,
                         int destCepId, unsigned int sequenceNumber);
+#ifndef SWIG
         int getSourceCepId() const;
         int getDestCepId() const;
         int getPortId() const;
+#endif
 };
 
 class DestroyConnectionResultEvent: public IPCEvent {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
         /** The destination cep-id of the connection */
         int result;
 
-public:
         DestroyConnectionResultEvent(int portId, int result,
                         unsigned int sequenceNumber);
+#ifndef SWIG
         int getResult() const;
         int getPortId() const;
+#endif
 };
 
 /**
@@ -418,6 +426,7 @@ public:
  * functionality
  */
 class ExtendedIPCManager: public IPCManager {
+public:
 	/** The ID of the IPC Process */
 	unsigned short ipcProcessId;
 
@@ -433,15 +442,16 @@ class ExtendedIPCManager: public IPCManager {
 	/** The current configuration of the IPC Process */
 	DIFInformation currentDIFInformation;
 
-public:
 	static const std::string error_allocate_flow;
 	ExtendedIPCManager();
 	~ExtendedIPCManager() throw();
+#ifndef SWIG
 	const DIFInformation& getCurrentDIFInformation() const;
 	void setCurrentDIFInformation(const DIFInformation& currentDIFInformation);
 	unsigned short getIpcProcessId() const;
 	void setIpcProcessId(unsigned short ipcProcessId);
 	void setIPCManagerPort(unsigned int ipcManagerPort);
+#endif
 
 	/**
 	 * Notify the IPC Manager about the successful initialization of the
@@ -451,8 +461,7 @@ public:
 	 * an error occurs
 	 */
 	void notifyIPCProcessInitialized(
-	                const ApplicationProcessNamingInformation& name)
-	throw (IPCException);
+	                const ApplicationProcessNamingInformation& name);
 
 	/**
 	 * True if the IPC Process has been successfully initialized, false
@@ -469,8 +478,7 @@ public:
 	 */
 	ApplicationRegistration * appRegistered(
 	                        const ApplicationProcessNamingInformation& appName,
-	                        const ApplicationProcessNamingInformation& DIFName)
-	        throw (ApplicationRegistrationException);
+	                        const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * The IPC Process has been unregistered from the DIF called DIFName,
@@ -479,8 +487,7 @@ public:
 	 * @param DIFName
 	 */
 	void appUnregistered(const ApplicationProcessNamingInformation& appName,
-	                const ApplicationProcessNamingInformation& DIFName)
-	                                throw (ApplicationUnregistrationException);
+	                const ApplicationProcessNamingInformation& DIFName);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "assign
@@ -489,8 +496,7 @@ public:
 	 * @param result the result of the operation (0 successful)
 	 * @throws AssignToDIFResponseException
 	 */
-	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result)
-		throw (AssignToDIFResponseException);
+	void assignToDIFResponse(const AssignToDIFRequestEvent& event, int result);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of an "enroll
@@ -504,8 +510,7 @@ public:
 	 */
 	void enrollToDIFResponse(const EnrollToDIFRequestEvent& event,
 	                int result, const std::list<Neighbor> & newNeighbors,
-	                const DIFInformation& difInformation)
-	throw (EnrollException);
+	                const DIFInformation& difInformation);
 
 	/**
 	 * Inform the IPC Manager about new neighbors being added or existing
@@ -516,8 +521,7 @@ public:
 	 * IPC Manager
 	 */
 	void notifyNeighborsModified(bool added,
-	                const std::list<Neighbor> & neighbors)
-	throw (EnrollException);
+	                const std::list<Neighbor> & neighbors);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
@@ -527,8 +531,7 @@ public:
 	 * @throws RegisterApplicationResponseException
 	 */
 	void registerApplicationResponse(
-			const ApplicationRegistrationRequestEvent& event, int result)
-		throw (RegisterApplicationResponseException);
+			const ApplicationRegistrationRequestEvent& event, int result);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "unregister
@@ -538,8 +541,7 @@ public:
 	 * @throws UnregisterApplicationResponseException
 	 */
 	void unregisterApplicationResponse(
-			const ApplicationUnregistrationRequestEvent& event, int result)
-		throw (UnregisterApplicationResponseException);
+			const ApplicationUnregistrationRequestEvent& event, int result);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a "allocate
@@ -548,8 +550,7 @@ public:
 	 * @param result
 	 * @throws AllocateFlowResponseException
 	 */
-	void allocateFlowRequestResult(const FlowRequestEvent& event, int result)
-		throw (AllocateFlowResponseException);
+	void allocateFlowRequestResult(const FlowRequestEvent& event, int result);
 
 	/**
 	 * Tell the IPC Manager that an allocate flow request targeting a local
@@ -569,56 +570,54 @@ public:
 			const ApplicationProcessNamingInformation& localAppName,
 			const ApplicationProcessNamingInformation& remoteAppName,
 			const FlowSpecification& flowSpecification,
-			int portId)
-		throw (AllocateFlowRequestArrivedException);
+			int portId);
 
-        /**
-         * Overrides IPCManager's operation
-         * Requests the allocation of a Flow
-         *
-         * @param localAppName The naming information of the local application
-         * @param remoteAppName The naming information of the remote application
-         * @param flowSpecifiction The characteristics required for the flow
-         * @return A handler to be able to identify the proper response event
-         * @throws FlowAllocationException if there are problems during the flow allocation
-         */
-        unsigned int requestFlowAllocation(
-                        const ApplicationProcessNamingInformation& localAppName,
-                        const ApplicationProcessNamingInformation& remoteAppName,
-                        const FlowSpecification& flow) throw (FlowAllocationException);
+	/**
+	 * Overrides IPCManager's operation
+	 * Requests the allocation of a Flow
+	 *
+	 * @param localAppName The naming information of the local application
+	 * @param remoteAppName The naming information of the remote application
+	 * @param flowSpecifiction The characteristics required for the flow
+	 * @return A handler to be able to identify the proper response event
+	 * @throws FlowAllocationException if there are problems during the flow allocation
+	 */
+	unsigned int requestFlowAllocation(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const FlowSpecification& flow);
 
-        /**
-         * Overrides IPCManager's operation
-         * Requests the allocation of a flow using a speficif dIF
-         * @param localAppName The naming information of the local application
-         * @param remoteAppName The naming information of the remote application
-         * @param flowSpecifiction The characteristics required for the flow
-         * @param difName The DIF through which we want the flow allocated
-         * @return A handler to be able to identify the proper response event
-         * @throws FlowAllocationException if there are problems during the flow allocation
-         */
-        unsigned int requestFlowAllocationInDIF(
-                        const ApplicationProcessNamingInformation& localAppName,
-                        const ApplicationProcessNamingInformation& remoteAppName,
-                        const ApplicationProcessNamingInformation& difName,
-                        const FlowSpecification& flow) throw (FlowAllocationException);
+	/**
+	 * Overrides IPCManager's operation
+	 * Requests the allocation of a flow using a speficif dIF
+	 * @param localAppName The naming information of the local application
+	 * @param remoteAppName The naming information of the remote application
+	 * @param flowSpecifiction The characteristics required for the flow
+	 * @param difName The DIF through which we want the flow allocated
+	 * @return A handler to be able to identify the proper response event
+	 * @throws FlowAllocationException if there are problems during the flow allocation
+	 */
+	unsigned int requestFlowAllocationInDIF(
+			const ApplicationProcessNamingInformation& localAppName,
+			const ApplicationProcessNamingInformation& remoteAppName,
+			const ApplicationProcessNamingInformation& difName,
+			const FlowSpecification& flow);
 
-        /**
-         * Overrides IPCManager's operation
-         * Confirms or denies the request for a flow to this application.
-         *
-         * @param flowRequestEvent information of the flow request
-         * @param result 0 means the flow is accepted, a different number
-         * indicates the deny code
-         * @param notifySource if true the source IPC Process will get
-         * the allocate flow response message back, otherwise it will be ignored
-         * @return Flow If the flow is accepted, returns the flow object
-         * @throws FlowAllocationException If there are problems
-         * confirming/denying the flow
-         */
-        Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
-                        int result, bool notifySource)
-        throw (FlowAllocationException);
+	/**
+	 * Overrides IPCManager's operation
+	 * Confirms or denies the request for a flow to this application.
+	 *
+	 * @param flowRequestEvent information of the flow request
+	 * @param result 0 means the flow is accepted, a different number
+	 * indicates the deny code
+	 * @param notifySource if true the source IPC Process will get
+	 * the allocate flow response message back, otherwise it will be ignored
+	 * @return Flow If the flow is accepted, returns the flow object
+	 * @throws FlowAllocationException If there are problems
+	 * confirming/denying the flow
+	 */
+	Flow * allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+			int result, bool notifySource);
 
 	/**
 	 * Invoked by the IPC Process to respond to the Application Process that
@@ -630,8 +629,7 @@ public:
 	 * replying ot the application
 	 */
 	void notifyflowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-			int result)
-		throw (DeallocateFlowResponseException);
+			int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely
@@ -640,8 +638,7 @@ public:
 	 * @param code
 	 * @throws DeallocateFlowResponseException
 	 */
-	void flowDeallocatedRemotely(int portId, int code)
-		throw (DeallocateFlowResponseException);
+	void flowDeallocatedRemotely(int portId, int code);
 
 	/**
 	 * Reply to the IPC Manager, providing 0 or more RIB Objects in response to
@@ -652,8 +649,7 @@ public:
 	 * @throws QueryRIBResponseException
 	 */
 	void queryRIBResponse(const QueryRIBRequestEvent& event, int result,
-			const std::list<RIBObject>& ribObjects)
-		throw (QueryRIBResponseException);
+			const std::list<RIBObjectData>& ribObjects);
 
 	/**
 	 * Request an available portId to the kernel
@@ -664,15 +660,14 @@ public:
 	 * @return the port-id
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(const ApplicationProcessNamingInformation& appName)
-	        throw (PortAllocationException);
+	int allocatePortId(const ApplicationProcessNamingInformation& appName);
 
 	/**
 	 * Request the kernel to free a used port-id
 	 * @param portId the port-id to be freed
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	void deallocatePortId(int portId) throw (PortAllocationException);
+	void deallocatePortId(int portId);
 };
 
 /**
@@ -684,6 +679,7 @@ extern Singleton<ExtendedIPCManager> extendedIPCManager;
  * Represents the data to create an EFCP connection
  */
 class Connection {
+public:
         /** The port-id to which the connection is bound */
         int portId;
 
@@ -722,8 +718,8 @@ class Connection {
          */
         unsigned short flowUserIpcProcessId;
 
-public:
         Connection();
+#ifndef SWIG
         unsigned int getDestAddress() const;
         void setDestAddress(unsigned int destAddress);
         int getPortId() const;
@@ -740,6 +736,7 @@ public:
         void setSourceCepId(int sourceCepId);
         const ConnectionPolicies& getPolicies() const;
         void setPolicies(const ConnectionPolicies& policies);
+#endif
         const std::string toString();
 };
 
@@ -747,6 +744,7 @@ public:
  * Models an entry in the PDU Forwarding Table
  */
 class PDUForwardingTableEntry {
+public:
         /** The destination address */
         unsigned int address;
 
@@ -755,10 +753,11 @@ class PDUForwardingTableEntry {
 
         /** The N-1 portid */
         std::list<unsigned int> portIds;
-public:
+
         PDUForwardingTableEntry();
         bool operator==(const PDUForwardingTableEntry &other) const;
         bool operator!=(const PDUForwardingTableEntry &other) const;
+#ifndef SWIG
         unsigned int getAddress() const;
         void setAddress(unsigned int address);
         const std::list<unsigned int> getPortIds() const;
@@ -766,6 +765,7 @@ public:
         void addPortId(unsigned int portId);
         unsigned int getQosId() const;
         void setQosId(unsigned int qosId);
+#endif
         const std::string toString();
 };
 
@@ -775,18 +775,19 @@ public:
  * IPC Process
  */
 class DumpFTResponseEvent: public IPCEvent {
-
+public:
         /** The PDU Forwarding Table entries*/
         std::list<PDUForwardingTableEntry> entries;
 
         /** Result of the operation, 0 success */
         int result;
 
-public:
         DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
                         int result, unsigned int sequenceNumber);
+#ifndef SWIG
         const std::list<PDUForwardingTableEntry>& getEntries() const;
         int getResult() const;
+#endif
 };
 
 
@@ -794,15 +795,17 @@ public:
  * FIXME: Quick hack to get multiple parameters back
  */
 class ReadManagementSDUResult {
+public:
         int bytesRead;
         int portId;
 
-public:
         ReadManagementSDUResult();
+#ifndef SWIG
         int getBytesRead() const;
         void setBytesRead(int bytesRead);
         int getPortId() const;
         void setPortId(int portId);
+#endif
 };
 
 /**
@@ -811,10 +814,10 @@ public:
  * IPC Process Daemon to communicate with its components in the kernel
  */
 class KernelIPCProcess {
+public:
         /** The ID of the IPC Process */
         unsigned short ipcProcessId;
 
-public:
         void setIPCProcessId(unsigned short ipcProcessId);
         unsigned short getIPCProcessId() const;
 
@@ -828,8 +831,7 @@ public:
          * @throws AssignToDIFException if an error happens during the process
          * @returns the handle to the response message
          */
-        unsigned int assignToDIF(const DIFInformation& difInformation)
-                throw (AssignToDIFException);
+        unsigned int assignToDIF(const DIFInformation& difInformation);
 
         /**
          * Invoked by the IPC Process Daemon to modify the configuration of
@@ -841,8 +843,7 @@ public:
          * @returns the handle to the response message
          */
         unsigned int updateDIFConfiguration(
-                        const DIFConfiguration& difConfiguration)
-        throw (UpdateDIFConfigurationException);
+                        const DIFConfiguration& difConfiguration);
 
         /**
          * Invoked by the IPC Process Daemon to request the creation of an
@@ -852,8 +853,7 @@ public:
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnection(const Connection& connection)
-        throw (CreateConnectionException);
+        unsigned int createConnection(const Connection& connection);
 
         /**
          * Invoked by the IPC Process Daemon to request an update of an
@@ -863,8 +863,7 @@ public:
          * @throws UpdateConnectionException
          * @return the handle to the response message
          */
-        unsigned int updateConnection(const Connection& connection)
-        throw (UpdateConnectionException);
+        unsigned int updateConnection(const Connection& connection);
 
         /**
          * Invoked by the IPC Process Daemon to request the creation of an
@@ -875,8 +874,7 @@ public:
          * @throws CreateConnectionException
          * @return the handle to the response message
          */
-        unsigned int createConnectionArrived(const Connection& connection)
-        throw (CreateConnectionException);
+        unsigned int createConnectionArrived(const Connection& connection);
 
         /**
          * Invoked by the IPC Process Daemon to request the destruction of an
@@ -886,16 +884,15 @@ public:
          * @throws DestroyConnectionException
          * @return the handle to the response message
          */
-        unsigned int destroyConnection(const Connection& connection)
-        throw (DestroyConnectionException);
+        unsigned int destroyConnection(const Connection& connection);
 
         /**
          * Modify the entries of the PDU forwarding table
          * @param entries to be modified
          * @param mode 0 add, 1 remove, 2 flush and add
          */
-        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry>& entries,
-                        int mode) throw (PDUForwardingTableException);
+        void modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entries,
+                        int mode);
 
         /**
          * Request the Kernel IPC Process to provide a list of
@@ -903,7 +900,7 @@ public:
          * @return a handle to the response event
          * @throws PDUForwardingTabeException if something goes wrong
          */
-        unsigned int dumptPDUFT() throw (PDUForwardingTableException);
+        unsigned int dumptPDUFT();
 
         /**
          * Requests the kernel to write a management SDU to the
@@ -914,8 +911,7 @@ public:
          * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
-        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId)
-                throw (WriteSDUException);
+        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
 
         /**
          * Requests the kernel to send a management SDU to the IPC Process
@@ -927,8 +923,7 @@ public:
          * destination of the SDU
          * @throws WriteSDUException
          */
-        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address)
-                throw (WriteSDUException);
+        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
 
         /**
          * Requests the kernel to get a management SDU from a peer
@@ -940,14 +935,64 @@ public:
          * been read from
          * @throws ReadSDUException
          */
-        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes)
-                throw (ReadSDUException);
+        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes);
 };
 
 /**
  * Make Kernel IPC Process singleton
  */
 extern Singleton<KernelIPCProcess> kernelIPCProcess;
+
+/// An entry of the directory forwarding table
+class DirectoryForwardingTableEntry {
+public:
+	DirectoryForwardingTableEntry();
+	bool operator==(const DirectoryForwardingTableEntry &object);
+#ifndef SWIG
+	ApplicationProcessNamingInformation get_ap_naming_info() const;
+	void set_ap_naming_info(const ApplicationProcessNamingInformation& ap_naming_info);
+	unsigned int get_address() const;
+	void set_address(unsigned int address);
+	long get_timestamp() const;
+	void set_timestamp(long timestamp);
+#endif
+
+	/**
+	 * Returns a key identifying this entry
+	 * @return
+	 */
+	std::string getKey();
+	std::string toString();
+
+	/// The name of the application process
+	ApplicationProcessNamingInformation ap_naming_info_;
+
+	/// The address of the IPC process it is currently attached to
+	unsigned int address_;
+
+	/// A timestamp for this entry
+	long timestamp_;
+};
+
+/// Defines a whatevercast name (or a name of a set of names).
+/// In traditional architectures, sets that returned all members were called multicast; while
+/// sets that returned one member were called anycast.  It is not clear what sets that returned
+/// something in between were called.  With the more general definition here, these
+/// distinctions are unnecessary.
+class WhatevercastName {
+public:
+	bool operator==(const WhatevercastName &other);
+	std::string toString();
+
+	/// The name
+	std::string name_;
+
+	/// The members of the set
+	std::list<std::string> set_members_;
+
+	/// The rule to select one or more members from the set
+	std::string rule_;
+};
 
 }
 

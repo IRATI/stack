@@ -7,12 +7,12 @@
 
 ME=install-from-scratch
 
-./install-kernel-from-scratch || {
-    echo "$ME: Cannot install kernel"
+./compile-kernel && ./install-kernel $@ || {
+    echo "$ME: Cannot compile or install the kernel from scratch"
     exit 1
 }
 
 ./install-user-from-scratch $@ || {
-    echo "$ME: Cannot install user parts"
+    echo "$ME: Cannot install the user parts from scratch"
     exit 1
 }

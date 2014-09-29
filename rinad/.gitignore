@@ -27,4 +27,10 @@ Makefile.in
 /conftest.c
 /conftest.err
 
-._*
+/libtool
+
+/*.tar.gz
+
+/.project
+/.cproject
+

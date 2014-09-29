@@ -25,7 +25,7 @@
 
 #define RINA_PREFIX "core"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "core.h"
 
 namespace rina {
@@ -105,7 +105,7 @@ void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
 }
 
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
-		unsigned short ipcProcessId) throw(NetlinkException) {
+		unsigned short ipcProcessId) {
 	std::map<unsigned short, RINANetlinkEndpoint *>::iterator it =
 			ipcProcessIdMappings.find(ipcProcessId);
 	if (it == ipcProcessIdMappings.end()){
@@ -133,7 +133,7 @@ void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
 }
 
 RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
-		ApplicationProcessNamingInformation apName) throw(NetlinkException) {
+		ApplicationProcessNamingInformation apName) {
 	std::map<std::string, RINANetlinkEndpoint *>::iterator it =
 			applicationNameMappings.find(apName.getProcessNamePlusInstance());
 	if (it == applicationNameMappings.end()){
@@ -151,7 +151,7 @@ unsigned int NetlinkPortIdMap::getIPCManagerPortId(){
 }
 
 void NetlinkPortIdMap::updateMessageOrPortIdMap(
-		BaseNetlinkMessage* message, bool send) throw(NetlinkException){
+		BaseNetlinkMessage* message, bool send) {
 	switch (message->getOperationCode()) {
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
 		if(send){
@@ -230,7 +230,7 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}else{
 			putAPNametoNetlinkPortIdMapping(
 			        specificMessage->getApplicationRegistrationInformation().
-			                getApplicationName(),
+			                appName,
 			        specificMessage->getSourcePortId(),
 				specificMessage->getSourceIpcProcessId());
 		}
@@ -443,9 +443,9 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			event = myRINAManager->osProcessFinalized(message->getPortId());
 			if (event) {
 				eventsQueue->put(event);
-				LOG_DBG("Added event of type %d and sequence number %u to events queue",
-				                (int)event->getType(),
-				                event->getSequenceNumber());
+				LOG_DBG("Added event of type %s and sequence number %u to events queue",
+				                IPCEvent::eventTypeToString(event->eventType).c_str(),
+				                event->sequenceNumber);
 			}
 
 			delete message;
@@ -454,9 +454,9 @@ void * doNetlinkMessageReaderWork(void * arg) {
 			event = incomingMessage->toIPCEvent();
 			if (event) {
 			        eventsQueue->put(event);
-			        LOG_DBG("Added event of type %d and sequence number %u to events queue",
-			                        (int)event->getType(),
-			                        event->getSequenceNumber());
+			        LOG_DBG("Added event of type %s and sequence number %u to events queue",
+			        			IPCEvent::eventTypeToString(event->eventType).c_str(),
+			                    event->sequenceNumber);
 			} else
 			        LOG_WARN("Event is null for message type %d",
 			                        incomingMessage->getOperationCode());
@@ -502,9 +502,9 @@ void RINAManager::initialize(){
 	LOG_DBG("Initialized event queue");
 
 	//3 Start Netlink message reader thread
-	ThreadAttributes * threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
-	netlinkMessageReader = new Thread(threadAttributes,
+	ThreadAttributes threadAttributes;
+	threadAttributes.setJoinable();
+	netlinkMessageReader = new Thread(&threadAttributes,
 			&doNetlinkMessageReaderWork, (void *) this);
 	LOG_DBG("Started Netlink Message reader thread");
 }
@@ -515,9 +515,7 @@ RINAManager::~RINAManager() {
 	delete eventQueue;
 }
 
-void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage)
-throw (NetlinkException)
-{
+void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage) {
 	sendReceiveLock.lock();
 
 	try{
@@ -537,7 +535,7 @@ throw (NetlinkException)
 }
 
 void RINAManager::sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
-                size_t maxSize) throw (NetlinkException) {
+                size_t maxSize) {
         sendReceiveLock.lock();
 
         try{

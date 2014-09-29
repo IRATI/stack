@@ -54,15 +54,15 @@ FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina.la
 #
 
 test_01_SOURCES  = test-01.cc
-test_01_CPPFLAGS = $(COMMONCPPFLAGS)
+test_01_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_01_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_02_SOURCES  = test-02.cc
-test_02_CPPFLAGS = $(COMMONCPPFLAGS)
+test_02_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_02_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 test_03_SOURCES  = test-03.cc
-test_03_CPPFLAGS = $(COMMONCPPFLAGS)
+test_03_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_03_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
 #
@@ -85,6 +85,14 @@ test_syscalls_SOURCES  = test-syscalls.cc
 test_syscalls_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_syscalls_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
+test_timer_SOURCES  = test-timer.cc
+test_timer_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_timer_LDFLAGS  = $(FUNCTIONALLDFLAGS)
+
+test_cdap_SOURCES  = test-cdap.cc
+test_cdap_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -92,7 +100,9 @@ check_PROGRAMS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-syscalls				
+	test-syscalls				\
+	test-timer				\
+	test-cdap
 
 XFAIL_TESTS =					\
 	test-03
@@ -107,13 +117,15 @@ FUNCTIONAL_PASS_TESTS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-syscalls			
+	test-syscalls				\
+	test-timer				\
+	test-cdap
 
 FUNCTIONAL_XFAIL_TESTS =
 
 FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
 
-KERNEL_DEBUG_PASS_TESTS =				\
+KERNEL_DEBUG_PASS_TESTS =			\
 	test-syscalls
 
 KERNEL_DEBUG_XFAIL_TESTS =

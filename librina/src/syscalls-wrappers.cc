@@ -20,14 +20,8 @@
 // MA  02110-1301  USA
 //
 
-/* FIXME: PIGSTY HACK TO USE OUR SYSCALLS, PLEASE FIX ASAP !!! */
-#if defined(__x86_64__)
-#undef _ASM_X86_UNISTD_64_H
-#include "/usr/include/linux/include/asm-x86/unistd_64.h"
-#else
-#undef _ASM_X86_UNISTD_32_H
-#include "/usr/include/linux/include/asm-x86/unistd_32.h"
-#endif
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #define SYS_createIPCProcess   __NR_ipc_create
 #define SYS_destroyIPCProcess  __NR_ipc_destroy
@@ -38,6 +32,7 @@
 #define SYS_readManagementSDU  __NR_management_sdu_read
 #define SYS_writeManagementSDU __NR_management_sdu_write
 
+// These should be removed (should be checked at configuration time)
 #if !defined(__NR_ipc_create)
 #error No ipc_create syscall defined
 #endif
@@ -63,12 +58,9 @@
 #error No management_sdu_write syscall defined
 #endif
 
-#include <sys/syscall.h>
-#include <unistd.h>
-
 #define RINA_PREFIX "syscalls"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "utils.h"
 #include "rina-syscalls.h"
 #include "rina-systypes.h"
@@ -174,10 +166,10 @@ int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProce
         DUMP_SYSCALL("SYS_createIPCProcess", SYS_createIPCProcess);
 
         result = syscall(SYS_createIPCProcess,
-                         ipcProcessName.getProcessName().c_str(),
-                         ipcProcessName.getProcessInstance().c_str(),
-                         ipcProcessName.getEntityName().c_str(),
-                         ipcProcessName.getEntityInstance().c_str(),
+                         ipcProcessName.processName.c_str(),
+                         ipcProcessName.processInstance.c_str(),
+                         ipcProcessName.entityName.c_str(),
+                         ipcProcessName.entityInstance.c_str(),
                          ipcProcessId,
                          difType.c_str());
 
@@ -198,8 +190,8 @@ int syscallAllocatePortId(unsigned short ipcProcessId,
 
         result = syscall(SYS_allocatePortId,
                          ipcProcessId,
-                         applicationName.getProcessName().c_str(),
-                         applicationName.getProcessInstance().c_str());
+                         applicationName.processName.c_str(),
+                         applicationName.processInstance.c_str());
 
         if (result < 0) {
                 LOG_ERR("Syscall allocate port id failed: %d", result);

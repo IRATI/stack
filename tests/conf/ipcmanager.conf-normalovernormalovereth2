@@ -32,19 +32,19 @@
     }],
     "ipcProcessesToCreate" : [ {
         "type" : "shim-eth-vlan",
-        "applicationProcessName" : "test-eth",
-        "applicationProcessInstance" : "1",
+        "apName" : "test-eth",
+        "apInstance" : "1",
         "difName" : "300"
     }, {
         "type" : "normal-ipc",
-        "applicationProcessName" : "test2.IRATI",
-        "applicationProcessInstance" : "1",
+        "apName" : "test2.IRATI",
+        "apInstance" : "1",
         "difName" : "normal.DIF",
         "difsToRegisterAt" : ["300"]
     }, {
         "type" : "normal-ipc",
-        "applicationProcessName" : "Knuth",
-        "applicationProcessInstance" : "1",
+        "apName" : "Knuth",
+        "apInstance" : "1",
         "difName" : "fantastic.DIF",
         "difsToRegisterAt" : ["normal.DIF"]
     } ],
@@ -55,15 +55,14 @@
             "cepIdLength" : 2,
             "lengthLength" : 2,
             "portIdLength" : 2,
-            "qosIdLenght" : 2,
+            "qosIdLength" : 2,
             "sequenceNumberLength" : 4,
             "maxPduSize" : 10000,
             "maxPduLifetime" : 30
         },
-        "configParameters" : [ {
-            "name" : "bar", 
-            "value" : "foo"
-        } ],
+        "configParameters" : {
+            "bar" : "foo"
+        },
         "qosCubes" : [ {
             "name" : "reliable",
             "id" : 1, 
@@ -93,10 +92,9 @@
         } ]
     }, {
         "difName" : "300",
-        "configParameters" : [ {
-            "name" : "interface-name", 
-            "value" : "eth11"
-        } ]
+        "configParameters" : {
+          "interface-name" : "eth1"
+        } 
     }, {
         "difName" : "normal.DIF",
         "dataTransferConstants" : {
@@ -104,15 +102,14 @@
             "cepIdLength" : 2,
             "lengthLength" : 2,
             "portIdLength" : 2,
-            "qosIdLenght" : 2,
+            "qosIdLength" : 2,
             "sequenceNumberLength" : 4,
             "maxPduSize" : 10000,
             "maxPduLifetime" : 30
         },
-        "configParameters" : [ {
-            "name" : "bar", 
-            "value" : "foo"
-        } ],
+        "configParameters" : {
+            "bar" : "foo"
+         },
         "qosCubes" : [ {
             "name" : "reliable",
             "id" : 1, 

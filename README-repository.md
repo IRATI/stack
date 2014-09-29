@@ -32,7 +32,7 @@ Tags
 A tag is stitched to 'be' when:
   * New functionalities are added
 
-A tag is stitched to 'wip' when: 
+A tag is stitched to 'wip' when:
   * 'be' is merged into 'wip'
 
 A tag is stitched to irati when:

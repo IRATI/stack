@@ -564,6 +564,14 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         return 0;
 }
 
+static bool rtxqueue_empty(struct rtxqueue * q)
+{
+        if (!q)
+                return true;
+
+        return list_empty(&q->head);
+}
+
 struct rtxq {
         spinlock_t                lock;
         struct rtimer *           r_timer;
@@ -578,6 +586,7 @@ static int rtx_worker(void * o)
 
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
+        unsigned int         tr;
 
         q = (struct rtxq *) o;
         if (!q) {
@@ -591,15 +600,17 @@ static int rtx_worker(void * o)
                 return -1;
         }
 
+        tr = dt_sv_tr(q->parent);
         spin_lock(&q->lock);
         if (rtxqueue_rtx(q->queue,
-                         dt_sv_tr(q->parent),
+                         tr,
                          q->rmt,
                          dtcp_data_retransmit_max(dtcp_cfg)))
                 LOG_ERR("RTX failed");
         spin_unlock(&q->lock);
 
-        rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+        if (!rtxqueue_empty(q->queue))
+                        rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 
         LOG_DBG("RTX timer worker OK...");
         return 0;
@@ -641,8 +652,8 @@ int rtxq_destroy(struct rtxq * q)
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
-
         spin_unlock(&q->lock);
+
         rkfree(q);
 
         return 0;

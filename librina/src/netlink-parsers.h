@@ -351,7 +351,6 @@ QoSCube * parseQoSCubeObject(nlmsghdr *hdr);
 enum DIFPropertiesAttributes {
 	DIF_PROP_ATTR_DIF_NAME = 1,
 	DIF_PROP_ATTR_MAX_SDU_SIZE,
-	DIF_PROP_ATTR_QOS_CUBES,
 	__DIF_PROP_ATTR_MAX,
 };
 
@@ -502,12 +501,155 @@ int putRMTConfigurationObject(nl_msg* netlinkMessage,
 
 RMTConfiguration * parseRMTConfigurationObject(nlattr *nested);
 
+/* LinkStateRoutingConfiguration CLASS */
+enum LinkStateRoutingConfigurationAttributes {
+	LSRC_OBJECT_MAX_AGE = 1,
+	LSRC_WAIT_UNTIL_READ,
+	LSRC_WAIT_UNTIL_ERROR,
+	LSRC_WAIT_UNTIL_PDUFT_COM,
+	LSRC_WAIT_UNTIL_FSDB_PROP,
+	LSRC_WAIT_UNTIL_AGE_INC,
+	LSRC_ROUTING_ALG,
+	__LSRC_ATTR_MAX,
+};
+
+#define LSRC_ATTR_MAX (__LSRC_ATTR_MAX -1)
+
+int putLinkStateRoutingConfigurationObject(nl_msg* netlinkMessage,
+		const LinkStateRoutingConfiguration& object);
+
+LinkStateRoutingConfiguration * parseLinkStateRoutingConfigurationObject(nlattr *nested);
+
+/* PDUFTableGeneratorConfiguration CLASS */
+enum PDUFTableGeneratorConfigurationAttributes {
+	PDUFTC_PDU_FTG_POLICY = 1,
+	PDUFTC_LINK_STATE_CONFIG,
+	__PDUFTC_ATTR_MAX,
+};
+
+#define PDUFTC_ATTR_MAX (__PDUFTC_ATTR_MAX -1)
+
+int putPDUFTableGeneratorConfigurationObject(nl_msg* netlinkMessage,
+		const PDUFTableGeneratorConfiguration& object);
+
+PDUFTableGeneratorConfiguration * parsePDUFTableGeneratorConfigurationObject(nlattr *nested);
+
+/* FlowAllocatorConfiguration CLASS */
+enum FlowAllocatorConfigurationAttributes {
+	FLAC_MAX_CREATE_FLOW_RETRIES = 1,
+	FLAC_ALLOC_NOTIFY_POLICY,
+	FLAC_ALLOC_RETRY_POLICY,
+	FLAC_NEW_FLOW_REQ_POLICY,
+	FLAC_SEQ_ROLL_OVER_POLICY,
+	__FLAC_ATTR_MAX,
+};
+
+#define FLAC_ATTR_MAX (__FLAC_ATTR_MAX -1)
+
+int putFlowAllocatorConfigurationObject(nl_msg* netlinkMessage,
+		const FlowAllocatorConfiguration& object);
+
+FlowAllocatorConfiguration * parseFlowAllocatorConfigurationObject(nlattr *nested);
+
+/* EnrollmentTaskConfiguration CLASS */
+enum EnrollmentTaskConfigurationAttributes {
+	ENTC_ENROLLMENT_TIMEOUT_MS = 1,
+	ENTC_WHATCHDOG_PERIOD_MS,
+	ENTC_NEIGH_DECLARED_DEAD_INT_MS,
+	ENTC_MAX_NUM_ENROLL_ATTEMPTS,
+	ENTC_NEIGH_ENROLLER_PERIOD_MS,
+	__ENTC_ATTR_MAX,
+};
+
+#define ENTC_ATTR_MAX (__ENTC_ATTR_MAX -1)
+
+int putEnrollmentTaskConfigurationObject(nl_msg* netlinkMessage,
+		const EnrollmentTaskConfiguration& object);
+
+EnrollmentTaskConfiguration * parseEnrollmentTaskConfigurationObject(nlattr *nested);
+
+/* StaticIPCProcessAddress CLASS */
+enum StaticIPCProcessAddressAttributes {
+	SIPCA_AP_NAME = 1,
+	SIPCA_AP_INSTANCE,
+	SIPCA_ADDRESS,
+	__SIPCA_ATTR_MAX,
+};
+
+#define SIPCA_ATTR_MAX (__SIPCA_ATTR_MAX -1)
+
+int putStaticIPCProcessAddressObject(nl_msg* netlinkMessage,
+		const StaticIPCProcessAddress& object);
+
+StaticIPCProcessAddress * parseStaticIPCProcessAddressObject(nlattr *nested);
+
+/* AddressPrefixConfiguration CLASS */
+enum AddressPrefixConfigurationAttributes {
+	ADDRPC_ADDRESS_PREFIX = 1,
+	ADDRPC_ORGANIZATION,
+	__ADDRPC_ATTR_MAX,
+};
+
+#define ADDRPC_ATTR_MAX (__ADDRPC_ATTR_MAX -1)
+
+int putAddressPrefixConfigurationObject(nl_msg* netlinkMessage,
+		const AddressPrefixConfiguration& object);
+
+AddressPrefixConfiguration * parseAddressPrefixConfigurationObject(nlattr *nested);
+
+/* AddressingConfiguration CLASS */
+enum AddressingConfigurationAttributes {
+	ADDRC_STATIC_ADDRESSES = 1,
+	ADDRC_ADDRESS_PREFIXES,
+	__ADDRC_ATTR_MAX,
+};
+
+#define ADDRC_ATTR_MAX (__ADDRC_ATTR_MAX -1)
+
+int putAddressingConfigurationObject(nl_msg* netlinkMessage,
+		const AddressingConfiguration& object);
+
+AddressingConfiguration * parseAddressingConfigurationObject(nlattr *nested);
+
+/* NamespaceManagerConfiguration CLASS */
+enum NamespaceManagerConfigurationAttributes {
+	NSMC_ADDRESSING_CONF = 1,
+	__NSMC_ATTR_MAX,
+};
+
+#define NSMC_ATTR_MAX (__NSMC_ATTR_MAX -1)
+
+int putNamespaceManagerConfigurationObject(nl_msg* netlinkMessage,
+		const NamespaceManagerConfiguration& object);
+
+NamespaceManagerConfiguration * parseNamespaceManagerConfigurationObject(nlattr *nested);
+
+/* SecurityManagerConfiguration CLASS */
+enum SecurityManagerConfigurationAttributes {
+	SECMANC_DIF_MEM_ACC_CON_POLICY = 1,
+	SECMANC_NEW_FLOW_ACC_CON_POLICY,
+	SECMANC_AUTH_POLICY,
+	__SECMANC_ATTR_MAX,
+};
+
+#define SECMANC_ATTR_MAX (__SECMANC_ATTR_MAX -1)
+
+int putSecurityManagerConfigurationObject(nl_msg* netlinkMessage,
+		const SecurityManagerConfiguration& object);
+
+SecurityManagerConfiguration * parseSecurityManagerConfigurationObject(nlattr *nested);
+
 /* DIF Configuration CLASS */
 enum DIFConfigurationAttributes {
 	DCONF_ATTR_PARAMETERS = 1,
 	DCONF_ATTR_ADDRESS,
 	DCONF_ATTR_EFCP_CONF,
 	DCONF_ATTR_RMT_CONF,
+	DCONF_ATTR_PDUFT_CONF,
+	DCONF_ATTR_FA_CONF,
+	DCONF_ATTR_ET_CONF,
+	DCONF_ATTR_NSM_CONF,
+	DCONF_ATTR_SM_CONF,
 	__DCONF_ATTR_MAX,
 };
 
@@ -790,9 +932,9 @@ enum RIBObjectAttributes {
 
 #define RIBO_ATTR_MAX (__RIBO_ATTR_MAX -1)
 
-int putRIBObject(nl_msg* netlinkMessage, const RIBObject& object);
+int putRIBObject(nl_msg* netlinkMessage, const RIBObjectData& object);
 
-RIBObject * parseRIBObject(nlattr *nested);
+RIBObjectData * parseRIBObject(nlattr *nested);
 
 /* IpcmDIFQueryRIBResponseMessage CLASS*/
 enum IpcmDIFQueryRIBResponseMessageAttributes {
@@ -978,15 +1120,15 @@ parseDTCPConfigObject(nlattr *nested);
 enum ConnectionPoliciesAttributes {
 	CPA_ATTR_DTCP_PRESENT = 1,
 	CPA_ATTR_DTCP_CONFIG,
-        CPA_ATTR_RCVR_TIMER_INAC_POLICY,
-        CPA_ATTR_SNDR_TIMER_INAC_POLICY,
+	CPA_ATTR_RCVR_TIMER_INAC_POLICY,
+	CPA_ATTR_SNDR_TIMER_INAC_POLICY,
 	CPA_ATTR_INIT_SEQ_NUM_POLICY,
 	CPA_ATTR_SEQ_NUM_ROLLOVER,
 	CPA_ATTR_INIT_A_TIMER,
-        CPA_ATTR_PARTIAL_DELIVERY,
-        CPA_ATTR_INCOMPLETE_DELIVERY,
-        CPA_ATTR_IN_ORDER_DELIVERY,
-        CPA_ATTR_MAX_SDU_GAP,
+	CPA_ATTR_PARTIAL_DELIVERY,
+	CPA_ATTR_INCOMPLETE_DELIVERY,
+	CPA_ATTR_IN_ORDER_DELIVERY,
+	CPA_ATTR_MAX_SDU_GAP,
 	__CPA_ATTR_MAX,
 };
 

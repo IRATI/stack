@@ -1,0 +1,7 @@
+IPCM:
+        - Integrate inotify for monitoring the configuration file.
+          This could be done by creating a separate thread that does
+          select() (or poll()) on the inotify call descriptor.
+
+IPCP:
+        -

@@ -32,7 +32,7 @@
 
 #define RINA_PREFIX "logs"
 
-#include "logs.h"
+#include "librina/logs.h"
 
 LOG_LEVEL        logLevel         = DBG;
 FILE *           logOutputStream  = stdout;
@@ -69,6 +69,10 @@ void setLogLevel(const std::string& newLogLevel)
 int setLogFile(const std::string& pathToFile)
 {
 	int result = 0;
+
+	if (pathToFile.compare("") == 0) {
+		return result;
+	}
 
 	pthread_rwlock_wrlock(&outputStreamLock);
 	if (logOutputStream != stdout) {

@@ -27,22 +27,21 @@
   }],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-eth-vlan",
-    "applicationProcessName" : "test-eth-vlan",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-eth-vlan",
+    "apInstance" : "1",
     "difName" : "100"
    }, {
     "type" : "normal-ipc",
-    "applicationProcessName" : "test1.IRATI",
-    "applicationProcessInstance" : "1",
+    "apName" : "test1.IRATI",
+    "apInstance" : "1",
     "difName" : "normal.DIF",
     "difsToRegisterAt" : ["100"]
    } ],
   "difConfigurations" : [ {
     "difName" : "100",
-    "configParameters" : [ {
-    	"name" : "interface-name", 
-    	"value" : "eth1"
-      } ]
+    "configParameters" : {
+     "interface-name" : "eth1"
+      } 
   }, {
     "difName" : "normal.DIF",
     "dataTransferConstants" : {
@@ -50,7 +49,7 @@
     	"cepIdLength" : 2,
     	"lengthLength" : 2,
     	"portIdLength" : 2,
-    	"qosIdLenght" : 2,
+        "qosIdLength" : 2,
     	"sequenceNumberLength" : 4,
     	"maxPduSize" : 10000,
     	"maxPduLifetime" : 30

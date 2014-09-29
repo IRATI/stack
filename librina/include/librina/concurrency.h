@@ -38,7 +38,7 @@ namespace rina {
 class ConcurrentException : public Exception {
 public:
         ConcurrentException() { }
-ConcurrentException(const std::string & s) : Exception(s) { }
+ConcurrentException(const std::string & s) : Exception(s.c_str()) { }
 
         static const std::string error_initialize_thread_attributes;
         static const std::string error_destroy_thread_attributes;
@@ -177,21 +177,21 @@ private:
 
 class AccessGuard {
 public:
-        AccessGuard(Lockable & guarded) :
+AccessGuard(Lockable & guarded) :
         guarded_(guarded)
         { guarded_.lock(); }
-        
+
         virtual ~AccessGuard() throw() {
                 try {
                         guarded_.unlock();
                 } catch (std::exception & e) {
                 }
         }
-        
- private:
+
+private:
         Lockable & guarded_;
 };
- 
+
 /**
  * Wraps a Condition Variable as provided by the pthreads library
  */
@@ -217,7 +217,7 @@ private:
  */
 template <class T> class BlockingFIFOQueue: public ConditionVariable {
 public:
- BlockingFIFOQueue():ConditionVariable() { };
+BlockingFIFOQueue():ConditionVariable() { };
         ~BlockingFIFOQueue() throw() { };
 
         /** Insert an element at the end of the queue */
@@ -302,6 +302,14 @@ public:
 
 private:
         std::list<T*> queue;
+};
+
+/// Wrapper to sleep a thread
+class Sleep{
+public:
+	bool sleep(int sec, int milisec);
+	bool sleepForMili(int milisec);
+	bool sleepForSec(int sec);
 };
 
 }

@@ -715,7 +715,7 @@ static int rmt_queue_recv_delete(struct rmt * instance,
                 return -1;
         }
 
-        if (!instance->egress.queues) {
+        if (!instance->ingress.queues) {
                 LOG_ERR("Bogus egress instance passed");
                 return -1;
         }
@@ -1048,7 +1048,8 @@ static int receive_worker(void * o)
                     !is_address_ok(dst_addr)  ||
                     !is_qos_id_ok(qos_id)) {
                         LOG_ERR("Wrong PDU type, dst address or qos_id,"
-                                " dropping SDU!");
+                                " dropping SDU! %u, %u, %u",
+                                pdu_type, dst_addr, qos_id);
                         pdu_destroy(pdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;

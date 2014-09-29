@@ -233,7 +233,7 @@ EXPORT_SYMBOL(name_dup);
 
 /* NOTE: RINA reference model says only process_name is mandatory */
 bool name_is_ok(const struct name * n)
-{ return (n && n->process_name); }
+{ return (n && n->process_name && strlen(n->process_name)); }
 EXPORT_SYMBOL(name_is_ok);
 
 bool name_is_equal(const struct name * a,

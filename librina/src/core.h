@@ -82,12 +82,12 @@ public:
 	void putIPCProcessIdToNelinkPortIdMapping(
 			unsigned int netlinkPortId, unsigned short ipcProcessId);
 	RINANetlinkEndpoint * getNetlinkPortIdFromIPCProcessId(
-			unsigned short ipcProcessId) throw(NetlinkException);
+			unsigned short ipcProcessId);
 	void putAPNametoNetlinkPortIdMapping(
 			ApplicationProcessNamingInformation apName,
 			unsigned int netlinkPortId, unsigned short ipcProcessId);
 	RINANetlinkEndpoint * getNetlinkPortIdFromAPName(
-			ApplicationProcessNamingInformation apName) throw(NetlinkException);
+			ApplicationProcessNamingInformation apName);
 	unsigned int getIPCManagerPortId();
 
 	/**
@@ -96,8 +96,7 @@ public:
 	 * @param message
 	 * @param sent
 	 */
-	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send)
-		throw(NetlinkException);
+	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send);
 
 	/**
 	 * An OS Process has finalized. Retrieve the information associated to
@@ -137,12 +136,10 @@ public:
 	~RINAManager();
 
 	/** Sends a NL message of default maximum size (PAGE SIZE) */
-	void sendMessage(BaseNetlinkMessage * netlinkMessage)
-	throw (NetlinkException);
+	void sendMessage(BaseNetlinkMessage * netlinkMessage);
 
 	/** Sends a NL message of specified maximum size */
-	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage, size_t maxSize)
-	throw (NetlinkException);
+	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage, size_t maxSize);
 
 	/**
 	 * Notify about the reception of a Netlink message

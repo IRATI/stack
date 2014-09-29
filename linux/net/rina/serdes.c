@@ -34,6 +34,7 @@
 #include "buffer.h"
 #include "pci.h"
 
+/* FIXME: This is wrong, use a version value and use sifeof later */
 #define VERSION_SIZE  1
 
 /* FIXME: Remove this useless variable, we have to have a define for that */
@@ -157,6 +158,7 @@ static int serialize_base_pci(const struct serdes * instance,
         offset = 0;
         memcpy(data + offset, &version, VERSION_SIZE);
         offset += VERSION_SIZE;
+        LOG_DBG("Serialized version %d, with size %d", version, VERSION_SIZE);
 
         addr = pci_destination(pci);
         memcpy(data + offset, &addr, dt_cons->address_length);

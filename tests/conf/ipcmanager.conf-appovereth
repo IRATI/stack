@@ -17,15 +17,14 @@
   }],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-eth-vlan",
-    "applicationProcessName" : "test-eth",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-eth",
+    "apInstance" : "1",
     "difName" : "300"
    } ],
   "difConfigurations" : [ {
     "difName" : "300",
-    "configParameters" : [ {
-     "name" : "interface-name", 
-     "value" : "eth1"
-      } ]
+    "configParameters" : {
+     "interface-name" : "eth1"
+      } 
    } ] 
 }

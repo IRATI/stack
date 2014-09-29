@@ -20,22 +20,21 @@
   } ],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-hv",
-    "applicationProcessName" : "test-shim-hv.IPCP",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-shim-hv.IPCP",
+    "apInstance" : "1",
     "difName" : "test-shim-hv.DIF"
    }, {
     "type" : "normal-ipc",
-    "applicationProcessName" : "test-normal-1.IPCP",
-    "applicationProcessInstance" : "1",
+    "apName" : "test-normal-1.IPCP",
+    "apInstance" : "1",
     "difName" : "test-normal.DIF",
     "difsToRegisterAt" : ["test-shim-hv.DIF"]
    } ],
   "difConfigurations" : [ {
     "difName" : "test-shim-hv.DIF",
-    "configParameters" : [ {
-     "name" : "vmpi-id",
-     "value" : "0"
-      } ]
+    "configParameters" : {
+     "vmpi-id" : "0"
+      } 
   }, {
     "difName" : "test-normal.DIF",
     "dataTransferConstants" : {
@@ -43,15 +42,14 @@
      "cepIdLength" : 2,
      "lengthLength" : 2,
      "portIdLength" : 2,
-     "qosIdLenght" : 2,
+     "qosIdLength" : 2,
      "sequenceNumberLength" : 4,
      "maxPduSize" : 10000,
      "maxPduLifetime" : 30
     },
-    "configParameters" : [ {
-     "name" : "bar",
-     "value" : "foo"
-      } ],
+     "configParameters" : {
+      "bar" : "foo"
+      },
      "qosCubes" : [ {
          "name" : "reliable",
          "id" : 1,
