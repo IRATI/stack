@@ -1,141 +1,178 @@
 {
-    "localConfiguration" : {
-        "installationPath" : "/usr/local/irati/share/rinad",
-        "libraryPath" : "/usr/local/irati/lib",
-        "consolePort" : 32766,
-        "cdapTimeoutInMs" : 10000,
-        "enrollmentTimeoutInMs" : 10000,
-        "flowAllocatorTimeoutInMs" : 15000,
-        "watchdogPeriodInMs" : 60000,
-        "declaredDeadIntervalInMs" : 120000,
-        "neighborsEnrollerPeriodInMs" : 10000,
-        "lengthOfFlowQueues" : 10
+    "localConfiguration": {
+        "installationPath": "/usr/local/irati/share/rinad",
+        "libraryPath": "/usr/local/irati/lib",
+        "consolePort": 32766,
+        "cdapTimeoutInMs": 10000,
+        "enrollmentTimeoutInMs": 10000,
+        "flowAllocatorTimeoutInMs": 15000,
+        "watchdogPeriodInMs": 60000,
+        "declaredDeadIntervalInMs": 120000,
+        "neighborsEnrollerPeriodInMs": 10000,
+        "lengthOfFlowQueues": 10
     },
-    "applicationToDIFMappings" : [ {
-        "encodedAppName" : "rina.utils.apps.echo.server-1--",
-        "difName" : "fantastic.DIF" 
-    }, {
-        "encodedAppName" : "rina.utils.apps.echo.client-1--",
-        "difName" : "fantastic.DIF" 
-    }, {
-        "encodedAppName" : "rina.utils.apps.rinaperf.server-1--",
-        "difName" : "fantastic.DIF" 
-    }, {
-        "encodedAppName" : "rina.utils.apps.rinaperf.client-1--",
-        "difName" : "fantastic.DIF" 
-    }, {
-        "encodedAppName" : "rina.utils.apps.echo-2--",
-        "difName" : "fantastic.DIF" 
-    }, {
-        "encodedAppName" : "rina.utils.apps.echoclient-2--",
-        "difName" : "fantastic.DIF" 
-    }],
-    "ipcProcessesToCreate" : [ {
-        "type" : "shim-eth-vlan",
-        "apName" : "test-eth",
-        "apInstance" : "1",
-        "difName" : "300"
-    }, {
-        "type" : "normal-ipc",
-        "apName" : "test1.IRATI",
-        "apInstance" : "1",
-        "difName" : "normal.DIF",
-        "difsToRegisterAt" : ["300"]
-    }, {
-        "type" : "normal-ipc",
-        "apName" : "Ada",
-        "apInstance" : "1",
-        "difName" : "fantastic.DIF",
-        "difsToRegisterAt" : ["normal.DIF"]
-    } ],
-    "difConfigurations" : [ {
-        "difName" : "fantastic.DIF",
-    	"difType" : "normal-ipc",
-        "dataTransferConstants" : {
-            "addressLength" : 2,
-            "cepIdLength" : 2,
-            "lengthLength" : 2,
-            "portIdLength" : 2,
-            "qosIdLength" : 2,
-            "sequenceNumberLength" : 4,
-            "maxPduSize" : 10000,
-            "maxPduLifetime" : 30
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "difName": "fantastic.DIF"
         },
-        "qosCubes" : [ {
-            "name" : "reliable",
-            "id" : 1, 
-            "partialDelivery" : false,
-            "orderedDelivery" : true
-        }, {
-            "name" : "unreliable",
-            "id" : 2, 
-            "partialDelivery" : true,
-            "orderedDelivery" : false 
-        } ], 
-        "knownIPCProcessAddresses" : [ {
-            "apName" : "Ada",
-            "apInstance" : "1",
-            "address" : 5
-        }, {
-            "apName" : "Knuth",
-            "apInstance" : "1",
-            "address" : 6
-        } ], 
-        "addressPrefixes" : [ {
-            "addressPrefix" : 0,
-            "organization" : "N.Bourbaki"
-        }, {
-            "addressPrefix" : 16,
-            "organization" : "IRATI"
-        } ]
-    }, {
-        "difName" : "300",
-   	"difType" : "shim-eth-vlan",
-        "configParameters" : {
-           "interface-name" : "eth1"
-         } 
-    }, {
-        "difName" : "normal.DIF",
-    	"difType" : "normal-ipc",
-        "dataTransferConstants" : {
-            "addressLength" : 2,
-            "cepIdLength" : 2,
-            "lengthLength" : 2,
-            "portIdLength" : 2,
-            "qosIdLength" : 2,
-            "sequenceNumberLength" : 4,
-            "maxPduSize" : 10000,
-            "maxPduLifetime" : 30
+        {
+            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "difName": "fantastic.DIF"
         },
-        "configParameters" : {
-          "bar" : "foo"
-         },
-        "qosCubes" : [ {
-            "name" : "reliable",
-            "id" : 1, 
-            "partialDelivery" : false,
-            "orderedDelivery" : true
-        }, {
-            "name" : "unreliable",
-            "id" : 2, 
-            "partialDelivery" : true,
-            "orderedDelivery" : false 
-        } ], 
-        "knownIPCProcessAddresses" : [ {
-            "apName" : "test1.IRATI",
-            "apInstance" : "1",
-            "address" : 16
-        }, {
-            "apName" : "test2.IRATI",
-            "apInstance" : "1",
-            "address" : 17
-        } ], 
-        "addressPrefixes" : [ {
-            "addressPrefix" : 0,
-            "organization" : "N.Bourbaki"
-        }, {
-            "addressPrefix" : 16,
-            "organization" : "IRATI"
-        } ]
-    } ]
+        {
+            "encodedAppName": "rina.utils.apps.rinaperf.server-1--",
+            "difName": "fantastic.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.rinaperf.client-1--",
+            "difName": "fantastic.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.echo-2--",
+            "difName": "fantastic.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.echoclient-2--",
+            "difName": "fantastic.DIF"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "type": "shim-eth-vlan",
+            "apName": "test-eth",
+            "apInstance": "1",
+            "difName": "300"
+        },
+        {
+            "type": "normal-ipc",
+            "apName": "test1.IRATI",
+            "apInstance": "1",
+            "difName": "normal.DIF",
+            "difsToRegisterAt": [
+                "300"
+            ]
+        },
+        {
+            "type": "normal-ipc",
+            "apName": "Ada",
+            "apInstance": "1",
+            "difName": "fantastic.DIF",
+            "difsToRegisterAt": [
+                "normal.DIF"
+            ]
+        }
+    ],
+    "difConfigurations": [
+        {
+            "difName": "fantastic.DIF",
+            "difType": "normal-ipc",
+            "dataTransferConstants": {
+                "addressLength": 2,
+                "cepIdLength": 2,
+                "lengthLength": 2,
+                "portIdLength": 2,
+                "qosIdLength": 2,
+                "sequenceNumberLength": 4,
+                "maxPduSize": 10000,
+                "maxPduLifetime": 30
+            },
+            "qosCubes": [
+                {
+                    "name": "reliable",
+                    "id": 1,
+                    "partialDelivery": false,
+                    "orderedDelivery": true
+                },
+                {
+                    "name": "unreliable",
+                    "id": 2,
+                    "partialDelivery": true,
+                    "orderedDelivery": false
+                }
+            ],
+            "knownIPCProcessAddresses": [
+                {
+                    "apName": "Ada",
+                    "apInstance": "1",
+                    "address": 5
+                },
+                {
+                    "apName": "Knuth",
+                    "apInstance": "1",
+                    "address": 6
+                }
+            ],
+            "addressPrefixes": [
+                {
+                    "addressPrefix": 0,
+                    "organization": "N.Bourbaki"
+                },
+                {
+                    "addressPrefix": 16,
+                    "organization": "IRATI"
+                }
+            ]
+        },
+        {
+            "difName": "300",
+            "difType": "shim-eth-vlan",
+            "configParameters": {
+                "interface-name": "eth1"
+            }
+        },
+        {
+            "difName": "normal.DIF",
+            "difType": "normal-ipc",
+            "dataTransferConstants": {
+                "addressLength": 2,
+                "cepIdLength": 2,
+                "lengthLength": 2,
+                "portIdLength": 2,
+                "qosIdLength": 2,
+                "sequenceNumberLength": 4,
+                "maxPduSize": 10000,
+                "maxPduLifetime": 30
+            },
+            "configParameters": {
+                "bar": "foo"
+            },
+            "qosCubes": [
+                {
+                    "name": "reliable",
+                    "id": 1,
+                    "partialDelivery": false,
+                    "orderedDelivery": true
+                },
+                {
+                    "name": "unreliable",
+                    "id": 2,
+                    "partialDelivery": true,
+                    "orderedDelivery": false
+                }
+            ],
+            "knownIPCProcessAddresses": [
+                {
+                    "apName": "test1.IRATI",
+                    "apInstance": "1",
+                    "address": 16
+                },
+                {
+                    "apName": "test2.IRATI",
+                    "apInstance": "1",
+                    "address": 17
+                }
+            ],
+            "addressPrefixes": [
+                {
+                    "addressPrefix": 0,
+                    "organization": "N.Bourbaki"
+                },
+                {
+                    "addressPrefix": 16,
+                    "organization": "IRATI"
+                }
+            ]
+        }
+    ]
 }
