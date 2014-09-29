@@ -49,9 +49,9 @@ void parse_name(const Json::Value &root,
         name.entityInstance  = root.get("aeInstance", string()).asString();
 }
 
-void parse_policy(const Json::Value  &root,
-                  const string       &name,
-                  rina::PolicyConfig &pol)
+void parse_policy(const Json::Value  & root,
+                  const string       & name,
+                  rina::PolicyConfig & pol)
 {
         Json::Value p = root[name];
 
@@ -70,8 +70,8 @@ void parse_policy(const Json::Value  &root,
         }
 }
 
-void parse_flow_ctrl(const Json::Value root,
-                     rina::DTCPConfig &dc)
+void parse_flow_ctrl(const Json::Value  root,
+                     rina::DTCPConfig & dc)
 {
         Json::Value flow_ctrl = root["flowControlConfig"];
 
@@ -187,13 +187,12 @@ void parse_flow_ctrl(const Json::Value root,
                              "receivingFlowControlPolicy",
                              fc.receiving_flow_control_policy_);
 
-
                 dc.flow_control_config_ = fc;
         }
 }
 
-void parse_rtx_flow_ctrl(const Json::Value root,
-                         rina::DTCPConfig &dc)
+void parse_rtx_flow_ctrl(const Json::Value  root,
+                         rina::DTCPConfig & dc)
 {
         Json::Value rtx_ctrl = root["rtxControlConfig"];
         if (rtx_ctrl != 0) {
@@ -242,9 +241,8 @@ void parse_rtx_flow_ctrl(const Json::Value root,
         }
 }
 
-
-void parse_efcp_policies(const Json::Value root,
-                         rina::QoSCube    &cube)
+void parse_efcp_policies(const Json::Value  root,
+                         rina::QoSCube    & cube)
 {
         Json::Value con_pol = root["efcpPolicies"];
         if (con_pol != 0) {
@@ -316,8 +314,8 @@ void parse_efcp_policies(const Json::Value root,
         }
 }
 
-void parse_dif_configs(const Json::Value   &root,
-                       list<DIFProperties> &difConfigurations)
+void parse_dif_configs(const Json::Value   & root,
+                       list<DIFProperties> & difConfigurations)
 {
         const std::string NORMAL_TYPE = "normal-ipc";
         rina::IPCProcessFactory fact;
@@ -360,7 +358,7 @@ void parse_dif_configs(const Json::Value   &root,
                          props.difType.c_str());
 
                 // normal.DIF specific configurations
-                if(props.difType.compare(NORMAL_TYPE) == 0) {
+                if (props.difType.compare(NORMAL_TYPE) == 0) {
                         // Data transfer constants
                         Json::Value dt_const =
                                 dif_configs[i]["dataTransferConstants"];
@@ -720,8 +718,8 @@ void parse_dif_configs(const Json::Value   &root,
         }
 }
 
-void parse_ipc_to_create(const Json::Value         root,
-                         list<IPCProcessToCreate> &ipcProcessesToCreate)
+void parse_ipc_to_create(const Json::Value          root,
+                         list<IPCProcessToCreate> & ipcProcessesToCreate)
 {
         Json::Value ipc_processes = root["ipcProcessesToCreate"];
 
@@ -810,21 +808,20 @@ void parse_ipc_to_create(const Json::Value         root,
 
                 ipcProcessesToCreate.push_back(ipc);
         }
-
 }
 
-void parse_app_to_dif(const Json::Value &root,
+void parse_app_to_dif(const Json::Value & root,
                       std::map<std::string,
                       rina::ApplicationProcessNamingInformation>
-                      &applicationToDIFMappings)
+                      & applicationToDIFMappings)
 {
         Json::Value appToDIF = root["applicationToDIFMappings"];
         if (appToDIF != 0) {
                 for (unsigned int i = 0; i < appToDIF.size(); i++) {
-
                         string encodedAppName =
                                 appToDIF[i].get("encodedAppName",
                                                 string()).asString();
+
                         rina::ApplicationProcessNamingInformation difName =
                                 rina::ApplicationProcessNamingInformation
                                 (appToDIF[i].get
@@ -839,9 +836,8 @@ void parse_app_to_dif(const Json::Value &root,
         }
 }
 
-
-void parse_local_conf(const Json::Value &root,
-                      rinad::LocalConfiguration &local)
+void parse_local_conf(const Json::Value &         root,
+                      rinad::LocalConfiguration & local)
 {
         Json::Value local_conf = root["localConfiguration"];
         if (local_conf != 0) {
@@ -884,8 +880,8 @@ void parse_local_conf(const Json::Value &root,
         }
 }
 
-bool parse_configuration(string file_loc,
-                         IPCManager *ipcm)
+bool parse_configuration(string       file_loc,
+                         IPCManager * ipcm)
 {
         // General note: Params should be checked before they are used
         // Some can be NULL
@@ -896,7 +892,7 @@ bool parse_configuration(string file_loc,
         ifstream file;
 
         file.open(file_loc.c_str());
-        if(file.fail()) {
+        if (file.fail()) {
                 LOG_ERR("Failed to open config file");
                 return false;
         }
