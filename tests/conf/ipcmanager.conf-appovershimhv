@@ -26,6 +26,7 @@
    } ],
   "difConfigurations" : [ {
     "difName" : "test-shim-dif-hv",
+    "difType" : "shim-hv",
     "configParameters" : {
      "vmpi-id" : "0"
       }
