@@ -29,8 +29,6 @@
 #include "rds/rmem.h"
 
 
-#define DEFAULT_NAME    "default"
-
 static void
 default_max_q_policy_tx(struct rmt_ps *ps, struct pdu *pdu,
                         struct rfifo *queue)

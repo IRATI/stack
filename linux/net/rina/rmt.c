@@ -232,8 +232,9 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
-        struct rmt *         tmp;
-        const char *         name;
+        struct rmt              *tmp;
+        const char              *name;
+        struct rmt_ps_factory   *ps_factory;
 
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
@@ -296,7 +297,14 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
+        /* Try to select the default policy set factory. */
         tmp->ps = NULL;
+        ps_factory = (struct rmt_ps_factory *)
+                        lookup_ps(&policy_sets, DEFAULT_NAME);
+        if (ps_factory) {
+                /* Instantiate a policy set. */
+                tmp->ps = ps_factory->create(tmp);
+        }
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 

@@ -44,7 +44,7 @@ struct rmt_ps {
 };
 
 struct rmt_ps_factory {
-        /* Parent struct. */
+        /* Parent struct, must be the first member. */
         struct base_ps_factory base;
 
         /* Factory callbacks. */
