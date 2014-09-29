@@ -460,7 +460,6 @@ static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
                         return -1;
                 }
                 rtxq_ack(q, seq_num, dt_sv_tr(dtcp->parent));
-                snd_lft_win_set(dtcp, seq_num);
         }
 
         return 0;
