@@ -48,7 +48,6 @@ ipcm_SOURCES  =							\
 	flow-allocation.cc          flow-allocation.h		\
 	console.cc		    console.h
 
-
 test_empty_SOURCES  =				\
 	test-empty.cc
 test_empty_CPPFLAGS =				\
