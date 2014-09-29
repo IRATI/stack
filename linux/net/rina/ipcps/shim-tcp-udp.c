@@ -1537,7 +1537,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         rkfree(copy);
 
-                        LOG_DBG("Got hostname %d", data->host_name);
+                        LOG_DBG("Got hostname %u", data->host_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
                         unsigned int       len, port_nr;
                         __be32             ip_addr;
