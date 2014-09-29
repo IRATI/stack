@@ -4,4 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS = ipcp
+ipcmincludedir = $(pkgincludedir)/ipcm
+
+nobase_ipcminclude_HEADERS =			\
+        policy.h
