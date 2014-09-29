@@ -96,7 +96,9 @@ AC_CONFIG_FILES([
     src/common/encoders/Makefile
     src/common/tclap/Makefile
     src/ipcp/Makefile
+    src/ipcp/include/Makefile
     src/ipcm/Makefile
+    src/ipcm/include/Makefile
 
     doc/Makefile
     etc/Makefile

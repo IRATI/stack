@@ -4,6 +4,8 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+SUBDIRS      = include
+
 EXTRA_DIST   =
 CLEANFILES   =
 
