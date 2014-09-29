@@ -35,6 +35,9 @@ rina-personality-default-y +=			\
 	 utils-workarounds.o
 endif
 
+obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
+	rmt-ps-default.o
+
 obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/
 obj-$(CONFIG_RINA) += rinarp/
