@@ -1,0 +1,10 @@
+prefix=@prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: RINAd IPCM
+Description: RINA IPC Manager Daemon
+Version: @PACKAGE_VERSION@
+URL: @PACKAGE_URL@
+Requires: LibRINA >= @PACKAGE_VERSION@
+Libs: -L${libdir} -lrina
