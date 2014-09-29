@@ -2,6 +2,7 @@
  * Configuration reader for IPC Manager
  *
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,22 +40,13 @@ using namespace std;
 
 namespace rinad {
 
-
 void parse_name(const Json::Value &root,
                 rina::ApplicationProcessNamingInformation &name)
 {
-        name.processName =
-                root.get("apName",
-                         string()).asString();
-        name.processInstance =
-                root.get("apInstance",
-                         string()).asString();
-        name.entityName =
-                root.get("aeName",
-                         string()).asString();
-        name.entityInstance =
-                root.get("aeInstance",
-                         string()).asString();
+        name.processName     = root.get("apName",     string()).asString();
+        name.processInstance = root.get("apInstance", string()).asString();
+        name.entityName      = root.get("aeName",     string()).asString();
+        name.entityInstance  = root.get("aeInstance", string()).asString();
 }
 
 void parse_policy(const Json::Value  &root,
@@ -63,7 +55,7 @@ void parse_policy(const Json::Value  &root,
 {
         Json::Value p = root[name];
 
-        pol.name_ = p.get("name", string()).asString();
+        pol.name_    = p.get("name", string()).asString();
         pol.version_ = p.get("version", string()).asString();
 
         Json::Value par = p["parameters"];
@@ -327,8 +319,8 @@ void parse_efcp_policies(const Json::Value root,
 void parse_dif_configs(const Json::Value   &root,
                        list<DIFProperties> &difConfigurations)
 {
-		const std::string NORMAL_TYPE = "normal-ipc";
-		rina::IPCProcessFactory fact;
+        const std::string NORMAL_TYPE = "normal-ipc";
+        rina::IPCProcessFactory fact;
         Json::Value dif_configs = root["difConfigurations"];
         for (unsigned int i = 0; i < dif_configs.size(); i++) {
                 rinad::DIFProperties props;
@@ -340,366 +332,390 @@ void parse_dif_configs(const Json::Value   &root,
 
                 props.difType = dif_configs[i].get("difType",
                                                    string()).asString();
-                std::list<std::string> suportedDIFS = fact.getSupportedIPCProcessTypes();
+                std::list<std::string> suportedDIFS =
+                        fact.getSupportedIPCProcessTypes();
                 bool difCorrect = false;
-            	std::string s;
-                for (std::list<std::string>::iterator it = suportedDIFS.begin(); it != suportedDIFS.end(); ++it) {
-                	if (props.difType.compare(*it) == 0)
-                		difCorrect = true;
-                	s.append(*it);
-                	s.append(", ");
+                std::string s;
+                for (std::list<std::string>::iterator it =suportedDIFS.begin();
+                     it != suportedDIFS.end();
+                     ++it) {
+                        if (props.difType.compare(*it) == 0)
+                                difCorrect = true;
+                        s.append(*it);
+                        s.append(", ");
                 }
-                if (!difCorrect)
-                {
+                if (!difCorrect) {
+                        std::stringstream ss;
 
-                	std::stringstream ss;
-                	ss << "difType parameter of DIF " << props.difName.processName <<" is wrong, options are: "
-                			<<s;
-                	throw Exception(ss.str().c_str());
+                        ss << "difType parameter of DIF "
+                           << props.difName.processName
+                           << " is wrong, options are: "
+                           << s;
+
+                        throw Exception(ss.str().c_str());
                 }
+
                 LOG_INFO("Parsing configuration of DIF %s of type %s",
-                		props.difName.processName.c_str(),
-                		props.difType.c_str());
+                         props.difName.processName.c_str(),
+                         props.difType.c_str());
 
                 // normal.DIF specific configurations
-                if(props.difType.compare(NORMAL_TYPE) == 0){
-                    // Data transfer constants
-                	Json::Value dt_const = dif_configs[i]["dataTransferConstants"];
-					if (dt_const != 0) {
-							rina::DataTransferConstants dt;
+                if(props.difType.compare(NORMAL_TYPE) == 0) {
+                        // Data transfer constants
+                        Json::Value dt_const =
+                                dif_configs[i]["dataTransferConstants"];
+                        if (dt_const != 0) {
+                                rina::DataTransferConstants dt;
 
-							// There is no asShort()
-							dt.address_length_ = static_cast<unsigned short>
-									(dt_const.get("addressLength", 0).asUInt());
-							dt.cep_id_length_ = static_cast<unsigned short>
-									(dt_const.get("cepIdLength", 0).asUInt());
-							dt.dif_integrity_ = dt_const.get
-									("difIntegrity", false).asBool();
-							dt.length_length_ = static_cast<unsigned short>
-									(dt_const.get("lengthLength", 0).asUInt());
-							dt.max_pdu_lifetime_ = dt_const.get
-									("maxPduLifetime", 0).asUInt();
-							dt.max_pdu_size_ = dt_const.get
-									("maxPduSize", 0).asUInt();
-							dt.port_id_length_ = static_cast<unsigned short>
-									(dt_const.get("portIdLength", 0).asUInt());
-							dt.qos_id_length_ = static_cast<unsigned short>
-									(dt_const.get("qosIdLength", 0).asUInt());
-							dt.sequence_number_length_ = static_cast<unsigned short>
-									(dt_const.get
-									 ("sequenceNumberLength", 0).asUInt());
-							props.dataTransferConstants = dt;
-					}
-					else
-	                	throw Exception("dataTransferConstants parameter can not be empty");
+                                // There is no asShort()
+                                dt.address_length_ = static_cast<unsigned short>
+                                        (dt_const.get("addressLength", 0).asUInt());
+                                dt.cep_id_length_ = static_cast<unsigned short>
+                                        (dt_const.get("cepIdLength", 0).asUInt());
+                                dt.dif_integrity_ = dt_const.get
+                                        ("difIntegrity", false).asBool();
+                                dt.length_length_ = static_cast<unsigned short>
+                                        (dt_const.get("lengthLength", 0).asUInt());
+                                dt.max_pdu_lifetime_ = dt_const.get
+                                        ("maxPduLifetime", 0).asUInt();
+                                dt.max_pdu_size_ = dt_const.get
+                                        ("maxPduSize", 0).asUInt();
+                                dt.port_id_length_ = static_cast<unsigned short>
+                                        (dt_const.get("portIdLength", 0).asUInt());
+                                dt.qos_id_length_ = static_cast<unsigned short>
+                                        (dt_const.get("qosIdLength", 0).asUInt());
+                                dt.sequence_number_length_ = static_cast<unsigned short>
+                                        (dt_const.get
+                                         ("sequenceNumberLength", 0).asUInt());
+                                props.dataTransferConstants = dt;
+                        } else
+                                throw Exception("dataTransferConstants parameter can not be empty");
 
-					// QoS cubes
-                	Json::Value cubes = dif_configs[i]["qosCubes"];
-                	if (cubes.empty())
-	                	throw Exception("qosCubes parameter can not be empty");
-					for (unsigned int j = 0; j < cubes.size(); j++) {
-							// FIXME: Probably should have good default values
-							// Check default constructor
-							rina::QoSCube cube;
+                        // QoS cubes
+                        Json::Value cubes = dif_configs[i]["qosCubes"];
+                        if (cubes.empty())
+                                throw Exception("qosCubes parameter can not be empty");
+                        for (unsigned int j = 0; j < cubes.size(); j++) {
+                                // FIXME: Probably should have good default
+                                //        values. Check default constructor
+                                rina::QoSCube cube;
 
-							cube.id_ = cubes[j].get("id", 0).asUInt();
-							cube.name_ = cubes[j].get("name", string()).asString();
+                                cube.id_   = cubes[j].get("id", 0).asUInt();
+                                cube.name_ = cubes[j].get("name", string()).asString();
 
-							parse_efcp_policies(cubes[j], cube);
+                                parse_efcp_policies(cubes[j], cube);
 
-							cube.average_bandwidth_ =
-									cubes[j].get("averageBandwidth",
-												 cube.average_bandwidth_)
-									.asUInt();
-							cube.average_sdu_bandwidth_ =
-									cubes[j].get("averageSduBandwidth",
-											  cube.average_sdu_bandwidth_)
-									.asUInt();
-							cube.peak_bandwidth_duration_ =
-									cubes[j].get("peakBandwidthDuration",
-											  cube.peak_bandwidth_duration_)
-									.asUInt();
-							cube.peak_sdu_bandwidth_duration_ =
-									cubes[j].get("peakSduBandwidthDuration",
-											  cube.peak_sdu_bandwidth_duration_)
-									.asUInt();
-							cube.undetected_bit_error_rate_ =
-									cubes[j].get("undetectedBitErrorRate",
-											  cube.undetected_bit_error_rate_)
-									.asDouble();
-							cube.partial_delivery_ =
-									cubes[j].get("partialDelivery",
-											  cube.partial_delivery_)
-									.asBool();
-							cube.ordered_delivery_ =
-									cubes[j].get("orderedDelivery",
-											  cube.ordered_delivery_)
-									.asBool();
-							cube.max_allowable_gap_ =
-									cubes[j].get("maxAllowableGap",
-											  cube.max_allowable_gap_)
-									.asInt();
-							cube.delay_ = cubes[j].get("delay", cube.delay_)
-									.asUInt();
-							cube.jitter_ = cubes[j].get("jitter", cube.jitter_)
-									.asUInt();
+                                cube.average_bandwidth_ =
+                                        cubes[j].get("averageBandwidth",
+                                                     cube.average_bandwidth_)
+                                        .asUInt();
+                                cube.average_sdu_bandwidth_ =
+                                        cubes[j].get("averageSduBandwidth",
+                                                     cube.average_sdu_bandwidth_)
+                                        .asUInt();
+                                cube.peak_bandwidth_duration_ =
+                                        cubes[j].get("peakBandwidthDuration",
+                                                     cube.peak_bandwidth_duration_)
+                                        .asUInt();
+                                cube.peak_sdu_bandwidth_duration_ =
+                                        cubes[j].get("peakSduBandwidthDuration",
+                                                     cube.peak_sdu_bandwidth_duration_)
+                                        .asUInt();
+                                cube.undetected_bit_error_rate_ =
+                                        cubes[j].get("undetectedBitErrorRate",
+                                                     cube.undetected_bit_error_rate_)
+                                        .asDouble();
+                                cube.partial_delivery_ =
+                                        cubes[j].get("partialDelivery",
+                                                     cube.partial_delivery_)
+                                        .asBool();
+                                cube.ordered_delivery_ =
+                                        cubes[j].get("orderedDelivery",
+                                                     cube.ordered_delivery_)
+                                        .asBool();
+                                cube.max_allowable_gap_ =
+                                        cubes[j].get("maxAllowableGap",
+                                                     cube.max_allowable_gap_)
+                                        .asInt();
+                                cube.delay_ = cubes[j].get("delay", cube.delay_)
+                                        .asUInt();
+                                cube.jitter_ = cubes[j].get("jitter", cube.jitter_)
+                                        .asUInt();
 
-							props.qosCubes.push_back(cube);
-					}
+                                props.qosCubes.push_back(cube);
+                        }
 
-					// rmtConfiguration;
-					Json::Value rmt_conf = dif_configs[i]["rmtConfiguration"];
-					if (rmt_conf != 0) {
-							rina::RMTConfiguration rc;
+                        // rmtConfiguration;
+                        Json::Value rmt_conf = dif_configs[i]["rmtConfiguration"];
+                        if (rmt_conf != 0) {
+                                rina::RMTConfiguration rc;
 
-							parse_policy(rmt_conf,
-										 "rmtQueueMonitorPolicy",
-										 rc.rmt_queue_monitor_policy_);
+                                parse_policy(rmt_conf,
+                                             "rmtQueueMonitorPolicy",
+                                             rc.rmt_queue_monitor_policy_);
 
-							parse_policy(rmt_conf,
-										 "rmtSchedulingPolicy",
-										 rc.rmt_scheduling_policy_);
+                                parse_policy(rmt_conf,
+                                             "rmtSchedulingPolicy",
+                                             rc.rmt_scheduling_policy_);
 
-							parse_policy(rmt_conf,
-										 "maxQueuePolicy",
-										 rc.max_queue_policy_);
+                                parse_policy(rmt_conf,
+                                             "maxQueuePolicy",
+                                             rc.max_queue_policy_);
 
-							props.rmtConfiguration = rc;
-					}
+                                props.rmtConfiguration = rc;
+                        }
 
-					// std::map<std::string, std::string> policies;
-					Json::Value policies = dif_configs[i]["policies"];
-					if (policies != 0) {
-							Json::Value::Members members =
-									policies.getMemberNames();
-							for (unsigned int j = 0; j < members.size(); j++) {
-									string value = policies.get
-											(members[i], string()).asString();
-									props.policies.insert
-											(pair<string, string>
-											 (members[i], value));
-							}
-					}
+                        // std::map<std::string, std::string> policies;
+                        Json::Value policies = dif_configs[i]["policies"];
+                        if (policies != 0) {
+                                Json::Value::Members members =
+                                        policies.getMemberNames();
+                                for (unsigned int j = 0;
+                                     j < members.size();
+                                     j++) {
+                                        string value =
+                                                policies.get(members[i],
+                                                             string())
+                                                .asString();
+                                        props.policies.insert
+                                                (pair<string, string>
+                                                 (members[i], value));
+                                }
+                        }
 
-					// std::map<std::string, std::string> policyParameters;
-					Json::Value policyParams = dif_configs[i]["policyParameters"];
-					if (policyParams != 0) {
-							Json::Value::Members members =
-									policyParams.getMemberNames();
-							for (unsigned int j = 0; j < members.size(); j++) {
-									string value = policyParams.get
-											(members[i], string()).asString();
-									props.policyParameters.insert
-											(pair<string, string>
-											 (members[i], value));
-							}
-					}
+                        // std::map<std::string, std::string> policyParameters;
+                        Json::Value policyParams =
+                                dif_configs[i]["policyParameters"];
+                        if (policyParams != 0) {
+                                Json::Value::Members members =
+                                        policyParams.getMemberNames();
+                                for (unsigned int j = 0;
+                                     j < members.size();
+                                     j++) {
+                                        string value =
+                                                policyParams.get(members[i],
+                                                                 string())
+                                                .asString();
+                                        props.policyParameters.insert
+                                                (pair<string, string>
+                                                 (members[i], value));
+                                }
+                        }
 
-					// NMinusOneFlowsConfiguration
-					//       nMinusOneFlowsConfiguration;
+                        // NMinusOneFlowsConfiguration
+                        //       nMinusOneFlowsConfiguration;
 
-					Json::Value flow_conf =
-							dif_configs[i]["nMinusOneFlowsConfiguration"];
-					if (flow_conf != 0) {
-							rinad::NMinusOneFlowsConfiguration fc;
+                        Json::Value flow_conf =
+                                dif_configs[i]["nMinusOneFlowsConfiguration"];
+                        if (flow_conf != 0) {
+                                rinad::NMinusOneFlowsConfiguration fc;
 
-							fc.managementFlowQoSId =
-									flow_conf.get("managementFlowQosId",
-												  fc.managementFlowQoSId)
-									.asInt();
+                                fc.managementFlowQoSId =
+                                        flow_conf.get("managementFlowQosId",
+                                                      fc.managementFlowQoSId)
+                                        .asInt();
 
-							Json::Value data_flow = flow_conf["dataFlowsQosIds"];
-							for (unsigned int j = 0; j < data_flow.size(); j++) {
-									fc.dataFlowsQoSIds.push_back
-											(data_flow[j].asInt());
-							}
+                                Json::Value data_flow =
+                                        flow_conf["dataFlowsQosIds"];
+                                for (unsigned int j = 0;
+                                     j < data_flow.size();
+                                     j++) {
+                                        fc.dataFlowsQoSIds.push_back
+                                                (data_flow[j].asInt());
+                                }
 
-							props.nMinusOneFlowsConfiguration = fc;
-					}
+                                props.nMinusOneFlowsConfiguration = fc;
+                        }
 
-					// std::list<ExpectedApplicationRegistration>
-					// expectedApplicationRegistrations;
-					Json::Value exp_app =
-							dif_configs[i]["expectedApplicationRegistrations"];
-					if (exp_app != 0) {
-							for (unsigned int j = 0; j < exp_app.size(); j++) {
-									rinad::ExpectedApplicationRegistration exp;
+                        // std::list<ExpectedApplicationRegistration>
+                        // expectedApplicationRegistrations;
+                        Json::Value exp_app =
+                                dif_configs[i]["expectedApplicationRegistrations"];
+                        if (exp_app != 0) {
+                                for (unsigned int j = 0;
+                                     j < exp_app.size();
+                                     j++) {
+                                        rinad::ExpectedApplicationRegistration exp;
 
-									exp.applicationProcessName =
-											exp_app[j]
-											.get("apName",
-												 string())
-											.asString();
+                                        exp.applicationProcessName =
+                                                exp_app[j]
+                                                .get("apName",
+                                                     string())
+                                                .asString();
 
-									exp.applicationProcessInstance =
-											exp_app[j]
-											.get("apInstance",
-												 string())
-											.asString();
+                                        exp.applicationProcessInstance =
+                                                exp_app[j]
+                                                .get("apInstance",
+                                                     string())
+                                                .asString();
 
-									exp.applicationEntityName =
-											exp_app[j]
-											.get("aeName",
-												 string())
-											.asString();
+                                        exp.applicationEntityName =
+                                                exp_app[j]
+                                                .get("aeName",
+                                                     string())
+                                                .asString();
 
-									exp.socketPortNumber =
-											exp_app[j]
-											.get("socketPortNumber",
-												 exp.socketPortNumber)
-											.asInt();
+                                        exp.socketPortNumber =
+                                                exp_app[j]
+                                                .get("socketPortNumber",
+                                                     exp.socketPortNumber)
+                                                .asInt();
 
-									props.expectedApplicationRegistrations
-											.push_back(exp);
-							}
-					}
+                                        props.expectedApplicationRegistrations
+                                                .push_back(exp);
+                                }
+                        }
 
-					// std::list<DirectoryEntry> directory;
-					Json::Value dir = dif_configs[i]["directory"];
-					if (dir != 0) {
-							for (unsigned int j = 0; j < dir.size(); j++) {
-									rinad::DirectoryEntry de;
+                        // std::list<DirectoryEntry> directory;
+                        Json::Value dir = dif_configs[i]["directory"];
+                        if (dir != 0) {
+                                for (unsigned int j = 0; j < dir.size(); j++) {
+                                        rinad::DirectoryEntry de;
 
-									de.applicationProcessName =
-											dir[j].get("apName",
-													string())
-											.asString();
+                                        de.applicationProcessName =
+                                                dir[j].get("apName",
+                                                           string())
+                                                .asString();
 
-									de.applicationProcessInstance =
-											dir[j].get("apInstance",
-													   string())
-											.asString();
+                                        de.applicationProcessInstance =
+                                                dir[j].get("apInstance",
+                                                           string())
+                                                .asString();
 
-									de.applicationEntityName =
-											dir[j].get("aeName",
-													   string())
-											.asString();
+                                        de.applicationEntityName =
+                                                dir[j].get("aeName",
+                                                           string())
+                                                .asString();
 
-									de.hostname =
-											dir[j].get("hostname",
-													   string())
-											.asString();
+                                        de.hostname =
+                                                dir[j].get("hostname",
+                                                           string())
+                                                .asString();
 
-									de.socketPortNumber =
-											dir[j].get("socketPortNumber",
-													   de.socketPortNumber)
-											.asInt();
+                                        de.socketPortNumber =
+                                                dir[j].get("socketPortNumber",
+                                                           de.socketPortNumber)
+                                                .asInt();
 
-									props.directory.push_back(de);
-							}
-					}
+                                        props.directory.push_back(de);
+                                }
+                        }
 
-					// std::list<KnownIPCProcessAddress>
-					// knownIPCProcessAddresses;
+                        // std::list<KnownIPCProcessAddress>
+                        // knownIPCProcessAddresses;
 
-					Json::Value known = dif_configs[i]["knownIPCProcessAddresses"];
-					if (known != 0) {
-							for (unsigned int j = 0; j < known.size(); j++) {
-									rinad::KnownIPCProcessAddress kn;
+                        Json::Value known =
+                                dif_configs[i]["knownIPCProcessAddresses"];
+                        if (known != 0) {
+                                for (unsigned int j = 0;
+                                     j < known.size();
+                                     j++) {
+                                        rinad::KnownIPCProcessAddress kn;
 
-									parse_name(known[j], kn.name);
+                                        parse_name(known[j], kn.name);
 
-									kn.address =
-											known[j].get("address",
-														 kn.address).asUInt();
+                                        kn.address = known[j]
+                                                .get("address", kn.address)
+                                                .asUInt();
 
-									props.knownIPCProcessAddresses.push_back(kn);
-							}
-					}
-					else
-	                	throw Exception("knownIPCProcessAddresses parameter can not be empty");
+                                        props.knownIPCProcessAddresses.push_back(kn);
+                                }
+                        } else
+                                throw Exception("knownIPCProcessAddresses parameter can not be empty");
 
-					// rina::PDUFTableGeneratorConfiguration
-					// pdufTableGeneratorConfiguration;
-					Json::Value pft =
-							dif_configs[i]["pdufTableGeneratorConfiguration"];
-					if (pft != 0) {
-							rina::PDUFTableGeneratorConfiguration pf;
+                        // rina::PDUFTableGeneratorConfiguration
+                        // pdufTableGeneratorConfiguration;
+                        Json::Value pft =
+                                dif_configs[i]["pdufTableGeneratorConfiguration"];
+                        if (pft != 0) {
+                                rina::PDUFTableGeneratorConfiguration pf;
 
-							parse_policy(pft, "pduFtGeneratorPolicy",
-										 pf.pduft_generator_policy_);
+                                parse_policy(pft, "pduFtGeneratorPolicy",
+                                             pf.pduft_generator_policy_);
 
-							Json::Value lsr_config = pft["linkStateRoutingConfiguration"];
+                                Json::Value lsr_config = pft["linkStateRoutingConfiguration"];
 
-							rina::LinkStateRoutingConfiguration lsr;
+                                rina::LinkStateRoutingConfiguration lsr;
 
-							lsr.object_maximum_age_ =
-									lsr_config.get("objectMaximumAge",
-											lsr.object_maximum_age_)
-									.asInt();
+                                lsr.object_maximum_age_ =
+                                        lsr_config.get("objectMaximumAge",
+                                                       lsr.object_maximum_age_)
+                                        .asInt();
 
-							lsr.wait_until_read_cdap_ =
-									lsr_config.get("waitUntilReadCdap",
-											lsr.wait_until_read_cdap_)
-									.asInt();
+                                lsr.wait_until_read_cdap_ =
+                                        lsr_config.get("waitUntilReadCdap",
+                                                       lsr.wait_until_read_cdap_)
+                                        .asInt();
 
-							lsr.wait_until_error_ =
-									lsr_config.get("waitUntilError",
-											lsr.wait_until_error_)
-									.asInt();
+                                lsr.wait_until_error_ =
+                                        lsr_config.get("waitUntilError",
+                                                       lsr.wait_until_error_)
+                                        .asInt();
 
-							lsr.wait_until_pduft_computation_ =
-									lsr_config.get("waitUntilPduftComputation",
-											lsr.wait_until_pduft_computation_)
-									.asInt();
+                                lsr.wait_until_pduft_computation_ =
+                                        lsr_config.get("waitUntilPduftComputation",
+                                                       lsr.wait_until_pduft_computation_)
+                                        .asInt();
 
-							lsr.wait_until_fsodb_propagation_ =
-									lsr_config.get("waitUntilFsodbPropagation",
-											lsr.wait_until_fsodb_propagation_)
-									.asInt();
+                                lsr.wait_until_fsodb_propagation_ =
+                                        lsr_config.get("waitUntilFsodbPropagation",
+                                                       lsr.wait_until_fsodb_propagation_)
+                                        .asInt();
 
-							lsr.wait_until_age_increment_ =
-									lsr_config.get("waitUntilAgeIncrement",
-											lsr.wait_until_age_increment_)
-									.asInt();
+                                lsr.wait_until_age_increment_ =
+                                        lsr_config.get("waitUntilAgeIncrement",
+                                                       lsr.wait_until_age_increment_)
+                                        .asInt();
 
-							lsr.routing_algorithm_ =
-									lsr_config.get("routingAlgorithm",
-											string())
-									.asString();
+                                lsr.routing_algorithm_ =
+                                        lsr_config.get("routingAlgorithm",
+                                                       string())
+                                        .asString();
 
-							pf.link_state_routing_configuration_ = lsr;
+                                pf.link_state_routing_configuration_ = lsr;
 
-							props.pdufTableGeneratorConfiguration = pf;
-					}
-					else
-	                	throw Exception("pdufTableGeneratorConfiguration parameter can not be empty");
+                                props.pdufTableGeneratorConfiguration = pf;
+                        } else
+                                throw Exception("pdufTableGeneratorConfiguration parameter can not be empty");
 
-					// std::list<AddressPrefixConfiguration> addressPrefixes;
-					Json::Value addrp = dif_configs[i]["addressPrefixes"];
-					if (addrp != 0) {
-							for (unsigned int j = 0; j < addrp.size(); j++) {
-									AddressPrefixConfiguration apc;
+                        // std::list<AddressPrefixConfiguration> addressPrefixes;
+                        Json::Value addrp = dif_configs[i]["addressPrefixes"];
+                        if (addrp != 0) {
+                                for (unsigned int j = 0;
+                                     j < addrp.size();
+                                     j++) {
+                                        AddressPrefixConfiguration apc;
 
-									apc.addressPrefix =
-											addrp[j].get("addressPrefix",
-														 apc.addressPrefix)
-											.asUInt();
+                                        apc.addressPrefix =
+                                                addrp[j].get("addressPrefix",
+                                                             apc.addressPrefix)
+                                                .asUInt();
 
-									apc.organization =
-											addrp[j].get("organization",
-														 string())
-											.asString();
+                                        apc.organization =
+                                                addrp[j].get("organization",
+                                                             string())
+                                                .asString();
 
-									props.addressPrefixes.push_back(apc);
-							}
-					}
-					else
-	                	throw Exception("pdufTableGeneratorConfiguration parameter can not be empty");
+                                        props.addressPrefixes.push_back(apc);
+                                }
+                        } else
+                                throw Exception("pdufTableGeneratorConfiguration parameter can not be empty");
                 }
+
                 // configParameters;
                 Json::Value confParams = dif_configs[i]["configParameters"];
-				if (confParams != 0) {
-						Json::Value::Members members =
-								confParams.getMemberNames();
-					for (unsigned int j = 0; j < members.size(); j++) {
-								string value = confParams.get
-										(members[j], string()).asString();
-								props.configParameters.insert
-										(pair<string, string>
-										 (members[j], value));
-					}
-				}
+                if (confParams != 0) {
+                        Json::Value::Members members =
+                                confParams.getMemberNames();
+                        for (unsigned int j = 0; j < members.size(); j++) {
+                                string value = confParams.get
+                                        (members[j], string()).asString();
+                                props.configParameters.insert
+                                        (pair<string, string>
+                                         (members[j], value));
+                        }
+                }
+
                 difConfigurations.push_back(props);
         }
 }
@@ -708,8 +724,8 @@ void parse_ipc_to_create(const Json::Value         root,
                          list<IPCProcessToCreate> &ipcProcessesToCreate)
 {
         Json::Value ipc_processes = root["ipcProcessesToCreate"];
-        for (unsigned int i = 0; i < ipc_processes.size(); i++) {
 
+        for (unsigned int i = 0; i < ipc_processes.size(); i++) {
                 rinad::IPCProcessToCreate ipc;
 
                 ipc.type = ipc_processes[i].get("type", string()).asString();
@@ -764,7 +780,8 @@ void parse_ipc_to_create(const Json::Value         root,
                         ("hostName", string()).asString();
 
                 // SDU protection options
-                Json::Value sdu_prot = ipc_processes[i]["sduProtectionOptions"];
+                Json::Value sdu_prot =
+                        ipc_processes[i]["sduProtectionOptions"];
                 if (sdu_prot != 0) {
                         for (unsigned int j = 0; j < sdu_prot.size(); j++) {
                                 string key =
@@ -806,8 +823,8 @@ void parse_app_to_dif(const Json::Value &root,
                 for (unsigned int i = 0; i < appToDIF.size(); i++) {
 
                         string encodedAppName =
-                                appToDIF[i].get
-                                ("encodedAppName", string()).asString();
+                                appToDIF[i].get("encodedAppName",
+                                                string()).asString();
                         rina::ApplicationProcessNamingInformation difName =
                                 rina::ApplicationProcessNamingInformation
                                 (appToDIF[i].get
@@ -889,7 +906,7 @@ bool parse_configuration(string file_loc,
 
                 // FIXME: Log messages need to take string for this to work
                 cout << "Failed to parse JSON" << endl
-                          << reader.getFormatedErrorMessages() << endl;
+                     << reader.getFormatedErrorMessages() << endl;
 
                 return false;
         }
@@ -898,15 +915,13 @@ bool parse_configuration(string file_loc,
         // Get everything in our data structures
         rinad::RINAConfiguration config;
         try {
-        parse_local_conf(root, config.local);
-        parse_app_to_dif(root, config.applicationToDIFMappings);
-        parse_ipc_to_create(root, config.ipcProcessesToCreate);
-        parse_dif_configs(root, config.difConfigurations);
-        ipcm->config = config;
-        }
-        catch(Exception &e)
-        {
-        	LOG_ERR("Wrong configuration: %s", e.what());
+                parse_local_conf(root, config.local);
+                parse_app_to_dif(root, config.applicationToDIFMappings);
+                parse_ipc_to_create(root, config.ipcProcessesToCreate);
+                parse_dif_configs(root, config.difConfigurations);
+                ipcm->config = config;
+        } catch(Exception &e) {
+                LOG_ERR("Wrong configuration: %s", e.what());
         }
 
         return true;
