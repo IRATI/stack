@@ -46,12 +46,12 @@ enum LOG_LEVEL {
 	DBG
 };
 
-const std::string LOG_LEVEL_DBG = "DBG";
-const std::string LOG_LEVEL_INFO = "INFO";
-const std::string LOG_LEVEL_NOTE = "NOTE";
-const std::string LOG_LEVEL_WARN = "WARN";
-const std::string LOG_LEVEL_ERR = "ERR";
-const std::string LOG_LEVEL_CRIT = "CRIT";
+const std::string LOG_LEVEL_DBG   = "DBG";
+const std::string LOG_LEVEL_INFO  = "INFO";
+const std::string LOG_LEVEL_NOTE  = "NOTE";
+const std::string LOG_LEVEL_WARN  = "WARN";
+const std::string LOG_LEVEL_ERR   = "ERR";
+const std::string LOG_LEVEL_CRIT  = "CRIT";
 const std::string LOG_LEVEL_ALERT = "ALERT";
 const std::string LOG_LEVEL_EMERG = "EMERG";
 
@@ -71,7 +71,7 @@ extern FILE * logOutputStream;
  *
  * @param logLevel the new log level
  */
-void setLogLevel(const std::string& logLevel);
+void setLogLevel(const std::string & logLevel);
 
 /**
  * Set the output stream.
@@ -79,7 +79,7 @@ void setLogLevel(const std::string& logLevel);
  * @param pathToFile Path to the log file
  * @returns 0 if successful, -1 if there is an error
  */
-int setLogFile(const std::string& pathToFile);
+int setLogFile(const std::string & pathToFile);
 
 /**
  * Prints a log statement to the output stream, in case it can be done
@@ -108,11 +108,11 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, DBG,   FMT, ##ARGS)
 
-#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                              \
-        do {                                                            \
-		log(LEVEL,                                              \
-                    "#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n",  \
-                    __func__, ##ARGS);                                            \
+#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                                \
+        do {                                                               \
+		log(LEVEL,                                                 \
+                    "#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n", \
+                    __func__, ##ARGS);                                     \
 	} while (0)
 
 #define LOGF_EMERG(FMT, ARGS...) __LOGF(RINA_PREFIX, EMERG, FMT, ##ARGS)
