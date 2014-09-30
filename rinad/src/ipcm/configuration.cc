@@ -915,9 +915,9 @@ bool parse_configuration(string       file_loc,
         // Some can be NULL
 
         // Parse config file with jsoncpp
-        Json::Value root;
+        Json::Value  root;
         Json::Reader reader;
-        ifstream file;
+        ifstream     file;
 
         file.open(file_loc.c_str());
         if (file.fail()) {
@@ -934,6 +934,7 @@ bool parse_configuration(string       file_loc,
 
                 return false;
         }
+
         file.close();
 
         // Get everything in our data structures
@@ -944,7 +945,7 @@ bool parse_configuration(string       file_loc,
                 parse_ipc_to_create(root, config.ipcProcessesToCreate);
                 parse_dif_configs(root, config.difConfigurations);
                 ipcm->config = config;
-        } catch(Exception &e) {
+        } catch (Exception & e) {
                 LOG_ERR("Wrong configuration: %s", e.what());
         }
 
