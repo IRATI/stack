@@ -23,7 +23,6 @@
     ],
     "ipcProcessesToCreate": [
         {
-            "type": "shim-dummy",
             "apName": "test-dummy",
             "apInstance": "1",
             "difName": "loopback.DIF"

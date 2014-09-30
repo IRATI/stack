@@ -23,13 +23,11 @@
     ],
     "ipcProcessesToCreate": [
         {
-            "type": "shim-hv",
             "apName": "test-shim-hv.IPCP",
             "apInstance": "1",
             "difName": "test-shim-hv.DIF"
         },
         {
-            "type": "normal-ipc",
             "apName": "test-normal-2.IPCP",
             "apInstance": "1",
             "difName": "test-normal.DIF",
