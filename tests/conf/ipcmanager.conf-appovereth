@@ -19,7 +19,6 @@
     ],
     "ipcProcessesToCreate": [
         {
-            "type": "shim-eth-vlan",
             "apName": "test-eth",
             "apInstance": "1",
             "difName": "300"

@@ -151,7 +151,6 @@ struct NeighborData {
 /* The configuration required to create an IPC Process */
 struct IPCProcessToCreate {
 
-        std::string type;
         rina::ApplicationProcessNamingInformation name;
         rina::ApplicationProcessNamingInformation difName;
         std::list<NeighborData> neighbors;
@@ -283,6 +282,11 @@ class RINAConfiguration {
         bool lookup_dif_by_application(
                 const rina::ApplicationProcessNamingInformation& app_name,
                 rina::ApplicationProcessNamingInformation& result);
+
+        bool lookup_type_by_dif(
+                const rina::ApplicationProcessNamingInformation& dif_name,
+                std::string& result) const;
+
 #if 0
         bool lookup_ipcp_address(const std::string dif_name,
                 const rina::ApplicationProcessNamingInformation& ipcp_name,
