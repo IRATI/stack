@@ -130,10 +130,12 @@ class IPCManager : public EventLoopData {
         int deallocate_flow(rina::IPCProcess *ipcp,
                             const rina::FlowDeallocateRequestEvent& event);
 
-        int select_policy_set(const std::string& component_path,
+        int select_policy_set(rina::IPCProcess *ipcp,
+                              const std::string& component_path,
                               const std::string& policy_set);
 
-        int set_policy_set_param(const std::string& path,
+        int set_policy_set_param(rina::IPCProcess *ipcp,
+                                 const std::string& path,
                                  const std::string& name,
                                  const std::string& value);
 

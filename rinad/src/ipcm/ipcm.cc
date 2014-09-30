@@ -660,12 +660,14 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
 }
 
 int
-IPCManager::select_policy_set(const std::string& component_path,
+IPCManager::select_policy_set(rina::IPCProcess *ipcp,
+                              const std::string& component_path,
                               const std::string& policy_set)
 {
         ostringstream ss;
 
-        ss << "Not implemented yet" << endl;
+        LOG_ERR("Not implemented yet");
+        (void)ipcp;
         (void)component_path;
         (void)policy_set;
 
@@ -673,13 +675,15 @@ IPCManager::select_policy_set(const std::string& component_path,
 }
 
 int
-IPCManager::set_policy_set_param(const std::string& component_path,
+IPCManager::set_policy_set_param(rina::IPCProcess *ipcp,
+                                 const std::string& component_path,
                                  const std::string& param_name,
                                  const std::string& param_value)
 {
         ostringstream ss;
 
-        ss << "Not implemented yet" << endl;
+        LOG_ERR("Not implemented yet");
+        (void)ipcp;
         (void)component_path;
         (void)param_name;
         (void)param_value;

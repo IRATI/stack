@@ -99,6 +99,14 @@ IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
         commands_map["query-rib"] =
                         ConsoleCmdInfo(&IPCMConsole::query_rib,
                                 "USAGE: query-rib <ipcp-id>");
+        commands_map["select-policy-set"] =
+                        ConsoleCmdInfo(&IPCMConsole::select_policy_set,
+                                "USAGE: select-policy-set <ipcp-id> "
+                                "<component-path> <policy-set-name>");
+        commands_map["set-policy-set-param"] =
+                        ConsoleCmdInfo(&IPCMConsole::set_policy_set_param,
+                                "USAGE: set-policy-set-param <ipcp-id> "
+                                "<policy-path> <param-name> <param-value>");
 }
 
 IPCMConsole::~IPCMConsole() throw()
@@ -586,6 +594,79 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
                         outstream << "Enrollment operation failed" << endl;
                 } else {
                         outstream << "DIF enrollment succesfully completed" << endl;
+                }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::select_policy_set(std::vector<std::string>& args)
+{
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 4) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                ret = ipcm.select_policy_set(ipcp, args[2], args[3]);
+                if (ret) {
+                        outstream << "select-policy-set operation failed"
+                                        << endl;
+                } else {
+                        outstream << "Policy-set selection succesfully "
+                                        "completed" << endl;
+                }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
+{
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 5) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                ret = ipcm.set_policy_set_param(ipcp, args[2], args[3],
+                                                args[4]);
+                if (ret) {
+                        outstream << "set-policy-set-param operation failed"
+                                        << endl;
+                } else {
+                        outstream << "Policy-set parameter succesfully set"
+                                        << endl;
                 }
         }
 
