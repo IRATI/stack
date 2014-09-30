@@ -28,12 +28,15 @@ rina-personality-default-y :=					\
 	pft.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o				\
 	kipcm-utils.o kipcm.o					\
-	default.o
+	default.o ps-factory.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
 rina-personality-default-y +=			\
 	 utils-workarounds.o
 endif
+
+obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
+	rmt-ps-default.o
 
 obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/

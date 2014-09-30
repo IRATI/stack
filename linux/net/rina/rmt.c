@@ -39,8 +39,12 @@
 #include "efcp-utils.h"
 #include "serdes.h"
 #include "pdu-ser.h"
+#include "rmt-ps.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
+
+
+static LIST_HEAD(policy_sets);
 
 struct rmt_queue {
         struct rfifo *    queue;
@@ -191,6 +195,8 @@ struct rmt {
         struct kfa *            kfa;
         struct efcp_container * efcpc;
         struct serdes *         serdes;
+        struct rmt_ps *         ps;
+        struct rmt_ps_factory   *ps_factory;
 
         struct {
                 struct workqueue_struct * wq;
@@ -227,8 +233,8 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
-        struct rmt *         tmp;
-        const char *         name;
+        struct rmt              *tmp;
+        const char              *name;
 
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
@@ -291,6 +297,15 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 return NULL;
         }
 
+        /* Try to select the default policy set factory. */
+        tmp->ps = NULL;
+        tmp->ps_factory = (struct rmt_ps_factory *)
+                          lookup_ps(&policy_sets, DEFAULT_NAME);
+        if (tmp->ps_factory) {
+                /* Instantiate a policy set. */
+                tmp->ps = tmp->ps_factory->create(tmp);
+        }
+
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
@@ -316,6 +331,10 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->pft)            pft_destroy(instance->pft);
         if (instance->serdes)         serdes_destroy(instance->serdes);
+
+        if (instance->ps) {
+                instance->ps_factory->destroy(instance->ps);
+        }
 
         rkfree(instance);
 
@@ -467,6 +486,7 @@ int rmt_send_port_id(struct rmt * instance,
 {
         struct rwq_work_item * item;
         struct rmt_queue *     s_queue;
+        struct rmt_ps *        ps;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus PDU passed");
@@ -478,6 +498,7 @@ int rmt_send_port_id(struct rmt * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
+        ps = instance->ps;
         if (!instance->egress.queues) {
                 LOG_ERR("No queues to push into");
 
@@ -499,6 +520,11 @@ int rmt_send_port_id(struct rmt * instance,
                 spin_unlock(&instance->egress.queues->lock);
                 pdu_destroy(pdu);
                 return -1;
+        }
+
+        if (ps && ps->max_q_policy_tx &&
+                        rfifo_length(s_queue->queue) >= ps->max_q) {
+                ps->max_q_policy_tx(ps, pdu, s_queue->queue);
         }
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
@@ -1109,6 +1135,7 @@ int rmt_receive(struct rmt * instance,
 {
         struct rwq_work_item * item;
         struct rmt_queue *     r_queue;
+        struct rmt_ps *        ps;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1120,6 +1147,7 @@ int rmt_receive(struct rmt * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+        ps = instance->ps;
         if (!is_port_id_ok(from)) {
                 LOG_ERR("Wrong port-id %d", from);
 
@@ -1149,6 +1177,11 @@ int rmt_receive(struct rmt * instance,
 
                 sdu_destroy(sdu);
                 return -1;
+        }
+
+        if (ps && ps->max_q_policy_rx &&
+                        rfifo_length(r_queue->queue) >= ps->max_q) {
+                ps->max_q_policy_rx(ps, sdu, r_queue->queue);
         }
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {
@@ -1260,6 +1293,23 @@ int rmt_pft_flush(struct rmt * instance)
         return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1;
 }
 EXPORT_SYMBOL(rmt_pft_flush);
+
+int publish_rmt_ps(struct rmt_ps_factory *factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        return publish_ps(&policy_sets, &factory->base);
+}
+EXPORT_SYMBOL(publish_rmt_ps);
+
+int unpublish_rmt_ps(const char *name)
+{
+        return unpublish_ps(&policy_sets, name);
+}
+EXPORT_SYMBOL(unpublish_rmt_ps);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 #if 0
