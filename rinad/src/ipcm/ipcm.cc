@@ -186,7 +186,6 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
         concurrency.lock();
 
         try {
-                // FIXME: This always returns the correct list?
                 supportedDIFS = fact.getSupportedIPCProcessTypes();
                 for (std::list<std::string>::iterator it =
                              supportedDIFS.begin();
@@ -580,13 +579,12 @@ IPCManager::apply_configuration()
                 std::string             type;
                 ostringstream           ss;
 
-                // FIXME: Bail out here
                 if(!config.lookup_type_by_dif(cit->difName, type)) {
                         ss << "Failed to retrieve DIF type for "
                            << cit->name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
 
-                        throw rina::CreateIPCProcessException();
+                        continue;
                 }
 
                 ipcp = create_ipcp(cit->name, type);
