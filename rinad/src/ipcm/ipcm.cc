@@ -235,7 +235,7 @@ IPCManager::destroy_ipcp(unsigned int ipcp_id)
                         << "]" << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::DestroyIPCProcessException) {
-                ss << __func__ << ": Error while destroying IPC "
+                ss  << ": Error while destroying IPC "
                         "process with id " << ipcp_id << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
@@ -401,7 +401,7 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
         concurrency.unlock();
 
         if (!arrived) {
-                ss << __func__ << ": Timed out" << endl;
+                ss  << ": Timed out" << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
         }
@@ -447,7 +447,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
                 arrived = concurrency.wait_for_event(
                         rina::IPCM_REGISTER_APP_RESPONSE_EVENT, seqnum, ret);
         } catch (Exception) {
-                ss << __func__ << ": Error while requesting "
+                ss  << ": Error while requesting "
                         << "registration" << endl;
                 FLUSH_LOG(ERR, ss);
         }
@@ -455,7 +455,7 @@ IPCManager::register_at_dif(rina::IPCProcess *ipcp,
         concurrency.unlock();
 
         if (!arrived) {
-                ss << __func__ << ": Timed out" << endl;
+                ss  << ": Timed out" << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
         }
@@ -506,7 +506,7 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
                         ret = 0;
                 }
         } catch (rina::EnrollException) {
-                ss << __func__ << ": Error while enrolling "
+                ss  << ": Error while enrolling "
                         << "to DIF " << neighbor.difName.toString()
                         << endl;
                 FLUSH_LOG(ERR, ss);
@@ -515,7 +515,7 @@ IPCManager::enroll_to_dif(rina::IPCProcess *ipcp,
         concurrency.unlock();
 
         if (!arrived) {
-                ss << __func__ << ": Timed out" << endl;
+                ss  << ": Timed out" << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
         }
@@ -594,7 +594,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
                 arrived = concurrency.wait_for_event(
                         rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT, seqnum, ret);
         } catch (rina::UpdateDIFConfigurationException) {
-                ss << __func__ << ": Error while updating DIF configuration "
+                ss  << ": Error while updating DIF configuration "
                         " for IPC process " << ipcp->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
@@ -602,7 +602,7 @@ IPCManager::update_dif_configuration(rina::IPCProcess *ipcp,
         concurrency.unlock();
 
         if (!arrived) {
-                ss << __func__ << ": Timed out" << endl;
+                ss  << ": Timed out" << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
         }
@@ -652,7 +652,7 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
         concurrency.unlock();
 
         if (!arrived) {
-                ss << __func__ << ": Timed out" << endl;
+                ss  << ": Timed out" << endl;
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -699,14 +699,14 @@ assign_to_dif_response_event_handler(rina::IPCEvent *e,
                         FLUSH_LOG(INFO, ss);
                         ret = 0;
                 } catch (rina::AssignToDIFException) {
-                        ss <<  __func__ << ": Error while reporting DIF "
+                        ss << ": Error while reporting DIF "
                                 "assignment result for IPC process "
                                 << ipcp->name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
                 }
                 ipcm->pending_ipcp_dif_assignments.erase(mit);
         } else {
-                ss <<  __func__ << ": Warning: DIF assignment response "
+                ss << ": Warning: DIF assignment response "
                         "received, but no pending DIF assignment" << endl;
                 FLUSH_LOG(WARN, ss);
         }
@@ -735,7 +735,7 @@ update_dif_config_response_event_handler(rina::IPCEvent *e,
 
         mit = ipcm->pending_dif_config_updates.find(event->sequenceNumber);
         if (mit == ipcm->pending_dif_config_updates.end()) {
-                ss << __func__ << ": Warning: DIF configuration update "
+                ss  << ": Warning: DIF configuration update "
                         "response received, but no corresponding pending "
                         "request" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -753,7 +753,7 @@ update_dif_config_response_event_handler(rina::IPCEvent *e,
                         " [success=" << success << "]" << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::UpdateDIFConfigurationException) {
-                ss << __func__ << ": Error while reporting DIF "
+                ss  << ": Error while reporting DIF "
                         "configuration update for process " <<
                         ipcp->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
@@ -783,7 +783,7 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
 
         mit = ipcm->pending_ipcp_enrollments.find(event->sequenceNumber);
         if (mit == ipcm->pending_ipcp_enrollments.end()) {
-                ss << __func__ << ": Warning: IPC process enrollment "
+                ss  << ": Warning: IPC process enrollment "
                         "response received, but no corresponding pending "
                         "request" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -797,7 +797,7 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                         FLUSH_LOG(INFO, ss);
                         ret = 0;
                 } else {
-                        ss << __func__ << ": Error: Enrollment operation of "
+                        ss  << ": Error: Enrollment operation of "
                                 "process " << ipcp->name.toString() << " failed"
                                 << endl;
                         FLUSH_LOG(ERR, ss);
@@ -820,14 +820,14 @@ neighbors_modified_notification_event_handler(rina::IPCEvent *e,
         ostringstream ss;
 
         if (!event->neighbors.size()) {
-                ss << __func__ << ": Warning: Empty neighbors-modified "
+                ss  << ": Warning: Empty neighbors-modified "
                         "notification received" << endl;
                 FLUSH_LOG(WARN, ss);
                 return;
         }
 
         if (!ipcp) {
-                ss << __func__ << ": Error: IPC process unexpectedly "
+                ss  << ": Error: IPC process unexpectedly "
                         "went away" << endl;
                 FLUSH_LOG(ERR, ss);
                 return;
@@ -889,7 +889,7 @@ os_process_finalized_handler(rina::IPCEvent *e,
         list<rina::FlowInformation> involved_flows;
         ostringstream ss;
 
-        ss << __func__ << "Application " << app_name.toString()
+        ss  << "Application " << app_name.toString()
                         << "terminated" << endl;
         FLUSH_LOG(INFO, ss);
 
@@ -902,7 +902,7 @@ os_process_finalized_handler(rina::IPCEvent *e,
                 rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
 
                 if (!ipcp) {
-                        ss << __func__ << ": Cannot find the IPC process "
+                        ss  << ": Cannot find the IPC process "
                                 "that provides the flow with port-id " <<
                                 fit->portId << endl;
                         FLUSH_LOG(ERR, ss);
@@ -955,7 +955,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
 
         mit = ipcm->pending_ipcp_query_rib_responses.find(event->sequenceNumber);
         if (mit == ipcm->pending_ipcp_query_rib_responses.end()) {
-                ss << __func__ << ": Warning: IPC process query RIB "
+                ss  << ": Warning: IPC process query RIB "
                         "response received, but no corresponding pending "
                         "request" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -979,7 +979,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                         ipcm->query_rib_responses[event->sequenceNumber] = ss.str();
                         ret = 0;
                 } else {
-                        ss << __func__ << ": Error: Query RIB operation of "
+                        ss  << ": Error: Query RIB operation of "
                                 "process " << ipcp->name.toString() << " failed"
                                 << endl;
                         FLUSH_LOG(ERR, ss);
@@ -1012,7 +1012,7 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
                 FLUSH_LOG(INFO, ss);
                 ret = 0;
         } else {
-                ss <<  __func__ << ": Warning: IPCP daemon initialized, "
+                ss << ": Warning: IPCP daemon initialized, "
                         "but no pending normal IPC process initialization"
                         << endl;
                 FLUSH_LOG(WARN, ss);
