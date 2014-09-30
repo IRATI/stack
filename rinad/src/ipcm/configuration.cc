@@ -310,9 +310,7 @@ void parse_efcp_policies(const Json::Value  root,
 void parse_dif_configs(const Json::Value   & root,
                        list<DIFProperties> & difConfigurations)
 {
-        const std::string       NORMAL_TYPE = "normal-ipc";
-        rina::IPCProcessFactory fact;
-        Json::Value             dif_configs = root["difConfigurations"];
+        Json::Value dif_configs = root["difConfigurations"];
 
         for (unsigned int i = 0; i < dif_configs.size(); i++) {
                 rinad::DIFProperties props;
@@ -324,92 +322,55 @@ void parse_dif_configs(const Json::Value   & root,
 
                 props.difType = dif_configs[i].get("difType", string())
                         .asString();
-                std::list<std::string> supportedDIFS =
-                        fact.getSupportedIPCProcessTypes();
+           
+               
+                // Data transfer constants
+                Json::Value dt_const =
+                        dif_configs[i]["dataTransferConstants"];
+                if (dt_const != 0) {
+                        rina::DataTransferConstants dt;
 
-                bool        difCorrect = false;
-                std::string s;
-
-                for (std::list<std::string>::iterator it =
-                             supportedDIFS.begin();
-                     it != supportedDIFS.end();
-                     ++it) {
-                        if (props.difType.compare(*it) == 0)
-                                difCorrect = true;
-
-                        s.append(*it);
-                        s.append(", ");
-                }
-
-                if (!difCorrect) {
-                        std::stringstream ss;
-
-                        ss << "difType parameter of DIF "
-                           << props.difName.processName
-                           << " is wrong, options are: "
-                           << s;
-
-                        throw Exception(ss.str().c_str());
-                }
-
-                LOG_INFO("Parsing configuration of DIF %s of type %s",
-                         props.difName.processName.c_str(),
-                         props.difType.c_str());
-
-                // normal.DIF specific configurations
-                if (props.difType.compare(NORMAL_TYPE) == 0) {
-                        // Data transfer constants
-                        Json::Value dt_const =
-                                dif_configs[i]["dataTransferConstants"];
-                        if (dt_const != 0) {
-                                rina::DataTransferConstants dt;
-
-                                // There is no asShort()
-                                dt.address_length_ =
-                                        static_cast<unsigned short>
-                                        (dt_const
-                                         .get("addressLength", 0)
-                                         .asUInt());
-                                dt.cep_id_length_ = static_cast<unsigned short>
-                                        (dt_const
-                                         .get("cepIdLength", 0)
-                                         .asUInt());
-                                dt.dif_integrity_ = dt_const
-                                        .get("difIntegrity", false)
-                                        .asBool();
-                                dt.length_length_ = static_cast<unsigned short>
-                                        (dt_const
-                                         .get("lengthLength", 0)
-                                         .asUInt());
-                                dt.max_pdu_lifetime_ = dt_const
-                                        .get("maxPduLifetime", 0)
-                                        .asUInt();
-                                dt.max_pdu_size_ = dt_const
-                                        .get("maxPduSize", 0)
-                                        .asUInt();
-                                dt.port_id_length_ =
-                                        static_cast<unsigned short>
-                                        (dt_const
-                                         .get("portIdLength", 0)
-                                         .asUInt());
-                                dt.qos_id_length_ = static_cast<unsigned short>
-                                        (dt_const
-                                         .get("qosIdLength", 0)
-                                         .asUInt());
-                                dt.sequence_number_length_ =
-                                        static_cast<unsigned short>
-                                        (dt_const
-                                         .get("sequenceNumberLength", 0)
-                                         .asUInt());
-                                props.dataTransferConstants = dt;
-                        } else
-                                throw Exception("dataTransferConstants parameter can not be empty");
+                        // There is no asShort()
+                        dt.address_length_ =
+                                static_cast<unsigned short>
+                                (dt_const
+                                 .get("addressLength", 0)
+                                 .asUInt());
+                        dt.cep_id_length_ = static_cast<unsigned short>
+                                (dt_const
+                                 .get("cepIdLength", 0)
+                                 .asUInt());
+                        dt.dif_integrity_ = dt_const
+                                .get("difIntegrity", false)
+                                .asBool();
+                        dt.length_length_ = static_cast<unsigned short>
+                                (dt_const
+                                 .get("lengthLength", 0)
+                                 .asUInt());
+                        dt.max_pdu_lifetime_ = dt_const
+                                .get("maxPduLifetime", 0)
+                                .asUInt();
+                        dt.max_pdu_size_ = dt_const
+                                .get("maxPduSize", 0)
+                                .asUInt();
+                        dt.port_id_length_ =
+                                static_cast<unsigned short>
+                                (dt_const
+                                 .get("portIdLength", 0)
+                                 .asUInt());
+                        dt.qos_id_length_ = static_cast<unsigned short>
+                                (dt_const
+                                 .get("qosIdLength", 0)
+                                 .asUInt());
+                        dt.sequence_number_length_ =
+                                static_cast<unsigned short>
+                                (dt_const
+                                 .get("sequenceNumberLength", 0)
+                                 .asUInt());
+                        props.dataTransferConstants = dt;
 
                         // QoS cubes
                         Json::Value cubes = dif_configs[i]["qosCubes"];
-                        if (cubes.empty())
-                                throw Exception("qosCubes parameter "
-                                                "can not be empty");
                         for (unsigned int j = 0; j < cubes.size(); j++) {
                                 // FIXME: Probably should have good default
                                 //        values. Check default constructor
@@ -617,7 +578,6 @@ void parse_dif_configs(const Json::Value   & root,
 
                         // std::list<KnownIPCProcessAddress>
                         // knownIPCProcessAddresses;
-
                         Json::Value known =
                                 dif_configs[i]["knownIPCProcessAddresses"];
                         if (known != 0) {
@@ -635,9 +595,7 @@ void parse_dif_configs(const Json::Value   & root,
                                         props.knownIPCProcessAddresses
                                                 .push_back(kn);
                                 }
-                        } else
-                                throw Exception("knownIPCProcessAddresses "
-                                                "parameter cannot be empty");
+                        }
 
                         // rina::PDUFTableGeneratorConfiguration
                         // pdufTableGeneratorConfiguration;
@@ -690,8 +648,7 @@ void parse_dif_configs(const Json::Value   & root,
 
                                 pf.link_state_routing_configuration_  = lsr;
                                 props.pdufTableGeneratorConfiguration = pf;
-                        } else
-                                throw Exception("pdufTableGeneratorConfiguration parameter can not be empty");
+                        } 
 
                         // std::list<AddressPrefixConfiguration> addressPrefixes;
                         Json::Value addrp = dif_configs[i]["addressPrefixes"];
@@ -713,8 +670,7 @@ void parse_dif_configs(const Json::Value   & root,
 
                                         props.addressPrefixes.push_back(apc);
                                 }
-                        } else
-                                throw Exception("pdufTableGeneratorConfiguration parameter can not be empty");
+                        }
                 }
 
                 // configParameters;
@@ -939,15 +895,12 @@ bool parse_configuration(string       file_loc,
 
         // Get everything in our data structures
         rinad::RINAConfiguration config;
-        try {
-                parse_local_conf(root, config.local);
-                parse_app_to_dif(root, config.applicationToDIFMappings);
-                parse_ipc_to_create(root, config.ipcProcessesToCreate);
-                parse_dif_configs(root, config.difConfigurations);
-                ipcm->config = config;
-        } catch (Exception & e) {
-                LOG_ERR("Wrong configuration: %s", e.what());
-        }
+
+        parse_local_conf(root, config.local);
+        parse_app_to_dif(root, config.applicationToDIFMappings);
+        parse_ipc_to_create(root, config.ipcProcessesToCreate);
+        parse_dif_configs(root, config.difConfigurations);
+        ipcm->config = config;
 
         return true;
 }
