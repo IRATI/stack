@@ -23,25 +23,29 @@
 #define RINA_KRPI_RMT_H
 
 #include <linux/types.h>
+
 #include "rmt.h"
 #include "pdu.h"
 #include "rds/rfifo.h"
 #include "ps-factory.h"
 
-
 struct rmt_ps {
         /* Behavioural policies. */
-        void (*max_q_policy_tx)(struct rmt_ps *, struct pdu *, struct rfifo *);
-        void (*max_q_policy_rx)(struct rmt_ps *, struct sdu *, struct rfifo *);
+        void (* max_q_policy_tx)(struct rmt_ps *,
+                                 struct pdu *,
+                                 struct rfifo *);
+        void (* max_q_policy_rx)(struct rmt_ps *,
+                                 struct sdu *,
+                                 struct rfifo *);
 
         /* Parametric policies. */
-        int max_q;
+        int          max_q;
 
         /* Reference used to access the RMT data model. */
-        struct rmt *dm;
+        struct rmt * dm;
 
         /* Data private to the policy-set implementation. */
-        void *priv;
+        void *       priv;
 };
 
 struct rmt_ps_factory {
@@ -49,8 +53,8 @@ struct rmt_ps_factory {
         struct base_ps_factory base;
 
         /* Factory callbacks. */
-        struct rmt_ps *(* create)(struct rmt *);
-        void (* destroy)(struct rmt_ps *);
+        struct rmt_ps * (* create)(struct rmt *);
+        void            (* destroy)(struct rmt_ps *);
 };
 
 /*

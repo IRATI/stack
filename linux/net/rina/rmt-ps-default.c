@@ -26,8 +26,8 @@
 #define RINA_PREFIX "rmt-ps-default"
 
 #include "logs.h"
-#include "rmt-ps.h"
 #include "rds/rmem.h"
+#include "rmt-ps.h"
 
 static void default_max_q_policy_tx(struct rmt_ps * ps,
                                     struct pdu *    pdu,
