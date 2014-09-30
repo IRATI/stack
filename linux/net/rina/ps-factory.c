@@ -1,7 +1,8 @@
 /*
  * Policy set publication/unpublication functions
  *
- *    Vincenzo Maffione<v.maffione@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,13 +28,13 @@
 #include "logs.h"
 #include "ps-factory.h"
 
-
-int publish_ps(struct list_head *head, struct base_ps_factory *factory)
+int ps_publish(struct list_head *       head,
+               struct base_ps_factory * factory)
 {
-        struct base_ps_factory *cur;
+        struct base_ps_factory * cur;
 
-        if (factory->name == NULL) {
-                LOG_ERR("%s: NULL name", __func__);
+        if (!factory || !factory->name) {
+                LOG_ERR("Wrong factory");
                 return -1;
         }
 
@@ -52,10 +53,10 @@ int publish_ps(struct list_head *head, struct base_ps_factory *factory)
         return 0;
 }
 
-struct base_ps_factory *
-lookup_ps(struct list_head *head, const char *name)
+struct base_ps_factory * ps_lookup(struct list_head * head,
+                                   const char *       name)
 {
-        struct base_ps_factory *cur;
+        struct base_ps_factory * cur;
 
         if (name == NULL) {
                 LOG_ERR("%s: NULL name", __func__);
@@ -63,30 +64,28 @@ lookup_ps(struct list_head *head, const char *name)
         }
 
         list_for_each_entry(cur, head, node) {
-                if (strcmp(name, cur->name) == 0) {
+                if (strcmp(name, cur->name) == 0)
                         return cur;
-                }
         }
 
-        LOG_ERR("%s: policy set '%s' has not been published",
-                __func__, name);
+        LOG_ERR("policy set '%s' has not been published", name);
 
         return NULL;
 }
 
-int unpublish_ps(struct list_head *head, const char *name)
+int ps_unpublish(struct list_head *head, const char *name)
 {
-        struct base_ps_factory *factory = lookup_ps(head, name);
+        struct base_ps_factory * factory;
 
-        if (factory == NULL) {
+        factory = ps_lookup(head, name);
+        if (factory == NULL)
                 return -1;
-        }
 
-        /* Don't free here, the plug-in has the
-         * ownership. */
+        /* Don't free here, the plug-in has the ownership. */
         list_del(&factory->node);
+
         LOG_INFO("policy-set '%s' unpublished successfully",
-                        factory->name);
+                 factory->name);
 
         return 0;
 }

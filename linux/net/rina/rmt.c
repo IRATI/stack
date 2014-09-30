@@ -189,14 +189,14 @@ static int pft_cache_fini(struct pft_cache * c)
 }
 
 struct rmt {
-        address_t               address;
-        struct ipcp_instance *  parent;
-        struct pft *            pft;
-        struct kfa *            kfa;
-        struct efcp_container * efcpc;
-        struct serdes *         serdes;
-        struct rmt_ps *         ps;
-        struct rmt_ps_factory   *ps_factory;
+        address_t                 address;
+        struct ipcp_instance *    parent;
+        struct pft *              pft;
+        struct kfa *              kfa;
+        struct efcp_container *   efcpc;
+        struct serdes *           serdes;
+        struct rmt_ps *           ps;
+        struct rmt_ps_factory   * ps_factory;
 
         struct {
                 struct workqueue_struct * wq;
@@ -300,7 +300,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         /* Try to select the default policy set factory. */
         tmp->ps = NULL;
         tmp->ps_factory = (struct rmt_ps_factory *)
-                          lookup_ps(&policy_sets, DEFAULT_NAME);
+                          ps_lookup(&policy_sets, DEFAULT_NAME);
         if (tmp->ps_factory) {
                 /* Instantiate a policy set. */
                 tmp->ps = tmp->ps_factory->create(tmp);
@@ -1289,9 +1289,7 @@ int rmt_pft_dump(struct rmt *       instance,
 EXPORT_SYMBOL(rmt_pft_dump);
 
 int rmt_pft_flush(struct rmt * instance)
-{
-        return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1;
-}
+{ return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1; }
 EXPORT_SYMBOL(rmt_pft_flush);
 
 int publish_rmt_ps(struct rmt_ps_factory *factory)
@@ -1301,14 +1299,12 @@ int publish_rmt_ps(struct rmt_ps_factory *factory)
                 return -1;
         }
 
-        return publish_ps(&policy_sets, &factory->base);
+        return ps_publish(&policy_sets, &factory->base);
 }
 EXPORT_SYMBOL(publish_rmt_ps);
 
 int unpublish_rmt_ps(const char *name)
-{
-        return unpublish_ps(&policy_sets, name);
-}
+{ return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(unpublish_rmt_ps);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS

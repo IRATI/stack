@@ -1,7 +1,8 @@
 /*
  * Policy set publication/unpublication functions
  *
- *    Vincenzo Maffione<v.maffione@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +24,7 @@
 
 #include <linux/list.h>
 
-
-#define DEFAULT_NAME    "default"
+#define DEFAULT_NAME            "default"
 
 #define PARAMETER_DESC_MAX_LEN  32
 #define POLICY_SET_NAME_MAX_LEN 64
@@ -36,17 +36,20 @@ struct parameter_desc {
 
 struct base_ps_factory {
         /* A name for this policy-set. */
-        char name[POLICY_SET_NAME_MAX_LEN];
+        char                    name[POLICY_SET_NAME_MAX_LEN];
 
         /* Policy-set-specific parameters. */
-        struct parameter_desc   *parameters;
+        struct parameter_desc * parameters;
         unsigned int            num_parameters;
 
         struct list_head        node;
 };
 
-int publish_ps(struct list_head *head, struct base_ps_factory *factory);
-struct base_ps_factory * lookup_ps(struct list_head *head, const char *name);
-int unpublish_ps(struct list_head *head, const char *name);
+int                      ps_publish(struct list_head *       head,
+                                    struct base_ps_factory * factory);
+struct base_ps_factory * ps_lookup(struct list_head * head,
+                                   const char *       name);
+int                      ps_unpublish(struct list_head * head,
+                                      const char *       name);
 
 #endif
