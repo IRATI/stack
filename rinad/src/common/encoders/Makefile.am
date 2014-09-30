@@ -18,5 +18,6 @@ BUILT_SOURCES = $(protoSOURCES)
 libencoders_la_SOURCES =			\
 	$(protoSOURCES)
 libencoders_la_CPPFLAGS =			\
-	-I$(builddir)/..
-	-I$(srcdir)/..
+	-I$(builddir)/..			\
+	-I$(srcdir)/..				\
+	$(CPPFLAGS_EXTRA)

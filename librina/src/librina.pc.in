@@ -5,7 +5,7 @@ includedir=@includedir@
 Name: LibRINA
 Description: RINA support libraries
 Version: @PACKAGE_VERSION@
-URL: http://irati.eu
+URL: @PACKAGE_URL@
 Requires: libnl-3.0 >= @LIBNL_MIN_VERSION@, libnl-genl-3.0 >= @LIBNL_MIN_VERSION@, protobuf >= @LIBPROTOBUF_MIN_VERSION@
 Libs: -L${libdir} -lrina
 Libs.private: -lpthread @LIBNL3_LIBS@ @LIBNLGENL3_LIBS@ @LIBPROTOBUF_LIBS@

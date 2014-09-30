@@ -131,6 +131,17 @@ bool rfifo_is_empty(struct rfifo * f)
 }
 EXPORT_SYMBOL(rfifo_is_empty);
 
+ssize_t rfifo_length(struct rfifo * f)
+{
+        if (!f) {
+                LOG_ERR("Can't get size of a NULL fifo");
+                return NULL;
+        }
+
+        return rqueue_length(f->q);
+}
+EXPORT_SYMBOL(rfifo_length);
+
 #ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
 bool regression_tests_rfifo(void)
 { return true; }

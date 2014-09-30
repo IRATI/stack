@@ -47,8 +47,10 @@ namespace rinad {
 
 class IPCMConcurrency : public rina::ConditionVariable {
  public:
-        bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum);
+        bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
+                            int &result);
         void notify_event(rina::IPCEvent *event);
+        void set_event_result(int result) { event_result = result; }
 
         IPCMConcurrency(unsigned int wt) :
                                 wait_time(wt), event_waiting(false) { }
@@ -58,6 +60,7 @@ class IPCMConcurrency : public rina::ConditionVariable {
         bool event_waiting;
         rina::IPCEventType event_ty;
         unsigned int event_sn;
+        int event_result;
 };
 
 struct PendingFlowAllocation {
