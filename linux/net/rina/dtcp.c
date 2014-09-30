@@ -284,16 +284,6 @@ static seq_num_t snd_lft_win(struct dtcp * dtcp)
         return tmp;
 }
 
-static void snd_lft_win_set(struct dtcp * dtcp, seq_num_t seq_num)
-{
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock(&dtcp->sv->lock);
-        dtcp->sv->snd_lft_win = seq_num;
-        spin_unlock(&dtcp->sv->lock);
-}
-
 static seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t tmp;
