@@ -130,7 +130,7 @@ IPCMConsole::init()
         try {
                 sfd = socket(AF_INET, SOCK_STREAM, 0);
                 if (sfd < 0) {
-                        ss << __func__ << " Error [" << errno <<
+                        ss  << " Error [" << errno <<
                                 "] calling socket() " << endl;
                         throw Exception();
                 }
@@ -138,7 +138,7 @@ IPCMConsole::init()
                 ret = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR,
                                 &optval, sizeof(optval));
                 if (ret < 0) {
-                        ss << __func__ << " Error [" << errno <<
+                        ss  << " Error [" << errno <<
                                 "] calling setsockopt(SOL_SOCKET, "
                                 "SO_REUSEADDR, 1)" << endl;
                         FLUSH_LOG(WARN, ss);
@@ -147,14 +147,14 @@ IPCMConsole::init()
                 ret = bind(sfd, reinterpret_cast<struct sockaddr *>(&server_address),
                                 sizeof(server_address));
                 if (ret < 0) {
-                        ss << __func__ << " Error [" << errno <<
+                        ss  << " Error [" << errno <<
                                 "] calling bind() " << endl;
                         throw Exception();
                 }
 
                 ret = listen(sfd, 5);
                 if (ret < 0) {
-                        ss << __func__ << " Error [" << errno <<
+                        ss  << " Error [" << errno <<
                                 "] calling listen() " << endl;
                         throw Exception();
                 }
@@ -191,7 +191,7 @@ void IPCMConsole::body()
                 cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
                              &client_address), &address_len);
                 if (cfd < 0) {
-                        ss << __func__ << " Error [" << errno <<
+                        ss  << " Error [" << errno <<
                                 "] calling accept() " << endl;
                         FLUSH_LOG(ERR, ss);
                         continue;
@@ -203,7 +203,7 @@ void IPCMConsole::body()
 
                         n = read(cfd, cmdbuf, sizeof(cmdbuf));
                         if (n < 0) {
-                                ss << __func__ << " Error [" << errno <<
+                                ss  << " Error [" << errno <<
                                         "] calling read() " << endl;
                                 FLUSH_LOG(ERR, ss);
                                 close(cfd);
@@ -230,7 +230,7 @@ IPCMConsole::flush_output(int cfd)
 
         n = write(cfd, str.c_str(), str.size());
         if (n < 0) {
-                ss << __func__ << " Error [" << errno <<
+                ss  << " Error [" << errno <<
                         "] calling write() " << endl;
                 FLUSH_LOG(ERR, ss);
                 return -1;
