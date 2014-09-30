@@ -272,10 +272,8 @@ void NeighborSetRIBObject::populateNeighborsToCreateList(rina::Neighbor* neighbo
 
 	for(it = get_children().begin(); it != get_children().end(); ++it) {
 		candidate = (const rina::Neighbor *) (*it)->get_value();
-		if (candidate->get_name().processName.compare(neighbor->name_.processName) == 0) {
-			list->push_back(neighbor);
+		if (candidate->get_name().processName.compare(neighbor->name_.processName) == 0)
 			found = true;
-		}
 	}
 	if (!found)
 		list->push_back(neighbor);
