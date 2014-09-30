@@ -579,7 +579,7 @@ IPCManager::apply_configuration()
                 std::string             type;
                 ostringstream           ss;
 
-                if(!config.lookup_type_by_dif(cit->difName, type)) {
+                if (!config.lookup_type_by_dif(cit->difName, type)) {
                         ss << "Failed to retrieve DIF type for "
                            << cit->name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
@@ -1008,7 +1008,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                                 << "process " << ipcp->name.toString() << endl;
                         FLUSH_LOG(INFO, ss);
                         for (lit = event->ribObjects.begin(); lit != event->ribObjects.end();
-                                        ++lit){
+                                        ++lit) {
                                 ss << "Name: " << lit->name_ <<
                                         "; Class: "<< lit->class_;
                                 ss << "; Instance: "<< lit->instance_ << endl;
