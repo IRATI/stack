@@ -322,8 +322,7 @@ void parse_dif_configs(const Json::Value   & root,
 
                 props.difType = dif_configs[i].get("difType", string())
                         .asString();
-           
-               
+
                 // Data transfer constants
                 Json::Value dt_const =
                         dif_configs[i]["dataTransferConstants"];
@@ -648,7 +647,7 @@ void parse_dif_configs(const Json::Value   & root,
 
                                 pf.link_state_routing_configuration_  = lsr;
                                 props.pdufTableGeneratorConfiguration = pf;
-                        } 
+                        }
 
                         // std::list<AddressPrefixConfiguration> addressPrefixes;
                         Json::Value addrp = dif_configs[i]["addressPrefixes"];

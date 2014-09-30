@@ -192,7 +192,7 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                              supportedDIFS.begin();
                      it != supportedDIFS.end();
                      ++it) {
-                        if (type.compare(*it) == 0)
+                        if (type == *it)
                                 difCorrect = true;
 
                         s.append(*it);
@@ -581,8 +581,8 @@ IPCManager::apply_configuration()
                 ostringstream           ss;
 
                 // FIXME: Bail out here
-                if(!config.lookup_type_by_dif(cit->name, type)) {
-                        ss << "Failed to retrieve DIF type for " 
+                if(!config.lookup_type_by_dif(cit->difName, type)) {
+                        ss << "Failed to retrieve DIF type for "
                            << cit->name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
 

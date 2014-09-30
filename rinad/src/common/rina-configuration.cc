@@ -53,7 +53,7 @@ bool RINAConfiguration::lookup_dif_properties(
 }
 
 
-// Return the DIF type by supplying the difName 
+// Return the DIF type by supplying the difName
 // @param dif_name
 // @result
 bool RINAConfiguration::lookup_type_by_dif(
@@ -65,11 +65,11 @@ bool RINAConfiguration::lookup_type_by_dif(
         for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
                                         it != difConfigurations.end(); it++) {
                 if (it->difName == dif_name) {
-                        result = dif_props.difType;
+                        result = it->difType;
                         return true;
                 }
         }
-        
+
         return false;
 }
 
@@ -149,7 +149,6 @@ string RINAConfiguration::toString() const
                                 it != ipcProcessesToCreate.end(); it++) {
                 ss << "IPC process to create:" << endl;
 
-                ss << "\tType: " << it->type << endl;
                 ss << "\tName: " << it->name.toString() << endl;
                 ss << "\tDIF Name: " << it->difName.toString() << endl;
 
