@@ -1,7 +1,8 @@
 /*
  * RMT (Relaying and Multiplexing Task) kRPI
  *
- *    Vincenzo Maffione<v.maffione@nextworks.it>
+ *    Vincenzo Maffione     <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,14 +49,15 @@ struct rmt_ps_factory {
         struct base_ps_factory base;
 
         /* Factory callbacks. */
-        struct rmt_ps *(*create)(struct rmt *);
-        void (*destroy)(struct rmt_ps *);
+        struct rmt_ps *(* create)(struct rmt *);
+        void (* destroy)(struct rmt_ps *);
 };
 
-/* The ownership of @factory is not passed. Plugin module is therefore
- * in charge of deallocate its memory, if necessary. */
-int publish_rmt_ps(struct rmt_ps_factory *factory);
-
-int unpublish_rmt_ps(const char *name);
+/*
+ * The ownership of @factory is not passed. Plugin module is therefore
+ * in charge of deallocate its memory, if necessary.
+ */
+int rmt_ps_publish(struct rmt_ps_factory * factory);
+int rmt_ps_unpublish(const char * name);
 
 #endif

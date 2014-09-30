@@ -43,7 +43,6 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-
 static LIST_HEAD(policy_sets);
 
 struct rmt_queue {
@@ -1292,7 +1291,7 @@ int rmt_pft_flush(struct rmt * instance)
 { return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1; }
 EXPORT_SYMBOL(rmt_pft_flush);
 
-int publish_rmt_ps(struct rmt_ps_factory *factory)
+int rmt_ps_publish(struct rmt_ps_factory * factory)
 {
         if (factory == NULL) {
                 LOG_ERR("%s: NULL factory", __func__);
@@ -1301,11 +1300,11 @@ int publish_rmt_ps(struct rmt_ps_factory *factory)
 
         return ps_publish(&policy_sets, &factory->base);
 }
-EXPORT_SYMBOL(publish_rmt_ps);
+EXPORT_SYMBOL(rmt_ps_publish);
 
-int unpublish_rmt_ps(const char *name)
+int rmt_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
-EXPORT_SYMBOL(unpublish_rmt_ps);
+EXPORT_SYMBOL(rmt_ps_unpublish);
 
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 #if 0

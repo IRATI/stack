@@ -2,6 +2,7 @@
  * Default policy set for RMT
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,51 +29,44 @@
 #include "rmt-ps.h"
 #include "rds/rmem.h"
 
+static void default_max_q_policy_tx(struct rmt_ps * ps,
+                                    struct pdu *    pdu,
+                                    struct rfifo *  queue)
+{ }
 
-static void
-default_max_q_policy_tx(struct rmt_ps *ps, struct pdu *pdu,
-                        struct rfifo *queue)
+static void default_max_q_policy_rx(struct rmt_ps * ps,
+                                    struct sdu *    sdu,
+                                    struct rfifo *  queue)
+{ }
+
+static struct rmt_ps * rmt_ps_default_create(struct rmt *rmt)
 {
-}
-
-static void
-default_max_q_policy_rx(struct rmt_ps *ps, struct sdu *sdu,
-                        struct rfifo *queue)
-{
-}
-
-static struct rmt_ps *
-rmt_ps_default_create(struct rmt *rmt)
-{
-        struct rmt_ps *ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-
+        struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
              return ps;
         }
 
-        ps->dm = rmt;
-        ps->max_q = 256;
-        ps->priv = NULL;
+        ps->dm              = rmt;
+        ps->max_q           = 256;
+        ps->priv            = NULL;
         ps->max_q_policy_tx = default_max_q_policy_tx;
         ps->max_q_policy_rx = default_max_q_policy_rx;
 
         return ps;
 }
 
-static void
-rmt_ps_default_destroy(struct rmt_ps *ps)
+static void rmt_ps_default_destroy(struct rmt_ps * ps)
 {
-        if (ps) {
+        if (ps)
                 rkfree(ps);
-        }
 }
 
 static struct rmt_ps_factory factory = {
         .base = {
-                .parameters = NULL,
+                .parameters     = NULL,
                 .num_parameters = 0,
         },
-        .create = rmt_ps_default_create,
+        .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
 };
 
@@ -82,7 +76,7 @@ static int __init mod_init(void)
 
         strcpy(factory.base.name, DEFAULT_NAME);
 
-        ret = publish_rmt_ps(&factory);
+        ret = rmt_ps_publish(&factory);
         if (ret) {
                 LOG_ERR("Failed to publish policy set factory");
                 return -1;
@@ -95,7 +89,7 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        int ret = unpublish_rmt_ps(DEFAULT_NAME);
+        int ret = rmt_ps_unpublish(DEFAULT_NAME);
 
         if (ret) {
                 LOG_ERR("Failed to unpublish policy set factory");
@@ -113,3 +107,4 @@ MODULE_DESCRIPTION("RMT default policy set");
 MODULE_LICENSE("GPL");
 
 MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
