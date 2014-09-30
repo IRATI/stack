@@ -108,6 +108,22 @@ void log(LOG_LEVEL level, const char * fmt, ...);
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, INFO,  FMT, ##ARGS)
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, DBG,   FMT, ##ARGS)
 
+#define __LOGF(PREFIX, LEVEL, FMT, ARGS...)                              \
+        do {                                                            \
+		log(LEVEL,                                              \
+                    "#" PREFIX " (" __STRINGIZE(LEVEL) ")[%s]: " FMT "\n",  \
+                    __func__, ##ARGS);                                            \
+	} while (0)
+
+#define LOGF_EMERG(FMT, ARGS...) __LOGF(RINA_PREFIX, EMERG, FMT, ##ARGS)
+#define LOGF_ALERT(FMT, ARGS...) __LOGF(RINA_PREFIX, ALERT, FMT, ##ARGS)
+#define LOGF_CRIT(FMT,  ARGS...) __LOGF(RINA_PREFIX, CRIT,  FMT, ##ARGS)
+#define LOGF_ERR(FMT,   ARGS...) __LOGF(RINA_PREFIX, ERR,   FMT, ##ARGS)
+#define LOGF_WARN(FMT,  ARGS...) __LOGF(RINA_PREFIX, WARN,  FMT, ##ARGS)
+#define LOGF_NOTE(FMT,  ARGS...) __LOGF(RINA_PREFIX, NOTE,  FMT, ##ARGS)
+#define LOGF_INFO(FMT,  ARGS...) __LOGF(RINA_PREFIX, INFO,  FMT, ##ARGS)
+#define LOGF_DBG(FMT,   ARGS...) __LOGF(RINA_PREFIX, DBG,   FMT, ##ARGS)
+
 #endif
 
 #endif
