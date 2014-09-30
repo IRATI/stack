@@ -95,9 +95,9 @@ CLEANFILES += rinad-ipcp.pc
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = rinad-ipcp.pc
 
-bin_SCRIPTS = ipcp-plugins-dir
+bin_SCRIPTS = ipcp-plugins
 
-ipcp-plugins-dir: Makefile ipcp-plugins-dir.in
+ipcp-plugins: Makefile ipcp-plugins.in
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -106,5 +106,5 @@ ipcp-plugins-dir: Makefile ipcp-plugins-dir.in
 	chmod u+x $@.tmp
 	mv $@.tmp $@
 
-EXTRA_DIST += ipcp-plugins-dir.in
-CLEANFILES += ipcp-plugins-dir
+EXTRA_DIST += ipcp-plugins.in
+CLEANFILES += ipcp-plugins
