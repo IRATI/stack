@@ -699,8 +699,6 @@ void parse_ipc_to_create(const Json::Value          root,
         for (unsigned int i = 0; i < ipc_processes.size(); i++) {
                 rinad::IPCProcessToCreate ipc;
 
-                ipc.type = ipc_processes[i].get("type", string()).asString();
-
                 // IPC process Names
                 // Might want to move this to another function
                 parse_name(ipc_processes[i], ipc.name);
