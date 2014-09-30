@@ -88,6 +88,8 @@ class IPCMConsole : public rina::Thread {
                 int unregister_from_dif(std::vector<std::string>& args);
                 int update_dif_config(std::vector<std::string>& args);
                 int enroll_to_dif(std::vector<std::string>& args);
+                int select_policy_set(std::vector<std::string>& args);
+                int set_policy_set_param(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta);
