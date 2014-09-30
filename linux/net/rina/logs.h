@@ -55,6 +55,7 @@
 
 /* Helpers */
 #define LOG_DBGF(FMT,  ARGS...) LOG_DBG("(%s: " FMT, __FUNCTION__, ##ARGS)
+#define LOG_ERRF(FMT,  ARGS...) LOG_ERR("(%s: " FMT, __FUNCTION__, ##ARGS)
 
 #ifdef CONFIG_RINA_DEBUG_HEARTBEATS
 #define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
