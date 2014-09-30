@@ -659,6 +659,34 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
         return retstr;
 }
 
+int
+IPCManager::select_policy_set(const std::string& component_path,
+                              const std::string& policy_set)
+{
+        ostringstream ss;
+
+        ss << "Not implemented yet" << endl;
+        (void)component_path;
+        (void)policy_set;
+
+        return -1;
+}
+
+int
+IPCManager::set_policy_set_param(const std::string& component_path,
+                                 const std::string& param_name,
+                                 const std::string& param_value)
+{
+        ostringstream ss;
+
+        ss << "Not implemented yet" << endl;
+        (void)component_path;
+        (void)param_name;
+        (void)param_value;
+
+        return -1;
+}
+
 static void
 application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
