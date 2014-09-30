@@ -666,7 +666,7 @@ IPCManager::select_policy_set(rina::IPCProcess *ipcp,
 {
         ostringstream ss;
 
-        LOG_ERR("Not implemented yet");
+        LOGF_ERR("Not implemented yet");
         (void)ipcp;
         (void)component_path;
         (void)policy_set;
@@ -682,7 +682,7 @@ IPCManager::set_policy_set_param(rina::IPCProcess *ipcp,
 {
         ostringstream ss;
 
-        LOG_ERR("Not implemented yet");
+        LOGF_ERR("Not implemented yet");
         (void)ipcp;
         (void)component_path;
         (void)param_name;
