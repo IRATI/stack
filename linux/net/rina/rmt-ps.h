@@ -19,8 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_KRPI_RMT_H
-#define RINA_KRPI_RMT_H
+#ifndef RINA_RMT_PS_H
+#define RINA_RMT_PS_H
 
 #include <linux/types.h>
 
