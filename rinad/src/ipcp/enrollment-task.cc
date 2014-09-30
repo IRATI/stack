@@ -43,11 +43,12 @@ EnrollmentInformationRequest::EnrollmentInformationRequest() {
 }
 
 //Class WatchdogTimerTask
-WatchdogTimerTask::WatchdogTimerTask(WatchdogRIBObject * watchdog, rina::Timer * timer,
-		int delay) {
+WatchdogTimerTask::WatchdogTimerTask(WatchdogRIBObject * watchdog,
+                                     rina::Timer *       timer,
+                                     int                 delay) {
 	watchdog_ = watchdog;
-	timer_ = timer;
-	delay_ = delay;
+	timer_    = timer;
+	delay_    = delay;
 }
 
 void WatchdogTimerTask::run() {
