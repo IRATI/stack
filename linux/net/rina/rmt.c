@@ -43,7 +43,9 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
-static LIST_HEAD(policy_sets);
+static struct policy_set_list policy_sets = {
+        .head = LIST_HEAD_INIT(policy_sets.head)
+};
 
 struct rmt_queue {
         struct rfifo *    queue;

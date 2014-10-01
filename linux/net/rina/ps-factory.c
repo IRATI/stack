@@ -28,7 +28,7 @@
 #include "logs.h"
 #include "ps-factory.h"
 
-int ps_publish(struct list_head *       head,
+int ps_publish(struct policy_set_list * list,
                struct base_ps_factory * factory)
 {
         struct base_ps_factory * cur;
@@ -38,7 +38,12 @@ int ps_publish(struct list_head *       head,
                 return -1;
         }
 
-        list_for_each_entry(cur, head, node) {
+        if (!list) {
+                LOG_ERR("Null policy set list");
+                return -1;
+        }
+
+        list_for_each_entry(cur, &list->head, node) {
                 if (strcmp(factory->name, cur->name) == 0) {
                         LOG_ERR("%s: policy set '%s' already published",
                                 __func__, factory->name);
@@ -46,15 +51,15 @@ int ps_publish(struct list_head *       head,
                 }
         }
 
-        list_add(&factory->node, head);
+        list_add(&factory->node, &list->head);
 
         LOG_INFO("policy-set '%s' published successfully", factory->name);
 
         return 0;
 }
 
-struct base_ps_factory * ps_lookup(struct list_head * head,
-                                   const char *       name)
+struct base_ps_factory * ps_lookup(struct policy_set_list * list,
+                                   const char *             name)
 {
         struct base_ps_factory * cur;
 
@@ -63,7 +68,12 @@ struct base_ps_factory * ps_lookup(struct list_head * head,
                 return NULL;
         }
 
-        list_for_each_entry(cur, head, node) {
+        if (!list) {
+                LOG_ERR("Null policy set list");
+                return -1;
+        }
+
+        list_for_each_entry(cur, &list->head, node) {
                 if (strcmp(name, cur->name) == 0)
                         return cur;
         }
@@ -73,11 +83,11 @@ struct base_ps_factory * ps_lookup(struct list_head * head,
         return NULL;
 }
 
-int ps_unpublish(struct list_head *head, const char *name)
+int ps_unpublish(struct policy_set_list * list, const char * name)
 {
         struct base_ps_factory * factory;
 
-        factory = ps_lookup(head, name);
+        factory = ps_lookup(list, name);
         if (factory == NULL)
                 return -1;
 

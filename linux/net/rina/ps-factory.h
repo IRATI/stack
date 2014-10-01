@@ -45,11 +45,15 @@ struct base_ps_factory {
         struct list_head        node;
 };
 
-int                      ps_publish(struct list_head *       head,
+struct policy_set_list {
+        struct list_head head;
+};
+
+int                      ps_publish(struct policy_set_list * list,
                                     struct base_ps_factory * factory);
-struct base_ps_factory * ps_lookup(struct list_head * head,
+struct base_ps_factory * ps_lookup(struct policy_set_list * list,
                                    const char *       name);
-int                      ps_unpublish(struct list_head * head,
+int                      ps_unpublish(struct policy_set_list * list,
                                       const char *       name);
 
 #endif
