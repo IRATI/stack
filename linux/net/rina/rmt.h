@@ -89,5 +89,8 @@ int          rmt_receive(struct rmt * instance,
 int          rmt_flush_work(struct rmt * rmt);
 int          rmt_restart_work(struct rmt * rmt);
 int          rmt_select_policy_set(struct rmt * rmt, const char * name);
+int          rmt_set_policy_set_param(struct rmt * rmt,
+                                      const char * name,
+                                      const char * value);
 
 #endif

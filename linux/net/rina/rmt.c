@@ -247,6 +247,21 @@ int rmt_select_policy_set(struct rmt * rmt,
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 
+int rmt_set_policy_set_param(struct rmt * rmt,
+                             const char * name,
+                             const char * value)
+{
+        (void) rmt;
+        (void) name;
+        (void) value;
+
+        LOG_ERRF("Not implemented yet");
+
+        return -1;
+}
+EXPORT_SYMBOL(rmt_set_policy_set_param);
+
+
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
