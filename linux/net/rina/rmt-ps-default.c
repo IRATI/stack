@@ -61,10 +61,29 @@ static void rmt_ps_default_destroy(struct rmt_ps * ps)
                 rkfree(ps);
 }
 
+static int rmt_ps_set_policy_set_param(const char * name,
+                                       const char * value)
+{
+        if (!name) {
+                LOG_ERR("Null parameter name");
+                return -1;
+        }
+
+        if (!value) {
+                LOG_ERR("Null parameter value");
+                return -1;
+        }
+
+        LOG_ERR("No such parameter to set");
+
+        return -1;
+}
+
 static struct rmt_ps_factory factory = {
         .base = {
                 .parameters     = NULL,
                 .num_parameters = 0,
+                .set_policy_set_param = rmt_ps_set_policy_set_param,
         },
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
