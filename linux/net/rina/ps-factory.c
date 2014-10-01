@@ -64,13 +64,13 @@ struct base_ps_factory * ps_lookup(struct policy_set_list * list,
         struct base_ps_factory * cur;
 
         if (name == NULL) {
-                LOG_ERR("%s: NULL name", __func__);
+                LOG_ERRF("NULL name");
                 return NULL;
         }
 
         if (!list) {
-                LOG_ERR("Null policy set list");
-                return -1;
+                LOG_ERRF("Null policy set list");
+                return NULL;
         }
 
         list_for_each_entry(cur, &list->head, node) {

@@ -27,6 +27,7 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/string.h>
 
 #define RINA_PREFIX "rmt"
 
@@ -250,19 +251,36 @@ int rmt_select_policy_set(struct rmt * rmt,
 EXPORT_SYMBOL(rmt_select_policy_set);
 
 int rmt_set_policy_set_param(struct rmt * rmt,
+                             const char * path,
                              const char * name,
                              const char * value)
 {
-        (void) rmt;
-        (void) name;
-        (void) value;
+        if (!rmt || !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", rmt, path, name, value);
+                return -1;
+        }
 
-        LOG_ERRF("Not implemented yet");
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this RMT instance. */
+                /* TODO process the request */
+        } else if (rmt->ps && rmt->ps_factory->set_policy_set_param) {
+                if (strcmp(path, rmt->ps_factory->base.name) == 0) {
+                        /* The request addresses the RMT policy set. */
+                        rmt->ps_factory->set_policy_set_param(rmt->ps,
+                                                              name, value);
+                } else {
+                        LOG_ERRF("Policy set %s not selected for this "
+                                 "component", name);
+                        return -1;
+                }
+        } else {
+                LOG_ERRF("No policy set selected");
+                return -1;
+        }
 
-        return -1;
+        return 0;
 }
 EXPORT_SYMBOL(rmt_set_policy_set_param);
-
 
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,

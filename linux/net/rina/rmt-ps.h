@@ -55,6 +55,11 @@ struct rmt_ps_factory {
         /* Factory callbacks. */
         struct rmt_ps * (* create)(struct rmt *);
         void            (* destroy)(struct rmt_ps *);
+
+        /* Method for setting policy-set-specific parameters. */
+        int (*set_policy_set_param)(struct rmt_ps * ps,
+                                    const char    * name,
+                                    const char    * value);
 };
 
 /*

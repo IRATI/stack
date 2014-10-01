@@ -43,10 +43,6 @@ struct base_ps_factory {
         unsigned int            num_parameters;
 
         struct list_head        node;
-
-        /* Method for setting policy-set-specific parameters. */
-        int (*set_policy_set_param)(const char * name,
-                                    const char * value);
 };
 
 struct policy_set_list {
