@@ -174,13 +174,42 @@ rina::IPCProcess *
 IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                         const string& type)
 {
-        rina::IPCProcess *ipcp = NULL;
-        bool wait = false;
-        ostringstream ss;
+        rina::IPCProcess *      ipcp = NULL;
+        bool                    wait = false;
+        ostringstream           ss;
+        rina::IPCProcessFactory fact;
+        std::list<std::string>  supportedDIFS;
+        bool                    difCorrect = false;
+        std::string             s;
+
 
         concurrency.lock();
 
         try {
+                supportedDIFS = fact.getSupportedIPCProcessTypes();
+                for (std::list<std::string>::iterator it =
+                             supportedDIFS.begin();
+                     it != supportedDIFS.end();
+                     ++it) {
+                        if (type == *it)
+                                difCorrect = true;
+
+                        s.append(*it);
+                        s.append(", ");
+                }
+
+                if (!difCorrect) {
+                        std::stringstream ss;
+
+                        ss << "difType parameter of DIF "
+                           << name.toString()
+                           << " is wrong, options are: "
+                           << s;
+                        FLUSH_LOG(ERR, ss);
+
+                        throw rina::CreateIPCProcessException();
+                }
+
                 ipcp = rina::ipcProcessFactory->create(name,
                                                        type);
                 if (type != rina::NORMAL_IPC_PROCESS) {
@@ -546,9 +575,19 @@ IPCManager::apply_configuration()
         // according to the configuration file.
         for (cit = config.ipcProcessesToCreate.begin();
                         cit != config.ipcProcessesToCreate.end(); cit++) {
-                rina::IPCProcess *ipcp;
+                rina::IPCProcess *      ipcp;
+                std::string             type;
+                ostringstream           ss;
 
-                ipcp = create_ipcp(cit->name, cit->type);
+                if (!config.lookup_type_by_dif(cit->difName, type)) {
+                        ss << "Failed to retrieve DIF type for "
+                           << cit->name.toString() << endl;
+                        FLUSH_LOG(ERR, ss);
+
+                        continue;
+                }
+
+                ipcp = create_ipcp(cit->name, type);
                 assign_to_dif(ipcp, cit->difName);
                 register_at_difs(ipcp, cit->difsToRegisterAt);
 
@@ -1001,7 +1040,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                                 << "process " << ipcp->name.toString() << endl;
                         FLUSH_LOG(INFO, ss);
                         for (lit = event->ribObjects.begin(); lit != event->ribObjects.end();
-                                        ++lit){
+                                        ++lit) {
                                 ss << "Name: " << lit->name_ <<
                                         "; Class: "<< lit->class_;
                                 ss << "; Instance: "<< lit->instance_ << endl;

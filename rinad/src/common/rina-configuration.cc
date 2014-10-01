@@ -52,6 +52,28 @@ bool RINAConfiguration::lookup_dif_properties(
         return false;
 }
 
+
+// Return the DIF type by supplying the difName
+// @param dif_name
+// @result
+bool RINAConfiguration::lookup_type_by_dif(
+                const rina::ApplicationProcessNamingInformation& dif_name,
+                std::string& result) const
+{
+        DIFProperties dif_props;
+
+        for (list<DIFProperties>::const_iterator it = difConfigurations.begin();
+                                        it != difConfigurations.end(); it++) {
+                if (it->difName == dif_name) {
+                        result = it->difType;
+                        return true;
+                }
+        }
+
+        return false;
+}
+
+
 #if 0
 // Return the address of the IPC process named "name" if it is known,
 // 0 otherwise
@@ -127,7 +149,6 @@ string RINAConfiguration::toString() const
                                 it != ipcProcessesToCreate.end(); it++) {
                 ss << "IPC process to create:" << endl;
 
-                ss << "\tType: " << it->type << endl;
                 ss << "\tName: " << it->name.toString() << endl;
                 ss << "\tDIF Name: " << it->difName.toString() << endl;
 

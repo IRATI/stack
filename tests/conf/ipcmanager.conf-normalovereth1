@@ -31,13 +31,11 @@
     ],
     "ipcProcessesToCreate": [
         {
-            "type": "shim-eth-vlan",
             "apName": "test-eth",
             "apInstance": "1",
             "difName": "300"
         },
         {
-            "type": "normal-ipc",
             "apName": "test1.IRATI",
             "apInstance": "1",
             "difName": "normal.DIF",

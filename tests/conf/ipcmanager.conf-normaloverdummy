@@ -31,13 +31,11 @@
     ],
     "ipcProcessesToCreate": [
         {
-            "type": "shim-dummy",
             "apName": "test-dummy",
             "apInstance": "1",
             "difName": "loopback.DIF"
         },
         {
-            "type": "normal-ipc",
             "apName": "test1.IRATI",
             "apInstance": "1",
             "difName": "normal.DIF",
@@ -46,7 +44,6 @@
             ]
         },
         {
-            "type": "normal-ipc",
             "apName": "test2.IRATI",
             "apInstance": "1",
             "difName": "normal.DIF",
