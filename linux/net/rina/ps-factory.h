@@ -24,7 +24,7 @@
 
 #include <linux/list.h>
 
-#define DEFAULT_NAME            "default"
+#define RINA_PS_DEFAULT_NAME            "default"
 
 #define PARAMETER_DESC_MAX_LEN  32
 #define POLICY_SET_NAME_MAX_LEN 64

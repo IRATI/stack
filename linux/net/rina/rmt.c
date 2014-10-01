@@ -234,7 +234,7 @@ int rmt_select_policy_set(struct rmt * rmt,
                           const char * name)
 {
         rmt->ps_factory = (struct rmt_ps_factory *)
-                          ps_lookup(&policy_sets, DEFAULT_NAME);
+                          ps_lookup(&policy_sets, RINA_PS_DEFAULT_NAME);
         if (rmt->ps_factory) {
                 /* Instantiate a policy set. */
                 rmt->ps = rmt->ps_factory->create(rmt);
@@ -332,7 +332,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
 
         /* Try to select the default policy set factory. */
         tmp->ps = NULL;
-        rmt_select_policy_set(tmp, DEFAULT_NAME);
+        rmt_select_policy_set(tmp, RINA_PS_DEFAULT_NAME);
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 

@@ -74,7 +74,7 @@ static int __init mod_init(void)
 {
         int ret;
 
-        strcpy(factory.base.name, DEFAULT_NAME);
+        strcpy(factory.base.name, RINA_PS_DEFAULT_NAME);
 
         ret = rmt_ps_publish(&factory);
         if (ret) {
@@ -89,7 +89,7 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        int ret = rmt_ps_unpublish(DEFAULT_NAME);
+        int ret = rmt_ps_unpublish(RINA_PS_DEFAULT_NAME);
 
         if (ret) {
                 LOG_ERR("Failed to unpublish policy set factory");
