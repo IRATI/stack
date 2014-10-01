@@ -4,27 +4,29 @@
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
-#include <errno.h>
+#include <cerrno>
+#include <unistd.h>
 
 #define RINA_PREFIX "concurrency"
 
-#include "logs.h"
-#include "concurrency.h"
+#include "librina/concurrency.h"
+#include "librina/logs.h"
 
 namespace rina {
 
@@ -299,8 +301,11 @@ pthread_t Thread::getThreadType() const{
 }
 
 void Thread::join(void ** status){
-	if(pthread_join(thread_id_, status)){
-		LOG_CRIT("%s", ConcurrentException::error_join_thread.c_str());
+	int error = pthread_join(thread_id_, status);
+	if(error != 0){
+		LOG_CRIT("%s. Error is: %d",
+				ConcurrentException::error_join_thread.c_str(),
+				error);
 		throw ConcurrentException(ConcurrentException::error_join_thread);
 	}
 }
@@ -591,6 +596,17 @@ void ConditionVariable::timedwait(long seconds, long nanoseconds){
 	LOG_CRIT("%s", ConcurrentException::error_wait_cond.c_str());
 	throw ConcurrentException(
 			ConcurrentException::error_wait_cond);
+}
+
+// Class Sleep
+bool Sleep::sleep(int sec, int milisec) {
+	return usleep(sec * 1000000 + milisec * 1000);
+}
+bool Sleep::sleepForMili(int milisec) {
+	return usleep(milisec * 1000);
+}
+bool Sleep::sleepForSec(int sec) {
+	return usleep(sec * 1000000);
 }
 
 }

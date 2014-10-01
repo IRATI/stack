@@ -1,26 +1,34 @@
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
+/*
+ * Netlink messages
+ *
+ *    Eduard Grasa      <eduard.grasa@i2cat.net>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
+ */
 
 #ifndef LIBRINA_NETLINK_MESSAGES_H
 #define LIBRINA_NETLINK_MESSAGES_H
 
-#include "librina-common.h"
-#include "librina-ipc-process.h"
+#ifdef __cplusplus
 
-namespace rina{
+#include "librina/configuration.h"
+#include "librina/ipc-process.h"
+
+namespace rina {
 
 enum RINANetlinkOperationCode{
 	RINA_C_UNSPEC, /* 0 Unespecified operation */
@@ -126,7 +134,7 @@ class BaseNetlinkMessage {
 	/** True if this is a response message */
 	bool responseMessage;
 
-	/** True if this is a notificaiton message */
+	/** True if this is a notification message */
 	bool notificationMessage;
 
 public:
@@ -154,6 +162,9 @@ public:
 	bool isResponseMessage() const;
 	void setResponseMessage(bool responseMessage);
 	const std::string toString();
+
+private:
+	static const std::string operationCodeToString(RINANetlinkOperationCode operationCode);
 };
 
 class BaseNetlinkResponseMessage: public BaseNetlinkMessage {
@@ -995,13 +1006,13 @@ public:
 class IpcmDIFQueryRIBResponseMessage:
 		public BaseNetlinkResponseMessage {
 
-	std::list<RIBObject> ribObjects;
+	std::list<RIBObjectData> ribObjects;
 
 public:
 	IpcmDIFQueryRIBResponseMessage();
-	const std::list<RIBObject>& getRIBObjects() const;
-	void setRIBObjects(const std::list<RIBObject>& ribObjects);
-	void addRIBObject(const RIBObject& ribObject);
+	const std::list<RIBObjectData>& getRIBObjects() const;
+	void setRIBObjects(const std::list<RIBObjectData>& ribObjects);
+	void addRIBObject(const RIBObjectData& ribObject);
 	IPCEvent* toIPCEvent();
 };
 
@@ -1056,33 +1067,13 @@ public:
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
         
-        /** The port-id where the connection will be bound to */
-        int portId;
-        
-        /** The source address of the connection (the IPC Process address) */
-        unsigned int sourceAddress;
-        
-        /** The connection's destination IPC Process address */
-        unsigned int destAddress;
-        
-        /** The qos-id of the connection */
-        unsigned int qosId;
-
-        /** The policies parameters */
-        ConnectionPoliciesParameters connPoliciesParams;
+        /** Contains the data of the connection to be created */
+        Connection connection;
 
 public:
         IpcpConnectionCreateRequestMessage();
-        unsigned int getDestAddress() const;
-        void setDestAddress(unsigned int destAddress);
-        int getPortId() const;
-        void setPortId(int portId);
-        unsigned int getQosId() const;
-        void setQosId(unsigned int qosId);
-        unsigned int getSourceAddress() const;
-        void setSourceAddress(unsigned int sourceAddress);
-        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
-        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
+        const Connection& getConnection() const;
+        void setConnection(const Connection& connection);
         IPCEvent* toIPCEvent();
 };
 
@@ -1170,46 +1161,13 @@ public:
  */
 class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
 
-        /** The port-id where the connection will be bound to */
-        int portId;
-
-        /** The source address of the connection (the IPC Process address) */
-        unsigned int sourceAddress;
-
-        /** The connection's destination IPC Process address */
-        unsigned int destAddress;
-
-        /** The qos-id of the connection */
-        unsigned int qosId;
-
-        /** The connection's source CEP-id */
-        int destCepId;
-
-        /** The policies parameters */
-        ConnectionPoliciesParameters connPoliciesParameters;
-
-        /**
-         * The id of the IPC Process that will be using the flow
-         * (0 if it is an application)
-         */
-        unsigned short flowUserIpcProcessId;
+        /** Contains the data of the connection to be created */
+        Connection connection;
 
 public:
         IpcpConnectionCreateArrivedMessage();
-        unsigned int getDestAddress() const;
-        void setDestAddress(unsigned int destAddress);
-        int getPortId() const;
-        void setPortId(int portId);
-        unsigned int getQosId() const;
-        void setQosId(unsigned int qosId);
-        unsigned int getSourceAddress() const;
-        void setSourceAddress(unsigned int sourceAddress);
-        unsigned short getFlowUserIpcProcessId() const;
-        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
-        int getDestCepId() const;
-        void setDestCepId(int sourceCepId);
-        const ConnectionPoliciesParameters& getConnPoliciesParams() const;
-        void setConnPoliciesParams(const ConnectionPoliciesParameters& connPParams);
+        const Connection& getConnection() const;
+        void setConnection(const Connection& connection);
         IPCEvent* toIPCEvent();
 };
 
@@ -1295,16 +1253,16 @@ public:
  */
 class RmtModifyPDUFTEntriesRequestMessage: public BaseNetlinkMessage {
         /** The entries to be added */
-        std::list<PDUForwardingTableEntry> entries;
+        std::list<PDUForwardingTableEntry *> entries;
 
         /** 0 add, 1 remove, 2 flush and add */
         int mode;
 
 public:
         RmtModifyPDUFTEntriesRequestMessage();
-        const std::list<PDUForwardingTableEntry>& getEntries() const;
-        void setEntries(const std::list<PDUForwardingTableEntry>& entries);
-        void addEntry(const PDUForwardingTableEntry& entry);
+        const std::list<PDUForwardingTableEntry *>& getEntries() const;
+        void setEntries(const std::list<PDUForwardingTableEntry *>& entries);
+        void addEntry(PDUForwardingTableEntry * entry);
         int getMode() const;
         void setMode(int mode);
         IPCEvent* toIPCEvent();
@@ -1339,4 +1297,6 @@ public:
 
 }
 
-#endif /* NETLINK_MESSAGES_H_ */
+#endif
+
+#endif

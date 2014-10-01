@@ -6,3 +6,9 @@
 /*.l[ao]
 
 /librina.pc
+
+/test-linking
+
+/*.stamp
+/*.pb.*
+

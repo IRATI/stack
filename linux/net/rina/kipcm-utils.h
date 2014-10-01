@@ -76,7 +76,7 @@ int                    kipcm_smap_add_ni(struct kipcm_smap * map,
                                          port_id_t           value);
 int                    kipcm_smap_remove(struct kipcm_smap * map,
                                          rnl_sn_t            key);
-bool                   is_seq_num_ok(rnl_sn_t sn);
+bool                   is_rnl_seq_num_ok(rnl_sn_t sn);
 
 
 #endif

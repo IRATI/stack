@@ -35,6 +35,9 @@ struct rfifo {
         struct rqueue * q;
 };
 
+/* FIXME: This extern has to disappear from here */
+struct rqueue * rqueue_create_gfp(gfp_t flags);
+
 static struct rfifo * rfifo_create_gfp(gfp_t flags)
 {
         struct rfifo * f;
@@ -43,7 +46,7 @@ static struct rfifo * rfifo_create_gfp(gfp_t flags)
         if (!f)
                 return NULL;
 
-        f->q = rqueue_create();
+        f->q = rqueue_create_gfp(flags);
         if (!f->q) {
                 rkfree(f);
                 return NULL;
@@ -127,6 +130,17 @@ bool rfifo_is_empty(struct rfifo * f)
         return rqueue_is_empty(f->q);
 }
 EXPORT_SYMBOL(rfifo_is_empty);
+
+ssize_t rfifo_length(struct rfifo * f)
+{
+        if (!f) {
+                LOG_ERR("Can't get size of a NULL fifo");
+                return NULL;
+        }
+
+        return rqueue_length(f->q);
+}
+EXPORT_SYMBOL(rfifo_length);
 
 #ifdef CONFIG_RINA_RFIFO_REGRESSION_TESTS
 bool regression_tests_rfifo(void)

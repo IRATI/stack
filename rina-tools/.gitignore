@@ -3,6 +3,8 @@
 
 *.orig
 
+TAGS
+
 .deps
 .libs
 .dirstamp

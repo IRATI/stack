@@ -38,10 +38,11 @@ struct sdu {
 
 /*
  * Represents and SDU with the port-id the SDU is to be written to
- * or has been read from
+ * or has been read from OR the destination address
  */
 struct sdu_wpi {
         struct sdu * sdu;
+        address_t    dst_addr;
         port_id_t    port_id;
 };
 
@@ -51,6 +52,7 @@ struct pdu;
 struct sdu *          sdu_create_buffer_with(struct buffer * buffer);
 struct sdu *          sdu_create_buffer_with_ni(struct buffer * buffer);
 
+/* FIXME: To be removed after ser/des */
 struct sdu *          sdu_create_pdu_with(struct pdu * pdu);
 struct sdu *          sdu_create_pdu_with_ni(struct pdu * pdu);
 

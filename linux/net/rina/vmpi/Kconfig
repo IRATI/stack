@@ -1,0 +1,41 @@
+#
+# VMPI
+#
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
+
+menuconfig VMPI
+	bool "VMPI support"
+        default n
+
+if VMPI
+
+config VMPI_KVM_GUEST
+	tristate "VMPI for KVM and Virtio - guest support"
+	default m
+        depends on VIRTIO
+	help
+	  No help for the time being
+
+config VMPI_KVM_HOST
+	tristate "VMPI for KVM and Virtio - host support"
+	default m
+        depends on VHOST
+	help
+	  No help for the time being
+
+config VMPI_XEN_GUEST
+        tristate "VMPI for Xen - guest support"
+        default m
+        depends on XEN
+        help
+	  No help for the time being
+
+config VMPI_XEN_HOST
+        tristate "VMPI for Xen - host support"
+        default m
+        depends on XEN
+        help
+          No help for the time being
+
+endif

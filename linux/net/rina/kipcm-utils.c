@@ -243,16 +243,16 @@ int ipcp_imap_remove(struct ipcp_imap * map,
  */
 
 #define FMAP_HASH_BITS 7
-#define SNVALUE_WRONG  0xFFFFFFFF
+#define SNVALUE_WRONG  -1
 
 rnl_sn_t seq_num_bad(void)
 { return SNVALUE_WRONG; }
 EXPORT_SYMBOL(seq_num_bad);
 
 /* FIXME: We need to change this */
-bool is_seq_num_ok(rnl_sn_t sn)
+bool is_rnl_seq_num_ok(rnl_sn_t sn)
 { return (sn < SNVALUE_WRONG) ? true : false; }
-EXPORT_SYMBOL(is_seq_num_ok);
+EXPORT_SYMBOL(is_rnl_seq_num_ok);
 
 struct kipcm_pmap {
         DECLARE_HASHTABLE(table, FMAP_HASH_BITS);
@@ -329,7 +329,7 @@ rnl_sn_t kipcm_pmap_find(struct kipcm_pmap * map,
 
         entry = pmap_entry_find(map, key);
         if (!entry)
-                return SNVALUE_WRONG;
+                return seq_num_bad();
 
         return entry->value;
 }

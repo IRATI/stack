@@ -1,0 +1,36 @@
+{
+    "localConfiguration": {
+        "installationPath": "/usr/local/irati/share/rinad",
+        "libraryPath": "/usr/local/irati/lib",
+        "consolePort": 32766,
+        "cdapTimeoutInMs": 10000,
+        "enrollmentTimeoutInMs": 10000,
+        "flowAllocatorTimeoutInMs": 15000,
+        "watchdogPeriodInMs": 60000,
+        "declaredDeadIntervalInMs": 120000,
+        "neighborsEnrollerPeriodInMs": 10000,
+        "lengthOfFlowQueues": 10
+    },
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "difName": "300"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "apName": "test-eth",
+            "apInstance": "1",
+            "difName": "300"
+        }
+    ],
+    "difConfigurations": [
+        {
+            "difName": "300",
+            "difType": "shim-eth-vlan",
+            "configParameters": {
+                "interface-name": "eth1"
+            }
+        }
+    ]
+}

@@ -2,9 +2,8 @@
 /config.h
 /config.h.in
 
-/*.[ao]
+*.[ao]
 
-/rina-wrap
 /rina-mem-stats
 /rina-show-plots
 /rina-bug-report

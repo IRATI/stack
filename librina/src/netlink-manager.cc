@@ -1,25 +1,24 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
-/*
- * librina-netlink-manager.cc
- *
- *  Created on: 12/06/2013
- *      Author: eduardgrasa
- */
+//
+// Netlink manager
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
+//
 
 #include <unistd.h>
 #include <netlink/genl/genl.h>
@@ -28,7 +27,7 @@
 
 #define RINA_PREFIX "netlink-manager"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "netlink-manager.h"
 #include "netlink-parsers.h"
 
@@ -36,7 +35,7 @@ namespace rina {
 
 /* CLASS NETLINK EXCEPTION */
 NetlinkException::NetlinkException(const std::string& description) :
-		Exception(description) {
+		Exception(description.c_str()) {
 }
 
 const std::string NetlinkException::error_resolving_netlink_family =
@@ -68,15 +67,14 @@ const std::string NetlinkException::error_waiting_for_response =
 
 /* CLASS NETLINK MANAGER */
 
-NetlinkManager::NetlinkManager() throw (NetlinkException) {
+NetlinkManager::NetlinkManager() {
 	this->localPort = getpid();
 	LOG_DBG("Netlink Manager constructor called, using local port = %d",
 			localPort);
 	initialize(false);
 }
 
-NetlinkManager::NetlinkManager(unsigned int localPort)
-		throw (NetlinkException) {
+NetlinkManager::NetlinkManager(unsigned int localPort) {
 	this->localPort = localPort;
 	LOG_DBG("Netlink Manager constructor called, with netlink pid = %d",
 			localPort);
@@ -88,7 +86,7 @@ NetlinkManager::~NetlinkManager() {
 	nl_socket_free(socket);
 }
 
-void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
+void NetlinkManager::initialize(bool ipcManager) {
         int result = 0;
 
 	socket = nl_socket_alloc();
@@ -127,8 +125,7 @@ void NetlinkManager::initialize(bool ipcManager) throw (NetlinkException) {
 	LOG_DBG("Generic Netlink RINA family id: %d", family);
 }
 
-void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)
-throw(NetlinkException) {
+void NetlinkManager::_sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage) {
         struct rinaHeader* myHeader;
 
         message->setSourcePortId(localPort);
@@ -196,8 +193,7 @@ unsigned int NetlinkManager::getSequenceNumber(){
 	return nl_socket_use_seq(socket);
 }
 
-void NetlinkManager::sendMessage(BaseNetlinkMessage * message)
-throw (NetlinkException) {
+void NetlinkManager::sendMessage(BaseNetlinkMessage * message) {
         struct nl_msg* netlinkMessage;
 
         netlinkMessage = nlmsg_alloc();
@@ -208,8 +204,7 @@ throw (NetlinkException) {
         _sendMessage(message, netlinkMessage);
 }
 
-void NetlinkManager::sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize)
-throw(NetlinkException) {
+void NetlinkManager::sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize) {
         struct nl_msg* netlinkMessage;
 
         netlinkMessage = nlmsg_alloc_size(maxSize);
@@ -220,16 +215,18 @@ throw(NetlinkException) {
         _sendMessage(message, netlinkMessage);
 }
 
-BaseNetlinkMessage * NetlinkManager::getMessage() throw (NetlinkException) {
+BaseNetlinkMessage * NetlinkManager::getMessage() {
 	unsigned char *buf = NULL;
 	struct nlmsghdr *hdr;
 	struct genlmsghdr *nlhdr;
 	struct rinaHeader * myHeader;
-	struct sockaddr_nl nla = { 0 };
+	struct sockaddr_nl nla;
 	struct nl_msg *msg = NULL;
 	struct ucred *creds = NULL;
+	int numBytes;
 
-	int numBytes = nl_recv(socket, &nla, &buf, &creds);
+        memset(&nla, 0, sizeof(nla));
+        numBytes = nl_recv(socket, &nla, &buf, &creds);
 	if (numBytes <= 0) {
 		LOG_ERR("%s %d",
 				NetlinkException::error_receiving_netlink_message.c_str(),

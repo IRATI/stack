@@ -27,6 +27,7 @@
 #include "common.h"
 #include "ipcp-instances.h"
 #include "efcp.h"
+#include "rds/rstr.h"
 
 /*
  * Allocates a new name, returning the allocated object. In case of an error, a
@@ -99,13 +100,14 @@ char *        name_tostring(const struct name * n);
 char *        name_tostring_ni(const struct name * n);
 
 /* Inverse of name_tostring() */
-string_t *    string_from_user(const char __user * src);
 struct name * string_toname(const string_t * s);
 struct name * string_toname_ni(const string_t * s);
 
 struct ipcp_config * ipcp_config_create(void);
 int                  ipcp_config_destroy(struct ipcp_config * cfg);
 
+struct efcp_config * efcp_config_create(void);
+int                  efcp_config_destroy(struct efcp_config * efcp_config);
 struct dif_config *  dif_config_create(void);
 int                  dif_config_destroy(struct dif_config * dif_config);
 struct dif_info *    dif_info_create(void);

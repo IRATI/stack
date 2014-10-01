@@ -1,19 +1,37 @@
-obj-m += vhost-mpi.o
-vhost-mpi-y := vmpi-host-impl-virtio.o vmpi-host.o vmpi-ring.o vmpi-host-test.o
+#
+# Makefile for Virtual MPI (VMPI)
+#
+# Written by Vincenzo Maffione <v.maffione@nextworks.it>
+#            Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
 
-obj-m += virtio-mpi.o
-virtio-mpi-y := vmpi-guest-impl-virtio.o vmpi-guest-test.o vmpi-guest.o vmpi-ring.o
+ccflags-y += -I$(srctree)/net/rina
+ccflags-y += -I$(srctree)/net/rina/ipcps
+ccflags-y += -Wtype-limits
 
-KER=`uname -r`
+obj-m += vmpi-provider.o
 
-all: user-guest-test
-	make -C /usr/lib/modules/$(KER)/build M=$(PWD) modules
+obj-$(CONFIG_VMPI_KVM_GUEST) += vmpi-kvm-guest.o
 
-user-guest-test: user-guest-test.o
-	gcc -Wall -g -o user-guest-test user-guest-test.o -lrt
+vmpi-kvm-guest-y :=						\
+	vmpi-guest-impl-kvm.o vmpi-test.o vmpi-guest.o	\
+	vmpi-structs.o vmpi-iovec.o vmpi-stats.o
 
-user-guest-test.o: user-guest-test.c
-	gcc -Wall -g -c user-guest-test.c
+obj-$(CONFIG_VMPI_KVM_HOST) += vmpi-kvm-host.o
 
-clean:
-	make -C /usr/lib/modules/$(KER)/build M=$(PWD) clean
+vmpi-kvm-host-y :=						\
+	vmpi-host-impl-kvm.o  vmpi-test.o  vmpi-host.o	\
+	vmpi-structs.o vmpi-iovec.o vmpi-stats.o
+
+obj-$(CONFIG_VMPI_XEN_GUEST) += vmpi-xen-guest.o
+
+vmpi-xen-guest-y :=						\
+	vmpi-guest-impl-xen.o vmpi-structs.o vmpi-guest.o		\
+	vmpi-iovec.o vmpi-test.o vmpi-stats.o
+
+obj-$(CONFIG_VMPI_XEN_HOST) += vmpi-xen-host.o
+
+vmpi-xen-host-y :=						\
+	vmpi-host-impl-xen.o  xen-mpi-back-interface.o		\
+	xen-mpi-back-xenbus.o vmpi-structs.o vmpi-host.o	\
+	vmpi-iovec.o vmpi-test.o vmpi-stats.o

@@ -71,12 +71,96 @@ enum ipcp_config_entry_attrs_list {
 };
 #define IPCP_CONFIG_ENTRY_ATTR_MAX (__IPCP_CONFIG_ENTRY_ATTR_MAX - 1)
 
+enum policy_param_attrs_list {
+        PPA_ATTR_NAME = 1,
+        PPA_ATTR_VALUE,
+        __PPA_ATTR_MAX,
+};
+#define PPA_ATTR_MAX (__PPA_ATTR_MAX - 1)
+
+enum policy_attrs_list {
+        PA_ATTR_NAME = 1,
+        PA_ATTR_VERSION,
+        PA_ATTR_PARAMETERS,
+        __PA_ATTR_MAX,
+};
+#define PA_ATTR_MAX (__PA_ATTR_MAX - 1)
+
+enum dtcp_wb_fctrl_config_attrs_list {
+        DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH = 1,
+        DWFCC_ATTR_INITIAL_CREDIT,
+        DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY,
+        DWFCC_ATTR_TX_CTRL_POLICY,
+        __DWFCC_ATTR_MAX,
+};
+#define DWFCC_ATTR_MAX (__DWFCC_ATTR_MAX -1)
+
+enum dtcp_rb_fctrl_config_attrs_list {
+        DRFCC_ATTR_SEND_RATE = 1,
+        DRFCC_ATTR_TIME_PERIOD,
+        DRFCC_ATTR_NO_RATE_SDOWN_POLICY,
+        DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY,
+        DRFCC_ATTR_RATE_REDUC_POLICY,
+        __DRFCC_ATTR_MAX,
+};
+#define DRFCC_ATTR_MAX (__DRFCC_ATTR_MAX -1)
+
+enum dtcp_fctrl_config_attrs_lists {
+        DFCC_ATTR_WINDOW_BASED = 1,
+        DFCC_ATTR_WINDOW_BASED_CONFIG,
+        DFCC_ATTR_RATE_BASED,
+        DFCC_ATTR_RATE_BASED_CONFIG,
+        DFCC_ATTR_SBYTES_THRES,
+        DFCC_ATTR_SBYTES_PER_THRES,
+        DFCC_ATTR_SBUFFER_THRES,
+        DFCC_ATTR_RBYTES_THRES,
+        DFCC_ATTR_RBYTES_PER_THRES,
+        DFCC_ATTR_RBUFFER_THRES,
+        DFCC_ATTR_CLOSED_WINDOW_POLICY,
+        DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY,
+        DFCC_ATTR_RECON_FLOW_CTRL_POLICY,
+        DFCC_ATTR_RCVING_FLOW_CTRL_POLICY,
+        __DFCC_ATTR_MAX,
+};
+#define DFCC_ATTR_MAX (__DFCC_ATTR_MAX -1)
+
+enum dtcp_rctrl_config_attrs_list {
+        DRCC_ATTR_MAX_TIME_TO_RETRY = 1,
+        DRCC_ATTR_DATA_RXMSN_MAX,
+        DRCC_ATTR_INIT_TR,
+        DRCC_ATTR_RTX_TIME_EXP_POLICY,
+        DRCC_ATTR_SACK_POLICY,
+        DRCC_ATTR_RACK_LIST_POLICY,
+        DRCC_ATTR_RACK_POLICY,
+        DRCC_ATTR_SDING_ACK_POLICY,
+        DRCC_ATTR_RCONTROL_ACK_POLICY,
+        __DRCC_ATTR_MAX,
+};
+#define DRCC_ATTR_MAX (__DRCC_ATTR_MAX -1)
+
+enum dtcp_config_params_attrs_list {
+        DCA_ATTR_FLOW_CONTROL = 1,
+        DCA_ATTR_FLOW_CONTROL_CONFIG,
+        DCA_ATTR_RETX_CONTROL,
+        DCA_ATTR_RETX_CONTROL_CONFIG,
+        DCA_ATTR_LOST_CONTROL_PDU_POLICY,
+        DCA_ATTR_RTT_EST_POLICY,
+        __DCA_ATTR_MAX,
+};
+#define DCA_ATTR_MAX (__DCA_ATTR_MAX - 1)
+
 enum conn_policies_params_attrs_list {
         CPP_ATTR_DTCP_PRESENT = 1,
-        CPP_ATTR_FLOW_CONTROL,
-        CPP_ATTR_RTX_CONTROL,
-        CPP_ATTR_WINDOW_BASED_FLOW_CONTROL,
-        CPP_ATTR_RATE_BASED_FLOW_CONTROL,
+        CPP_ATTR_DTCP_CONFIG,
+        CPP_ATTR_RCVR_TIMER_INAC_POLICY,
+        CPP_ATTR_SNDR_TIMER_INAC_POLICY,
+        CPP_ATTR_INIT_SEQ_NUM_POLICY,
+        CPP_ATTR_SEQ_NUM_ROLLOVER,
+        CPP_ATTR_INIT_A_TIMER,
+        CPP_ATTR_PARTIAL_DELIVERY,
+        CPP_ATTR_INCOMPLETE_DELIVERY,
+        CPP_ATTR_IN_ORDER_DELIVERY,
+        CPP_ATTR_MAX_SDU_GAP,
         __CPP_ATTR_MAX,
 };
 #define CPP_ATTR_MAX (__CPP_ATTR_MAX - 1)
@@ -315,11 +399,19 @@ enum data_transfer_cons_attrs_list {
 };
 #define DTC_ATTR_MAX (__DTC_ATTR_MAX -1)
 
+enum efcp_config_attrs_list {
+        EFCPC_ATTR_DATA_TRANS_CONS = 1,
+        EFCPC_ATTR_QOS_CUBES,
+        EFCPC_ATTR_UNKNOWN_FLOW_POLICY,
+        __EFCPC_ATTR_MAX,
+};
+#define EFCPC_ATTR_MAX (__EFCPC_ATTR_MAX -1)
+
 enum dif_config_attrs_list {
         DCONF_ATTR_IPCP_CONFIG_ENTRIES = 1,
-        DCONF_ATTR_DATA_TRANS_CONS,
         DCONF_ATTR_ADDRESS,
-        DCONF_ATTR_QOS_CUBES,
+        DCONF_ATTR_EFCPC,
+        DCONF_ATTR_RMTC,
         __DCONF_ATTR_MAX,
 };
 #define DCONF_ATTR_MAX (__DCONF_ATTR_MAX -1)
@@ -535,11 +627,11 @@ struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
 
 /*  FIXME: policies should not be int */
 struct rnl_ipcp_conn_create_req_msg_attrs {
-        port_id_t            port_id;
-        address_t            src_addr;
-        address_t            dst_addr;
-        qos_id_t             qos_id;
-        struct conn_p_params cp_params;
+        port_id_t              port_id;
+        address_t              src_addr;
+        address_t              dst_addr;
+        qos_id_t               qos_id;
+        struct conn_policies * cp_params;
 };
 
 struct rnl_ipcp_conn_create_resp_msg_attrs {
@@ -548,13 +640,13 @@ struct rnl_ipcp_conn_create_resp_msg_attrs {
 };
 
 struct rnl_ipcp_conn_create_arrived_msg_attrs {
-        port_id_t            port_id;
-        address_t            src_addr;
-        address_t            dst_addr;
-        cep_id_t             dst_cep;
-        qos_id_t             qos_id;
-        ipc_process_id_t     flow_user_ipc_process_id;
-        struct conn_p_params cp_params;
+        port_id_t             port_id;
+        address_t             src_addr;
+        address_t             dst_addr;
+        cep_id_t              dst_cep;
+        qos_id_t              qos_id;
+        ipc_process_id_t      flow_user_ipc_process_id;
+        struct conn_policies * cp_params;
 };
 
 struct rnl_ipcp_conn_create_result_msg_attrs {
@@ -704,8 +796,5 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
                                struct list_head * entries,
                                rnl_sn_t           seq_num,
                                u32                nl_port_id);
-
-char * nla_get_string(struct nlattr *nla);
-
 
 #endif

@@ -25,6 +25,8 @@
 
 #include <linux/types.h>
 
+#include "rds/rstr.h"
+
 /* FIXME: Shouldn't we keep contrained to int32 ids ? */
 typedef int           port_id_t;
 
@@ -46,7 +48,6 @@ typedef uint16_t      ipc_process_id_t;
 typedef unsigned int  ipc_process_address_t;
 
 /* We should get rid of the following definitions */
-typedef char          string_t;
 typedef uint          uint_t;
 
 /* FIXME: Is this address_t definition correct ??? */

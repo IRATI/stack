@@ -26,32 +26,45 @@
 
 #include "common.h"
 #include "pdu.h"
+#include "rmt.h"
 
 struct cwq;
+struct dtp;
+struct dt;
 
 struct cwq *    cwq_create(void);
+struct cwq *    cwq_create_ni(void);
 int             cwq_destroy(struct cwq * q);
 
 int             cwq_push(struct cwq * q,
                          struct pdu * pdu);
 struct pdu *    cwq_pop(struct cwq * q);
 bool            cwq_is_empty(struct cwq * q);
-size_t          cwq_size(struct cwq * q);
+int             cwq_flush(struct cwq * q);
+ssize_t         cwq_size(struct cwq * q);
+void            cwq_deliver(struct cwq * queue,
+                            struct dt *  dt,
+                            struct rmt * rmt,
+                            address_t    address,
+                            qos_id_t     qos_id);
 
 struct rtxq;
 
-struct rtxq *   rtxq_create(void);
+struct rtxq *   rtxq_create(struct dt *  dt,
+                            struct rmt * rmt);
+struct rtxq *   rtxq_create_ni(struct dt *  dt,
+                               struct rmt * rmt);
 int             rtxq_destroy(struct rtxq * q);
 
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
-int             rtxq_push(struct rtxq *  q,
-                          struct pdu *   pdu);
-int             rtxq_drop(struct rtxq *  q,
-                          seq_num_t      from,
-                          seq_num_t      to);
-int             rtxq_set_pop(struct rtxq *      q,
-                             seq_num_t          from,
-                             seq_num_t          to,
-                             struct list_head * p);
+int             rtxq_push_ni(struct rtxq * q,
+                             struct pdu *  pdu);
+int             rtxq_ack(struct rtxq * q,
+                         seq_num_t     seq_num,
+                         timeout_t     tr);
+int             rtxq_nack(struct rtxq * q,
+                          seq_num_t     seq_num,
+                          timeout_t     tr);
+int             rtxq_flush(struct rtxq * q);
 
 #endif

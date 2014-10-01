@@ -29,6 +29,12 @@
 #include "debug.h"
 #include "common.h"
 #include "ipcp-utils.h"
+#include "policies.h"
+
+/* FIXME: These externs have to disappear from here */
+extern int string_dup_gfp(gfp_t            flags,
+                          const string_t * src,
+                          string_t **      dst);
 
 static struct name * name_create_gfp(gfp_t flags)
 { return rkzalloc(sizeof(struct name), flags); }
@@ -41,59 +47,8 @@ struct name * name_create_ni(void)
 { return name_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(name_create_ni);
 
-/*
- * NOTE:
- *
- * No needs to export the following string_* symbols for the time being. They
- * will be grouped here and moved into their own placeholder later on (as well
- * as all the "common" utilities). Lot of them should even be dropped ...
- *
- *   Francesco
- */
-static int string_dup_gfp(gfp_t            flags,
-                          const string_t * src,
-                          string_t **      dst)
-{
-        if (!dst) {
-                LOG_ERR("Destination string is NULL, cannot copy");
-                return -1;
-        }
-
-        /*
-         * An empty source is allowed (ref. the chain of calls) and it must
-         * provoke no consequeunces
-         */
-        if (src) {
-                *dst = rkstrdup(src, flags);
-                if (!*dst) {
-                        LOG_ERR("Cannot duplicate source string "
-                                "in kernel-space");
-                        return -1;
-                }
-        } else {
-                LOG_DBG("Duplicating a NULL source string ...");
-                *dst = NULL;
-        }
-
-        return 0;
-}
-
-string_t * string_from_user(const char __user * src)
-{ return strdup_from_user(src); }
-EXPORT_SYMBOL(string_from_user);
-
-static int string_dup(const string_t * src, string_t ** dst)
-{ return string_dup_gfp(GFP_KERNEL, src, dst); }
-
-static int string_cmp(const string_t * a, const string_t * b)
-{ return strcmp(a, b); }
-
-/* FIXME: Should we assert here ? */
-static int string_len(const string_t * s)
-{ return strlen(s); }
-
 /* FIXME: This thing is bogus and has to be fixed properly */
-#ifdef CONFIG_RINA_DEBUG
+#ifdef CONFIG_RINA_ASSERTIONS
 static bool name_is_initialized(struct name * dst)
 {
         ASSERT(dst);
@@ -278,7 +233,7 @@ EXPORT_SYMBOL(name_dup);
 
 /* NOTE: RINA reference model says only process_name is mandatory */
 bool name_is_ok(const struct name * n)
-{ return (n && n->process_name); }
+{ return (n && n->process_name && strlen(n->process_name)); }
 EXPORT_SYMBOL(name_is_ok);
 
 bool name_is_equal(const struct name * a,
@@ -469,6 +424,47 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 }
 EXPORT_SYMBOL(flow_spec_dup);
 
+struct efcp_config * efcp_config_create(void)
+{
+        struct efcp_config * tmp;
+        struct dt_cons *     tmp_dt;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp_dt = rkzalloc(sizeof(*tmp_dt), GFP_KERNEL);
+        if (!tmp_dt) {
+                rkfree(tmp);
+                return NULL;
+        }
+        tmp->dt_cons = tmp_dt;
+
+        tmp->unknown_flow = policy_create();
+        if (!tmp->unknown_flow) {
+                rkfree(tmp_dt);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+EXPORT_SYMBOL(efcp_config_create);
+
+int efcp_config_destroy(struct efcp_config * efcp_config)
+{
+        if (efcp_config->dt_cons)
+                rkfree(efcp_config->dt_cons);
+
+        if (efcp_config->unknown_flow)
+                policy_destroy(efcp_config->unknown_flow);
+
+        rkfree(efcp_config);
+
+        return 0;
+}
+EXPORT_SYMBOL(efcp_config_destroy);
+
 struct dif_config * dif_config_create(void)
 {
         struct dif_config * tmp;
@@ -477,12 +473,7 @@ struct dif_config * dif_config_create(void)
         if (!tmp)
                 return NULL;
 
-        tmp->dt_cons = rkzalloc(sizeof(*tmp->dt_cons), GFP_KERNEL);
-        if (!tmp->dt_cons) {
-                rkfree(tmp);
-                return NULL;
-        }
-
+        tmp->efcp_config = NULL;
         INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
 
         return tmp;
@@ -503,8 +494,6 @@ int dif_config_destroy(struct dif_config * dif_config)
                 ipcp_config_destroy(pos);
         }
 
-        if (dif_config->dt_cons)
-                rkfree(dif_config->dt_cons);
         rkfree(dif_config);
 
         return 0;

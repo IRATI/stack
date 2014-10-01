@@ -33,6 +33,8 @@
 #include "utils.h"
 #include "rnl.h"
 #include "rnl-utils.h"
+#include "dtcp-utils.h"
+#include "policies.h"
 
 /*
  * FIXME: I suppose these functions are internal (at least for the time being)
@@ -55,7 +57,7 @@
 
 /*
  * FIXME: Destination is usually at the end of the prototype, not at the
- * beginning (e.g. msg and name)
+ *        beginning (e.g. msg and name)
  */
 
 #define BUILD_STRERROR(X)                                       \
@@ -64,13 +66,14 @@
 #define BUILD_STRERROR_BY_MTYPE(X)                      \
         "Could not parse Netlink message of type " X
 
+/* FIXME: These externs have to disappear from here */
 extern struct genl_family rnl_nl_family;
 
-char * nla_get_string(struct nlattr * nla)
+static char * nla_get_string(struct nlattr * nla)
 { return (char *) nla_data(nla); }
 
-char * nla_dup_string(struct nlattr * nla, gfp_t flags)
-{ return rkstrdup(nla_get_string(nla), flags); }
+static char * nla_dup_string(struct nlattr * nla, gfp_t flags)
+{ return rkstrdup_gfp(nla_get_string(nla), flags); }
 
 static struct rnl_ipcm_alloc_flow_req_msg_attrs *
 rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
@@ -208,6 +211,12 @@ rnl_ipcp_conn_create_req_msg_attrs_create(void)
         if  (!tmp)
                 return NULL;
 
+        tmp->cp_params = conn_policies_create();
+        if (!tmp->cp_params) {
+                rkfree(tmp);
+                return NULL;
+        }
+
         return tmp;
 }
 
@@ -219,6 +228,12 @@ rnl_ipcp_conn_create_arrived_msg_attrs_create(void)
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if  (!tmp)
                 return NULL;
+
+        tmp->cp_params = conn_policies_create();
+        if (!tmp->cp_params) {
+                rkfree(tmp);
+                return NULL;
+        }
 
         return tmp;
 }
@@ -618,13 +633,11 @@ static int parse_flow_spec(struct nlattr * fspec_attr,
                 fspec_struct->undetected_bit_error_rate =
                         nla_get_u32(attrs[FSPEC_ATTR_UNDETECTED_BER]);
 
-        if (attrs[FSPEC_ATTR_PART_DELIVERY])
-                fspec_struct->partial_delivery =
-                        nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);
+        fspec_struct->partial_delivery =
+                nla_get_flag(attrs[FSPEC_ATTR_PART_DELIVERY]);
 
-        if (attrs[FSPEC_ATTR_IN_ORD_DELIVERY])
-                fspec_struct->ordered_delivery =
-                        nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);
+        fspec_struct->ordered_delivery =
+                nla_get_flag(attrs[FSPEC_ATTR_IN_ORD_DELIVERY]);
 
         if (attrs[FSPEC_ATTR_MAX_GAP])
                 fspec_struct->max_allowable_gap =
@@ -659,7 +672,8 @@ static int parse_pdu_fte_port_list_entries(struct nlattr *       nested_attr,
         }
 
         entry->ports_size = nla_len(nested_attr);
-        entry->ports = rkzalloc(entry->ports_size, GFP_KERNEL);
+        entry->ports      = rkzalloc(entry->ports_size, GFP_KERNEL);
+
         LOG_DBG("Allocated %zd bytes in %pk", entry->ports_size, entry->ports);
 
         if (!entry->ports) {
@@ -874,6 +888,137 @@ static int parse_list_of_ipcp_config_entries(struct nlattr *     nested_attr,
         return 0;
 }
 
+static int parse_policy_param(struct nlattr * attr, struct policy_parm * param)
+{
+        struct nla_policy attr_policy[PPA_ATTR_MAX + 1];
+        struct nlattr *   attrs[PPA_ATTR_MAX + 1];
+
+        if (!attr || !param) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+        attr_policy[PPA_ATTR_NAME].type  = NLA_STRING;
+        attr_policy[PPA_ATTR_NAME].len   = 0;
+        attr_policy[PPA_ATTR_VALUE].type = NLA_STRING;
+        attr_policy[PPA_ATTR_VALUE].len  = 0;
+
+        if (nla_parse_nested(attrs, PPA_ATTR_MAX, attr, attr_policy))
+                return -1;
+
+        if (attrs[PPA_ATTR_NAME])
+                policy_param_name_set(param,
+                                      nla_dup_string(attrs[PPA_ATTR_NAME],
+                                                     GFP_KERNEL));
+        else
+                policy_param_name_set(param, NULL);
+
+        if (attrs[PPA_ATTR_VALUE])
+                policy_param_value_set(param,
+                                       nla_dup_string(attrs[PPA_ATTR_VALUE],
+                                                      GFP_KERNEL));
+        else
+                policy_param_value_set(param, NULL);
+
+        return 0;
+}
+
+static int parse_policy_param_list(struct nlattr * nested_attr,
+                                   struct policy * p)
+{
+        struct nlattr *      nla;
+        int                  rem                   = 0;
+        int                  entries_with_problems = 0;
+        int                  total_entries         = 0;
+
+        if (!nested_attr) {
+                LOG_ERR("Bogus attribute passed, bailing out");
+                return -1;
+        }
+
+        if (!p) {
+                LOG_ERR("Bogus policy struct passed, bailing out");
+                return -1;
+        }
+
+        for (nla = (struct nlattr *) nla_data(nested_attr),
+                     rem = nla_len(nested_attr);
+             nla_ok(nla, rem);
+             nla = nla_next(nla, &(rem))) {
+                struct policy_parm * param;
+
+                total_entries++;
+
+                param = policy_param_create();
+                if (!param) {
+                        entries_with_problems++;
+                        continue;
+                }
+
+                if (parse_policy_param(nla, param)) {
+                        policy_param_destroy(param);
+                        entries_with_problems++;
+                        continue;
+                }
+
+                if (!policy_param_bind(p, param)) {
+                        policy_param_destroy(param);
+                        entries_with_problems++;
+                        continue;
+                }
+        }
+
+        if (rem > 0) {
+                LOG_WARN("Missing bits to parse");
+        }
+
+        if (entries_with_problems > 0)
+                LOG_WARN("Problems parsing %d out of %d parameters",
+                         entries_with_problems,
+                         total_entries);
+
+        return 0;
+}
+
+static int parse_policy(struct nlattr * p_attr, struct policy * p)
+{
+        struct nla_policy attr_policy[PA_ATTR_MAX + 1];
+        struct nlattr *   attrs[PA_ATTR_MAX + 1];
+
+        if (!p_attr || !p) {
+                LOG_ERR("Bogus input parameters, cannot parse policy info");
+                return -1;
+        }
+
+        attr_policy[PA_ATTR_NAME].type       = NLA_STRING;
+        attr_policy[PA_ATTR_NAME].len        = 0;
+        attr_policy[PA_ATTR_VERSION].type    = NLA_STRING;
+        attr_policy[PA_ATTR_VERSION].len     = 0;
+        attr_policy[PA_ATTR_PARAMETERS].type = NLA_NESTED;
+        attr_policy[PA_ATTR_PARAMETERS].len  = 0;
+
+        if (nla_parse_nested(attrs, PA_ATTR_MAX, p_attr, attr_policy))
+                return -1;
+
+        if (attrs[PA_ATTR_NAME])
+                policy_name_set(p, nla_dup_string(attrs[PA_ATTR_NAME],
+                                                  GFP_KERNEL));
+        else
+                policy_name_set(p, NULL);
+
+        if (attrs[PA_ATTR_VERSION])
+                policy_version_set(p, nla_dup_string(attrs[PA_ATTR_VERSION],
+                                                     GFP_KERNEL));
+        else
+                policy_version_set(p, NULL);
+
+        if (attrs[PA_ATTR_PARAMETERS])
+                if (parse_policy_param_list(attrs[PA_ATTR_PARAMETERS], p))
+                        return -1;
+
+        return 0;
+}
+
 static int parse_dt_cons(struct nlattr *  attr,
                          struct dt_cons * dt_cons)
 {
@@ -934,10 +1079,56 @@ static int parse_dt_cons(struct nlattr *  attr,
                 dt_cons->max_pdu_life =
                         nla_get_u32(attrs[DTC_ATTR_MAX_PDU_LIFE]);
 
-        if (attrs[DTC_ATTR_DIF_INTEGRITY])
-                dt_cons->dif_integrity = true;
+        dt_cons->dif_integrity = nla_get_flag(attrs[DTC_ATTR_DIF_INTEGRITY]);
 
         return 0;
+}
+
+static int parse_efcp_config(struct nlattr *      efcp_config_attr,
+                             struct efcp_config * efcp_config)
+{
+        struct nla_policy attr_policy[EFCPC_ATTR_MAX + 1];
+        struct nlattr *   attrs[EFCPC_ATTR_MAX + 1];
+
+        attr_policy[EFCPC_ATTR_DATA_TRANS_CONS].type     = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_DATA_TRANS_CONS].len      = 0;
+        attr_policy[EFCPC_ATTR_QOS_CUBES].type           = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_QOS_CUBES].len            = 0;
+        attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].type = NLA_NESTED;
+        attr_policy[EFCPC_ATTR_UNKNOWN_FLOW_POLICY].len = 0;
+
+        if (nla_parse_nested(attrs,
+                             EFCPC_ATTR_MAX,
+                             efcp_config_attr,
+                             attr_policy) < 0)
+                goto parse_fail;
+
+        if (attrs[EFCPC_ATTR_DATA_TRANS_CONS]) {
+                if (!efcp_config->dt_cons)
+                        goto parse_fail;
+
+
+                if (parse_dt_cons(attrs[EFCPC_ATTR_DATA_TRANS_CONS],
+                                  efcp_config->dt_cons))
+                        goto parse_fail;
+        }
+
+        if (attrs[EFCPC_ATTR_QOS_CUBES]) {
+                LOG_MISSING;
+        }
+
+        if (attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY]) {
+                if (parse_policy(attrs[EFCPC_ATTR_UNKNOWN_FLOW_POLICY],
+                                 efcp_config->unknown_flow))
+                        goto parse_fail;
+
+        }
+
+        return 0;
+
+ parse_fail:
+        LOG_ERR(BUILD_STRERROR_BY_MTYPE("efcp config attributes"));
+        return -1;
 }
 
 static int parse_dif_config(struct nlattr *     dif_config_attr,
@@ -948,12 +1139,12 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
 
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].type = NLA_NESTED;
         attr_policy[DCONF_ATTR_IPCP_CONFIG_ENTRIES].len  = 0;
-        attr_policy[DCONF_ATTR_DATA_TRANS_CONS].type     = NLA_NESTED;
-        attr_policy[DCONF_ATTR_DATA_TRANS_CONS].len      = 0;
         attr_policy[DCONF_ATTR_ADDRESS].type             = NLA_U32;
         attr_policy[DCONF_ATTR_ADDRESS].len              = 4;
-        attr_policy[DCONF_ATTR_QOS_CUBES].type           = NLA_NESTED;
-        attr_policy[DCONF_ATTR_QOS_CUBES].len            = 0;
+        attr_policy[DCONF_ATTR_EFCPC].type               = NLA_NESTED;
+        attr_policy[DCONF_ATTR_EFCPC].len                = 0;
+        attr_policy[DCONF_ATTR_RMTC].type                = NLA_NESTED;
+        attr_policy[DCONF_ATTR_RMTC].len                 = 0;
 
         if (nla_parse_nested(attrs,
                              DCONF_ATTR_MAX,
@@ -967,23 +1158,29 @@ static int parse_dif_config(struct nlattr *     dif_config_attr,
                         goto parse_fail;
         }
 
-        if (attrs[DCONF_ATTR_DATA_TRANS_CONS]) {
-                if (!dif_config->dt_cons)
-                        goto parse_fail;
-
-                if (parse_dt_cons(attrs[DCONF_ATTR_DATA_TRANS_CONS],
-                                  dif_config->dt_cons) < 0) {
-                        goto parse_fail;
-                }
-        }
-
         if (attrs[DCONF_ATTR_ADDRESS])
                 dif_config->address = nla_get_u32(attrs[DCONF_ATTR_ADDRESS]);
+
+        if (attrs[DCONF_ATTR_EFCPC]) {
+                dif_config->efcp_config = efcp_config_create();
+                if (!dif_config->efcp_config)
+                        goto parse_fail;
+
+                if (parse_efcp_config(attrs[DCONF_ATTR_EFCPC],
+                                      dif_config->efcp_config))
+                        goto parse_fail;
+        }
+
+        if (attrs[DCONF_ATTR_RMTC]) {
+                LOG_MISSING;
+        }
 
         return 0;
 
  parse_fail:
         LOG_ERR(BUILD_STRERROR_BY_MTYPE("dif config attributes"));
+        if (dif_config->efcp_config)
+                efcp_config_destroy(dif_config->efcp_config);
         return -1;
 }
 
@@ -1035,8 +1232,10 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         struct nlattr *attrs[RIBO_ATTR_MAX + 1];
 
         attr_policy[RIBO_ATTR_OBJECT_CLASS].type    = NLA_U32;
+        attr_policy[RIBO_ATTR_OBJECT_CLASS].len     = 4;
         attr_policy[RIBO_ATTR_OBJECT_NAME].type     = NLA_STRING;
         attr_policy[RIBO_ATTR_OBJECT_INSTANCE].type = NLA_U32;
+        attr_policy[RIBO_ATTR_OBJECT_INSTANCE].len  = 4;
 
         if (nla_parse_nested(attrs,
                              RIBO_ATTR_MAX, rib_obj_attr, attr_policy) < 0)
@@ -1056,47 +1255,418 @@ static int parse_rib_object(struct nlattr     * rib_obj_attr,
         return 0;
 }
 
+static int parse_dtcp_wb_fctrl_config(struct nlattr * attr,
+                                      struct dtcp_config * cfg)
+{
+        struct nla_policy attr_policy[DWFCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DWFCC_ATTR_MAX + 1];
+
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].type = NLA_U32;
+        attr_policy[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH].len  = 4;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].type             = NLA_U32;
+        attr_policy[DWFCC_ATTR_INITIAL_CREDIT].len              = 4;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].type      = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY].len       = 0;
+        attr_policy[DWFCC_ATTR_TX_CTRL_POLICY].type             = NLA_NESTED;
+        attr_policy[DWFCC_ATTR_TX_CTRL_POLICY].len              = 0;
+
+        if (nla_parse_nested(attrs,
+                             DWFCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH])
+                dtcp_max_closed_winq_length_set(cfg,
+                                                nla_get_u32(attrs[DWFCC_ATTR_MAX_CLOSED_WINDOW_Q_LENGTH]));
+
+        if (attrs[DWFCC_ATTR_INITIAL_CREDIT])
+                dtcp_initial_credit_set(cfg,
+                                        nla_get_u32(attrs[DWFCC_ATTR_INITIAL_CREDIT]));
+
+        if (attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DWFCC_ATTR_RCVR_FLOW_CTRL_POLICY],
+                                 dtcp_rcvr_flow_control(cfg)))
+                        return -1;
+
+        if (attrs[DWFCC_ATTR_TX_CTRL_POLICY])
+                if (parse_policy(attrs[DWFCC_ATTR_TX_CTRL_POLICY],
+                                 dtcp_tx_control(cfg)))
+                        return -1;
+
+        return 0;
+}
+
+static int parse_dtcp_rb_fctrl_config(struct nlattr * attr,
+                                      struct dtcp_config * cfg)
+{
+        struct nla_policy attr_policy[DRFCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DRFCC_ATTR_MAX + 1];
+
+        attr_policy[DRFCC_ATTR_SEND_RATE].type                = NLA_U32;
+        attr_policy[DRFCC_ATTR_SEND_RATE].len                 = 4;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].type              = NLA_U32;
+        attr_policy[DRFCC_ATTR_TIME_PERIOD].len               = 4;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].type     = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_NO_RATE_SDOWN_POLICY].len      = 0;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].type = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY].len  = 0;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].type        = NLA_NESTED;
+        attr_policy[DRFCC_ATTR_RATE_REDUC_POLICY].len         = 0;
+
+        if (nla_parse_nested(attrs,
+                             DRFCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DRFCC_ATTR_SEND_RATE])
+                dtcp_sending_rate_set(cfg,
+                                      nla_get_u32(attrs[DRFCC_ATTR_SEND_RATE]));
+
+        if (attrs[DRFCC_ATTR_TIME_PERIOD])
+                dtcp_time_period_set(cfg,
+                                     nla_get_u32(attrs[DRFCC_ATTR_TIME_PERIOD]));
+
+        if (attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY])
+                if (parse_policy(attrs[DRFCC_ATTR_NO_RATE_SDOWN_POLICY],
+                                 dtcp_no_rate_slow_down(cfg)))
+                        return -1;
+
+        if (attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY])
+                if (parse_policy(attrs[DRFCC_ATTR_NO_OVERR_DEF_PEAK_POLICY],
+                                 dtcp_no_override_default_peak(cfg)))
+                        return -1;
+
+        if (attrs[DRFCC_ATTR_RATE_REDUC_POLICY])
+                if (parse_policy(attrs[DRFCC_ATTR_RATE_REDUC_POLICY],
+                                 dtcp_rate_reduction(cfg)))
+                        return -1;
+
+        return 0;
+}
+
+static int parse_dtcp_fctrl_config(struct nlattr * attr,
+                                   struct dtcp_config * cfg)
+{
+        struct nla_policy attr_policy[DFCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DFCC_ATTR_MAX + 1];
+
+        attr_policy[DFCC_ATTR_WINDOW_BASED].type             = NLA_FLAG;
+        attr_policy[DFCC_ATTR_WINDOW_BASED].len              = 0;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].type      = NLA_NESTED;
+        attr_policy[DFCC_ATTR_WINDOW_BASED_CONFIG].len       = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED].type               = NLA_FLAG;
+        attr_policy[DFCC_ATTR_RATE_BASED].len                = 0;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].type        = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RATE_BASED_CONFIG].len         = 0;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].type             = NLA_U32;
+        attr_policy[DFCC_ATTR_SBYTES_THRES].len              = 4;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].type         = NLA_U32;
+        attr_policy[DFCC_ATTR_SBYTES_PER_THRES].len          = 4;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].type            = NLA_U32;
+        attr_policy[DFCC_ATTR_SBUFFER_THRES].len             = 4;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].type             = NLA_U32;
+        attr_policy[DFCC_ATTR_RBYTES_THRES].len              = 4;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].type         = NLA_U32;
+        attr_policy[DFCC_ATTR_RBYTES_PER_THRES].len          = 4;
+        attr_policy[DFCC_ATTR_RBUFFER_THRES].type            = NLA_U32;
+        attr_policy[DFCC_ATTR_RBUFFER_THRES].len             = 4;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].type     = NLA_NESTED;
+        attr_policy[DFCC_ATTR_CLOSED_WINDOW_POLICY].len      = 0;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].type = NLA_NESTED;
+        attr_policy[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY].len  = 0;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].type   = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RECON_FLOW_CTRL_POLICY].len    = 0;
+        attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].type  = NLA_NESTED;
+        attr_policy[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY].len   = 0;
+
+        if (nla_parse_nested(attrs,
+                             DFCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        dtcp_window_based_fctrl_set(cfg, nla_get_flag(attrs[DFCC_ATTR_WINDOW_BASED]));
+
+        if (attrs[DFCC_ATTR_WINDOW_BASED_CONFIG]) {
+                if (dtcp_wfctrl_cfg_set(cfg, dtcp_window_fctrl_config_create()))
+                        return -1;
+                parse_dtcp_wb_fctrl_config(attrs[DFCC_ATTR_WINDOW_BASED_CONFIG],
+                                           cfg);
+        }
+
+        dtcp_rate_based_fctrl_set(cfg, nla_get_flag(attrs[DFCC_ATTR_RATE_BASED]));
+
+        if (attrs[DFCC_ATTR_RATE_BASED_CONFIG]) {
+                if (dtcp_rfctrl_cfg_set(cfg, dtcp_rate_fctrl_config_create()))
+                        return -1;
+                parse_dtcp_rb_fctrl_config(attrs[DFCC_ATTR_RATE_BASED_CONFIG],
+                                           cfg);
+        }
+
+        if (attrs[DFCC_ATTR_SBYTES_THRES])
+                dtcp_sent_bytes_th_set(cfg,
+                                       nla_get_u32(attrs[DFCC_ATTR_SBYTES_THRES]));
+
+        if (attrs[DFCC_ATTR_SBYTES_PER_THRES])
+                dtcp_sent_bytes_percent_th_set(cfg,
+                                               nla_get_u32(attrs[DFCC_ATTR_SBYTES_PER_THRES]));
+
+        if (attrs[DFCC_ATTR_SBUFFER_THRES])
+                dtcp_sent_buffers_th_set(cfg,
+                                         nla_get_u32(attrs[DFCC_ATTR_SBUFFER_THRES]));
+
+        if (attrs[DFCC_ATTR_RBYTES_THRES])
+                dtcp_rcvd_bytes_th_set(cfg,
+                                       nla_get_u32(attrs[DFCC_ATTR_RBYTES_THRES]));
+
+        if (attrs[DFCC_ATTR_RBYTES_PER_THRES])
+                dtcp_rcvd_bytes_percent_th_set(cfg,
+                                               nla_get_u32(attrs[DFCC_ATTR_RBYTES_PER_THRES]));
+
+        if (attrs[DFCC_ATTR_RBUFFER_THRES])
+                dtcp_rcvd_buffers_th_set(cfg,
+                                         nla_get_u32(attrs[DFCC_ATTR_RBUFFER_THRES]));
+
+        if (attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_CLOSED_WINDOW_POLICY],
+                                 dtcp_closed_window(cfg)))
+                        return -1;
+
+        if (attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_FLOW_CTRL_OVERRUN_POLICY],
+                                 dtcp_flow_control_overrun(cfg)))
+                        return -1;
+
+        if (attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_RECON_FLOW_CTRL_POLICY],
+                                 dtcp_reconcile_flow_conflict(cfg)))
+                        return -1;
+
+        if (attrs[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY])
+                if (parse_policy(attrs[DFCC_ATTR_RCVING_FLOW_CTRL_POLICY],
+                                 dtcp_receiving_flow_control(cfg)))
+                        return -1;
+
+        return 0;
+}
+
+static int parse_dtcp_rctrl_config(struct nlattr * attr,
+                                   struct dtcp_config * cfg)
+{
+        struct nla_policy attr_policy[DRCC_ATTR_MAX + 1];
+        struct nlattr * attrs[DRCC_ATTR_MAX + 1];
+
+        attr_policy[DRCC_ATTR_MAX_TIME_TO_RETRY].type   = NLA_U32;
+        attr_policy[DRCC_ATTR_MAX_TIME_TO_RETRY].len    = 4;
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].type      = NLA_U32;
+        attr_policy[DRCC_ATTR_DATA_RXMSN_MAX].len       = 4;
+        attr_policy[DRCC_ATTR_INIT_TR].type             = NLA_U32;
+        attr_policy[DRCC_ATTR_INIT_TR].len              = 4;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RTX_TIME_EXP_POLICY].len  = 0;
+        attr_policy[DRCC_ATTR_SACK_POLICY].type         = NLA_NESTED;
+        attr_policy[DRCC_ATTR_SACK_POLICY].len          = 0;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].type    = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RACK_LIST_POLICY].len     = 0;
+        attr_policy[DRCC_ATTR_RACK_POLICY].type         = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RACK_POLICY].len          = 0;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].type    = NLA_NESTED;
+        attr_policy[DRCC_ATTR_SDING_ACK_POLICY].len     = 0;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].type = NLA_NESTED;
+        attr_policy[DRCC_ATTR_RCONTROL_ACK_POLICY].len  = 0;
+
+        if (nla_parse_nested(attrs,
+                             DRCC_ATTR_MAX,
+                             attr, attr_policy))
+                return -1;
+
+        if (attrs[DRCC_ATTR_MAX_TIME_TO_RETRY])
+                dtcp_max_time_retry_set(cfg,
+                                        nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+
+        if (attrs[DRCC_ATTR_DATA_RXMSN_MAX])
+                dtcp_data_retransmit_max_set(cfg,
+                                             nla_get_u32(attrs[DRCC_ATTR_DATA_RXMSN_MAX]));
+
+        if (attrs[DRCC_ATTR_INIT_TR])
+                dtcp_initial_tr_set(cfg,
+                                    nla_get_u32(attrs[DRCC_ATTR_INIT_TR]));
+
+        if (attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RTX_TIME_EXP_POLICY],
+                                 dtcp_retransmission_timer_expiry(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_SACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_SACK_POLICY],
+                                 dtcp_sender_ack(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RACK_LIST_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RACK_LIST_POLICY],
+                                 dtcp_receiving_ack_list(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RACK_POLICY],
+                                 dtcp_rcvr_ack(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_SDING_ACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_SDING_ACK_POLICY],
+                                 dtcp_sending_ack(cfg)))
+                        return -1;
+
+        if (attrs[DRCC_ATTR_RCONTROL_ACK_POLICY])
+                if (parse_policy(attrs[DRCC_ATTR_RCONTROL_ACK_POLICY],
+                                 dtcp_rcvr_control_ack(cfg)))
+                        return -1;
+
+        return 0;
+}
+
+static int parse_dtcp_config(struct nlattr * attr, struct dtcp_config * cfg)
+{
+        struct nla_policy attr_policy[DCA_ATTR_MAX + 1];
+        struct nlattr * attrs[DCA_ATTR_MAX + 1];
+
+        attr_policy[DCA_ATTR_FLOW_CONTROL].type            = NLA_FLAG;
+        attr_policy[DCA_ATTR_FLOW_CONTROL].len             = 0;
+        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].type     = NLA_NESTED;
+        attr_policy[DCA_ATTR_FLOW_CONTROL_CONFIG].len      = 0;
+        attr_policy[DCA_ATTR_RETX_CONTROL].type            = NLA_FLAG;
+        attr_policy[DCA_ATTR_RETX_CONTROL].len             = 0;
+        attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].type     = NLA_NESTED;
+        attr_policy[DCA_ATTR_RETX_CONTROL_CONFIG].len      = 0;
+        attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].type = NLA_NESTED;
+        attr_policy[DCA_ATTR_LOST_CONTROL_PDU_POLICY].len  = 0;
+        attr_policy[DCA_ATTR_RTT_EST_POLICY].type          = NLA_NESTED;
+        attr_policy[DCA_ATTR_RTT_EST_POLICY].len           = 0;
+
+        if (!attr || !cfg) {
+                LOG_ERR("Bogus input to parse dtcp_config");
+                return -1;
+        }
+
+        if (nla_parse_nested(attrs,
+                             DCA_ATTR_MAX,
+                             attr, attr_policy)) {
+                LOG_ERR("Could not parse nested in parse_dtcp_config");
+                return -1;
+        }
+
+        dtcp_flow_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_FLOW_CONTROL]));
+
+        if (attrs[DCA_ATTR_FLOW_CONTROL_CONFIG]) {
+                if (dtcp_fctrl_cfg_set(cfg, dtcp_fctrl_config_create()))
+                        return -1;
+                parse_dtcp_fctrl_config(attrs[DCA_ATTR_FLOW_CONTROL_CONFIG],
+                                        cfg);
+        }
+
+        if (attrs[DCA_ATTR_RETX_CONTROL]) {
+                if (dtcp_rxctrl_cfg_set(cfg, dtcp_rxctrl_config_create()))
+                        return -1;
+                dtcp_rtx_ctrl_set(cfg, nla_get_flag(attrs[DCA_ATTR_RETX_CONTROL]));
+        }
+
+        if (attrs[DCA_ATTR_RETX_CONTROL_CONFIG])
+                if (parse_dtcp_rctrl_config(attrs[DCA_ATTR_RETX_CONTROL_CONFIG],
+                                            cfg))
+                        return -1;
+
+        if (attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY])
+                if (parse_policy(attrs[DCA_ATTR_LOST_CONTROL_PDU_POLICY],
+                                 dtcp_lost_control_pdu(cfg)))
+                        return -1;
+
+        if (attrs[DCA_ATTR_RTT_EST_POLICY])
+                if (parse_policy(attrs[DCA_ATTR_RTT_EST_POLICY],
+                                 dtcp_rtt_estimator(cfg)))
+                        return -1;
+
+        return 0;
+}
+
 static int parse_conn_policies_params(struct nlattr *        cpp_attr,
-                                      struct conn_p_params * cpp_struct)
+                                      struct conn_policies * cpp_struct)
 {
         struct nla_policy attr_policy[CPP_ATTR_MAX + 1];
         struct nlattr * attrs[CPP_ATTR_MAX + 1];
 
-        attr_policy[CPP_ATTR_DTCP_PRESENT].type              = NLA_FLAG;
-        attr_policy[CPP_ATTR_DTCP_PRESENT].len               = 0;
-        attr_policy[CPP_ATTR_FLOW_CONTROL].type              = NLA_FLAG;
-        attr_policy[CPP_ATTR_FLOW_CONTROL].len               = 0;
-        attr_policy[CPP_ATTR_RTX_CONTROL].type               = NLA_FLAG;
-        attr_policy[CPP_ATTR_RTX_CONTROL].len                = 0;
-        attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].type = NLA_FLAG;
-        attr_policy[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL].len  = 0;
-        attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].type   = NLA_FLAG;
-        attr_policy[CPP_ATTR_RATE_BASED_FLOW_CONTROL].len    = 0;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].type           = NLA_FLAG;
+        attr_policy[CPP_ATTR_DTCP_PRESENT].len            = 0;
+        attr_policy[CPP_ATTR_DTCP_CONFIG].type            = NLA_NESTED;
+        attr_policy[CPP_ATTR_DTCP_CONFIG].len             = 0;
+        attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
+        attr_policy[CPP_ATTR_RCVR_TIMER_INAC_POLICY].len  = 0;
+        attr_policy[CPP_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
+        attr_policy[CPP_ATTR_SNDR_TIMER_INAC_POLICY].len  = 0;
+        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POLICY].type    = NLA_NESTED;
+        attr_policy[CPP_ATTR_INIT_SEQ_NUM_POLICY].len     = 0;
+        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].type       = NLA_U32;
+        attr_policy[CPP_ATTR_SEQ_NUM_ROLLOVER].len        = 4;
+        attr_policy[CPP_ATTR_INIT_A_TIMER].type           = NLA_U32;
+        attr_policy[CPP_ATTR_INIT_A_TIMER].len            = 4;
+        attr_policy[CPP_ATTR_PARTIAL_DELIVERY].type       = NLA_FLAG;
+        attr_policy[CPP_ATTR_PARTIAL_DELIVERY].len        = 0;
+        attr_policy[CPP_ATTR_INCOMPLETE_DELIVERY].type    = NLA_FLAG;
+        attr_policy[CPP_ATTR_INCOMPLETE_DELIVERY].len     = 0;
+        attr_policy[CPP_ATTR_IN_ORDER_DELIVERY].type      = NLA_FLAG;
+        attr_policy[CPP_ATTR_IN_ORDER_DELIVERY].len       = 0;
+        attr_policy[CPP_ATTR_MAX_SDU_GAP].type            = NLA_U32;
+        attr_policy[CPP_ATTR_MAX_SDU_GAP].len             = 4;
 
         if (nla_parse_nested(attrs,
                              CPP_ATTR_MAX,
                              cpp_attr, attr_policy) < 0)
                 return -1;
 
-        if (attrs[CPP_ATTR_DTCP_PRESENT])
-                cpp_struct->dtcp_present =
-                        nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
+        cpp_struct->dtcp_present = nla_get_flag(attrs[CPP_ATTR_DTCP_PRESENT]);
 
-        if (attrs[CPP_ATTR_FLOW_CONTROL])
-                cpp_struct->flow_ctrl =
-                        nla_get_flag(attrs[CPP_ATTR_FLOW_CONTROL]);
+        if (attrs[CPP_ATTR_DTCP_CONFIG])
+                if (parse_dtcp_config(attrs[CPP_ATTR_DTCP_CONFIG],
+                                      cpp_struct->dtcp_cfg)) {
+                        LOG_ERR("Could not parse dtcp config");
+                        return -1;
+                }
 
-        if (attrs[CPP_ATTR_RTX_CONTROL])
-                cpp_struct->rtx_ctrl =
-                        nla_get_flag(attrs[CPP_ATTR_RTX_CONTROL]);
+        if (attrs[CPP_ATTR_RCVR_TIMER_INAC_POLICY])
+                if (parse_policy(attrs[CPP_ATTR_RCVR_TIMER_INAC_POLICY],
+                                 cpp_struct->receiver_inactivity_timer))
+                        return -1;
 
-        if (attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL])
-                cpp_struct->window_based_fctrl =
-                        nla_get_flag(attrs[CPP_ATTR_WINDOW_BASED_FLOW_CONTROL]);
+        if (attrs[CPP_ATTR_SNDR_TIMER_INAC_POLICY])
+                if (parse_policy(attrs[CPP_ATTR_SNDR_TIMER_INAC_POLICY],
+                                 cpp_struct->sender_inactivity_timer))
+                        return -1;
 
-        if (attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL])
-                cpp_struct->rate_based_fctrl =
-                        nla_get_flag(attrs[CPP_ATTR_RATE_BASED_FLOW_CONTROL]);
+        if (attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY]) {
+                if (parse_policy(attrs[CPP_ATTR_INIT_SEQ_NUM_POLICY],
+                                 cpp_struct->initial_sequence_number)) {
+                        LOG_ERR("Could not parse initial_sequence_number "
+                                "policy");
+                        return -1;
+                }
+        }
+
+        if (attrs[CPP_ATTR_SEQ_NUM_ROLLOVER])
+                cpp_struct->seq_num_ro_th =
+                        nla_get_u32(attrs[CPP_ATTR_SEQ_NUM_ROLLOVER]);
+
+        if (attrs[CPP_ATTR_INIT_A_TIMER])
+                cpp_struct->initial_a_timer =
+                        nla_get_u32(attrs[CPP_ATTR_INIT_A_TIMER]);
+
+        cpp_struct->partial_delivery    =
+                nla_get_flag(attrs[CPP_ATTR_PARTIAL_DELIVERY]);
+        cpp_struct->incomplete_delivery =
+                nla_get_flag(attrs[CPP_ATTR_INCOMPLETE_DELIVERY]);
+        cpp_struct->in_order_delivery   =
+                nla_get_flag(attrs[CPP_ATTR_IN_ORDER_DELIVERY]);
+
+        if (attrs[CPP_ATTR_MAX_SDU_GAP])
+                cpp_struct->max_sdu_gap =
+                        nla_get_u32(attrs[CPP_ATTR_MAX_SDU_GAP]);
 
         return 0;
 }
@@ -1142,9 +1712,9 @@ rnl_parse_ipcm_ipcp_dif_reg_noti_msg(struct genl_info * info,
                 if (parse_app_name_info(info->attrs[IDRN_ATTR_DIF_NAME],
                                         msg_attrs->dif_name))
                         goto parse_fail;
-        if (info->attrs[IDRN_ATTR_REGISTRATION])
-                msg_attrs->is_registered =
-                        nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
+
+        msg_attrs->is_registered =
+                nla_get_flag(info->attrs[IDRN_ATTR_REGISTRATION]);
 
         return 0;
 
@@ -1214,9 +1784,9 @@ rnl_parse_ipcm_alloc_flow_resp_msg(struct genl_info * info,
         if (info->attrs[IAFRE_ATTR_RESULT])
                 msg_attrs->result =
                         nla_get_u32(info->attrs[IAFRE_ATTR_RESULT]);
-        if (info->attrs[IAFRE_ATTR_NOTIFY_SOURCE])
-                msg_attrs->notify_src =
-                        nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
+
+        msg_attrs->notify_src =
+                nla_get_flag(info->attrs[IAFRE_ATTR_NOTIFY_SOURCE]);
 
         return 0;
 }
@@ -1259,9 +1829,9 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
                 msg_attrs->qos_id   =
                         nla_get_u32(info->attrs[ICCRQ_ATTR_QOS_ID]);
         if (info->attrs[ICCRQ_ATTR_POLICIES_PARAMS]) {
-                if (parse_conn_policies_params(info->attrs                     \
+                if (parse_conn_policies_params(info->attrs
                                                [ICCRQ_ATTR_POLICIES_PARAMS],
-                                               &(msg_attrs->cp_params))) {
+                                               msg_attrs->cp_params)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECTION"
                                                         "_CREATE_REQUEST"));
                         return -1;
@@ -1294,9 +1864,9 @@ rnl_parse_ipcm_conn_create_arrived_msg(struct genl_info * info,
                 msg_attrs->flow_user_ipc_process_id =
                         nla_get_u16(info->attrs[ICCA_ATTR_FLOW_USER_IPCP_ID]);
         if (info->attrs[ICCA_ATTR_POLICIES_PARAMS]) {
-                if (parse_conn_policies_params(info->attrs                     \
+                if (parse_conn_policies_params(info->attrs
                                                [ICCA_ATTR_POLICIES_PARAMS],
-                                               &(msg_attrs->cp_params))) {
+                                               msg_attrs->cp_params)) {
                         LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_CONNECT"
                                                         "ION_CREATE_ARRIVED"));
                         return -1;
@@ -1875,7 +2445,7 @@ static int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
         if (nla_put_u32(skb_out, IFDN_ATTR_PORT_ID, id))
                 return format_fail("rnl_ipcm_alloc_flow_resp_msg");
 
-        if (nla_put_u32(skb_out, IFDN_ATTR_CODE, code ))
+        if (nla_put_u32(skb_out, IFDN_ATTR_CODE, code))
                 return format_fail("rnl_ipcm_alloc_flow_resp_msg");
 
         return 0;
@@ -1893,7 +2463,7 @@ static int rnl_format_ipcm_conn_create_resp_msg(port_id_t        id,
         if (nla_put_u32(skb_out, ICCRE_ATTR_PORT_ID, id))
                 return format_fail("rnl_format_ipcm_conn_create_resp_msg");
 
-        if (nla_put_u32(skb_out, ICCRE_ATTR_SOURCE_CEP_ID, src_cep ))
+        if (nla_put_u32(skb_out, ICCRE_ATTR_SOURCE_CEP_ID, src_cep))
                 return format_fail("rnl_format_ipcm_conn_create_resp_msg");
 
         return 0;
@@ -1912,10 +2482,10 @@ static int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
         if (nla_put_u32(skb_out, ICCRS_ATTR_PORT_ID, id))
                 return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
-        if (nla_put_u32(skb_out, ICCRS_ATTR_SOURCE_CEP_ID, src_cep ))
+        if (nla_put_u32(skb_out, ICCRS_ATTR_SOURCE_CEP_ID, src_cep))
                 return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
-        if (nla_put_u32(skb_out, ICCRS_ATTR_DEST_CEP_ID, dst_cep ))
+        if (nla_put_u32(skb_out, ICCRS_ATTR_DEST_CEP_ID, dst_cep))
                 return format_fail("rnl_format_ipcm_conn_create_result_msg");
 
         return 0;
@@ -1965,7 +2535,7 @@ static int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
                 return -1;
         }
 
-        if (nla_put_u32(skb_out, IRARE_ATTR_RESULT, result ))
+        if (nla_put_u32(skb_out, IRARE_ATTR_RESULT, result))
                 return format_fail("rnl_ipcm_reg_app_resp_msg");
 
         return 0;
@@ -2766,10 +3336,10 @@ int rnl_ipcp_pft_dump_resp_msg(ipc_process_id_t   ipc_id,
         }
 
         result = genlmsg_end(out_msg, out_hdr);
-
         if (result) {
                 LOG_DBG("Result of genlmesg_end: %d", result);
         }
+
         result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
         if (result) {
                 LOG_ERR("Could not send unicast msg: %d", result);

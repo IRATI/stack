@@ -1,0 +1,5 @@
+*.o
+
+/ipcp
+/test-encoders
+/test-pduftg

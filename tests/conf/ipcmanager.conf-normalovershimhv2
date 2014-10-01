@@ -1,0 +1,140 @@
+{
+    "localConfiguration": {
+        "installationPath": "/usr/local/irati/share/rinad",
+        "libraryPath": "/usr/local/irati/lib",
+        "consolePort": 32766,
+        "cdapTimeoutInMs": 10000,
+        "enrollmentTimeoutInMs": 10000,
+        "flowAllocatorTimeoutInMs": 15000,
+        "watchdogPeriodInMs": 60000,
+        "declaredDeadIntervalInMs": 120000,
+        "neighborsEnrollerPeriodInMs": 10000,
+        "lengthOfFlowQueues": 10
+    },
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "difName": "test-normal.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "difName": "test-normal.DIF"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "apName": "test-shim-hv.IPCP",
+            "apInstance": "1",
+            "difName": "test-shim-hv.DIF"
+        },
+        {
+            "apName": "test-normal-2.IPCP",
+            "apInstance": "1",
+            "difName": "test-normal.DIF",
+            "difsToRegisterAt": [
+                "test-shim-hv.DIF"
+            ]
+        }
+    ],
+    "difConfigurations": [
+        {
+            "difName": "test-shim-hv.DIF",
+            "difType": "shim-hv",
+            "configParameters": {
+                "vmpi-id": "0"
+            }
+        },
+        {
+            "difName": "test-normal.DIF",
+            "difType": "normal-ipc",
+            "dataTransferConstants": {
+                "addressLength": 2,
+                "cepIdLength": 2,
+                "lengthLength": 2,
+                "portIdLength": 2,
+                "qosIdLength": 2,
+                "sequenceNumberLength": 4,
+                "maxPduSize": 10000,
+                "maxPduLifetime": 30
+            },
+            "configParameters": {
+                "bar": "foo"
+            },
+            "qosCubes": [
+                {
+                    "name": "unreliablewithflowcontrol",
+                    "id": 1,
+                    "partialDelivery": false,
+                    "orderedDelivery": false,
+                    "efcpPolicies": {
+                        "dtcpPresent": true,
+                        "dtcpConfiguration": {
+                            "rtxcontrol": false,
+                            "flowcontrol": true,
+                            "flowcontrolconfig": {
+                                "ratebased": false,
+                                "windowbased": true,
+                                "windowbasedconfig": {
+                                    "maxclosedwindowqueuelength": 200,
+                                    "initialcredit": 50
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "reliablewithflowcontrol",
+                    "id": 2,
+                    "partialDelivery": false,
+                    "orderedDelivery": false,
+                    "efcpPolicies": {
+                        "dtcpPresent": true,
+                        "dtcpConfiguration": {
+                            "rtxcontrol": true,
+                            "rtxcontrolconfig": {
+                                "datarxmsnmax": 5,
+                                "initialRtxTime": 20
+                            },
+                            "flowcontrol": true,
+                            "flowcontrolconfig": {
+                                "ratebased": false,
+                                "windowbased": true,
+                                "windowbasedconfig": {
+                                    "maxclosedwindowqueuelength": 200,
+                                    "initialcredit": 50
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "knownIPCProcessAddresses": [
+                {
+                    "apName": "test-normal-1.IPCP",
+                    "apInstance": "1",
+                    "address": 16
+                },
+                {
+                    "apName": "test-normal-2.IPCP",
+                    "apInstance": "1",
+                    "address": 17
+                }
+            ],
+            "pdufTableGeneratorConfiguration": {
+                "pduFtGeneratorPolicy": {
+                    "name": "LinkState",
+                    "version": "0"
+                },
+                "linkStateRoutingConfiguration": {
+                    "objectMaximumAge": 10000,
+                    "waitUntilReadCDAP": 5001,
+                    "waitUntilError": 5001,
+                    "waitUntilPDUFTComputation": 103,
+                    "waitUntilFSODBPropagation": 101,
+                    "waitUntilAgeIncrement": 997,
+                    "routingAlgorithm": "Dijkstra"
+                }
+            }
+        }
+    ]
+}

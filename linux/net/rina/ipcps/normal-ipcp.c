@@ -145,7 +145,11 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 return -1;
         }
-        efcp_container_write(data->efcpc, flow->active, sdu);
+        if (efcp_container_write(data->efcpc, flow->active, sdu)) {
+                LOG_ERR("Could not send sdu to EFCP Container");
+                return -1;
+        }
+
         return 0;
 }
 
@@ -172,14 +176,14 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
                                    address_t                   source,
                                    address_t                   dest,
                                    qos_id_t                    qos_id,
-                                   struct conn_p_params        cp_params)
+                                   struct conn_policies *      cp_params)
 {
         cep_id_t               cep_id;
         struct connection *    conn;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
 
-        conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
+        conn = connection_create();
         if (!conn)
                 return -1;
 
@@ -187,11 +191,12 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         conn->source_address      = source;
         conn->port_id             = port_id;
         conn->qos_id              = qos_id;
+        conn->policies_params     = cp_params;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                rkfree(conn);
+                connection_destroy(conn);
                 return cep_id_bad();
         }
 
@@ -311,7 +316,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
                           address_t                   dest,
                           qos_id_t                    qos_id,
                           cep_id_t                    dst_cep_id,
-                          struct conn_p_params        cp_params)
+                          struct conn_policies *      cp_params)
 {
         struct connection *    conn;
         cep_id_t               cep_id;
@@ -328,11 +333,12 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->port_id             = port_id;
         conn->qos_id              = qos_id;
         conn->destination_cep_id  = dst_cep_id;
+        conn->policies_params     = cp_params;
 
         cep_id = efcp_connection_create(data->efcpc, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
-                rkfree(conn);
+                connection_destroy(conn);
                 return cep_id_bad();
         }
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
@@ -379,7 +385,7 @@ static int remove_all_cepid(struct ipcp_instance_data * data,
 
         ASSERT(data);
 
-        list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list){
+        list_for_each_entry_safe(pos, next, &flow->cep_ids_list, list) {
                 efcp_connection_destroy(data->efcpc, pos->cep_id);
                 list_del(&pos->list);
                 rkfree(pos);
@@ -412,30 +418,36 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_check_dt_cons(struct dt_cons * dt_cons)
-{
-        /* FIXME: What should we check here? */
-        return 0;
-}
-
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
-        struct dt_cons * dt_cons;
+        struct efcp_config * efcp_config;
 
         data->info->dif_name = name_dup(dif_information->dif_name);
         data->address        = dif_information->configuration->address;
-        if (rmt_address_set(data->rmt, data->address))
-                return -1;
 
-        dt_cons = dif_information->configuration->dt_cons;
+        efcp_config = dif_information->configuration->efcp_config;
 
-        if (normal_check_dt_cons(dt_cons)) {
-                LOG_ERR("Configuration constants for the DIF are bogus...");
+        if (!efcp_config) {
+                LOG_ERR("No EFCP configuration in the dif_info");
                 return -1;
         }
 
-        efcp_container_set_dt_cons(dt_cons, data->efcpc);
+        if (!efcp_config->dt_cons) {
+                LOG_ERR("Configuration constants for the DIF are bogus...");
+                efcp_config_destroy(efcp_config);
+                return -1;
+        }
+
+        efcp_container_set_config(efcp_config, data->efcpc);
+
+        if (rmt_address_set(data->rmt, data->address))
+                return -1;
+
+        if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
+                LOG_ERR("Could not set dt_cons in RMT");
+                return -1;
+        }
 
         return 0;
 }
@@ -546,6 +558,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
 }
 
 static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
+                                 address_t                   dst_addr,
                                  port_id_t                   port_id,
                                  struct sdu *                sdu)
 {
@@ -564,13 +577,14 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
         if (!pci)
                 return -1;
 
+        /* FIXME: qos_id is set to 1 since 0 is QOS_ID_WRONG */
         if (pci_format(pci,
                        0,
                        0,
                        data->address,
+                       dst_addr,
                        0,
-                       0,
-                       0,
+                       1,
                        PDU_TYPE_MGMT)) {
                 pci_destroy(pci);
                 return -1;
@@ -592,16 +606,29 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        LOG_DBG("Going to send to the RMT:");
-        LOG_DBG("src_address %d", pci_source(pci));
-        LOG_DBG("dst_address: %d", pci_destination(pci));
-        LOG_DBG("port: %d", port_id);
-
-        /* Give the data to RMT now ! */
-        if (rmt_send_port_id(data->rmt,
-                             port_id,
+        /*
+         * NOTE:
+         *   Decide on how to deliver to the RMT depending on
+         *   port_id or dst_addr
+         */
+        if (dst_addr) {
+                if (rmt_send(data->rmt,
+                             pci_destination(pdu_pci_get_ro(pdu)),
+                             pci_qos_id(pdu_pci_get_ro(pdu)),
                              pdu)) {
-                LOG_ERR("Could not send to RMT");
+                        LOG_ERR("Could not send to RMT (using dst_addr");
+                        return -1;
+                }
+        } else if (port_id) {
+                if (rmt_send_port_id(data->rmt,
+                                     port_id,
+                                     pdu)) {
+                        LOG_ERR("Could not send to RMT (using port_id)");
+                        return -1;
+                }
+        } else {
+                LOG_ERR("Could not send to RMT: no port_id nor dst_addr");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -663,8 +690,9 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                 return -1;
         }
         spin_unlock(&data->mgmt_data->lock);
+
         LOG_DBG("Gonna wake up all waitqueues: %d", port_id);
-        wake_up_all(&data->mgmt_data->wait_q);
+        wake_up_interruptible_all(&data->mgmt_data->wait_q);
 
         return 0;
 }
@@ -795,7 +823,8 @@ static int mgmt_data_destroy(struct mgmt_data * data)
                 return 0;
         }
         spin_unlock(&data->lock);
-        wake_up_all(&data->wait_q);
+
+        wake_up_interruptible_all(&data->wait_q);
 
         return 0;
 }

@@ -101,13 +101,12 @@ message_handler_cb kipcm_handlers[RINA_C_MAX];
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
-static int
-alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
-                              ipc_process_id_t      id,
-                              uint_t                res,
-                              uint_t                seq_num,
-                              uint_t                port_id,
-                              port_id_t             pid)
+static int alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
+                                         ipc_process_id_t      id,
+                                         uint_t                res,
+                                         uint_t                seq_num,
+                                         uint_t                port_id,
+                                         port_id_t             pid)
 {
         rnl_msg_destroy(msg);
 
@@ -799,6 +798,7 @@ static int notify_ipcp_conn_create_req(void *             data,
                 goto fail;
         }
 
+        /* IPCP takes ownership of the cp_params */
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
                                                attrs->src_addr,
@@ -1670,14 +1670,20 @@ int kipcm_ipcp_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        if (!factory_name)
-                factory_name = DEFAULT_FACTORY;
+        if (!name_is_ok(ipcp_name)) {
+                LOG_ERR("Bad IPC process name");
+                return -1;
+        }
+
+        ASSERT(ipcp_name);
 
         name = name_tostring(ipcp_name);
         if (!name)
                 return -1;
 
-        ASSERT(ipcp_name);
+        if (!factory_name)
+                factory_name = DEFAULT_FACTORY;
+
         ASSERT(factory_name);
 
         LOG_DBG("Creating IPC process:");
@@ -1882,6 +1888,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
 {
         IRQ_BARRIER;
 
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return -1;
+        }
+
         /* The SDU is theirs now */
 
         if (kfa_flow_sdu_read(kipcm->kfa, port_id, sdu)) {
@@ -1938,6 +1949,7 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         KIPCM_UNLOCK(kipcm);
 
         if (ipcp->ops->mgmt_sdu_write(ipcp->data,
+                                      sdu_wpi->dst_addr,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
                 sdu_buffer_disown(sdu_wpi->sdu);
@@ -2028,13 +2040,11 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                  *        system
                  */
                 LOG_DBG("This flow should go for an app");
-
-                LOG_MISSING;
         }
 
         KIPCM_UNLOCK(kipcm);
 
-        pid =  kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 name_destroy(process_name);
                 return port_id_bad();
@@ -2074,7 +2084,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
         }
 
         seq_num = kipcm_pmap_find(kipcm->messages->ingress, pid);
-        if (!is_seq_num_ok(seq_num)) {
+        if (!is_rnl_seq_num_ok(seq_num)) {
                 LOG_ERR("Could not find request message id (seq num)");
                 return -1;
         }

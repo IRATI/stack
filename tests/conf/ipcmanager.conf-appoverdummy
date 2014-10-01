@@ -1,30 +1,37 @@
 {
-  "localConfiguration" : {
-    "installationPath" : "/usr/local/irati/share/rinad",
-    "libraryPath" : "/usr/local/irati/lib",
-    "consolePort" : 32766,
-    "cdapTimeoutInMs" : 10000,
-    "enrollmentTimeoutInMs" : 10000,
-    "flowAllocatorTimeoutInMs" : 15000,
-    "watchdogPeriodInMs" : 60000,
-    "declaredDeadIntervalInMs" : 120000,
-    "neighborsEnrollerPeriodInMs" : 10000,
-    "lengthOfFlowQueues" : 10
-  },
-  "applicationToDIFMappings" : [ {
-    "encodedAppName" : "rina.utils.apps.echo.server-1--",
-    "difName" : "loopback.DIF" 
-  }, {
-    "encodedAppName" : "rina.utils.apps.echo.client-1--",
-    "difName" : "loopback.DIF" 
-  }],
-  "ipcProcessesToCreate" : [ {
-    "type" : "shim-dummy",
-    "applicationProcessName" : "test-dummy",
-    "applicationProcessInstance" : "1",
-    "difName" : "loopback.DIF"
-   } ],
-  "difConfigurations" : [ {
-    "difName" : "loopback.DIF"
-  } ]
+    "localConfiguration": {
+        "installationPath": "/usr/local/irati/share/rinad",
+        "libraryPath": "/usr/local/irati/lib",
+        "consolePort": 32766,
+        "cdapTimeoutInMs": 10000,
+        "enrollmentTimeoutInMs": 10000,
+        "flowAllocatorTimeoutInMs": 15000,
+        "watchdogPeriodInMs": 60000,
+        "declaredDeadIntervalInMs": 120000,
+        "neighborsEnrollerPeriodInMs": 10000,
+        "lengthOfFlowQueues": 10
+    },
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "difName": "loopback.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "difName": "loopback.DIF"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "apName": "test-dummy",
+            "apInstance": "1",
+            "difName": "loopback.DIF"
+        }
+    ],
+    "difConfigurations": [
+        {
+            "difName": "loopback.DIF",
+            "difType": "shim-dummy"
+        }
+    ]
 }

@@ -85,16 +85,26 @@ struct dt_cons {
         bool      dif_integrity;
 };
 
-/* Represents a DIF configuration (policies, parameters, etc) */
-struct dif_config {
-        /* List of configuration entries */
-        struct list_head ipcp_config_entries;
+struct dt_cons * dt_cons_dup(const struct dt_cons * dt_cons);
 
+/* Represents the configuration of the EFCP */
+struct efcp_config {
         /* The data transfer constants */
         struct dt_cons * dt_cons;
 
+        struct policy * unknown_flow;
+};
+
+/* Represents a DIF configuration (policies, parameters, etc) */
+struct dif_config {
+        /* List of configuration entries */
+        struct list_head    ipcp_config_entries;
+
+        /* the config of the efcp */
+        struct efcp_config * efcp_config;
+
         /* The address of the IPC Process*/
-        address_t        address;
+        address_t           address;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
@@ -145,7 +155,7 @@ struct ipcp_instance_ops {
                                        address_t                   source,
                                        address_t                   dest,
                                        qos_id_t                    qos_id,
-                                       struct conn_p_params        cp_params);
+                                       struct conn_policies *      cp_params);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id,
@@ -162,7 +172,7 @@ struct ipcp_instance_ops {
                                       address_t                   dest,
                                       qos_id_t                    qos_id,
                                       cep_id_t                    dst_cep_id,
-                                      struct conn_p_params        cp_params);
+                                      struct conn_policies *      cp_params);
 
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id);
@@ -176,6 +186,7 @@ struct ipcp_instance_ops {
 
         /* Takes the ownership of the passed sdu */
         int (* mgmt_sdu_write)(struct ipcp_instance_data * data,
+                               address_t                   dst_addr,
                                port_id_t                   port_id,
                                struct sdu *                sdu);
 

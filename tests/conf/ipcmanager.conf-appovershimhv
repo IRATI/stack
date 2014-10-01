@@ -1,0 +1,40 @@
+{
+    "localConfiguration": {
+        "installationPath": "/usr/local/irati/share/rinad",
+        "libraryPath": "/usr/local/irati/lib",
+        "consolePort": 32766,
+        "cdapTimeoutInMs": 10000,
+        "enrollmentTimeoutInMs": 10000,
+        "flowAllocatorTimeoutInMs": 15000,
+        "watchdogPeriodInMs": 60000,
+        "declaredDeadIntervalInMs": 120000,
+        "neighborsEnrollerPeriodInMs": 10000,
+        "lengthOfFlowQueues": 10
+    },
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "difName": "test-shim-dif-hv"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "difName": "test-shim-dif-hv"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "apName": "test-hv",
+            "apInstance": "1",
+            "difName": "test-shim-dif-hv"
+        }
+    ],
+    "difConfigurations": [
+        {
+            "difName": "test-shim-dif-hv",
+            "difType": "shim-hv",
+            "configParameters": {
+                "vmpi-id": "0"
+            }
+        }
+    ]
+}

@@ -1,0 +1,155 @@
+{
+    "localConfiguration": {
+        "installationPath": "@pkgdatadir@",
+        "libraryPath": "@libdir@",
+        "consolePort": 32766,
+        "cdapTimeoutInMs": 10000,
+        "enrollmentTimeoutInMs": 10000,
+        "flowAllocatorTimeoutInMs": 15000,
+        "watchdogPeriodInMs": 60000,
+        "declaredDeadIntervalInMs": 120000,
+        "neighborsEnrollerPeriodInMs": 10000,
+        "maxEnrollmentRetries": 3,
+        "lengthOfFlowQueues": 10
+    },
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "difName": "normal.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "difName": "normal.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.rinaperf.server-1--",
+            "difName": "normal.DIF"
+        },
+        {
+            "encodedAppName": "rina.utils.apps.rinaperf.client-1--",
+            "difName": "normal.DIF"
+        }
+    ],
+    "ipcProcessesToCreate": [
+        {
+            "apName": "test-eth-vlan",
+            "apInstance": "1",
+            "difName": "100"
+        },
+        {
+            "apName": "test1.IRATI",
+            "apInstance": "1",
+            "difName": "normal.DIF",
+            "difsToRegisterAt": [
+                "100"
+            ]
+        }
+    ],
+    "difConfigurations": [
+        {
+            "difName": "100",
+            "difType": "shim-eth-vlan",
+            "configParameters": {
+                "interface-name": "eth1"
+            }
+        },
+        {
+            "difName": "normal.DIF",
+            "difType": "normal-ipc",
+            "dataTransferConstants": {
+                "addressLength": 2,
+                "cepIdLength": 2,
+                "lengthLength": 2,
+                "portIdLength": 2,
+                "qosIdLength": 2,
+                "sequenceNumberLength": 4,
+                "maxPduSize": 10000,
+                "maxPduLifetime": 30
+            },
+            "qosCubes": [
+                {
+                    "name": "unreliablewithflowcontrol",
+                    "id": 1,
+                    "partialDelivery": false,
+                    "orderedDelivery": false,
+                    "efcpPolicies": {
+                        "dtcpPresent": true,
+                        "dtcpConfiguration": {
+                            "rtxControl": false,
+                            "flowControl": true,
+                            "flowControlConfig": {
+                                "rateBased": false,
+                                "windowBased": true,
+                                "windowBasedConfig": {
+                                    "maxClosedWindowQueueLength": 200,
+                                    "initialCredit": 50
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "reliablewithflowcontrol",
+                    "id": 2,
+                    "partialDelivery": false,
+                    "orderedDelivery": false,
+                    "efcpPolicies": {
+                        "dtcpPresent": true,
+                        "dtcpConfiguration": {
+                            "rtxControl": true,
+                            "rtxControlConfig": {
+                                "dataRxmsNmax": 5
+                            },
+                            "flowControl": true,
+                            "flowControlConfig": {
+                                "rateBased": false,
+                                "windowBased": true,
+                                "windowBasedXonfig": {
+                                    "maxClosedWindowQueueLength": 200,
+                                    "initialCredit": 50
+                                }
+                            }
+                        }
+                    }
+                }
+            ],
+            "knownIPCProcessAddresses": [
+                {
+                    "apName": "test1.IRATI",
+                    "apInstance": "1",
+                    "address": 16
+                },
+                {
+                    "apName": "test2.IRATI",
+                    "apInstance": "1",
+                    "address": 17
+                }
+            ],
+            "addressPrefixes": [
+                {
+                    "addressPrefix": 0,
+                    "organization": "N.Bourbaki"
+                },
+                {
+                    "addressPrefix": 16,
+                    "organization": "IRATI"
+                }
+            ],
+            "pdufTableGeneratorConfiguration": {
+                "pduFtGeneratorPolicy": {
+                    "name": "LinkState",
+                    "version": 0
+                },
+                "linkStateRoutingConfiguration": {
+                    "objectMaximumAge": 10000,
+                    "waitUntilReadCDAP": 5001,
+                    "waitUntilError": 5001,
+                    "waitUntilPDUFTComputation": 103,
+                    "waitUntilFSODBPropagation": 101,
+                    "waitUntilAgeIncrement": 997,
+                    "routingAlgorithm": "Dijkstra"
+                }
+            }
+        }
+    ]
+}

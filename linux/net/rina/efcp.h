@@ -35,8 +35,8 @@ struct efcp_container;
 
 struct efcp_container * efcp_container_create(struct kfa * kfa);
 int                     efcp_container_destroy(struct efcp_container * c);
-int                     efcp_container_set_dt_cons(struct dt_cons *        d,
-                                                   struct efcp_container * c);
+int                     efcp_container_set_config(struct efcp_config *   efcpc,
+                                                  struct efcp_container * c);
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
                                              struct sdu *            sdu);
@@ -61,6 +61,7 @@ struct efcp;
 
 struct efcp *           efcp_container_find(struct efcp_container * container,
                                             cep_id_t                id);
+struct efcp_config *    efcp_container_config(struct efcp_container * c);
 
 int                     efcp_bind_rmt(struct efcp_container * container,
                                       struct rmt *            rmt);

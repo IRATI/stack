@@ -33,6 +33,11 @@ struct dtp * dtp_create(struct dt *         dt,
                         struct connection * connection);
 int          dtp_destroy(struct dtp * instance);
 
+int          dtp_sv_init(struct dtp * dtp,
+                         bool         rexmsn_ctrl,
+                         bool         window_based,
+                         bool         rate_based,
+                         timeout_t    a);
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct sdu * sdu);
@@ -45,6 +50,11 @@ int          dtp_mgmt_write(struct rmt * rmt,
 int          dtp_receive(struct dtp * instance,
                          struct pdu * pdu);
 
-bool         dtp_drf_flag(struct dtp * instance);
+/*FIXME: This may be changed depending on the discussion around
+ * RcvrInactivityTimer Policy */
+/* DTP Policies called in DTCP */
+int dtp_initial_sequence_number(struct dtp * instance);
+
+seq_num_t    dtp_sv_last_seq_nr_sent(struct dtp * instance);
 
 #endif

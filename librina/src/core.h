@@ -1,30 +1,35 @@
-//
-// Core librina logic
-//
-//    Eduard Grasa          <eduard.grasa@i2cat.net>
-//    Francesco Salvestrini <f.salvestrini@nextworks.it>
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
+/*
+ * Core librina logic
+ *
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
+ */
 
 #ifndef LIBRINA_CORE_H
 #define LIBRINA_CORE_H
 
+#ifdef __cplusplus
+
 #include <map>
-#include "concurrency.h"
-#include "patterns.h"
+
+#include "librina/concurrency.h"
+#include "librina/patterns.h"
+
 #include "netlink-manager.h"
 
 #define WAIT_RESPONSE_TIMEOUT 10
@@ -77,12 +82,12 @@ public:
 	void putIPCProcessIdToNelinkPortIdMapping(
 			unsigned int netlinkPortId, unsigned short ipcProcessId);
 	RINANetlinkEndpoint * getNetlinkPortIdFromIPCProcessId(
-			unsigned short ipcProcessId) throw(NetlinkException);
+			unsigned short ipcProcessId);
 	void putAPNametoNetlinkPortIdMapping(
 			ApplicationProcessNamingInformation apName,
 			unsigned int netlinkPortId, unsigned short ipcProcessId);
 	RINANetlinkEndpoint * getNetlinkPortIdFromAPName(
-			ApplicationProcessNamingInformation apName) throw(NetlinkException);
+			ApplicationProcessNamingInformation apName);
 	unsigned int getIPCManagerPortId();
 
 	/**
@@ -91,8 +96,7 @@ public:
 	 * @param message
 	 * @param sent
 	 */
-	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send)
-		throw(NetlinkException);
+	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send);
 
 	/**
 	 * An OS Process has finalized. Retrieve the information associated to
@@ -132,12 +136,10 @@ public:
 	~RINAManager();
 
 	/** Sends a NL message of default maximum size (PAGE SIZE) */
-	void sendMessage(BaseNetlinkMessage * netlinkMessage)
-	throw (NetlinkException);
+	void sendMessage(BaseNetlinkMessage * netlinkMessage);
 
 	/** Sends a NL message of specified maximum size */
-	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage, size_t maxSize)
-	throw (NetlinkException);
+	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage, size_t maxSize);
 
 	/**
 	 * Notify about the reception of a Netlink message
@@ -166,5 +168,7 @@ void setNetlinkPortId(unsigned int netlinkPortId);
 unsigned int getNelinkPortId();
 
 }
+
+#endif
 
 #endif

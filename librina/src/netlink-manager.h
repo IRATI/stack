@@ -1,33 +1,35 @@
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * Netlink manager
  *
- * This program is distributed in the hope that it will be useful,
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * 
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
-/*
- * librina-netlink-manager.cc
- *
- *  Created on: 12/06/2013
- *      Author: eduardgrasa
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef LIBRINA_NETLINK_MANAGER_H
 #define LIBRINA_NETLINK_MANAGER_H
 
+#ifdef __cplusplus
+
 #include <netlink/netlink.h>
 
-#include "exceptions.h"
-#include "patterns.h"
+#include "librina/exceptions.h"
+#include "librina/patterns.h"
+
 #include "netlink-messages.h"
 
 #define RINA_GENERIC_NETLINK_FAMILY_NAME "rina"
@@ -72,23 +74,23 @@ class NetlinkManager{
 	int family;
 
 	/** Creates the Netlink socket and binds it to the netlinkPid */
-	void initialize(bool ipcManager) throw(NetlinkException);
+	void initialize(bool ipcManager);
 
 	/** Send a Netlink message */
-	void _sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage)
-	        throw(NetlinkException);
+	void _sendMessage(BaseNetlinkMessage * message, struct nl_msg* netlinkMessage);
+
 public:
 	/**
 	 * Creates an instance of a Netlink socket and binds it to the local port
 	 * whose number is the same as the OS process PID
 	 */
-	NetlinkManager() throw(NetlinkException);
+	NetlinkManager();
 
 	/**
 	 * Creates an instance of a Netlink socket and binds it to the specified
 	 * local port
 	 */
-	NetlinkManager(unsigned int localPort) throw(NetlinkException);
+	NetlinkManager(unsigned int localPort);
 
 	/**
 	 * Closes the Netlink socket
@@ -106,13 +108,15 @@ public:
 	 */
 	unsigned int getSequenceNumber();
 
-	void sendMessage(BaseNetlinkMessage * message) throw(NetlinkException);
+	void sendMessage(BaseNetlinkMessage * message);
 
-	void sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize)
-	        throw(NetlinkException);
+	void sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize);
 
-	BaseNetlinkMessage *  getMessage() throw(NetlinkException);
+	BaseNetlinkMessage *  getMessage();
 };
+
 }
 
-#endif /* LIBRINA_NETLINK_MANAGER_H_ */
+#endif
+
+#endif

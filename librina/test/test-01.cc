@@ -1,23 +1,31 @@
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// Test 01
 //
-// This program is distributed in the hope that it will be useful,
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 #include <iostream>
 #include <stdio.h>
-#include "librina.h"
+
 #include "core.h"
+
+#include "librina/librina.h"
 
 using namespace rina;
 
@@ -53,13 +61,13 @@ bool checkRegisteredApplications(unsigned int expectedApps) {
         for (unsigned int i = 0; i < registeredApplications.size(); i++) {
                 applicationRegistration = registeredApplications.at(i);
                 std::cout << "Application "
-                                << applicationRegistration->getApplicationName()
-                                                .getProcessName() << " registered at DIFs: ";
+                                << applicationRegistration->applicationName
+                                                .processName << " registered at DIFs: ";
                 std::list<ApplicationProcessNamingInformation>::const_iterator iterator;
-                for (iterator = applicationRegistration->getDIFNames().begin();
-                                iterator != applicationRegistration->getDIFNames().end();
+                for (iterator = applicationRegistration->DIFNames.begin();
+                                iterator != applicationRegistration->DIFNames.end();
                                 ++iterator) {
-                        std::cout << iterator->getProcessName() << ", ";
+                        std::cout << iterator->processName << ", ";
                 }
                 std::cout << "\n";
         }
@@ -67,7 +75,7 @@ bool checkRegisteredApplications(unsigned int expectedApps) {
         return true;
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-APPLICATION\n";
 	ApplicationProcessNamingInformation sourceName =
 			ApplicationProcessNamingInformation("/apps/test/source", "1");
@@ -84,7 +92,7 @@ int main(int argc, char * argv[]) {
 
 	Flow * flow = ipcManager->commitPendingFlow(seqNumber, 23, difName);
 	std::cout << "Flow allocated, portId is " << flow->getPortId()
-			<< "; DIF name is: " << flow->getDIFName().getProcessName()
+			<< "; DIF name is: " << flow->getDIFName().processName
 			<< "\n";
 
 	/* TEST WRITE SDU */
@@ -93,10 +101,10 @@ int main(int argc, char * argv[]) {
 
 	/* TEST ALLOCATE RESPONSE */
 	FlowRequestEvent flowRequestEvent = FlowRequestEvent(25, flowSpecification,
-			true, sourceName, destinationName, difName, 23);
+			true, sourceName, destinationName, difName, 23, 234);
 	Flow * flow2 = ipcManager->allocateFlowResponse(flowRequestEvent, 0, true);
 	std::cout << "Accepted flow allocation, portId is " << flow2->getPortId()
-			<< "; DIF name is: " << flow2->getDIFName().getProcessName()
+			<< "; DIF name is: " << flow2->getDIFName().processName
 			<< "\n";
 
 	/* TEST READ SDU */
@@ -123,7 +131,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	ipcManager->requestFlowDeallocation(flow2->getPortId());
-	if (flow->getState() != FLOW_DEALLOCATION_REQUESTED) {
+	if (flow2->getState() != FLOW_DEALLOCATION_REQUESTED) {
 	        std::cout<<"Requested flow deallocation, but flow is in wrong state";
 	        return -1;
 	}
@@ -142,10 +150,10 @@ int main(int argc, char * argv[]) {
 	ApplicationRegistrationInformation info =
 			 ApplicationRegistrationInformation(
 					APPLICATION_REGISTRATION_SINGLE_DIF);
-	info.setDIFName(difName);
-	info.setApplicationName(sourceName);
+	info.difName = difName;
+	info.appName = sourceName;
 	seqNumber = ipcManager->requestApplicationRegistration(info);
-	ipcManager->commitPendingResitration(seqNumber, difName);
+	ipcManager->commitPendingRegistration(seqNumber, difName);
 	if (!checkRegisteredApplications(1)) {
 	        return -1;
 	}

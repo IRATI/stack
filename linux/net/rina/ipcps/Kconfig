@@ -11,13 +11,6 @@ config RINA_NORMAL_IPCP
 	help
 	  No help for the time being
 
-config RINA_RELIABLE_FLOW_SUPPORT
-	bool "Reliable flow support"
-	default y
-        depends on RINA_NORMAL_IPCP
-	help
-	  No help for the time being
-
 config RINA_RMT_REGRESSION_TESTS
 	bool "RMT regression tests"
 	default n
@@ -75,23 +68,11 @@ config RINA_SHIM_TCP_UDP
 	help
 	  No help for the time being
 
-config RINA_SHIM_HV_VMPI
-	tristate "Shim IPC for Hypervisors VMPI support"
+config RINA_SHIM_HV
+	tristate "Shim IPC for Hypervisors"
 	default m
-        depends on RINA_PERSONALITY_DEFAULT
-	help
-	  No help for the time being
-
-config RINA_SHIM_HV_VIRTIO
-	tristate "Shim IPC for Hypervisors (using Virtio)"
-	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_SHIM_HV_VMPI && VIRTIO
-	help
-	  No help for the time being
-
-config RINA_SHIM_HV_XEN
-	tristate "Shim IPC for Hypervisors (using XEN)"
-	default m
-        depends on RINA_PERSONALITY_DEFAULT && RINA_SHIM_HV_VMPI
+        depends on RINA_PERSONALITY_DEFAULT && \
+                   (VMPI_KVM_GUEST || VMPI_KVM_HOST || \
+                    VMPI_XEN_GUEST || VMPI_XEN_HOST)
 	help
 	  No help for the time being

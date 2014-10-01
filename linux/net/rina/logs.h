@@ -30,13 +30,8 @@
 /* The global logs prefix */
 #define __GPFX "rina-"
 
-#ifdef CONFIG_RINA_UNFILTERED_LOGS
-#define __LOG(PFX, LVL, FMT, ARGS...)                                   \
-        do { printk(KERN_NOTICE __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
-#else
 #define __LOG(PFX, LVL, FMT, ARGS...)                                   \
         do { printk(LVL __GPFX PFX ": " FMT "\n", ##ARGS); } while (0)
-#endif
 
 /* Sorted by "urgency" (high to low) */
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,   FMT, ##ARGS)
@@ -46,20 +41,36 @@
 #define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING, FMT, ##ARGS)
 #define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,  FMT, ##ARGS)
 #define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,    FMT, ##ARGS)
-#define LOG_DBG(FMT,  ARGS...)  __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+
+#ifdef CONFIG_RINA_DEBUG
+#ifdef CONFIG_RINA_SUPPRESS_DEBUG_LOGS
+#warning Debugging logs WILL BE suppressed
+#define LOG_DBG(FMT,   ARGS...) do { } while (0)
+#else
+#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,   FMT, ##ARGS)
+#endif
+#else
+#define LOG_DBG(FMT,   ARGS...) do { } while (0)
+#endif
+
+/* Helpers */
+#define LOG_DBGF(FMT,  ARGS...) LOG_DBG("(%s: " FMT, __FUNCTION__, ##ARGS)
+#define LOG_ERRF(FMT,  ARGS...) LOG_ERR("(%s: " FMT, __FUNCTION__, ##ARGS)
 
 #ifdef CONFIG_RINA_DEBUG_HEARTBEATS
 #define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
                           __FUNCTION__, __FILE__, __LINE__)
 #else
-#define LOG_HBEAT
+#define LOG_HBEAT do { } while (0)
 #endif
 
-#define LOG_OBSOLETE_FUNC LOG_ERR("Function %s is obsolete and it will be " \
-                                  "removed soon, do not use",           \
-                                  __FUNCTION__)
-#define LOG_MISSING       LOG_ERR("Missing code in %s:%d", __FILE__, __LINE__)
-#define LOG_UNSUPPORTED   LOG_WARN("Unsupported feature in %s:%d",      \
-                                   __FILE__, __LINE__)
+#define LOG_OBSOLETE    LOG_ERR("Code in %s:%d is obsolete and "        \
+                                "it will be removed soon, "             \
+                                "DO NOT USE!!!",                        \
+                                __FILE__, __LINE__)
+#define LOG_MISSING     LOG_ERR("Missing code in %s:%d",        \
+                                __FILE__, __LINE__)
+#define LOG_UNSUPPORTED LOG_WARN("Unsupported feature in %s:%d",        \
+                                 __FILE__, __LINE__)
 
 #endif

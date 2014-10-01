@@ -11,6 +11,27 @@
 #include <epan/packet.h>
 #include <epan/wmem/wmem.h>
 
+static const value_string opcodes[] = {
+        { 0, "M_CONNECT" },
+        { 1, "M_CONNECT_R" }, 
+        { 2, "M_RELEASE" }, 
+        { 3, "M_RELEASE_R" }, 
+        { 4, "M_CREATE" }, 
+        { 5, "M_CREATE_R" }, 
+        { 6, "M_DELETE" }, 
+        { 7, "M_DELETE_R" }, 
+        { 8, "M_READ" }, 
+        { 9, "M_READ_R" }, 
+        { 10, "M_CANCELREAD" }, 
+        { 11, "M_CANCELREAD_R" }, 
+        { 12, "M_WRITE" }, 
+        { 13, "M_WRITE_R" }, 
+        { 14, "M_START" }, 
+        { 15, "M_START_R" }, 
+        { 16, "M_STOP" }, 
+        { 17, "M_STOP_R" } 
+};
+
 static int proto_cdap = -1;
 
 static int hf_cdap_abs_syntax   = -1;
@@ -47,10 +68,6 @@ cdap_get_length_varint(size_t len, const guint8 *data)
         for (i = 0; i < len; i++) {
                 if ((data[i] & 0x80) == 0)
                         break;
-        }
-        
-        if (i > 0) {
-                printf("Got an int that is larger than a byte\n");
         }
 
         return i+1;
@@ -130,11 +147,26 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 protofield = tvb_get_guint8(tvb, offset);
                                 offset++;
                                 protofield = protofield >> 3;
+
+                                /* Check if the MSB is 1, in which case we need the second byte too */
+                                if (protofield & 0x10) {
+                                        protofield = (tvb_get_guint8(tvb, offset) << 4) | protofield;
+                                        offset++;
+                                }
+
                                 /* String */
                                 if ((protofield >= 19 && protofield <= 27) ||
                                     (protofield >= 5 && protofield <= 6)) {  
-                                        len = tvb_get_guint8(tvb, offset);
-                                        offset++;
+                                        for (i = 0; i < 4; i++) { 
+                                                /* TODO: Check if we don't go beyond the packet length */
+                                                buf[i] = tvb_get_guint8(tvb, offset+i);
+                                        }
+                                        len = cdap_get_length_varint(4, buf);
+                                        offset += len;
+
+                                        buf2 = cdap_parse_int32(len, buf);
+                                        len = (buf2[3] << 24) | (buf2[2] << 16) | (buf2[1] << 8) | buf2[0]; 
+                                        
                                         str = (guint8 *) wmem_alloc0(wmem_packet_scope(), len+1);
                                         str[len]= '\0';
 
@@ -148,15 +180,17 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                          protofield == 10 ||
                                          protofield == 17) {
                                         /* Get data from tvbuff */
-                                        /* TODO: Use tvb_memcpy */
+                                        /* TODO: Use tvb_memcpy or tvp_ptr */
                                         for (i = 0; i < 4; i++) { 
                                                 /* TODO: Check if we don't go beyond the packet length */
                                                 buf[i] = tvb_get_guint8(tvb, offset+i);
                                         }
                                         len = cdap_get_length_varint(4, buf);
                                         buf2 = cdap_parse_int32(len, buf);
-                                        new_tvb = tvb_new_real_data(buf2, 4, 4);
                                         offset+= len;
+
+                                        new_tvb = tvb_new_child_real_data(tvb, buf2, 4, 4);
+                                        add_new_data_source(pinfo, new_tvb, "Decoded Int32");
                                 } 
                                 /* Int 64 */
                                 else if (protofield == 7 ||
@@ -169,17 +203,24 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                         }
                                         len = cdap_get_length_varint(8, buf);
                                         buf2 = cdap_parse_int64(len, buf);
-                                        new_tvb = tvb_new_real_data(buf2, 8, 8);
+                                        new_tvb = tvb_new_child_real_data(tvb, buf2, 8, 8);
+                                        add_new_data_source(pinfo, new_tvb, "Decoded Int64");
                                         offset+= len;
                                 } 
                                 /* Message in message or bytes */
                                 else if (protofield == 8 ||
                                          protofield == 11 ||
                                          protofield == 18) {
-                                        printf("Proto: %d\n", protofield);
-                                        len = tvb_get_guint8(tvb, offset);
-                                        offset++;
-                                        printf("Length: %d\n", len);
+                                        for (i = 0; i < 4; i++) { 
+                                                /* TODO: Check if we don't go beyond the packet length */
+                                                buf[i] = tvb_get_guint8(tvb, offset+i);
+                                        }
+                                        len = cdap_get_length_varint(4, buf);
+                                        offset += len;
+
+                                        buf2 = cdap_parse_int32(len, buf);
+                                        len = (buf2[3] << 24) | (buf2[2] << 16) | (buf2[1] << 8) | buf2[0]; 
+                                        offset += len;
                                 }
                         }
                         CATCH_ALL {
@@ -239,7 +280,6 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 break;
                         case 8:
                                 /* For now just increase the offset */
-                                offset+=len;
                                 break;
                         case 9:  
                                 proto_tree_add_item(cdap_tree, 
@@ -255,7 +295,6 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 break;
                         case 11:
                                 /* For now just increase the offset */
-                                offset+= len;
                                 break; 
                         case 17:
                                 proto_tree_add_item(cdap_tree, 
@@ -265,7 +304,6 @@ dissect_cdap(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
                                 break;
                         case 18:
                                 /* For now just increase the offset */
-                                offset+= len;
                                 break;
                         case 19:
                                 proto_tree_add_string(cdap_tree, 
@@ -361,7 +399,7 @@ proto_register_cdap(void)
             { &hf_cdap_opcode,
               { "Opcode", "cdap.opcode",
                 FT_UINT32, BASE_DEC,
-                NULL, 0x0,
+                VALS(opcodes), 0x0,
                 NULL, HFILL }
             },
             { &hf_cdap_invokeid,

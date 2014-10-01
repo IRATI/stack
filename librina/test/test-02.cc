@@ -1,22 +1,30 @@
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// Test 02
 //
-// This program is distributed in the hope that it will be useful,
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 #include <iostream>
-#include "librina.h"
+
 #include "core.h"
+
+#include "librina/librina.h"
 
 using namespace rina;
 
@@ -33,7 +41,7 @@ bool checkIPCProcesses(unsigned int expectedProcesses) {
 	return true;
 }
 
-int main(int argc, char * argv[]) {
+int main() {
 	std::cout << "TESTING LIBRINA-IPCMANAGER\n";
 
 	/* TEST LIST IPC PROCESS TYPES */
@@ -85,7 +93,7 @@ int main(int argc, char * argv[]) {
 	ipcProcess1->assignToDIFResult(true);
 
 	/* TEST REGISTER APPLICATION */
-	unsigned int handle = ipcProcess1->registerApplication(*sourceName);
+	unsigned int handle = ipcProcess1->registerApplication(*sourceName, 1);
 	ipcProcess1->registerApplicationResult(handle, true);
 
 	/* TEST UNREGISTER APPLICATION */
@@ -95,8 +103,8 @@ int main(int argc, char * argv[]) {
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
-			true, *sourceName, *difName, 1234);
-	flowRequest->setPortId(430);
+			true, *sourceName, *difName, 1234, 4545);
+	flowRequest->portId = 430;
 	ipcProcess1->allocateFlow(*flowRequest);
 
 	/* TEST QUERY RIB */
@@ -106,7 +114,7 @@ int main(int argc, char * argv[]) {
 	/* TEST APPLICATION REGISTERED */
 	ApplicationRegistrationInformation appRegInfo =
 			ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
-	appRegInfo.setDIFName(*difName);
+	appRegInfo.difName = *difName;
 	ApplicationRegistrationRequestEvent * event = new
 			ApplicationRegistrationRequestEvent(appRegInfo, 34);
 	applicationManager->applicationRegistered(*event, *difName, 0);
@@ -118,7 +126,7 @@ int main(int argc, char * argv[]) {
 
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,
-			true, *sourceName, *destinationName, *difName, 3);
+			true, *sourceName, *destinationName, *difName, 3, 2323);
 	applicationManager->flowAllocated(*flowEvent);
 
 	ipcProcessFactory->destroy(ipcProcess1->getId());

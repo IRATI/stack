@@ -1,7 +1,8 @@
 /*
  * Netlink temporary workarounds waiting for better solutions
  *
- *    Eduard Grasa <eduard.grasa@i2cat.net>
+ *    Eduard Grasa          <eduard.grasa@i2cat.net>
+ *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +21,11 @@
 
 #ifndef RINA_RNL_WORKAROUNDS_H
 #define RINA_RNL_WORKAROUNDS_H
+
+/*
+ * FIXME: Please note that this workaround is only temporary and
+ *        must disappear
+ */
 
 void set_netlink_non_root_send_flag(void);
 

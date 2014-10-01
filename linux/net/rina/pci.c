@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,8 +42,6 @@ struct buffer * buffer_dup_gfp(gfp_t                 flags,
                                const struct buffer * b);
 
 struct pci {
-        pdu_type_t  type;
-
         /* If type == PDU_TYPE_MGMT, all the following fields are useless */
         address_t   destination;
         address_t   source;
@@ -52,21 +51,22 @@ struct pci {
          *        (See spec)
          */
         struct {
+                qos_id_t qos_id;
                 cep_id_t source;
                 cep_id_t destination;
-        }           ceps;
+        } connection_id;
 
-        qos_id_t    qos_id;
+        pdu_type_t  type;
         pdu_flags_t flags;
         seq_num_t   sequence_number;
 
         struct {
+                seq_num_t last_ctrl_seq_num_rcvd;
                 seq_num_t ack_nack_seq_num;
                 seq_num_t new_rt_wind_edge;
-                seq_num_t new_left_wind_edge;
-                seq_num_t left_wind_edge;
-                seq_num_t rt_wind_edge;
-                seq_num_t last_ctrl_seq_num_rcvd;
+                seq_num_t new_lf_wind_edge;
+                seq_num_t my_lf_wind_edge;
+                seq_num_t my_rt_wind_edge;
         } control;
 };
 
@@ -79,15 +79,10 @@ size_t pci_length_min(void)
 EXPORT_SYMBOL(pci_length_min);
 
 ssize_t pci_length(const struct pci * pci)
-{
-        if (!pci)
-                return -1;
-
-        return sizeof(*pci);
-}
+{ return pci ? sizeof(*pci) : -1; }
 EXPORT_SYMBOL(pci_length);
 
-static struct pci * pci_create_gfp(gfp_t flags)
+struct pci * pci_create_gfp(gfp_t flags)
 {
         struct pci * tmp;
 
@@ -115,7 +110,7 @@ int pci_cep_source_set(struct pci * pci,
         if (!is_cep_id_ok(src_cep_id))
                 return -1;
 
-        pci->ceps.destination = src_cep_id;
+        pci->connection_id.destination = src_cep_id;
         return 0;
 }
 EXPORT_SYMBOL(pci_cep_source_set);
@@ -129,7 +124,7 @@ int pci_cep_destination_set(struct pci * pci,
         if (!is_cep_id_ok(dst_cep_id))
                 return -1;
 
-        pci->ceps.source = dst_cep_id;
+        pci->connection_id.source = dst_cep_id;
 
         return 0;
 }
@@ -171,7 +166,7 @@ int pci_sequence_number_set(struct pci * pci,
 }
 EXPORT_SYMBOL(pci_sequence_number_set);
 
-seq_num_t pci_sequence_number_get(struct pci * pci)
+seq_num_t pci_sequence_number_get(const struct pci * pci)
 {
         if (!pci)
                 return -1;
@@ -186,7 +181,7 @@ int pci_qos_id_set(struct pci * pci,
         if (!pci)
                 return -1;
 
-        pci->qos_id = qos_id;
+        pci->connection_id.qos_id = qos_id;
 
         return 0;
 }
@@ -202,6 +197,17 @@ int pci_type_set(struct pci * pci, pdu_type_t type)
         return 0;
 }
 EXPORT_SYMBOL(pci_type_set);
+
+int pci_flags_set(struct pci * pci, pdu_flags_t flags)
+{
+        if (!pci)
+                return -1;
+
+        pci->flags = flags;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_flags_set);
 
 int pci_format(struct pci * pci,
                cep_id_t     src_cep_id,
@@ -275,7 +281,7 @@ struct pci * pci_dup_gfp(gfp_t              flags,
 {
         struct pci * tmp;
 
-        if (pci_is_ok(pci))
+        if (!pci_is_ok(pci))
                 return NULL;
 
         tmp = rkmalloc(sizeof(*tmp), flags);
@@ -329,7 +335,7 @@ cep_id_t pci_cep_destination(const struct pci * pci)
         if (!pci)
                 return cep_id_bad();
 
-        return pci->ceps.destination;
+        return pci->connection_id.destination;
 }
 EXPORT_SYMBOL(pci_cep_destination);
 
@@ -338,12 +344,12 @@ cep_id_t pci_cep_source(const struct pci * pci)
         if (!pci)
                 return cep_id_bad();
 
-        return pci->ceps.source;
+        return pci->connection_id.source;
 }
 EXPORT_SYMBOL(pci_cep_source);
 
 qos_id_t pci_qos_id(const struct pci * pci)
-{ return pci ? pci->qos_id : qos_id_bad();  }
+{ return pci ? pci->connection_id.qos_id : qos_id_bad();  }
 EXPORT_SYMBOL(pci_qos_id);
 
 pdu_flags_t pci_flags_get(const struct pci * pci)
@@ -392,13 +398,13 @@ int pci_control_new_left_wind_edge_set(struct pci * pci, seq_num_t seq)
         if (!pdu_type_is_control(pci->type))
                 return -1;
 
-        pci->control.new_left_wind_edge = seq;
+        pci->control.new_lf_wind_edge = seq;
 
         return 0;
 }
 EXPORT_SYMBOL(pci_control_new_left_wind_edge_set);
 
-int pci_control_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
+int pci_control_my_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
 {
         if (!pci)
                 return -1;
@@ -406,13 +412,13 @@ int pci_control_rt_wind_edge_set(struct pci * pci, seq_num_t seq)
         if (!pdu_type_is_control(pci->type))
                 return -1;
 
-        pci->control.rt_wind_edge = seq;
+        pci->control.my_rt_wind_edge = seq;
 
         return 0;
 }
-EXPORT_SYMBOL(pci_control_rt_wind_edge_set);
+EXPORT_SYMBOL(pci_control_my_rt_wind_edge_set);
 
-int pci_control_left_wind_edge_set(struct pci * pci, seq_num_t seq)
+int pci_control_my_left_wind_edge_set(struct pci * pci, seq_num_t seq)
 {
         if (!pci)
                 return -1;
@@ -420,11 +426,11 @@ int pci_control_left_wind_edge_set(struct pci * pci, seq_num_t seq)
         if (!pdu_type_is_control(pci->type))
                 return -1;
 
-        pci->control.left_wind_edge = seq;
+        pci->control.my_lf_wind_edge = seq;
 
         return 0;
 }
-EXPORT_SYMBOL(pci_control_left_wind_edge_set);
+EXPORT_SYMBOL(pci_control_my_left_wind_edge_set);
 
 int pci_control_last_seq_num_rcvd_set(struct pci * pci, seq_num_t seq)
 {
@@ -449,17 +455,17 @@ seq_num_t pci_control_new_rt_wind_edge(const struct pci * pci)
 EXPORT_SYMBOL(pci_control_new_rt_wind_edge);
 
 seq_num_t pci_control_new_left_wind_edge(const struct pci * pci)
-{ return pci ? pci->control.new_left_wind_edge : 0; }
+{ return pci ? pci->control.new_lf_wind_edge : 0; }
 EXPORT_SYMBOL(pci_control_new_left_wind_edge);
 
-seq_num_t pci_control_rt_wind_edge(const struct pci * pci)
-{ return pci ? pci->control.rt_wind_edge : 0; }
-EXPORT_SYMBOL(pci_control_rt_wind_edge);
+seq_num_t pci_control_my_rt_wind_edge(const struct pci * pci)
+{ return pci ? pci->control.my_rt_wind_edge : 0; }
+EXPORT_SYMBOL(pci_control_my_rt_wind_edge);
 
-seq_num_t pci_control_left_wind_edge(const struct pci * pci)
-{ return pci ? pci->control.left_wind_edge : 0; }
-EXPORT_SYMBOL(pci_control_left_wind_edge);
+seq_num_t pci_control_my_left_wind_edge(const struct pci * pci)
+{ return pci ? pci->control.my_lf_wind_edge : 0; }
+EXPORT_SYMBOL(pci_control_my_left_wind_edge);
 
-seq_num_t pci_control_last_seq_num_rcvd(struct pci * pci)
+seq_num_t pci_control_last_seq_num_rcvd(const struct pci * pci)
 { return pci ? pci->control.last_ctrl_seq_num_rcvd : 0; }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd);

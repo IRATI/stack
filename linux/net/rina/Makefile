@@ -9,16 +9,20 @@ ccflags-y += -Wtype-limits
 obj-$(CONFIG_RINA) +=				\
 	utils.o debug.o				\
 	rds/					\
-	core.o personality.o syscalls.o		\
+	core.o personality.o			\
 	rnl-utils.o rnl-workarounds.o rnl.o	\
 	buffer.o qos.o pci.o pdu.o sdu.o du.o	\
-	connection.o ipcp-utils.o		\
-	common.o
+	pdu-ser.o serdes.o ipcp-utils.o         \
+	connection.o common.o policies.o        \
+	dtcp-utils.o                            \
+
+obj-y +=					\
+	syscalls.o
 
 obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
-	rina_personality_default.o
+	rina-personality-default.o
 
-rina_personality_default-y :=					\
+rina-personality-default-y :=					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pft.o rmt.o						\
@@ -27,10 +31,10 @@ rina_personality_default-y :=					\
 	default.o
 
 ifeq  ($(CONFIG_RINA_PERSONALITY_DEFAULT),m)
-rina_personality_default-y +=			\
+rina-personality-default-y +=			\
 	 utils-workarounds.o
 endif
 
-obj-$(CONFIG_RINA)              += ipcps/
-obj-$(CONFIG_RINA)              += rinarp/
-obj-$(CONFIG_RINA_SHIM_HV_VMPI) += vmpi/
+obj-$(CONFIG_VMPI) += vmpi/
+obj-$(CONFIG_RINA) += ipcps/
+obj-$(CONFIG_RINA) += rinarp/

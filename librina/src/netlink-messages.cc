@@ -1,36 +1,37 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- */
-
-/*
- * librina-netlink-messages.cc
- *
- *  Created on: 12/06/2013
- *      Author: eduardgrasa
- */
+//
+// Netlink messages
+//
+//    Eduard Grasa          <eduard.grasa@i2cat.net>
+//    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
+//    Francesco Salvestrini <f.salvestrini@nextworks.it>
+//
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
+// 
+// This library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
+// 
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
+//
 
 #include <sstream>
 #include <unistd.h>
 
 #define RINA_PREFIX "netlink-messages"
 
-#include "logs.h"
+#include "librina/logs.h"
 #include "netlink-messages.h"
-#include "librina-application.h"
-#include "librina-ipc-process.h"
-#include "librina-ipc-manager.h"
+
+#include "librina/application.h"
+#include "librina/ipc-process.h"
+#include "librina/ipc-manager.h"
 
 namespace rina {
 
@@ -137,7 +138,8 @@ void BaseNetlinkMessage::setResponseMessage(bool responseMessage) {
 const std::string BaseNetlinkMessage::toString(){
 	std::stringstream ss;
 	ss << "Family: " << family << "; Operation code: "
-			<< operationCode << "; Source port: " << sourcePortId
+			<< BaseNetlinkMessage::operationCodeToString(operationCode)
+			<< "; Source port: " << sourcePortId
 			<< "; Destination port: " << destPortId
 			<< "; Sequence Number: " << sequenceNumber << "\n"
 			<< "Is request message? " << requestMessage
@@ -146,6 +148,176 @@ const std::string BaseNetlinkMessage::toString(){
 			<< "Source IPC Process: " << sourceIPCProcessId
 			<< "; Destination IPC Process: " << destIPCProcessId;
 	return ss.str();
+}
+
+const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperationCode operationCode) {
+	std::string result;
+
+	switch(operationCode) {
+	case RINA_C_UNSPEC:
+		result = "0_Unespecified operation";
+		break;
+	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST:
+		result = "1_ASSIGN_TO_DIF_REQUEST";
+		break;
+	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+		result = "2_ASSIGN_TO_DIF_RESPONSE";
+		break;
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST:
+		result = "3_UPDATE_DIF_CONFIG REQUEST";
+		break;
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE:
+		result = "4_UPDATE_DIF_CONFIG_RESPONSE";
+		break;
+	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
+		result = "5_DIF_REGISTRATION_NOTIFICATION";
+		break;
+	case RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION:
+		result = "6_DIF_UNREGISTRATION_NOTIFICATION";
+		break;
+	case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST:
+		result = "7_ENROLL_TO_DIF_REQUEST";
+		break;
+	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE:
+		result = "8_ENROLL_TO_DIF_RESPONSE";
+		break;
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST:
+		result = "9_DISCONNECT_FROM_NEIGHBOR_REQUEST";
+		break;
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+		result = "10_DISCONNECT_FROM_NEIGHBOR_RESPONSE";
+		break;
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST:
+		result = "11_IPCM_ALLOCATE_FLOW_REQUEST";
+		break;
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+		result = "12_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED";
+		break;
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+		result = "13_IPCM_ALLOCATE_FLOW_REQUEST_RESULT";
+		break;
+	case RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE:
+		result = "14_IPCM_ALLOCATE_FLOW_RESPONSE";
+		break;
+	case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST:
+		result = "15_IPCM_DEALLOCATE_FLOW_REQUEST";
+		break;
+	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
+		result = "16_ICPM_DEALLOCATE_FLOW_RESPONSE";
+		break;
+	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION:
+		result = "17_IPCM_FLOW_DEALLOCATED_NOTIFICATION";
+		break;
+	case RINA_C_IPCM_REGISTER_APPLICATION_REQUEST:
+		result = "18_IPCM_REGISTER_APP_REQUEST";
+		break;
+	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+		result = "19_ICPM_REGISTER_APP_RESPONSE";
+		break;
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST:
+		result = "20_IPCM_UNREGISTER_APP_REQUEST";
+		break;
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+		result = "21_IPCM_UNREGISTER_APP_RESPONSE";
+		break;
+	case RINA_C_IPCM_QUERY_RIB_REQUEST:
+		result = "22_QUERY_RIB_REQUEST";
+		break;
+	case RINA_C_IPCM_QUERY_RIB_RESPONSE:
+		result = "23_QUERY_RIB_RESPONSE";
+		break;
+	case RINA_C_RMT_MODIFY_FTE_REQUEST:
+		result = "24_MODIFY_FT_REQUEST";
+		break;
+	case RINA_C_RMT_DUMP_FT_REQUEST:
+		result = "25_DUMP_FT_REQUEST";
+		break;
+	case RINA_C_RMT_DUMP_FT_REPLY:
+		result = "26_DUMP_FT_REPLY";
+		break;
+	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION:
+		result = "27_SOCKET_CLOSED_NOTIFICATION";
+		break;
+	case RINA_C_IPCM_IPC_MANAGER_PRESENT:
+		result = "28_IPC_MANAGER_PRESENT";
+		break;
+	case RINA_C_IPCP_CONN_CREATE_REQUEST:
+		result = "29_CREATE_EFCP_CONN_REQUEST";
+		break;
+	case RINA_C_IPCP_CONN_CREATE_RESPONSE:
+		result = "30_CREATE_EFCP_CONN_RESPONSE";
+		break;
+	case RINA_C_IPCP_CONN_CREATE_ARRIVED:
+		result = "31_CREATE_EFCP_CONN_ARRIVED";
+		break;
+	case RINA_C_IPCP_CONN_CREATE_RESULT:
+		result = "32_CREATE_EFCP_CONN_RESULT";
+		break;
+	case RINA_C_IPCP_CONN_UPDATE_REQUEST:
+		result = "33_UPDATE_EFCP_CONN_REQUEST";
+		break;
+	case RINA_C_IPCP_CONN_UPDATE_RESULT:
+		result = "34_UPDATE_EFCP_CONN_RESULT";
+		break;
+	case RINA_C_IPCP_CONN_DESTROY_REQUEST:
+		result = "35_DESTROY_EFCP_CONN_REQUEST";
+		break;
+	case RINA_C_IPCP_CONN_DESTROY_RESULT:
+		result = "36_DESTROY_EFCP_CONN_RESULT";
+		break;
+	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
+		result = "37_IPC_PROCESS_INITIALIZED";
+		break;
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
+		result = "38_APP_ALLOCATE_FLOW_REQUEST";
+		break;
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT:
+		result = "39_APP_ALLOCATE_FLOW_REQUEST_RESULT";
+		break;
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED:
+		result = "40_APP_ALLOCATE_FLOW_REQUEST_ARRIVED";
+		break;
+	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
+		result = "41_APP_ALLOCATE_FLOW_RESPONSE";
+		break;
+	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
+		result = "42_APP_DEALLOCATE_FLOW_REQUEST";
+		break;
+	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
+		result = "43_APP_DEALLOCATE_FLOW_RESPONSE";
+		break;
+	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
+		result = "44_APP_FLOW_DEALLOCATED_NOTIFICATION";
+		break;
+	case RINA_C_APP_REGISTER_APPLICATION_REQUEST:
+		result = "45_APP_REGISTER_REQUEST";
+		break;
+	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:
+		result = "46_APP_REGISTER_RESPONSE";
+		break;
+	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:
+		result = "47_APP_UNREGISTER_REQUEST";
+		break;
+	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
+		result = "48_APP_UNREGISTER_RESPONSE";
+		break;
+	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION:
+		result = "49_APP_REGISTRATION_CANCELED_NOTIFICATION";
+		break;
+	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
+		result = "50_GET_DIF_PROPERTIES_REQUEST";
+		break;
+	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:
+		result = "51_GET_DIF_PROPERTIES_RESPONSE";
+		break;
+	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION:
+		result = "52_NEIGHBORS_MODIFIED_NOTIFICATION";
+		break;
+	default:
+		result = "Unknown operation";
+	}
+
+	return result;
 }
 
 /* CLASS BASE NETLINK RESPONSE MESSAGE */
@@ -214,7 +386,7 @@ IPCEvent* AppAllocateFlowRequestMessage::toIPCEvent(){
 					true, sourceAppName, destAppName,
 					getSourceIpcProcessId(),
 					getSequenceNumber());
-	event->setDIFName(difName);
+	event->DIFName = difName;
 	return event;
 }
 
@@ -753,9 +925,9 @@ setRegIpcProcessId(unsigned short regIpcProcessId) {
 IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 	ApplicationRegistrationInformation information =
 		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
-	information.setDIFName(difName);
-	information.setApplicationName(applicationName);
-	information.setIpcProcessId(regIpcProcessId);
+	information.difName = difName;
+	information.appName = applicationName;
+	information.ipcProcessId = regIpcProcessId;
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
 					information,
@@ -1364,17 +1536,17 @@ IpcmDIFQueryRIBResponseMessage::IpcmDIFQueryRIBResponseMessage()
 	:BaseNetlinkResponseMessage(RINA_C_IPCM_QUERY_RIB_RESPONSE){
 }
 
-const std::list<RIBObject>&
+const std::list<RIBObjectData>&
 	IpcmDIFQueryRIBResponseMessage::getRIBObjects() const{
 	return ribObjects;
 }
 
 void IpcmDIFQueryRIBResponseMessage::setRIBObjects(
-		const std::list<RIBObject>& ribObjects){
+		const std::list<RIBObjectData>& ribObjects){
 	this->ribObjects = ribObjects;
 }
 
-void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObject& ribObject){
+void IpcmDIFQueryRIBResponseMessage::addRIBObject(const RIBObjectData& ribObject){
 	ribObjects.push_back(ribObject);
 }
 
@@ -1443,54 +1615,15 @@ IPCEvent* IpcmIPCProcessInitializedMessage::toIPCEvent(){
 /* CLASS IPCM CONNECTION CREATE REQUEST MESSAGE */
 IpcpConnectionCreateRequestMessage::IpcpConnectionCreateRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_REQUEST) {
-        portId = 0;
-        sourceAddress = 0;
-        destAddress = 0;
-        qosId = 0;
 }
 
-unsigned int IpcpConnectionCreateRequestMessage::getDestAddress() const {
-        return destAddress;
+const Connection& IpcpConnectionCreateRequestMessage::getConnection() const {
+        return connection;
 }
 
-void IpcpConnectionCreateRequestMessage::setDestAddress(
-                unsigned int destAddress) {
-        this->destAddress = destAddress;
-}
-
-int IpcpConnectionCreateRequestMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionCreateRequestMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-unsigned int IpcpConnectionCreateRequestMessage::getQosId() const {
-                return qosId;
-}
-
-void IpcpConnectionCreateRequestMessage::setQosId(unsigned int qosId){
-        this->qosId = qosId;
-}
-
-unsigned int IpcpConnectionCreateRequestMessage::getSourceAddress() const {
-        return sourceAddress;
-}
-
-void IpcpConnectionCreateRequestMessage::setSourceAddress(
-                unsigned int sourceAddress) {
-        this->sourceAddress = sourceAddress;
-}
-
-const ConnectionPoliciesParameters& 
-IpcpConnectionCreateRequestMessage::getConnPoliciesParams() const {
-        return connPoliciesParams;
-}
-
-void IpcpConnectionCreateRequestMessage::setConnPoliciesParams(
-                const ConnectionPoliciesParameters& connPParams) {
-        this->connPoliciesParams = connPParams;
+void IpcpConnectionCreateRequestMessage::setConnection(
+                const Connection& connection) {
+        this->connection = connection;
 }
 
 IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
@@ -1599,74 +1732,15 @@ IPCEvent* IpcpConnectionUpdateResultMessage::toIPCEvent() {
 /* CLASS IPCM CONNECTION CREATE ARRIVED MESSAGE */
 IpcpConnectionCreateArrivedMessage::IpcpConnectionCreateArrivedMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_ARRIVED) {
-        portId = 0;
-        sourceAddress = 0;
-        destAddress = 0;
-        qosId = 0;
-        destCepId = 0;
-        flowUserIpcProcessId = 0;
 }
 
-unsigned int IpcpConnectionCreateArrivedMessage::getDestAddress() const {
-        return destAddress;
+const Connection& IpcpConnectionCreateArrivedMessage::getConnection() const {
+        return connection;
 }
 
-void IpcpConnectionCreateArrivedMessage::setDestAddress(
-                unsigned int destAddress) {
-        this->destAddress = destAddress;
-}
-
-int IpcpConnectionCreateArrivedMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionCreateArrivedMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-unsigned int IpcpConnectionCreateArrivedMessage::getQosId() const {
-                return qosId;
-}
-
-void IpcpConnectionCreateArrivedMessage::setQosId(unsigned int qosId){
-        this->qosId = qosId;
-}
-
-unsigned int IpcpConnectionCreateArrivedMessage::getSourceAddress() const {
-        return sourceAddress;
-}
-
-void IpcpConnectionCreateArrivedMessage::setSourceAddress(
-                unsigned int sourceAddress) {
-        this->sourceAddress = sourceAddress;
-}
-
-unsigned short IpcpConnectionCreateArrivedMessage::
-getFlowUserIpcProcessId() const {
-        return flowUserIpcProcessId;
-}
-
-void IpcpConnectionCreateArrivedMessage::
-setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
-        this->flowUserIpcProcessId = flowUserIpcProcessId;
-}
-
-int IpcpConnectionCreateArrivedMessage::getDestCepId() const {
-        return destCepId;
-}
-
-void IpcpConnectionCreateArrivedMessage::setDestCepId(int destCepId) {
-        this->destCepId = destCepId;
-}
-
-const ConnectionPoliciesParameters& IpcpConnectionCreateArrivedMessage::
-getConnPoliciesParams() const {
-        return connPoliciesParameters;
-}
-
-void IpcpConnectionCreateArrivedMessage::setConnPoliciesParams(
-                const ConnectionPoliciesParameters& connPParams) {
-        this->connPoliciesParameters = connPParams;
+void IpcpConnectionCreateArrivedMessage::setConnection(
+                const Connection& connection) {
+        this->connection = connection;
 }
 
 IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {
@@ -1774,18 +1848,18 @@ BaseNetlinkMessage(RINA_C_RMT_MODIFY_FTE_REQUEST){
         mode = 0;
 }
 
-const std::list<PDUForwardingTableEntry>&
+const std::list<PDUForwardingTableEntry *>&
 RmtModifyPDUFTEntriesRequestMessage::getEntries() const {
         return entries;
 }
 
 void RmtModifyPDUFTEntriesRequestMessage::
-setEntries(const std::list<PDUForwardingTableEntry>& entries) {
+setEntries(const std::list<PDUForwardingTableEntry *>& entries) {
         this->entries = entries;
 }
 
 void RmtModifyPDUFTEntriesRequestMessage::
-addEntry(const PDUForwardingTableEntry& entry) {
+addEntry(PDUForwardingTableEntry * entry) {
         entries.push_back(entry);
 }
 
@@ -1838,6 +1912,4 @@ IPCEvent* RmtDumpPDUFTEntriesResponseMessage::toIPCEvent() {
         return event;
 }
 
-
 }
-

@@ -1,6 +1,7 @@
-/* A vmpi-impl interface for the hypervisor
+/*
+ * A guest-side vmpi-impl interface
  *
- * Copyright 2014 Vincenzo Maffione <v.maffione@nextworks.it> Nextworks
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,13 +15,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef __VMPI_GUEST_IMPL_H__
 #define __VMPI_GUEST_IMPL_H__
 
-#include "vmpi-ring.h"
+#include "vmpi-structs.h"
 
 
 typedef struct vmpi_impl_info vmpi_impl_info_t;
@@ -28,14 +29,10 @@ typedef struct vmpi_info vmpi_info_t;
 
 typedef void (*vmpi_impl_callback_t)(vmpi_impl_info_t *);
 
-struct vmpi_impl_info *vmpi_impl_get_instance(void);
 int vmpi_impl_write_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
 void vmpi_impl_txkick(vmpi_impl_info_t *vi);
-void vmpi_impl_rxkick(vmpi_impl_info_t *vi);
 struct vmpi_buffer * vmpi_impl_get_written_buffer(vmpi_impl_info_t *vi);
-int vmpi_impl_give_rx_buf(vmpi_impl_info_t *vi, struct vmpi_buffer *buf);
 struct vmpi_buffer * vmpi_impl_read_buffer(vmpi_impl_info_t *vi);
-void vmpi_impl_free_unused_bufs(vmpi_impl_info_t *vi);
 bool vmpi_impl_send_cb(vmpi_impl_info_t *vi, int enable);
 bool vmpi_impl_receive_cb(vmpi_impl_info_t *vi, int enable);
 void vmpi_impl_callbacks_register(vmpi_impl_info_t *vi,
@@ -44,8 +41,9 @@ void vmpi_impl_callbacks_register(vmpi_impl_info_t *vi,
 void vmpi_impl_callbacks_unregister(vmpi_impl_info_t *vi);
 
 vmpi_info_t *vmpi_info_from_vmpi_impl_info(vmpi_impl_info_t *vi);
-vmpi_info_t *vmpi_init(int *err);
-void vmpi_fini(void);
+vmpi_info_t *vmpi_init(vmpi_impl_info_t *vi, int *err,
+                       bool deferred_test_init);
+void vmpi_fini(vmpi_info_t *mpi, bool deferred_test_fini);
 
 
 #endif  /* __VMPI_GUEST_IMPL_H__ */

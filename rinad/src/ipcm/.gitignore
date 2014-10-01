@@ -1,0 +1,4 @@
+*.o
+
+/ipcm
+/test-empty

@@ -29,6 +29,8 @@
 #include "debug.h"
 #include "common.h"
 #include "connection.h"
+#include "dtcp-utils.h"
+#include "policies.h"
 
 struct connection * connection_create(void)
 {
@@ -41,6 +43,48 @@ struct connection * connection_create(void)
         return tmp;
 }
 EXPORT_SYMBOL(connection_create);
+
+struct conn_policies * conn_policies_create(void)
+{
+        struct conn_policies * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->dtcp_cfg = dtcp_config_create();
+        if (!tmp->dtcp_cfg) {
+                LOG_ERR("Could not create dtcp_config");
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->initial_sequence_number = policy_create();
+        if (!tmp->initial_sequence_number) {
+                LOG_ERR("Could not create initial_sequence_number");
+                dtcp_config_destroy(tmp->dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->receiver_inactivity_timer = policy_create();
+        if (!tmp->receiver_inactivity_timer) {
+                LOG_ERR("Could not create receiver_inactivity_timer policy");
+                dtcp_config_destroy(tmp->dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        tmp->sender_inactivity_timer = policy_create();
+        if (!tmp->sender_inactivity_timer) {
+                LOG_ERR("Could not create sender_inactivity_timer policy");
+                dtcp_config_destroy(tmp->dtcp_cfg);
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
 
 struct connection *
 connection_dup_from_user(const struct connection __user * conn)
@@ -57,10 +101,34 @@ connection_dup_from_user(const struct connection __user * conn)
         return tmp;
 }
 
+int conn_policies_destroy(struct conn_policies * cp_params)
+{
+        int retval = 0;
+
+        if (!cp_params)
+                return -1;
+
+        if (cp_params->dtcp_cfg)
+                if (dtcp_config_destroy(cp_params->dtcp_cfg))
+                        retval = -1;
+
+        if (cp_params->initial_sequence_number)
+                if (policy_destroy(cp_params->initial_sequence_number))
+                        retval = -1;
+
+        rkfree(cp_params);
+        return retval;
+}
+EXPORT_SYMBOL(conn_policies_destroy);
+
 int connection_destroy(struct connection * conn)
 {
         if (!conn)
                 return -1;
+
+        if (conn->policies_params)
+                if (conn_policies_destroy(conn->policies_params))
+                        return -1;
 
         rkfree(conn);
 

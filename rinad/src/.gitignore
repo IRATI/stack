@@ -1,2 +1,6 @@
+*.[ao]
+*.l[ao]
+
+/config.h
+/config.h.in
 /stamp-h1
-/pom.xml

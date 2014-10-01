@@ -27,36 +27,59 @@
 #include "dt-utils.h"
 
 struct dt_sv {
-        uint_t    max_flow_pdu_size;
-        uint_t    max_flow_sdu_size;
-        timeout_t MPL;
-        timeout_t R;
-        timeout_t A;
-        seq_num_t rcv_left_window_edge;
-        bool      window_closed;
-        seq_num_t last_seq_num_sent;
+        uint_t       max_flow_pdu_size;
+        uint_t       max_flow_sdu_size;
+        timeout_t    MPL;
+        timeout_t    R;
+        timeout_t    A;
+        timeout_t    tr;
+        seq_num_t    rcv_left_window_edge;
+        bool         window_closed;
+        bool         drf_flag;
 };
 
 struct dt {
-        struct dt_sv *  sv;
-        struct dtp *    dtp;
-        struct dtcp *   dtcp;
+        struct dt_sv *      sv;
+        struct dtp *        dtp;
+        struct dtcp *       dtcp;
 
-        struct cwq *    cwq;
-        struct rtxq *   rtxq;
+        struct cwq *        cwq;
+        struct rtxq *       rtxq;
 
-        spinlock_t      lock;
+        spinlock_t          lock;
 };
 
 static struct dt_sv default_sv = {
-        .max_flow_pdu_size    = 0,
-        .max_flow_sdu_size    = 0,
-        .MPL                  = 0,
-        .R                    = 0,
+        .max_flow_pdu_size    = UINT_MAX,
+        .max_flow_sdu_size    = UINT_MAX,
+        .MPL                  = 1000,
+        .R                    = 100,
         .A                    = 0,
+        .tr                   = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
+        .drf_flag             = false,
 };
+
+int dt_sv_init(struct dt * instance,
+               uint_t      mfps,
+               uint_t      mfss,
+               u_int32_t   mpl,
+               timeout_t   a,
+               timeout_t   r,
+               timeout_t   tr)
+{
+        ASSERT(instance);
+
+        instance->sv->max_flow_pdu_size = mfps;
+        instance->sv->max_flow_sdu_size = mfss;
+        instance->sv->MPL               = mpl;
+        instance->sv->A                 = a;
+        instance->sv->R                 = r;
+        instance->sv->tr                = tr;
+
+        return 0;
+}
 
 struct dt * dt_create(void)
 {
@@ -73,7 +96,6 @@ struct dt * dt_create(void)
         }
 
         *tmp->sv = default_sv;
-
         spin_lock_init(&tmp->lock);
 
         return tmp;
@@ -108,7 +130,7 @@ int dt_destroy(struct dt * dt)
                         LOG_ERR("Failed to destroy rexmsn queue");
                         return -1;
                 }
-                dt->rtxq = NULL; /* Useless */
+                dt->rtxq = NULL; /* Useful */
         }
 
         rkfree(dt->sv);
@@ -132,9 +154,10 @@ int dt_dtp_bind(struct dt * dt, struct dtp * dtp)
 
         spin_lock(&dt->lock);
         if (dt->dtp) {
+                spin_unlock(&dt->lock);
+
                 LOG_ERR("A DTP instance is already bound to instance %pK, "
                         "unbind it first", dt);
-                spin_unlock(&dt->lock);
                 return -1;
         }
         dt->dtp = dtp;
@@ -154,9 +177,9 @@ struct dtp * dt_dtp_unbind(struct dt * dt)
 
         spin_lock(&dt->lock);
         if (!dt->dtp) {
-                LOG_ERR("No DTP instance bound to instance %pK, "
-                        "cannot bind", dt);
                 spin_unlock(&dt->lock);
+
+                LOG_DBG("No DTP bound to instance %pK", dt);
                 return NULL;
         }
 
@@ -180,25 +203,10 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
 
         spin_lock(&dt->lock);
         if (dt->dtcp) {
+                spin_unlock(&dt->lock);
+
                 LOG_ERR("A DTCP instance already bound to instance %pK, "
                         "unbind it first", dt);
-                spin_unlock(&dt->lock);
-                return -1;
-        }
-
-        dt->cwq = cwq_create();
-        if (!dt->cwq) {
-                LOG_ERR("Failed to create closed window queue");
-                spin_unlock(&dt->lock);
-                return -1;
-        }
-
-        dt->rtxq = rtxq_create();
-        if (!dt->rtxq) {
-                LOG_ERR("Failed to create rexmsn queue");
-                if (cwq_destroy(dt->cwq))
-                        LOG_ERR("Failed to destroy closed window queue");
-                spin_unlock(&dt->lock);
                 return -1;
         }
 
@@ -219,27 +227,10 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
 
         spin_lock(&dt->lock);
         if (!dt->dtcp) {
-                LOG_ERR("No DTCP bound to instance %pK", dt);
                 spin_unlock(&dt->lock);
+
+                LOG_DBG("No DTCP bound to instance %pK", dt);
                 return NULL;
-        }
-
-        if (dt->cwq) {
-                if (cwq_destroy(dt->cwq)) {
-                        LOG_ERR("Failed to destroy closed window queue");
-                        spin_unlock(&dt->lock);
-                        return NULL;
-                }
-                dt->cwq = NULL;
-        }
-
-        if (dt->rtxq) {
-                if (rtxq_destroy(dt->rtxq)) {
-                        LOG_ERR("Failed to destroy rexmsn queue");
-                        spin_unlock(&dt->lock);
-                        return NULL;
-                }
-                dt->rtxq = NULL;
         }
 
         tmp      = dt->dtcp;
@@ -247,6 +238,104 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
         spin_unlock(&dt->lock);
 
         return tmp;
+}
+
+int dt_cwq_bind(struct dt * dt, struct cwq * cwq)
+{
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot bind CWQ");
+                return -1;
+        }
+
+        if (!cwq) {
+                LOG_ERR("Cannot bind NULL CWQ to instance %pK", dt);
+                return -1;
+        }
+
+        spin_lock(&dt->lock);
+        if (dt->cwq) {
+                spin_unlock(&dt->lock);
+
+                LOG_ERR("A CWQ already bound to instance %pK", dt);
+                return -1;
+        }
+        dt->cwq = cwq;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
+struct cwq * dt_cwq_unbind(struct dt * dt)
+{
+        struct cwq * tmp;
+
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot unbind CWQ");
+                return NULL;
+        }
+
+        spin_lock(&dt->lock);
+        if (!dt->cwq) {
+                spin_unlock(&dt->lock);
+
+                LOG_DBG("No CWQ bound to instance %pK", dt);
+                return NULL;
+        }
+
+        tmp     = dt->cwq;
+        dt->cwq = NULL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct rtxq * dt_rtxq_unbind(struct dt * dt)
+{
+        struct rtxq * tmp;
+
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot unbind RTXQ");
+                return NULL;
+        }
+
+        spin_lock(&dt->lock);
+        if (!dt->rtxq) {
+                spin_unlock(&dt->lock);
+
+                LOG_DBG("No RTXQ bound to instance %pK", dt);
+                return NULL;
+        }
+
+        tmp      = dt->rtxq;
+        dt->rtxq = NULL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq)
+{
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot bind RTXQ");
+                return -1;
+        }
+
+        if (!rtxq) {
+                LOG_ERR("Cannot bind NULL RTXQ to instance %pK", dt);
+                return -1;
+        }
+
+        spin_lock(&dt->lock);
+        if (dt->rtxq) {
+                spin_unlock(&dt->lock);
+
+                LOG_ERR("A CWQ already bound to instance %pK", dt);
+                return -1;
+        }
+        dt->rtxq = rtxq;
+        spin_unlock(&dt->lock);
+
+        return 0;
 }
 
 struct dtp * dt_dtp(struct dt * dt)
@@ -427,17 +516,43 @@ int dt_sv_window_closed_set(struct dt * dt, bool closed)
         return 0;
 }
 
-seq_num_t dt_sv_last_seq_num_sent(struct dt * dt)
+timeout_t dt_sv_tr(struct dt * dt)
 {
-        seq_num_t tmp;
+        timeout_t tmp;
 
-        if (!dt || !dt->sv)
-                return -1;
+        ASSERT(dt);
+        ASSERT(dt->sv);
 
         spin_lock(&dt->lock);
-        tmp = dt->sv->last_seq_num_sent;
+        tmp = dt->sv->tr;
         spin_unlock(&dt->lock);
 
         return tmp;
+}
+
+bool dt_sv_drf_flag(struct dt * dt)
+{
+        bool flag;
+
+        if (!dt || !dt->sv)
+                return false;
+
+        spin_lock(&dt->lock);
+        flag = dt->sv->drf_flag;
+        spin_unlock(&dt->lock);
+
+        return flag;
+}
+
+void dt_sv_drf_flag_set(struct dt * dt, bool value)
+{
+        if (!dt || !dt->sv)
+                return;
+
+        spin_lock(&dt->lock);
+        dt->sv->drf_flag = value;
+        spin_unlock(&dt->lock);
+
+        return;
 }
 

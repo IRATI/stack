@@ -69,6 +69,10 @@
 #define SYSCALL_DUMP_EXIT  do { } while (0)
 #endif
 
+/*
+ * FIXME: Once accepted (...), move them to cond_syscall()
+ */
+
 SYSCALL_DEFINE6(ipc_create,
                 const char __user *, process_name,
                 const char __user *, process_instance,
@@ -77,6 +81,16 @@ SYSCALL_DEFINE6(ipc_create,
                 ipc_process_id_t,    id,
                 const char __user *, type)
 {
+#ifndef CONFIG_RINA
+        (void) process_name;
+        (void) process_instance;
+        (void) entity_name;
+        (void) entity_instance;
+        (void) id;
+        (void) type;
+
+        return -ENOSYS;
+#else
         long          retval;
 
         struct name * tn;
@@ -129,11 +143,17 @@ SYSCALL_DEFINE6(ipc_create,
         SYSCALL_DUMP_EXIT;
 
         return retval;
+#endif
 }
 
 SYSCALL_DEFINE1(ipc_destroy,
                 ipc_process_id_t, id)
 {
+#ifndef CONFIG_RINA
+        (void) id;
+
+        return -ENOSYS;
+#else
         long retval;
 
         SYSCALL_DUMP_ENTER;
@@ -143,6 +163,7 @@ SYSCALL_DEFINE1(ipc_destroy,
         SYSCALL_DUMP_EXIT;
 
         return retval;
+#endif
 }
 
 SYSCALL_DEFINE3(sdu_read,
@@ -150,6 +171,13 @@ SYSCALL_DEFINE3(sdu_read,
                 void __user *, buffer,
                 size_t,        size)
 {
+#ifndef CONFIG_RINA
+        (void) id;
+        (void) buffer;
+        (void) size;
+
+        return -ENOSYS;
+#else
         ssize_t      retval;
         struct sdu * tmp;
         size_t       retsize;
@@ -200,6 +228,7 @@ SYSCALL_DEFINE3(sdu_read,
         SYSCALL_DUMP_EXIT;
 
         return retsize;
+#endif
 }
 
 SYSCALL_DEFINE3(sdu_write,
@@ -207,6 +236,12 @@ SYSCALL_DEFINE3(sdu_write,
                 const void __user *, buffer,
                 size_t,              size)
 {
+#ifndef CONFIG_RINA
+        (void) buffer;
+        (void) size;
+
+        return -ENOSYS;
+#else
         ssize_t         retval;
         struct sdu *    sdu;
         struct buffer * tmp_buffer;
@@ -256,6 +291,7 @@ SYSCALL_DEFINE3(sdu_write,
         SYSCALL_DUMP_EXIT;
 
         return size;
+#endif
 }
 
 SYSCALL_DEFINE3(allocate_port,
@@ -263,6 +299,13 @@ SYSCALL_DEFINE3(allocate_port,
                 const char __user *, process_name,
                 const char __user *, process_instance)
 {
+#ifndef CONFIG_RINA
+        (void) id;
+        (void) process_name;
+        (void) process_instance;
+
+        return -ENOSYS;
+#else
         port_id_t     retval;
         struct name * tname;
 
@@ -289,11 +332,17 @@ SYSCALL_DEFINE3(allocate_port,
         SYSCALL_DUMP_EXIT;
 
         return retval;
+#endif
 }
 
 SYSCALL_DEFINE1(deallocate_port,
                 port_id_t, id)
 {
+#ifndef CONFIG_RINA
+        (void) id;
+
+        return -ENOSYS;
+#else
         int retval;
 
         SYSCALL_DUMP_ENTER;
@@ -303,6 +352,7 @@ SYSCALL_DEFINE1(deallocate_port,
         SYSCALL_DUMP_EXIT;
 
         return retval;
+#endif
 }
 
 SYSCALL_DEFINE4(management_sdu_read,
@@ -311,6 +361,14 @@ SYSCALL_DEFINE4(management_sdu_read,
                 port_id_t __user *,   port_id,
                 size_t,               size)
 {
+#ifndef CONFIG_RINA
+        (void) ipcp_id;
+        (void) buffer;
+        (void) port_id;
+        (void) size;
+
+        return -ENOSYS;
+#else
         ssize_t          retval;
         struct sdu_wpi * tmp;
         size_t           retsize;
@@ -328,13 +386,6 @@ SYSCALL_DEFINE4(management_sdu_read,
                 SYSCALL_DUMP_EXIT;
                 return -EFAULT;
         }
-
-        LOG_DBG("SDU_WPI in syscall\n"
-                "tmp: %pk\n"
-                "tmp->port_id: %d\n"
-                "tmp->sdu: %pk\n"
-                "tmp->sdu->buffer: %pk\n",
-                tmp, tmp->port_id, tmp->sdu, tmp->sdu->buffer);
 
         if (!sdu_wpi_is_ok(tmp)) {
                 SYSCALL_DUMP_EXIT;
@@ -378,14 +429,24 @@ SYSCALL_DEFINE4(management_sdu_read,
         SYSCALL_DUMP_EXIT;
 
         return retsize;
+#endif
 }
 
-SYSCALL_DEFINE4(management_sdu_write,
-                ipc_process_id_t,           id,
+SYSCALL_DEFINE5(management_sdu_write,
+                ipc_process_id_t,           ipcp_id,
+                address_t,                  dst_addr,
                 port_id_t,                  port_id,
                 const void __user *,        buffer,
                 size_t,                     size)
 {
+#ifndef CONFIG_RINA
+        (void) ipcp_id;
+        (void) port_id;
+        (void) buffer;
+        (void) size;
+
+        return -ENOSYS;
+#else
         ssize_t          retval;
         struct sdu_wpi * sdu_wpi;
         struct buffer *  tmp_buffer;
@@ -397,9 +458,9 @@ SYSCALL_DEFINE4(management_sdu_write,
                 return -EFAULT;
         }
 
-        LOG_DBG("Syscall write management SDU " \
-                "(size = %zd, ipcp-id %d, port-id = %d)",
-                size, id, port_id);
+        LOG_DBG("Syscall write management SDU "
+                "(size = %zd, ipcp-id = %d, port-id = %d)",
+                size, ipcp_id, port_id);
 
         tmp_buffer = buffer_create(size);
         if (!tmp_buffer) {
@@ -424,11 +485,12 @@ SYSCALL_DEFINE4(management_sdu_write,
                 buffer_destroy(tmp_buffer);
                 return -EFAULT;
         }
-        sdu_wpi->port_id = port_id;
+        sdu_wpi->dst_addr = dst_addr;
+        sdu_wpi->port_id  = port_id;
         ASSERT(sdu_wpi_is_ok(sdu_wpi));
 
         /* Passing ownership to the internal layers */
-        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_write, id, sdu_wpi);
+        CALL_DEFAULT_PERSONALITY(retval, mgmt_sdu_write, ipcp_id, sdu_wpi);
         if (retval) {
                 SYSCALL_DUMP_EXIT;
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */
@@ -438,4 +500,5 @@ SYSCALL_DEFINE4(management_sdu_write,
         SYSCALL_DUMP_EXIT;
 
         return size;
+#endif
 }

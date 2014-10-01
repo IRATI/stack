@@ -13,9 +13,7 @@ menuconfig RINA
 
 if RINA
 
-menu "Core"
-
-config RINA_DEBUG
+menuconfig RINA_DEBUG
 	bool "Debugging support"
 	default y
 	help
@@ -24,36 +22,20 @@ config RINA_DEBUG
 if RINA_DEBUG
 
 config RINA_SYSCALLS_DEBUG
-       bool "Debug RINA syscalls"
-       default n
-       depends on RINA_DEBUG
-       help
-         no help for the time being
+        bool "Debug RINA syscalls"
+        default n
+        help
+          no help for the time being
 
 config RINA_KIPCM_LOCKS_DEBUG
 	bool "K-IPC Manager locks debugging"
 	default n
-        depends on RINA_DEBUG
-	help
-	  No help for the time being
-
-config RINA_UNFILTERED_LOGS
-	bool "Unfiltered logging"
-	default y
-	depends on RINA_DEBUG
 	help
 	  No help for the time being
 
 config RINA_DEBUG_HEARTBEATS
 	bool "Dump heartbeat messages"
 	default y
-	depends on RINA_DEBUG
-	help
-	  No help for the time being
-
-config RINA_REGRESSION_TESTS
-	bool "Regression tests"
-	default n
 	help
 	  No help for the time being
 
@@ -62,7 +44,22 @@ config RINA_ASSERTIONS
 	default y
 	help
 	  No help for the time being
+
+config RINA_SUPPRESS_DEBUG_LOGS
+	bool "Remove code related to debugging logs"
+	default n
+	help
+	  No help for the time being
+
+config RINA_REGRESSION_TESTS
+	bool "Enable regression testing suites"
+	default n
+	help
+	  No help for the time being
+
 endif
+
+menu "Core"
 
 source "net/rina/rds/Kconfig"
 
@@ -74,14 +71,14 @@ config RINA_PERSONALITY_DEFAULT
 
 endmenu
 
-source "net/rina/rinarp/Kconfig"
-
 menuconfig IPC_PROCESSES
 	bool "IPC Processes"
         default y
 
 if IPC_PROCESSES
 source "net/rina/ipcps/Kconfig"
+source "net/rina/rinarp/Kconfig"
+source "net/rina/vmpi/Kconfig"
 endif
 
 endif

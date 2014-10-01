@@ -1,9 +1,9 @@
 /*
- *  Shim IPC Process over Ethernet (using VLANs)
+ * Shim IPC Process over Ethernet (using VLANs)
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
- *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *   Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *   Sander Vrijders       <sander.vrijders@intec.ugent.be>
+ *   Miquel Tarzan         <miquel.tarzan@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,10 +29,10 @@
 #include <linux/if_packet.h>
 #include <linux/workqueue.h>
 
-#define PROTO_LEN   32
 #define SHIM_NAME   "shim-eth-vlan"
 
 #define RINA_PREFIX SHIM_NAME
+#define PROTO_LEN   32
 
 #include "logs.h"
 #include "common.h"
@@ -64,8 +64,8 @@ extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
 struct eth_vlan_info {
-        uint16_t     vlan_id;
-        char *       interface_name;
+        uint16_t vlan_id;
+        char *   interface_name;
 };
 
 enum port_id_state {
@@ -296,7 +296,7 @@ static string_t * create_vlan_interface_name(string_t * interface_name,
 }
 
 static int flow_destroy(struct ipcp_instance_data * data,
-                        struct shim_eth_flow *     flow)
+                        struct shim_eth_flow *      flow)
 {
         if (!data || !flow) {
                 LOG_ERR("Couldn't destroy flow.");
@@ -869,7 +869,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         return -1;
                 }
 
-                if (kfa_flow_create(data->kfa, data->id, flow->port_id)){
+                if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
                         LOG_DBG("Could not create flow in KFA");
                         flow->port_id_state = PORT_STATE_NULL;
                         kfa_port_id_release(data->kfa, flow->port_id);
@@ -1020,12 +1020,11 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 if (num_frames >= CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT)
                         return;
 #endif
-
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
 
-        LOG_DBG("Worker finished for now, processed %d frames", num_frames);
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
+        LOG_DBG("Worker finished for now, processed %d frames", num_frames);
 }
 
 static int eth_vlan_rcv(struct sk_buff *     skb,
@@ -1118,8 +1117,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 if (!strcmp(entry->name, "interface-name")) {
                         ASSERT(entry->value);
 
-                        info->interface_name =
-                                rkstrdup(entry->value, GFP_KERNEL);
+                        info->interface_name = rkstrdup_ni(entry->value);
                         if (!info->interface_name) {
                                 LOG_ERR("Cannot copy interface name");
                                 name_destroy(data->dif_name);
@@ -1128,6 +1126,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                         }
                 } else
                         LOG_WARN("Unknown config param for eth shim");
+        }
+
+        /* Fail here if we didn't get an interface */
+        if (!info->interface_name) {
+                LOG_ERR("Didn't get an interface name");
+                name_destroy(data->dif_name);
+                data->dif_name = NULL;
+                return -1;
         }
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
