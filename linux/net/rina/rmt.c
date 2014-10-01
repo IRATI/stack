@@ -230,6 +230,23 @@ static const char * create_name(const char *       prefix,
         return name;
 }
 
+int rmt_select_policy_set(struct rmt * rmt,
+                          const char * name)
+{
+        rmt->ps_factory = (struct rmt_ps_factory *)
+                          ps_lookup(&policy_sets, DEFAULT_NAME);
+        if (rmt->ps_factory) {
+                /* Instantiate a policy set. */
+                rmt->ps = rmt->ps_factory->create(rmt);
+                if (rmt->ps) {
+                        return 0;
+                }
+        }
+
+        return -1;
+}
+EXPORT_SYMBOL(rmt_select_policy_set);
+
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
@@ -300,12 +317,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
 
         /* Try to select the default policy set factory. */
         tmp->ps = NULL;
-        tmp->ps_factory = (struct rmt_ps_factory *)
-                          ps_lookup(&policy_sets, DEFAULT_NAME);
-        if (tmp->ps_factory) {
-                /* Instantiate a policy set. */
-                tmp->ps = tmp->ps_factory->create(tmp);
-        }
+        rmt_select_policy_set(tmp, DEFAULT_NAME);
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
