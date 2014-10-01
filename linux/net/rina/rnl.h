@@ -150,7 +150,13 @@ typedef enum {
         /* 36 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_DESTROY_RESULT,
 
-        /* 37 */
+        /* 37 IPC Process (user space) -> KIPCM */
+        RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST,
+
+        /* 38 KIPCM -> IPC Process (user space) */
+        RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE,
+
+        /* 39 */
         RINA_C_MAX,
 } msg_type_t;
 
