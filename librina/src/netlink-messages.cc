@@ -313,6 +313,12 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION:
 		result = "52_NEIGHBORS_MODIFIED_NOTIFICATION";
 		break;
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST:
+		result = "53_SET_POLICY_SET_PARAM_REQUEST";
+		break;
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
+		result = "54_SET_POLICY_SET_RESPONSE";
+		break;
 	default:
 		result = "Unknown operation";
 	}
@@ -1555,6 +1561,28 @@ IPCEvent* IpcmDIFQueryRIBResponseMessage::toIPCEvent(){
                         ribObjects, getResult(),
                         getSequenceNumber());
         return event;
+}
+
+/* CLASS SET POLICY SET PARAM REQUEST MESSAGE */
+IpcmSetPolicySetParamRequestMessage::IpcmSetPolicySetParamRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST) {
+}
+
+IPCEvent* IpcmSetPolicySetParamRequestMessage::toIPCEvent(){
+	IPCEvent * event = new SetPolicySetParamRequestEvent(path, name,
+			                        value, getSequenceNumber());
+	return event;
+}
+
+/* CLASS SET POLICY SET PARAM RESPONSE MESSAGE */
+IpcmSetPolicySetParamResponseMessage::IpcmSetPolicySetParamResponseMessage():
+                BaseNetlinkResponseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE) {
+}
+
+IPCEvent* IpcmSetPolicySetParamResponseMessage::toIPCEvent(){
+	IPCEvent * event = new SetPolicySetParamResponseEvent(result,
+			                        getSequenceNumber());
+	return event;
 }
 
 /* CLASS IPCM SOCKET CLOSED NOTIFICATION MESSAGE */

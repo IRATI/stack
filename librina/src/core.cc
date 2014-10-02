@@ -343,6 +343,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
 	        if(send){
 	        }else{

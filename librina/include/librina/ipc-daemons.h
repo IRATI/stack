@@ -179,6 +179,21 @@ public:
 };
 
 /**
+ * Thrown when there are problems while modifying a policy-set-related
+ * parameter of an IPC Process
+ */
+class SetPolicySetParamException: public IPCException {
+public:
+	SetPolicySetParamException():
+		IPCException("Problems while modifying a policy-set related "
+                                "parameter of an IPC Process"){
+	}
+	SetPolicySetParamException(const std::string& description):
+		IPCException(description){
+	}
+};
+
+/**
  * Event informing about the result of an assign to DIF operation
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {

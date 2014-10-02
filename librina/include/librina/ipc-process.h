@@ -163,6 +163,38 @@ public:
 };
 
 /**
+ * The IPC Manager accesses a policy-set-related parameter
+ * of an IPC process
+ */
+class SetPolicySetParamRequestEvent: public IPCEvent {
+public:
+        /** The path of the sybcomponent/policy-set to be addressed */
+	std::string path;
+
+	/** The name of the parameter being accessed */
+	std::string name;
+
+	/** The value to assign to the parameter */
+	std::string value;
+
+	SetPolicySetParamRequestEvent(const std::string& path,
+                        const std::string& name, const std::string& value,
+			unsigned int sequenceNumber);
+};
+
+/**
+ * An IPC process reports the result of the access of a policy-set-related
+ * parameter
+ */
+class SetPolicySetParamResponseEvent: public IPCEvent {
+public:
+        int result;
+
+	SetPolicySetParamResponseEvent(int result,
+                                       unsigned int sequenceNumber);
+};
+
+/**
  * The Kernel components of the IPC Process report about the result of a
  * create EFCP connection operation
  */
@@ -668,6 +700,17 @@ public:
 	 * @throws PortAllocationException if something goes wrong
 	 */
 	void deallocatePortId(int portId);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a
+         * setPolicySetParam operation
+	 * @param event the event that trigered the operation
+	 * @param result the result of the operation (0 successful)
+	 * @throws SetPolicySetParamException
+	 */
+	void setPolicySetParamResponse(
+                const SetPolicySetParamRequestEvent& event, int result);
+
 };
 
 /**
@@ -901,6 +944,20 @@ public:
          * @throws PDUForwardingTabeException if something goes wrong
          */
         unsigned int dumptPDUFT();
+
+        /**
+         * Request the Kernel IPC Process to modify a policy-set-related
+         * parameter.
+         * @param path The identificator of the component/policy-set to
+         *             be addressed
+         * @param name The name of the parameter to be modified
+         * @param value The value to set the parameter to
+         * @return a handle to the response event
+         * @throws SetPolicySetParamException if something goes wrong
+         */
+        unsigned int setPolicySetParam(const std::string& path,
+                                       const std::string& name,
+                                       const std::string& value);
 
         /**
          * Requests the kernel to write a management SDU to the

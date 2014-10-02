@@ -84,6 +84,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 50 Application -> IPC Manager */
 	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 51 IPC Manager -> Application */
 	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* 52 IPC Process -> IPC Manager */
+        RINA_C_IPCM_SET_POLICY_SET_PARAM_REQUEST, /* 53, IPC Manager -> IPC Process */
+        RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE, /* 54, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -1014,6 +1016,42 @@ public:
 	void setRIBObjects(const std::list<RIBObjectData>& ribObjects);
 	void addRIBObject(const RIBObjectData& ribObject);
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to ask an IPC process to modify a
+ * policy-set-specific parameter or a parametric policy
+ * IPC Manager -> IPC Process
+ */
+class IpcmSetPolicySetParamRequestMessage:
+		public BaseNetlinkMessage {
+public:
+        /** The path of the sybcomponent/policy-set to be addressed */
+	std::string path;
+
+	/** The name of the parameter being accessed */
+	std::string name;
+
+	/** The value to assign to the parameter */
+	std::string value;
+
+	IpcmSetPolicySetParamRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of a set-policy-set-param
+ * request operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmSetPolicySetParamResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+        /** The result of the operation */
+        int result;
+
+        IpcmSetPolicySetParamResponseMessage();
+        IPCEvent* toIPCEvent();
 };
 
 /**

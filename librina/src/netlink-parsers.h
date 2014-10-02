@@ -1335,7 +1335,39 @@ int putRmtDumpPDUFTEntriesResponseObject(nl_msg* netlinkMessage,
 RmtDumpPDUFTEntriesResponseMessage * parseRmtDumpPDUFTEntriesResponseMessage(
                 nlmsghdr *hdr);
 
+/* IpcmSetPolicySetParamRequestMessage CLASS*/
+enum IpcmSetPolicySetParamRequestMessageAttributes {
+	ISPSPR_ATTR_PATH = 1,
+	ISPSPR_ATTR_NAME,
+	ISPSPR_ATTR_VALUE,
+	__ISPSPR_ATTR_MAX,
+};
+
+#define ISPSPR_ATTR_MAX (__ISPSPR_ATTR_MAX -1)
+
+int putIpcmSetPolicySetParamRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmSetPolicySetParamRequestMessage& object);
+
+IpcmSetPolicySetParamRequestMessage * parseIpcmSetPolicySetParamRequestMessage(
+		nlmsghdr *hdr);
+
+
+/* IpcmSetPolicySetParamResponseMessage CLASS*/
+enum IpcmSetPolicySetParamResponseMessageAttributes {
+	ISPSPRE_ATTR_RESULT = 1,
+	__ISPSPRE_ATTR_MAX,
+};
+
+#define ISPSPRE_ATTR_MAX (__ISPSPRE_ATTR_MAX -1)
+
+int putIpcmSetPolicySetParamResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmSetPolicySetParamResponseMessage& object);
+
+IpcmSetPolicySetParamResponseMessage *parseIpcmSetPolicySetParamResponseMessage(
+		nlmsghdr *hdr);
+
 }
+
 
 #endif
 
