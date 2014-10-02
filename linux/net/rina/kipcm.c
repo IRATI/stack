@@ -1389,6 +1389,75 @@ out:
         return 0;
 }
 
+static int notify_ipcp_select_policy_set(void *             data,
+                                         struct sk_buff *   buff,
+                                         struct genl_info * info)
+{
+        struct kipcm *                                    kipcm = data;
+        struct rnl_ipcp_select_policy_set_req_msg_attrs * attrs;
+        struct rnl_msg *                                  msg;
+        struct ipcp_instance *                            ipc_process;
+        ipc_process_id_t                                  ipc_id = 0;
+        int retval = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        ipc_id      = msg->header.dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                retval = -1;
+                goto out;
+        }
+        LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+        ASSERT(ipc_process->ops);
+#if 0
+        ASSERT(ipc_process->ops->assign_to_dif);
+
+        if (ipc_process->ops->assign_to_dif(ipc_process->data,
+                                            attrs->dif_info)) {
+                char * tmp = name_tostring(attrs->dif_info->dif_name);
+                LOG_ERR("Assign to dif %s operation failed for IPC process %d",
+                        tmp, ipc_id);
+                rkfree(tmp);
+
+                retval = -1;
+        } else {
+                LOG_DBG("Select-policy-set seems ok, gonna complete it");
+        }
+#endif
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_select_policy_set_response(ipc_id, retval, info->snd_seq,
+                                           info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
@@ -1438,8 +1507,10 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_modify_pfte;
         kipcm_handlers[RINA_C_RMT_DUMP_FT_REQUEST]                 =
                 notify_ipcp_dump_pft;
-        kipcm_handlers[RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST]     =
+        kipcm_handlers[RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST]   =
                 notify_ipcp_set_policy_set_param;
+        kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
+                notify_ipcp_select_policy_set;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
