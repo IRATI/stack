@@ -63,11 +63,11 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
-/* FIXME: Rename: Is actually socket related things for the flow */
-struct app_data {
+/* data for registrated applications */
+struct reg_app_data {
         struct list_head list;
 
-        struct socket *  lsock;
+        struct socket *  tcpsock;
         struct socket *  udpsock;
 
         struct name *    app_name;
@@ -113,8 +113,8 @@ struct ipcp_instance_data {
         struct list_head    flows;
 
         spinlock_t          app_lock;
-        /* Holds app_data, e.g. socket related things */
-        struct list_head    apps;
+        /* Holds reg_app_data, e.g. the registrated applications */
+        struct list_head    reg_apps;
 
         spinlock_t          dir_lock;
         struct list_head    directory;
@@ -264,11 +264,11 @@ find_udp_flow(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static struct app_data *
+static struct reg_app_data *
 find_app_by_socket(struct ipcp_instance_data * data,
                    const struct socket *       sock)
 {
-        struct app_data * app;
+        struct reg_app_data * app;
 
         ASSERT(data);
         ASSERT(sock);
@@ -276,13 +276,13 @@ find_app_by_socket(struct ipcp_instance_data * data,
         spin_lock(&data->flow_lock);
 
         if (sock->type == SOCK_DGRAM) {
-                list_for_each_entry(app, &data->apps, list) {
+                list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->udpsock == sock)
                                 return app;
                 }
         } else {
-                list_for_each_entry(app, &data->apps, list) {
-                        if (app->lsock == sock)
+                list_for_each_entry(app, &data->reg_apps, list) {
+                        if (app->tcpsock == sock)
                                 return app;
                 }
         }
@@ -292,17 +292,17 @@ find_app_by_socket(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static struct app_data * find_app_by_name(struct ipcp_instance_data * data,
+static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
                                           const struct name *         name)
 {
-        struct app_data * app;
+        struct reg_app_data * app;
 
         ASSERT(data);
         ASSERT(name);
 
         spin_lock(&data->app_lock);
 
-        list_for_each_entry(app, &data->apps, list) {
+        list_for_each_entry(app, &data->reg_apps, list) {
                 if (name_is_equal(app->app_name, name))
                         return app;
         }
@@ -380,7 +380,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                               port_id_t                   id)
 {
         struct shim_tcp_udp_flow * flow;
-        struct app_data *          app;
+        struct reg_app_data *          app;
         struct dir_entry *         entry;
         int                        err;
 
@@ -442,10 +442,6 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                                IPPROTO_TCP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("could not create tcp socket");
-                                /*
-                                 * FIXME: Is the flow already created in the
-                                 *        KFA?
-                                 */
                                 deallocate_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -669,11 +665,11 @@ static int udp_process_msg(struct socket * sock)
         struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
         struct sockaddr_in          addr;
-        struct app_data *           app;
+        struct reg_app_data *           app;
         struct buffer *             sdubuf;
         struct name *               sname;
         struct sdu *                du;
-        char                        buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
+        char *                      buf; /* FIXME: Remove ASAP! */
         int                         size;
 
         /*
@@ -684,18 +680,24 @@ static int udp_process_msg(struct socket * sock)
 
         LOG_DBG("udp_process_msg");
 
+	buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
+
         memset(&addr, 0, sizeof(struct sockaddr_in));
         if ((size = recv_msg(sock, &addr, sizeof(addr),
                              buf, BUFFER_SIZE)) < 0) {
                 LOG_ERR("error during udp recv");
+		rkfree(buf);
                 return -1;
         }
 
         sdubuf = buffer_create_from(buf, size);
         if (!sdubuf) {
                 LOG_ERR("could not create buffer");
+		rkfree(buf);
                 return -1;
         }
+
+	rkfree(buf);
 
         du = sdu_create_buffer_with_ni(sdubuf);
         if (!du) {
@@ -850,7 +852,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 {
         struct buffer * sdubuf;
         struct sdu *    du;
-        char            buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
+        char *          buf; /* FIXME: Remove ASAP! */
         int             size;
         __be16          nlen;
 
@@ -860,12 +862,17 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
          */
         BUILD_BUG_ON((BUFFER_SIZE > 512));
 
+	buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
+
         size = recv_msg(sock, NULL, 0, buf, 2);
-        if (!size)
+        if (!size) {
+		rkfree(buf);
                 return 0;
+	}
 
         if (size != 2) {
                 LOG_ERR("could not read size: %d", size);
+		rkfree(buf);
                 return -1;
         }
 
@@ -877,6 +884,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         size = recv_msg(sock, NULL, 0, buf, flow->bytes_left);
         if (size <= 0) {
                 LOG_ERR("Error during tcp receive: %d", size);
+		rkfree(buf);
                 return size;
         }
 
@@ -885,8 +893,11 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 sdubuf = buffer_create_from(buf, size);
                 if (!sdubuf) {
                         LOG_ERR("Could not create buffer");
+			rkfree(buf);
                         return -1;
                 }
+
+		rkfree(buf);
 
                 du = sdu_create_buffer_with_ni(sdubuf);
                 if (!du) {
@@ -931,6 +942,8 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 flow->bytes_left = flow->bytes_left - size;
 
                 memcpy(&flow->buf[0], &buf[0], size);
+
+		rkfree(buf);
 
                 return -1;
         }
@@ -1038,7 +1051,7 @@ static int tcp_process(struct socket * sock)
 {
         struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
-        struct app_data *           app;
+        struct reg_app_data *           app;
         struct socket *             acsock;
         struct name *               sname;
         int                         err;
@@ -1059,7 +1072,7 @@ static int tcp_process(struct socket * sock)
                 return err;
         } else {
                 //accept connection
-                err = kernel_accept(app->lsock, &acsock, O_NONBLOCK);
+                err = kernel_accept(app->tcpsock, &acsock, O_NONBLOCK);
                 if (err < 0) {
                         LOG_ERR("could not accept socket");
                         return -1;
@@ -1219,7 +1232,7 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                         const struct name *         name)
 {
-        struct app_data *          app;
+        struct reg_app_data *      app;
         struct sockaddr_in         sin;
         struct exp_reg *           exp_reg;
         int                        err;
@@ -1234,7 +1247,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        app = rkzalloc(sizeof(struct app_data), GFP_KERNEL);
+        app = rkzalloc(sizeof(struct reg_app_data), GFP_KERNEL);
         if (!app) {
                 LOG_ERR("Could not allocate mem for application data");
                 return -1;
@@ -1286,7 +1299,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
-        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &app->lsock);
+        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &app->tcpsock);
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");
                 sock_release(app->udpsock);
@@ -1295,37 +1308,37 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        err = kernel_bind(app->lsock, (struct sockaddr*) &sin, sizeof(sin));
+        err = kernel_bind(app->tcpsock, (struct sockaddr*) &sin, sizeof(sin));
         if (err < 0) {
                 LOG_ERR("Could not bind TCP socket for registration");
-                sock_release(app->lsock);
+                sock_release(app->tcpsock);
                 sock_release(app->udpsock);
                 name_destroy(app->app_name);
                 rkfree(app);
                 return -1;
         }
 
-        err = kernel_listen(app->lsock, 5);
+        err = kernel_listen(app->tcpsock, 5);
         if (err < 0) {
                 LOG_ERR("Could not listen on TCP socket for registration");
-                sock_release(app->lsock);
+                sock_release(app->tcpsock);
                 sock_release(app->udpsock);
                 name_destroy(app->app_name);
                 rkfree(app);
                 return -1;
         }
 
-        write_lock_bh(&app->lsock->sk->sk_callback_lock);
-        app->lsock->sk->sk_user_data = app->lsock->sk->sk_data_ready;
-        app->lsock->sk->sk_data_ready = tcp_udp_rcv;
-        write_unlock_bh(&app->lsock->sk->sk_callback_lock);
+        write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
+        app->tcpsock->sk->sk_user_data = app->tcpsock->sk->sk_data_ready;
+        app->tcpsock->sk->sk_data_ready = tcp_udp_rcv;
+        write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
 
         LOG_DBG("TCP socket ready");
 
         INIT_LIST_HEAD(&(app->list));
 
         spin_lock(&data->app_lock);
-        list_add(&(app->list), &(data->apps));
+        list_add(&(app->list), &(data->reg_apps));
         spin_unlock(&data->app_lock);
 
         return 0;
@@ -1334,7 +1347,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
                                           const struct name *         name)
 {
-        struct app_data * app;
+        struct reg_app_data * app;
 
         LOG_HBEAT;
 
@@ -1358,15 +1371,15 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket destroyed");
 
-        lock_sock(app->lsock->sk);
-        write_lock_bh(&app->lsock->sk->sk_callback_lock);
-        app->lsock->sk->sk_data_ready = app->lsock->sk->sk_user_data;
-        app->lsock->sk->sk_user_data = NULL;
-        write_unlock_bh(&app->lsock->sk->sk_callback_lock);
-        release_sock(app->lsock->sk);
+        lock_sock(app->tcpsock->sk);
+        write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
+        app->tcpsock->sk->sk_data_ready = app->tcpsock->sk->sk_user_data;
+        app->tcpsock->sk->sk_user_data = NULL;
+        write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
+        release_sock(app->tcpsock->sk);
 
-        kernel_sock_shutdown(app->lsock, SHUT_RDWR);
-        sock_release(app->lsock);
+        kernel_sock_shutdown(app->tcpsock, SHUT_RDWR);
+        sock_release(app->tcpsock);
 
         LOG_DBG("TCP socket destroyed");
 
@@ -2089,7 +2102,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         spin_lock_init(&inst->data->exp_lock);
 
         INIT_LIST_HEAD(&(inst->data->flows));
-        INIT_LIST_HEAD(&(inst->data->apps));
+        INIT_LIST_HEAD(&(inst->data->reg_apps));
         INIT_LIST_HEAD(&(inst->data->directory));
         INIT_LIST_HEAD(&(inst->data->exp_regs));
 
