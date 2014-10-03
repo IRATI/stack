@@ -135,7 +135,7 @@ ssize_t rfifo_length(struct rfifo * f)
 {
         if (!f) {
                 LOG_ERR("Can't get size of a NULL fifo");
-                return NULL;
+                return -1;
         }
 
         return rqueue_length(f->q);
