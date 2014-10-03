@@ -799,6 +799,8 @@ update_dif_config_response_event_handler(rina::IPCEvent *e,
         }
 
         ipcm->pending_dif_config_updates.erase(mit);
+
+        ipcm->concurrency.set_event_result(event->result);
 }
 
 static void
