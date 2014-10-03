@@ -124,7 +124,7 @@ int wrapped_main(int argc, char** argv)
                                              "gap",
                                              "Gap of the retransmission window",
                                              false,
-                                             1,
+                                             -1,
                                              "integer");
 
                 cmd.add(listen_arg);
