@@ -164,15 +164,6 @@ SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
         this->value = value;
 }
 
-/* CLASS SET POLICY SET PARAM RESPONSE EVENT */
-SetPolicySetParamResponseEvent::SetPolicySetParamResponseEvent(
-                int result, unsigned int sequenceNumber) :
-			IPCEvent(IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
-                                         sequenceNumber)
-{
-        this->result = result;
-}
-
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
         int cepId, unsigned int sequenceNumber):

@@ -183,18 +183,6 @@ public:
 };
 
 /**
- * An IPC process reports the result of the access of a policy-set-related
- * parameter
- */
-class SetPolicySetParamResponseEvent: public IPCEvent {
-public:
-        int result;
-
-	SetPolicySetParamResponseEvent(int result,
-                                       unsigned int sequenceNumber);
-};
-
-/**
  * The Kernel components of the IPC Process report about the result of a
  * create EFCP connection operation
  */

@@ -228,5 +228,12 @@ AssignToDIFResponseEvent::AssignToDIFResponseEvent(
                                         sequenceNumber) {
 }
 
+/* CLASS SET POLICY SET PARAM RESPONSE EVENT */
+SetPolicySetParamResponseEvent::SetPolicySetParamResponseEvent(
+                int result, unsigned int sequenceNumber) :
+			IPCEvent(IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
+                                         sequenceNumber)
+{ this->result = result; }
+
 }
 

@@ -202,6 +202,18 @@ public:
                         int result, unsigned int sequenceNumber);
 };
 
+/**
+ * An IPC process reports the result of the access of a policy-set-related
+ * parameter
+ */
+class SetPolicySetParamResponseEvent: public IPCEvent {
+public:
+        int result;
+
+	SetPolicySetParamResponseEvent(int result,
+                                       unsigned int sequenceNumber);
+};
+
 }
 
 #endif

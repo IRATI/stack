@@ -989,7 +989,6 @@ public:
         TimerExpiredEvent(unsigned int sequenceNumber);
 };
 
-
 }
 
 #endif
