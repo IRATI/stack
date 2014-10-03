@@ -48,6 +48,10 @@ public:
 	void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
 	void requestPDUFTEDump();
 	void logPDUFTE(const rina::DumpFTResponseEvent& event);
+        void processSetPolicySetParamRequestEvent(
+                const rina::SetPolicySetParamRequestEvent& event);
+        void processSetPolicySetParamResponseEvent(
+                const rina::SetPolicySetParamResponseEvent& event);
 
 private:
 	void init_cdap_session_manager();
@@ -55,6 +59,8 @@ private:
 
 	IPCProcessOperationalState state;
 	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
+        std::map<unsigned int, rina::SetPolicySetParamRequestEvent>
+                pending_set_policy_set_param_events;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
 };

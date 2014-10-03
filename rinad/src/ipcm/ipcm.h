@@ -183,6 +183,9 @@ class IPCManager : public EventLoopData {
                           >
                 > pending_flow_deallocations;
 
+        std::map<unsigned int,
+                 rina::IPCProcess *> pending_set_policy_set_param_ops;
+
         IPCMConcurrency concurrency;
 
  private:

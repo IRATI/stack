@@ -720,14 +720,37 @@ IPCManager::set_policy_set_param(rina::IPCProcess *ipcp,
                                  const std::string& param_value)
 {
         ostringstream ss;
+        unsigned int seqnum;
+        bool arrived = false;
+        int ret = -1;
 
-        LOGF_ERR("Not implemented yet");
-        (void)ipcp;
-        (void)component_path;
-        (void)param_name;
-        (void)param_value;
+        concurrency.lock();
 
-        return -1;
+        try {
+                seqnum = ipcp->setPolicySetParam(component_path,
+                                                 param_name, param_value);
+
+                pending_set_policy_set_param_ops[seqnum] = ipcp;
+                ss << "Issued set-policy-set-param to IPC process " <<
+                        ipcp->name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
+                                seqnum, ret);
+        } catch (rina::SetPolicySetParamException) {
+                ss << "Error while issuing set-policy-set-param request "
+                        "to IPC Process " << ipcp->name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        return ret;
 }
 
 static void
@@ -1093,6 +1116,34 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_set_policy_set_param_response_handler(rina::IPCEvent *e,
+                                                  EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        bool success = (event->result == 0);
+        ostringstream ss;
+        int ret = -1;
+
+        mit = ipcm->pending_set_policy_set_param_ops.find(event->sequenceNumber);
+        if (mit != ipcm->pending_set_policy_set_param_ops.end()) {
+                ipcm->pending_set_policy_set_param_ops.erase(mit);
+                ss << "set-policy-set-param-op completed on IPC process "
+                       << mit->second->name.toString() <<
+                        " [success=" << success << "]" << endl;
+                FLUSH_LOG(INFO, ss);
+                ret = 0;
+        } else {
+                ss << "Warning: unmatched event received" << endl;
+                FLUSH_LOG(WARN, ss);
+        }
+
+        ipcm->concurrency.set_event_result(ret);
+}
+
+
+static void
 timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {
         (void) event; // Stop compiler barfs
@@ -1213,6 +1264,8 @@ register_handlers_all(EventLoop& loop)
                         ipc_process_destroy_connection_result_handler);
         loop.register_event(rina::IPC_PROCESS_DUMP_FT_RESPONSE,
                         ipc_process_dump_ft_response_handler);
+        loop.register_event(rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
+                        ipc_process_set_policy_set_param_response_handler);
 }
 
 }
