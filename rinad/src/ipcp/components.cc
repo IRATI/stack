@@ -20,6 +20,7 @@
 //
 
 #include <sstream>
+#include <iostream>
 
 #include "components.h"
 
@@ -55,12 +56,14 @@ Flow::Flow() {
 
 Flow::~Flow() {
 	std::list<rina::Connection*>::iterator iterator;
-
 	for (iterator = connections.begin(); iterator != connections.end();
 			++iterator) {
-		delete *iterator;
-		*iterator = 0;
+		if (*iterator) {
+			delete *iterator;
+			*iterator = 0;
+		}
 	}
+	connections.clear();
 }
 
 rina::Connection * Flow::getActiveConnection() {
