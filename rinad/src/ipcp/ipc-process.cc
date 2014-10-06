@@ -352,7 +352,7 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 	it = pending_set_policy_set_param_events.find(event.sequenceNumber);
 	if (it == pending_set_policy_set_param_events.end()) {
-		LOG_ERR("Couldn't find a set-policy-set request event "
+		LOG_ERR("Couldn't find a set-policy-set-param request event "
                         "associated to the handle %u", event.sequenceNumber);
 		return;
 	}
@@ -378,6 +378,63 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 
 	try {
 		rina::extendedIPCManager->setPolicySetParamResponse(requestEvent, 0);
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void IPCProcessImpl::processSelectPolicySetRequestEvent(
+                        const rina::SelectPolicySetRequestEvent& event) {
+	rina::AccessGuard g(*lock_);
+
+	try {
+		unsigned int handle =
+                        rina::kernelIPCProcess->selectPolicySet(event.path,
+                                                                event.name);
+		pending_select_policy_set_events.insert(
+                        std::pair<unsigned int,
+			rina::SelectPolicySetRequestEvent>(handle, event));
+	} catch (Exception &e) {
+		LOG_ERR("Problems sending select-policy-set request "
+                        "to the kernel: %s", e.what());
+		rina::extendedIPCManager->selectPolicySetResponse(event, -1);
+	}
+}
+
+void IPCProcessImpl::processSelectPolicySetResponseEvent(
+                        const rina::SelectPolicySetResponseEvent& event) {
+	rina::AccessGuard g(*lock_);
+	std::map<unsigned int,
+                 rina::SelectPolicySetRequestEvent>::iterator it;
+
+	it = pending_select_policy_set_events.find(event.sequenceNumber);
+	if (it == pending_select_policy_set_events.end()) {
+		LOG_ERR("Couldn't find a select-policy-set request event "
+                        "associated to the handle %u", event.sequenceNumber);
+		return;
+	}
+
+	rina::SelectPolicySetRequestEvent requestEvent = it->second;
+
+	pending_select_policy_set_events.erase(it);
+	if (event.result != 0) {
+		LOG_ERR("The kernel couldn't successfully process the "
+                        "select-policy-set Request: %d", event.result);
+
+		try {
+			rina::extendedIPCManager->selectPolicySetResponse(it->second, -1);
+		} catch (Exception &e) {
+			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_DBG("The kernel processed successfully the "
+                "set-policy-set-param request");
+
+	try {
+		rina::extendedIPCManager->selectPolicySetResponse(requestEvent, 0);
 	} catch (Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
@@ -602,6 +659,28 @@ ipc_process_set_policy_set_param_response_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_select_policy_set_handler(rina::IPCEvent *e,
+		                      EventLoopData *opaque)
+
+{
+	DOWNCAST_DECL(e, rina::SelectPolicySetRequestEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->processSelectPolicySetRequestEvent(*event);
+}
+
+static void
+ipc_process_select_policy_set_response_handler(rina::IPCEvent *e,
+		                               EventLoopData *opaque)
+
+{
+	DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->processSelectPolicySetResponseEvent(*event);
+}
+
+static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
@@ -651,6 +730,10 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_set_policy_set_param_handler);
         loop.register_event(rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
                         ipc_process_set_policy_set_param_response_handler);
+        loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET,
+                        ipc_process_select_policy_set_handler);
+        loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
+                        ipc_process_select_policy_set_response_handler);
 
 	//Unsupported events
 	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,

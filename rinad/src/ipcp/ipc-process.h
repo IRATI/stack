@@ -52,6 +52,10 @@ public:
                 const rina::SetPolicySetParamRequestEvent& event);
         void processSetPolicySetParamResponseEvent(
                 const rina::SetPolicySetParamResponseEvent& event);
+        void processSelectPolicySetRequestEvent(
+                const rina::SelectPolicySetRequestEvent& event);
+        void processSelectPolicySetResponseEvent(
+                const rina::SelectPolicySetResponseEvent& event);
 
 private:
 	void init_cdap_session_manager();
@@ -61,6 +65,8 @@ private:
 	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
         std::map<unsigned int, rina::SetPolicySetParamRequestEvent>
                 pending_set_policy_set_param_events;
+        std::map<unsigned int, rina::SelectPolicySetRequestEvent>
+                pending_select_policy_set_events;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
 };

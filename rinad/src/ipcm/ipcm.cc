@@ -699,21 +699,6 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
 }
 
 int
-IPCManager::select_policy_set(rina::IPCProcess *ipcp,
-                              const std::string& component_path,
-                              const std::string& policy_set)
-{
-        ostringstream ss;
-
-        LOGF_ERR("Not implemented yet");
-        (void)ipcp;
-        (void)component_path;
-        (void)policy_set;
-
-        return -1;
-}
-
-int
 IPCManager::set_policy_set_param(rina::IPCProcess *ipcp,
                                  const std::string& component_path,
                                  const std::string& param_name,
@@ -739,6 +724,44 @@ IPCManager::set_policy_set_param(rina::IPCProcess *ipcp,
                                 seqnum, ret);
         } catch (rina::SetPolicySetParamException) {
                 ss << "Error while issuing set-policy-set-param request "
+                        "to IPC Process " << ipcp->name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        return ret;
+}
+
+int
+IPCManager::select_policy_set(rina::IPCProcess *ipcp,
+                              const std::string& component_path,
+                              const std::string& ps_name)
+{
+        ostringstream ss;
+        unsigned int seqnum;
+        bool arrived = false;
+        int ret = -1;
+
+        concurrency.lock();
+
+        try {
+                seqnum = ipcp->selectPolicySet(component_path, ps_name);
+
+                pending_select_policy_set_ops[seqnum] = ipcp;
+                ss << "Issued select-policy-set to IPC process " <<
+                        ipcp->name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
+                                seqnum, ret);
+        } catch (rina::SelectPolicySetException) {
+                ss << "Error while issuing select-policy-set request "
                         "to IPC Process " << ipcp->name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
@@ -1142,6 +1165,32 @@ ipc_process_set_policy_set_param_response_handler(rina::IPCEvent *e,
         ipcm->concurrency.set_event_result(ret);
 }
 
+static void
+ipc_process_select_policy_set_response_handler(rina::IPCEvent *e,
+                                               EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        bool success = (event->result == 0);
+        ostringstream ss;
+        int ret = -1;
+
+        mit = ipcm->pending_select_policy_set_ops.find(event->sequenceNumber);
+        if (mit != ipcm->pending_select_policy_set_ops.end()) {
+                ipcm->pending_select_policy_set_ops.erase(mit);
+                ss << "select-policy-set-op completed on IPC process "
+                       << mit->second->name.toString() <<
+                        " [success=" << success << "]" << endl;
+                FLUSH_LOG(INFO, ss);
+                ret = 0;
+        } else {
+                ss << "Warning: unmatched event received" << endl;
+                FLUSH_LOG(WARN, ss);
+        }
+
+        ipcm->concurrency.set_event_result(ret);
+}
 
 static void
 timer_expired_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
@@ -1266,6 +1315,8 @@ register_handlers_all(EventLoop& loop)
                         ipc_process_dump_ft_response_handler);
         loop.register_event(rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
                         ipc_process_set_policy_set_param_response_handler);
+        loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
+                        ipc_process_select_policy_set_response_handler);
 }
 
 }
