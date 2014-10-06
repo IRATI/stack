@@ -2125,19 +2125,16 @@ rnl_parse_ipcp_set_policy_set_param_req_msg(
                 struct rnl_ipcp_set_policy_set_param_req_msg_attrs * msg_attrs)
 {
         if (info->attrs[ISPSP_ATTR_PATH])
-                nla_strlcpy(msg_attrs->path,
-                            info->attrs[ISPSP_ATTR_PATH],
-                            sizeof(info->attrs[ISPSP_ATTR_PATH]));
+                msg_attrs->path = nla_dup_string(info->attrs[ISPSP_ATTR_PATH],
+                                                 GFP_KERNEL);
 
         if (info->attrs[ISPSP_ATTR_NAME])
-                nla_strlcpy(msg_attrs->name,
-                            info->attrs[ISPSP_ATTR_NAME],
-                            sizeof(info->attrs[ISPSP_ATTR_NAME]));
+                msg_attrs->name = nla_dup_string(info->attrs[ISPSP_ATTR_NAME],
+                                                 GFP_KERNEL);
 
         if (info->attrs[ISPSP_ATTR_VALUE])
-                nla_strlcpy(msg_attrs->value,
-                            info->attrs[ISPSP_ATTR_VALUE],
-                            sizeof(info->attrs[ISPSP_ATTR_VALUE]));
+                msg_attrs->value = nla_dup_string(info->attrs[ISPSP_ATTR_VALUE],
+                                                  GFP_KERNEL);
 
         return 0;
 }
@@ -2148,14 +2145,12 @@ rnl_parse_ipcp_select_policy_set_req_msg(
                 struct rnl_ipcp_select_policy_set_req_msg_attrs * msg_attrs)
 {
         if (info->attrs[ISPS_ATTR_PATH])
-                nla_strlcpy(msg_attrs->path,
-                            info->attrs[ISPS_ATTR_PATH],
-                            sizeof(info->attrs[ISPS_ATTR_PATH]));
+                msg_attrs->path = nla_dup_string(info->attrs[ISPS_ATTR_PATH],
+                                                 GFP_KERNEL);
 
         if (info->attrs[ISPS_ATTR_NAME])
-                nla_strlcpy(msg_attrs->name,
-                            info->attrs[ISPS_ATTR_NAME],
-                            sizeof(info->attrs[ISPS_ATTR_NAME]));
+                msg_attrs->name = nla_dup_string(info->attrs[ISPS_ATTR_NAME],
+                                                 GFP_KERNEL);
 
         return 0;
 }

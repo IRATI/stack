@@ -1379,6 +1379,8 @@ static int notify_ipcp_set_policy_set_param(void *             data,
                 LOG_DBG("Set-policy-set-param seems ok, gonna complete it");
         }
 #endif
+        LOG_DBG("SET POLICY SET PARAM REQUEST %s %s %s\n",
+                attrs->path, attrs->name, attrs->value);
 out:
         rnl_msg_destroy(msg);
 
