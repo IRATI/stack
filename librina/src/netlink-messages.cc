@@ -1591,6 +1591,28 @@ IPCEvent* IpcmSetPolicySetParamResponseMessage::toIPCEvent(){
 	return event;
 }
 
+/* CLASS SELECT POLICY SET REQUEST MESSAGE */
+IpcmSelectPolicySetRequestMessage::IpcmSelectPolicySetRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_SELECT_POLICY_SET_REQUEST) {
+}
+
+IPCEvent* IpcmSelectPolicySetRequestMessage::toIPCEvent(){
+	IPCEvent * event = new SelectPolicySetRequestEvent(path, name,
+			                        getSequenceNumber());
+	return event;
+}
+
+/* CLASS SELECT POLICY SET RESPONSE MESSAGE */
+IpcmSelectPolicySetResponseMessage::IpcmSelectPolicySetResponseMessage():
+        BaseNetlinkResponseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE)
+{ }
+
+IPCEvent* IpcmSelectPolicySetResponseMessage::toIPCEvent(){
+	IPCEvent * event = new SelectPolicySetResponseEvent(result,
+			                        getSequenceNumber());
+	return event;
+}
+
 /* CLASS IPCM SOCKET CLOSED NOTIFICATION MESSAGE */
 IpcmNLSocketClosedNotificationMessage::IpcmNLSocketClosedNotificationMessage() :
                                 BaseNetlinkResponseMessage(

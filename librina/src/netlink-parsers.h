@@ -1366,8 +1366,38 @@ int putIpcmSetPolicySetParamResponseMessageObject(nl_msg* netlinkMessage,
 IpcmSetPolicySetParamResponseMessage *parseIpcmSetPolicySetParamResponseMessage(
 		nlmsghdr *hdr);
 
-}
+/* IpcmSelectPolicySetRequestMessage CLASS*/
+enum IpcmSelectPolicySetRequestMessageAttributes {
+	ISPSR_ATTR_PATH = 1,
+	ISPSR_ATTR_NAME,
+	ISPSR_ATTR_VALUE,
+	__ISPSR_ATTR_MAX,
+};
 
+#define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
+
+int putIpcmSelectPolicySetRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmSelectPolicySetRequestMessage& object);
+
+IpcmSelectPolicySetRequestMessage * parseIpcmSelectPolicySetRequestMessage(
+		nlmsghdr *hdr);
+
+
+/* IpcmSelectPolicySetResponseMessage CLASS*/
+enum IpcmSelectPolicySetResponseMessageAttributes {
+	ISPSRE_ATTR_RESULT = 1,
+	__ISPSRE_ATTR_MAX,
+};
+
+#define ISPSRE_ATTR_MAX (__ISPSRE_ATTR_MAX -1)
+
+int putIpcmSelectPolicySetResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmSelectPolicySetResponseMessage& object);
+
+IpcmSelectPolicySetResponseMessage *parseIpcmSelectPolicySetResponseMessage(
+		nlmsghdr *hdr);
+
+}
 
 #endif
 

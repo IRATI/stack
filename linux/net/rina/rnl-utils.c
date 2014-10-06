@@ -2821,7 +2821,7 @@ static int rnl_format_ipcp_set_policy_set_param_resp_msg(
                                                 struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
-                                                IAFRRM_ATTR_RESULT,
+                                                ISPSPR_ATTR_RESULT,
                                                 "rnl_ipcp_set_policy_set"
                                                 "_param_resp_msg",
                                                 skb_out);
@@ -2832,8 +2832,8 @@ static int rnl_format_ipcp_select_policy_set_resp_msg(
                                                 struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
-                                                IAFRRM_ATTR_RESULT,
-                                                "rnl_ipcp_selectt_policy"
+                                                ISPSR_ATTR_RESULT,
+                                                "rnl_ipcp_select_policy"
                                                 "_set_resp_msg",
                                                 skb_out);
 }

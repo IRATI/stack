@@ -473,6 +473,24 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_SELECT_POLICY_SET_REQUEST: {
+		IpcmSelectPolicySetRequestMessage * requestObject =
+				dynamic_cast<IpcmSelectPolicySetRequestMessage *>(message);
+		if (putIpcmSelectPolicySetRequestMessageObject(netlinkMessage,
+				*requestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE: {
+		IpcmSelectPolicySetResponseMessage * responseObject =
+				dynamic_cast<IpcmSelectPolicySetResponseMessage *>(message);
+		if (putIpcmSelectPolicySetResponseMessageObject(netlinkMessage,
+				*responseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -679,6 +697,14 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE: {
 		return parseIpcmSetPolicySetParamResponseMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_SELECT_POLICY_SET_REQUEST: {
+		return parseIpcmSelectPolicySetRequestMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE: {
+		return parseIpcmSelectPolicySetResponseMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -4877,6 +4903,34 @@ int putIpcmSetPolicySetParamResponseMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIpcmSelectPolicySetRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmSelectPolicySetRequestMessage& object){
+	NLA_PUT_STRING(netlinkMessage, ISPSR_ATTR_PATH,
+			object.path.c_str());
+	NLA_PUT_STRING(netlinkMessage, ISPSR_ATTR_NAME,
+			object.name.c_str());
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmSelectPolicySetRequestMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmSelectPolicySetResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmSelectPolicySetResponseMessage& object){
+
+	NLA_PUT_U32(netlinkMessage, ISPSRE_ATTR_RESULT, object.result);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmSelectPolicySetResponseMessage "
+                        "Netlink object");
+        return -1;
+}
+
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
@@ -8479,6 +8533,68 @@ parseIpcmSetPolicySetParamResponseMessage(nlmsghdr *hdr){
 
 	if (attrs[ISPSPRE_ATTR_RESULT]) {
 		result->result = nla_get_u32(attrs[ISPSPRE_ATTR_RESULT]);
+	}
+
+	return result;
+}
+
+IpcmSelectPolicySetRequestMessage *
+parseIpcmSelectPolicySetRequestMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[ISPSR_ATTR_MAX + 1];
+	attr_policy[ISPSR_ATTR_PATH].type = NLA_STRING;
+	attr_policy[ISPSR_ATTR_PATH].minlen = 0;
+	attr_policy[ISPSR_ATTR_PATH].maxlen = 65535;
+	attr_policy[ISPSR_ATTR_NAME].type = NLA_STRING;
+	attr_policy[ISPSR_ATTR_NAME].minlen = 0;
+	attr_policy[ISPSR_ATTR_NAME].maxlen = 65535;
+	attr_policy[ISPSR_ATTR_VALUE].type = NLA_STRING;
+	attr_policy[ISPSR_ATTR_VALUE].minlen = 0;
+	attr_policy[ISPSR_ATTR_VALUE].maxlen = 65535;
+	struct nlattr *attrs[ISPSPR_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ISPSR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmSelectPolicySetRequestMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmSelectPolicySetRequestMessage * result =
+			new IpcmSelectPolicySetRequestMessage();
+
+	if (attrs[ISPSR_ATTR_PATH])
+		result->path = nla_get_string(
+                                attrs[ISPSR_ATTR_PATH]);
+
+	if (attrs[ISPSR_ATTR_NAME])
+		result->name = nla_get_string(
+                                attrs[ISPSR_ATTR_NAME]);
+
+	return result;
+}
+
+IpcmSelectPolicySetResponseMessage *
+parseIpcmSelectPolicySetResponseMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[ISPSRE_ATTR_MAX + 1];
+        attr_policy[ISPSRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[ISPSRE_ATTR_RESULT].minlen = 4;
+        attr_policy[ISPSRE_ATTR_RESULT].maxlen = 4;
+	struct nlattr *attrs[ISPSRE_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ISPSRE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmSelectPolicySetResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmSelectPolicySetResponseMessage * result =
+			new IpcmSelectPolicySetResponseMessage();
+
+	if (attrs[ISPSRE_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[ISPSRE_ATTR_RESULT]);
 	}
 
 	return result;

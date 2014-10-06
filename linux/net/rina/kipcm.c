@@ -1450,6 +1450,8 @@ static int notify_ipcp_select_policy_set(void *             data,
                 LOG_DBG("Select-policy-set seems ok, gonna complete it");
         }
 #endif
+        LOG_DBG("SELECT POLICY SET REQUEST %s %s\n",
+                attrs->path, attrs->name);
 out:
         rnl_msg_destroy(msg);
 

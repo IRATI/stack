@@ -677,7 +677,6 @@ public:
 	 * Invoked by the IPC Manager to change a parameter value in a subcomponent
          * of the IPC process. The parameter addressed by @path can be either a
          * parametric policy or a policy-set-specific parameter.
-         *
 	 *
 	 * @param path The path of the addressed subcomponent (may be a policy-set)
          *             in dotted notation
@@ -690,6 +689,20 @@ public:
 	unsigned int setPolicySetParam(const std::string& path,
                                        const std::string& name,
                                        const std::string& value);
+
+	/**
+	 * Invoked by the IPC Manager to select a policy-set for a subcomponent
+         * of the IPC process.
+         *
+	 * @param path The path of the addressed subcomponent (cannot be a
+         *             policy-set) in dotted notation
+         * @param name The name of the policy-set to select
+	 * @throws SelectPolicySetException if an error happens during
+         *         the process
+	 * @returns the handle to the response message
+	 */
+	unsigned int selectPolicySet(const std::string& path,
+                                     const std::string& name);
 };
 
 /**

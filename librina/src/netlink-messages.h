@@ -1057,6 +1057,36 @@ public:
 };
 
 /**
+ * Used by the IPC Manager to ask an IPC process to select a
+ * policy-set for a component
+ * IPC Manager -> IPC Process
+ */
+class IpcmSelectPolicySetRequestMessage:
+		public BaseNetlinkMessage {
+public:
+        /** The path of the sybcomponent to be addressed */
+	std::string path;
+
+	/** The name of the policy-set to be selected */
+	std::string name;
+
+	IpcmSelectPolicySetRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of a select-policy-set
+ * request operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmSelectPolicySetResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+        IpcmSelectPolicySetResponseMessage();
+        IPCEvent* toIPCEvent();
+};
+
+/**
  * NL layer (kernel) -> IPC Manager. Received when a user-space NL socket has been
  * closed, which means the user process associated to that socket will be no longer
  * reachable.

@@ -183,6 +183,22 @@ public:
 };
 
 /**
+ * The IPC Manager selects a policy-set for an IPC process component
+ */
+class SelectPolicySetRequestEvent: public IPCEvent {
+public:
+        /** The path of the sybcomponent to be addressed */
+	std::string path;
+
+	/** The name of the policy-set to select */
+	std::string name;
+
+	SelectPolicySetRequestEvent(const std::string& path,
+                                    const std::string& name,
+			            unsigned int sequenceNumber);
+};
+
+/**
  * The Kernel components of the IPC Process report about the result of a
  * create EFCP connection operation
  */
@@ -699,6 +715,15 @@ public:
 	void setPolicySetParamResponse(
                 const SetPolicySetParamRequestEvent& event, int result);
 
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a
+         * selectPolicySet operation
+	 * @param event the event that trigered the operation
+	 * @param result the result of the operation (0 successful)
+	 * @throws SelectPolicySetException
+	 */
+	void selectPolicySetResponse(
+                const SelectPolicySetRequestEvent& event, int result);
 };
 
 /**
@@ -946,6 +971,18 @@ public:
         unsigned int setPolicySetParam(const std::string& path,
                                        const std::string& name,
                                        const std::string& value);
+
+        /**
+         * Request the Kernel IPC Process to select a policy-set
+         * for an IPC process component.
+         * @param path The identificator of the component to
+         *             be addressed
+         * @param name The name of the policy-set to be selected
+         * @return a handle to the response event
+         * @throws SelectPolicySetException if something goes wrong
+         */
+        unsigned int selectPolicySet(const std::string& path,
+                                     const std::string& name);
 
         /**
          * Requests the kernel to write a management SDU to the

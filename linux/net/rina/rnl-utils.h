@@ -502,6 +502,18 @@ enum ipcp_select_policy_set_req_attrs_list {
 };
 #define ISPS_ATTR_MAX (__ISPS_ATTR_MAX -1)
 
+enum ipcm_set_policy_set_param_req_result_attrs_list {
+        ISPSPR_ATTR_RESULT = 1,
+        __ISPSPR_ATTR_MAX,
+};
+#define ISPSPR_ATTR_MAX (__ISPSPR_ATTR_MAX -1)
+
+enum ipcm_select_policy_set_req_result_attrs_list {
+        ISPSR_ATTR_RESULT = 1,
+        __ISPSR_ATTR_MAX,
+};
+#define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;

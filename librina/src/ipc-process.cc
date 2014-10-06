@@ -164,6 +164,17 @@ SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
         this->value = value;
 }
 
+/* CLASS SELECT POLICY SET REQUEST EVENT */
+SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
+                const std::string& path, const std::string& name,
+                unsigned int sequenceNumber) :
+				IPCEvent(IPC_PROCESS_SELECT_POLICY_SET,
+                                         sequenceNumber)
+{
+        this->path = path;
+        this->name = name;
+}
+
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
         int cepId, unsigned int sequenceNumber):
@@ -701,6 +712,27 @@ void ExtendedIPCManager::setPolicySetParamResponse(
 #endif
 }
 
+void ExtendedIPCManager::selectPolicySetResponse(
+		const SelectPolicySetRequestEvent& event, int result) {
+#if STUB_API
+	//Do nothing
+        (void) event;
+        (void) result;
+#else
+	IpcmSelectPolicySetResponseMessage responseMessage;
+	responseMessage.result = result;
+	responseMessage.setSequenceNumber(event.sequenceNumber);
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
+	responseMessage.setResponseMessage(true);
+	try {
+		rinaManager->sendMessage(&responseMessage);
+	} catch (NetlinkException &e) {
+		throw SelectPolicySetException(e.what());
+	}
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS CONNECTION */
@@ -1105,7 +1137,8 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
 unsigned int KernelIPCProcess::setPolicySetParam(
                                 const std::string& path,
                                 const std::string& name,
-                                const std::string& value) {
+                                const std::string& value)
+{
         unsigned int seqNum=0;
 
 #if STUB_API
@@ -1127,6 +1160,37 @@ unsigned int KernelIPCProcess::setPolicySetParam(
                 rinaManager->sendMessage(&message);
         } catch (NetlinkException &e) {
                 throw SetPolicySetParamException(e.what());
+        }
+
+        seqNum = message.getSequenceNumber();
+#endif
+
+        return seqNum;
+}
+
+unsigned int KernelIPCProcess::selectPolicySet(
+                                const std::string& path,
+                                const std::string& name)
+{
+        unsigned int seqNum=0;
+
+#if STUB_API
+        //Do nothing
+        (void) path;
+        (void) name;
+#else
+        IpcmSelectPolicySetRequestMessage message;
+        message.path = path;
+        message.name = name;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try {
+                rinaManager->sendMessage(&message);
+        } catch (NetlinkException &e) {
+                throw SelectPolicySetException(e.what());
         }
 
         seqNum = message.getSequenceNumber();

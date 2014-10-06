@@ -295,6 +295,7 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+        // FIXME use the same code for multiple labels
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
@@ -344,6 +345,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		break;
 	}
 	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:{
 		if(send){
 			message->setDestPortId(getIPCManagerPortId());
 		}

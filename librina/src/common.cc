@@ -423,8 +423,14 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
         case IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
                 result = "37_SET_POLICY_SET_PARAM_RESPONSE";
                 break;
+        case IPC_PROCESS_SELECT_POLICY_SET:
+                result = "38_SELECT_POLICY_SET";
+                break;
+        case IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
+                result = "39_SELECT_POLICY_SET_RESPONSE";
+                break;
 	case NO_EVENT:
-		result = "38_NO_EVENT";
+		result = "40_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";
