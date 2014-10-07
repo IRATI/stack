@@ -1364,22 +1364,20 @@ static int notify_ipcp_set_policy_set_param(void *             data,
         LOG_DBG("Found IPC Process with id %d", ipc_id);
 
         ASSERT(ipc_process->ops);
-#if 0
-        ASSERT(ipc_process->ops->assign_to_dif);
-
-        if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_info)) {
-                char * tmp = name_tostring(attrs->dif_info->dif_name);
-                LOG_ERR("Assign to dif %s operation failed for IPC process %d",
-                        tmp, ipc_id);
-                rkfree(tmp);
-
-                retval = -1;
+        if (ipc_process->ops->set_policy_set_param) {
+                retval = ipc_process->ops->set_policy_set_param(
+                                ipc_process->data, attrs->path,
+                                attrs->name, attrs->value);
+                if (retval) {
+                        LOG_ERR("set-policy-set-param operation failed");
+                }
         } else {
-                LOG_DBG("Set-policy-set-param seems ok, gonna complete it");
+                retval = -1;
+                LOG_ERR("IPC process %d does not support policy "
+                        "parameters", ipc_id);
         }
-#endif
-        LOG_DBG("SET POLICY SET PARAM REQUEST %s %s %s\n",
+
+        LOG_DBG("set-policy-set-param request served %s %s %s",
                 attrs->path, attrs->name, attrs->value);
 out:
         rnl_msg_destroy(msg);
@@ -1435,22 +1433,19 @@ static int notify_ipcp_select_policy_set(void *             data,
         LOG_DBG("Found IPC Process with id %d", ipc_id);
 
         ASSERT(ipc_process->ops);
-#if 0
-        ASSERT(ipc_process->ops->assign_to_dif);
-
-        if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_info)) {
-                char * tmp = name_tostring(attrs->dif_info->dif_name);
-                LOG_ERR("Assign to dif %s operation failed for IPC process %d",
-                        tmp, ipc_id);
-                rkfree(tmp);
-
-                retval = -1;
+        if (ipc_process->ops->select_policy_set) {
+                retval = ipc_process->ops->select_policy_set(
+                                ipc_process->data, attrs->path,
+                                attrs->name);
+                if (retval) {
+                        LOG_ERR("set-policy-set-param operation failed");
+                }
         } else {
-                LOG_DBG("Select-policy-set seems ok, gonna complete it");
+                retval = -1;
+                LOG_ERR("IPC process %d does not support policies", ipc_id);
         }
-#endif
-        LOG_DBG("SELECT POLICY SET REQUEST %s %s\n",
+
+        LOG_DBG("select-policy-set request served %s %s",
                 attrs->path, attrs->name);
 out:
         rnl_msg_destroy(msg);

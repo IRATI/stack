@@ -715,6 +715,9 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .pft_flush                 = NULL,
 
         .ipcp_name                 = dummy_ipcp_name,
+
+        .set_policy_set_param      = NULL,
+        .select_policy_set         = NULL,
 };
 
 static struct ipcp_instance_data *

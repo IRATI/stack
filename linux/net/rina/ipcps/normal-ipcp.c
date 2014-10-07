@@ -753,6 +753,19 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
+static int normal_set_policy_set_param(struct ipcp_instance_data * data,
+                                       string_t *path, string_t *param_name,
+                                       string_t *param_value)
+{
+        return -1;
+}
+
+static int normal_select_policy_set(struct ipcp_instance_data *data,
+                                    string_t *path, string_t *ps_name)
+{
+        return -1;
+}
+
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
@@ -783,7 +796,10 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pft_dump                  = normal_pft_dump,
         .pft_flush                 = normal_pft_flush,
 
-        .ipcp_name                 = normal_ipcp_name
+        .ipcp_name                 = normal_ipcp_name,
+
+        .set_policy_set_param      = normal_set_policy_set_param,
+        .select_policy_set         = normal_select_policy_set,
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)

@@ -1917,6 +1917,9 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .pft_flush                 = NULL,
 
         .ipcp_name                 = tcp_udp_ipcp_name,
+
+        .set_policy_set_param      = NULL,
+        .select_policy_set         = NULL,
 };
 
 static struct ipcp_factory_data {

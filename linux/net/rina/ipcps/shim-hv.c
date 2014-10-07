@@ -1062,6 +1062,9 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .pft_flush                 = NULL,
 
         .ipcp_name                 = shim_hv_ipcp_name,
+
+        .set_policy_set_param      = NULL,
+        .select_policy_set         = NULL,
 };
 
 /* Initialize the IPC process factory. */
