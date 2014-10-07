@@ -1156,7 +1156,7 @@ ipc_process_set_policy_set_param_response_handler(rina::IPCEvent *e,
                        << mit->second->name.toString() <<
                         " [success=" << success << "]" << endl;
                 FLUSH_LOG(INFO, ss);
-                ret = 0;
+                ret = event->result;
         } else {
                 ss << "Warning: unmatched event received" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -1183,7 +1183,7 @@ ipc_process_select_policy_set_response_handler(rina::IPCEvent *e,
                        << mit->second->name.toString() <<
                         " [success=" << success << "]" << endl;
                 FLUSH_LOG(INFO, ss);
-                ret = 0;
+                ret = event->result;
         } else {
                 ss << "Warning: unmatched event received" << endl;
                 FLUSH_LOG(WARN, ss);
