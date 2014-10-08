@@ -22,6 +22,7 @@
 
 #include <linux/module.h>
 #include <linux/list.h>
+#include <linux/string.h>
 
 #define IPCP_NAME   "normal-ipc"
 
@@ -754,14 +755,38 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 }
 
 static int normal_set_policy_set_param(struct ipcp_instance_data * data,
-                                       string_t *path, string_t *param_name,
-                                       string_t *param_value)
+                                       const string_t *path,
+                                       const string_t *param_name,
+                                       const string_t *param_value)
 {
+        const string_t *dot = strchr(path, '.');
+        size_t cmplen;
+        size_t offset;
+
+        if (!dot) {
+                /* Emulate strchrnul(). */
+                dot = path + strlen(path);
+        }
+
+        offset = cmplen = dot - path;
+        if (path[offset] == '.') {
+                offset++;
+        }
+
+        if (strncmp(path, "rmt", cmplen) == 0) {
+                return rmt_set_policy_set_param(data->rmt, path + offset,
+                                                param_name, param_value);
+        } else {
+                LOG_ERR("The selected component does not exist");
+                return -1;
+        }
+
         return -1;
 }
 
 static int normal_select_policy_set(struct ipcp_instance_data *data,
-                                    string_t *path, string_t *ps_name)
+                                    const string_t *path,
+                                    const string_t *ps_name)
 {
         return -1;
 }

@@ -237,7 +237,7 @@ int rmt_select_policy_set(struct rmt * rmt,
                           const char * name)
 {
         rmt->ps_factory = (struct rmt_ps_factory *)
-                          ps_lookup(&policy_sets, RINA_PS_DEFAULT_NAME);
+                          ps_lookup(&policy_sets, name);
         if (rmt->ps_factory) {
                 /* Instantiate a policy set. */
                 rmt->ps = rmt->ps_factory->create(rmt);
@@ -260,17 +260,29 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                 return -1;
         }
 
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
         if (strcmp(path, "") == 0) {
                 /* The request addresses this RMT instance. */
-                /* TODO process the request */
+                if (!rmt->ps) {
+                        LOG_ERR("No policy-set selected for this RMT");
+                        return -1;
+                }
+                if (strcmp(name, "max_q") == 0) {
+                        return kstrtoint(value, 10, &rmt->ps->max_q);
+                } else {
+                        LOG_ERR("Unknown RMT parameter policy '%s'", name);
+                        return -1;
+                }
+
         } else if (rmt->ps && rmt->ps_factory->set_policy_set_param) {
                 if (strcmp(path, rmt->ps_factory->base.name) == 0) {
                         /* The request addresses the RMT policy set. */
-                        rmt->ps_factory->set_policy_set_param(rmt->ps,
-                                                              name, value);
+                        return rmt->ps_factory->set_policy_set_param(rmt->ps,
+                                                                name, value);
                 } else {
-                        LOG_ERRF("Policy set %s not selected for this "
-                                 "component", name);
+                        LOG_ERR("Policy set %s not selected for this "
+                                 "component", path);
                         return -1;
                 }
         } else {
@@ -278,7 +290,7 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                 return -1;
         }
 
-        return 0;
+        return -1;
 }
 EXPORT_SYMBOL(rmt_set_policy_set_param);
 
