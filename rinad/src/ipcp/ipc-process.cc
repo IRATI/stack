@@ -20,6 +20,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <dlfcn.h>
 
 #define RINA_PREFIX "ipc-process"
 
@@ -128,6 +129,11 @@ IPCProcessImpl::~IPCProcessImpl() {
 	if (rib_daemon) {
 		delete rib_daemon;
 	}
+
+        for (std::vector<void *>::iterator i = plugins_handles.begin();
+                                        i != plugins_handles.end(); i++) {
+                dlclose(*i);
+        }
 }
 
 void IPCProcessImpl::init_cdap_session_manager() {
@@ -438,6 +444,27 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 	} catch (Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
+}
+
+int IPCProcessImpl::plugin_load(const std::string& plugin_name)
+{
+#define STRINGIFY(s) #s
+        std::string plugin_path = STRINGIFY(PLUGINSDIR);
+#undef STRINGIFY
+        void *handle;
+
+        plugin_path += "/";
+        plugin_path += plugin_name + ".so";
+
+        handle = dlopen(plugin_path.c_str(), RTLD_LAZY);
+        if (!handle) {
+                LOG_ERR("Cannot load plugin: %s", dlerror());
+                return -1;
+        }
+
+        plugins_handles.push_back(handle);
+
+        return 0;
 }
 
 //Event loop handlers
