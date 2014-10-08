@@ -22,7 +22,9 @@ COMMONLIBS =					\
 	$(LIBRINA_LIBS)
 
 ipcp_CFLAGS   =
-ipcp_CPPFLAGS = $(COMMONCPPFLAGS)
+ipcp_CPPFLAGS =					\
+	$(COMMONCPPFLAGS)			\
+	-DPLUGINSDIR=$(pkglibdir)/ipcp
 ipcp_LDADD    = $(COMMONLIBS)
 ipcp_SOURCES  =						\
 	main.cc						\

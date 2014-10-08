@@ -40,7 +40,8 @@ ipcm_CPPFLAGS =					\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
-	-I$(srcdir)/jsoncpp
+	-I$(srcdir)/jsoncpp			\
+	-DPLUGINSDIR=$(pkglibdir)/ipcm
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
