@@ -234,19 +234,52 @@ static const char * create_name(const char *       prefix,
 }
 
 int rmt_select_policy_set(struct rmt * rmt,
-                          const char * name)
+                          const string_t * path,
+                          const string_t * name)
 {
-        rmt->ps_factory = (struct rmt_ps_factory *)
-                          ps_lookup(&policy_sets, name);
-        if (rmt->ps_factory) {
-                /* Instantiate a policy set. */
-                rmt->ps = rmt->ps_factory->create(rmt);
-                if (rmt->ps) {
-                        return 0;
-                }
+        struct rmt_ps *candidate_ps = NULL;
+        struct rmt_ps_factory *candidate_ps_factory = NULL;
+
+        if (!name || !path) {
+                LOG_ERR("NULL args %p %p", path, name);
+                return -1;
         }
 
-        return -1;
+        if (strcmp(path, "")) {
+                LOG_ERR("RMT has no selectable subcomponents");
+                return -1;
+        }
+
+        candidate_ps_factory = (struct rmt_ps_factory *)
+                               ps_lookup(&policy_sets, name);
+        if (!candidate_ps_factory) {
+                LOG_ERR("No policy-set '%s' published", name);
+                return -1;
+        }
+
+        if (candidate_ps_factory == rmt->ps_factory) {
+                LOG_INFO("Policy-set '%s' already selected", name);
+                return 0;
+        }
+
+        /* Instantiate the new policy set. */
+        candidate_ps = candidate_ps_factory->create(rmt);
+        if (!candidate_ps) {
+                LOG_ERR("Policy-set instantiation failed");
+                return -1;
+        }
+
+        if (rmt->ps) {
+                /* Free the old one. */
+                ASSERT(rmt->ps_factory);
+                rmt->ps_factory->destroy(rmt->ps);
+        }
+
+        /* Do the transaction. */
+        rmt->ps_factory = candidate_ps_factory;
+        rmt->ps = candidate_ps;
+
+        return 0;
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 
@@ -364,7 +397,8 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
 
         /* Try to select the default policy set factory. */
         tmp->ps = NULL;
-        rmt_select_policy_set(tmp, RINA_PS_DEFAULT_NAME);
+        tmp->ps_factory = NULL;
+        rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME);
 
         LOG_DBG("Instance %pK initialized successfully", tmp);
 

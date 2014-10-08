@@ -1438,7 +1438,7 @@ static int notify_ipcp_select_policy_set(void *             data,
                                 ipc_process->data, attrs->path,
                                 attrs->name);
                 if (retval) {
-                        LOG_ERR("set-policy-set-param operation failed");
+                        LOG_ERR("select-policy-set operation failed");
                 }
         } else {
                 retval = -1;

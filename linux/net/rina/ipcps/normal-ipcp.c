@@ -754,24 +754,31 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
-static int normal_set_policy_set_param(struct ipcp_instance_data * data,
-                                       const string_t *path,
-                                       const string_t *param_name,
-                                       const string_t *param_value)
+static void parse_component_id(const string_t *path, size_t *cmplen,
+                               size_t *offset)
 {
         const string_t *dot = strchr(path, '.');
-        size_t cmplen;
-        size_t offset;
 
         if (!dot) {
                 /* Emulate strchrnul(). */
                 dot = path + strlen(path);
         }
 
-        offset = cmplen = dot - path;
-        if (path[offset] == '.') {
-                offset++;
+        *offset = *cmplen = dot - path;
+        if (path[*offset] == '.') {
+                (*offset)++;
         }
+}
+
+static int normal_set_policy_set_param(struct ipcp_instance_data * data,
+                                       const string_t *path,
+                                       const string_t *param_name,
+                                       const string_t *param_value)
+{
+        size_t cmplen;
+        size_t offset;
+
+        parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_set_policy_set_param(data->rmt, path + offset,
@@ -788,6 +795,19 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
                                     const string_t *path,
                                     const string_t *ps_name)
 {
+        size_t cmplen;
+        size_t offset;
+
+        parse_component_id(path, &cmplen, &offset);
+
+        if (strncmp(path, "rmt", cmplen) == 0) {
+                return rmt_select_policy_set(data->rmt, path + offset,
+                                             ps_name);
+        } else {
+                LOG_ERR("The selected component does not exist");
+                return -1;
+        }
+
         return -1;
 }
 
