@@ -813,9 +813,9 @@ static int process_mgmt_pdu(struct rmt * rmt,
                                                 sdu) ? -1 : 0);
 }
 
-static int process_dt_pdu(struct rmt *       rmt,
-                          port_id_t          port_id,
-                          struct pdu *       pdu)
+static int process_dt_pdu(struct rmt * rmt,
+                          port_id_t    port_id,
+                          struct pdu * pdu)
 {
         address_t  dst_addr;
         cep_id_t   c;

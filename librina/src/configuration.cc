@@ -1172,7 +1172,7 @@ void LinkStateRoutingConfiguration::set_wait_until_read_cdap(int wait_until_read
 	wait_until_read_cdap_ = wait_until_read_cdap;
 }
 
-int LinkStateRoutingConfiguration::get_object_maximum_age() const {
+unsigned int LinkStateRoutingConfiguration::get_object_maximum_age() const {
 	return object_maximum_age_;
 }
 
