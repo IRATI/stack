@@ -25,7 +25,6 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/workqueue.h>
-
 #include <net/sock.h>
 
 #define SHIM_NAME   "shim-tcp-udp"
@@ -105,7 +104,7 @@ struct ipcp_instance_data {
         struct name *       name;
         struct name *       dif_name;
 
-        char *              interface_name;
+        __be32              host_name;
 
         struct flow_spec ** qos;
 
@@ -117,14 +116,16 @@ struct ipcp_instance_data {
         /* Holds app_data, e.g. socket related things */
         struct list_head    apps;
 
+        spinlock_t          dir_lock;
         struct list_head    directory;
+        spinlock_t          exp_lock;
         struct list_head    exp_regs;
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
         struct kfa *        kfa;
 };
 
-/* Note: Same as app_register_data below, to avoid a mess */
+/* Directory entry */
 struct dir_entry {
         struct list_head list;
 
@@ -142,39 +143,50 @@ struct exp_reg {
         int              port;
 };
 
-
-/* Holds applications that were registered in the DIF */
-static struct list_head applications;
-
-struct app_register_data {
-        struct list_head        list;
-
-        struct name *           app_name;
-
-        int                     ip_address;
-        int                     port;
-};
-
-/*
- * FIXME: Rename the function.
- * It checks for an app that is expected to be registered in the DIF
- * But ... it also holds the directory. D'Oh.
- * Needs to be separated into two distinct things
- */
-static struct app_register_data * find_app_data(const struct name * app_name)
+static struct dir_entry *
+find_dir_entry(struct ipcp_instance_data * data,
+               const struct name * app_name)
 {
-        struct app_register_data * app;
+        struct dir_entry * entry;
 
         ASSERT(app_name);
+        ASSERT(data);
 
-        list_for_each_entry(app, &applications, list) {
-                if (name_is_equal(app->app_name, app_name)) {
-                        return app;
+        spin_lock(&data->dir_lock);
+
+        list_for_each_entry(entry, &data->directory, list) {
+                if (name_is_equal(entry->app_name, app_name)) {
+                        return entry;
                 }
         }
 
+        spin_unlock(&data->dir_lock);
+
         return NULL;
 }
+
+static struct exp_reg *
+find_exp_reg(struct ipcp_instance_data * data,
+             const struct name * app_name)
+{
+        struct exp_reg * exp;
+
+        ASSERT(app_name);
+        ASSERT(data);
+
+        spin_lock(&data->exp_lock);
+
+        list_for_each_entry(exp, &data->exp_regs, list) {
+                if (name_is_equal(exp->app_name, app_name)) {
+                        return exp;
+                }
+        }
+
+        spin_unlock(&data->exp_lock);
+
+        return NULL;
+}
+
 
 static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data * data,
                                             port_id_t                   id)
@@ -328,8 +340,8 @@ static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
                 LOG_ERR("Failed to destroy shim-tcp-udp flow");
 }
 
-static void tcp_deallocate_and_destroy_flow(struct ipcp_instance_data *data,
-                                            struct shim_tcp_udp_flow *flow)
+static void tcp_deallocate_and_destroy_flow(struct ipcp_instance_data * data,
+                                            struct shim_tcp_udp_flow *  flow)
 {
         ASSERT(data);
         ASSERT(flow);
@@ -369,7 +381,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct app_data *          app;
-        struct app_register_data * app_data;
+        struct dir_entry *         entry;
         int                        err;
 
         LOG_HBEAT;
@@ -408,16 +420,16 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 LOG_DBG("allocate request flow added");
 
                 /* this should be done with DNS or DHT */
-                app_data = find_app_data(dest);
-                if (!app_data) {
-                        LOG_ERR("application data not found");
+                entry = find_dir_entry(data, dest);
+                if (!entry) {
+                        LOG_ERR("Directory entry not found");
                 }
 
                 LOG_DBG("application data found");
 
-                flow->addr.sin_addr.s_addr = htonl(app_data->ip_address);
+                flow->addr.sin_addr.s_addr = htonl(entry->ip_address);
                 flow->addr.sin_family      = AF_INET;
-                flow->addr.sin_port        = htons(app_data->port);
+                flow->addr.sin_port        = htons(entry->port);
 
                 if (!fspec->ordered_delivery) {
                         LOG_DBG("unreliable flow requested");
@@ -660,8 +672,14 @@ static int udp_process_msg(struct socket * sock)
         struct buffer *             sdubuf;
         struct name *               sname;
         struct sdu *                du;
-        char                        buf[BUFFER_SIZE];
+        char                        buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
         int                         size;
+
+        /*
+         * FIXME: Remove this compile-time assertion once the stack-overflow
+         *        potential problem is resolved
+         */
+        BUILD_BUG_ON((BUFFER_SIZE > 512));
 
         LOG_DBG("udp_process_msg");
 
@@ -831,9 +849,15 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 {
         struct buffer * sdubuf;
         struct sdu *    du;
-        char            buf[BUFFER_SIZE];
+        char            buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
         int             size;
         __be16          nlen;
+
+        /*
+         * FIXME: Remove this compile-time assertion once the stack-overflow
+         *        potential problem is resolved
+         */
+        BUILD_BUG_ON((BUFFER_SIZE > 512));
 
         size = recv_msg(sock, NULL, 0, buf, 2);
         if (!size)
@@ -1025,11 +1049,10 @@ static int tcp_process(struct socket * sock)
         data = inst_data;
         app = find_app_by_socket(data, sock);
 
-        /* FIXME: Seems weird... if it is NULL it will enter here */
         if (!app) {
                 //connection exists
                 err = tcp_process_msg(data, sock);
-                while(err > 0) {
+                while (err > 0) {
                         err = tcp_process_msg(data, sock);
                 }
                 return err;
@@ -1141,7 +1164,7 @@ static int tcp_process(struct socket * sock)
         }
 }
 
-static int tcp_udp_rcv_process_msg(struct sock *sk)
+static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
         int res;
 
@@ -1156,7 +1179,7 @@ static int tcp_udp_rcv_process_msg(struct sock *sk)
         }
 }
 
-static void tcp_udp_rcv_worker(struct work_struct *work)
+static void tcp_udp_rcv_worker(struct work_struct * work)
 {
         struct rcv_data * recvd, * next;
         unsigned long     flags;
@@ -1197,7 +1220,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 {
         struct app_data *          app;
         struct sockaddr_in         sin;
-        struct app_register_data * app_data;
+        struct exp_reg *           exp_reg;
         int                        err;
 
         LOG_HBEAT;
@@ -1223,15 +1246,15 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        app_data = find_app_data(name);
-        if (!app_data) {
-                LOG_ERR("application data not found");
+        exp_reg = find_exp_reg(data, name);
+        if (!exp_reg) {
+                LOG_ERR("That application is not expected to register");
                 rkfree(app);
                 return -1;
         }
-        LOG_DBG("Application data found");
+        LOG_DBG("Application found in exp_reg");
 
-        app->port = app_data->port;
+        app->port = exp_reg->port;
 
         err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP,
                                &app->udpsock);
@@ -1242,8 +1265,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        /* FIXME: Bind to correct NIC */
-        sin.sin_addr.s_addr = htonl(INADDR_ANY);
+        sin.sin_addr.s_addr = htonl(data->host_name);
         sin.sin_family = AF_INET;
         sin.sin_port = htons(app->port);
 
@@ -1358,13 +1380,13 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int get_nxt_len(char ** enc, 
+static int get_nxt_len(char ** enc,
                        int *   len)
 {
         char * tmp;
 
         ASSERT(enc);
-        
+
         tmp = strsep(enc, ":");
         if (!enc) {
                 LOG_ERR("No separator found!");
@@ -1383,6 +1405,10 @@ static int eat_substr(char ** dst,
                       char ** src,
                       int *   len)
 {
+        ASSERT(len);
+        ASSERT(dst);
+        ASSERT(src);
+
         *dst = rkmalloc((*len) + 1, GFP_KERNEL);
         if (!*dst) {
                 LOG_ERR("Failed to get mem");
@@ -1392,104 +1418,142 @@ static int eat_substr(char ** dst,
         memcpy(*dst, *src, *len);
         (*dst)[*len] = '\0';
         *src += *len;
-     
-        return 0;
-}
 
-static void remove_dif_name(struct ipcp_instance_data * data)
-{
-        name_destroy(data->dif_name);
-        data->dif_name = NULL;
+        return 0;
 }
 
 static int get_nxt_val(char ** dst,
                        char ** val,
                        int  *  len)
 {
+        ASSERT(len);
+        ASSERT(dst);
+        ASSERT(val);
+
         if (get_nxt_len(val, len)) {
                 LOG_ERR("get_nxt_len failed");
                 return -1;
         }
-        
+
         if (eat_substr(dst, val, len)) {
                 LOG_ERR("eat_substr failed");
                 return -1;
         }
-                       
+
         return 0;
 }
 
-static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
-                                 const struct dif_info *     dif_information)
+/* Note: Assumes an IPv4 address */
+static int ip_string_to_int(char *   ip_s,
+                            __be32 * ip_a)
+{
+        char         *tmp;
+        unsigned int nr, i;
+
+        ASSERT(ip_s);
+        ASSERT(ip_a);
+
+        *ip_a = 0;
+        nr = 0;
+        for (i = 0; i < 4; i++) {
+                tmp = strsep(&ip_s, ".");
+                if (kstrtouint(tmp, 10, &nr)) {
+                        LOG_ERR("Failed to convert int");
+                        return -1;
+                }
+                *ip_a |= nr << (8 * (3-i));
+        }
+
+        return 0;
+}
+
+static void clear_directory(struct ipcp_instance_data * data)
+{
+        struct dir_entry * entry, * next;
+
+        ASSERT(data);
+
+        list_for_each_entry_safe(entry, next, &data->directory, list) {
+                list_del(&entry->list);
+                name_destroy(entry->app_name);
+                rkfree(entry);
+        }
+}
+
+static void clear_exp_reg(struct ipcp_instance_data * data)
+{
+        struct exp_reg * entry, * next;
+
+        ASSERT(data);
+
+        list_for_each_entry_safe(entry, next, &data->exp_regs, list) {
+                list_del(&entry->list);
+                name_destroy(entry->app_name);
+                rkfree(entry);
+        }
+}
+
+static void undo_assignment(struct ipcp_instance_data * data)
+{
+        clear_directory(data);
+        clear_exp_reg(data);
+}
+
+static int parse_assign_conf(struct ipcp_instance_data * data,
+                             const struct dif_config *   config)
 {
         struct ipcp_config * tmp;
 
-        LOG_HBEAT;
         ASSERT(data);
-        ASSERT(dif_information);
+        ASSERT(config);
 
-        if (data->dif_name) {
-                ASSERT(data->dif_name->process_name);
-
-                LOG_ERR("This IPC Process is already assigned to the DIF %s. ",
-                        data->dif_name->process_name);
-                return -1;
-        }
-
-        data->dif_name = name_dup(dif_information->dif_name);
-        if (!data->dif_name) {
-                LOG_ERR("Error duplicating name, bailing out");
-                return -1;
-        }
-
-        /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp, &(dif_information->
-                                   configuration->
+        list_for_each_entry(tmp, &(config->
                                    ipcp_config_entries), next) {
                 const struct ipcp_config_entry * entry = tmp->entry;
-
-                /* 
-                 * Note: Cleanup in the fixmes means:
-                 *
-                 * - Delete all entries from the dir
-                 * - Delete all entries from exp reg
-                 * - Remove interface name (if any)
-                 */
-
-                /* 
+                /*
                  *  Want to get an interface name here
                  *  Directory entries and exp registrations
                  */
-                if (!strcmp(entry->name, "interface")) {
+                if (!strcmp(entry->name, "hostname")) {
+                        char * copy;
+                        __be32 ip_addr;
+
                         ASSERT(entry->value);
 
-                        data->interface_name =
-                                rkstrdup(entry->value, GFP_KERNEL);
-                        if (!data->interface_name) {
-                                LOG_ERR("Cannot copy interface name");
-                                remove_dif_name(data);
-                                /* FIXME: Cleanup */
+                        copy = rkstrdup_ni(entry->value);
+                        if (!copy) {
+                                LOG_ERR("Failed to dup value");
                                 return -1;
                         }
-                        LOG_DBG("Got interface name %s", data->interface_name);
+
+                        ip_addr = 0;
+                        if (ip_string_to_int(copy, &ip_addr)) {
+                                LOG_ERR("Failed to convert ip to int");
+                                rkfree(copy);
+                                return -1;
+                        }
+
+                        data->host_name = ip_addr;
+
+                        rkfree(copy);
+
+                        LOG_DBG("Got hostname %u", data->host_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
-                        unsigned int       len, port_nr, ip_addr, nr, i; 
-                        int                result;
-                        char               *val, *tmp, *copy;
-                        char               *ap, *ae, *ip, *port, *ip_b;
+                        unsigned int       len, port_nr;
+                        __be32             ip_addr;
+                        char               *val, *copy;
+                        char               *ap, *ae, *ip, *port;
                         struct name *      app_name;
                         struct dir_entry * dir_entry;
 
                         ASSERT(entry->value);
 
-                        dir_entry = rkmalloc(sizeof(struct dir_entry), 
+                        dir_entry = rkmalloc(sizeof(struct dir_entry),
                                              GFP_KERNEL);
-                        app_name = name_create();
-                        copy = rkstrdup(entry->value, GFP_KERNEL);
+
+                        copy = rkstrdup_ni(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
-                                remove_dif_name(data);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         val = copy;
@@ -1500,9 +1564,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ap = 0;
                         if (get_nxt_val(&ap, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
@@ -1510,10 +1572,8 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ae = 0;
                         if (get_nxt_val(&ae, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
@@ -1521,30 +1581,19 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         ip = 0;
                         if (get_nxt_val(&ip, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
-                        
-                        ip_b = ip;
-                        ip_addr = 0;
-                        for (i = 0; i < 4; i++) {
-                                tmp = strsep(&ip_b, ".");
-                                result = kstrtouint(tmp, 10, &nr);
-                                if (result) {
-                                        LOG_ERR("Failed to convert int");
-                                        remove_dif_name(data);
-                                        rkfree(ip);
-                                        rkfree(ae);
-                                        rkfree(ap);
-                                        rkfree(copy);
-                                        /* FIXME: Cleanup */
-                                        return -1;
-                                }
-                                ip_addr |= nr << (8 * (3-i));
+
+                        if (ip_string_to_int(ip, &ip_addr)) {
+                                LOG_ERR("Failed to convert ip to int");
+                                rkfree(ip);
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                return -1;
                         }
                         rkfree(ip);
 
@@ -1552,60 +1601,157 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                         port = 0;
                         if (get_nxt_val(&port, &val, &len)) {
                                 LOG_ERR("Failed to get next value");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
 
-                        result = kstrtouint(port, 10, &port_nr);
-                        if (result) {
+                        if (kstrtouint(port, 10, &port_nr)) {
                                 LOG_ERR("Failed to convert int");
-                                remove_dif_name(data);
                                 rkfree(port);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         rkfree(port);
 
                         INIT_LIST_HEAD(&dir_entry->list);
-                        if (!name_init_with(app_name, 
-                                            ap, rkstrdup("", GFP_KERNEL), 
-                                            ae, rkstrdup("", GFP_KERNEL))) {
+                        app_name = name_create();
+                        if (!name_init_with(app_name,
+                                            ap, rkstrdup_ni(""),
+                                            ae, rkstrdup_ni(""))) {
                                 LOG_ERR("Failed to init name");
-                                remove_dif_name(data);
                                 rkfree(ae);
                                 rkfree(ap);
                                 rkfree(copy);
-                                /* FIXME: Cleanup */
                                 return -1;
                         }
                         dir_entry->app_name = app_name;
                         dir_entry->ip_address = ip_addr;
                         dir_entry->port = port_nr;
+
+                        spin_lock(&data->dir_lock);
                         list_add(&dir_entry->list, &data->directory);
+                        spin_unlock(&data->dir_lock);
 
                         rkfree(copy);
 
                         LOG_DBG("Added a new dir entry");
                 } else if (!strcmp(entry->name, "expReg")) {
+                        struct exp_reg * exp_reg;
+                        char           * val, * copy;
+                        unsigned int     len, port_nr;
+                        char           * ap, * ae, * port;
+                        struct name    * app_name;
+
                         ASSERT(entry->value);
 
-                        
+                        exp_reg = rkmalloc(sizeof(struct exp_reg),
+                                           GFP_KERNEL);
+
+                        copy = rkstrdup_ni(entry->value);
+                        if (!copy) {
+                                LOG_ERR("Failed to dup value");
+                                return -1;
+                        }
+                        val = copy;
+
+                        /* len:aplen:aelen:port */
+                        /* Get AP name */
+                        len = 0;
+                        ap = 0;
+                        if (get_nxt_val(&ap, &val, &len)) {
+                                LOG_ERR("Failed to get next value");
+                                rkfree(copy);
+                                return -1;
+                        }
+
+                        /* Get AE name */
+                        ae = 0;
+                        if (get_nxt_val(&ae, &val, &len)) {
+                                LOG_ERR("Failed to get next value");
+                                rkfree(ap);
+                                rkfree(copy);
+                                return -1;
+                        }
+
+                        /* Get port number */
+                        port = 0;
+                        if (get_nxt_val(&port, &val, &len)) {
+                                LOG_ERR("Failed to get next value");
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                return -1;
+                        }
+
+                        if (kstrtouint(port, 10, &port_nr)) {
+                                LOG_ERR("Failed to convert int");
+                                rkfree(port);
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                return -1;
+                        }
+                        rkfree(port);
+
+                        INIT_LIST_HEAD(&exp_reg->list);
+                        app_name = name_create();
+                        if (!name_init_with(app_name,
+                                            ap, rkstrdup_ni(""),
+                                            ae, rkstrdup_ni(""))) {
+                                LOG_ERR("Failed to init name");
+                                rkfree(ae);
+                                rkfree(ap);
+                                rkfree(copy);
+                                return -1;
+                        }
+                        exp_reg->app_name = app_name;
+                        exp_reg->port = port_nr;
+
+                        spin_lock(&data->exp_lock);
+                        list_add(&exp_reg->list, &data->exp_regs);
+                        spin_unlock(&data->exp_lock);
+
+                        rkfree(copy);
+
+                        LOG_DBG("Added a new exp reg entry");
                 } else
                         LOG_WARN("Unknown config param: %s", entry->name);
         }
 
-        /* Fail here if we didn't get an interface */
-        if (!data->interface_name) {
-                LOG_ERR("Didn't get an interface name");
-                remove_dif_name(data);
-                /* FIXME: Cleanup */
+        return 0;
+}
+
+static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
+                                 const struct dif_info *     dif_information)
+{
+        LOG_HBEAT;
+        ASSERT(data);
+        ASSERT(dif_information);
+
+        if (data->dif_name) {
+                ASSERT(data->dif_name->process_name);
+
+                LOG_ERR("This IPC Process is already assigned to the DIF %s",
+                        data->dif_name->process_name);
+                return -1;
+        }
+
+        data->dif_name = name_dup(dif_information->dif_name);
+        if (!data->dif_name) {
+                LOG_ERR("Error duplicating name, bailing out");
+                return -1;
+        }
+
+        if (parse_assign_conf(data,
+                              dif_information->configuration)) {
+                LOG_ERR("Failed to parse configuration");
+                name_destroy(data->dif_name);
+                data->dif_name = NULL;
+                undo_assignment(data);
                 return -1;
         }
 
@@ -1620,14 +1766,21 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(new_config);
 
-        /* 
+        /*
          * FIXME: Update configuration here
          *
-         * Close all sockets, destroy all flows 
+         * Close all sockets, destroy all flows
          *
-         * Update directory, update expected app reg 
-         * See assign to dif for parsing of args
-         */ 
+         */
+
+        undo_assignment(data);
+
+        if (parse_assign_conf(data, new_config)) {
+                LOG_ERR("Failed to update configuration");
+                undo_assignment(data);
+                /* FIXME: If this fails, DIF is no longer functional */
+                return -1;
+        }
 
         return 0;
 }
@@ -1767,7 +1920,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
 };
 
 static struct ipcp_factory_data {
-        /* FIXME: We might add a lock here */
+        spinlock_t lock;
         struct list_head instances;
 } tcp_udp_data;
 
@@ -1780,6 +1933,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&rcv_wq_data);
+
+        spin_lock_init(&data->lock);
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
 
@@ -1806,11 +1961,15 @@ find_instance(struct ipcp_factory_data * data,
 
         ASSERT(data);
 
+        spin_lock(&data->lock);
+
         list_for_each_entry(pos, &(data->instances), list) {
                 if (pos->id == id) {
                         return pos;
                 }
         }
+
+        spin_unlock(&data->lock);
 
         return NULL;
 
@@ -1888,6 +2047,8 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+        inst->data->host_name = INADDR_ANY;
+
         inst->data->qos[0]->average_bandwidth           = 0;
         inst->data->qos[0]->average_sdu_bandwidth       = 0;
         inst->data->qos[0]->delay                       = 0;
@@ -1923,6 +2084,8 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         spin_lock_init(&inst->data->flow_lock);
         spin_lock_init(&inst->data->app_lock);
+        spin_lock_init(&inst->data->dir_lock);
+        spin_lock_init(&inst->data->exp_lock);
 
         INIT_LIST_HEAD(&(inst->data->flows));
         INIT_LIST_HEAD(&(inst->data->apps));
@@ -1934,7 +2097,9 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
          * structures linked (somewhat) together
          */
         INIT_LIST_HEAD(&(inst->data->list));
+        spin_lock(&data->lock);
         list_add(&(inst->data->list), &(data->instances));
+        spin_unlock(&data->lock);
 
         return inst;
 }
@@ -1955,7 +2120,9 @@ static int tcp_udp_destroy(struct ipcp_factory_data *data,
                 if (pos->id == instance->data->id) {
 
                         /* Unbind from the instances set */
+                        spin_lock(&data->lock);
                         list_del(&pos->list);
+                        spin_unlock(&data->lock);
 
                         /* Destroy it */
                         if (pos->qos[0])
@@ -1995,10 +2162,6 @@ static struct ipcp_factory *shim = NULL;
 
 static int __init mod_init(void)
 {
-        struct app_register_data * app;
-
-        LOG_HBEAT;
-
         rcv_wq = alloc_workqueue(SHIM_NAME,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
         if (!rcv_wq) {
@@ -2011,43 +2174,12 @@ static int __init mod_init(void)
         if (!shim)
                 return -1;
 
-        /* FIXME: Remove this hardcoded code, fix in assign_to_dif */
-        INIT_LIST_HEAD(&applications);
-        app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
-
-        INIT_LIST_HEAD(&app->list);
-        app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (3);
-        app->port = 2325;
-        app->app_name = name_create_ni();
-        if (!name_init_from_ni(app->app_name,
-                               "rina.utils.apps.echo.server", "1", "", "")) {
-                name_destroy(app->app_name);
-                return -1;
-        }
-        list_add(&app->list, &applications);
-
-        app = rkmalloc(sizeof(struct app_register_data), GFP_KERNEL);
-
-        INIT_LIST_HEAD(&app->list);
-        app->ip_address = (10 << 24) | (1 << 16) | (1 << 8) | (2);
-        app->port = 2325;
-        app->app_name = name_create_ni();
-        if (!name_init_from_ni(app->app_name,
-                               "rina.utils.apps.echo.client", "1", "", "")) {
-                name_destroy(app->app_name);
-                return -1;
-        }
-        list_add(&app->list, &applications);
-
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
         struct rcv_data * recvd, *nxt;
-        struct app_register_data * app, * next;
-
-        LOG_HBEAT;
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
@@ -2055,12 +2187,6 @@ static void __exit mod_exit(void)
         list_for_each_entry_safe(recvd, nxt, &rcv_wq_data, list) {
                 list_del(&recvd->list);
                 rkfree(recvd);
-        }
-
-        list_for_each_entry_safe(app, next, &applications, list) {
-                list_del(&app->list);
-                name_destroy(app->app_name);
-                rkfree(app);
         }
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim);

@@ -46,8 +46,8 @@ bool test_flow (rinad::Encoder * encoder) {
 	rina::DTCPRateBasedFlowControlConfig rate_to_encode;
 
 	// Set
-	flow_to_encode.source_naming_info_ = rina::ApplicationProcessNamingInformation("test", "1");
-	flow_to_encode.destination_naming_info_ = rina::ApplicationProcessNamingInformation("test2", "1");
+	flow_to_encode.source_naming_info = rina::ApplicationProcessNamingInformation("test", "1");
+	flow_to_encode.destination_naming_info = rina::ApplicationProcessNamingInformation("test2", "1");
 	connection_policies_to_encode.set_dtcp_present(true);
 	connection_policies_to_encode.set_seq_num_rollover_threshold(1234);
 	connection_policies_to_encode.set_initial_a_timer(14561);
@@ -74,7 +74,7 @@ bool test_flow (rinad::Encoder * encoder) {
 	connection_policies_to_encode.set_dtcp_configuration(dtcp_config_to_encode);
 	pconnection_to_encode->setPolicies(connection_policies_to_encode);
 	connection_list.push_front(pconnection_to_encode);
-	flow_to_encode.connections_ = connection_list;
+	flow_to_encode.connections = connection_list;
 
 	// Encode
 	pflow_to_encode = &flow_to_encode;
@@ -86,12 +86,12 @@ bool test_flow (rinad::Encoder * encoder) {
 	rinad::Flow *pflow_decoded = (rinad::Flow*) encoder->decode(&cdapMessage);
 
 	// Assert
-	if (pflow_to_encode->source_naming_info_.processName != pflow_decoded->source_naming_info_.processName)
+	if (pflow_to_encode->source_naming_info.processName != pflow_decoded->source_naming_info.processName)
 		return false;
-	if (pflow_to_encode->source_naming_info_.processInstance != pflow_decoded->source_naming_info_.processInstance)
+	if (pflow_to_encode->source_naming_info.processInstance != pflow_decoded->source_naming_info.processInstance)
 		return false;
 
-	rina::Connection *pconnection_decoded = pflow_decoded->connections_.front();
+	rina::Connection *pconnection_decoded = pflow_decoded->connections.front();
 	rina::ConnectionPolicies connection_policies_decoded = pconnection_decoded->getPolicies();
 	if ( connection_policies_to_encode.get_seq_num_rollover_threshold() != connection_policies_decoded.get_seq_num_rollover_threshold())
 		return false;

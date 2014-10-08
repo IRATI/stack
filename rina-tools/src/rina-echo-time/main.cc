@@ -44,6 +44,7 @@ int wrapped_main(int argc, char** argv)
         unsigned int count;
         unsigned int size;
         unsigned int wait;
+        int gap;
         string test_type;
         string server_apn;
         string server_api;
@@ -119,6 +120,12 @@ int wrapped_main(int argc, char** argv)
                                                       false,
                                                       "ping",
                                                       "string");
+                TCLAP::ValueArg<int> gap_arg("g",
+                                             "gap",
+                                             "Gap of the retransmission window",
+                                             false,
+                                             -1,
+                                             "integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -132,6 +139,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(client_api_arg);
                 cmd.add(dif_arg);
                 cmd.add(test_type_arg);
+                cmd.add(gap_arg);
 
                 cmd.parse(argc, argv);
 
@@ -147,6 +155,7 @@ int wrapped_main(int argc, char** argv)
                 client_api = client_api_arg.getValue();
                 dif_name = dif_arg.getValue();
                 test_type = test_type_arg.getValue();
+                gap = gap_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -171,7 +180,7 @@ int wrapped_main(int argc, char** argv)
                 // Client mode
                 Client c(test_type, dif_name, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait);
+                         registration, size, wait, gap);
 
                 c.run();
         }
