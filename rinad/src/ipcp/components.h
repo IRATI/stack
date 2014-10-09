@@ -66,16 +66,16 @@ extern "C" {
 }
 
 struct ComponentFactory {
-        /* Name of this pluggable component. */
+        // Name of this pluggable component.
         std::string name;
 
-        /* Name of the component where this plugin applies. */
+        // Name of the component where this plugin applies.
         std::string component;
 
-        /* Constructor method for instances of this pluggable component. */
+        // Constructor method for instances of this pluggable component.
         component_factory_create_t create;
 
-        /* Destructor method for instances of this pluggable component. */
+        // Destructor method for instances of this pluggable component.
         component_factory_destroy_t destroy;
 };
 
@@ -1037,12 +1037,12 @@ public:
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
 
-        std::vector<ComponentFactory>::iterator
-                componentFactoryLookup(const std::string& component,
-                                       const std::string& name);
-        int componentFactoryPublish(const ComponentFactory& factory);
-        int componentFactoryUnpublish(const std::string& component,
-                                      const std::string& name);
+        virtual std::vector<ComponentFactory>::iterator
+                        componentFactoryLookup(const std::string& component,
+                                       const std::string& name) = 0;
+        virtual int componentFactoryPublish(const ComponentFactory& factory) = 0;
+        virtual int componentFactoryUnpublish(const std::string& component,
+                                              const std::string& name) = 0;
 };
 
 /// Generates unique object instances

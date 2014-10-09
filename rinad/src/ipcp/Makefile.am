@@ -45,8 +45,7 @@ testsLIBS     = $(COMMONLIBS)
 libps_default_la_CFLAGS =
 libps_default_la_CPPFLAGS =			\
 	$(COMMONCPPFLAGS)
-libps_default_la_LIBADD =			\
-	$(COMMONLIBS)
+libps_default_la_LIBADD =
 libps_default_la_LDFLAGS =
 libps_default_la_SOURCES =				\
 		default-plugin.cc			\

@@ -57,6 +57,13 @@ public:
         void processSelectPolicySetResponseEvent(
                 const rina::SelectPolicySetResponseEvent& event);
 
+        std::vector<ComponentFactory>::iterator
+                        componentFactoryLookup(const std::string& component,
+                                       const std::string& name);
+        int componentFactoryPublish(const ComponentFactory& factory);
+        int componentFactoryUnpublish(const std::string& component,
+                                              const std::string& name);
+
 private:
 	void init_cdap_session_manager();
 	void init_encoder();
