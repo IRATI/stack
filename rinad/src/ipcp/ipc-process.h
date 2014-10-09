@@ -27,6 +27,7 @@
 
 #include "common/event-loop.h"
 #include "ipcp/components.h"
+#include "ipcp/component-factory.h"
 
 namespace rinad {
 
@@ -57,6 +58,13 @@ public:
         void processSelectPolicySetResponseEvent(
                 const rina::SelectPolicySetResponseEvent& event);
 
+        std::vector<ComponentFactory>::iterator
+                componentFactoryLookup(const std::string& component,
+                                       const std::string& name);
+        int componentFactoryPublish(const ComponentFactory& factory);
+        int componentFactoryUnpublish(const std::string& component,
+                                      const std::string& name);
+
 private:
 	void init_cdap_session_manager();
 	void init_encoder();
@@ -71,6 +79,7 @@ private:
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
         std::vector<void *>plugins_handles;
+        std::vector<ComponentFactory> component_factories;
 };
 
 void register_handlers_all(EventLoop& loop);
