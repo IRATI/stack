@@ -68,6 +68,7 @@ private:
 	void init_cdap_session_manager();
 	void init_encoder();
         int plugin_load(const std::string& name);
+        int plugin_unload(const std::string& name);
 
 	IPCProcessOperationalState state;
 	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
@@ -77,7 +78,7 @@ private:
                 pending_select_policy_set_events;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
-        std::vector<void *>plugins_handles;
+        std::map< std::string, void * > plugins_handles;
 };
 
 void register_handlers_all(EventLoop& loop);

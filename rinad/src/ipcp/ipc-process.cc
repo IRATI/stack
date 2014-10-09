@@ -134,9 +134,10 @@ IPCProcessImpl::~IPCProcessImpl() {
 		delete rib_daemon;
 	}
 
-        for (std::vector<void *>::iterator i = plugins_handles.begin();
-                                        i != plugins_handles.end(); i++) {
-                dlclose(*i);
+        for (std::map<std::string, void *>::iterator
+                        it = plugins_handles.begin();
+                                it != plugins_handles.end(); it++) {
+                plugin_unload(it->first);
         }
 }
 
@@ -460,6 +461,11 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
         char *errstr;
         int ret;
 
+        if (plugins_handles.count(plugin_name)) {
+                LOG_ERR("Plugin '%s' already loaded", plugin_name.c_str());
+                return -1;
+        }
+
         plugin_path += "/";
         plugin_path += plugin_name + ".so";
 
@@ -495,9 +501,27 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
                 return -1;
         }
 
-        plugins_handles.push_back(handle);
+        plugins_handles[plugin_name] = handle;
 
         LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
+
+        return 0;
+}
+
+int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
+{
+        std::map< std::string, void * >::iterator mit;
+
+        mit = plugins_handles.find(plugin_name);
+        if (mit == plugins_handles.end()) {
+                LOG_ERR("plugin %s already loaded", plugin_name.c_str());
+                return -1;
+        }
+
+        // TODO unload all the pluggable components
+
+        dlclose(mit->second);
+        plugins_handles.erase(mit);
 
         return 0;
 }
