@@ -32,7 +32,6 @@
 #include "ipcp/pduft-generator.h"
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
-#include "ipcp/security-manager.h"
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -72,6 +71,9 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	resource_allocator = new ResourceAllocator();
 	security_manager = dynamic_cast<ISecurityManager *>(
                         componentFactoryCreate("security-manager", NULL));
+        if (!security_manager) {
+                throw Exception("Cannot create security manager component");
+        }
 	rib_daemon = new RIBDaemon();
 
 	rib_daemon->set_ipc_process(this);
