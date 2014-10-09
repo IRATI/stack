@@ -37,8 +37,7 @@ ipcp_SOURCES  =						\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h   	\
 	security-manager.cc     security-manager.h 	\
-	ipc-process.cc          ipc-process.h		\
-	component-factory.h
+	ipc-process.cc          ipc-process.h
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)
@@ -51,7 +50,7 @@ libps_default_la_LIBADD =			\
 libps_default_la_LDFLAGS =
 libps_default_la_SOURCES =				\
 		default-plugin.cc			\
-		component-factory.h			\
+		component.h				\
 		default-security-manager.cc
 
 lib_LTLIBRARIES = libps-default.la

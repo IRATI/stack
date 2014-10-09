@@ -1,4 +1,4 @@
-#include "ipcp/component-factory.h"
+#include "ipcp/components.h"
 
 namespace rinad {
 
@@ -12,16 +12,16 @@ extern "C" int
 init(IPCProcess * ipc_process)
 {
         struct ComponentFactory factory;
+        int ret;
 
         factory.name = "default";
         factory.component = "security-manager";
         factory.create = createSecurityManager;
         factory.destroy = destroySecurityManager;
 
-        (void) factory;
-        (void) ipc_process;
+        ret = ipc_process->componentFactoryPublish(factory);
 
-        return 0;
+        return ret;
 }
 
 }   // namespace rinad

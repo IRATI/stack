@@ -4,6 +4,7 @@
  *    Bernat Gaston         <bernat.gaston@i2cat.net>
  *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +27,8 @@
 #ifdef __cplusplus
 
 #include <list>
+#include <vector>
+#include <string>
 
 #include <librina/cdap.h>
 #include <librina/ipc-process.h>
@@ -52,6 +55,28 @@ public:
 	virtual ~IPCProcessComponent(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+};
+
+extern "C" {
+        typedef IPCProcessComponent *(*component_factory_create_t)(
+                                                IPCProcess * ipc_process);
+        typedef void (*component_factory_destroy_t)(
+                                        IPCProcessComponent * ipc_process);
+        typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
+}
+
+struct ComponentFactory {
+        /* Name of this pluggable component. */
+        std::string name;
+
+        /* Name of the component where this plugin applies. */
+        std::string component;
+
+        /* Constructor method for instances of this pluggable component. */
+        component_factory_create_t create;
+
+        /* Destructor method for instances of this pluggable component. */
+        component_factory_destroy_t destroy;
 };
 
 /// Interface
@@ -982,6 +1007,9 @@ public:
 
 /// IPC Process interface
 class IPCProcess {
+protected:
+        std::vector<ComponentFactory> component_factories;
+
 public:
 	static const std::string MANAGEMENT_AE;
 	static const std::string DATA_TRANSFER_AE;
@@ -1008,6 +1036,13 @@ public:
 	virtual const rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
+
+        std::vector<ComponentFactory>::iterator
+                componentFactoryLookup(const std::string& component,
+                                       const std::string& name);
+        int componentFactoryPublish(const ComponentFactory& factory);
+        int componentFactoryUnpublish(const std::string& component,
+                                      const std::string& name);
 };
 
 /// Generates unique object instances
