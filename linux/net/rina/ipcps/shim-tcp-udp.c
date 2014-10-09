@@ -45,6 +45,7 @@ static struct workqueue_struct * rcv_wq;
 static struct work_struct        rcv_work;
 static struct list_head          rcv_wq_data;
 static DEFINE_SPINLOCK(rcv_wq_lock);
+static DEFINE_SPINLOCK(rcv_stop_lock);
 
 /* Structure for the workqueue */
 struct rcv_data {
@@ -588,6 +589,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
                 app = find_app_by_socket(data, flow->sock);
 
+                /* FIXME: wq cleanup */
                 if (flow->fspec_id == 1 &&
                     flow->port_id_state == PORT_STATE_ALLOCATED) {
                         kernel_sock_shutdown(flow->sock, SHUT_RDWR);
@@ -620,6 +622,8 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
+        struct rcv_data *          recvd;
+        unsigned long              flags;
 
         LOG_HBEAT;
         ASSERT(data);
@@ -634,6 +638,19 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 
         if (flow->fspec_id == 1 && 
                         flow->port_id_state == PORT_STATE_ALLOCATED) {
+
+                /* FIXME: more efficient locking and better cleanup */
+                spin_lock(&rcv_stop_lock);
+                spin_lock_irqsave(&rcv_wq_lock, flags);
+                list_for_each_entry(recvd, &rcv_wq_data, list) {
+                        if (recvd->sk->sk_socket == flow->sock) {
+                                LOG_DBG("set sock to null");
+                                recvd->sk = NULL;
+                        }
+                }
+                spin_unlock_irqrestore(&rcv_wq_lock, flags);
+                spin_unlock(&rcv_stop_lock);
+
                 LOG_DBG("closing socket");
                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
         }
@@ -1048,6 +1065,8 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                            struct socket *             sock)
 {
         struct shim_tcp_udp_flow * flow;
+        struct rcv_data *          recvd;
+        unsigned long              flags;
         int                        size;
 
         ASSERT(data);
@@ -1061,11 +1080,36 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
         else
                 size = tcp_recv_partial_message(data, sock, flow);
 
-        if (size == 0 && flow->port_id_state == PORT_STATE_ALLOCATED) {
+        if (size == 0 && (flow->port_id_state == PORT_STATE_ALLOCATED ||
+                                flow->port_id_state == PORT_STATE_PENDING)) {
                 LOG_DBG("closing flow");
-                kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+
+                if (flow->port_id_state == PORT_STATE_ALLOCATED)
+                        flow->port_id_state = PORT_STATE_NULL;
+
+                write_lock_bh(&flow->sock->sk->sk_callback_lock);
+                flow->sock->sk->sk_data_ready = flow->sock->sk->sk_user_data;
+                flow->sock->sk->sk_user_data = NULL;
+                write_unlock_bh(&flow->sock->sk->sk_callback_lock);
+
+                /* FIXME: better cleanup */
+                spin_lock_irqsave(&rcv_wq_lock, flags);
+                list_for_each_entry(recvd, &rcv_wq_data, list) {
+                        if (recvd->sk->sk_socket == flow->sock)
+                                recvd->sk = NULL;
+                }
+                spin_unlock_irqrestore(&rcv_wq_lock, flags);
+
                 sock_release(flow->sock);
-                /* FIXME: Isn't more cleanup needed? */
+
+                /* FIXME: remove the msleep */
+                while (flow->sdu_queue != NULL) {
+                        msleep(2);
+                }
+                LOG_DBG("notifying kipcm aboud deallocate");
+                kfa_flow_deallocate(data->kfa, flow->port_id);
+                kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+
                 return 0;
         }
 
@@ -1076,7 +1120,7 @@ static int tcp_process(struct socket * sock)
 {
         struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
-        struct reg_app_data *           app;
+        struct reg_app_data *       app;
         struct socket *             acsock;
         struct name *               sname;
         int                         err;
@@ -1222,31 +1266,26 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 {
         struct rcv_data * recvd, * next;
         unsigned long     flags;
-        struct sock *     last = NULL;
 
         LOG_HBEAT;
 
+        /* FIXME: more efficient locking and better cleanup */
         spin_lock_irqsave(&rcv_wq_lock, flags);
         list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
-                spin_unlock_irqrestore(&rcv_wq_lock, flags);
-
-                LOG_DBG("worker on %p", recvd->sk->sk_socket);
-                if (recvd->sk != last) {
-                        if (tcp_udp_rcv_process_msg(recvd->sk) == EAGAIN) {
-                                last = recvd->sk;
-                        } else {
-                                last = NULL;
-                        }
-                } else {
-                        last = NULL;
-                }
-
-                spin_lock_irqsave(&rcv_wq_lock, flags);
+                spin_lock(&rcv_stop_lock);
                 list_del(&recvd->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
+                LOG_DBG("worker on %p", recvd->sk);
+
+                if (recvd->sk != NULL)
+                        tcp_udp_rcv_process_msg(recvd->sk);
+                else
+                        LOG_DBG("null pointer in worker (good thing)");
+
                 rkfree(recvd);
 
+                spin_unlock(&rcv_stop_lock);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
