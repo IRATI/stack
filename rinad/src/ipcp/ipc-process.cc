@@ -518,7 +518,16 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
                 return -1;
         }
 
-        // TODO unload all the pluggable components
+        // Unload all the pluggable components published by this plugin
+        // Note: Here we assume the plugin name is used as the "name"
+        // argument in the componentFactoryPublish() calls.
+        for (std::vector<ComponentFactory>::iterator
+                it = components_factories.begin();
+                        it != components_factories.end(); it++) {
+                if (it->name == plugin_name) {
+                        componentFactoryUnpublish(it->component, it->name);
+                }
+        }
 
         dlclose(mit->second);
         plugins_handles.erase(mit);
@@ -564,7 +573,7 @@ int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
 }
 
 int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
-                                          const std::string& name)
+                                              const std::string& name)
 {
         std::vector<ComponentFactory>::iterator fi;
 
