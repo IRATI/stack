@@ -79,6 +79,7 @@ private:
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
         std::map< std::string, void * > plugins_handles;
+        std::vector<ComponentFactory> components_factories;
 };
 
 void register_handlers_all(EventLoop& loop);

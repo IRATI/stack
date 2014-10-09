@@ -531,15 +531,15 @@ IPCProcessImpl::componentFactoryLookup(const std::string& component,
                                        const std::string& name)
 {
         for (std::vector<ComponentFactory>::iterator
-                it = component_factories.begin();
-                        it != component_factories.end(); it++) {
+                it = components_factories.begin();
+                        it != components_factories.end(); it++) {
                 if (it->component == component &&
                                 it->name == name) {
                         return it;
                 }
         }
 
-        return component_factories.end();
+        return components_factories.end();
 }
 
 int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
@@ -547,7 +547,7 @@ int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
         if (componentFactoryLookup(factory.component, factory.name) !=
-                                                component_factories.end()) {
+                                                components_factories.end()) {
                 LOG_ERR("Factory %s for component %s already "
                                 "published", factory.name.c_str(),
                                 factory.component.c_str());
@@ -555,7 +555,7 @@ int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
         }
 
         // Add the new factory
-        component_factories.push_back(factory);
+        components_factories.push_back(factory);
 
         LOG_INFO("Pluggable component %s/%s published",
                  factory.component.c_str(), factory.name.c_str());
@@ -569,14 +569,14 @@ int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
         std::vector<ComponentFactory>::iterator fi;
 
         fi = componentFactoryLookup(component, name);
-        if (fi == component_factories.end()) {
+        if (fi == components_factories.end()) {
                 LOG_ERR("Factory %s for component %s not "
                                 "published", name.c_str(),
                                 component.c_str());
                 return -1;
         }
 
-        component_factories.erase(fi);
+        components_factories.erase(fi);
 
         LOG_INFO("Pluggable component %s/%s unpublished",
                  component.c_str(), name.c_str());

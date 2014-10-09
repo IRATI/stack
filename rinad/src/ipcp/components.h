@@ -1007,9 +1007,6 @@ public:
 
 /// IPC Process interface
 class IPCProcess {
-protected:
-        std::vector<ComponentFactory> component_factories;
-
 public:
 	static const std::string MANAGEMENT_AE;
 	static const std::string DATA_TRANSFER_AE;
