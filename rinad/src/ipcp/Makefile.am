@@ -42,6 +42,19 @@ ipcp_SOURCES  =						\
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)
 
+libps_default_la_CFLAGS =
+libps_default_la_CPPFLAGS =			\
+	$(COMMONCPPFLAGS)
+libps_default_la_LIBADD =			\
+	$(COMMONLIBS)
+libps_default_la_LDFLAGS =
+libps_default_la_SOURCES =				\
+		default-plugin.cc			\
+		component-factory.h			\
+		default-security-manager.cc
+
+lib_LTLIBRARIES = libps-default.la
+
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
 	components.cc	     components.h	\
