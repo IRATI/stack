@@ -12,6 +12,7 @@ extern "C" {
                                                 IPCProcess * ipc_process);
         typedef void (*component_factory_destroy_t)(
                                         IPCProcessComponent * ipc_process);
+        typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
 }
 
 struct ComponentFactory {

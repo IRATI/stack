@@ -37,7 +37,8 @@ ipcp_SOURCES  =						\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h   	\
 	security-manager.cc     security-manager.h 	\
-	ipc-process.cc          ipc-process.h
+	ipc-process.cc          ipc-process.h		\
+	component-factory.h
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)

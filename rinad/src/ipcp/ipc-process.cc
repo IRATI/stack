@@ -33,6 +33,7 @@
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
 #include "ipcp/security-manager.h"
+#include "ipcp/component-factory.h"
 
 namespace rinad {
 
@@ -452,13 +453,42 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
         std::string plugin_path = STRINGIFY(PLUGINSDIR);
 #undef STRINGIFY
         void *handle;
+        plugin_init_function_t init_func;
+        char *errstr;
+        int ret;
 
         plugin_path += "/";
         plugin_path += plugin_name + ".so";
 
         handle = dlopen(plugin_path.c_str(), RTLD_LAZY);
         if (!handle) {
-                LOG_ERR("Cannot load plugin: %s", dlerror());
+                LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(),
+                        dlerror());
+                return -1;
+        }
+
+        /* Clear any pending error conditions. */
+        dlerror();
+
+        /* Try to load the init() function. */
+        init_func = (plugin_init_function_t)dlsym(handle, "init");
+
+        /* Check if an error occurred in dlsym(). */
+        errstr = dlerror();
+        if (errstr) {
+                dlclose(handle);
+                LOG_ERR("Failed to link the init() function for plugin %s: %s",
+                        plugin_name.c_str(), errstr);
+                return -1;
+        }
+
+        /* Invoke the plugin initialization function, that will publish
+         * pluggable components. */
+        ret = init_func(this);
+        if (ret) {
+                dlclose(handle);
+                LOG_ERR("Failed to initialize plugin %s",
+                        plugin_name.c_str());
                 return -1;
         }
 

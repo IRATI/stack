@@ -8,7 +8,7 @@ createSecurityManager(IPCProcess * ipc_process);
 extern "C" void
 destroySecurityManager(IPCProcessComponent *component);
 
-extern "C" void
+extern "C" int
 init(IPCProcess * ipc_process)
 {
         struct ComponentFactory factory;
@@ -20,6 +20,8 @@ init(IPCProcess * ipc_process)
 
         (void) factory;
         (void) ipc_process;
+
+        return 0;
 }
 
 }   // namespace rinad
