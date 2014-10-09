@@ -3,7 +3,7 @@
 namespace rinad {
 
 extern "C" IPCProcessComponent *
-createSecurityManager(IPCProcess * ipc_process);
+createSecurityManager(void * context);
 
 extern "C" void
 destroySecurityManager(IPCProcessComponent *component);

@@ -63,25 +63,18 @@ bool SecurityManager::acceptFlow(const Flow& newFlow) {
 }
 
 extern "C" IPCProcessComponent *
-createSecurityManager(IPCProcess * ipc_process)
+createSecurityManager(void * context)
 {
-        (void) ipc_process;
-        return NULL;
+        (void) context;
+        return new SecurityManager();
 }
 
 extern "C" void
 destroySecurityManager(IPCProcessComponent *component)
 {
-        (void) component;
+        if (component) {
+                delete component;
+        }
 }
 
 }
-
-/* TODO remove
-extern "C" rinad::ISecurityManager *
-createSecurityManager(rinad::IPCProcess * ipc_process)
-{
-        (void) ipc_process;
-        return NULL;
-}
-*/

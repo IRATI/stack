@@ -70,7 +70,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	flow_allocator = new FlowAllocator();
 	namespace_manager = new NamespaceManager();
 	resource_allocator = new ResourceAllocator();
-	security_manager = new SecurityManager();
+	security_manager = dynamic_cast<ISecurityManager *>(
+                        componentFactoryCreate("security-manager", NULL));
 	rib_daemon = new RIBDaemon();
 
 	rib_daemon->set_ipc_process(this);
@@ -127,7 +128,7 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (security_manager) {
-		delete security_manager;
+		componentFactoryDestroy("security-manager", security_manager);
 	}
 
 	if (rib_daemon) {
@@ -589,6 +590,41 @@ int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
 
         LOG_INFO("Pluggable component %s/%s unpublished",
                  component.c_str(), name.c_str());
+
+        return 0;
+}
+
+IPCProcessComponent *
+IPCProcessImpl::componentFactoryCreate(const std::string& component,
+                                       void * context)
+{
+        std::vector<ComponentFactory>::iterator it;
+        std::string plugin_name = "default";
+
+        it = componentFactoryLookup(component, plugin_name);
+        if (it == components_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), plugin_name.c_str());
+                return NULL;
+        }
+
+        return it->create(context);
+}
+
+int IPCProcessImpl::componentFactoryDestroy(const std::string& component,
+                                            IPCProcessComponent * instance)
+{
+        std::vector<ComponentFactory>::iterator it;
+        std::string plugin_name = "default";
+
+        it = componentFactoryLookup(component, "default");
+        if (it == components_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), plugin_name.c_str());
+                return -1;
+        }
+
+        it->destroy(instance);
 
         return 0;
 }

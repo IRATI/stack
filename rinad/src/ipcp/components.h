@@ -59,7 +59,7 @@ public:
 
 extern "C" {
         typedef IPCProcessComponent *(*component_factory_create_t)(
-                                                IPCProcess * ipc_process);
+                                                        void * context);
         typedef void (*component_factory_destroy_t)(
                                         IPCProcessComponent * ipc_process);
         typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
