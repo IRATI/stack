@@ -52,9 +52,15 @@ class IPCProcess;
 /// IPC process component interface
 class IPCProcessComponent {
 public:
+        std::string selected_ps_name;
+
 	virtual ~IPCProcessComponent(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+        virtual int select_policy_set(const std::string& name) {
+                (void)name;
+                return -1;
+        }
 };
 
 class IPolicySet {
@@ -507,6 +513,7 @@ public:
 	SecurityManager();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+        int select_policy_set(const std::string& name);
 	~SecurityManager() {};
 };
 
@@ -1065,6 +1072,13 @@ public:
         virtual int componentFactoryPublish(const ComponentFactory& factory) = 0;
         virtual int componentFactoryUnpublish(const std::string& component,
                                               const std::string& name) = 0;
+        virtual IPolicySet * componentFactoryCreate(
+                                        const std::string& component,
+                                        const std::string& name,
+                                        IPCProcessComponent * context) = 0;
+        virtual int componentFactoryDestroy(const std::string& component,
+                                            const std::string& name,
+                                            IPolicySet * instance) = 0;
 };
 
 /// Generates unique object instances

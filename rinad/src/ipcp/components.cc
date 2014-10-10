@@ -423,4 +423,37 @@ void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_co
 	LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
+int SecurityManager::select_policy_set(const std::string& name)
+{
+        IPolicySet *candidate = NULL;
+
+        if (!ipcp) {
+                LOG_ERR("bug: NULL ipcp reference");
+                return -1;
+        }
+
+        if (name == selected_ps_name) {
+                LOG_INFO("policy set %s already selected", name.c_str());
+                return 0;
+        }
+
+        candidate = ipcp->componentFactoryCreate("security-manager", name, this);
+        if (!candidate) {
+                LOG_ERR("failed to allocate instance of policy set %s");
+                return -1;
+        }
+
+        if (ps) {
+                // Remove the old one.
+                ipcp->componentFactoryDestroy("security-manager", selected_ps_name, ps);
+        }
+
+        // Install the new one.
+        ps = dynamic_cast<ISecurityManagerPs *>(candidate);
+        selected_ps_name = name;
+        LOG_INFO("Policy-set %s selected", name.c_str());
+
+        return ps ? 0 : -1;
+}
+
 }

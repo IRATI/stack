@@ -58,15 +58,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	state = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
-        // This initialization must be before any plugin_load(). */
-        selected_components["delimiter"] = "default";
-        selected_components["enrollment"] = "default";
-        selected_components["flow-allocator"] = "default";
-        selected_components["namespace-manager"] = "default";
-        selected_components["resource-allocator"] = "default";
-        selected_components["security-manager"] = "default";
-        selected_components["rib-daemon"] = "default";
-
         // Load the default pluggable components
         if (plugin_load("default")) {
                 throw Exception("Failed to load default plugin");
@@ -82,13 +73,6 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	resource_allocator = new ResourceAllocator();
 
         security_manager = new SecurityManager();
-        security_manager->ps = dynamic_cast<ISecurityManagerPs *>(
-                                componentFactoryCreate("security-manager",
-                                                       security_manager));
-        if (!security_manager->ps) {
-                throw Exception("Cannot create security manager policy-set");
-        }
-
 	rib_daemon = new RIBDaemon();
 
 	rib_daemon->set_ipc_process(this);
@@ -97,6 +81,12 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager->set_ipc_process(this);
 	flow_allocator->set_ipc_process(this);
 	security_manager->set_ipc_process(this);
+
+        // Select the default policy sets
+        security_manager->select_policy_set("default");
+        if (!security_manager->ps) {
+                throw Exception("Cannot create security manager policy-set");
+        }
 
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name);
@@ -146,7 +136,8 @@ IPCProcessImpl::~IPCProcessImpl() {
 
 	if (security_manager) {
 		componentFactoryDestroy("security-manager",
-                                        security_manager->ps);
+                                security_manager->selected_ps_name,
+                                security_manager->ps);
                 delete security_manager;
 	}
 
@@ -573,10 +564,7 @@ IPCProcessImpl::componentFactoryLookup(const std::string& component,
 
 int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
 {
-        if (!selected_components.count(factory.component)) {
-                LOG_ERR("Cannot plugin component %s");
-                return -1;
-        }
+        // TODO check that factory.component is an existing component
 
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
@@ -620,15 +608,15 @@ int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
 
 IPolicySet *
 IPCProcessImpl::componentFactoryCreate(const std::string& component,
+                                       const std::string& name,
                                        IPCProcessComponent * context)
 {
         std::vector<ComponentFactory>::iterator it;
-        std::string plugin_name = selected_components[component];
 
-        it = componentFactoryLookup(component, plugin_name);
+        it = componentFactoryLookup(component, name);
         if (it == components_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
-                        component.c_str(), plugin_name.c_str());
+                        component.c_str(), name.c_str());
                 return NULL;
         }
 
@@ -636,15 +624,15 @@ IPCProcessImpl::componentFactoryCreate(const std::string& component,
 }
 
 int IPCProcessImpl::componentFactoryDestroy(const std::string& component,
+                                            const std::string& name,
                                             IPolicySet * instance)
 {
         std::vector<ComponentFactory>::iterator it;
-        std::string plugin_name = selected_components[component];
 
-        it = componentFactoryLookup(component, plugin_name);
+        it = componentFactoryLookup(component, name);
         if (it == components_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
-                        component.c_str(), plugin_name.c_str());
+                        component.c_str(), name.c_str());
                 return -1;
         }
 
