@@ -85,6 +85,7 @@ private:
 	rina::DIFInformation dif_information_;
         std::map< std::string, void * > plugins_handles;
         std::vector<ComponentFactory> components_factories;
+        std::map< std::string, std::string > selected_components;
 };
 
 void register_handlers_all(EventLoop& loop);

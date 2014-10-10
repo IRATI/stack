@@ -59,7 +59,16 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	lock_ = new rina::Lockable();
 
         // Load the default pluggable components
-        plugin_load("default");
+        if (plugin_load("default")) {
+                throw Exception("Failed to load default plugin");
+        }
+        selected_components["delimiter"] = "default";
+        selected_components["enrollment"] = "default";
+        selected_components["flow-allocator"] = "default";
+        selected_components["namespace-manager"] = "default";
+        selected_components["resource-allocator"] = "default";
+        selected_components["security-manager"] = "default";
+        selected_components["rib-daemon"] = "default";
 
 	// Initialize subcomponents
 	init_cdap_session_manager();
@@ -601,7 +610,7 @@ IPCProcessImpl::componentFactoryCreate(const std::string& component,
                                        void * context)
 {
         std::vector<ComponentFactory>::iterator it;
-        std::string plugin_name = "default";
+        std::string plugin_name = selected_components[component];
 
         it = componentFactoryLookup(component, plugin_name);
         if (it == components_factories.end()) {
@@ -617,9 +626,9 @@ int IPCProcessImpl::componentFactoryDestroy(const std::string& component,
                                             IPCProcessComponent * instance)
 {
         std::vector<ComponentFactory>::iterator it;
-        std::string plugin_name = "default";
+        std::string plugin_name = selected_components[component];
 
-        it = componentFactoryLookup(component, "default");
+        it = componentFactoryLookup(component, plugin_name);
         if (it == components_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), plugin_name.c_str());
