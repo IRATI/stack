@@ -29,17 +29,17 @@ namespace rinad {
 
 class SecurityManagerPs: public ISecurityManagerPs {
 public:
-	SecurityManagerPs(SecurityManager * dm);
+	SecurityManagerPs(ISecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
 	bool acceptFlow(const Flow& newFlow);
         virtual ~SecurityManagerPs() {}
 
 private:
-        // Data model of the SecurityManager component.
-        SecurityManager * dm;
+        // Data model of the security manager component.
+        ISecurityManager * dm;
 };
 
-SecurityManagerPs::SecurityManagerPs(SecurityManager * dm_) : dm(dm_)
+SecurityManagerPs::SecurityManagerPs(ISecurityManager * dm_) : dm(dm_)
 { }
 
 
@@ -59,7 +59,7 @@ bool SecurityManagerPs::acceptFlow(const Flow& newFlow)
 extern "C" IPolicySet *
 createSecurityManagerPs(IPCProcessComponent * ctx)
 {
-        SecurityManager * sm = static_cast<SecurityManager *>(ctx);
+        ISecurityManager * sm = dynamic_cast<ISecurityManager *>(ctx);
 
         if (!sm) {
                 return NULL;

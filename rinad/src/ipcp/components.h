@@ -480,6 +480,7 @@ public:
 /// and integrity
 
 class ISecurityManagerPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
 public:
 	/// Decide if an IPC Process is allowed to join a DIF
 	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
@@ -490,7 +491,14 @@ public:
         virtual ~ISecurityManagerPs() {}
 };
 
-class SecurityManager: public IPCProcessComponent {
+class ISecurityManager: public IPCProcessComponent {
+// This class is used by the plugins to access the IPCP functionalities
+public:
+        virtual ~ISecurityManager() {}
+};
+
+class SecurityManager: public ISecurityManager {
+// Used by IPCP to access the functionalities of the security manager
 private:
         IPCProcess *ipcp;
 public:
