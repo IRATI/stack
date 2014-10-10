@@ -1107,7 +1107,7 @@ void EnrollerStateMachine::connect(int invoke_id, rina::CDAPSessionDescriptor * 
 
 	//TODO Authenticate sender
 	LOG_DBG("Authentication successful, deciding if new member can join the DIF...");
-	if (!security_manager_->isAllowedToJoinDIF(*remote_peer_)) {
+	if (!security_manager_->ps->isAllowedToJoinDIF(*remote_peer_)) {
 		LOG_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
 		abortEnrollment(remote_peer_->name_, port_id_,
 				ENROLLMENT_NOT_ALLOWED, false, true);

@@ -27,53 +27,52 @@
 
 namespace rinad {
 
-class SecurityManager: public ISecurityManager {
+class SecurityManagerPs: public ISecurityManagerPs {
 public:
-	SecurityManager();
-	void set_ipc_process(IPCProcess * ipc_process);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	SecurityManagerPs(SecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
 	bool acceptFlow(const Flow& newFlow);
+        virtual ~SecurityManagerPs() {}
 
 private:
-	IPCProcess * ipc_process_;
+        // Data model of the SecurityManager component.
+        SecurityManager * dm;
 };
 
-SecurityManager::SecurityManager() {
-	ipc_process_ = 0;
-}
+SecurityManagerPs::SecurityManagerPs(SecurityManager * dm_) : dm(dm_)
+{ }
 
-void SecurityManager::set_ipc_process(IPCProcess * ipc_process) {
-	ipc_process_ = ipc_process;
-}
 
-void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
-}
-
-bool SecurityManager::isAllowedToJoinDIF(const rina::Neighbor& newMember) {
+bool SecurityManagerPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
+{
 	LOG_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
 	return true;
 }
 
-bool SecurityManager::acceptFlow(const Flow& newFlow) {
+bool SecurityManagerPs::acceptFlow(const Flow& newFlow)
+{
 	LOG_DBG("Accepting flow from remote application %s",
 			newFlow.source_naming_info.getEncodedString().c_str());
 	return true;
 }
 
-extern "C" IPCProcessComponent *
-createSecurityManager(void * context)
+extern "C" IPolicySet *
+createSecurityManagerPs(IPCProcessComponent * ctx)
 {
-        (void) context;
-        return new SecurityManager();
+        SecurityManager * sm = static_cast<SecurityManager *>(ctx);
+
+        if (!sm) {
+                return NULL;
+        }
+
+        return new SecurityManagerPs(sm);
 }
 
 extern "C" void
-destroySecurityManager(IPCProcessComponent *component)
+destroySecurityManagerPs(IPolicySet * ps)
 {
-        if (component) {
-                delete component;
+        if (ps) {
+                delete ps;
         }
 }
 

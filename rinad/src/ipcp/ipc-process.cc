@@ -80,11 +80,15 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	flow_allocator = new FlowAllocator();
 	namespace_manager = new NamespaceManager();
 	resource_allocator = new ResourceAllocator();
-	security_manager = dynamic_cast<ISecurityManager *>(
-                        componentFactoryCreate("security-manager", NULL));
-        if (!security_manager) {
-                throw Exception("Cannot create security manager component");
+
+        security_manager = new SecurityManager();
+        security_manager->ps = dynamic_cast<ISecurityManagerPs *>(
+                                componentFactoryCreate("security-manager",
+                                                       security_manager));
+        if (!security_manager->ps) {
+                throw Exception("Cannot create security manager policy-set");
         }
+
 	rib_daemon = new RIBDaemon();
 
 	rib_daemon->set_ipc_process(this);
@@ -141,7 +145,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (security_manager) {
-		componentFactoryDestroy("security-manager", security_manager);
+		componentFactoryDestroy("security-manager",
+                                        security_manager->ps);
+                delete security_manager;
 	}
 
 	if (rib_daemon) {
@@ -612,9 +618,9 @@ int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
         return 0;
 }
 
-IPCProcessComponent *
+IPolicySet *
 IPCProcessImpl::componentFactoryCreate(const std::string& component,
-                                       void * context)
+                                       IPCProcessComponent * context)
 {
         std::vector<ComponentFactory>::iterator it;
         std::string plugin_name = selected_components[component];
@@ -630,7 +636,7 @@ IPCProcessImpl::componentFactoryCreate(const std::string& component,
 }
 
 int IPCProcessImpl::componentFactoryDestroy(const std::string& component,
-                                            IPCProcessComponent * instance)
+                                            IPolicySet * instance)
 {
         std::vector<ComponentFactory>::iterator it;
         std::string plugin_name = selected_components[component];

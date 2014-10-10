@@ -394,6 +394,7 @@ void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
 	rib_daemon_->removeRIBObject(name_);
 }
 
+//Class IPCProcess
 IPCProcess::IPCProcess()
 {
 	delimiter = 0;
@@ -405,6 +406,21 @@ IPCProcess::IPCProcess()
 	resource_allocator = 0;
 	security_manager = 0;
 	rib_daemon = 0;
+}
+
+//Class SecurityManager
+SecurityManager::SecurityManager() {
+	ipcp = 0;
+        ps = 0;
+}
+
+void SecurityManager::set_ipc_process(IPCProcess * ipc_process)
+{
+	ipcp = ipc_process;
+}
+
+void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
+	LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
 }

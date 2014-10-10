@@ -63,11 +63,10 @@ public:
         int componentFactoryPublish(const ComponentFactory& factory);
         int componentFactoryUnpublish(const std::string& component,
                                               const std::string& name);
-        IPCProcessComponent * componentFactoryCreate(
-                                        const std::string& component,
-                                        void * context);
+        IPolicySet * componentFactoryCreate(const std::string& component,
+                                            IPCProcessComponent* context);
         int componentFactoryDestroy(const std::string& component,
-                                    IPCProcessComponent * instance);
+                                    IPolicySet * instance);
 
 private:
 	void init_cdap_session_manager();

@@ -57,11 +57,15 @@ public:
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 };
 
+class IPolicySet {
+public:
+        virtual ~IPolicySet() {}
+};
+
 extern "C" {
-        typedef IPCProcessComponent *(*component_factory_create_t)(
-                                                        void * context);
-        typedef void (*component_factory_destroy_t)(
-                                        IPCProcessComponent * ipc_process);
+        typedef IPolicySet *(*component_factory_create_t)(
+                                                IPCProcessComponent * ctx);
+        typedef void (*component_factory_destroy_t)(IPolicySet * ps);
         typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
 }
 
@@ -474,15 +478,28 @@ public:
 /// Control is performed by the Flow Allocator. The particular security procedures used for
 /// these security functions are a matter of policy. SDU Protection provides confidentiality
 /// and integrity
-class ISecurityManager: public IPCProcessComponent {
-public:
-	virtual ~ISecurityManager(){};
 
+class ISecurityManagerPs : public IPolicySet {
+public:
 	/// Decide if an IPC Process is allowed to join a DIF
 	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
 
 	/// Decide if a new flow to the IPC process should be accepted
 	virtual bool acceptFlow(const Flow& newFlow) = 0;
+
+        virtual ~ISecurityManagerPs() {}
+};
+
+class SecurityManager: public IPCProcessComponent {
+private:
+        IPCProcess *ipcp;
+public:
+        ISecurityManagerPs * ps;
+
+	SecurityManager();
+	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	~SecurityManager() {};
 };
 
 class IRIBDaemon;
@@ -1019,7 +1036,7 @@ public:
 	IFlowAllocator * flow_allocator;
 	INamespaceManager * namespace_manager;
 	IResourceAllocator * resource_allocator;
-	ISecurityManager * security_manager;
+	SecurityManager * security_manager;
 	IRIBDaemon * rib_daemon;
 	rina::ApplicationProcessNamingInformation name;
 

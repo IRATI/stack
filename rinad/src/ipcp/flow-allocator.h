@@ -301,7 +301,7 @@ private:
 	Encoder * encoder_;
 	IRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
-	ISecurityManager * security_manager_;
+	SecurityManager * security_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;
 	FAIState state;
 

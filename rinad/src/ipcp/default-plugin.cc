@@ -2,11 +2,11 @@
 
 namespace rinad {
 
-extern "C" IPCProcessComponent *
-createSecurityManager(void * context);
+extern "C" IPolicySet *
+createSecurityManagerPs(IPCProcessComponent * context);
 
 extern "C" void
-destroySecurityManager(IPCProcessComponent *component);
+destroySecurityManagerPs(IPolicySet * instance);
 
 extern "C" int
 init(IPCProcess * ipc_process)
@@ -16,8 +16,8 @@ init(IPCProcess * ipc_process)
 
         factory.name = "default";
         factory.component = "security-manager";
-        factory.create = createSecurityManager;
-        factory.destroy = destroySecurityManager;
+        factory.create = createSecurityManagerPs;
+        factory.destroy = destroySecurityManagerPs;
 
         ret = ipc_process->componentFactoryPublish(factory);
 
