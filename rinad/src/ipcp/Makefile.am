@@ -36,6 +36,7 @@ ipcp_SOURCES  =						\
 	pduft-generator.cc      pduft-generator.h	\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h   	\
+	security-manager.cc				\
 	ipc-process.cc          ipc-process.h
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)
