@@ -58,10 +58,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	state = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
-        // Load the default pluggable components
-        if (plugin_load("default")) {
-                throw Exception("Failed to load default plugin");
-        }
+        // This initialization must be before any plugin_load(). */
         selected_components["delimiter"] = "default";
         selected_components["enrollment"] = "default";
         selected_components["flow-allocator"] = "default";
@@ -69,6 +66,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         selected_components["resource-allocator"] = "default";
         selected_components["security-manager"] = "default";
         selected_components["rib-daemon"] = "default";
+
+        // Load the default pluggable components
+        if (plugin_load("default")) {
+                throw Exception("Failed to load default plugin");
+        }
 
 	// Initialize subcomponents
 	init_cdap_session_manager();
@@ -565,6 +567,11 @@ IPCProcessImpl::componentFactoryLookup(const std::string& component,
 
 int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
 {
+        if (!selected_components.count(factory.component)) {
+                LOG_ERR("Cannot plugin component %s");
+                return -1;
+        }
+
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
         if (componentFactoryLookup(factory.component, factory.name) !=
