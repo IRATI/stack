@@ -75,4 +75,12 @@ int SecurityManager::select_policy_set(const std::string& name)
         return ps ? 0 : -1;
 }
 
+int SecurityManager::set_policy_set_param(const std::string& name,
+                                          const std::string& value)
+{
+        LOG_DBG("set_policy_set_param(%s, %s) called",
+                name.c_str(), value.c_str());
+        return -1;
+}
+
 }
