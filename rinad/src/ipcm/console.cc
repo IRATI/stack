@@ -102,7 +102,8 @@ IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
         commands_map["select-policy-set"] =
                         ConsoleCmdInfo(&IPCMConsole::select_policy_set,
                                 "USAGE: select-policy-set <ipcp-id> "
-                                "<component-path> <policy-set-name>");
+                                "<component-path> <policy-set-name>"
+                                "[<plugin-name>]");
         commands_map["set-policy-set-param"] =
                         ConsoleCmdInfo(&IPCMConsole::set_policy_set_param,
                                 "USAGE: set-policy-set-param <ipcp-id> "
@@ -604,6 +605,7 @@ int
 IPCMConsole::select_policy_set(std::vector<std::string>& args)
 {
         rina::IPCProcess *ipcp = NULL;
+        string plugin_name;
         int ipcp_id;
         int ret;
 
@@ -620,10 +622,14 @@ IPCMConsole::select_policy_set(std::vector<std::string>& args)
 
         ipcp = lookup_ipcp_by_id(ipcp_id);
 
+        if (args.size() >= 5) {
+                plugin_name = args[4];
+        }
+
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = ipcm.select_policy_set(ipcp, args[2], args[3]);
+                ret = ipcm.select_policy_set(ipcp, args[2], args[3], plugin_name);
                 if (ret) {
                         outstream << "select-policy-set operation failed"
                                         << endl;

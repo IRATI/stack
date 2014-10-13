@@ -1370,7 +1370,7 @@ IpcmSetPolicySetParamResponseMessage *parseIpcmSetPolicySetParamResponseMessage(
 enum IpcmSelectPolicySetRequestMessageAttributes {
 	ISPSR_ATTR_PATH = 1,
 	ISPSR_ATTR_NAME,
-	ISPSR_ATTR_VALUE,
+	ISPSR_ATTR_PLUGIN_NAME,
 	__ISPSR_ATTR_MAX,
 };
 

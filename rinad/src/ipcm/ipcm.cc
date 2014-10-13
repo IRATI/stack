@@ -741,7 +741,8 @@ IPCManager::set_policy_set_param(rina::IPCProcess *ipcp,
 int
 IPCManager::select_policy_set(rina::IPCProcess *ipcp,
                               const std::string& component_path,
-                              const std::string& ps_name)
+                              const std::string& ps_name,
+                              std::string plugin_name)
 {
         ostringstream ss;
         unsigned int seqnum;
@@ -751,7 +752,8 @@ IPCManager::select_policy_set(rina::IPCProcess *ipcp,
         concurrency.lock();
 
         try {
-                seqnum = ipcp->selectPolicySet(component_path, ps_name);
+                seqnum = ipcp->selectPolicySet(component_path, ps_name,
+                                               plugin_name);
 
                 pending_select_policy_set_ops[seqnum] = ipcp;
                 ss << "Issued select-policy-set to IPC process " <<

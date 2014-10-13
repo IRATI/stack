@@ -132,7 +132,8 @@ class IPCManager : public EventLoopData {
 
         int select_policy_set(rina::IPCProcess *ipcp,
                               const std::string& component_path,
-                              const std::string& policy_set);
+                              const std::string& policy_set,
+                              std::string plugin_name = "");
 
         int set_policy_set_param(rina::IPCProcess *ipcp,
                                  const std::string& path,

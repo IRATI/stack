@@ -702,7 +702,8 @@ public:
 	 * @returns the handle to the response message
 	 */
 	unsigned int selectPolicySet(const std::string& path,
-                                     const std::string& name);
+                                     const std::string& name,
+                                     std::string plugin_name = "");
 };
 
 /**
