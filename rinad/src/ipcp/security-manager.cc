@@ -58,7 +58,7 @@ int SecurityManager::select_policy_set(const std::string& name)
 
         candidate = ipcp->componentFactoryCreate("security-manager", name, this);
         if (!candidate) {
-                LOG_ERR("failed to allocate instance of policy set %s");
+                LOG_ERR("failed to allocate instance of policy set %s", name.c_str());
                 return -1;
         }
 

@@ -408,7 +408,37 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 void IPCProcessImpl::processSelectPolicySetRequestEvent(
                         const rina::SelectPolicySetRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
+        std::string component = event.path.substr(0, event.path.find_first_of('.'));
+        bool got_in_userspace = true;
+        int result = -1;
 
+        // First check if the request should be served by this daemon
+        // or should be forwarded to kernelspace
+        if (component == "security-manager") {
+                result = security_manager->select_policy_set(event.name);
+        } else if (component == "enrollment") {
+                result = enrollment_task->select_policy_set(event.name);
+        } else if (component == "flow-allocator") {
+                result = flow_allocator->select_policy_set(event.name);
+        } else if (component == "namespace-manager") {
+                result = namespace_manager->select_policy_set(event.name);
+        } else if (component == "resource-allocator") {
+                result = resource_allocator->select_policy_set(event.name);
+        } else if (component == "rib-daemon") {
+                result = rib_daemon->select_policy_set(event.name);
+        } else {
+                got_in_userspace = false;
+        }
+
+        if (got_in_userspace) {
+                // Event managed without going through kernelspace. Notify
+                // the IPC Manager about the result
+		rina::extendedIPCManager->selectPolicySetResponse(event,
+                                                                  result);
+                return;
+        }
+
+        // Forward the request to the kernel
 	try {
 		unsigned int handle =
                         rina::kernelIPCProcess->selectPolicySet(event.path,
