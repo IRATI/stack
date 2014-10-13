@@ -102,7 +102,7 @@ IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
         commands_map["select-policy-set"] =
                         ConsoleCmdInfo(&IPCMConsole::select_policy_set,
                                 "USAGE: select-policy-set <ipcp-id> "
-                                "<component-path> <policy-set-name>"
+                                "<component-path> <policy-set-name> "
                                 "[<plugin-name>]");
         commands_map["set-policy-set-param"] =
                         ConsoleCmdInfo(&IPCMConsole::set_policy_set_param,
