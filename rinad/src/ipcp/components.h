@@ -57,14 +57,15 @@ public:
 	virtual ~IPCProcessComponent(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-        virtual int select_policy_set(const std::string& name) {
-                (void) name;
+        virtual int select_policy_set(const std::string& path,
+                                      const std::string& name) {
+                (void) (path + name);
                 return -1;
         }
-        virtual int set_policy_set_param(const std::string& name,
+        virtual int set_policy_set_param(const std::string& path,
+                                         const std::string& name,
                                          const std::string& value) {
-                (void) name;
-                (void) value;
+                (void) (path + name + value);
                 return -1;
         }
 };
@@ -519,8 +520,9 @@ public:
 	SecurityManager();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        int select_policy_set(const std::string& name);
-        int set_policy_set_param(const std::string& name,
+        int select_policy_set(const std::string& path, const std::string& name);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
                                  const std::string& value);
 	~SecurityManager() {};
 };

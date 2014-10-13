@@ -42,9 +42,15 @@ void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_co
 	LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
-int SecurityManager::select_policy_set(const std::string& name)
+int SecurityManager::select_policy_set(const std::string& path,
+                                       const std::string& name)
 {
         IPolicySet *candidate = NULL;
+
+        if (path != std::string()) {
+                LOG_ERR("No subcomponents to address");
+                return -1;
+        }
 
         if (!ipcp) {
                 LOG_ERR("bug: NULL ipcp reference");
@@ -75,9 +81,20 @@ int SecurityManager::select_policy_set(const std::string& name)
         return ps ? 0 : -1;
 }
 
-int SecurityManager::set_policy_set_param(const std::string& name,
+int SecurityManager::set_policy_set_param(const std::string& path,
+                                          const std::string& name,
                                           const std::string& value)
 {
+        if (path != std::string()) {
+                LOG_ERR("No subcomponents to address");
+                return -1;
+        }
+
+        if (!ipcp) {
+                LOG_ERR("bug: NULL ipcp reference");
+                return -1;
+        }
+
         LOG_DBG("set_policy_set_param(%s, %s) called",
                 name.c_str(), value.c_str());
         return -1;

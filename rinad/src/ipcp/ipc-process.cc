@@ -83,7 +83,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	security_manager->set_ipc_process(this);
 
         // Select the default policy sets
-        security_manager->select_policy_set("default");
+        security_manager->select_policy_set(std::string(), "default");
         if (!security_manager->ps) {
                 throw Exception("Cannot create security manager policy-set");
         }
@@ -348,32 +348,53 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	LOG_INFO("%s", ss.str().c_str());
 }
 
+static void parse_path(const std::string& path, std::string& component,
+                       std::string& remainder)
+{
+        size_t dotpos = path.find_first_of('.');
+
+        component = path.substr(0, dotpos);
+        if (dotpos == std::string::npos || dotpos + 1 == path.size()) {
+                remainder = std::string();
+        } else {
+                remainder = path.substr(dotpos + 1);
+        }
+}
+
 void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                         const rina::SetPolicySetParamRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
-        std::string component = event.path.substr(0, event.path.find_first_of('.'));
+        std::string component, remainder;
         bool got_in_userspace = true;
         int result = -1;
+
+        parse_path(event.path, component, remainder);
 
         // First check if the request should be served by this daemon
         // or should be forwarded to kernelspace
         if (component == "security-manager") {
-                result = security_manager->set_policy_set_param(event.name,
+                result = security_manager->set_policy_set_param(remainder,
+                                                                event.name,
                                                                 event.value);
         } else if (component == "enrollment") {
-                result = enrollment_task->set_policy_set_param(event.name,
+                result = enrollment_task->set_policy_set_param(remainder,
+                                                               event.name,
                                                                event.value);
         } else if (component == "flow-allocator") {
-                result = flow_allocator->set_policy_set_param(event.name,
+                result = flow_allocator->set_policy_set_param(remainder,
+                                                              event.name,
                                                               event.value);
         } else if (component == "namespace-manager") {
-                result = namespace_manager->set_policy_set_param(event.name,
+                result = namespace_manager->set_policy_set_param(remainder,
+                                                                 event.name,
                                                                  event.value);
         } else if (component == "resource-allocator") {
-                result = resource_allocator->set_policy_set_param(event.name,
+                result = resource_allocator->set_policy_set_param(remainder,
+                                                                  event.name,
                                                                   event.value);
         } else if (component == "rib-daemon") {
-                result = rib_daemon->set_policy_set_param(event.name,
+                result = rib_daemon->set_policy_set_param(remainder,
+                                                          event.name,
                                                           event.value);
         } else {
                 got_in_userspace = false;
@@ -443,24 +464,32 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 void IPCProcessImpl::processSelectPolicySetRequestEvent(
                         const rina::SelectPolicySetRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
-        std::string component = event.path.substr(0, event.path.find_first_of('.'));
+        std::string component, remainder;
         bool got_in_userspace = true;
         int result = -1;
+
+        parse_path(event.path, component, remainder);
 
         // First check if the request should be served by this daemon
         // or should be forwarded to kernelspace
         if (component == "security-manager") {
-                result = security_manager->select_policy_set(event.name);
+                result = security_manager->select_policy_set(remainder,
+                                                             event.name);
         } else if (component == "enrollment") {
-                result = enrollment_task->select_policy_set(event.name);
+                result = enrollment_task->select_policy_set(remainder,
+                                                            event.name);
         } else if (component == "flow-allocator") {
-                result = flow_allocator->select_policy_set(event.name);
+                result = flow_allocator->select_policy_set(remainder,
+                                                           event.name);
         } else if (component == "namespace-manager") {
-                result = namespace_manager->select_policy_set(event.name);
+                result = namespace_manager->select_policy_set(remainder,
+                                                              event.name);
         } else if (component == "resource-allocator") {
-                result = resource_allocator->select_policy_set(event.name);
+                result = resource_allocator->select_policy_set(remainder,
+                                                               event.name);
         } else if (component == "rib-daemon") {
-                result = rib_daemon->select_policy_set(event.name);
+                result = rib_daemon->select_policy_set(remainder,
+                                                       event.name);
         } else {
                 got_in_userspace = false;
         }
