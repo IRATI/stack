@@ -577,6 +577,9 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
         }
 
         plugin_path += "/";
+#if 1   //XXX Don't stage me!!
+        plugin_path = "/home/vmaffione/git/pristine/local/lib/libps-";
+#endif
         plugin_path += plugin_name + ".so";
 
         handle = dlopen(plugin_path.c_str(), RTLD_NOW);

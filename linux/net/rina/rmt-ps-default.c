@@ -80,7 +80,7 @@ static int rmt_ps_set_policy_set_param(struct rmt_ps * ps,
         return -1;
 }
 
-static struct rmt_ps_factory factory = {
+struct rmt_ps_factory rmt_factory = {
         .base = {
                 .parameters     = NULL,
                 .num_parameters = 0,
@@ -89,42 +89,3 @@ static struct rmt_ps_factory factory = {
         .destroy = rmt_ps_default_destroy,
         .set_policy_set_param = rmt_ps_set_policy_set_param,
 };
-
-static int __init mod_init(void)
-{
-        int ret;
-
-        strcpy(factory.base.name, RINA_PS_DEFAULT_NAME);
-
-        ret = rmt_ps_publish(&factory);
-        if (ret) {
-                LOG_ERR("Failed to publish policy set factory");
-                return -1;
-        }
-
-        LOG_INFO("RMT default policy set loaded successfully");
-
-        return 0;
-}
-
-static void __exit mod_exit(void)
-{
-        int ret = rmt_ps_unpublish(RINA_PS_DEFAULT_NAME);
-
-        if (ret) {
-                LOG_ERR("Failed to unpublish policy set factory");
-                return;
-        }
-
-        LOG_INFO("RMT default policy set unloaded successfully");
-}
-
-module_init(mod_init);
-module_exit(mod_exit);
-
-MODULE_DESCRIPTION("RMT default policy set");
-
-MODULE_LICENSE("GPL");
-
-MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
-MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
