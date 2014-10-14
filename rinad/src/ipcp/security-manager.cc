@@ -46,7 +46,7 @@ bool SecurityManager::isAllowedToJoinDIF(const rina::Neighbor& newMember) {
 
 bool SecurityManager::acceptFlow(const Flow& newFlow) {
 	LOG_DBG("Accepting flow from remote application %s",
-			newFlow.source_naming_info_.getEncodedString().c_str());
+			newFlow.source_naming_info.getEncodedString().c_str());
 	return true;
 }
 

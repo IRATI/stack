@@ -210,7 +210,9 @@ struct rmt {
 static const char * create_name(const char *       prefix,
                                 const struct rmt * instance)
 {
-        static char name[MAX_NAME_SIZE];
+        static char name[MAX_NAME_SIZE]; /* FIXME: Remove, ot it will become
+                                          *        source of troubles for sure
+                                          */
 
         ASSERT(prefix);
         ASSERT(instance);
@@ -227,8 +229,8 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
                         struct efcp_container * efcpc)
 {
-        struct rmt *         tmp;
-        const char *         name;
+        struct rmt * tmp;
+        const char * name;
 
         if (!parent || !kfa || !efcpc) {
                 LOG_ERR("Bogus input parameters");
@@ -388,12 +390,12 @@ static int send_worker(void * o)
                            ntmp,
                            entry,
                            hlist) {
-                struct sdu *            sdu;
-                struct pdu *            pdu;
-                struct pdu_ser *        pdu_ser;
-                port_id_t               port_id;
-                struct buffer *         buffer;
-                struct serdes *         serdes;
+                struct sdu *     sdu;
+                struct pdu *     pdu;
+                struct pdu_ser * pdu_ser;
+                port_id_t        port_id;
+                struct buffer *  buffer;
+                struct serdes *  serdes;
 
                 ASSERT(entry);
 
@@ -811,9 +813,9 @@ static int process_mgmt_pdu(struct rmt * rmt,
                                                 sdu) ? -1 : 0);
 }
 
-static int process_dt_pdu(struct rmt *       rmt,
-                          port_id_t          port_id,
-                          struct pdu *       pdu)
+static int process_dt_pdu(struct rmt * rmt,
+                          port_id_t    port_id,
+                          struct pdu * pdu)
 {
         address_t  dst_addr;
         cep_id_t   c;
@@ -860,11 +862,11 @@ static int forward_pdu(struct rmt * rmt,
                        qos_id_t     qos_id,
                        struct pdu * pdu)
 {
-        int                     i;
-        struct sdu *            sdu;
-        struct pdu_ser *        pdu_ser;
-        struct buffer *         buffer;
-        struct serdes *         serdes;
+        int              i;
+        struct sdu *     sdu;
+        struct pdu_ser * pdu_ser;
+        struct buffer *  buffer;
+        struct serdes *  serdes;
 
         if (!is_address_ok(dst_addr)) {
                 LOG_ERR("PDU has Wrong destination address");
@@ -973,16 +975,16 @@ static int receive_worker(void * o)
                            entry,
                            hlist) {
 
-                port_id_t               port_id;
-                pdu_type_t              pdu_type;
-                const struct pci *      pci;
-                struct pdu_ser *        pdu_ser;
-                struct pdu *            pdu;
-                address_t               dst_addr;
-                qos_id_t                qos_id;
-                struct serdes *         serdes;
-                struct buffer *         buf;
-                struct sdu *            sdu;
+                port_id_t          port_id;
+                pdu_type_t         pdu_type;
+                const struct pci * pci;
+                struct pdu_ser *   pdu_ser;
+                struct pdu *       pdu;
+                address_t          dst_addr;
+                qos_id_t           qos_id;
+                struct serdes *    serdes;
+                struct buffer *    buf;
+                struct sdu *       sdu;
 
                 ASSERT(entry);
 

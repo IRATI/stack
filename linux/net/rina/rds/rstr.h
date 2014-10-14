@@ -32,4 +32,8 @@ int        string_dup(const string_t * src, string_t ** dst);
 int        string_cmp(const string_t * a, const string_t * b);
 int        string_len(const string_t * s);
 
+char *     rkstrdup_gfp(const char * s, gfp_t flags);
+char *     rkstrdup(const char * s);
+char *     rkstrdup_ni(const char * s);
+
 #endif

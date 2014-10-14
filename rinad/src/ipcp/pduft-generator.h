@@ -81,7 +81,7 @@ public:
 	int sequence_number_;
 
 	// Age of this FSO (in seconds)
-	int age_;
+	unsigned int age_;
 
 	// The object has been marked for propagation
 	bool modified_;
@@ -125,7 +125,7 @@ private:
 	struct CheckedVertex {
 		unsigned int address_;
 		int port_id_;
-		std::list<unsigned int> connections_;
+		std::list<unsigned int> connections;
 
 		CheckedVertex(unsigned int address) {
 			address_ = address;
@@ -134,7 +134,7 @@ private:
 
 		bool connection_contains_address(unsigned int address) {
 			std::list<unsigned int>::iterator it;
-			for(it = connections_.begin(); it != connections_.end(); ++it) {
+			for(it = connections.begin(); it != connections.end(); ++it) {
 				if ((*it) == address) {
 					return true;
 				}
@@ -234,17 +234,18 @@ public:
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 
 	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
-			flow_state_rib_object_group, rina::Timer * timer, IRIBDaemon *rib_daemon);
+			flow_state_rib_object_group, rina::Timer * timer, IRIBDaemon *rib_daemon, unsigned int *maximum_age);
 	bool isEmpty() const;
 	void setAvoidPort(int avoidPort);
 	void addObjectToGroup(unsigned int address, int portId,
 			unsigned int neighborAddress, int neighborPortId);
-	bool deprecateObject(int portId, int maximum_age);
+	void deprecateObject(int port_id);
 	std::vector< std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
-	void incrementAge(int maximum_age);
+	void incrementAge();
 	void updateObjects(const std::list<FlowStateObject*>& newObjects, int avoidPort, unsigned int address);
 	std::list<FlowStateObject*> getModifiedFSOs();
-	std::list<FlowStateObject*> getAllFSOs();
+	void getAllFSOs(std::list<FlowStateObject*> &flow_state_objects);
+	unsigned int get_maximum_age() const;
 
 	//Signals a modification in the FlowStateDB
 	bool modified_;
@@ -255,6 +256,7 @@ private:
 	FlowStateRIBObjectGroup * flow_state_rib_object_group_;
 	rina::Timer * timer_;
 	IRIBDaemon *rib_daemon_;
+	unsigned int *maximum_age_;
 
 	FlowStateObject * getByPortId(int portId);
 };
@@ -411,7 +413,7 @@ private:
 	rina::PDUFTableGeneratorConfiguration pduft_generator_config_;
 	IRoutingAlgorithm * routing_algorithm_;
 	unsigned int source_vertex_;
-	int maximum_age_;
+	unsigned int maximum_age_;
 
 	/// If a flow allocation is launched before the enrollment is finished, the flow
 	/// allocation procedure of the PDU Forwarding table must wait. Otherwise it will

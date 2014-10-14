@@ -722,7 +722,7 @@ public:
         void set_wait_until_pduft_computation(const int wait_until_pduft_computation);
         int get_wait_until_read_cdap() const;
         void set_wait_until_read_cdap(const int wait_until_read_cdap);
-        int get_object_maximum_age() const;
+        unsigned int get_object_maximum_age() const;
         void set_object_maximum_age(const int object_maximum_age);
         const std::string& get_routing_algorithm() const;
         void set_routing_algorithm(const std::string& routing_algorithm);
@@ -735,7 +735,7 @@ public:
         static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
         static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
         static const std::string DEFAULT_ROUTING_ALGORITHM;
-        int object_maximum_age_;
+        unsigned int object_maximum_age_;
         int wait_until_read_cdap_;
         int wait_until_error_;
         int wait_until_pduft_computation_;

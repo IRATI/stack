@@ -4,6 +4,9 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+EXTRA_DIST   =
+CLEANFILES   =
+
 bin_PROGRAMS = ipcm
 
 noinst_LTLIBRARIES = libjsoncpp.la
@@ -47,7 +50,6 @@ ipcm_SOURCES  =							\
 	registration.cc 	    registration.h		\
 	flow-allocation.cc          flow-allocation.h		\
 	console.cc		    console.h
-
 
 test_empty_SOURCES  =				\
 	test-empty.cc
