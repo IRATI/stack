@@ -6,11 +6,11 @@ KDIR=../../linux
 
 ifneq ($(KERNELRELEASE),)
 
-ccflags-y = -Wtype-limits
+ccflags-y = -Wtype-limits -Inet/rina
 
 obj-m := skeleton.o
 
-skeleton-y := source1.o source2.o
+skeleton-y := ps.o
 
 else
 
