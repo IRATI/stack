@@ -39,7 +39,7 @@ static void default_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { }
 
-static struct base_ps * rmt_ps_default_create(void * component)
+static struct ps_base * rmt_ps_default_create(void * component)
 {
         struct rmt * rmt = (struct rmt *)component;
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
@@ -57,7 +57,7 @@ static struct base_ps * rmt_ps_default_create(void * component)
         return &ps->base;
 }
 
-static void rmt_ps_default_destroy(struct base_ps * bps)
+static void rmt_ps_default_destroy(struct ps_base * bps)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 
@@ -65,7 +65,7 @@ static void rmt_ps_default_destroy(struct base_ps * bps)
                 rkfree(ps);
 }
 
-static int rmt_ps_set_policy_set_param(struct base_ps * bps,
+static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
 {

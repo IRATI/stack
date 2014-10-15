@@ -30,7 +30,7 @@
 #include "ps-factory.h"
 
 struct rmt_ps {
-        struct base_ps base;
+        struct ps_base base;
 
         /* Behavioural policies. */
         void (* max_q_policy_tx)(struct rmt_ps *,

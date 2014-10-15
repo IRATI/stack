@@ -34,7 +34,7 @@ struct parameter_desc {
         char name[PARAMETER_DESC_MAX_LEN];
 };
 
-struct base_ps {
+struct ps_base {
 };
 
 struct ps_factory {
@@ -46,11 +46,11 @@ struct ps_factory {
         unsigned int            num_parameters;
 
         /* Factory callbacks. */
-        struct base_ps * (*create)(void * component);
-        void (*destroy)(struct base_ps *);
+        struct ps_base * (*create)(void * component);
+        void (*destroy)(struct ps_base *);
 
         /* Method for setting policy-set-specific parameters. */
-        int (*set_policy_set_param)(struct base_ps * ps,
+        int (*set_policy_set_param)(struct ps_base * ps,
                                     const char * name,
                                     const char * value);
 

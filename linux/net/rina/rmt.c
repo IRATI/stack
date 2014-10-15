@@ -237,7 +237,7 @@ int rmt_select_policy_set(struct rmt * rmt,
                           const string_t * path,
                           const string_t * name)
 {
-        struct base_ps *candidate_ps = NULL;
+        struct ps_base *candidate_ps = NULL;
         struct ps_factory *candidate_ps_factory = NULL;
 
         if (!name || !path) {
