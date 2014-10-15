@@ -1411,6 +1411,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         inst->data->name = name_dup(name);
         if (!inst->data->name) {
                 LOG_ERR("Failed creation of ipc name");
+                rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
                 return NULL;
@@ -1419,6 +1420,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
         if (!inst->data->info) {
                 LOG_ERR("Instance creation failed (#2)");
+                name_destroy(inst->data->name);
                 rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
@@ -1429,6 +1431,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         if (!inst->data->fspec) {
                 LOG_ERR("Instance creation failed (#3)");
                 rkfree(inst->data->info);
+                name_destroy(inst->data->name);
                 rkfree(inst->data->eth_vlan_packet_type);
                 rkfree(inst->data);
                 rkfree(inst);
