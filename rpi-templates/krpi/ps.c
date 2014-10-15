@@ -38,11 +38,14 @@ static void default_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { }
 
-static struct rmt_ps * rmt_ps_default_create(struct rmt *rmt)
+static struct ps_base *
+rmt_ps_default_create(struct rina_component * component)
 {
+        struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+
         if (!ps) {
-             return ps;
+             return NULL;
         }
 
         ps->dm              = rmt;
@@ -51,19 +54,25 @@ static struct rmt_ps * rmt_ps_default_create(struct rmt *rmt)
         ps->max_q_policy_tx = default_max_q_policy_tx;
         ps->max_q_policy_rx = default_max_q_policy_rx;
 
-        return ps;
+        return &ps->base;
 }
 
-static void rmt_ps_default_destroy(struct rmt_ps * ps)
+static void rmt_ps_default_destroy(struct ps_base * bps)
 {
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+
         if (ps)
                 rkfree(ps);
 }
 
-static int rmt_ps_set_policy_set_param(struct rmt_ps * ps,
+static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
 {
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+
+        (void) ps;
+
         if (!name) {
                 LOG_ERR("Null parameter name");
                 return -1;
@@ -79,11 +88,9 @@ static int rmt_ps_set_policy_set_param(struct rmt_ps * ps,
         return -1;
 }
 
-static struct rmt_ps_factory factory = {
-        .base = {
-                .parameters     = NULL,
-                .num_parameters = 0,
-        },
+static struct ps_factory factory = {
+        .parameters     = NULL,
+        .num_parameters = 0,
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
         .set_policy_set_param = rmt_ps_set_policy_set_param,
@@ -95,7 +102,7 @@ static int __init mod_init(void)
 {
         int ret;
 
-        strcpy(factory.base.name, RINA_SKELETON_NAME);
+        strcpy(factory.name, RINA_SKELETON_NAME);
 
         ret = rmt_ps_publish(&factory);
         if (ret) {
