@@ -1236,7 +1236,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         mapping = inst_data_mapping_get(data->dev);
         if (mapping) {
                 list_del(&mapping->list);
-                rkfree(&mapping);
+                rkfree(mapping);
         }
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
