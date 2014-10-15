@@ -164,4 +164,8 @@ struct pdu_ft_entry {
         struct list_head next;
 };
 
+/* Base class for the IPCP components. */
+struct rina_component {
+};
+
 #endif

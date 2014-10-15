@@ -28,6 +28,7 @@
 #include "logs.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
+#include "rmt.h"
 
 static void default_max_q_policy_tx(struct rmt_ps * ps,
                                     struct pdu *    pdu,
@@ -39,9 +40,10 @@ static void default_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { }
 
-static struct ps_base * rmt_ps_default_create(void * component)
+static struct ps_base *
+rmt_ps_default_create(struct rina_component * component)
 {
-        struct rmt * rmt = (struct rmt *)component;
+        struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
 
         if (!ps) {

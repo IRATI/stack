@@ -23,6 +23,7 @@
 #define RINA_PS_FACTORY_H
 
 #include <linux/list.h>
+#include "common.h"
 
 #define RINA_PS_DEFAULT_NAME            "default"
 
@@ -34,6 +35,7 @@ struct parameter_desc {
         char name[PARAMETER_DESC_MAX_LEN];
 };
 
+/* A base class for policy sets. */
 struct ps_base {
 };
 
@@ -46,7 +48,7 @@ struct ps_factory {
         unsigned int            num_parameters;
 
         /* Factory callbacks. */
-        struct ps_base * (*create)(void * component);
+        struct ps_base * (*create)(struct rina_component * component);
         void (*destroy)(struct ps_base *);
 
         /* Method for setting policy-set-specific parameters. */

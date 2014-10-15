@@ -191,6 +191,7 @@ static int pft_cache_fini(struct pft_cache * c)
 }
 
 struct rmt {
+        struct rina_component     base;
         address_t                 address;
         struct ipcp_instance *    parent;
         struct pft *              pft;
@@ -233,6 +234,13 @@ static const char * create_name(const char *       prefix,
         return name;
 }
 
+struct rmt *
+rmt_from_component(struct rina_component * component)
+{
+        return container_of(component, struct rmt, base);
+}
+EXPORT_SYMBOL(rmt_from_component);
+
 int rmt_select_policy_set(struct rmt * rmt,
                           const string_t * path,
                           const string_t * name)
@@ -262,7 +270,7 @@ int rmt_select_policy_set(struct rmt * rmt,
         }
 
         /* Instantiate the new policy set. */
-        candidate_ps = candidate_ps_factory->create(rmt);
+        candidate_ps = candidate_ps_factory->create(&rmt->base);
         if (!candidate_ps) {
                 LOG_ERR("Policy-set instantiation failed");
                 return -1;
