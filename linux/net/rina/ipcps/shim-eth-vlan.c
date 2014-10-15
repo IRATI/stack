@@ -1235,7 +1235,9 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         /* Remove from list */
         mapping = inst_data_mapping_get(data->dev);
         if (mapping) {
+                spin_lock(&data_instances_lock);
                 list_del(&mapping->list);
+                spin_unlock(&data_instances_lock);
                 rkfree(mapping);
         }
 
@@ -1469,6 +1471,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
 static int eth_vlan_destroy(struct ipcp_factory_data * data,
                             struct ipcp_instance *     instance)
 {
+        struct interface_data_mapping * mapping;
         struct ipcp_instance_data * pos, * next;
 
         ASSERT(data);
@@ -1512,6 +1515,14 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                                                 "the entry from the cache");
                                         return -1;
                                 }
+                        }
+
+                        mapping = inst_data_mapping_get(pos->dev);
+                        if (mapping) {
+                                spin_lock(&data_instances_lock);
+                                list_del(&mapping->list);
+                                spin_unlock(&data_instances_lock);
+                                rkfree(mapping);
                         }
 
                         /*
