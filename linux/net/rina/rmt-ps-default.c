@@ -39,11 +39,13 @@ static void default_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { }
 
-static struct rmt_ps * rmt_ps_default_create(struct rmt *rmt)
+static struct base_ps * rmt_ps_default_create(void * component)
 {
+        struct rmt * rmt = (struct rmt *)component;
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+
         if (!ps) {
-             return ps;
+             return NULL;
         }
 
         ps->dm              = rmt;
@@ -52,19 +54,25 @@ static struct rmt_ps * rmt_ps_default_create(struct rmt *rmt)
         ps->max_q_policy_tx = default_max_q_policy_tx;
         ps->max_q_policy_rx = default_max_q_policy_rx;
 
-        return ps;
+        return &ps->base;
 }
 
-static void rmt_ps_default_destroy(struct rmt_ps * ps)
+static void rmt_ps_default_destroy(struct base_ps * bps)
 {
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+
         if (ps)
                 rkfree(ps);
 }
 
-static int rmt_ps_set_policy_set_param(struct rmt_ps * ps,
+static int rmt_ps_set_policy_set_param(struct base_ps * bps,
                                        const char    * name,
                                        const char    * value)
 {
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+
+        (void) ps;
+
         if (!name) {
                 LOG_ERR("Null parameter name");
                 return -1;
@@ -80,11 +88,9 @@ static int rmt_ps_set_policy_set_param(struct rmt_ps * ps,
         return -1;
 }
 
-struct rmt_ps_factory rmt_factory = {
-        .base = {
-                .parameters     = NULL,
-                .num_parameters = 0,
-        },
+struct ps_factory rmt_factory = {
+        .parameters     = NULL,
+        .num_parameters = 0,
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
         .set_policy_set_param = rmt_ps_set_policy_set_param,

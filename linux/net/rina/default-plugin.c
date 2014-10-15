@@ -29,13 +29,13 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 
-extern struct rmt_ps_factory rmt_factory;
+extern struct ps_factory rmt_factory;
 
 static int __init mod_init(void)
 {
         int ret;
 
-        strcpy(rmt_factory.base.name, RINA_PS_DEFAULT_NAME);
+        strcpy(rmt_factory.name, RINA_PS_DEFAULT_NAME);
 
         ret = rmt_ps_publish(&rmt_factory);
         if (ret) {

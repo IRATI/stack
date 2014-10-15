@@ -29,9 +29,9 @@
 #include "ps-factory.h"
 
 int ps_publish(struct policy_set_list * list,
-               struct base_ps_factory * factory)
+               struct ps_factory * factory)
 {
-        struct base_ps_factory * cur;
+        struct ps_factory * cur;
 
         if (!factory || !factory->name) {
                 LOG_ERR("Wrong factory");
@@ -58,10 +58,10 @@ int ps_publish(struct policy_set_list * list,
         return 0;
 }
 
-struct base_ps_factory * ps_lookup(struct policy_set_list * list,
-                                   const char *             name)
+struct ps_factory * ps_lookup(struct policy_set_list * list,
+                              const char *             name)
 {
-        struct base_ps_factory * cur;
+        struct ps_factory * cur;
 
         if (name == NULL) {
                 LOG_ERRF("NULL name");
@@ -85,7 +85,7 @@ struct base_ps_factory * ps_lookup(struct policy_set_list * list,
 
 int ps_unpublish(struct policy_set_list * list, const char * name)
 {
-        struct base_ps_factory * factory;
+        struct ps_factory * factory;
 
         factory = ps_lookup(list, name);
         if (factory == NULL)
