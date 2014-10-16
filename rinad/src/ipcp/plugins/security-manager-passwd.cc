@@ -1,4 +1,4 @@
-#define RINA_PREFIX "security-manager-passwd"
+#define RINA_PREFIX "security-manager-ps-passwd"
 
 #include <librina/logs.h>
 

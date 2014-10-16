@@ -19,7 +19,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
-#define RINA_PREFIX "security-manager"
+#define RINA_PREFIX "security-manager-ps-default"
 
 #include <librina/logs.h>
 #include <string>

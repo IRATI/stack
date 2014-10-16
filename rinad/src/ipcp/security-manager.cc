@@ -85,18 +85,26 @@ int SecurityManager::set_policy_set_param(const std::string& path,
                                           const std::string& name,
                                           const std::string& value)
 {
-        if (path != std::string()) {
-                LOG_ERR("No subcomponents to address");
-                return -1;
-        }
+        LOG_DBG("set_policy_set_param(%s, %s) called",
+                name.c_str(), value.c_str());
 
         if (!ipcp) {
                 LOG_ERR("bug: NULL ipcp reference");
                 return -1;
         }
 
-        LOG_DBG("set_policy_set_param(%s, %s) called",
-                name.c_str(), value.c_str());
+        if (path == selected_ps_name) {
+                // This request is for the currently selected
+                // policy set, forward to it
+                return ps->set_policy_set_param(name, value);
+        } else if (path != std::string()) {
+                LOG_ERR("Invalid component address '%s'", path.c_str());
+                return -1;
+        }
+
+        // This request is for the Security Manager itself
+        LOG_ERR("No such parameter '%s' exists", name.c_str());
+
         return -1;
 }
 
