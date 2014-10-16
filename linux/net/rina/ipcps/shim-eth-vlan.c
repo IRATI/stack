@@ -1370,6 +1370,22 @@ find_instance(struct ipcp_factory_data * data,
 
 }
 
+static void inst_cleanup(struct ipcp_instance * inst)
+{
+        ASSERT(inst);
+
+        if (inst->data->info)
+                rkfree(inst->data->info);
+        if (inst->data->name)
+                name_destroy(inst->data->name);
+        if (inst->data->eth_vlan_packet_type)
+                rkfree(inst->data->eth_vlan_packet_type);
+        if (inst->data)
+                rkfree(inst->data);
+
+        rkfree(inst);
+}
+
 static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                                               const struct name *        name,
                                               ipc_process_id_t           id)
@@ -1393,7 +1409,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         inst->ops  = &eth_vlan_instance_ops;
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
@@ -1401,8 +1417,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 rkzalloc(sizeof(struct packet_type), GFP_KERNEL);
         if (!inst->data->eth_vlan_packet_type) {
                 LOG_ERR("Instance creation failed (#1)");
-                rkfree(inst->data);
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
@@ -1411,30 +1426,21 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         inst->data->name = name_dup(name);
         if (!inst->data->name) {
                 LOG_ERR("Failed creation of ipc name");
-                rkfree(inst->data->eth_vlan_packet_type);
-                rkfree(inst->data);
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->info = rkzalloc(sizeof(*inst->data->info), GFP_KERNEL);
         if (!inst->data->info) {
                 LOG_ERR("Instance creation failed (#2)");
-                name_destroy(inst->data->name);
-                rkfree(inst->data->eth_vlan_packet_type);
-                rkfree(inst->data);
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
         if (!inst->data->fspec) {
                 LOG_ERR("Instance creation failed (#3)");
-                rkfree(inst->data->info);
-                name_destroy(inst->data->name);
-                rkfree(inst->data->eth_vlan_packet_type);
-                rkfree(inst->data);
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
@@ -1522,6 +1528,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 
                         mapping = inst_data_mapping_get(pos->dev);
                         if (mapping) {
+                                LOG_DBG("removing mapping from list");
                                 spin_lock(&data_instances_lock);
                                 list_del(&mapping->list);
                                 spin_unlock(&data_instances_lock);
