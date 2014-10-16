@@ -11,6 +11,8 @@ public:
 	SecurityManagerPasswdPs(ISecurityManager * dm);
 	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
 	bool acceptFlow(const Flow& newFlow);
+        int set_policy_set_param(const std::string& name,
+                                 const std::string& value);
         virtual ~SecurityManagerPasswdPs() {}
 
 private:
@@ -33,6 +35,14 @@ bool SecurityManagerPasswdPs::acceptFlow(const Flow& newFlow)
 	LOG_DBG("Accepting flow from remote application %s",
 			newFlow.source_naming_info.getEncodedString().c_str());
 	return true;
+}
+
+int SecurityManagerPasswdPs::set_policy_set_param(const std::string& name,
+                                                  const std::string& value)
+{
+        LOG_DBG("No policy-set specific parameters to set (%s, %s)",
+                        name.c_str(), value.c_str());
+        return -1;
 }
 
 extern "C" IPolicySet *

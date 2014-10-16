@@ -72,6 +72,8 @@ public:
 
 class IPolicySet {
 public:
+        virtual int set_policy_set_param(const std::string& name,
+                                         const std::string& value) = 0;
         virtual ~IPolicySet() {}
 };
 
