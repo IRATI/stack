@@ -128,11 +128,12 @@ class CDAPInvokeIdManagerImpl: public CDAPInvokeIdManagerInterface, Lockable {
 public:
 	CDAPInvokeIdManagerImpl();
 	~CDAPInvokeIdManagerImpl() throw ();
-	void freeInvokeId(int invoke_id);
-	int newInvokeId();
-	void reserveInvokeId(int invoke_id);
+	void freeInvokeId(int invoke_id, bool sent);
+	int newInvokeId(bool sent);
+	void reserveInvokeId(int invoke_id, bool sent);
 private:
-	std::list<int> used_invoke_ids_;
+	std::list<int> used_invoke_sent_ids_;
+	std::list<int> used_invoke_recv_ids_;
 };
 
 /// Implements a CDAP session. Has the necessary logic to ensure that a
@@ -157,17 +158,17 @@ public:
 	void stopConnection();
 private:
 	void messageSentOrReceived(const CDAPMessage &cdap_message, bool sent);
-	void freeOrReserveInvokeId(const CDAPMessage &cdap_message);
+	void freeOrReserveInvokeId(const CDAPMessage &cdap_message, bool sent);
 	void checkIsConnected() const;
-	void checkInvokeIdNotExists(const CDAPMessage &cdap_message) const;
+	void checkInvokeIdNotExists(const CDAPMessage &cdap_message, bool sent) const;
 	void checkCanSendOrReceiveCancelReadRequest(const CDAPMessage &cdap_message,
-			bool sender) const;
+			bool sent) const;
 	void requestMessageSentOrReceived(const CDAPMessage &cdap_message,
 			CDAPMessage::Opcode op_code, bool sent);
 	void cancelReadMessageSentOrReceived(const CDAPMessage &cdap_message,
 			bool sender);
 	void checkCanSendOrReceiveResponse(const CDAPMessage &cdap_message,
-			CDAPMessage::Opcode op_code, bool send) const;
+			CDAPMessage::Opcode op_code, bool sender) const;
 	void checkCanSendOrReceiveCancelReadResponse(
 			const CDAPMessage &cdap_message, bool send) const;
 	void responseMessageSentOrReceived(const CDAPMessage &cdap_message,
@@ -180,7 +181,8 @@ private:
 	void emptySessionDescriptor();
 	/// This map contains the invokeIds of the messages that
 	/// have requested a response, except for the M_CANCELREADs
-	std::map<int, CDAPOperationState*> pending_messages_;
+	std::map<int, CDAPOperationState*> pending_messages_sent_;
+	std::map<int, CDAPOperationState*> pending_messages_recv_;
 	std::map<int, CDAPOperationState*> cancel_read_pending_messages_;
 	/// Deals with the connection establishment and deletion messages and states
 	ConnectionStateMachine *connection_state_machine_;
@@ -284,7 +286,7 @@ public:
 	CDAPMessage* getCancelReadResponseMessage(CDAPMessage::Flags flags, int invoke_id, int result,
 			const std::string &result_reason);
 private:
-	void assignInvokeId(CDAPMessage &cdap_message, bool invoke_id, int port_id);
+	void assignInvokeId(CDAPMessage &cdap_message, bool invoke_id, int port_id, bool sent);
 	WireMessageProviderFactory* wire_message_provider_factory_;
 	std::map<int, CDAPSessionImpl*> cdap_sessions_;
 	/// Used by the serialize and unserialize operations
