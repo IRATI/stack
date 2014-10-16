@@ -1,5 +1,7 @@
 #define RINA_PREFIX "security-manager-ps-passwd"
 
+#include <string>
+#include <sstream>
 #include <librina/logs.h>
 
 #include "ipcp/components.h"
@@ -18,6 +20,8 @@ public:
 private:
         // Data model of the security manager component.
         ISecurityManager * dm;
+
+        int max_retries;
 };
 
 SecurityManagerPasswdPs::SecurityManagerPasswdPs(ISecurityManager * dm_) : dm(dm_)
@@ -40,9 +44,24 @@ bool SecurityManagerPasswdPs::acceptFlow(const Flow& newFlow)
 int SecurityManagerPasswdPs::set_policy_set_param(const std::string& name,
                                                   const std::string& value)
 {
-        LOG_DBG("No policy-set specific parameters to set (%s, %s)",
-                        name.c_str(), value.c_str());
-        return -1;
+        if (name == "max_retries") {
+                int x;
+                std::stringstream ss;
+
+                ss << value;
+                ss >> x;
+                if (ss.fail()) {
+                        LOG_ERR("Invalid value '%s'", value.c_str());
+                        return -1;
+                }
+
+                max_retries = x;
+        } else {
+                LOG_ERR("Unknown parameter '%s'", name.c_str());
+                return -1;
+        }
+
+        return 0;
 }
 
 extern "C" IPolicySet *
