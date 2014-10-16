@@ -264,7 +264,7 @@ CDAPInvokeIdManagerImpl::~CDAPInvokeIdManagerImpl() throw () {
 }
 void CDAPInvokeIdManagerImpl::freeInvokeId(int invoke_id, bool sent) {
 	lock();
-        if (sent)
+        if (!sent)
 	        used_invoke_sent_ids_.remove(invoke_id);
         else
 	        used_invoke_recv_ids_.remove(invoke_id);
@@ -551,21 +551,17 @@ void CDAPSessionImpl::checkIsConnected() const {
 }
 void CDAPSessionImpl::checkInvokeIdNotExists(
 		const CDAPMessage &cdap_message, bool sent) const {
-        if (sent) {
-	        if (pending_messages_sent_.find(cdap_message.get_invoke_id())
-	        		!= pending_messages_sent_.end()) {
-	        	std::stringstream ss;
-	        	ss << cdap_message.get_invoke_id();
-	        	throw CDAPException("The invokeid " + ss.str() + " already exists");
-	        }
-        } else {
-	        if (pending_messages_recv_.find(cdap_message.get_invoke_id())
-	        		!= pending_messages_recv_.end()) {
-	        	std::stringstream ss;
-	        	ss << cdap_message.get_invoke_id();
-	        	throw CDAPException("The invokeid " + ss.str() + " already exists");
-	        }
+        const std::map<int, CDAPOperationState*>* pending_messages;
+        if (sent)
+                pending_messages = &pending_messages_sent_;
+        else
+                pending_messages = &pending_messages_recv_;
 
+	if (pending_messages->find(cdap_message.get_invoke_id())
+	                != pending_messages->end()) {
+	        std::stringstream ss;
+	        ss << cdap_message.get_invoke_id();
+	        throw CDAPException("The invokeid " + ss.str() + " already exists");
         }
 }
 void CDAPSessionImpl::checkCanSendOrReceiveCancelReadRequest(
@@ -705,7 +701,7 @@ void CDAPSessionImpl::responseMessageSentOrReceived(
 	checkCanSendOrReceiveResponse(cdap_message, op_code, sent);
 	bool operation_complete = true;
         std::map<int, CDAPOperationState*>* pending_messages;
-        if (sent)
+        if (!sent)
                 pending_messages = &pending_messages_sent_;
         else
                 pending_messages = &pending_messages_recv_;
