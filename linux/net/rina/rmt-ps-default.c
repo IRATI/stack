@@ -40,33 +40,6 @@ static void default_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { }
 
-static struct ps_base *
-rmt_ps_default_create(struct rina_component * component)
-{
-        struct rmt * rmt = rmt_from_component(component);
-        struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-
-        if (!ps) {
-             return NULL;
-        }
-
-        ps->dm              = rmt;
-        ps->max_q           = 256;
-        ps->priv            = NULL;
-        ps->max_q_policy_tx = default_max_q_policy_tx;
-        ps->max_q_policy_rx = default_max_q_policy_rx;
-
-        return &ps->base;
-}
-
-static void rmt_ps_default_destroy(struct ps_base * bps)
-{
-        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
-
-        if (ps)
-                rkfree(ps);
-}
-
 static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
@@ -90,10 +63,37 @@ static int rmt_ps_set_policy_set_param(struct ps_base * bps,
         return -1;
 }
 
+static struct ps_base *
+rmt_ps_default_create(struct rina_component * component)
+{
+        struct rmt * rmt = rmt_from_component(component);
+        struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+
+        if (!ps) {
+             return NULL;
+        }
+
+        ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
+        ps->dm              = rmt;
+        ps->max_q           = 256;
+        ps->priv            = NULL;
+        ps->max_q_policy_tx = default_max_q_policy_tx;
+        ps->max_q_policy_rx = default_max_q_policy_rx;
+
+        return &ps->base;
+}
+
+static void rmt_ps_default_destroy(struct ps_base * bps)
+{
+        struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
+
+        if (ps)
+                rkfree(ps);
+}
+
 struct ps_factory rmt_factory = {
         .parameters     = NULL,
         .num_parameters = 0,
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
-        .set_policy_set_param = rmt_ps_set_policy_set_param,
 };

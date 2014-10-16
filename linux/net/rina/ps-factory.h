@@ -37,6 +37,10 @@ struct parameter_desc {
 
 /* A base class for policy sets. */
 struct ps_base {
+        /* Method for setting policy-set-specific parameters. */
+        int (*set_policy_set_param)(struct ps_base * ps,
+                                    const char * name,
+                                    const char * value);
 };
 
 struct ps_factory {
@@ -50,11 +54,6 @@ struct ps_factory {
         /* Factory callbacks. */
         struct ps_base * (*create)(struct rina_component * component);
         void (*destroy)(struct ps_base *);
-
-        /* Method for setting policy-set-specific parameters. */
-        int (*set_policy_set_param)(struct ps_base * ps,
-                                    const char * name,
-                                    const char * value);
 
         struct list_head        node;
 };

@@ -315,11 +315,11 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                         return -1;
                 }
 
-        } else if (rmt->ps && rmt->ps_factory->set_policy_set_param) {
+        } else if (rmt->ps && rmt->ps->base.set_policy_set_param) {
                 if (strcmp(path, rmt->ps_factory->name) == 0) {
                         /* The request addresses the RMT policy set. */
-                        return rmt->ps_factory->set_policy_set_param(
-                                                &rmt->ps->base, name, value);
+                        return rmt->ps->base.set_policy_set_param(
+                                        &rmt->ps->base, name, value);
                 } else {
                         LOG_ERR("Policy set %s not selected for this "
                                  "component", path);
