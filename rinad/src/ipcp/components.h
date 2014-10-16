@@ -83,16 +83,16 @@ extern "C" {
 }
 
 struct ComponentFactory {
-        // Name of this pluggable component.
+        // Name of this pluggable policy set.
         std::string name;
 
         // Name of the component where this plugin applies.
         std::string component;
 
-        // Constructor method for instances of this pluggable component.
+        // Constructor method for instances of this pluggable policy set.
         component_factory_create_t create;
 
-        // Destructor method for instances of this pluggable component.
+        // Destructor method for instances of this pluggable policy set.
         component_factory_destroy_t destroy;
 };
 

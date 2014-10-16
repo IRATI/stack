@@ -1,5 +1,5 @@
 //
-// Security Manager
+// Defaul policy set for Security Manager
 //
 //    Eduard Grasa <eduard.grasa@i2cat.net>
 //    Vincenzo Maffione <v.maffione@nextworks.it>

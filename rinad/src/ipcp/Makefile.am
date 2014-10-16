@@ -50,7 +50,7 @@ libps_default_la_LDFLAGS =
 libps_default_la_SOURCES =				\
 		default-plugin.cc			\
 		component.h				\
-		default-security-manager.cc
+		default-security-manager-ps.cc
 
 lib_LTLIBRARIES = libps-default.la
 
