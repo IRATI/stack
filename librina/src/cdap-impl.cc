@@ -639,7 +639,7 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 		bool sender) const {
 	bool validation_failed = false;
         const std::map<int, CDAPOperationState*>* pending_messages;
-        if (sender)
+        if (!sender)
                 pending_messages = &pending_messages_sent_;
         else
                 pending_messages = &pending_messages_recv_;
@@ -648,7 +648,7 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 	iterator = pending_messages->find(cdap_message.invoke_id_);
 	if (iterator == pending_messages->end()) {
 		std::stringstream ss;
-		ss << "Cannot sender a response for the " << op_code
+		ss << "Cannot send a response for the " << op_code
 				<< " operation with invokeId " << cdap_message.get_invoke_id();
 		throw CDAPException(ss.str());
 	}
