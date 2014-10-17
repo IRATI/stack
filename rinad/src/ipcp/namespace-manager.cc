@@ -124,7 +124,7 @@ DirectoryForwardingTableEntryRIBObject::DirectoryForwardingTableEntryRIBObject(I
 		const std::string& object_name, rina::DirectoryForwardingTableEntry * entry):
 			SimpleSetMemberRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 					object_name, entry){
-	namespace_manager_ = ipc_process->namespace_manager;
+	namespace_manager_ = ipc_process->namespace_manager_;
 	namespace_manager_->addDFTEntry(entry);
 	ap_name_entry_ = entry->get_ap_naming_info();
 }
@@ -217,7 +217,7 @@ DirectoryForwardingTableEntrySetRIBObject::DirectoryForwardingTableEntrySetRIBOb
 		BaseRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
 				objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) {
-	namespace_manager_ = ipc_process_->namespace_manager;
+	namespace_manager_ = ipc_process_->namespace_manager_;
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
@@ -399,7 +399,7 @@ NamespaceManager::NamespaceManager() {
 
 void NamespaceManager::set_ipc_process(IPCProcess * ipc_process) {
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon;
+	rib_daemon_ = ipc_process->rib_daemon_;
 	populateRIB();
 }
 
