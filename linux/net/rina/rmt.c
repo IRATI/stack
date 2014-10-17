@@ -269,9 +269,18 @@ int rmt_select_policy_set(struct rmt * rmt,
                 return 0;
         }
 
+        /* Take a reference to the plugin module, to prevent
+         * rmmodding. */
+        if (!try_module_get(candidate_ps_factory->owner)) {
+                LOG_ERR("Module %p is not alive as it should",
+                        candidate_ps_factory->owner);
+                return -1;
+        }
+
         /* Instantiate the new policy set. */
         candidate_ps = candidate_ps_factory->create(&rmt->base);
         if (!candidate_ps) {
+                module_put(candidate_ps_factory->owner);
                 LOG_ERR("Policy-set instantiation failed");
                 return -1;
         }
@@ -280,6 +289,7 @@ int rmt_select_policy_set(struct rmt * rmt,
                 /* Free the old one. */
                 ASSERT(rmt->ps_factory);
                 rmt->ps_factory->destroy(&rmt->ps->base);
+                module_put(rmt->ps_factory->owner);
         }
 
         /* Do the transaction. */
@@ -435,6 +445,7 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->ps) {
                 instance->ps_factory->destroy(&instance->ps->base);
+                module_put(instance->ps_factory->owner);
         }
 
         rkfree(instance);

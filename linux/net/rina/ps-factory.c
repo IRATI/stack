@@ -33,7 +33,8 @@ int ps_publish(struct policy_set_list * list,
 {
         struct ps_factory * cur;
 
-        if (!factory || !factory->name) {
+        if (!factory || !factory->name || !factory->owner ||
+                !factory->create || !factory->destroy) {
                 LOG_ERR("Wrong factory");
                 return -1;
         }

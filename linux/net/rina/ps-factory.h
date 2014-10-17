@@ -23,6 +23,7 @@
 #define RINA_PS_FACTORY_H
 
 #include <linux/list.h>
+#include <linux/module.h>
 #include "common.h"
 
 #define RINA_PS_DEFAULT_NAME            "default"
@@ -55,6 +56,11 @@ struct ps_factory {
         struct ps_base * (*create)(struct rina_component * component);
         void (*destroy)(struct ps_base *);
 
+        /* The module that published this policy-set. */
+        struct module           * owner;
+
+        /* Used to implement per-component list of available
+         * policy sets. */
         struct list_head        node;
 };
 

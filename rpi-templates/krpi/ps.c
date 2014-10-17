@@ -68,7 +68,7 @@ rmt_ps_default_create(struct rina_component * component)
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
 
         if (!ps) {
-             return NULL;
+                return NULL;
         }
 
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
@@ -85,11 +85,13 @@ static void rmt_ps_default_destroy(struct ps_base * bps)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 
-        if (ps)
+        if (bps) {
                 rkfree(ps);
+        }
 }
 
 static struct ps_factory factory = {
+        .owner          = THIS_MODULE,
         .parameters     = NULL,
         .num_parameters = 0,
         .create  = rmt_ps_default_create,
