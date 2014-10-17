@@ -67,16 +67,9 @@ static struct ps_base *
 rmt_ps_default_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
-        struct rmt_ps * ps;
+        struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
 
-        if (!try_module_get(THIS_MODULE)) {
-                LOG_ERR("This module is not alive as it should");
-                return NULL;
-        }
-
-        ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
-                module_put(THIS_MODULE);
                 return NULL;
         }
 
@@ -96,11 +89,11 @@ static void rmt_ps_default_destroy(struct ps_base * bps)
 
         if (bps) {
                 rkfree(ps);
-                module_put(THIS_MODULE);
         }
 }
 
 struct ps_factory rmt_factory = {
+        .owner          = THIS_MODULE,
         .parameters     = NULL,
         .num_parameters = 0,
         .create  = rmt_ps_default_create,
