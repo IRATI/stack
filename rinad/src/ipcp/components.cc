@@ -22,6 +22,9 @@
 #include <sstream>
 #include <iostream>
 
+#define RINA_PREFIX "ipcp-components"
+#include <librina/logs.h>
+
 #include "components.h"
 
 namespace rinad {
@@ -391,6 +394,7 @@ void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
 	rib_daemon_->removeRIBObject(name_);
 }
 
+//Class IPCProcess
 IPCProcess::IPCProcess()
 {
 	delimiter = 0;

@@ -23,6 +23,7 @@
 #define RINA_PS_FACTORY_H
 
 #include <linux/list.h>
+#include "common.h"
 
 #define RINA_PS_DEFAULT_NAME            "default"
 
@@ -34,13 +35,25 @@ struct parameter_desc {
         char name[PARAMETER_DESC_MAX_LEN];
 };
 
-struct base_ps_factory {
+/* A base class for policy sets. */
+struct ps_base {
+        /* Method for setting policy-set-specific parameters. */
+        int (*set_policy_set_param)(struct ps_base * ps,
+                                    const char * name,
+                                    const char * value);
+};
+
+struct ps_factory {
         /* A name for this policy-set. */
         char                    name[POLICY_SET_NAME_MAX_LEN];
 
         /* Policy-set-specific parameters. */
         struct parameter_desc * parameters;
         unsigned int            num_parameters;
+
+        /* Factory callbacks. */
+        struct ps_base * (*create)(struct rina_component * component);
+        void (*destroy)(struct ps_base *);
 
         struct list_head        node;
 };
@@ -50,8 +63,8 @@ struct policy_set_list {
 };
 
 int                      ps_publish(struct policy_set_list * list,
-                                    struct base_ps_factory * factory);
-struct base_ps_factory * ps_lookup(struct policy_set_list * list,
+                                    struct ps_factory * factory);
+struct ps_factory * ps_lookup(struct policy_set_list * list,
                                    const char *       name);
 int                      ps_unpublish(struct policy_set_list * list,
                                       const char *       name);

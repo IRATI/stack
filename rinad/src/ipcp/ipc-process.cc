@@ -20,6 +20,7 @@
 
 #include <cstdlib>
 #include <sstream>
+#include <dlfcn.h>
 
 #define RINA_PREFIX "ipc-process"
 
@@ -31,7 +32,7 @@
 #include "ipcp/pduft-generator.h"
 #include "ipcp/resource-allocator.h"
 #include "ipcp/rib-daemon.h"
-#include "ipcp/security-manager.h"
+#include "ipcp/components.h"
 
 namespace rinad {
 
@@ -57,6 +58,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	state = NOT_INITIALIZED;
 	lock_ = new rina::Lockable();
 
+        // Load the default pluggable components
+        if (plugin_load("default")) {
+                throw Exception("Failed to load default plugin");
+        }
+
 	// Initialize subcomponents
 	init_cdap_session_manager();
 	init_encoder();
@@ -65,7 +71,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	flow_allocator = new FlowAllocator();
 	namespace_manager = new NamespaceManager();
 	resource_allocator = new ResourceAllocator();
-	security_manager = new SecurityManager();
+
+        security_manager = new SecurityManager();
 	rib_daemon = new RIBDaemon();
 
 	rib_daemon->set_ipc_process(this);
@@ -74,6 +81,12 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager->set_ipc_process(this);
 	flow_allocator->set_ipc_process(this);
 	security_manager->set_ipc_process(this);
+
+        // Select the default policy sets
+        security_manager->select_policy_set(std::string(), "default");
+        if (!security_manager->ps) {
+                throw Exception("Cannot create security manager policy-set");
+        }
 
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name);
@@ -122,12 +135,21 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (security_manager) {
-		delete security_manager;
+		componentFactoryDestroy("security-manager",
+                                security_manager->selected_ps_name,
+                                security_manager->ps);
+                delete security_manager;
 	}
 
 	if (rib_daemon) {
 		delete rib_daemon;
 	}
+
+        for (std::map<std::string, void *>::iterator
+                        it = plugins_handles.begin();
+                                it != plugins_handles.end(); it++) {
+                plugin_unload(it->first);
+        }
 }
 
 void IPCProcessImpl::init_cdap_session_manager() {
@@ -326,9 +348,65 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	LOG_INFO("%s", ss.str().c_str());
 }
 
+static void parse_path(const std::string& path, std::string& component,
+                       std::string& remainder)
+{
+        size_t dotpos = path.find_first_of('.');
+
+        component = path.substr(0, dotpos);
+        if (dotpos == std::string::npos || dotpos + 1 == path.size()) {
+                remainder = std::string();
+        } else {
+                remainder = path.substr(dotpos + 1);
+        }
+}
+
 void IPCProcessImpl::processSetPolicySetParamRequestEvent(
                         const rina::SetPolicySetParamRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
+        std::string component, remainder;
+        bool got_in_userspace = true;
+        int result = -1;
+
+        parse_path(event.path, component, remainder);
+
+        // First check if the request should be served by this daemon
+        // or should be forwarded to kernelspace
+        if (component == "security-manager") {
+                result = security_manager->set_policy_set_param(remainder,
+                                                                event.name,
+                                                                event.value);
+        } else if (component == "enrollment") {
+                result = enrollment_task->set_policy_set_param(remainder,
+                                                               event.name,
+                                                               event.value);
+        } else if (component == "flow-allocator") {
+                result = flow_allocator->set_policy_set_param(remainder,
+                                                              event.name,
+                                                              event.value);
+        } else if (component == "namespace-manager") {
+                result = namespace_manager->set_policy_set_param(remainder,
+                                                                 event.name,
+                                                                 event.value);
+        } else if (component == "resource-allocator") {
+                result = resource_allocator->set_policy_set_param(remainder,
+                                                                  event.name,
+                                                                  event.value);
+        } else if (component == "rib-daemon") {
+                result = rib_daemon->set_policy_set_param(remainder,
+                                                          event.name,
+                                                          event.value);
+        } else {
+                got_in_userspace = false;
+        }
+
+        if (got_in_userspace) {
+                // Event managed without going through kernelspace. Notify
+                // the IPC Manager about the result
+		rina::extendedIPCManager->setPolicySetParamResponse(event,
+                                                                    result);
+                return;
+        }
 
 	try {
 		unsigned int handle =
@@ -386,7 +464,50 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 void IPCProcessImpl::processSelectPolicySetRequestEvent(
                         const rina::SelectPolicySetRequestEvent& event) {
 	rina::AccessGuard g(*lock_);
+        std::string component, remainder;
+        bool got_in_userspace = true;
+        int result = -1;
 
+        parse_path(event.path, component, remainder);
+
+        // If the request specifies a plugin name, load it
+        if (event.plugin_name != std::string()) {
+                plugin_load(event.plugin_name);
+        }
+
+        // First check if the request should be served by this daemon
+        // or should be forwarded to kernelspace
+        if (component == "security-manager") {
+                result = security_manager->select_policy_set(remainder,
+                                                             event.name);
+        } else if (component == "enrollment") {
+                result = enrollment_task->select_policy_set(remainder,
+                                                            event.name);
+        } else if (component == "flow-allocator") {
+                result = flow_allocator->select_policy_set(remainder,
+                                                           event.name);
+        } else if (component == "namespace-manager") {
+                result = namespace_manager->select_policy_set(remainder,
+                                                              event.name);
+        } else if (component == "resource-allocator") {
+                result = resource_allocator->select_policy_set(remainder,
+                                                               event.name);
+        } else if (component == "rib-daemon") {
+                result = rib_daemon->select_policy_set(remainder,
+                                                       event.name);
+        } else {
+                got_in_userspace = false;
+        }
+
+        if (got_in_userspace) {
+                // Event managed without going through kernelspace. Notify
+                // the IPC Manager about the result
+		rina::extendedIPCManager->selectPolicySetResponse(event,
+                                                                  result);
+                return;
+        }
+
+        // Forward the request to the kernel
 	try {
 		unsigned int handle =
                         rina::kernelIPCProcess->selectPolicySet(event.path,
@@ -438,6 +559,188 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 	} catch (Exception &e) {
 		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
+}
+
+int IPCProcessImpl::plugin_load(const std::string& plugin_name)
+{
+#define STRINGIFY(s) #s
+        std::string plugin_path = STRINGIFY(PLUGINSDIR);
+#undef STRINGIFY
+        void *handle = NULL;
+        plugin_init_function_t init_func;
+        char *errstr;
+        int ret;
+
+        if (plugins_handles.count(plugin_name)) {
+                LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
+                return 0;
+        }
+
+        plugin_path += "/";
+#if 1   //XXX Don't stage me!!
+        plugin_path = "/home/vmaffione/git/pristine/local/lib/libps-";
+#endif
+        plugin_path += plugin_name + ".so";
+
+        handle = dlopen(plugin_path.c_str(), RTLD_NOW);
+        if (!handle) {
+                LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(),
+                        dlerror());
+                return -1;
+        }
+
+        /* Clear any pending error conditions. */
+        dlerror();
+
+        /* Try to load the init() function. */
+        init_func = (plugin_init_function_t)dlsym(handle, "init");
+
+        /* Check if an error occurred in dlsym(). */
+        errstr = dlerror();
+        if (errstr) {
+                dlclose(handle);
+                LOG_ERR("Failed to link the init() function for plugin %s: %s",
+                        plugin_name.c_str(), errstr);
+                return -1;
+        }
+
+        /* Invoke the plugin initialization function, that will publish
+         * pluggable components. */
+        ret = init_func(this);
+        if (ret) {
+                dlclose(handle);
+                LOG_ERR("Failed to initialize plugin %s",
+                        plugin_name.c_str());
+                return -1;
+        }
+
+        plugins_handles[plugin_name] = handle;
+
+        LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
+
+        return 0;
+}
+
+int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
+{
+        std::map< std::string, void * >::iterator mit;
+
+        mit = plugins_handles.find(plugin_name);
+        if (mit == plugins_handles.end()) {
+                LOG_ERR("plugin %s already loaded", plugin_name.c_str());
+                return -1;
+        }
+
+        // Unload all the pluggable components published by this plugin
+        // Note: Here we assume the plugin name is used as the "name"
+        // argument in the componentFactoryPublish() calls.
+        for (std::vector<ComponentFactory>::iterator
+                it = components_factories.begin();
+                        it != components_factories.end(); it++) {
+                if (it->name == plugin_name) {
+                        componentFactoryUnpublish(it->component, it->name);
+                }
+        }
+
+        dlclose(mit->second);
+        plugins_handles.erase(mit);
+
+        return 0;
+}
+
+std::vector<ComponentFactory>::iterator
+IPCProcessImpl::componentFactoryLookup(const std::string& component,
+                                       const std::string& name)
+{
+        for (std::vector<ComponentFactory>::iterator
+                it = components_factories.begin();
+                        it != components_factories.end(); it++) {
+                if (it->component == component &&
+                                it->name == name) {
+                        return it;
+                }
+        }
+
+        return components_factories.end();
+}
+
+int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
+{
+        // TODO check that factory.component is an existing component
+
+        // Check if the (name, component) couple specified by 'factory'
+        // has not already been published.
+        if (componentFactoryLookup(factory.component, factory.name) !=
+                                                components_factories.end()) {
+                LOG_ERR("Factory %s for component %s already "
+                                "published", factory.name.c_str(),
+                                factory.component.c_str());
+                return -1;
+        }
+
+        // Add the new factory
+        components_factories.push_back(factory);
+
+        LOG_INFO("Pluggable component %s/%s published",
+                 factory.component.c_str(), factory.name.c_str());
+
+        return 0;
+}
+
+int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
+                                              const std::string& name)
+{
+        std::vector<ComponentFactory>::iterator fi;
+
+        fi = componentFactoryLookup(component, name);
+        if (fi == components_factories.end()) {
+                LOG_ERR("Factory %s for component %s not "
+                                "published", name.c_str(),
+                                component.c_str());
+                return -1;
+        }
+
+        components_factories.erase(fi);
+
+        LOG_INFO("Pluggable component %s/%s unpublished",
+                 component.c_str(), name.c_str());
+
+        return 0;
+}
+
+IPolicySet *
+IPCProcessImpl::componentFactoryCreate(const std::string& component,
+                                       const std::string& name,
+                                       IPCProcessComponent * context)
+{
+        std::vector<ComponentFactory>::iterator it;
+
+        it = componentFactoryLookup(component, name);
+        if (it == components_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), name.c_str());
+                return NULL;
+        }
+
+        return it->create(context);
+}
+
+int IPCProcessImpl::componentFactoryDestroy(const std::string& component,
+                                            const std::string& name,
+                                            IPolicySet * instance)
+{
+        std::vector<ComponentFactory>::iterator it;
+
+        it = componentFactoryLookup(component, name);
+        if (it == components_factories.end()) {
+                LOG_ERR("Pluggable component %s/%s not found",
+                        component.c_str(), name.c_str());
+                return -1;
+        }
+
+        it->destroy(instance);
+
+        return 0;
 }
 
 //Event loop handlers

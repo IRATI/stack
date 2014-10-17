@@ -2,6 +2,7 @@
 // Security Manager
 //
 //    Eduard Grasa <eduard.grasa@i2cat.net>
+//    Vincenzo Maffione <v.maffione@nextworks.it>
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,32 +23,89 @@
 
 #include <librina/logs.h>
 
-#include "security-manager.h"
+#include "ipcp/components.h"
 
 namespace rinad {
 
 //Class SecurityManager
 SecurityManager::SecurityManager() {
-	ipc_process_ = 0;
+	ipcp = 0;
+        ps = 0;
 }
 
-void SecurityManager::set_ipc_process(IPCProcess * ipc_process) {
-	ipc_process_ = ipc_process;
+void SecurityManager::set_ipc_process(IPCProcess * ipc_process)
+{
+	ipcp = ipc_process;
 }
 
 void SecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 	LOG_DBG("Set dif configuration: %u", dif_configuration.address_);
 }
 
-bool SecurityManager::isAllowedToJoinDIF(const rina::Neighbor& newMember) {
-	LOG_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
-	return true;
+int SecurityManager::select_policy_set(const std::string& path,
+                                       const std::string& name)
+{
+        IPolicySet *candidate = NULL;
+
+        if (path != std::string()) {
+                LOG_ERR("No subcomponents to address");
+                return -1;
+        }
+
+        if (!ipcp) {
+                LOG_ERR("bug: NULL ipcp reference");
+                return -1;
+        }
+
+        if (name == selected_ps_name) {
+                LOG_INFO("policy set %s already selected", name.c_str());
+                return 0;
+        }
+
+        candidate = ipcp->componentFactoryCreate("security-manager", name, this);
+        if (!candidate) {
+                LOG_ERR("failed to allocate instance of policy set %s", name.c_str());
+                return -1;
+        }
+
+        if (ps) {
+                // Remove the old one.
+                ipcp->componentFactoryDestroy("security-manager", selected_ps_name, ps);
+        }
+
+        // Install the new one.
+        ps = dynamic_cast<ISecurityManagerPs *>(candidate);
+        selected_ps_name = name;
+        LOG_INFO("Policy-set %s selected", name.c_str());
+
+        return ps ? 0 : -1;
 }
 
-bool SecurityManager::acceptFlow(const Flow& newFlow) {
-	LOG_DBG("Accepting flow from remote application %s",
-			newFlow.source_naming_info.getEncodedString().c_str());
-	return true;
+int SecurityManager::set_policy_set_param(const std::string& path,
+                                          const std::string& name,
+                                          const std::string& value)
+{
+        LOG_DBG("set_policy_set_param(%s, %s) called",
+                name.c_str(), value.c_str());
+
+        if (!ipcp) {
+                LOG_ERR("bug: NULL ipcp reference");
+                return -1;
+        }
+
+        if (path == selected_ps_name) {
+                // This request is for the currently selected
+                // policy set, forward to it
+                return ps->set_policy_set_param(name, value);
+        } else if (path != std::string()) {
+                LOG_ERR("Invalid component address '%s'", path.c_str());
+                return -1;
+        }
+
+        // This request is for the Security Manager itself
+        LOG_ERR("No such parameter '%s' exists", name.c_str());
+
+        return -1;
 }
 
 }

@@ -30,6 +30,8 @@
 #include "ps-factory.h"
 
 struct rmt_ps {
+        struct ps_base base;
+
         /* Behavioural policies. */
         void (* max_q_policy_tx)(struct rmt_ps *,
                                  struct pdu *,
@@ -48,25 +50,11 @@ struct rmt_ps {
         void *       priv;
 };
 
-struct rmt_ps_factory {
-        /* Parent struct, must be the first member. */
-        struct base_ps_factory base;
-
-        /* Factory callbacks. */
-        struct rmt_ps * (* create)(struct rmt *);
-        void            (* destroy)(struct rmt_ps *);
-
-        /* Method for setting policy-set-specific parameters. */
-        int (*set_policy_set_param)(struct rmt_ps * ps,
-                                    const char    * name,
-                                    const char    * value);
-};
-
 /*
  * The ownership of @factory is not passed. Plugin module is therefore
  * in charge of deallocate its memory, if necessary.
  */
-int rmt_ps_publish(struct rmt_ps_factory * factory);
+int rmt_ps_publish(struct ps_factory * factory);
 int rmt_ps_unpublish(const char * name);
 
 #endif

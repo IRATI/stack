@@ -1,8 +1,7 @@
 /*
- * Default policy set for RMT
+ * Skeleton plugin
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +22,11 @@
 #include <linux/module.h>
 #include <linux/string.h>
 
-#define RINA_PREFIX "rmt-ps-default"
+#define RINA_PREFIX "skeleton"
 
 #include "logs.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
-#include "rmt.h"
 
 static void default_max_q_policy_tx(struct rmt_ps * ps,
                                     struct pdu *    pdu,
@@ -91,9 +89,50 @@ static void rmt_ps_default_destroy(struct ps_base * bps)
                 rkfree(ps);
 }
 
-struct ps_factory rmt_factory = {
+static struct ps_factory factory = {
         .parameters     = NULL,
         .num_parameters = 0,
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
 };
+
+#define RINA_SKELETON_NAME   "skeleton"
+
+static int __init mod_init(void)
+{
+        int ret;
+
+        strcpy(factory.name, RINA_SKELETON_NAME);
+
+        ret = rmt_ps_publish(&factory);
+        if (ret) {
+                LOG_ERR("Failed to publish policy set factory");
+                return -1;
+        }
+
+        LOG_INFO("RMT default policy set loaded successfully");
+
+        return 0;
+}
+
+static void __exit mod_exit(void)
+{
+        int ret = rmt_ps_unpublish(RINA_SKELETON_NAME);
+
+        if (ret) {
+                LOG_ERR("Failed to unpublish policy set factory");
+                return;
+        }
+
+        LOG_INFO("RMT default policy set unloaded successfully");
+}
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("RMT default policy set");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");

@@ -799,7 +799,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 
 	//2 Check if the source application process has access to the destination application process.
 	// If not send negative M_CREATE_R back to the sender IPC process, and do housekeeping.
-	if (!security_manager_->acceptFlow(*flow_)) {
+	if (!security_manager_->ps->acceptFlow(*flow_)) {
 		LOG_WARN(
 				"Security Manager denied incoming flow request from application %s",
 				flow_->source_naming_info.getEncodedString().c_str());

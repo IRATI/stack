@@ -98,6 +98,7 @@ AC_CONFIG_FILES([
     src/ipcp/Makefile
     src/ipcp/include/Makefile
     src/ipcp/include/ipcp/Makefile
+    src/ipcp/plugins/Makefile
     src/ipcm/Makefile
     src/ipcm/include/Makefile
     src/ipcm/include/ipcm/Makefile

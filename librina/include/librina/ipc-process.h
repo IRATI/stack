@@ -193,8 +193,11 @@ public:
 	/** The name of the policy-set to select */
 	std::string name;
 
+        std::string plugin_name;
+
 	SelectPolicySetRequestEvent(const std::string& path,
                                     const std::string& name,
+                                    const std::string& plugin_name,
 			            unsigned int sequenceNumber);
 };
 

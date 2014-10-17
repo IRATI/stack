@@ -4909,6 +4909,8 @@ int putIpcmSelectPolicySetRequestMessageObject(nl_msg* netlinkMessage,
 			object.path.c_str());
 	NLA_PUT_STRING(netlinkMessage, ISPSR_ATTR_NAME,
 			object.name.c_str());
+	NLA_PUT_STRING(netlinkMessage, ISPSR_ATTR_PLUGIN_NAME,
+			object.plugin_name.c_str());
 
 	return 0;
 
@@ -8547,10 +8549,10 @@ parseIpcmSelectPolicySetRequestMessage(nlmsghdr *hdr){
 	attr_policy[ISPSR_ATTR_NAME].type = NLA_STRING;
 	attr_policy[ISPSR_ATTR_NAME].minlen = 0;
 	attr_policy[ISPSR_ATTR_NAME].maxlen = 65535;
-	attr_policy[ISPSR_ATTR_VALUE].type = NLA_STRING;
-	attr_policy[ISPSR_ATTR_VALUE].minlen = 0;
-	attr_policy[ISPSR_ATTR_VALUE].maxlen = 65535;
-	struct nlattr *attrs[ISPSPR_ATTR_MAX + 1];
+	attr_policy[ISPSR_ATTR_PLUGIN_NAME].type = NLA_STRING;
+	attr_policy[ISPSR_ATTR_PLUGIN_NAME].minlen = 0;
+	attr_policy[ISPSR_ATTR_PLUGIN_NAME].maxlen = 65535;
+	struct nlattr *attrs[ISPSR_ATTR_MAX + 1];
 
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			ISPSR_ATTR_MAX, attr_policy);
@@ -8570,6 +8572,10 @@ parseIpcmSelectPolicySetRequestMessage(nlmsghdr *hdr){
 	if (attrs[ISPSR_ATTR_NAME])
 		result->name = nla_get_string(
                                 attrs[ISPSR_ATTR_NAME]);
+
+	if (attrs[ISPSR_ATTR_PLUGIN_NAME])
+		result->plugin_name = nla_get_string(
+                                attrs[ISPSR_ATTR_PLUGIN_NAME]);
 
 	return result;
 }

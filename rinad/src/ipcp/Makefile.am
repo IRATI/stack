@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS      = include
+SUBDIRS      = include plugins
 
 EXTRA_DIST   =
 CLEANFILES   =
@@ -25,7 +25,7 @@ ipcp_CFLAGS   =
 ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
 	-DPLUGINSDIR=$(pkglibdir)/ipcp
-ipcp_LDADD    = $(COMMONLIBS)
+ipcp_LDADD    = $(COMMONLIBS) -ldl
 ipcp_SOURCES  =						\
 	main.cc						\
 	events.cc		events.h		\
@@ -36,11 +36,23 @@ ipcp_SOURCES  =						\
 	pduft-generator.cc      pduft-generator.h	\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h   	\
-	security-manager.cc     security-manager.h 	\
+	security-manager.cc				\
 	ipc-process.cc          ipc-process.h
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)
+
+libps_default_la_CFLAGS =
+libps_default_la_CPPFLAGS =			\
+	$(COMMONCPPFLAGS)
+libps_default_la_LIBADD =
+libps_default_la_LDFLAGS =
+libps_default_la_SOURCES =				\
+		default-plugin.cc			\
+		component.h				\
+		default-security-manager-ps.cc
+
+lib_LTLIBRARIES = libps-default.la
 
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\

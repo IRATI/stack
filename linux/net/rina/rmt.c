@@ -191,6 +191,7 @@ static int pft_cache_fini(struct pft_cache * c)
 }
 
 struct rmt {
+        struct rina_component     base;
         address_t                 address;
         struct ipcp_instance *    parent;
         struct pft *              pft;
@@ -198,7 +199,7 @@ struct rmt {
         struct efcp_container *   efcpc;
         struct serdes *           serdes;
         struct rmt_ps *           ps;
-        struct rmt_ps_factory   * ps_factory;
+        struct ps_factory   *     ps_factory;
 
         struct {
                 struct workqueue_struct * wq;
@@ -233,12 +234,19 @@ static const char * create_name(const char *       prefix,
         return name;
 }
 
+struct rmt *
+rmt_from_component(struct rina_component * component)
+{
+        return container_of(component, struct rmt, base);
+}
+EXPORT_SYMBOL(rmt_from_component);
+
 int rmt_select_policy_set(struct rmt * rmt,
                           const string_t * path,
                           const string_t * name)
 {
-        struct rmt_ps *candidate_ps = NULL;
-        struct rmt_ps_factory *candidate_ps_factory = NULL;
+        struct ps_base *candidate_ps = NULL;
+        struct ps_factory *candidate_ps_factory = NULL;
 
         if (!name || !path) {
                 LOG_ERR("NULL args %p %p", path, name);
@@ -250,8 +258,7 @@ int rmt_select_policy_set(struct rmt * rmt,
                 return -1;
         }
 
-        candidate_ps_factory = (struct rmt_ps_factory *)
-                               ps_lookup(&policy_sets, name);
+        candidate_ps_factory = ps_lookup(&policy_sets, name);
         if (!candidate_ps_factory) {
                 LOG_ERR("No policy-set '%s' published", name);
                 return -1;
@@ -263,7 +270,7 @@ int rmt_select_policy_set(struct rmt * rmt,
         }
 
         /* Instantiate the new policy set. */
-        candidate_ps = candidate_ps_factory->create(rmt);
+        candidate_ps = candidate_ps_factory->create(&rmt->base);
         if (!candidate_ps) {
                 LOG_ERR("Policy-set instantiation failed");
                 return -1;
@@ -272,12 +279,12 @@ int rmt_select_policy_set(struct rmt * rmt,
         if (rmt->ps) {
                 /* Free the old one. */
                 ASSERT(rmt->ps_factory);
-                rmt->ps_factory->destroy(rmt->ps);
+                rmt->ps_factory->destroy(&rmt->ps->base);
         }
 
         /* Do the transaction. */
         rmt->ps_factory = candidate_ps_factory;
-        rmt->ps = candidate_ps;
+        rmt->ps = container_of(candidate_ps, struct rmt_ps, base);
 
         return 0;
 }
@@ -308,11 +315,11 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                         return -1;
                 }
 
-        } else if (rmt->ps && rmt->ps_factory->set_policy_set_param) {
-                if (strcmp(path, rmt->ps_factory->base.name) == 0) {
+        } else if (rmt->ps && rmt->ps->base.set_policy_set_param) {
+                if (strcmp(path, rmt->ps_factory->name) == 0) {
                         /* The request addresses the RMT policy set. */
-                        return rmt->ps_factory->set_policy_set_param(rmt->ps,
-                                                                name, value);
+                        return rmt->ps->base.set_policy_set_param(
+                                        &rmt->ps->base, name, value);
                 } else {
                         LOG_ERR("Policy set %s not selected for this "
                                  "component", path);
@@ -427,7 +434,7 @@ int rmt_destroy(struct rmt * instance)
         if (instance->serdes)         serdes_destroy(instance->serdes);
 
         if (instance->ps) {
-                instance->ps_factory->destroy(instance->ps);
+                instance->ps_factory->destroy(&instance->ps->base);
         }
 
         rkfree(instance);
@@ -1386,14 +1393,14 @@ int rmt_pft_flush(struct rmt * instance)
 { return is_rmt_pft_ok(instance) ? pft_flush(instance->pft) : -1; }
 EXPORT_SYMBOL(rmt_pft_flush);
 
-int rmt_ps_publish(struct rmt_ps_factory * factory)
+int rmt_ps_publish(struct ps_factory * factory)
 {
         if (factory == NULL) {
                 LOG_ERR("%s: NULL factory", __func__);
                 return -1;
         }
 
-        return ps_publish(&policy_sets, &factory->base);
+        return ps_publish(&policy_sets, factory);
 }
 EXPORT_SYMBOL(rmt_ps_publish);
 

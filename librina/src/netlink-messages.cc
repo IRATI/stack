@@ -1598,6 +1598,7 @@ IpcmSelectPolicySetRequestMessage::IpcmSelectPolicySetRequestMessage():
 
 IPCEvent* IpcmSelectPolicySetRequestMessage::toIPCEvent(){
 	IPCEvent * event = new SelectPolicySetRequestEvent(path, name,
+                                                plugin_name,
 			                        getSequenceNumber());
 	return event;
 }

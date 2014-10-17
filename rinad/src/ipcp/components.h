@@ -4,6 +4,7 @@
  *    Bernat Gaston         <bernat.gaston@i2cat.net>
  *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +27,8 @@
 #ifdef __cplusplus
 
 #include <list>
+#include <vector>
+#include <string>
 
 #include <librina/cdap.h>
 #include <librina/ipc-process.h>
@@ -49,9 +52,50 @@ class IPCProcess;
 /// IPC process component interface
 class IPCProcessComponent {
 public:
+        std::string selected_ps_name;
+
 	virtual ~IPCProcessComponent(){};
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+        virtual int select_policy_set(const std::string& path,
+                                      const std::string& name) {
+                (void) (path + name);
+                return -1;
+        }
+        virtual int set_policy_set_param(const std::string& path,
+                                         const std::string& name,
+                                         const std::string& value) {
+                (void) (path + name + value);
+                return -1;
+        }
+};
+
+class IPolicySet {
+public:
+        virtual int set_policy_set_param(const std::string& name,
+                                         const std::string& value) = 0;
+        virtual ~IPolicySet() {}
+};
+
+extern "C" {
+        typedef IPolicySet *(*component_factory_create_t)(
+                                                IPCProcessComponent * ctx);
+        typedef void (*component_factory_destroy_t)(IPolicySet * ps);
+        typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
+}
+
+struct ComponentFactory {
+        // Name of this pluggable policy set.
+        std::string name;
+
+        // Name of the component where this plugin applies.
+        std::string component;
+
+        // Constructor method for instances of this pluggable policy set.
+        component_factory_create_t create;
+
+        // Destructor method for instances of this pluggable policy set.
+        component_factory_destroy_t destroy;
 };
 
 /// Interface
@@ -449,15 +493,40 @@ public:
 /// Control is performed by the Flow Allocator. The particular security procedures used for
 /// these security functions are a matter of policy. SDU Protection provides confidentiality
 /// and integrity
-class ISecurityManager: public IPCProcessComponent {
-public:
-	virtual ~ISecurityManager(){};
 
+class ISecurityManagerPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
+public:
 	/// Decide if an IPC Process is allowed to join a DIF
 	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
 
 	/// Decide if a new flow to the IPC process should be accepted
 	virtual bool acceptFlow(const Flow& newFlow) = 0;
+
+        virtual ~ISecurityManagerPs() {}
+};
+
+class ISecurityManager: public IPCProcessComponent {
+// This class is used by the plugins to access the IPCP functionalities
+public:
+        virtual ~ISecurityManager() {}
+};
+
+class SecurityManager: public ISecurityManager {
+// Used by IPCP to access the functionalities of the security manager
+private:
+        IPCProcess *ipcp;
+public:
+        ISecurityManagerPs * ps;
+
+	SecurityManager();
+	void set_ipc_process(IPCProcess * ipc_process);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+        int select_policy_set(const std::string& path, const std::string& name);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
+	~SecurityManager() {};
 };
 
 class IRIBDaemon;
@@ -994,7 +1063,7 @@ public:
 	IFlowAllocator * flow_allocator;
 	INamespaceManager * namespace_manager;
 	IResourceAllocator * resource_allocator;
-	ISecurityManager * security_manager;
+	SecurityManager * security_manager;
 	IRIBDaemon * rib_daemon;
 	rina::ApplicationProcessNamingInformation name;
 
@@ -1008,6 +1077,20 @@ public:
 	virtual const rina::DIFInformation& get_dif_information() const = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
+
+        virtual std::vector<ComponentFactory>::iterator
+                        componentFactoryLookup(const std::string& component,
+                                       const std::string& name) = 0;
+        virtual int componentFactoryPublish(const ComponentFactory& factory) = 0;
+        virtual int componentFactoryUnpublish(const std::string& component,
+                                              const std::string& name) = 0;
+        virtual IPolicySet * componentFactoryCreate(
+                                        const std::string& component,
+                                        const std::string& name,
+                                        IPCProcessComponent * context) = 0;
+        virtual int componentFactoryDestroy(const std::string& component,
+                                            const std::string& name,
+                                            IPolicySet * instance) = 0;
 };
 
 /// Generates unique object instances

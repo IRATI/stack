@@ -57,9 +57,24 @@ public:
         void processSelectPolicySetResponseEvent(
                 const rina::SelectPolicySetResponseEvent& event);
 
+        std::vector<ComponentFactory>::iterator
+                        componentFactoryLookup(const std::string& component,
+                                       const std::string& name);
+        int componentFactoryPublish(const ComponentFactory& factory);
+        int componentFactoryUnpublish(const std::string& component,
+                                              const std::string& name);
+        IPolicySet * componentFactoryCreate(const std::string& component,
+                                            const std::string& name,
+                                            IPCProcessComponent* context);
+        int componentFactoryDestroy(const std::string& component,
+                                    const std::string& name,
+                                    IPolicySet * instance);
+
 private:
 	void init_cdap_session_manager();
 	void init_encoder();
+        int plugin_load(const std::string& name);
+        int plugin_unload(const std::string& name);
 
 	IPCProcessOperationalState state;
 	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
@@ -69,6 +84,8 @@ private:
                 pending_select_policy_set_events;
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
+        std::map< std::string, void * > plugins_handles;
+        std::vector<ComponentFactory> components_factories;
 };
 
 void register_handlers_all(EventLoop& loop);
