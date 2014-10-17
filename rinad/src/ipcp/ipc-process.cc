@@ -268,7 +268,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 		state = INITIALIZED;
 
 		try {
-			rina::extendedIPCManager->assignToDIFResponse(it->second, -1);
+			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 		} catch (Exception &e) {
 			LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
@@ -278,13 +278,19 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	//TODO do stuff
 	LOG_DBG("The kernel processed successfully the Assign to DIF request");
-
-	rib_daemon->set_dif_configuration(dif_information_.dif_configuration_);
-	resource_allocator->set_dif_configuration(dif_information_.dif_configuration_);
-	namespace_manager->set_dif_configuration(dif_information_.dif_configuration_);
-	security_manager->set_dif_configuration(dif_information_.dif_configuration_);
-	flow_allocator->set_dif_configuration(dif_information_.dif_configuration_);
-	enrollment_task->set_dif_configuration(dif_information_.dif_configuration_);
+	try{
+		rib_daemon->set_dif_configuration(dif_information_.dif_configuration_);
+		resource_allocator->set_dif_configuration(dif_information_.dif_configuration_);
+		namespace_manager->set_dif_configuration(dif_information_.dif_configuration_);
+		security_manager->set_dif_configuration(dif_information_.dif_configuration_);
+		flow_allocator->set_dif_configuration(dif_information_.dif_configuration_);
+		enrollment_task->set_dif_configuration(dif_information_.dif_configuration_);
+	}
+	catch(Exception &e){
+		state = INITIALIZED;
+		LOG_ERR("Bad configutration error: %s", e.what());
+		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
+	}
 
 	state = ASSIGNED_TO_DIF;
 

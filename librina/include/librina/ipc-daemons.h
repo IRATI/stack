@@ -153,6 +153,19 @@ public:
 };
 
 /**
+ * Thrown when there are problems in the configuration
+ */
+class BadConfigurationException: public IPCException {
+public:
+	BadConfigurationException():
+                IPCException("Problems assigning IPC Process to DIF"){
+        }
+	BadConfigurationException(const std::string& description):
+                IPCException(description){
+        }
+};
+
+/**
  * Thrown when there are problems updating a DIF configuration
  */
 class UpdateDIFConfigurationException: public IPCException {
