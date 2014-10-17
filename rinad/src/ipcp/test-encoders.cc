@@ -54,6 +54,7 @@ bool test_flow (rinad::Encoder * encoder) {
 	connection_policies_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
 	dtcp_config_to_encode.set_rtx_control(true);
 	rtx_config.set_data_rxmsn_max(25423);
+	rtx_config.set_initial_rtx_time(100);
 	dtcp_config_to_encode.set_rtx_control_config(rtx_config);
 	dtcp_config_to_encode.set_flow_control(true);
 	flow_config_to_encode.set_rcv_buffers_threshold(412431);
@@ -110,6 +111,8 @@ bool test_flow (rinad::Encoder * encoder) {
 		if(dtcp_config_to_encode.get_rtx_control_config().get_data_rxmsn_max() != dtcp_config_decoded.get_rtx_control_config().get_data_rxmsn_max())
 			return false;
 		if(dtcp_config_to_encode.get_rtx_control_config().get_max_time_to_retry() != dtcp_config_decoded.get_rtx_control_config().get_max_time_to_retry())
+			return false;
+		if(dtcp_config_to_encode.get_rtx_control_config().get_initial_rtx_time() != dtcp_config_decoded.get_rtx_control_config().get_initial_rtx_time())
 			return false;
 		if(dtcp_config_to_encode.is_flow_control() != dtcp_config_decoded.is_flow_control())
 			return false;
