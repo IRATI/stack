@@ -43,6 +43,7 @@ message dtcpRtxControlConfig_t {  //the rtx control configuration of a connectio
     optional policyDescriptor_t rcvrackpolicy = 6;                 //Executed by the receiver of the PDU and provides some discretion in the action taken
     optional policyDescriptor_t sendingackpolicy = 7;              //allows an alternate action when the A-Timer expires when DTCP is present.
     optional policyDescriptor_t rcvrcontrolackpolicy = 8;          //Allows an alternate action when a Control Ack PDU is received
+    optional uint32 initialRtxTime = 9;							   //maximum time that a sender will wait before retransmitting the SDU
 }
 
 message dtcpConfig_t {  //configuration of DTCP for a connection

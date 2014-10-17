@@ -318,6 +318,7 @@ rina::messages::dtcpRtxControlConfig_t* Encoder::get_dtcpRtxControlConfig_t(cons
 
 	gpf_conf->set_maxtimetoretry(conf.get_max_time_to_retry());
 	gpf_conf->set_datarxmsnmax(conf.get_data_rxmsn_max());
+	gpf_conf->set_initialrtxtime(conf.get_initial_rtx_time());
 	gpf_conf->set_allocated_rtxtimerexpirypolicy(Encoder::get_policyDescriptor_t(conf.get_rtx_timer_expiry_policy()));
 	gpf_conf->set_allocated_senderackpolicy(Encoder::get_policyDescriptor_t(conf.get_sender_ack_policy()));
 	gpf_conf->set_allocated_recvingacklistpolicy(Encoder::get_policyDescriptor_t(conf.get_recving_ack_list_policy()));
