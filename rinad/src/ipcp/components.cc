@@ -128,8 +128,8 @@ BaseRIBObject::BaseRIBObject(IPCProcess * ipc_process, const std::string& object
 	instance_ = object_instance;
 	ipc_process_ = ipc_process;
 	if (ipc_process) {
-		rib_daemon_ =  ipc_process->rib_daemon;
-		encoder_ = ipc_process->encoder;
+		rib_daemon_ =  ipc_process->rib_daemon_;
+		encoder_ = ipc_process->encoder_;
 	} else {
 		rib_daemon_ = 0;
 		encoder_ = 0;
@@ -393,15 +393,15 @@ void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
 
 IPCProcess::IPCProcess()
 {
-	delimiter = 0;
-	encoder = 0;
-	cdap_session_manager = 0;
-	enrollment_task = 0;
-	flow_allocator = 0;
-	namespace_manager = 0;
-	resource_allocator = 0;
-	security_manager = 0;
-	rib_daemon = 0;
+	delimiter_ = 0;
+	encoder_ = 0;
+	cdap_session_manager_ = 0;
+	enrollment_task_ = 0;
+	flow_allocator_ = 0;
+	namespace_manager_ = 0;
+	resource_allocator_ = 0;
+	security_manager_ = 0;
+	rib_daemon_ = 0;
 }
 
 }

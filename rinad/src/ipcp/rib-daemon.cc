@@ -230,9 +230,9 @@ RIBDaemon::RIBDaemon()
 void RIBDaemon::set_ipc_process(IPCProcess * ipc_process)
 {
 	ipc_process_ = ipc_process;
-	cdap_session_manager_ = ipc_process->cdap_session_manager;
-	encoder_ = ipc_process->encoder;
-	n_minus_one_flow_manager_ = ipc_process->resource_allocator->get_n_minus_one_flow_manager();
+	cdap_session_manager_ = ipc_process->cdap_session_manager_;
+	encoder_ = ipc_process->encoder_;
+	n_minus_one_flow_manager_ = ipc_process->resource_allocator_->get_n_minus_one_flow_manager();
 
 	subscribeToEvents();
 
@@ -672,7 +672,7 @@ void RIBDaemon::cdapMessageDelivered(char* message, int length, int portId)
 
 	//2 Find the message recipient and call it
 	rina::CDAPMessage::Opcode opcode = cdapMessage->get_op_code();
-	enrollmentTask = ipc_process_->enrollment_task;
+	enrollmentTask = ipc_process_->enrollment_task_;
 	try {
 		switch (opcode) {
 		case rina::CDAPMessage::M_CONNECT:

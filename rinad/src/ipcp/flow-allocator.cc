@@ -194,10 +194,10 @@ FlowAllocator::~FlowAllocator()
 void FlowAllocator::set_ipc_process(IPCProcess * ipc_process)
 {
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process_->rib_daemon;
-	encoder_ = ipc_process_->encoder;
-	cdap_session_manager_ = ipc_process_->cdap_session_manager;
-	namespace_manager_ = ipc_process_->namespace_manager;
+	rib_daemon_ = ipc_process_->rib_daemon_;
+	encoder_ = ipc_process_->encoder_;
+	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
+	namespace_manager_ = ipc_process_->namespace_manager_;
 	populateRIB();
 }
 
@@ -533,7 +533,7 @@ std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(
 	std::list<BaseRIBObject *> children;
 
 	BaseRIBObject * ribObject = 0;
-	ribObject = ipc_process->rib_daemon->readObject(
+	ribObject = ipc_process->rib_daemon_->readObject(
 			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
 	if (ribObject != 0) {
@@ -594,10 +594,10 @@ void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
 	flow_allocator_ = flow_allocator;
 	ipc_process_ = ipc_process;
 	port_id_ = port_id;
-	rib_daemon_ = ipc_process->rib_daemon;
-	encoder_ = ipc_process->encoder;
-	namespace_manager_ = ipc_process->namespace_manager;
-	security_manager_ = ipc_process->security_manager;
+	rib_daemon_ = ipc_process->rib_daemon_;
+	encoder_ = ipc_process->encoder_;
+	namespace_manager_ = ipc_process->namespace_manager_;
+	security_manager_ = ipc_process->security_manager_;
 	state = NO_STATE;
 	allocate_response_message_handle_ = 0;
 	underlying_port_id_ = 0;
@@ -1222,7 +1222,7 @@ DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(
 				objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME)
 {
-	cdap_session_manager_ = ipc_process->cdap_session_manager;
+	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 }
 
 void DataTransferConstantsRIBObject::remoteReadObject(int invoke_id,
