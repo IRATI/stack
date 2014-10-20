@@ -440,7 +440,7 @@ void FlowAllocator::submitDeallocate(
 	} else {
 		flowAllocatorInstance->submitDeallocate(event);
 		try {
-			rina::extendedIPCManager->notifyflowDeallocated(event, -1);
+			rina::extendedIPCManager->notifyflowDeallocated(event, 0);
 		} catch (Exception &e) {
 			LOG_ERR("Error communicating with the IPC Manager: %s", e.what());
 		}
