@@ -360,14 +360,17 @@ bool DIFConfigValidator::validateConfigParameters()
 bool DIFConfigValidator::dataTransferConstants() {
 	rina::DataTransferConstants data_trans_config = dif_config_.efcp_configuration_
 			.data_transfer_constants_;
-	return data_trans_config.address_length_ != 0 &&
-			data_trans_config.qos_id_length_ != 0 &&
-			data_trans_config.port_id_length_ != 0 &&
-			data_trans_config.cep_id_length_ != 0 &&
-			data_trans_config.sequence_number_length_ != 0 &&
-			data_trans_config.length_length_ != 0 &&
-			data_trans_config.max_pdu_size_ != 0 &&
-			data_trans_config.max_pdu_lifetime_ != 0;
+	bool result = data_trans_config.address_length_ != 0 &&
+		      data_trans_config.qos_id_length_ != 0 &&
+		      data_trans_config.port_id_length_ != 0 &&
+		      data_trans_config.cep_id_length_ != 0 &&
+		      data_trans_config.sequence_number_length_ != 0 &&
+		      data_trans_config.length_length_ != 0 &&
+		      data_trans_config.max_pdu_size_ != 0 &&
+		      data_trans_config.max_pdu_lifetime_ != 0;
+        if (!result)
+                LOG_ERR("Data Transfer Constants configuration failed");
+        return result;
 }
 
 bool DIFConfigValidator::qosCubes(){
@@ -382,7 +385,9 @@ bool DIFConfigValidator::qosCubes(){
 				(*it)->id_ != 0;
 		result = result && temp_result;
 	}
-	return result;
+        if (!result)
+                LOG_ERR("QoS Cubes configuration failed");
+        return result;
 }
 
 bool DIFConfigValidator::knownIPCProcessAddresses()
@@ -396,15 +401,20 @@ bool DIFConfigValidator::knownIPCProcessAddresses()
 		bool temp_result = !it->ap_name_.empty() &&	it->address_ != 0;
 		result = result && temp_result;
 	}
-	return result;
+        if (!result)
+                LOG_ERR("Know IPCP Processes Addresses configuration failed");
+        return result;
 }
 
 bool DIFConfigValidator::pdufTableGeneratorConfiguration()
 {
-	return  dif_config_.pduft_generator_configuration_.
-			pduft_generator_policy_.name_.compare("LinkState") == 0 &&
-			dif_config_.pduft_generator_configuration_.
-			pduft_generator_policy_.version_.compare("0") == 0;
+	bool result =  dif_config_.pduft_generator_configuration_.
+		       pduft_generator_policy_.name_.compare("LinkState") == 0 &&
+		       dif_config_.pduft_generator_configuration_.
+		       pduft_generator_policy_.version_.compare("0") == 0;
+        if (!result)
+                LOG_ERR("PDUFT Generator configuration failed");
+        return result;
 }
 
 int
