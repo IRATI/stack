@@ -1006,7 +1006,6 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
                         return retval;
                 }
         }
-        LWE = dt_sv_rcv_lft_win(dtcp->parent);
 
         if (rtx_ctrl) {
                 LOG_DBG("Retransmission ctrl invoked");
