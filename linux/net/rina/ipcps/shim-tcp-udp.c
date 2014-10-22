@@ -55,8 +55,19 @@ struct rcv_data {
 
 extern struct kipcm * default_kipcm;
 
-/* FIXME Remove this */
-static struct ipcp_instance_data * inst_data;
+/*
+ * Mapping of ipcp_instance_data to host_name
+ * Needed for handling incomming SDUs
+ */
+struct host_ipcp_instance_mapping {
+        struct list_head            list;
+
+        struct ipcp_instance_data * data;
+        __be32                      host_name;
+};
+
+static DEFINE_SPINLOCK(data_instances_lock);
+static struct list_head data_instances_list;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -141,6 +152,27 @@ struct exp_reg {
         struct name *    app_name;
         int              port;
 };
+
+static struct host_ipcp_instance_mapping *
+inst_data_mapping_get(__be32 host_name)
+{
+        struct host_ipcp_instance_mapping * mapping;
+
+        ASSERT(host_name);
+
+        spin_lock(&data_instances_lock);
+
+        list_for_each_entry(mapping, &data_instances_list, list) {
+                if (mapping->host_name == host_name) {
+                        spin_unlock(&data_instances_lock);
+                        return mapping;
+                }
+        }
+
+        spin_unlock(&data_instances_lock);
+
+        return NULL;
+}
 
 static struct dir_entry *
 find_dir_entry(struct ipcp_instance_data * data,
@@ -715,9 +747,9 @@ int send_msg(struct socket *      sock,
         return size;
 }
 
-static int udp_process_msg(struct socket * sock)
+static int udp_process_msg(struct ipcp_instance_data * data,
+                struct socket * sock)
 {
-        struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
         struct sockaddr_in          addr;
         struct reg_app_data *       app;
@@ -727,7 +759,7 @@ static int udp_process_msg(struct socket * sock)
         char *                      buf;
         int                         size;
 
-        LOG_DBG("udp_process_msg");
+        LOG_HBEAT;
 
         buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
 
@@ -754,8 +786,6 @@ static int udp_process_msg(struct socket * sock)
                 buffer_destroy(sdubuf);
                 return -1;
         }
-
-        data = inst_data;
 
         spin_lock(&data->flow_lock);
         flow = find_udp_flow(data, &addr, sock);
@@ -1116,9 +1146,8 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
         return size;
 }
 
-static int tcp_process(struct socket * sock)
+static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 {
-        struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
         struct reg_app_data *       app;
         struct socket *             acsock;
@@ -1129,9 +1158,7 @@ static int tcp_process(struct socket * sock)
 
         LOG_DBG("tcp process on %p", sock);
 
-        data = inst_data;
         app = find_app_by_socket(data, sock);
-
         if (!app) {
                 //connection exists
                 err = tcp_process_msg(data, sock);
@@ -1249,16 +1276,30 @@ static int tcp_process(struct socket * sock)
 
 static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
-        int res;
+        struct host_ipcp_instance_mapping * mapping;
+        struct sockaddr_in own;
+        struct socket * sock;
+        int res, len;
+
+        sock = sk->sk_socket;
+
+        len = sizeof(struct sockaddr_in);
+        if (kernel_getsockname(sock, (struct sockaddr*) &own, &len)) {
+                LOG_ERR("Couldn't retrieve hostname");
+        }
+        LOG_DBG("found sockname: %d", ntohl(own.sin_addr.s_addr));
+        mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
+        
+        ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
-                res = udp_process_msg(sk->sk_socket);
+                res = udp_process_msg(mapping->data, sock);
                 while (res > 0) {
-                        res = udp_process_msg(sk->sk_socket);
+                        res = udp_process_msg(mapping->data, sock);
                 }
                 return res;
         } else {
-                return tcp_process(sk->sk_socket);
+                return tcp_process(mapping->data, sock);
         }
 }
 
@@ -1806,6 +1847,8 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                  const struct dif_info *     dif_information)
 {
+        struct host_ipcp_instance_mapping * mapping;
+
         LOG_HBEAT;
         ASSERT(data);
         ASSERT(dif_information);
@@ -1833,12 +1876,32 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
+                        GFP_KERNEL);
+        if (!mapping) {
+                LOG_ERR("Failed to allocate memory");
+                name_destroy(data->dif_name);
+                data->dif_name = NULL;
+                undo_assignment(data);
+                return -1;
+        }
+
+        mapping->host_name = data->host_name;
+        mapping->data = data;
+        INIT_LIST_HEAD(&mapping->list);
+
+        spin_lock(&data_instances_lock);
+        list_add(&mapping->list, &data_instances_list);
+        spin_unlock(&data_instances_lock);
+
         return 0;
 }
 
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
                                      const struct dif_config *   new_config)
 {
+        struct host_ipcp_instance_mapping * mapping;
+
         LOG_HBEAT;
 
         ASSERT(data);
@@ -1853,12 +1916,36 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
 
         undo_assignment(data);
 
+        mapping = inst_data_mapping_get(data->host_name);
+        if (mapping) {
+                spin_lock(&data_instances_lock);
+                list_del(&mapping->list);
+                spin_unlock(&data_instances_lock);
+                kfree(mapping);
+        }
+
         if (parse_assign_conf(data, new_config)) {
                 LOG_ERR("Failed to update configuration");
                 undo_assignment(data);
                 /* FIXME: If this fails, DIF is no longer functional */
                 return -1;
         }
+
+        mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
+                        GFP_KERNEL);
+        if (!mapping) {
+                LOG_ERR("Failed to allocate memory");
+                undo_assignment(data);
+                return -1;
+        }
+
+        mapping->host_name = data->host_name;
+        mapping->data = data;
+        INIT_LIST_HEAD(&mapping->list);
+
+        spin_lock(&data_instances_lock);
+        list_add(&mapping->list, &data_instances_list);
+        spin_unlock(&data_instances_lock);
 
         return 0;
 }
@@ -2012,6 +2099,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 
         INIT_LIST_HEAD(&rcv_wq_data);
 
+        INIT_LIST_HEAD(&data_instances_list);
+
         spin_lock_init(&data->lock);
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
@@ -2158,8 +2247,6 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         LOG_DBG("KFA instance %pK bound to the shim tcp-udp", inst->data->kfa);
 
-        inst_data = inst->data;
-
         spin_lock_init(&inst->data->flow_lock);
         spin_lock_init(&inst->data->app_lock);
         spin_lock_init(&inst->data->dir_lock);
@@ -2185,6 +2272,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 static int tcp_udp_destroy(struct ipcp_factory_data * data,
                            struct ipcp_instance *     instance)
 {
+        struct host_ipcp_instance_mapping * mapping;
         struct ipcp_instance_data * pos, * next;
 
         LOG_HBEAT;
@@ -2214,6 +2302,15 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                                 name_destroy(pos->name);
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
+
+                        mapping = inst_data_mapping_get(pos->host_name);
+                        if (mapping) {
+                                LOG_DBG("removing mapping from list");
+                                spin_lock(&data_instances_lock);
+                                list_del(&mapping->list);
+                                spin_unlock(&data_instances_lock);
+                                kfree(mapping);
+                        }
 
                         rkfree(pos);
                         rkfree(instance);
