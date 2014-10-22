@@ -563,8 +563,10 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 
 int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 {
-#define STRINGIFY(s) #s
+#define STRINGIFY(s) STRINGIFY1(s)
+#define STRINGIFY1(s) #s
         std::string plugin_path = STRINGIFY(PLUGINSDIR);
+#undef STRINGIFY1
 #undef STRINGIFY
         void *handle = NULL;
         plugin_init_function_t init_func;
