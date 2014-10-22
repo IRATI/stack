@@ -962,7 +962,6 @@ static int default_sv_update(struct dtcp * dtcp, seq_num_t seq)
         bool                 win_based;
         bool                 rate_based;
         bool                 rtx_ctrl;
-        seq_num_t            LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
