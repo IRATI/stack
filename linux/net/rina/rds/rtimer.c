@@ -20,7 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/types.h>
-#include <linux/timer.h>
+#include <linux/hrtimer.h>
 
 #define RINA_PREFIX "rtimer"
 
@@ -30,10 +30,19 @@
 #include "rtimer.h"
 
 struct rtimer {
-        struct timer_list tl;
+        struct hrtimer ht; /* THIS MUST BE FIRST */
         void (* function)(void * data);
         void * data;
 };
+
+void * rtimer_get_data(struct rtimer * timer)
+{
+        if (!timer)
+                return NULL;
+
+        return timer->data;
+}
+EXPORT_SYMBOL(rtimer_get_data);
 
 static struct rtimer * rtimer_create_gfp(gfp_t   flags,
                                          void (* function)(void * data),
@@ -51,20 +60,22 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
                 return NULL;
 
         tmp->function = function;
-        tmp->data     = data;
+        tmp-> data    = data;
 
-        init_timer(&tmp->tl);
+        hrtimer_init(&tmp->ht, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 
         LOG_DBG("Timer %pK created", tmp);
 
         return tmp;
 }
 
-struct rtimer * rtimer_create(void (* function)(void * data), void * data)
+struct rtimer * rtimer_create(void (* function)(void * data),
+                              void * data)
 { return rtimer_create_gfp(GFP_KERNEL, function, data); }
 EXPORT_SYMBOL(rtimer_create);
 
-struct rtimer * rtimer_create_ni(void (* function)(void * data), void * data)
+struct rtimer * rtimer_create_ni(void (* function)(void * data),
+                                 void * data)
 { return rtimer_create_gfp(GFP_ATOMIC, function, data); }
 EXPORT_SYMBOL(rtimer_create_ni);
 
@@ -72,7 +83,7 @@ static bool __rtimer_is_pending(struct rtimer * timer)
 {
         ASSERT(timer);
 
-        return timer_pending(&timer->tl) ? true : false;
+        return hrtimer_active(&timer->ht) ? true : false;
 }
 
 bool rtimer_is_pending(struct rtimer * timer)
@@ -90,17 +101,13 @@ static int __rtimer_start(struct rtimer * timer,
         ASSERT(timer);
 
         /* FIXME: Crappy, rearrange */
-        timer->tl.function = (void (*)(unsigned long)) timer->function;
-        timer->tl.data     = (unsigned long)           timer->data;
-        timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
+        timer->ht.function = (enum hrtimer_restart (*)(struct hrtimer *)) timer->function;
 
-        add_timer(&timer->tl);
+        hrtimer_start(&timer->ht, ktime_set(millisecs / 1000, 0),
+                      HRTIMER_MODE_REL);
 
-        LOG_DBG("Timer %pK started (function = %pK, data = %pK, expires = %ld",
-                timer,
-                (void *) timer->tl.function,
-                (void *) timer->tl.data,
-                timer->tl.expires);
+        LOG_DBG("Timer %pK started (function = %pK",
+                timer, (void *) timer->ht.function);
 
         return 0;
 }
@@ -129,7 +136,7 @@ static int __rtimer_stop(struct rtimer * timer)
                 return 0;
         }
 
-        del_timer(&timer->tl);
+        hrtimer_cancel(&timer->ht);
         LOG_DBG("Timer %pK stopped", timer);
 
         return 0;
@@ -173,6 +180,7 @@ int rtimer_destroy(struct rtimer * timer)
 }
 EXPORT_SYMBOL(rtimer_destroy);
 
+#if 0
 #ifdef CONFIG_RINA_RTIMER_REGRESSION_TESTS
 static void timer0_function(void * data)
 { }
@@ -245,4 +253,5 @@ bool regression_tests_rtimer(void)
 
         return true;
 }
+#endif
 #endif

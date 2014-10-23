@@ -23,6 +23,7 @@
 
 struct rtimer;
 
+void *          rtimer_get_data(struct rtimer * timer);
 struct rtimer * rtimer_create(void (* function)(void * data),
                               void *  data);
 struct rtimer * rtimer_create_ni(void (* function)(void * data),

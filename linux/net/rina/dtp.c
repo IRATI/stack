@@ -662,9 +662,15 @@ static int pdu_post(struct dtp * instance,
 /* Runs the SenderInactivityTimerPolicy */
 static void tf_sender_inactivity(void * data)
 {
+        struct rtimer * timer;
         struct dtp * dtp;
 
-        dtp = (struct dtp *) data;
+        timer = (struct rtimer *) data;
+        if (!timer) {
+                LOG_ERR("No timer to work with");
+                return;
+        }
+        dtp = (struct dtp *) rtimer_get_data(timer);
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
@@ -687,9 +693,15 @@ static void tf_sender_inactivity(void * data)
 /* Runs the ReceiverInactivityTimerPolicy */
 static void tf_receiver_inactivity(void * data)
 {
+        struct rtimer * timer;
         struct dtp * dtp;
 
-        dtp = (struct dtp *) data;
+        timer = (struct rtimer *) data;
+        if (!timer) {
+                LOG_ERR("No timer to work with");
+                return;
+        }
+        dtp = (struct dtp *) rtimer_get_data(timer);
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
@@ -904,10 +916,16 @@ static int post_worker(void * o)
 
 static void tf_a(void * data)
 {
+        struct rtimer *        timer;
         struct dtp *           dtp;
         struct rwq_work_item * item;
 
-        dtp = (struct dtp *) data;
+        timer = (struct rtimer *) data;
+        if (!timer) {
+                LOG_ERR("No timer to work with");
+                return;
+        }
+        dtp = (struct dtp *) rtimer_get_data(timer);
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;

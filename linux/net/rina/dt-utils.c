@@ -619,10 +619,17 @@ static int rtx_worker(void * o)
 
 static void Rtimer_handler(void * data)
 {
+        struct rtimer *        timer;
         struct rtxq *          q;
         struct rwq_work_item * item;
 
-        q = (struct rtxq *) data;
+        timer = (struct rtimer *) data;
+        if (!timer) {
+                LOG_ERR("No timer to work with");
+                return;
+        }
+
+        q = (struct rtxq *) rtimer_get_data(timer);
         if (!q) {
                 LOG_ERR("No RTXQ to work with");
                 return;
