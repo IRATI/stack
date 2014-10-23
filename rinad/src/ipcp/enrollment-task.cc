@@ -1372,8 +1372,8 @@ void * doNeighborsEnrollerWork(void * arg) {
 				}
 			}
 
-			sleepObject.sleepForMili(configuration.neighbor_enroller_period_in_ms_);
 		}
+		sleepObject.sleepForMili(configuration.neighbor_enroller_period_in_ms_);
 	}
 
 	return (void *) 0;
