@@ -20,7 +20,6 @@
 
 #include <linux/export.h>
 #include <linux/types.h>
-#include <linux/hrtimer.h>
 
 #define RINA_PREFIX "rtimer"
 
@@ -31,7 +30,7 @@
 
 struct rtimer {
         struct hrtimer ht; /* THIS MUST BE FIRST */
-        void (* function)(void * data);
+        enum hrtimer_restart (* function)(struct rtimer * timer);
         void * data;
 };
 
@@ -45,7 +44,7 @@ void * rtimer_get_data(struct rtimer * timer)
 EXPORT_SYMBOL(rtimer_get_data);
 
 static struct rtimer * rtimer_create_gfp(gfp_t   flags,
-                                         void (* function)(void * data),
+                                         enum hrtimer_restart (* function)(struct rtimer * timer),
                                          void *  data)
 {
         struct rtimer * tmp;
@@ -69,12 +68,12 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         return tmp;
 }
 
-struct rtimer * rtimer_create(void (* function)(void * data),
+struct rtimer * rtimer_create(enum hrtimer_restart (* function)(struct rtimer * rtimer),
                               void * data)
 { return rtimer_create_gfp(GFP_KERNEL, function, data); }
 EXPORT_SYMBOL(rtimer_create);
 
-struct rtimer * rtimer_create_ni(void (* function)(void * data),
+struct rtimer * rtimer_create_ni(enum hrtimer_restart (* function)(struct rtimer * rtimer),
                                  void * data)
 { return rtimer_create_gfp(GFP_ATOMIC, function, data); }
 EXPORT_SYMBOL(rtimer_create_ni);

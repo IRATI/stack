@@ -660,66 +660,62 @@ static int pdu_post(struct dtp * instance,
 }
 
 /* Runs the SenderInactivityTimerPolicy */
-static void tf_sender_inactivity(void * data)
+static enum hrtimer_restart tf_sender_inactivity(struct rtimer * timer)
 {
-        struct rtimer * timer;
         struct dtp * dtp;
 
-        timer = (struct rtimer *) data;
         if (!timer) {
                 LOG_ERR("No timer to work with");
-                return;
+                return HRTIMER_NORESTART;
         }
         dtp = (struct dtp *) rtimer_get_data(timer);
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
-                return;
+                return HRTIMER_NORESTART;
         }
         if (!dtp->policies) {
                 LOG_ERR("No DTP policies");
-                return;
+                return HRTIMER_NORESTART;
         }
         if (!dtp->policies->sender_inactivity_timer) {
                 LOG_ERR("No DTP sender inactivity policy");
-                return;
+                return HRTIMER_NORESTART;
         }
 
         if (dtp->policies->sender_inactivity_timer(dtp))
                 LOG_ERR("Problems executing the sender inactivity policy");
 
-        return;
+        return HRTIMER_NORESTART;
 }
 
 /* Runs the ReceiverInactivityTimerPolicy */
-static void tf_receiver_inactivity(void * data)
+static enum hrtimer_restart tf_receiver_inactivity(struct rtimer * timer)
 {
-        struct rtimer * timer;
         struct dtp * dtp;
 
-        timer = (struct rtimer *) data;
         if (!timer) {
                 LOG_ERR("No timer to work with");
-                return;
+                return HRTIMER_NORESTART;
         }
         dtp = (struct dtp *) rtimer_get_data(timer);
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
-                return;
+                return HRTIMER_NORESTART;
         }
         if (!dtp->policies) {
                 LOG_ERR("No DTP policies");
-                return;
+                return HRTIMER_NORESTART;
         }
 #if DTP_INACTIVITY_TIMERS_ENABLE
         if (!dtp->policies->receiver_inactivity_timer) {
                 LOG_ERR("No DTP sender inactivity policy");
-                return;
+                return HRTIMER_NORESTART;
         }
 
         if (dtp->policies->receiver_inactivity_timer(dtp))
                 LOG_ERR("Problems executing receiver inactivity policy");
 #endif
-        return;
+        return HRTIMER_NORESTART;
 }
 
 /*
@@ -914,35 +910,33 @@ static int post_worker(void * o)
         return 0;
 }
 
-static void tf_a(void * data)
+static enum hrtimer_restart tf_a(struct rtimer * timer)
 {
-        struct rtimer *        timer;
         struct dtp *           dtp;
         struct rwq_work_item * item;
 
-        timer = (struct rtimer *) data;
         if (!timer) {
                 LOG_ERR("No timer to work with");
-                return;
+                return HRTIMER_NORESTART;
         }
         dtp = (struct dtp *) rtimer_get_data(timer);
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
-                return;
+                return HRTIMER_NORESTART;
         }
 
         item = rwq_work_create_ni(post_worker, dtp);
         if (!item) {
                 LOG_ERR("Could not create twq item");
-                return;
+                return HRTIMER_NORESTART;
         }
 
         if (rwq_work_post(dtp->twq, item)) {
                 LOG_ERR("Could not add twq item to the wq");
-                return;
+                return HRTIMER_NORESTART;
         }
 
-        return;
+        return HRTIMER_NORESTART;
 }
 
 int dtp_sv_init(struct dtp * dtp,
