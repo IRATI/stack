@@ -103,7 +103,7 @@ static int __rtimer_start(struct rtimer * timer,
         timer->ht.function =
                 (enum hrtimer_restart (*)(struct hrtimer *)) timer->function;
 
-        hrtimer_start(&timer->ht, ktime_set(millisecs / 1000, 0),
+        hrtimer_start(&timer->ht, ktime_set(0, millisecs * 1000000),
                       HRTIMER_MODE_REL);
 
         LOG_DBG("Timer %pK started (function = %pK",
