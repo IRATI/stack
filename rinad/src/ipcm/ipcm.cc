@@ -816,6 +816,11 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
         return retstr;
 }
 
+std::string IPCManager::get_log_level() const
+{
+	return log_level_;
+}
+
 static void
 application_unregistered_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
 {

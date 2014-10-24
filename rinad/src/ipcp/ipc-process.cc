@@ -39,11 +39,12 @@ namespace rinad {
 
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
-		unsigned short id, unsigned int ipc_manager_port) {
+		unsigned short id, unsigned int ipc_manager_port,
+		std::string log_level, std::string log_file) {
 	try {
 		std::stringstream ss;
 		ss << IPCP_LOG_FILE_PREFIX << "-" << id;
-		rina::initialize(LOG_LEVEL_DBG, "");
+		rina::initialize(log_level, log_file);
 		rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
 		rina::extendedIPCManager->ipcProcessId = id;
 		rina::kernelIPCProcess->ipcProcessId = id;

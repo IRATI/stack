@@ -43,8 +43,10 @@
 
 namespace rina {
 
-std::string _installationPath;
-std::string _libraryPath;
+std::string _installation_path;
+std::string _library_path;
+std::string _log_path;
+std::string _log_level;
 
 void initializeIPCManager(unsigned int        localPort,
                           const std::string & installationPath,
@@ -54,8 +56,13 @@ void initializeIPCManager(unsigned int        localPort,
 {
 	initialize(localPort, logLevel, pathToLogFile);
 
-	_installationPath = installationPath;
-	_libraryPath = libraryPath;
+	_installation_path = installationPath;
+	_library_path = libraryPath;
+	unsigned int found = _installation_path.find_last_of("/");
+	_log_path = _installation_path.substr(0, found).append("/var/log");
+	LOG_DBG("Log path is %s", _log_path.c_str());
+	_log_level = logLevel;
+	LOG_DBG("Log level is %s", _log_level.c_str());
 
 	IpcmIPCManagerPresentMessage message;
 	message.setDestPortId(0);
@@ -862,11 +869,14 @@ IPCProcess * IPCProcessFactory::create(
 			char * argv[] =
 			{
                                 /* FIXME: These hardwired things must disappear */
-				stringToCharArray(_installationPath +"/ipcp"),
+				stringToCharArray(_installation_path +"/ipcp"),
 				stringToCharArray(ipcProcessName.processName),
 				stringToCharArray(ipcProcessName.processInstance),
 				intToCharArray(ipcProcessId),
 				intToCharArray(getNelinkPortId()),
+				stringToCharArray(_log_level),
+				stringToCharArray(_log_path + "/" + ipcProcessName.processName
+						+ "-" + ipcProcessName.processInstance + ".log"),
 				0
 			};
 			char * envp[] =
@@ -874,7 +884,7 @@ IPCProcess * IPCProcessFactory::create(
                                 /* FIXME: These hardwired things must disappear */
 				stringToCharArray("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
 				stringToCharArray("LD_LIBRARY_PATH=$LD_LIBRARY_PATH:"
-					          +_libraryPath),
+					          +_library_path),
 				(char*) 0
 			};
 

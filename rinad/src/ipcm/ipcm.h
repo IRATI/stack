@@ -132,6 +132,8 @@ class IPCManager : public EventLoopData {
 
         std::string query_rib(rina::IPCProcess *ipcp);
 
+        std::string get_log_level() const;
+
         rinad::RINAConfiguration config;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
@@ -179,6 +181,7 @@ class IPCManager : public EventLoopData {
  private:
         rina::Thread *script;
         IPCMConsole *console;
+        std::string log_level_;
 };
 
 class DIFConfigValidator {
