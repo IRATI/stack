@@ -60,7 +60,7 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
                 return NULL;
 
         tmp->function = function;
-        tmp-> data    = data;
+        tmp->data     = data;
 
         hrtimer_init(&tmp->ht, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 
@@ -101,7 +101,8 @@ static int __rtimer_start(struct rtimer * timer,
         ASSERT(timer);
 
         /* FIXME: Crappy, rearrange */
-        timer->ht.function = (enum hrtimer_restart (*)(struct hrtimer *)) timer->function;
+        timer->ht.function =
+                (enum hrtimer_restart (*)(struct hrtimer *)) timer->function;
 
         hrtimer_start(&timer->ht, ktime_set(millisecs / 1000, 0),
                       HRTIMER_MODE_REL);
