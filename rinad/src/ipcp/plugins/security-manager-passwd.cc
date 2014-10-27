@@ -87,7 +87,7 @@ destroySecurityManagerPasswdPs(IPolicySet * ps)
 extern "C" int
 init(IPCProcess * ipc_process)
 {
-        struct ComponentFactory factory;
+        struct PsFactory factory;
         int ret;
 
         factory.name = "passwd";
