@@ -23,7 +23,6 @@
     ],
     "ipcProcessesToCreate": [
         {
-            "type": "shim-hv",
             "apName": "test-hv",
             "apInstance": "1",
             "difName": "test-shim-dif-hv"
