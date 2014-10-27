@@ -633,7 +633,7 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
         // Unload all the pluggable components published by this plugin
         // Note: Here we assume the plugin name is used as the "name"
         // argument in the psFactoryPublish() calls.
-        for (std::vector<ComponentFactory>::iterator
+        for (std::vector<PsFactory>::iterator
                 it = components_factories.begin();
                         it != components_factories.end(); it++) {
                 if (it->name == plugin_name) {
@@ -647,11 +647,11 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
         return 0;
 }
 
-std::vector<ComponentFactory>::iterator
+std::vector<PsFactory>::iterator
 IPCProcessImpl::psFactoryLookup(const std::string& component,
                                        const std::string& name)
 {
-        for (std::vector<ComponentFactory>::iterator
+        for (std::vector<PsFactory>::iterator
                 it = components_factories.begin();
                         it != components_factories.end(); it++) {
                 if (it->component == component &&
@@ -663,7 +663,7 @@ IPCProcessImpl::psFactoryLookup(const std::string& component,
         return components_factories.end();
 }
 
-int IPCProcessImpl::psFactoryPublish(const ComponentFactory& factory)
+int IPCProcessImpl::psFactoryPublish(const PsFactory& factory)
 {
         // TODO check that factory.component is an existing component
 
@@ -689,7 +689,7 @@ int IPCProcessImpl::psFactoryPublish(const ComponentFactory& factory)
 int IPCProcessImpl::psFactoryUnpublish(const std::string& component,
                                               const std::string& name)
 {
-        std::vector<ComponentFactory>::iterator fi;
+        std::vector<PsFactory>::iterator fi;
 
         fi = psFactoryLookup(component, name);
         if (fi == components_factories.end()) {
@@ -712,7 +712,7 @@ IPCProcessImpl::psCreate(const std::string& component,
                                        const std::string& name,
                                        IPCProcessComponent * context)
 {
-        std::vector<ComponentFactory>::iterator it;
+        std::vector<PsFactory>::iterator it;
 
         it = psFactoryLookup(component, name);
         if (it == components_factories.end()) {
@@ -728,7 +728,7 @@ int IPCProcessImpl::psDestroy(const std::string& component,
                                             const std::string& name,
                                             IPolicySet * instance)
 {
-        std::vector<ComponentFactory>::iterator it;
+        std::vector<PsFactory>::iterator it;
 
         it = psFactoryLookup(component, name);
         if (it == components_factories.end()) {

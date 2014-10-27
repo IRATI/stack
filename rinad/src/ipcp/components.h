@@ -84,7 +84,7 @@ extern "C" {
         typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
 }
 
-struct ComponentFactory {
+struct PsFactory {
         // Name of this pluggable policy set.
         std::string name;
 
@@ -1078,10 +1078,10 @@ public:
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
 
-        virtual std::vector<ComponentFactory>::iterator
+        virtual std::vector<PsFactory>::iterator
                         psFactoryLookup(const std::string& component,
                                        const std::string& name) = 0;
-        virtual int psFactoryPublish(const ComponentFactory& factory) = 0;
+        virtual int psFactoryPublish(const PsFactory& factory) = 0;
         virtual int psFactoryUnpublish(const std::string& component,
                                               const std::string& name) = 0;
         virtual IPolicySet * psCreate(

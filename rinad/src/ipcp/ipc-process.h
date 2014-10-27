@@ -57,10 +57,10 @@ public:
         void processSelectPolicySetResponseEvent(
                 const rina::SelectPolicySetResponseEvent& event);
 
-        std::vector<ComponentFactory>::iterator
+        std::vector<PsFactory>::iterator
                         psFactoryLookup(const std::string& component,
                                        const std::string& name);
-        int psFactoryPublish(const ComponentFactory& factory);
+        int psFactoryPublish(const PsFactory& factory);
         int psFactoryUnpublish(const std::string& component,
                                               const std::string& name);
         IPolicySet * psCreate(const std::string& component,
@@ -85,7 +85,7 @@ private:
 	rina::Lockable * lock_;
 	rina::DIFInformation dif_information_;
         std::map< std::string, void * > plugins_handles;
-        std::vector<ComponentFactory> components_factories;
+        std::vector<PsFactory> components_factories;
 };
 
 void register_handlers_all(EventLoop& loop);
