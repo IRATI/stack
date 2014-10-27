@@ -758,11 +758,11 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LOG_DBG("Processing A timer expiration");
 
+        spin_lock(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %u", LWE);
         LOG_DBG("LWEU: MAX GAPS     = %u", max_sdu_gap);
 
-        spin_lock(&seqq->lock);
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
 
                 pdu = pos->pdu;
