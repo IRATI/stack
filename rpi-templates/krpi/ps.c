@@ -28,15 +28,15 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 
-static void default_max_q_policy_tx(struct rmt_ps * ps,
+static void skeleton_max_q_policy_tx(struct rmt_ps * ps,
                                     struct pdu *    pdu,
                                     struct rfifo *  queue)
-{ }
+{ printk("%s: called()\n", __func__); }
 
-static void default_max_q_policy_rx(struct rmt_ps * ps,
+static void skeleton_max_q_policy_rx(struct rmt_ps * ps,
                                     struct sdu *    sdu,
                                     struct rfifo *  queue)
-{ }
+{ printk("%s: called()\n", __func__); }
 
 static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
@@ -62,7 +62,7 @@ static int rmt_ps_set_policy_set_param(struct ps_base * bps,
 }
 
 static struct ps_base *
-rmt_ps_default_create(struct rina_component * component)
+rmt_ps_skeleton_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
@@ -75,13 +75,13 @@ rmt_ps_default_create(struct rina_component * component)
         ps->dm              = rmt;
         ps->max_q           = 256;
         ps->priv            = NULL;
-        ps->max_q_policy_tx = default_max_q_policy_tx;
-        ps->max_q_policy_rx = default_max_q_policy_rx;
+        ps->max_q_policy_tx = skeleton_max_q_policy_tx;
+        ps->max_q_policy_rx = skeleton_max_q_policy_rx;
 
         return &ps->base;
 }
 
-static void rmt_ps_default_destroy(struct ps_base * bps)
+static void rmt_ps_skeleton_destroy(struct ps_base * bps)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 
@@ -94,8 +94,8 @@ static struct ps_factory factory = {
         .owner          = THIS_MODULE,
         .parameters     = NULL,
         .num_parameters = 0,
-        .create  = rmt_ps_default_create,
-        .destroy = rmt_ps_default_destroy,
+        .create  = rmt_ps_skeleton_create,
+        .destroy = rmt_ps_skeleton_destroy,
 };
 
 #define RINA_SKELETON_NAME   "skeleton"
@@ -112,7 +112,7 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        LOG_INFO("RMT default policy set loaded successfully");
+        LOG_INFO("RMT skeleton policy set loaded successfully");
 
         return 0;
 }
@@ -126,13 +126,13 @@ static void __exit mod_exit(void)
                 return;
         }
 
-        LOG_INFO("RMT default policy set unloaded successfully");
+        LOG_INFO("RMT skeleton policy set unloaded successfully");
 }
 
 module_init(mod_init);
 module_exit(mod_exit);
 
-MODULE_DESCRIPTION("RMT default policy set");
+MODULE_DESCRIPTION("RMT skeleton policy set");
 
 MODULE_LICENSE("GPL");
 

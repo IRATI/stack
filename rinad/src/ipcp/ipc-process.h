@@ -58,15 +58,15 @@ public:
                 const rina::SelectPolicySetResponseEvent& event);
 
         std::vector<ComponentFactory>::iterator
-                        componentFactoryLookup(const std::string& component,
+                        psFactoryLookup(const std::string& component,
                                        const std::string& name);
-        int componentFactoryPublish(const ComponentFactory& factory);
-        int componentFactoryUnpublish(const std::string& component,
+        int psFactoryPublish(const ComponentFactory& factory);
+        int psFactoryUnpublish(const std::string& component,
                                               const std::string& name);
-        IPolicySet * componentFactoryCreate(const std::string& component,
+        IPolicySet * psCreate(const std::string& component,
                                             const std::string& name,
                                             IPCProcessComponent* context);
-        int componentFactoryDestroy(const std::string& component,
+        int psDestroy(const std::string& component,
                                     const std::string& name,
                                     IPolicySet * instance);
 
