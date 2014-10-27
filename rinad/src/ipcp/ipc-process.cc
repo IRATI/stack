@@ -135,7 +135,7 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (security_manager) {
-		componentFactoryDestroy("security-manager",
+		psDestroy("security-manager",
                                 security_manager->selected_ps_name,
                                 security_manager->ps);
                 delete security_manager;
@@ -632,12 +632,12 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
 
         // Unload all the pluggable components published by this plugin
         // Note: Here we assume the plugin name is used as the "name"
-        // argument in the componentFactoryPublish() calls.
+        // argument in the psFactoryPublish() calls.
         for (std::vector<ComponentFactory>::iterator
                 it = components_factories.begin();
                         it != components_factories.end(); it++) {
                 if (it->name == plugin_name) {
-                        componentFactoryUnpublish(it->component, it->name);
+                        psFactoryUnpublish(it->component, it->name);
                 }
         }
 
@@ -648,7 +648,7 @@ int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
 }
 
 std::vector<ComponentFactory>::iterator
-IPCProcessImpl::componentFactoryLookup(const std::string& component,
+IPCProcessImpl::psFactoryLookup(const std::string& component,
                                        const std::string& name)
 {
         for (std::vector<ComponentFactory>::iterator
@@ -663,13 +663,13 @@ IPCProcessImpl::componentFactoryLookup(const std::string& component,
         return components_factories.end();
 }
 
-int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
+int IPCProcessImpl::psFactoryPublish(const ComponentFactory& factory)
 {
         // TODO check that factory.component is an existing component
 
         // Check if the (name, component) couple specified by 'factory'
         // has not already been published.
-        if (componentFactoryLookup(factory.component, factory.name) !=
+        if (psFactoryLookup(factory.component, factory.name) !=
                                                 components_factories.end()) {
                 LOG_ERR("Factory %s for component %s already "
                                 "published", factory.name.c_str(),
@@ -686,12 +686,12 @@ int IPCProcessImpl::componentFactoryPublish(const ComponentFactory& factory)
         return 0;
 }
 
-int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
+int IPCProcessImpl::psFactoryUnpublish(const std::string& component,
                                               const std::string& name)
 {
         std::vector<ComponentFactory>::iterator fi;
 
-        fi = componentFactoryLookup(component, name);
+        fi = psFactoryLookup(component, name);
         if (fi == components_factories.end()) {
                 LOG_ERR("Factory %s for component %s not "
                                 "published", name.c_str(),
@@ -708,13 +708,13 @@ int IPCProcessImpl::componentFactoryUnpublish(const std::string& component,
 }
 
 IPolicySet *
-IPCProcessImpl::componentFactoryCreate(const std::string& component,
+IPCProcessImpl::psCreate(const std::string& component,
                                        const std::string& name,
                                        IPCProcessComponent * context)
 {
         std::vector<ComponentFactory>::iterator it;
 
-        it = componentFactoryLookup(component, name);
+        it = psFactoryLookup(component, name);
         if (it == components_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), name.c_str());
@@ -724,13 +724,13 @@ IPCProcessImpl::componentFactoryCreate(const std::string& component,
         return it->create(context);
 }
 
-int IPCProcessImpl::componentFactoryDestroy(const std::string& component,
+int IPCProcessImpl::psDestroy(const std::string& component,
                                             const std::string& name,
                                             IPolicySet * instance)
 {
         std::vector<ComponentFactory>::iterator it;
 
-        it = componentFactoryLookup(component, name);
+        it = psFactoryLookup(component, name);
         if (it == components_factories.end()) {
                 LOG_ERR("Pluggable component %s/%s not found",
                         component.c_str(), name.c_str());

@@ -1079,16 +1079,16 @@ public:
 	virtual const std::list<rina::Neighbor*> get_neighbors() const = 0;
 
         virtual std::vector<ComponentFactory>::iterator
-                        componentFactoryLookup(const std::string& component,
+                        psFactoryLookup(const std::string& component,
                                        const std::string& name) = 0;
-        virtual int componentFactoryPublish(const ComponentFactory& factory) = 0;
-        virtual int componentFactoryUnpublish(const std::string& component,
+        virtual int psFactoryPublish(const ComponentFactory& factory) = 0;
+        virtual int psFactoryUnpublish(const std::string& component,
                                               const std::string& name) = 0;
-        virtual IPolicySet * componentFactoryCreate(
+        virtual IPolicySet * psCreate(
                                         const std::string& component,
                                         const std::string& name,
                                         IPCProcessComponent * context) = 0;
-        virtual int componentFactoryDestroy(const std::string& component,
+        virtual int psDestroy(const std::string& component,
                                             const std::string& name,
                                             IPolicySet * instance) = 0;
 };

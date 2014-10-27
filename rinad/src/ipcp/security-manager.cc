@@ -62,7 +62,7 @@ int SecurityManager::select_policy_set(const std::string& path,
                 return 0;
         }
 
-        candidate = ipcp->componentFactoryCreate("security-manager", name, this);
+        candidate = ipcp->psCreate("security-manager", name, this);
         if (!candidate) {
                 LOG_ERR("failed to allocate instance of policy set %s", name.c_str());
                 return -1;
@@ -70,7 +70,7 @@ int SecurityManager::select_policy_set(const std::string& path,
 
         if (ps) {
                 // Remove the old one.
-                ipcp->componentFactoryDestroy("security-manager", selected_ps_name, ps);
+                ipcp->psDestroy("security-manager", selected_ps_name, ps);
         }
 
         // Install the new one.

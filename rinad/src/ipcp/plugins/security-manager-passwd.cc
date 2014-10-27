@@ -95,7 +95,7 @@ init(IPCProcess * ipc_process)
         factory.create = createSecurityManagerPasswdPs;
         factory.destroy = destroySecurityManagerPasswdPs;
 
-        ret = ipc_process->componentFactoryPublish(factory);
+        ret = ipc_process->psFactoryPublish(factory);
 
         return ret;
 }
