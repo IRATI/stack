@@ -12,7 +12,7 @@ rina_echo_time_SOURCES  =				\
 	server.cc              server.h			\
 	client.cc              client.h			\
 	main.cc
-rina_echo_time_LDADD    = $(LIBRINA_LIBS)
+rina_echo_time_LDADD    = $(LIBRINA_LIBS) -lrt
 rina_echo_time_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\

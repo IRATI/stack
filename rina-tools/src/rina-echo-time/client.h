@@ -59,6 +59,6 @@ private:
         bool client_app_reg;
         unsigned int data_size;
         unsigned int wait;
-        int gap_;
+        int gap;
 };
 #endif//CLIENT_HPP
