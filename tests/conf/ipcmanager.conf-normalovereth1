@@ -13,19 +13,19 @@
     },
     "applicationToDIFMappings": [
         {
-            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "encodedAppName": "rina.apps.echotime.server-1--",
             "difName": "test1.IRATI"
         },
         {
-            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "encodedAppName": "rina.apps.echotime.client-1--",
             "difName": "test2.IRATI"
         },
         {
-            "encodedAppName": "rina.utils.apps.echo-2--",
+            "encodedAppName": "rina.apps.echotime-2--",
             "difName": "fantastic.DIF"
         },
         {
-            "encodedAppName": "rina.utils.apps.echoclient-2--",
+            "encodedAppName": "rina.apps.echotime.client-2--",
             "difName": "fantastic.DIF"
         }
     ],
