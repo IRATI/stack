@@ -626,7 +626,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                     flow->port_id_state == PORT_STATE_ALLOCATED) {
                         kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                 }
-                
+
                 /*
                  * UDP flows on server side use the application socket, so we
                  * don't want to close this socket
@@ -668,7 +668,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 
         app = find_app_by_socket(data, flow->sock);
 
-        if (flow->fspec_id == 1 && 
+        if (flow->fspec_id == 1 &&
                         flow->port_id_state == PORT_STATE_ALLOCATED) {
 
                 /* FIXME: more efficient locking and better cleanup */
@@ -1289,7 +1289,7 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         }
         LOG_DBG("found sockname: %d", ntohl(own.sin_addr.s_addr));
         mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
-        
+
         ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
