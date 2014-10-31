@@ -303,6 +303,120 @@ IPCManager::list_ipcp_types(std::ostream& os)
         return 0;
 }
 
+/// DIFValidator CLASS
+DIFConfigValidator::DIFConfigValidator(const rina::DIFConfiguration &dif_config,
+		const rina::DIFInformation &dif_info, std::string type)
+		:dif_config_(dif_config), dif_info_(dif_info)
+{
+	if (type == "normal-ipc")
+			type_ = NORMAL;
+	else if (type == "shim-dummy")
+			type_ = SHIM_DUMMY;
+	else
+			type_ = SHIM_ETH;
+}
+
+bool DIFConfigValidator::validateConfigs()
+{
+	if (type_ == SHIM_ETH)
+		return validateShimEth();
+	else if(type_ == SHIM_DUMMY)
+		return validateShimDummy();
+	else
+		return validateNormal();
+}
+
+bool DIFConfigValidator::validateShimEth()
+{
+	return validateBasicDIFConfigs() && validateConfigParameters();
+}
+bool DIFConfigValidator::validateShimDummy()
+{
+	return validateBasicDIFConfigs();
+}
+bool DIFConfigValidator::validateNormal()
+{
+	return	dataTransferConstants() && qosCubes() &&
+			knownIPCProcessAddresses() && pdufTableGeneratorConfiguration();
+}
+
+bool DIFConfigValidator::validateBasicDIFConfigs()
+{
+	return !dif_info_.dif_name_.processName.empty();
+}
+
+bool DIFConfigValidator::validateConfigParameters()
+{
+	for (std::list<rina::Parameter>::const_iterator it =
+			dif_config_.parameters_.begin(); it !=
+					dif_config_.parameters_.end(); ++ it){
+		if (it->name.compare("interface-name") == 0){
+			return true;
+		}
+	}
+	return false;
+}
+
+bool DIFConfigValidator::dataTransferConstants() {
+	rina::DataTransferConstants data_trans_config = dif_config_.efcp_configuration_
+			.data_transfer_constants_;
+	bool result = data_trans_config.address_length_ != 0 &&
+		      data_trans_config.qos_id_length_ != 0 &&
+		      data_trans_config.port_id_length_ != 0 &&
+		      data_trans_config.cep_id_length_ != 0 &&
+		      data_trans_config.sequence_number_length_ != 0 &&
+		      data_trans_config.length_length_ != 0 &&
+		      data_trans_config.max_pdu_size_ != 0 &&
+		      data_trans_config.max_pdu_lifetime_ != 0;
+        if (!result)
+                LOG_ERR("Data Transfer Constants configuration failed");
+        return result;
+}
+
+bool DIFConfigValidator::qosCubes(){
+	bool result = dif_config_.efcp_configuration_.qos_cubes_.begin()
+			!= dif_config_.efcp_configuration_.qos_cubes_.end();
+
+	for (std::list<rina::QoSCube*>::const_iterator it = dif_config_.
+			efcp_configuration_.qos_cubes_.begin();
+			it != dif_config_.efcp_configuration_.qos_cubes_.end();
+			++it) {
+		bool temp_result =  !(*it)->name_.empty() &&
+				(*it)->id_ != 0;
+		result = result && temp_result;
+	}
+        if (!result)
+                LOG_ERR("QoS Cubes configuration failed");
+        return result;
+}
+
+bool DIFConfigValidator::knownIPCProcessAddresses()
+{
+	std::list<rina::StaticIPCProcessAddress> staticAddress =
+			dif_config_.nsm_configuration_.
+			addressing_configuration_.static_address_;
+	bool result = staticAddress.begin() != staticAddress.end();
+	for (std::list<rina::StaticIPCProcessAddress>::iterator it =
+			staticAddress.begin(); it != staticAddress.end(); ++it) {
+		bool temp_result = !it->ap_name_.empty() &&	it->address_ != 0;
+		result = result && temp_result;
+	}
+        if (!result)
+                LOG_ERR("Know IPCP Processes Addresses configuration failed");
+        return result;
+}
+
+bool DIFConfigValidator::pdufTableGeneratorConfiguration()
+{
+	bool result =  dif_config_.pduft_generator_configuration_.
+		       pduft_generator_policy_.name_.compare("LinkState") == 0 &&
+		       dif_config_.pduft_generator_configuration_.
+		       pduft_generator_policy_.version_.compare("0") == 0;
+        if (!result)
+                LOG_ERR("PDUFT Generator configuration failed");
+        return result;
+}
+
 int
 IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
@@ -407,6 +521,12 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                 dif_info.set_dif_type(ipcp->type);
                 dif_info.set_dif_configuration(dif_config);
 
+                // Validate the parameters
+                DIFConfigValidator validator(dif_config, dif_info,
+                		ipcp->type);
+                if(!validator.validateConfigs())
+                	throw rina::BadConfigurationException("DIF configuration validator failed");
+
                 // Invoke librina to assign the IPC process to the
                 // DIF specified by dif_info.
                 seqnum = ipcp->assignToDIF(dif_info);
@@ -423,7 +543,11 @@ IPCManager::assign_to_dif(rina::IPCProcess *ipcp,
                         ipcp->name.toString() <<
                         " to DIF " << dif_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
-        } catch (Exception) {
+        } catch (rina::BadConfigurationException &e) {
+        	LOG_ERR("DIF %s configuration failed", dif_name.toString().c_str());
+        	throw e;
+        }
+        catch (Exception) {
                 FLUSH_LOG(ERR, ss);
         }
 
@@ -587,9 +711,13 @@ IPCManager::apply_configuration()
                         continue;
                 }
 
-                ipcp = create_ipcp(cit->name, type);
-                assign_to_dif(ipcp, cit->difName);
-                register_at_difs(ipcp, cit->difsToRegisterAt);
+                try{
+                	ipcp = create_ipcp(cit->name, type);
+                	assign_to_dif(ipcp, cit->difName);
+                	register_at_difs(ipcp, cit->difsToRegisterAt);
+                }catch(Exception &e){
+                	LOG_ERR("Exception while applying configuration: %s", e.what());
+                }
 
                 ipcps.push_back(ipcp);
         }

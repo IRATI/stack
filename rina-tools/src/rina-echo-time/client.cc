@@ -1,19 +1,19 @@
 //
 // Echo Client
-// 
+//
 // Addy Bombeke <addy.bombeke@ugent.be>
 // Vincenzo Maffione <v.maffione@nextworks.it>
-// 
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -25,6 +25,7 @@
 #include <cassert>
 #include <random>
 #include <thread>
+#include <unistd.h>
 
 #define RINA_PREFIX     "rina-echo-time"
 #include <librina/logs.h>
@@ -65,11 +66,11 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               unsigned int w, int gap) :
+               unsigned int w, int gap, unsigned int dw) :
         Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
-        client_app_reg(registration), data_size(size), wait(w), gap_(gap)
+        client_app_reg(registration), data_size(size), wait(w), gap_(gap), dw_(dw)
 { }
 
 void Client::run()
@@ -88,8 +89,10 @@ void Client::run()
                 else
                         LOG_ERR("Unknown test type '%s'", test_type.c_str());
         }
-        if (flow)
+        if (flow) {
+                sleep(dw_);
                 destroyFlow(flow);
+        }
 }
 
 Flow* Client::createFlow()

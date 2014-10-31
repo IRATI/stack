@@ -7,12 +7,12 @@
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -591,13 +591,13 @@ public:
 	;
 	/// Obtains a valid invoke id for this session
 	/// @return
-	virtual int newInvokeId() = 0;
+	virtual int newInvokeId(bool sent) = 0;
 	/// Allows an invoke id to be reused for this session
 	/// @param invoke_id
-	virtual void freeInvokeId(int invoke_id) = 0;
+	virtual void freeInvokeId(int invoke_id, bool sent) = 0;
 	/// Mark an invoke_id as reserved (don't use it)
 	/// @param invoke_id
-	virtual void reserveInvokeId(int invoke_id) = 0;
+	virtual void reserveInvokeId(int invoke_id, bool sent) = 0;
 };
 
 /// Represents a CDAP session. Clients of the library are the ones managing the invoke ids. Application entities must

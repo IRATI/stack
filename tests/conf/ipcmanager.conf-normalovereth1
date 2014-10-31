@@ -1,6 +1,6 @@
 {
     "localConfiguration": {
-        "installationPath": "/usr/local/irati/share/rinad",
+        "installationPath": "/usr/local/irati/bin",
         "libraryPath": "/usr/local/irati/lib",
         "consolePort": 32766,
         "cdapTimeoutInMs": 10000,
@@ -13,20 +13,12 @@
     },
     "applicationToDIFMappings": [
         {
-            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "encodedAppName": "rina.apps.rina-echo-time.server-1--",
             "difName": "test1.IRATI"
         },
         {
-            "encodedAppName": "rina.utils.apps.echo.client-1--",
+            "encodedAppName": "rina.apps.rina-echo-time.client-1--",
             "difName": "test2.IRATI"
-        },
-        {
-            "encodedAppName": "rina.utils.apps.echo-2--",
-            "difName": "fantastic.DIF"
-        },
-        {
-            "encodedAppName": "rina.utils.apps.echoclient-2--",
-            "difName": "fantastic.DIF"
         }
     ],
     "ipcProcessesToCreate": [
@@ -49,7 +41,7 @@
             "difName": "300",
             "difType": "shim-eth-vlan",
             "configParameters": {
-                "interface-name": "eth1"
+                "interface-name": "eth2"
             }
         },
         {
@@ -68,42 +60,85 @@
             "configParameters": {
                 "bar": "foo"
             },
-            "qosCubes": [
-                {
-                    "name": "reliable",
-                    "id": 1,
-                    "partialDelivery": false,
-                    "orderedDelivery": true
-                },
-                {
-                    "name": "unreliable",
-                    "id": 2,
-                    "partialDelivery": true,
-                    "orderedDelivery": false
-                }
-            ],
-            "knownIPCProcessAddresses": [
-                {
-                    "apName": "test1.IRATI",
-                    "apInstance": "1",
-                    "address": 16
-                },
-                {
-                    "apName": "test2.IRATI",
-                    "apInstance": "1",
-                    "address": 17
-                }
-            ],
-            "addressPrefixes": [
-                {
-                    "addressPrefix": 0,
-                    "organization": "N.Bourbaki"
-                },
-                {
-                    "addressPrefix": 16,
-                    "organization": "IRATI"
-                }
-            ]
+            "qosCubes" : [ { 
+                 "name" : "unreliablewithflowcontrol",
+                 "id" : 1,
+                 "partialDelivery" : false,
+                 "orderedDelivery" : true,
+                 "efcpPolicies" : { 
+                   "initialATimer" : 500,
+                   "dtcpPresent" : true,
+                   "dtcpConfiguration" : { 
+                     "rtxControl" : false,
+                     "flowControl" : true,
+                     "flowControlConfig" : { 
+                       "rateBased" : false,
+                       "windowBased" : true,
+                       "windowBasedConfig" : { 
+                         "maxClosedWindowQueueLength" : 200,
+                         "initialCredit" : 50
+                       }   
+                     }   
+                   }   
+                 }   
+               }, {
+                 "name" : "reliablewithflowcontrol",
+                 "id" : 2,
+                 "partialDelivery" : false,
+                 "orderedDelivery" : true,
+                 "efcpPolicies" : { 
+                   "initialATimer" : 200,
+                   "dtcpPresent" : true,
+                   "dtcpConfiguration" : { 
+                     "rtxControl" : true,
+                     "rtxControlConfig" : { 
+                       "dataRxmsNmax" : 5,
+                       "initialRtxTime" : 600
+                     },  
+                     "flowControl" : true,
+                     "flowControlConfig" : { 
+                       "rateBased" : false,
+                       "windowBased" : true,
+                       "windowBasedConfig" : { 
+                         "maxClosedWindowQueueLength" : 200,
+                         "initialCredit" : 50
+                       }   
+                     }   
+                   }   
+                 }   
+             } ],
+            "knownIPCProcessAddresses" : [ { 
+                 "apName" : "test1.IRATI",
+                 "apInstance" : "1",
+                 "address" : 16
+                  }, {
+                 "apName" : "test2.IRATI",
+                 "apInstance" : "1",
+                 "address" : 17
+                } ],  
+                "addressPrefixes" : [ { 
+                 "addressPrefix" : 0,
+                 "organization" : "N.Bourbaki"
+                  }, {
+                 "addressPrefix" : 16, 
+                 "organization" : "IRATI"
+              } ],  
+            "pdufTableGeneratorConfiguration" : { 
+                "pduFtGeneratorPolicy" : { 
+                  "name" : "LinkState",
+                  "version" : "0" 
+                },  
+                "linkStateRoutingConfiguration" : { 
+                  "objectMaximumAge" : 10000,
+                  "waitUntilReadCDAP" : 5001,
+                  "waitUntilError" : 5001,
+                  "waitUntilPDUFTComputation" : 103,
+                  "waitUntilFSODBPropagation" : 101,
+                  "waitUntilAgeIncrement" : 997, 
+                  "routingAlgorithm" : "Dijkstra"
+                }   
+             }
         }
     ]
 }
+
