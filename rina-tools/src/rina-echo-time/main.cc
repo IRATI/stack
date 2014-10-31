@@ -128,13 +128,13 @@ int wrapped_main(int argc, char** argv)
                                              false,
                                              -1,
                                              "integer");
-                TCLAP::ValueArg<int> perf_interval_arg("i",
+                TCLAP::ValueArg<int> perf_interval_arg("",
                                              "perf-interval",
                                              "packet count interval to report perf results",
                                              false,
                                              -1,
                                              "integer");
-                TCLAP::ValueArg<int> dealloc_wait_arg("a",
+                TCLAP::ValueArg<int> dealloc_wait_arg("",
                                              "dealloc-wait",
                                              "On the server, deallocate after timeout (s)",
                                              false,
