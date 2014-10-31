@@ -584,6 +584,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num_t    seq;
         seq_num_t    last_ctrl;
 
+        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
+        struct timeval te;
+        long long milliseconds;
+
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
                 pdu_destroy(pdu);
@@ -613,6 +617,11 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
+
+        /*  SYSTEM TIME DBG_MESSAGE */
+        do_gettimeofday(&te);
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTCP Received Contrl PDU %d at %lld", seq_num, milliseconds);
 
         if (seq_num > (last_ctrl + 1))
                 dtcp->policies->lost_control_pdu(dtcp);
