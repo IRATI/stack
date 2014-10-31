@@ -1437,6 +1437,10 @@ static int rcv_worker(void * o)
         seq_num_t             max_sdu_gap;
         struct rqueue *       to_post;
 
+        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long milliseconds;
+
         ritem = (struct rcv_item *) o;
         if (!ritem) {
                 LOG_ERR("Bogus rcv_item...");
@@ -1505,6 +1509,11 @@ static int rcv_worker(void * o)
         }
 #endif
         seq_num = pci_sequence_number_get(pci);
+
+        /* SYSTEM TIMESTAMP DBG MESSAGE */
+        do_gettimeofday(&te); // get current time
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTP Received PDU %d at %lld", seq_num, milliseconds);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
@@ -1602,6 +1611,7 @@ static int rcv_worker(void * o)
         to_post = rqueue_create();
         if (!to_post) {
                 LOG_ERR("Could not create to_post list at reception");
+                pdu_destroy(pdu);
                 return -1;
         }
         spin_lock(&instance->seqq->lock);

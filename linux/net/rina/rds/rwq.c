@@ -57,7 +57,7 @@ static void rwq_worker(struct work_struct * work)
         return;
 }
 
-#define RWQ_MAX_ACTIVE 16 /* Only temporary */
+#define RWQ_MAX_ACTIVE 1 /* Only temporary */
 
 struct workqueue_struct * rwq_create(const char * name)
 {

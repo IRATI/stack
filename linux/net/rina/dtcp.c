@@ -800,6 +800,10 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
         seq_num_t    snd_rt;
         pdu_type_t   type;
 
+        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long milliseconds;
+
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -855,6 +859,11 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                 dump_we(dtcp,pci);
                 if (pdu_send(dtcp, pdu))
                         return -1;
+
+                /* SYSTEM TIMESTAMP DBG MESSAGE */
+                do_gettimeofday(&te);
+                milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+                LOG_DBG("DTCP Sending ACK %d at %lld", pci_sequence_number_get(pci), milliseconds);
 
                 return 0;
         case PDU_TYPE_NACK_AND_FC:
