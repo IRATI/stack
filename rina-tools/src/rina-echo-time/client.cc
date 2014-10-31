@@ -65,11 +65,11 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               unsigned int w, int gap) :
+               unsigned int w, int g) :
         Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
-        quiet(q), echo_times(count),
-        client_app_reg(registration), data_size(size), wait(w), gap_(gap)
+        quiet(q), echo_times(count), client_app_reg(registration),
+        data_size(size), wait(w), gap(g)
 { }
 
 void Client::run()
@@ -102,8 +102,8 @@ Flow* Client::createFlow()
         IPCEvent* event;
         uint seqnum;
 
-        if (gap_ >= 0)
-        	qosspec.maxAllowableGap = gap_;
+        if (gap >= 0)
+                qosspec.maxAllowableGap = gap;
 
         if (dif_name != string()) {
                 seqnum = ipcManager->requestFlowAllocationInDIF(
