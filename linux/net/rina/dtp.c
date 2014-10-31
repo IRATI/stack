@@ -1428,6 +1428,10 @@ int dtp_receive(struct dtp * instance,
         seq_num_t             max_sdu_gap;
         struct rqueue *       to_post;
 
+        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long milliseconds;
+
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
                 return -1;
@@ -1473,6 +1477,11 @@ int dtp_receive(struct dtp * instance,
         }
 #endif
         seq_num = pci_sequence_number_get(pci);
+
+        /* SYSTEM TIMESTAMP DBG MESSAGE */
+        do_gettimeofday(&te); // get current time
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTP Received PDU %d at %lld", seq_num, milliseconds);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
