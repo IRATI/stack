@@ -22,6 +22,7 @@
 #include <thread>
 #include <time.h>
 #include <signal.h>
+#include <time.h>
 
 #define RINA_PREFIX     "rina-echo-app"
 #include <librina/logs.h>
@@ -121,7 +122,7 @@ void Server::servePingFlow(Flow* flow)
         struct itimerspec itime;
         timer_t timer_id;
 
-        /* Timer setup if dealloc_wait is set */
+        // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
                 event.sigev_notify = SIGEV_THREAD;
                 event.sigev_value.sival_ptr = flow;
@@ -153,23 +154,31 @@ void Server::servePingFlow(Flow* flow)
         delete [] buffer;
 }
 
+static unsigned long
+timespec_diff_us(const struct timespec& before, const struct timespec& later)
+{
+        return ((later.tv_sec - before.tv_sec) * 1000000000 +
+                        (later.tv_nsec - before.tv_nsec))/1000;
+}
+
 void Server::servePerfFlow(Flow* flow)
 {
-        std::chrono::high_resolution_clock::time_point begin;
-        std::chrono::high_resolution_clock::duration dur;
-        unsigned long us;
+        unsigned long int us;
         unsigned long tot_us = 0;
         char *buffer = new char[max_buffer_size];
         unsigned long pkt_cnt = 0;
         unsigned long bytes_cnt = 0;
         unsigned long tot_pkt = 0;
         unsigned long tot_bytes = 0;
+        unsigned long interval_cnt = interval;  // counting down
         int sdu_size;
         struct sigevent event;
         struct itimerspec itime;
         timer_t timer_id;
+        struct timespec last_timestamp;
+        struct timespec now;
 
-        /* Timer setup if dealloc_wait is set */
+        // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
                 event.sigev_notify = SIGEV_THREAD;
                 event.sigev_value.sival_ptr = flow;
@@ -186,7 +195,7 @@ void Server::servePerfFlow(Flow* flow)
         }
 
         try {
-                begin = std::chrono::high_resolution_clock::now();
+                clock_gettime(CLOCK_REALTIME, &last_timestamp);
                 for(;;) {
                         sdu_size = flow->readSDU(buffer, max_buffer_size);
                         if (sdu_size <= 0) {
@@ -195,10 +204,10 @@ void Server::servePerfFlow(Flow* flow)
                         pkt_cnt++;
                         bytes_cnt += sdu_size;
 
-                        /* Report stats if interval is set */
-                        if (interval != -1 && pkt_cnt%interval == 0) {
-                                dur = std::chrono::high_resolution_clock::now() - begin;
-                                us = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
+                        // Report periodic stats if needed
+                        if (interval != -1 && --interval_cnt == 0) {
+                                clock_gettime(CLOCK_REALTIME, &now);
+                                us = timespec_diff_us(last_timestamp, now);
                                 printPerfStats(pkt_cnt, bytes_cnt, us);
 
                                 tot_pkt += pkt_cnt;
@@ -210,7 +219,8 @@ void Server::servePerfFlow(Flow* flow)
 
                                 if (dw > 0)
                                         timer_settime(timer_id, 0, &itime, NULL);
-                                begin = std::chrono::high_resolution_clock::now();
+                                clock_gettime(CLOCK_REALTIME, &last_timestamp);
+                                interval_cnt = interval;
                         }
                 }
         } catch(rina::IPCException e) {
@@ -221,8 +231,8 @@ void Server::servePerfFlow(Flow* flow)
         /* When dealloc_wait is not set, we can safely add the remaining packets
          * to the total count */
         if (dw <= 0) {
-                dur = std::chrono::high_resolution_clock::now() - begin;
-                us = std::chrono::duration_cast<std::chrono::microseconds>(dur).count();
+                clock_gettime(CLOCK_REALTIME, &now);
+                us = timespec_diff_us(last_timestamp, now);
 
                 tot_pkt += pkt_cnt;
                 tot_bytes += bytes_cnt;
@@ -250,13 +260,13 @@ void Server::printPerfStats(unsigned long pkt, unsigned long bytes,
 void Server::destroyFlow(sigval_t val)
 {
         Flow *flow = (Flow *)val.sival_ptr;
-        //unsigned int seqnum;
 
         if (flow->getState() != FlowState::FLOW_ALLOCATED)
                 return;
 
         int port_id = flow->getPortId();
 
+        // TODO here we should store the seqnum (handle) returned by
+        // requestFlowDeallocation() and match it in the event loop
         ipcManager->requestFlowDeallocation(port_id);
-        //seqnum = ipcManager->requestFlowDeallocation(port_id);
 }
