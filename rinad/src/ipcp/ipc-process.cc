@@ -66,7 +66,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	namespace_manager = new NamespaceManager();
 	resource_allocator = new ResourceAllocator();
 	security_manager = new SecurityManager();
-	rib_daemon = new RIBDaemon();
+	rib_daemon = new IPCPRIBDaemonImpl();
 
 	rib_daemon->set_ipc_process(this);
 	enrollment_task->set_ipc_process(this);

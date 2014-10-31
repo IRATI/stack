@@ -31,8 +31,8 @@ namespace rinad {
 
 // Class WhatevercastNameSetRIBObject
 WhateverCastNameSetRIBObject::WhateverCastNameSetRIBObject(IPCProcess * ipc_process) :
-	BaseRIBObject(ipc_process, EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
-			objectInstanceGenerator->getObjectInstance(),
+	BaseIPCPRIBObject(ipc_process, EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_CLASS,
+			rina::objectInstanceGenerator->getObjectInstance(),
 			EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME) {
 	lock_ = new rina::Lockable();
 }
@@ -109,7 +109,7 @@ void WhateverCastNameSetRIBObject::createName(rina::WhatevercastName * name) {
 	std::stringstream ss;
 	ss<<EncoderConstants::WHATEVERCAST_NAME_SET_RIB_OBJECT_NAME<<EncoderConstants::SEPARATOR;
 	ss<<name->rule_;
-	BaseRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_,
+	BaseRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(ipc_process_,
 			EncoderConstants::WHATEVERCAST_NAME_RIB_OBJECT_CLASS, ss.str(), name);
 	add_child(ribObject);
 	try {
@@ -122,7 +122,7 @@ void WhateverCastNameSetRIBObject::createName(rina::WhatevercastName * name) {
 // Class DirectoryForwardingTableEntry RIB Object
 DirectoryForwardingTableEntryRIBObject::DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process,
 		const std::string& object_name, rina::DirectoryForwardingTableEntry * entry):
-			SimpleSetMemberRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
+			SimpleSetMemberIPCPRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS,
 					object_name, entry){
 	namespace_manager_ = ipc_process->namespace_manager;
 	namespace_manager_->addDFTEntry(entry);
@@ -154,7 +154,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteCreateObject(void * object_va
 		currentEntry->set_address(entry->get_address());
 		std::list<int> cdapSessionIds;
 		cdapSessionIds.push_back(session_descriptor->port_id_);
-		NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
+		rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
 		try {
 			rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_RIB_OBJECT_CLASS, object_name,
 					currentEntry, &notificationPolicy);
@@ -184,7 +184,7 @@ void DirectoryForwardingTableEntryRIBObject::remoteDeleteObject(int invoke_id,
 	(void) invoke_id;
 
 	cdapSessionIds.push_back(session_descriptor->port_id_);
-	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
+	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
 	try {
 		rib_daemon_->deleteObject(class_, name_, 0, &notificationPolicy);
 	} catch (Exception &e) {
@@ -214,8 +214,8 @@ std::string DirectoryForwardingTableEntryRIBObject::get_displayable_value() {
 
 // Class DirectoryForwardingTableEntry Set RIB Object
 DirectoryForwardingTableEntrySetRIBObject::DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process):
-		BaseRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
-				objectInstanceGenerator->getObjectInstance(),
+		BaseIPCPRIBObject(ipc_process, EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
+				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_NAME) {
 	namespace_manager_ = ipc_process_->namespace_manager;
 	rib_daemon_->subscribeToEvent(IPCP_EVENT_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
@@ -281,7 +281,7 @@ void DirectoryForwardingTableEntrySetRIBObject::remoteCreateObject(void * object
 
 	std::list<int> cdapSessionIds;
 	cdapSessionIds.push_back(session_descriptor->port_id_);
-	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
+	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
 
 	try {
 		rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
@@ -373,7 +373,7 @@ void DirectoryForwardingTableEntrySetRIBObject::deleteObject(const void* objectV
 	}
 }
 
-BaseRIBObject * DirectoryForwardingTableEntrySetRIBObject::getObject(const std::string& candidateKey) {
+rina::BaseRIBObject * DirectoryForwardingTableEntrySetRIBObject::getObject(const std::string& candidateKey) {
 	rina::DirectoryForwardingTableEntry * entry;
 	std::list<BaseRIBObject *>::const_iterator iterator;
 
@@ -409,7 +409,7 @@ void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_c
 
 void NamespaceManager::populateRIB() {
 	try {
-		BaseRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipc_process_);
+		BaseIPCPRIBObject * object = new DirectoryForwardingTableEntrySetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
 		object = new WhateverCastNameSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
@@ -510,7 +510,7 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 	entriesToCreate.push_back(entry);
 
 	std::list<int> cdapSessionIds;
-	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
+	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
 
 	try {
 		rib_daemon_->createObject(EncoderConstants::DFT_ENTRY_SET_RIB_OBJECT_CLASS,
@@ -557,7 +557,7 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 	}
 
 	std::list<int> cdapSessionIds;
-	NotificationPolicy notificationPolicy = NotificationPolicy(cdapSessionIds);
+	rina::NotificationPolicy notificationPolicy = rina::NotificationPolicy(cdapSessionIds);
 
 	try {
 		std::stringstream ss;

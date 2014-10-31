@@ -21,6 +21,9 @@
 
 #include <sstream>
 
+#define RINA_PREFIX "events"
+
+#include <librina/logs.h>
 #include "events.h"
 
 namespace rinad {

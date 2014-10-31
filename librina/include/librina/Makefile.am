@@ -15,6 +15,7 @@ nobase_pkginclude_HEADERS =			\
 	ipc-process.h				\
 	faux-sockets.h				\
 	cdap.h					\
+	rib.h                    \
 	sdu-protection.h			\
 	patterns.h				\
 	exceptions.h				\

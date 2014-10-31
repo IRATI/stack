@@ -26,7 +26,7 @@
 
 #include "ipcp/pduft-generator.h"
 
-class FakeEncoder: public rinad::EncoderInterface {
+class FakeEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object) {
 		if (!object) {
@@ -43,7 +43,7 @@ public:
 	}
 };
 
-class FakeRIBDaemon: public rinad::IRIBDaemon {
+class FakeRIBDaemon: public rinad::IPCPRIBDaemon {
 public:
 	void subscribeToEvent(const rinad::IPCProcessEventType& eventId,
 			rinad::EventListener * eventListener) {
@@ -70,12 +70,12 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
 		LOG_DBG("DIF Configuration set: %u", dif_configuration.address_);
 	}
-	void addRIBObject(rinad::BaseRIBObject * ribObject){
+	void addRIBObject(rina::BaseRIBObject * ribObject){
 		if (!ribObject) {
 			return;
 		}
 	}
-	void removeRIBObject(rinad::BaseRIBObject * ribObject) {
+	void removeRIBObject(rina::BaseRIBObject * ribObject) {
 		if (!ribObject) {
 			return;
 		}
@@ -84,11 +84,11 @@ public:
 		LOG_DBG("Removing object with name %s", objectName.c_str());
 	}
 	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
-				const rinad::IUpdateStrategy& updateStrategy){
+				const rina::IUpdateStrategy& updateStrategy){
 		LOG_DBG("%d, %p", cdapMessages.size(), &updateStrategy);
 	}
 	void sendMessage(const rina::CDAPMessage & cdapMessage,
-	            int sessionId, rinad::ICDAPResponseMessageHandler * cdapMessageHandler){
+	            int sessionId, rina::ICDAPResponseMessageHandler * cdapMessageHandler){
 		if (!cdapMessageHandler)  {
 			return;
 		}
@@ -96,7 +96,7 @@ public:
 	}
 	void sendMessageToAddress(const rina::CDAPMessage & cdapMessage,
 	            int sessionId, unsigned int address,
-	            rinad::ICDAPResponseMessageHandler * cdapMessageHandler){
+	            rina::ICDAPResponseMessageHandler * cdapMessageHandler){
 		if (!cdapMessageHandler) {
 			return;
 		}
@@ -110,20 +110,20 @@ public:
 		LOG_DBG("Message delivered: %d, %d", length, portId);
 	}
 	void createObject(const std::string& objectClass, const std::string& objectName,
-	             const void* objectValue, const rinad::NotificationPolicy * notificationPolicy){
+	             const void* objectValue, const rina::NotificationPolicy * notificationPolicy){
 		operationCalled(objectClass, objectName, objectValue);
 		if (!notificationPolicy) {
 			return;
 		}
 	}
 	void deleteObject(const std::string& objectClass, const std::string& objectName,
-	             const void* objectValue, const rinad::NotificationPolicy * notificationPolicy) {
+	             const void* objectValue, const rina::NotificationPolicy * notificationPolicy) {
 		operationCalled(objectClass, objectName, objectValue);
 		if (!notificationPolicy) {
 			return;
 		}
 	}
-	rinad::BaseRIBObject * readObject(const std::string& objectClass,
+	rina::BaseRIBObject * readObject(const std::string& objectClass,
 				const std::string& objectName){
 		operationCalled(objectClass, objectName, 0);
 		return 0;
@@ -146,8 +146,8 @@ public:
 	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event){
 		LOG_DBG("Event: %d", event.eventType);
 	}
-	std::list<rinad::BaseRIBObject *> getRIBObjects() {
-		std::list<rinad::BaseRIBObject *> result;
+	std::list<rina::BaseRIBObject *> getRIBObjects() {
+		std::list<rina::BaseRIBObject *> result;
 		return result;
 	}
 	void openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
@@ -155,7 +155,7 @@ public:
 			const std::string &dest_ae_name, const std::string &dest_ap_inst,
 			const std::string &dest_ap_name, const std::string &src_ae_inst,
 			const std::string &src_ae_name, const std::string &src_ap_inst,
-			const std::string &src_ap_name, const rinad::RemoteIPCProcessId& remote_id) {
+			const std::string &src_ap_name, const rina::RemoteProcessId& remote_id) {
 		(void) auth_mech;
 		(void) auth_value;
 		(void) dest_ae_inst;
@@ -168,14 +168,14 @@ public:
 		(void) src_ap_name;
 		(void) remote_id;
 	}
-	void closeApplicationConnection(const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+	void closeApplicationConnection(const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) remote_id;
 		(void) response_handler;
 	}
 	void remoteCreateObject(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int scope, const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) object_class;
 		(void) object_name;
 		(void) object_value;
@@ -184,8 +184,8 @@ public:
 		(void) response_handler;
 	}
 	void remoteDeleteObject(const std::string& object_class, const std::string& object_name,
-				int scope, const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+				int scope, const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) object_class;
 		(void) object_name;
 		(void) scope;
@@ -193,8 +193,8 @@ public:
 		(void) response_handler;
 	}
 	void remoteReadObject(const std::string& object_class, const std::string& object_name,
-				int scope, const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+				int scope, const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) object_class;
 		(void) object_name;
 		(void) scope;
@@ -202,8 +202,8 @@ public:
 		(void) response_handler;
 	}
 	void remoteWriteObject(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int scope, const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) object_class;
 		(void) object_name;
 		(void) object_value;
@@ -212,8 +212,8 @@ public:
 		(void) response_handler;
 	}
 	void remoteStartObject(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int scope, const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) object_class;
 		(void) object_name;
 		(void) object_value;
@@ -222,8 +222,8 @@ public:
 		(void) response_handler;
 	}
 	void remoteStopObject(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int scope, const rinad::RemoteIPCProcessId& remote_id,
-				rinad::ICDAPResponseMessageHandler * response_handler) {
+				rina::RIBObjectValue& object_value, int scope, const rina::RemoteProcessId& remote_id,
+				rina::ICDAPResponseMessageHandler * response_handler) {
 		(void) object_class;
 		(void) object_name;
 		(void) object_value;
@@ -236,7 +236,7 @@ public:
 				const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
 				int result, const std::string &result_reason, const std::string &src_ae_inst,
 				const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
-				int invoke_id, const rinad::RemoteIPCProcessId& remote_id) {
+				int invoke_id, const rina::RemoteProcessId& remote_id) {
 		(void) auth_mech;
 		(void) auth_value;
 		(void) dest_ae_inst;
@@ -253,15 +253,15 @@ public:
 		(void) invoke_id;
 	}
 	void closeApplicationConnectionResponse(int result, const std::string result_reason,
-				int invoke_id, const rinad::RemoteIPCProcessId& remote_id) {
+				int invoke_id, const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) result;
 		(void) result_reason;
 		(void) remote_id;
 	}
 	void remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
-				const rinad::RemoteIPCProcessId& remote_id) {
+				rina::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+				const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) object_class;
 		(void) object_name;
@@ -272,7 +272,7 @@ public:
 	}
 	void remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
 			int result, const std::string result_reason, int invoke_id,
-			const rinad::RemoteIPCProcessId& remote_id) {
+			const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) object_class;
 		(void) object_name;
@@ -281,8 +281,8 @@ public:
 		(void) remote_id;
 	}
 	void remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int result, const std::string result_reason,
-				bool read_incomplete, int invoke_id, const rinad::RemoteIPCProcessId& remote_id) {
+				rina::RIBObjectValue& object_value, int result, const std::string result_reason,
+				bool read_incomplete, int invoke_id, const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) object_class;
 		(void) object_name;
@@ -294,7 +294,7 @@ public:
 	}
 	void remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
 			int result, const std::string result_reason, int invoke_id,
-			const rinad::RemoteIPCProcessId& remote_id) {
+			const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) object_class;
 		(void) object_name;
@@ -303,8 +303,8 @@ public:
 		(void) remote_id;
 	}
 	void remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
-				const rinad::RemoteIPCProcessId& remote_id) {
+				rina::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+				const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) object_class;
 		(void) object_name;
@@ -314,8 +314,8 @@ public:
 		(void) remote_id;
 	}
 	void remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
-				rinad::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
-				const rinad::RemoteIPCProcessId& remote_id) {
+				rina::RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
+				const rina::RemoteProcessId& remote_id) {
 		(void) invoke_id;
 		(void) object_class;
 		(void) object_name;
@@ -445,7 +445,7 @@ public:
 
 private:
 	rinad::Encoder * encoder_;
-	rinad::IRIBDaemon * rib_daemon_;
+	rinad::IPCPRIBDaemon * rib_daemon_;
 	rinad::INamespaceManager * namespace_manager_;
 	rina::ApplicationProcessNamingInformation name_;
 	rinad::IPCProcessOperationalState state;
@@ -489,7 +489,7 @@ int incrementAge_AddObjectCheckModified_False() {
 
 	fsdb.addObjectToGroup(1, 1, 1, 1);
 	fsdb.modified_ = false;
-	fsdb.incrementAge(3);
+	fsdb.incrementAge();
 
 	if (fsdb.modified_ == true) {
 		return -1;
