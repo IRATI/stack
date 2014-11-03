@@ -115,198 +115,19 @@ std::string Flow::toString() {
 	return ss.str();
 }
 
-// CLASS NotificationPolicy
-NotificationPolicy::NotificationPolicy(const std::list<int>& cdap_session_ids) {
-	cdap_session_ids_ = cdap_session_ids;
-}
-
 // Class BaseRIBObject
-BaseRIBObject::BaseRIBObject(IPCProcess * ipc_process, const std::string& object_class,
-		long object_instance, const std::string& object_name) {
-	name_ = object_name;
-	class_ = object_class;
-	instance_ = object_instance;
+BaseIPCPRIBObject::BaseIPCPRIBObject(IPCProcess * ipc_process, const std::string& object_class,
+		long object_instance, const std::string& object_name):
+		        rina::BaseRIBObject(ipc_process->rib_daemon_,
+		                        object_class, object_instance, object_name){
 	ipc_process_ = ipc_process;
 	if (ipc_process) {
-		rib_daemon_ =  ipc_process->rib_daemon;
-		encoder_ = ipc_process->encoder;
+		rib_daemon_ =  ipc_process->rib_daemon_;
+		encoder_ = ipc_process->encoder_;
 	} else {
 		rib_daemon_ = 0;
 		encoder_ = 0;
 	}
-	parent_ = 0;
-}
-
-rina::RIBObjectData BaseRIBObject::get_data() {
-	rina::RIBObjectData result;
-	result.class_ = class_;
-    result.name_ = name_;
-    result.instance_ = instance_;
-    result.displayable_value_ = get_displayable_value();
-
-    return result;
-}
-
-std::string BaseRIBObject::get_displayable_value() {
-	return "-";
-}
-
-const std::list<BaseRIBObject*>& BaseRIBObject::get_children() const {
-	return children_;
-}
-
-void BaseRIBObject::add_child(BaseRIBObject * child) {
-	for (std::list<BaseRIBObject*>::iterator it = children_.begin();
-			it != children_.end(); it++) {
-		if ((*it)->name_.compare(child->name_) == 0) {
-			throw Exception("Object is already a child");
-		}
-	}
-
-	children_.push_back(child);
-	child->parent_ = this;
-}
-
-void BaseRIBObject::remove_child(const std::string& objectName) {
-	for (std::list<BaseRIBObject*>::iterator it = children_.begin();
-			it != children_.end(); it++) {
-		if ( (*it)->name_.compare(objectName) == 0) {
-			children_.erase(it);
-			return;
-		}
-	}
-
-	throw Exception("Unknown child object");
-}
-
-void BaseRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
-		const void* objectValue) {
-	operartion_not_supported(objectClass, objectName, objectValue);
-}
-
-void BaseRIBObject::deleteObject(const void* objectValue) {
-	operation_not_supported(objectValue);
-}
-
-BaseRIBObject * BaseRIBObject::readObject() {
-	return this;
-}
-
-void BaseRIBObject::writeObject(const void* object_value) {
-	operation_not_supported(object_value);
-}
-
-void BaseRIBObject::startObject(const void* object) {
-	operation_not_supported(object);
-}
-
-void BaseRIBObject::stopObject(const void* object) {
-	operation_not_supported(object);
-}
-
-void BaseRIBObject::remoteCreateObject(void * object_value, const std::string& object_name,
-		int invoke_id, rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) object_value;
-	(void) object_name;
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();
-}
-
-void BaseRIBObject::remoteDeleteObject(int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();
-}
-
-void BaseRIBObject::remoteReadObject(int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();
-}
-
-void BaseRIBObject::remoteCancelReadObject(int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();
-}
-
-void BaseRIBObject::remoteWriteObject(void * object_value, int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) object_value;
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();;
-}
-
-void BaseRIBObject::remoteStartObject(void * object_value, int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) object_value;
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();;
-}
-
-void BaseRIBObject::remoteStopObject(void * object_value, int invoke_id,
-		rina::CDAPSessionDescriptor * session_descriptor) {
-	(void) object_value;
-	(void) invoke_id;
-	(void) session_descriptor;
-	operation_not_supported();;
-}
-
-void BaseRIBObject::operation_not_supported() {
-	throw Exception("Operation not supported");
-}
-
-void BaseRIBObject::operation_not_supported(const void* object) {
-	std::stringstream ss;
-	ss<<"Operation not allowed. Data: "<<std::endl;
-	ss<<"Object value memory @: "<<object;
-
-	throw Exception(ss.str().c_str());
-}
-
-void BaseRIBObject::operation_not_supported(const rina::CDAPMessage * cdapMessage,
-		rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-	std::stringstream ss;
-	ss<<"Operation not allowed. Data: "<<std::endl;
-	ss<<"CDAP Message code: "<<cdapMessage->get_op_code();
-	ss<<" N-1 port-id: "<<cdapSessionDescriptor->get_port_id()<<std::endl;
-
-	throw Exception(ss.str().c_str());
-}
-
-void BaseRIBObject::operartion_not_supported(const std::string& objectClass,
-		const std::string& objectName, const void* objectValue) {
-	std::stringstream ss;
-	ss<<"Operation not allowed. Data: "<<std::endl;
-	ss<<"Class: "<<objectClass<<"; Name: "<<objectName;
-	ss<<"; Value memory @: "<<objectValue;
-
-	throw Exception(ss.str().c_str());
-}
-
-
-///Class RemoteIPCProcessId
-RemoteIPCProcessId::RemoteIPCProcessId() {
-	use_address_ = false;
-	port_id_ = 0;
-	address_ = 0;
-}
-
-/// Class RIBObjectValue
-RIBObjectValue::RIBObjectValue() {
-	type_ = notype;
-	bool_value_ = false;
-	complex_value_ = 0;
-	int_value_ = 0;
-	double_value_ = 0;
-	long_value_ = 0;
-	float_value_ = 0;
 }
 
 // CLASS IPC Process
@@ -314,41 +135,23 @@ const std::string IPCProcess::MANAGEMENT_AE = "Management";
 const std::string IPCProcess::DATA_TRANSFER_AE = "Data Transfer";
 const int IPCProcess::DEFAULT_MAX_SDU_SIZE_IN_BYTES = 10000;
 
-// Class ObjectInstanceGenerator
-ObjectInstanceGenerator::ObjectInstanceGenerator() : rina::Lockable() {
-	instance_ = 0;
-}
-
-long ObjectInstanceGenerator::getObjectInstance() {
-	long result = 0;
-
-	lock();
-	instance_++;
-	result = instance_;
-	unlock();
-
-	return result;
-}
-
-Singleton<ObjectInstanceGenerator> objectInstanceGenerator;
-
-//Class SimpleRIBObject
-SimpleRIBObject::SimpleRIBObject(IPCProcess* ipc_process, const std::string& object_class,
+//Class SimpleIPCPRIBObject
+SimpleIPCPRIBObject::SimpleIPCPRIBObject(IPCProcess* ipc_process, const std::string& object_class,
 			const std::string& object_name, const void* object_value) :
-					BaseRIBObject(ipc_process, object_class,
-							objectInstanceGenerator->getObjectInstance(), object_name) {
+					BaseIPCPRIBObject(ipc_process, object_class,
+							rina::objectInstanceGenerator->getObjectInstance(), object_name) {
 	object_value_ = object_value;
 }
 
-const void* SimpleRIBObject::get_value() const {
+const void* SimpleIPCPRIBObject::get_value() const {
 	return object_value_;
 }
 
-void SimpleRIBObject::writeObject(const void* object_value) {
+void SimpleIPCPRIBObject::writeObject(const void* object_value) {
 	object_value_ = object_value;
 }
 
-void SimpleRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+void SimpleIPCPRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
 		const void* objectValue) {
 	if (objectName.compare("") != 0 && objectClass.compare("") != 0) {
 		object_value_ = objectValue;
@@ -356,34 +159,34 @@ void SimpleRIBObject::createObject(const std::string& objectClass, const std::st
 }
 
 //Class SimpleSetRIBObject
-SimpleSetRIBObject::SimpleSetRIBObject(IPCProcess * ipc_process, const std::string& object_class,
+SimpleSetIPCPRIBObject::SimpleSetIPCPRIBObject(IPCProcess * ipc_process, const std::string& object_class,
 		const std::string& set_member_object_class, const std::string& object_name) :
-					SimpleRIBObject(ipc_process, object_class, object_name, 0){
+					SimpleIPCPRIBObject(ipc_process, object_class, object_name, 0){
 	set_member_object_class_ = set_member_object_class;
 }
 
-void SimpleSetRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
+void SimpleSetIPCPRIBObject::createObject(const std::string& objectClass, const std::string& objectName,
 		const void* objectValue) {
 	if (set_member_object_class_.compare(objectClass) != 0) {
 		throw Exception("Class of set member does not match the expected value");
 	}
 
-	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(ipc_process_, objectClass,
+	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(ipc_process_, objectClass,
 			objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
 }
 
 //Class SimpleSetMemberRIBObject
-SimpleSetMemberRIBObject::SimpleSetMemberRIBObject(IPCProcess* ipc_process,
+SimpleSetMemberIPCPRIBObject::SimpleSetMemberIPCPRIBObject(IPCProcess* ipc_process,
                                                    const std::string& object_class,
                                                    const std::string& object_name,
                                                    const void* object_value) :
-        SimpleRIBObject(ipc_process, object_class, object_name, object_value)
+        SimpleIPCPRIBObject(ipc_process, object_class, object_name, object_value)
 {
 }
 
-void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
+void SimpleSetMemberIPCPRIBObject::deleteObject(const void* objectValue)
 {
         (void) objectValue; // Stop compiler barfs
 
@@ -393,15 +196,15 @@ void SimpleSetMemberRIBObject::deleteObject(const void* objectValue)
 
 IPCProcess::IPCProcess()
 {
-	delimiter = 0;
-	encoder = 0;
-	cdap_session_manager = 0;
-	enrollment_task = 0;
-	flow_allocator = 0;
-	namespace_manager = 0;
-	resource_allocator = 0;
-	security_manager = 0;
-	rib_daemon = 0;
+	delimiter_ = 0;
+	encoder_ = 0;
+	cdap_session_manager_ = 0;
+	enrollment_task_ = 0;
+	flow_allocator_ = 0;
+	namespace_manager_ = 0;
+	resource_allocator_ = 0;
+	security_manager_ = 0;
+	rib_daemon_ = 0;
 }
 
 }

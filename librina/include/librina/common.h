@@ -583,6 +583,22 @@ public:
         bool operator!=(const Parameter &other) const;
 };
 
+class SerializedObject {
+public:
+        SerializedObject();
+        SerializedObject( const SerializedObject& other );
+        SerializedObject(char* message, int size);
+        ~SerializedObject();
+        SerializedObject& operator=(const SerializedObject &other);
+        int get_size() const;
+        char* get_message() const;
+        int size_;
+        char* message_;
+
+private:
+        void initialize(const SerializedObject& other );
+};
+
 /**
  * Thrown when there are problems initializing librina
  */
@@ -614,23 +630,6 @@ void initialize(unsigned int localPort, const std::string& logLevel,
  */
 void initialize(const std::string& logLevel,
                 const std::string& pathToLogFile);
-
-class SerializedObject {
-public:
-	SerializedObject();
-	SerializedObject( const SerializedObject& other );
-	SerializedObject(char* message, int size);
-	~SerializedObject();
-	SerializedObject& operator=(const SerializedObject &other);
-	int get_size() const;
-	char* get_message() const;
-	int size_;
-	char* message_;
-
-private:
-	void initialize(const SerializedObject& other );
-};
-
 }
 #endif
 

@@ -204,7 +204,7 @@ class LinkStatePDUFTGeneratorPolicy;
 /// A group of flow state objects. This is the RIB target object
 /// when the PDU Forwarding Table Generator wants to send
 /// information about more than one N-1 flow
-class FlowStateRIBObjectGroup: public BaseRIBObject {
+class FlowStateRIBObjectGroup: public BaseIPCPRIBObject {
 public:
 	FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 			LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
@@ -234,7 +234,7 @@ public:
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 
 	FlowStateDatabase(Encoder * encoder, FlowStateRIBObjectGroup *
-			flow_state_rib_object_group, rina::Timer * timer, IRIBDaemon *rib_daemon, unsigned int *maximum_age);
+			flow_state_rib_object_group, rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age);
 	bool isEmpty() const;
 	void setAvoidPort(int avoidPort);
 	void addObjectToGroup(unsigned int address, int portId,
@@ -255,13 +255,13 @@ private:
 	Encoder * encoder_;
 	FlowStateRIBObjectGroup * flow_state_rib_object_group_;
 	rina::Timer * timer_;
-	IRIBDaemon *rib_daemon_;
+	IPCPRIBDaemon *rib_daemon_;
 	unsigned int *maximum_age_;
 
 	FlowStateObject * getByPortId(int portId);
 };
 
-class LinkStatePDUFTCDAPMessageHandler: public BaseCDAPResponseMessageHandler {
+class LinkStatePDUFTCDAPMessageHandler: public rina::BaseCDAPResponseMessageHandler {
 public:
 	LinkStatePDUFTCDAPMessageHandler(LinkStatePDUFTGeneratorPolicy * pduft_generator_policy);
 	void readResponse(int result, const std::string& result_reason,
@@ -286,13 +286,13 @@ private:
 
 class KillFlowStateObjectTimerTask : public rina::TimerTask {
 public:
-	KillFlowStateObjectTimerTask(IRIBDaemon * rib_daemon,
+	KillFlowStateObjectTimerTask(IPCPRIBDaemon * rib_daemon,
 			FlowStateObject * fso, FlowStateDatabase * fs_db);
 	~KillFlowStateObjectTimerTask() throw(){};
 	void run();
 
 private:
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	FlowStateObject * fso_;
 	FlowStateDatabase * fs_db_;
 };
@@ -406,7 +406,7 @@ public:
 private:
 	static const int MAXIMUM_BUFFER_SIZE;
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	Encoder * encoder_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	FlowStateRIBObjectGroup * fs_rib_group_;
@@ -457,7 +457,7 @@ private:
 };
 
 /// Encoder of Flow State object
-class FlowStateObjectEncoder: public EncoderInterface {
+class FlowStateObjectEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
@@ -468,7 +468,7 @@ public:
 };
 
 /// Encoder of a list of Flow State Objects
-class FlowStateObjectListEncoder: public EncoderInterface {
+class FlowStateObjectListEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
