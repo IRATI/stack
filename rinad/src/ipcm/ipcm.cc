@@ -186,6 +186,16 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
         concurrency.lock();
 
         try {
+                // Check that the AP name is not empty
+                if (name.processName == std::string()) {
+                        ss << "Cannot create IPC process with an "
+                                "empty AP name" << endl;
+                        FLUSH_LOG(ERR, ss);
+
+                        throw rina::CreateIPCProcessException();
+                }
+
+                // Check if @type is one of the supported DIF types.
                 supportedDIFS = fact.getSupportedIPCProcessTypes();
                 for (std::list<std::string>::iterator it =
                              supportedDIFS.begin();
@@ -199,8 +209,6 @@ IPCManager::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                 }
 
                 if (!difCorrect) {
-                        std::stringstream ss;
-
                         ss << "difType parameter of DIF "
                            << name.toString()
                            << " is wrong, options are: "
@@ -588,6 +596,9 @@ IPCManager::apply_configuration()
                 }
 
                 ipcp = create_ipcp(cit->name, type);
+                if (!ipcp) {
+                        continue;
+                }
                 assign_to_dif(ipcp, cit->difName);
                 register_at_difs(ipcp, cit->difsToRegisterAt);
 
