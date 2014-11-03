@@ -41,7 +41,7 @@ public:
                bool  registration,
                unsigned int size,
                unsigned int wait,
-               int gap,
+               int g,
                int dw);
                void run();
 protected:
@@ -60,7 +60,7 @@ private:
         bool client_app_reg;
         unsigned int data_size;
         unsigned int wait;
-        int gap_;
-        int dw_;
+        int gap;
+        int dealloc_wait;
 };
 #endif//CLIENT_HPP
