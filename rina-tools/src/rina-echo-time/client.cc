@@ -66,7 +66,7 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               unsigned int w, int gap, unsigned int dw) :
+               unsigned int w, int gap, int dw) :
         Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
@@ -90,7 +90,9 @@ void Client::run()
                         LOG_ERR("Unknown test type '%s'", test_type.c_str());
         }
         if (flow) {
-                sleep(dw_);
+                if (dw_ > 0) {
+                        sleep(dw_);
+                }
                 destroyFlow(flow);
         }
 }

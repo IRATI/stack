@@ -46,7 +46,7 @@ int wrapped_main(int argc, char** argv)
         unsigned int wait;
         int gap;
         int perf_interval;
-        unsigned int dw;
+        int dw;
         string test_type;
         string server_apn;
         string server_api;
@@ -136,7 +136,7 @@ int wrapped_main(int argc, char** argv)
                                              "integer");
                 TCLAP::ValueArg<int> dealloc_wait_arg("",
                                              "dealloc-wait",
-                                             "On the server, deallocate after timeout (s)",
+                                             "Deallocate the flow after specified timeout (s)",
                                              false,
                                              -1,
                                              "integer");

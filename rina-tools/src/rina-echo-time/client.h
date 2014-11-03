@@ -42,7 +42,7 @@ public:
                unsigned int size,
                unsigned int wait,
                int gap,
-               unsigned int dw);
+               int dw);
                void run();
 protected:
         rina::Flow* createFlow();
@@ -61,6 +61,6 @@ private:
         unsigned int data_size;
         unsigned int wait;
         int gap_;
-        unsigned int dw_;
+        int dw_;
 };
 #endif//CLIENT_HPP
