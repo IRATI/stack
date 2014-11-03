@@ -436,7 +436,7 @@ public:
 	virtual IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const = 0;
 };
 
-/// Security Management Ð A DIF requires three security functions:
+/// Security Management ï¿½ A DIF requires three security functions:
 ///  1) Authentication to ensure that an IPC-Process wishing to join the DIF is who it
 ///  says it is and is an allowable member of the DIF (Enrollment);
 ///  2) Confidentiality and integrity of all PDUs; and
@@ -492,16 +492,16 @@ public:
 	static const std::string DATA_TRANSFER_AE;
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
-	IDelimiter * delimiter;
-	Encoder * encoder;
-	rina::CDAPSessionManagerInterface* cdap_session_manager;
-	IEnrollmentTask * enrollment_task;
-	IFlowAllocator * flow_allocator;
-	INamespaceManager * namespace_manager;
-	IResourceAllocator * resource_allocator;
-	ISecurityManager * security_manager;
-	IPCPRIBDaemon * rib_daemon;
-	rina::ApplicationProcessNamingInformation name;
+	IDelimiter * delimiter_;
+	Encoder * encoder_;
+	rina::CDAPSessionManagerInterface* cdap_session_manager_;
+	IEnrollmentTask * enrollment_task_;
+	IFlowAllocator * flow_allocator_;
+	INamespaceManager * namespace_manager_;
+	IResourceAllocator * resource_allocator_;
+	ISecurityManager * security_manager_;
+	IPCPRIBDaemon * rib_daemon_;
+	rina::ApplicationProcessNamingInformation name_;
 
         IPCProcess();
 	virtual ~IPCProcess(){};

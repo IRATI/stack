@@ -40,8 +40,8 @@ NMinusOneFlowManager::NMinusOneFlowManager() {
 
 void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon;
-	cdap_session_manager_ = ipc_process->cdap_session_manager;
+	rib_daemon_ = ipc_process->rib_daemon_;
+	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	populateRIB();
 }
 
@@ -118,9 +118,9 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 
 void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
 	if (event.localApplicationName.processName.compare(
-			ipc_process_->name.processName) != 0 ||
+			ipc_process_->name_.processName) != 0 ||
 			event.localApplicationName.processInstance.compare(
-					ipc_process_->name.processInstance) != 0) {
+					ipc_process_->name_.processInstance) != 0) {
 		LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());

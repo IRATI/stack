@@ -903,9 +903,9 @@ LinkStatePDUFTGeneratorPolicy::~LinkStatePDUFTGeneratorPolicy()
 void LinkStatePDUFTGeneratorPolicy::set_ipc_process(IPCProcess * ipc_process)
 {
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process_->rib_daemon;
-	encoder_ = ipc_process_->encoder;
-	cdap_session_manager_ = ipc_process_->cdap_session_manager;
+	rib_daemon_ = ipc_process_->rib_daemon_;
+	encoder_ = ipc_process_->encoder_;
+	cdap_session_manager_ = ipc_process_->cdap_session_manager_;
 	populateRIB();
 	subscribeToEvents();
 	db_ = new FlowStateDatabase(encoder_, fs_rib_group_, timer_, rib_daemon_,
@@ -1015,7 +1015,7 @@ void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 	try {
 		db_->addObjectToGroup(ipc_process_->get_address(),
 				event->flow_information_.portId,
-				ipc_process_->namespace_manager->getAdressByname(
+				ipc_process_->namespace_manager_->getAdressByname(
 						event->flow_information_.remoteAppName), 1);
 	} catch (Exception &e) {
 		LOG_DBG("flow allocation waiting for enrollment");
@@ -1035,7 +1035,7 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 					"There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
-						ipc_process_->namespace_manager->getAdressByname(
+						ipc_process_->namespace_manager_->getAdressByname(
 								it->remoteAppName), 1);
 				allocated_flows_.erase(it);
 				break;
@@ -1074,7 +1074,7 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
 	rina::AccessGuard g(*lock_);
 
 	std::list<rina::FlowInformation> nMinusOneFlows =
-			ipc_process_->resource_allocator->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
+			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
 
 	std::vector<std::list<FlowStateObject *> > groupsToSend =
 			db_->prepareForPropagation(nMinusOneFlows);

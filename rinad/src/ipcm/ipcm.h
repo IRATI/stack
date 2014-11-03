@@ -181,6 +181,32 @@ class IPCManager : public EventLoopData {
         IPCMConsole *console;
 };
 
+class DIFConfigValidator {
+public:
+	enum Types{
+		SHIM_ETH,
+		NORMAL,
+		SHIM_DUMMY
+	};
+	DIFConfigValidator(const rina::DIFConfiguration &dif_config,
+			const rina::DIFInformation &dif_info, std::string type);
+	bool validateConfigs();
+private:
+	Types type_;
+	const rina::DIFConfiguration &dif_config_;
+    const rina::DIFInformation &dif_info_;
+
+	bool validateShimEth();
+	bool validateShimDummy();
+	bool validateNormal();
+	bool validateBasicDIFConfigs();
+	bool validateConfigParameters();
+	bool dataTransferConstants();
+	bool qosCubes();
+	bool knownIPCProcessAddresses();
+	bool pdufTableGeneratorConfiguration();
+};
+
 void register_handlers_all(EventLoop& loop);
 
 }

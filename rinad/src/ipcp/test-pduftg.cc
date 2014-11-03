@@ -83,6 +83,14 @@ public:
 	void removeRIBObject(const std::string& objectName){
 		LOG_DBG("Removing object with name %s", objectName.c_str());
 	}
+        void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
+                        unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler) {
+                (void) useAddress;
+                (void) cdapMessage;
+                (void) sessionId;
+                (void) address;
+                (void) cdapMessageHandler;
+        }
 	void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
 				const rina::IUpdateStrategy& updateStrategy){
 		LOG_DBG("%d, %p", cdapMessages.size(), &updateStrategy);
@@ -405,7 +413,7 @@ public:
 		encoder_->addEncoder(rinad::EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 				new FakeEncoder());
 		rib_daemon_ = new FakeRIBDaemon();
-		state= rinad::INITIALIZED;
+		state_= rinad::INITIALIZED;
 		address_ = 0;
 		timeout_ = 2000;
 		cdap_session_manager_ = cdap_manager_factory_.createCDAPSessionManager(&wire_factory_,
@@ -428,10 +436,10 @@ public:
 		address_ = address;
 	}
 	const rinad::IPCProcessOperationalState& get_operational_state() const {
-		return state;
+		return state_;
 	}
 	void set_operational_state(const rinad::IPCProcessOperationalState& operational_state){
-		state = operational_state;
+		state_ = operational_state;
 	}
 	rina::DIFInformation& get_dif_information() const {
 		throw Exception();
@@ -448,18 +456,17 @@ private:
 	rinad::IPCPRIBDaemon * rib_daemon_;
 	rinad::INamespaceManager * namespace_manager_;
 	rina::ApplicationProcessNamingInformation name_;
-	rinad::IPCProcessOperationalState state;
+	rinad::IPCProcessOperationalState state_;
 	rina::DIFInformation dif_information_;
 	std::list<rina::Neighbor*> neighbors_;
 	unsigned int address_;
 	rina::WireMessageProviderFactory wire_factory_;
 	rina::CDAPSessionManagerFactory cdap_manager_factory_;
 	long timeout_;
-	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 };
 
 int addObjectToGroup_NoObjectCheckModified_False() {
-	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(0,0,0);
+	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(0,0,0,0,0);
 	if (fsdb.modified_ == true) {
 		return -1;
 	}
@@ -470,8 +477,9 @@ int addObjectToGroup_NoObjectCheckModified_False() {
 int addObjectToGroup_AddObjectCheckModified_True() {
 	FakeIPCProcess ipcProcess;
 	rinad::FlowStateRIBObjectGroup group = rinad::FlowStateRIBObjectGroup(&ipcProcess, 0);
-	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.encoder,
-			&group,0);
+	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.encoder_,
+			&group,0,ipcProcess.rib_daemon_,0);
+
 
 	fsdb.addObjectToGroup(1, 1, 1, 1);
 	if (fsdb.modified_ == false) {
@@ -484,8 +492,9 @@ int addObjectToGroup_AddObjectCheckModified_True() {
 int incrementAge_AddObjectCheckModified_False() {
 	FakeIPCProcess ipcProcess;
 	rinad::FlowStateRIBObjectGroup group = rinad::FlowStateRIBObjectGroup(&ipcProcess, 0);
-	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.encoder,
-			&group,0);
+	unsigned int max_age = 5;
+	rinad::FlowStateDatabase fsdb = rinad::FlowStateDatabase(ipcProcess.encoder_,
+			&group,0, ipcProcess.rib_daemon_, &max_age);
 
 	fsdb.addObjectToGroup(1, 1, 1, 1);
 	fsdb.modified_ = false;

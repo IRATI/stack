@@ -158,10 +158,10 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl()
 
 void IPCPRIBDaemonImpl::set_ipc_process(IPCProcess * ipc_process)
 {
-        initialize(EncoderConstants::SEPARATOR, ipc_process->encoder,
-                        ipc_process->cdap_session_manager, ipc_process->enrollment_task);
+        initialize(EncoderConstants::SEPARATOR, ipc_process->encoder_,
+                        ipc_process->cdap_session_manager_, ipc_process->enrollment_task_);
 	ipc_process_ = ipc_process;
-	n_minus_one_flow_manager_ = ipc_process->resource_allocator->get_n_minus_one_flow_manager();
+	n_minus_one_flow_manager_ = ipc_process->resource_allocator_->get_n_minus_one_flow_manager();
 
 	subscribeToEvents();
 
@@ -197,7 +197,7 @@ void IPCPRIBDaemonImpl::eventHappened(Event * event)
 }
 
 void IPCPRIBDaemonImpl::nMinusOneFlowDeallocated(int portId) {
-        rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager;
+        rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager_;
 	cdsm->removeCDAPSession(portId);
 }
 
@@ -229,7 +229,7 @@ void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestE
 void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMessage& cdapMessage, int sessionId,
 			unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler) {
 	const rina::SerializedObject * sdu;
-	rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager;
+	rina::CDAPSessionManagerInterface * cdsm = ipc_process_->cdap_session_manager_;
 
 	if (!cdapMessageHandler && cdapMessage.get_invoke_id() != 0
 			&& cdapMessage.get_op_code() != rina::CDAPMessage::M_CONNECT
