@@ -451,11 +451,6 @@ public:
 		return neighbors_;
 	}
 
-private:
-	rinad::Encoder * encoder_;
-	rinad::IPCPRIBDaemon * rib_daemon_;
-	rinad::INamespaceManager * namespace_manager_;
-	rina::ApplicationProcessNamingInformation name_;
 	rinad::IPCProcessOperationalState state_;
 	rina::DIFInformation dif_information_;
 	std::list<rina::Neighbor*> neighbors_;
