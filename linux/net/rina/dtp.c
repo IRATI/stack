@@ -80,6 +80,7 @@ struct dtp {
         struct kfa *              kfa;
         struct squeue *           seqq;
         struct workqueue_struct * twq;
+        struct workqueue_struct * wwq;
         struct {
                 struct rtimer * sender_inactivity;
                 struct rtimer * receiver_inactivity;
@@ -995,7 +996,7 @@ int dtp_sv_init(struct dtp * dtp,
 #define MAX_NAME_SIZE 128
 
 /* FIXME: This function is not re-entrant */
-static const char * twq_name_format(const char *       prefix,
+static const char * wq_name_format(const char *       prefix,
                                     const struct dtp * instance)
 {
         static char name[MAX_NAME_SIZE];
@@ -1018,6 +1019,7 @@ struct dtp * dtp_create(struct dt *         dt,
 {
         struct dtp * tmp;
         const char * twq_name;
+        const char * wwq_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -1063,13 +1065,23 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
-        twq_name = twq_name_format("twq", tmp);
+        twq_name = wq_name_format("twq", tmp);
         if (!twq_name) {
                 dtp_destroy(tmp);
                 return NULL;
         }
         tmp->twq = rwq_create(twq_name);
         if (!tmp->twq) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+        wwq_name = wq_name_format("wwq", tmp);
+        if (!wwq_name) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+        tmp->wwq = rwq_create(wwq_name);
+        if (!tmp->wwq) {
                 dtp_destroy(tmp);
                 return NULL;
         }
@@ -1106,6 +1118,7 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.a);
 
         if (instance->twq)  rwq_destroy(instance->twq);
+        if (instance->wwq)  rwq_destroy(instance->wwq);
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
         rkfree(instance);
@@ -1140,12 +1153,19 @@ static bool window_is_closed(struct dtp_sv * sv,
         return retval;
 }
 
-int dtp_write(struct dtp * instance,
-              struct sdu * sdu)
+struct write_item {
+        struct dtp * dtp;
+        struct sdu * sdu;
+};
+
+int write_worker(void * o)
 {
+        struct write_item *   witem;
+        struct sdu *          sdu;
         struct pdu *          pdu;
         struct pci *          pci;
         struct dtp_sv *       sv;
+        struct dtp *          instance;
         struct dt *           dt;
         struct dtcp *         dtcp;
         struct rtxq *         rtxq;
@@ -1156,14 +1176,28 @@ int dtp_write(struct dtp * instance,
         struct timeval te;
         long long milliseconds;
 
-        if (!sdu_is_ok(sdu))
+        witem = (struct write_item *) o;
+        if (!witem) {
+                LOG_ERR("Bogus write_item...");
                 return -1;
+        }
 
+        sdu = witem->sdu;
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("write_item contained bogus sdu");
+                rkfree(witem);
+                return -1;
+        }
+
+        instance = witem->dtp;
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
+                rkfree(witem);
                 sdu_destroy(sdu);
                 return -1;
         }
+
+        rkfree(witem);
 
         dt = instance->parent;
         if (!dt) {
@@ -1342,6 +1376,46 @@ int dtp_write(struct dtp * instance,
                         pci_qos_id(pci),
                         pdu);
 }
+
+int dtp_write(struct dtp * instance,
+              struct sdu * sdu)
+{
+        struct rwq_work_item * item;
+        struct write_item *    witem;
+
+        if (!sdu_is_ok(sdu))
+                return -1;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        witem = rkzalloc(sizeof(*witem), GFP_KERNEL);
+        if (!witem) {
+                LOG_ERR("Could not create write item");
+                return -1;
+        }
+
+        witem->dtp = instance;
+        witem->sdu = sdu;
+
+        item = rwq_work_create_ni(write_worker, witem);
+        if (!item) {
+                LOG_ERR("Could not create wwq item");
+                rkfree(witem);
+                return -1;
+        }
+
+        if (rwq_work_post(instance->wwq, item)) {
+                LOG_ERR("Could not add wwq item to the wq");
+                return -1;
+        }
+
+        return 0;
+}
+
 
 int dtp_mgmt_write(struct rmt * rmt,
                    address_t    src_address,
