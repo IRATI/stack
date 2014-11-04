@@ -172,14 +172,16 @@ void log(LOG_LEVEL level, const char * fmt, ...)
 	va_start(args, fmt);
 
 	pthread_rwlock_rdlock(&outputStreamLock);
+
 	time_t now= time(0);
 	if (logOutputStream != stdout) {
 			fprintf(logOutputStream, "%d(%ld)", getProcessId(), now);
 			vfprintf(logOutputStream, fmt, args);
+            fflush(logOutputStream);
 	}
 	fprintf(stdout, "%d(%ld)", getProcessId(), now);
 	vfprintf(stdout, fmt, args);
-
+    fflush(stdout);
 	pthread_rwlock_unlock(&outputStreamLock);
 
 	va_end(args);

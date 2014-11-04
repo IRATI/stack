@@ -119,18 +119,18 @@ const std::string EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME = SE
 
 /// CLASS Encoder
 Encoder::~Encoder() {
-	for (std::map<std::string,EncoderInterface*>::iterator it = encoders_.begin(); it != encoders_.end(); ++it) {
+	for (std::map<std::string,rina::EncoderInterface*>::iterator it = encoders_.begin(); it != encoders_.end(); ++it) {
 		delete it->second;
 		it->second = 0;
 	}
 	encoders_.clear();
 }
-void Encoder::addEncoder(const std::string& object_class, EncoderInterface *encoder) {
-	encoders_.insert(std::pair<std::string,EncoderInterface*> (object_class, encoder));
+void Encoder::addEncoder(const std::string& object_class, rina::EncoderInterface *encoder) {
+	encoders_.insert(std::pair<std::string,rina::EncoderInterface*> (object_class, encoder));
 }
 
 void Encoder::encode(const void* object, rina::CDAPMessage * cdapMessage) {
-	EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
+	rina::EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
 	if (!encoder) {
 		throw Exception("Could not find encoder");
 	}
@@ -152,15 +152,15 @@ void* Encoder::decode(const rina::CDAPMessage * cdapMessage) {
 		throw Exception ("Object value is null");
 	}
 
-	EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
+	rina::EncoderInterface* encoder = get_encoder(cdapMessage->obj_class_);
 	if (!encoder) {
 		throw Exception("Could not find encoder");
 	}
 	return encoder->decode(cdapMessage->obj_value_);
 }
 
-EncoderInterface * Encoder::get_encoder(const std::string& object_class) {
-	std::map<std::string, EncoderInterface*>::iterator it = encoders_.find(object_class);
+rina::EncoderInterface * Encoder::get_encoder(const std::string& object_class) {
+	std::map<std::string, rina::EncoderInterface*>::iterator it = encoders_.find(object_class);
 	if (it == encoders_.end()) {
 		throw Exception("Could not find an Encoder associated to object class");
 	}

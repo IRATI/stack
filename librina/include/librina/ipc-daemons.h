@@ -24,7 +24,7 @@
 
 #ifdef __cplusplus
 
-#include "librina/common.h"
+#include "librina/rib.h"
 
 namespace rina {
 
@@ -90,53 +90,6 @@ public:
         /// The number of times we have tried to re-enroll with the
         /// neighbor after the connectivity has been lost
         unsigned int number_of_enrollment_attempts_;
-};
-
-/**
- * Represents the value of an object stored in the RIB
- */
-class RIBObjectValue{
-	//TODO
-};
-
-/// Contains the data of an object in the RIB
-class RIBObjectData{
-public:
-	RIBObjectData();
-	RIBObjectData(std::string clazz, std::string name,
-			long long instance, RIBObjectValue value);
-	bool operator==(const RIBObjectData &other) const;
-	bool operator!=(const RIBObjectData &other) const;
-#ifndef SWIG
-	const std::string& get_class() const;
-	void set_class(const std::string& clazz);
-	unsigned long get_instance() const;
-	void set_instance(unsigned long  instance);
-	const std::string& get_name() const;
-	void set_name(const std::string& name);
-	RIBObjectValue get_value() const;
-	void set_value(RIBObjectValue value);
-	const std::string& get_displayable_value() const;
-	void set_displayable_value(const std::string& displayable_value);
-#endif
-
-	/** The class (type) of object */
-	std::string class_;
-
-	/** The name of the object (unique within a class)*/
-	std::string name_;
-
-	/** A synonim for clazz+name (unique within the RIB) */
-	unsigned long instance_;
-
-	/** The value of the object */
-	RIBObjectValue value_;
-
-	/**
-	 * The value of the object, encoded in an string for
-	 * displayable purposes
-	 */
-	std::string displayable_value_;
 };
 
 /**

@@ -469,9 +469,9 @@ PredecessorInfo * DijkstraAlgorithm::getNextNode(unsigned int target,
 //Class FlowState RIB Object Group
 FlowStateRIBObjectGroup::FlowStateRIBObjectGroup(IPCProcess * ipc_process,
 		LinkStatePDUFTGeneratorPolicy * pduft_generator_policy) :
-		BaseRIBObject(ipc_process,
+		BaseIPCPRIBObject(ipc_process,
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-				objectInstanceGenerator->getObjectInstance(),
+				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME)
 {
 	pduft_generator_policy_ = pduft_generator_policy;
@@ -497,7 +497,7 @@ void FlowStateRIBObjectGroup::remoteWriteObject(void * object_value,
 void FlowStateRIBObjectGroup::createObject(const std::string& objectClass,
 		const std::string& objectName, const void* objectValue)
 {
-	SimpleSetMemberRIBObject * ribObject = new SimpleSetMemberRIBObject(
+	SimpleSetMemberIPCPRIBObject * ribObject = new SimpleSetMemberIPCPRIBObject(
 			ipc_process_, objectClass, objectName, objectValue);
 	add_child(ribObject);
 	rib_daemon_->addRIBObject(ribObject);
@@ -509,7 +509,7 @@ const long FlowStateDatabase::WAIT_UNTIL_REMOVE_OBJECT = 23000;
 
 FlowStateDatabase::FlowStateDatabase(Encoder * encoder,
 		FlowStateRIBObjectGroup * flow_state_rib_object_group,
-		rina::Timer * timer, IRIBDaemon *rib_daemon, unsigned int *maximum_age)
+		rina::Timer * timer, IPCPRIBDaemon *rib_daemon, unsigned int *maximum_age)
 {
 	encoder_ = encoder;
 	flow_state_rib_object_group_ = flow_state_rib_object_group;
@@ -791,7 +791,7 @@ void ComputePDUFTTimerTask::run()
 
 //Class KillFlowStateObjectTimerTask
 KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(
-		IRIBDaemon * rib_daemon, FlowStateObject * fso,
+		IPCPRIBDaemon * rib_daemon, FlowStateObject * fso,
 		FlowStateDatabase * fs_db)
 {
 	rib_daemon_ = rib_daemon;
@@ -814,8 +814,8 @@ void KillFlowStateObjectTimerTask::run()
 		}
 
 		try {
-			SimpleSetMemberRIBObject *fs_rib_o =
-					(SimpleSetMemberRIBObject*) rib_daemon_->readObject(
+			SimpleSetMemberIPCPRIBObject *fs_rib_o =
+					(SimpleSetMemberIPCPRIBObject*) rib_daemon_->readObject(
 							EncoderConstants::FLOW_STATE_OBJECT_RIB_OBJECT_CLASS,
 							fso_->object_name_);
 			fs_rib_o->deleteObject(fso_);
@@ -1052,11 +1052,11 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 	int portId = event->neighbor_->get_underlying_port_id();
 
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::complextype;
 		robject_value.complex_value_ = &(db_->flow_state_objects_);
 
-		RemoteIPCProcessId remote_id;
+		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = portId;
 
 		rib_daemon_->remoteWriteObject(
@@ -1083,11 +1083,11 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
 		return;
 	}
 
-	RIBObjectValue robject_value;
-	robject_value.type_ = RIBObjectValue::complextype;
+	rina::RIBObjectValue robject_value;
+	robject_value.type_ = rina::RIBObjectValue::complextype;
 	robject_value.complex_value_ = &(db_->flow_state_objects_);
 
-	RemoteIPCProcessId remote_id;
+	rina::RemoteProcessId remote_id;
 
 	std::list<FlowStateObject *> fsos;
 	std::list<rina::FlowInformation>::iterator it;
@@ -1158,11 +1158,11 @@ void LinkStatePDUFTGeneratorPolicy::readMessageRecieved(int invoke_id,
 	rina::AccessGuard g(*lock_);
 
 	try {
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::complextype;
 		robject_value.complex_value_ = &(db_->flow_state_objects_);
 
-		RemoteIPCProcessId remote_id;
+		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = portId;
 
 		rib_daemon_->remoteReadObjectResponse(fs_rib_group_->class_,
