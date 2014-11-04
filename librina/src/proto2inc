@@ -10,7 +10,7 @@ rm Makefile.inc
 
 cat > Makefile.inc <<EOF
 protoSOURCES =
-
+DISTCLEANFILES =
 
 EOF
 
@@ -38,12 +38,14 @@ $name.pb.h $name.pb.cc: $name.stamp
 	  fi; \\
 	fi
 
-MOSTLYCLEANFILES +=				\\
-	$name.tmp
+DISTCLEANFILES +=                               \\
+        $name.pb.h $name.pb.cc $name.stamp
 
-EXTRA_DIST +=					\\
-	$name.proto				\\
-	$name.stamp
+MOSTLYCLEANFILES +=                             \\
+        $name.tmp
+
+EXTRA_DIST +=                                   \\
+        $name.proto
 
 protoSOURCES += $name.pb.cc $name.pb.h
 
