@@ -60,13 +60,6 @@ int wrapped_main(int argc, char * argv[])
                                  "ipcmanager.conf",
                                  "string");
                 TCLAP::ValueArg<std::string>
-                        logfile_arg("f",
-                                    "logfile",
-                                    "File to use for logging",
-                                    false,
-                                    "",
-                                    "string");
-                TCLAP::ValueArg<std::string>
                         loglevel_arg("l",
                                      "loglevel",
                                      "Log level",
@@ -82,7 +75,6 @@ int wrapped_main(int argc, char * argv[])
                                      "unsigned int");
 
                 cmd.add(conf_arg);
-                cmd.add(logfile_arg);
                 cmd.add(loglevel_arg);
                 cmd.add(wait_time_arg);
 
@@ -91,7 +83,6 @@ int wrapped_main(int argc, char * argv[])
 
                 // Get the value parsed by each arg.
                 conf     = conf_arg.getValue();
-                logfile  = logfile_arg.getValue();
                 loglevel = loglevel_arg.getValue();
                 wait_time = wait_time_arg.getValue();
 
@@ -112,8 +103,7 @@ int wrapped_main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        ipcm.init(logfile, loglevel);
-
+        ipcm.init(loglevel);
         cout << ipcm.config.toString() << endl;
 
         rinad::register_handlers_all(loop);

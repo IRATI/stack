@@ -52,17 +52,15 @@ void initializeIPCManager(unsigned int        localPort,
                           const std::string & installationPath,
                           const std::string & libraryPath,
                           const std::string & logLevel,
-                          const std::string & pathToLogFile)
+                          const std::string & pathToLogFolder)
 {
-	initialize(localPort, logLevel, pathToLogFile);
+	std::string ipcmPathToLogFile = pathToLogFolder + "/ipcm.log";
+	initialize(localPort, logLevel, ipcmPathToLogFile);
 
 	_installation_path = installationPath;
 	_library_path = libraryPath;
-	unsigned int found = _installation_path.find_last_of("/");
-	_log_path = _installation_path.substr(0, found).append("/var/log");
-	LOG_DBG("Log path is %s", _log_path.c_str());
+	_log_path = pathToLogFolder;
 	_log_level = logLevel;
-	LOG_DBG("Log level is %s", _log_level.c_str());
 
 	IpcmIPCManagerPresentMessage message;
 	message.setDestPortId(0);
