@@ -1382,6 +1382,7 @@ int dtp_write(struct dtp * instance,
 
         witem = rkzalloc(sizeof(*witem), GFP_KERNEL);
         if (!witem) {
+                sdu_destroy(sdu);
                 LOG_ERR("Could not create write item");
                 return -1;
         }
@@ -1392,12 +1393,14 @@ int dtp_write(struct dtp * instance,
         item = rwq_work_create_ni(write_worker, witem);
         if (!item) {
                 LOG_ERR("Could not create wwq item");
+                sdu_destroy(sdu);
                 rkfree(witem);
                 return -1;
         }
 
         if (rwq_work_post(instance->wwq, item)) {
                 LOG_ERR("Could not add wwq item to the wq");
+                sdu_destroy(sdu);
                 return -1;
         }
 
