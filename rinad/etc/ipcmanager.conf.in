@@ -2,6 +2,7 @@
   "localConfiguration" : {
     "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
+    "logPath": "@logdir@",
     "consolePort" : 32766,
     "cdapTimeoutInMs" : 10000,
     "enrollmentTimeoutInMs" : 10000,

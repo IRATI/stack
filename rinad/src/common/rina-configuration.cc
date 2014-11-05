@@ -112,6 +112,7 @@ string LocalConfiguration::toString() const
         ss << "Local Configuration" << endl;
         ss << "\tInstallation path: " << installationPath << endl;
         ss << "\tLibrary path: " << libraryPath << endl;
+        ss << "\tLog path: " << logPath << endl;
         ss << "\tConsole port: " << consolePort << endl;
         ss << "\tCDAP timeout in ms: " << cdapTimeoutInMs << endl;
         ss << "\tEnrollment timeout in ms: " <<
