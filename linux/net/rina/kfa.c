@@ -476,7 +476,7 @@ int kfa_flow_sdu_write(struct kfa * instance,
                 return -1;
         }
 
-        LOG_DBG("Trying to write SDU to port-id %d", id);
+        LOG_INFO("Trying to write SDU to port-id %d", id);
 
         mutex_lock(&instance->lock);
 
@@ -616,7 +616,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 return -1;
         }
 
-        LOG_DBG("Trying to read SDU from port-id %d", id);
+        LOG_INFO("Trying to read SDU from port-id %d", id);
 
         mutex_lock(&instance->lock);
 
@@ -727,7 +727,7 @@ int kfa_sdu_post(struct kfa * instance,
                 return -1;
         }
 
-        LOG_DBG("Posting SDU to port-id %d ", id);
+        LOG_INFO("Posting SDU to port-id %d ", id);
 
         mutex_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);

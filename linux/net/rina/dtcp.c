@@ -558,14 +558,14 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
         dump_we(dtcp, pci);
         seq = pci_control_ack_seq_num(pci);
-        LOG_DBG("Ack/Nack SEQ NUM: %u", seq);
+       LOG_INFO("Received Ack/Nack SEQ NUM: %u", seq);
 
         /* This updates sender LWE */
         if (dtcp->policies->sender_ack(dtcp, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
+        LOG_INFO("Right Window Edge set to: %d", snd_rt_wind_edge(dtcp));
         pdu_destroy(pdu);
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
@@ -621,7 +621,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         /*  SYSTEM TIME DBG_MESSAGE */
         do_gettimeofday(&te);
         milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTCP Received Contrl PDU %d at %lld", seq_num, milliseconds);
+        LOG_INFO("DTCP Received Contrl PDU %d at %lld", seq_num, milliseconds);
 
         if (seq_num > (last_ctrl + 1))
                 dtcp->policies->lost_control_pdu(dtcp);
@@ -703,7 +703,7 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
                 return -1;
 #endif
 
-        LOG_DBG("Default lost control pdu policy");
+        LOG_INFO("Default lost control pdu policy");
 
         return 0;
 
@@ -863,7 +863,7 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                 /* SYSTEM TIMESTAMP DBG MESSAGE */
                 do_gettimeofday(&te);
                 milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-                LOG_DBG("DTCP Sending ACK %d at %lld", pci_sequence_number_get(pci), milliseconds);
+                LOG_INFO("DTCP Sending ACK %d at %lld", pci_sequence_number_get(pci), milliseconds);
 
                 return 0;
         case PDU_TYPE_NACK_AND_FC:
@@ -946,7 +946,7 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
         update_rt_wind_edge(dtcp);
 
         LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
+        LOG_INFO("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
 
         return 0;
 }
