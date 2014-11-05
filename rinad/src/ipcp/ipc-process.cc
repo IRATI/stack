@@ -60,13 +60,14 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	// Initialize subcomponents
 	init_cdap_session_manager();
 	init_encoder();
+
 	delimiter_ = 0; //TODO initialize Delimiter once it is implemented
 	enrollment_task_ = new EnrollmentTask();
 	flow_allocator_ = new FlowAllocator();
 	namespace_manager_ = new NamespaceManager();
 	resource_allocator_ = new ResourceAllocator();
 	security_manager_ = new SecurityManager();
-	rib_daemon_ = new RIBDaemon();
+	rib_daemon_ = new IPCPRIBDaemonImpl();
 
 	rib_daemon_->set_ipc_process(this);
 	enrollment_task_->set_ipc_process(this);
