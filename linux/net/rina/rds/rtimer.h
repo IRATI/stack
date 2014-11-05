@@ -21,14 +21,11 @@
 #ifndef RINA_RTIMER_H
 #define RINA_RTIMER_H
 
-#include <linux/hrtimer.h>
-
 struct rtimer;
 
-void *          rtimer_get_data(struct rtimer * timer);
-struct rtimer * rtimer_create(enum hrtimer_restart (* function)(struct rtimer * timer),
+struct rtimer * rtimer_create(void (* function)(void * data),
                               void *  data);
-struct rtimer * rtimer_create_ni(enum hrtimer_restart (* function)(struct rtimer * timer),
+struct rtimer * rtimer_create_ni(void (* function)(void * data),
                                  void *  data);
 int             rtimer_destroy(struct rtimer * timer);
 

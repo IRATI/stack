@@ -617,34 +617,29 @@ static int rtx_worker(void * o)
         return 0;
 }
 
-static enum hrtimer_restart Rtimer_handler(struct rtimer * timer)
+static void Rtimer_handler(void * data)
 {
         struct rtxq *          q;
         struct rwq_work_item * item;
 
-        if (!timer) {
-                LOG_ERR("No timer to work with");
-                return HRTIMER_NORESTART;
-        }
-
-        q = (struct rtxq *) rtimer_get_data(timer);
+        q = (struct rtxq *) data;
         if (!q) {
                 LOG_ERR("No RTXQ to work with");
-                return HRTIMER_NORESTART;
+                return;
         }
 
         item = rwq_work_create_ni(rtx_worker, q);
         if (!item) {
                 LOG_ERR("Could not create twq item");
-                return HRTIMER_NORESTART;
+                return;
         }
 
         if (rwq_work_post(q->twq, item)) {
                 LOG_ERR("Could not add twq item to the wq");
-                return HRTIMER_NORESTART;
+                return;
         }
 
-        return HRTIMER_NORESTART;
+        return;
 }
 
 int rtxq_destroy(struct rtxq * q)
