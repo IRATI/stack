@@ -49,7 +49,7 @@ namespace rinad {
 
 class IPCManager;
 
-class IPCMConsole : public rina::Thread {
+class IPCMConsole {
                 static const unsigned int CMDBUFSIZE = 120;
                 static const int CMDRETCONT = 0;
                 static const int CMDRETSTOP = 1;
@@ -67,6 +67,7 @@ class IPCMConsole : public rina::Thread {
                 };
 
                 IPCManager& ipcm;
+                rina::Thread *worker;
 
                 std::map<std::string, ConsoleCmdInfo> commands_map;
                 std::ostringstream outstream;

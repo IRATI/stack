@@ -54,7 +54,6 @@ console_function(void *opaque)
 }
 
 IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
-                rina::Thread(&ta, console_function, this),
                 ipcm(r)
 {
         commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,
@@ -99,10 +98,13 @@ IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
         commands_map["query-rib"] =
                         ConsoleCmdInfo(&IPCMConsole::query_rib,
                                 "USAGE: query-rib <ipcp-id>");
+
+        worker = new rina::Thread(&ta, console_function, this);
 }
 
 IPCMConsole::~IPCMConsole() throw()
 {
+        delete worker;
 }
 
 int

@@ -31,7 +31,6 @@
 
 #include "librina/configuration.h"
 #include "librina/application.h"
-#include "librina/cdap.h"
 #include "librina/ipc-daemons.h"
 
 namespace rina {

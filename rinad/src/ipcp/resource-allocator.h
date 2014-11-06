@@ -46,7 +46,7 @@ public:
 
 private:
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 
 	///Populate the IPC Process RIB with the objects related to N-1 Flow Management
@@ -71,7 +71,7 @@ private:
 	IPDUForwardingTableGenerator * pdu_forwarding_table_generator_;
 };
 
-class DIFRegistrationRIBObject: public SimpleSetMemberRIBObject {
+class DIFRegistrationRIBObject: public SimpleSetMemberIPCPRIBObject {
 public:
 	DIFRegistrationRIBObject(IPCProcess* ipc_process,
 			const std::string& object_class,
@@ -81,7 +81,7 @@ public:
 	void deleteObject(const void* objectValue);
 };
 
-class DIFRegistrationSetRIBObject: public BaseRIBObject {
+class DIFRegistrationSetRIBObject: public BaseIPCPRIBObject {
 public:
 	DIFRegistrationSetRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
@@ -90,7 +90,7 @@ public:
                           const void* objectValue);
 };
 
-class NMinusOneFlowRIBObject: public SimpleSetMemberRIBObject {
+class NMinusOneFlowRIBObject: public SimpleSetMemberIPCPRIBObject {
 public:
 	NMinusOneFlowRIBObject(IPCProcess* ipc_process,
 			const std::string& object_class,
@@ -99,7 +99,7 @@ public:
 	std::string get_displayable_value();
 };
 
-class NMinusOneFlowSetRIBObject: public BaseRIBObject {
+class NMinusOneFlowSetRIBObject: public BaseIPCPRIBObject {
 public:
 	NMinusOneFlowSetRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;

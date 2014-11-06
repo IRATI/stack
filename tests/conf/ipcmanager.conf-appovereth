@@ -13,7 +13,7 @@
     },
     "applicationToDIFMappings": [
         {
-            "encodedAppName": "rina.utils.apps.echo.server-1--",
+            "encodedAppName": "rina.apps.echotime.server-1--",
             "difName": "300"
         }
     ],

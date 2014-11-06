@@ -35,7 +35,7 @@ namespace rinad {
 FlowRIBObject::FlowRIBObject(IPCProcess * ipc_process,
 		const std::string& object_name, const std::string& object_class,
 		IFlowAllocatorInstance * flow_allocator_instance) :
-		SimpleSetMemberRIBObject(ipc_process, object_class, object_name,
+		SimpleSetMemberIPCPRIBObject(ipc_process, object_class, object_name,
 				flow_allocator_instance->get_flow())
 {
 	flow_allocator_instance_ = flow_allocator_instance;
@@ -57,8 +57,8 @@ std::string FlowRIBObject::get_displayable_value()
 //Class Flow Set RIB Object
 FlowSetRIBObject::FlowSetRIBObject(IPCProcess * ipc_process,
 		IFlowAllocator * flow_allocator) :
-		BaseRIBObject(ipc_process, EncoderConstants::FLOW_SET_RIB_OBJECT_CLASS,
-				objectInstanceGenerator->getObjectInstance(),
+		BaseIPCPRIBObject(ipc_process, EncoderConstants::FLOW_SET_RIB_OBJECT_CLASS,
+				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::FLOW_SET_RIB_OBJECT_NAME)
 {
 	flow_allocator_ = flow_allocator;
@@ -93,7 +93,7 @@ const void* FlowSetRIBObject::get_value() const
 QoSCubeRIBObject::QoSCubeRIBObject(IPCProcess* ipc_process,
 		const std::string& object_class, const std::string& object_name,
 		const rina::QoSCube* cube) :
-		SimpleSetMemberRIBObject(ipc_process, object_class, object_name, cube)
+		SimpleSetMemberIPCPRIBObject(ipc_process, object_class, object_name, cube)
 {
 }
 
@@ -123,9 +123,9 @@ std::string QoSCubeRIBObject::get_displayable_value()
 
 //Class QoS Cube Set RIB Object
 QoSCubeSetRIBObject::QoSCubeSetRIBObject(IPCProcess * ipc_process) :
-		BaseRIBObject(ipc_process,
+		BaseIPCPRIBObject(ipc_process,
 				EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
-				objectInstanceGenerator->getObjectInstance(),
+				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME)
 {
 }
@@ -223,7 +223,7 @@ void FlowAllocator::set_dif_configuration(
 void FlowAllocator::populateRIB()
 {
 	try {
-		BaseRIBObject * object = new FlowSetRIBObject(ipc_process_, this);
+		BaseIPCPRIBObject * object = new FlowSetRIBObject(ipc_process_, this);
 		rib_daemon_->addRIBObject(object);
 		object = new QoSCubeSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
@@ -530,15 +530,15 @@ std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(
 		IPCProcess * ipc_process)
 {
 	std::list<rina::QoSCube *> qosCubes;
-	std::list<BaseRIBObject *> children;
+	std::list<rina::BaseRIBObject *> children;
 
-	BaseRIBObject * ribObject = 0;
+	rina::BaseRIBObject * ribObject = 0;
 	ribObject = ipc_process->rib_daemon_->readObject(
 			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
 			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
 	if (ribObject != 0) {
 		children = ribObject->get_children();
-		for (std::list<BaseRIBObject *>::const_iterator it = children.begin();
+		for (std::list<rina::BaseRIBObject *>::const_iterator it = children.begin();
 				it != children.end(); ++it) {
 			qosCubes.push_back((rina::QoSCube *) (*it)->get_value());
 		}
@@ -743,13 +743,13 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 		//5 get the portId of any open CDAP session
 		std::vector<int> cdapSessions;
 		cdap_session_manager_->getAllCDAPSessionIds(cdapSessions);
-		RemoteIPCProcessId remote_id;
+		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = cdapSessions[0];
 		remote_id.use_address_ = true;
 		remote_id.address_ = flow_->destination_address;
 
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::complextype;
 		robject_value.complex_value_ = flow_;
 
 		//6 Encode the flow object and send it to the destination IPC process
@@ -805,13 +805,13 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 				flow_->source_naming_info.getEncodedString().c_str());
 
 		try {
-			RemoteIPCProcessId remote_id;
+			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = underlying_port_id_;
 			remote_id.use_address_ = true;
 			remote_id.address_ = flow_->source_address;
 
-			RIBObjectValue robject_value;
-			robject_value.type_ = RIBObjectValue::complextype;
+			rina::RIBObjectValue robject_value;
+			robject_value.type_ = rina::RIBObjectValue::complextype;
 			robject_value.complex_value_ = flow_;
 
 			rib_daemon_->remoteCreateObjectResponse(
@@ -904,13 +904,13 @@ void FlowAllocatorInstance::submitAllocateResponse(
 	if (event.result == 0) {
 		//Flow has been accepted
 		try {
-			RemoteIPCProcessId remote_id;
+			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = underlying_port_id_;
 			remote_id.use_address_ = true;
 			remote_id.address_ = flow_->source_address;
 
-			RIBObjectValue robject_value;
-			robject_value.type_ = RIBObjectValue::complextype;
+			rina::RIBObjectValue robject_value;
+			robject_value.type_ = rina::RIBObjectValue::complextype;
 			robject_value.complex_value_ = flow_;
 
 			rib_daemon_->remoteCreateObjectResponse(
@@ -946,13 +946,13 @@ void FlowAllocatorInstance::submitAllocateResponse(
 
 	//Flow has been rejected
 	try {
-		RemoteIPCProcessId remote_id;
+		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = underlying_port_id_;
 		remote_id.use_address_ = true;
 		remote_id.address_ = flow_->source_address;
 
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::complextype;
 		robject_value.complex_value_ = flow_;
 
 		rib_daemon_->remoteCreateObjectResponse(
@@ -1043,7 +1043,7 @@ void FlowAllocatorInstance::submitDeallocate(
 
 		//2 Send M_DELETE
 		try {
-			RemoteIPCProcessId remote_id;
+			rina::RemoteProcessId remote_id;
 			remote_id.port_id_ = underlying_port_id_;
 			remote_id.use_address_ = true;
 			if (ipc_process_->get_address() == flow_->source_address) {
@@ -1217,9 +1217,9 @@ void TearDownFlowTimerTask::run()
 //Class DatatransferConstantsRIBObject
 DataTransferConstantsRIBObject::DataTransferConstantsRIBObject(
 		IPCProcess * ipc_process) :
-		BaseRIBObject(ipc_process,
+		BaseIPCPRIBObject(ipc_process,
 				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS,
-				objectInstanceGenerator->getObjectInstance(),
+				rina::objectInstanceGenerator->getObjectInstance(),
 				EncoderConstants::DATA_TRANSFER_CONSTANTS_RIB_OBJECT_NAME)
 {
 	cdap_session_manager_ = ipc_process->cdap_session_manager_;
@@ -1229,11 +1229,11 @@ void DataTransferConstantsRIBObject::remoteReadObject(int invoke_id,
 		rina::CDAPSessionDescriptor * cdapSessionDescriptor)
 {
 	try {
-		RemoteIPCProcessId remote_id;
+		rina::RemoteProcessId remote_id;
 		remote_id.port_id_ = cdapSessionDescriptor->port_id_;
 
-		RIBObjectValue robject_value;
-		robject_value.type_ = RIBObjectValue::complextype;
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::complextype;
 		robject_value.complex_value_ = const_cast<void*>(get_value());
 
 		rib_daemon_->remoteReadObjectResponse(

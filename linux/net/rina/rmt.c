@@ -449,7 +449,7 @@ static int send_worker(void * o)
                         continue;
                 }
 
-                LOG_DBG("Gonna send SDU to port-id %d", port_id);
+                LOG_INFO("Gonna send SDU to port-id %d", port_id);
                 if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
                         spin_lock(&tmp->egress.queues->lock);
@@ -583,7 +583,7 @@ int rmt_send(struct rmt * instance,
                 else
                         p = pdu;
 
-                LOG_DBG("Gonna send PDU to port-id: %d", pid);
+                LOG_INFO("Gonna send PDU to port-id: %d", pid);
                 if (rmt_send_port_id(instance, pid, p))
                         LOG_ERR("Failed to send a PDU to port-id %d", pid);
         }
@@ -946,7 +946,7 @@ static int forward_pdu(struct rmt * rmt,
                         LOG_ERR("Cannot write SDU to KFA port-id %d",
                                 rmt->ingress.cache.pids[0]);
         } else {
-                LOG_DBG("Could not forward PDU");
+                LOG_WARN("Could not forward PDU");
                 sdu_destroy(sdu);
         }
 
@@ -999,14 +999,14 @@ static int receive_worker(void * o)
 
                 buf = sdu_buffer_rw(sdu);
                 if (!buf) {
-                        LOG_DBG("No buffer present");
+                        LOG_ERR("No buffer present");
                         sdu_destroy(sdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
                 if (sdu_buffer_disown(sdu)) {
-                        LOG_DBG("Could not disown SDU");
+                        LOG_ERR("Could not disown SDU");
                         sdu_destroy(sdu);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
@@ -1016,7 +1016,7 @@ static int receive_worker(void * o)
 
                 pdu_ser = pdu_ser_create_buffer_with(buf);
                 if (!pdu_ser) {
-                        LOG_DBG("No ser PDU to work with");
+                        LOG_ERR("No ser PDU to work with");
                         buffer_destroy(buf);
                         spin_lock(&tmp->ingress.queues->lock);
                         continue;
