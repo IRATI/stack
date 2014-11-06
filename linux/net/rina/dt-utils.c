@@ -610,7 +610,7 @@ static int rtx_worker(void * o)
         spin_unlock(&q->lock);
 
         if (!rtxqueue_empty(q->queue))
-                        rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+                rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 
         LOG_DBG("RTX timer worker OK...");
         return 0;
