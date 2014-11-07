@@ -331,7 +331,7 @@ find_app_by_socket(struct ipcp_instance_data * data,
 }
 
 static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
-                                          const struct name *             name)
+                                              const struct name *             name)
 {
         struct reg_app_data * app;
 
@@ -479,7 +479,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         sin.sin_port = htons(0);
 
                         err = kernel_bind(flow->sock, (struct sockaddr*) &sin,
-                                        sizeof(sin));
+                                          sizeof(sin));
                         if (err < 0) {
                                 LOG_ERR("Could not bind UDP socket for alloc");
                                 sock_release(flow->sock);
@@ -669,7 +669,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
         app = find_app_by_socket(data, flow->sock);
 
         if (flow->fspec_id == 1 &&
-                        flow->port_id_state == PORT_STATE_ALLOCATED) {
+            flow->port_id_state == PORT_STATE_ALLOCATED) {
 
                 /* FIXME: more efficient locking and better cleanup */
                 spin_lock(&rcv_stop_lock);
@@ -748,7 +748,7 @@ int send_msg(struct socket *      sock,
 }
 
 static int udp_process_msg(struct ipcp_instance_data * data,
-                struct socket * sock)
+                           struct socket * sock)
 {
         struct shim_tcp_udp_flow *  flow;
         struct sockaddr_in          addr;
@@ -1111,7 +1111,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                 size = tcp_recv_partial_message(data, sock, flow);
 
         if (size == 0 && (flow->port_id_state == PORT_STATE_ALLOCATED ||
-                                flow->port_id_state == PORT_STATE_PENDING)) {
+                          flow->port_id_state == PORT_STATE_PENDING)) {
                 LOG_DBG("closing flow");
 
                 if (flow->port_id_state == PORT_STATE_ALLOCATED)
@@ -1877,7 +1877,7 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
-                        GFP_KERNEL);
+                           GFP_KERNEL);
         if (!mapping) {
                 LOG_ERR("Failed to allocate memory");
                 name_destroy(data->dif_name);
@@ -1932,7 +1932,7 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
         }
 
         mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
-                        GFP_KERNEL);
+                           GFP_KERNEL);
         if (!mapping) {
                 LOG_ERR("Failed to allocate memory");
                 undo_assignment(data);
