@@ -86,6 +86,7 @@ struct dtp {
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
+        spinlock_t                a_lock;
 };
 
 static struct dtp_sv default_sv = {
@@ -759,6 +760,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LOG_DBG("Processing A timer expiration");
 
+        spin_lock(&dtp->a_lock);
         spin_lock(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %u", LWE);
@@ -806,6 +808,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                                 spin_unlock(&seqq->lock);
+                                spin_unlock(&dtp->a_lock);
 
                                 LOG_DBG("Retransmissions will be required");
                                 return seq_num;
@@ -813,6 +816,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 spin_unlock(&seqq->lock);
+                                spin_unlock(&dtp->a_lock);
 
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -840,6 +844,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         }
         spin_unlock(&seqq->lock);
+        spin_unlock(&dtp->a_lock);
 
         return LWE;
 }
@@ -1549,6 +1554,7 @@ static int rcv_worker(void * o)
                 return -1;
         }
 
+        spin_lock(&instance->a_lock);
         spin_lock(&instance->seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         while (pdu && (seq_num == LWE + 1)) {
@@ -1565,6 +1571,7 @@ static int rcv_worker(void * o)
         if (pdu)
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
+        spin_unlock(&instance->a_lock);
 
         if (a) {
                 LOG_DBG("Going to start A timer with t = %d", a/AF);
