@@ -1400,7 +1400,7 @@ static int rcv_worker(void * o)
 
         pdu = ritem->pdu;
         if (!pdu_is_ok(pdu)) {
-                LOG_ERR("write_item contained bogus sdu");
+                LOG_ERR("Receive_item contained bogus pdu");
                 rkfree(ritem);
                 return -1;
         }
