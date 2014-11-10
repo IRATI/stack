@@ -1615,6 +1615,9 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
+        ritem->dtp = instance;
+        ritem->pdu = pdu;
+
         item = rwq_work_create_ni(rcv_worker, ritem);
         if (!item) {
                 LOG_ERR("Could not create wwq item");
