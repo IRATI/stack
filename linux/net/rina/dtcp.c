@@ -558,14 +558,14 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 
         dump_we(dtcp, pci);
         seq = pci_control_ack_seq_num(pci);
-       LOG_INFO("Received Ack/Nack SEQ NUM: %u", seq);
+        LOG_DBG("Ack/Nack SEQ NUM: %u", seq);
 
         /* This updates sender LWE */
         if (dtcp->policies->sender_ack(dtcp, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
 
         snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        LOG_INFO("Right Window Edge set to: %d", snd_rt_wind_edge(dtcp));
+        LOG_DBG("Right Window Edge: %d", snd_rt_wind_edge(dtcp));
         pdu_destroy(pdu);
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
@@ -583,10 +583,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num_t    seq_num;
         seq_num_t    seq;
         seq_num_t    last_ctrl;
-
-        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
-        struct timeval te;
-        long long milliseconds;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok");
@@ -617,11 +613,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         seq_num = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
-
-        /*  SYSTEM TIME DBG_MESSAGE */
-        do_gettimeofday(&te);
-        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_INFO("DTCP Received Contrl PDU %d at %lld", seq_num, milliseconds);
 
         if (seq_num > (last_ctrl + 1))
                 dtcp->policies->lost_control_pdu(dtcp);
@@ -703,7 +694,7 @@ static int default_lost_control_pdu(struct dtcp * dtcp)
                 return -1;
 #endif
 
-        LOG_INFO("Default lost control pdu policy");
+        LOG_DBG("Default lost control pdu policy");
 
         return 0;
 
@@ -800,10 +791,6 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
         seq_num_t    snd_rt;
         pdu_type_t   type;
 
-        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
-        struct timeval te;
-        long long milliseconds;
-
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -859,11 +846,6 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
                 dump_we(dtcp,pci);
                 if (pdu_send(dtcp, pdu))
                         return -1;
-
-                /* SYSTEM TIMESTAMP DBG MESSAGE */
-                do_gettimeofday(&te);
-                milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-                LOG_INFO("DTCP Sending ACK %d at %lld", pci_sequence_number_get(pci), milliseconds);
 
                 return 0;
         case PDU_TYPE_NACK_AND_FC:
@@ -946,7 +928,7 @@ static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
         update_rt_wind_edge(dtcp);
 
         LOG_DBG("DTCP: %pK", dtcp);
-        LOG_INFO("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
+        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
 
         return 0;
 }

@@ -254,7 +254,7 @@ void cwq_deliver(struct cwq * queue,
         }
         spin_unlock(&queue->lock);
 
-        LOG_INFO("CWQ has delivered until %u", dtcp_snd_lf_win(dtcp));
+        LOG_DBG("CWQ has delivered until %u", dtcp_snd_lf_win(dtcp));
 
         if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
                 dt_sv_window_closed_set(dt, true);
@@ -410,7 +410,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
                 pci = pdu_pci_get_rw(cur->pdu);
                 seq = pci_sequence_number_get(pci);
                 if (seq <= seq_num) {
-                        LOG_INFO("Seq num acked: %u", seq);
+                        LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
                 } else
                         return 0;
@@ -481,7 +481,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
 
         if (list_empty(&q->head)) {
                 list_add(&tmp->next, &q->head);
-                LOG_INFO("First PDU with seqnum: %d push to rtxq at: %pk",
+                LOG_DBG("First PDU with seqnum: %d push to rtxq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -499,7 +499,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
-                LOG_INFO("Last PDU with seqnum: %d push to rtxq at: %pk",
+                LOG_DBG("Last PDU with seqnum: %d push to rtxq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -514,13 +514,13 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
-                        LOG_INFO("Middle PDU with seqnum: %d push to "
+                        LOG_DBG("Middle PDU with seqnum: %d push to "
                                 "rtxq at: %pk", csn, q);
                         return 0;
                 }
         }
 
-        LOG_ERR("PDU not pushed!");
+        LOG_DBG("PDU not pushed!");
 
         return 0;
 }
@@ -536,7 +536,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
-                LOG_INFO("Checking RTX PDU %u, now: %lu >?< %lu + %lu (%u ms)",
+                LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %lu (%u ms)",
                         seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr),
                         tr);
                 if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
@@ -560,7 +560,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                 }
         }
 
-        LOG_INFO("RTXQ %pK has delivered until %u", q, seq);
+        LOG_DBG("RTXQ %pK has delivered until %u", q, seq);
 
         return 0;
 }
@@ -611,7 +611,7 @@ static int rtx_worker(void * o)
         spin_unlock(&q->lock);
 
         if (!rtxqueue_empty(q->queue))
-                        rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+                rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
 
         LOG_DBG("RTX timer worker OK...");
         return 0;
