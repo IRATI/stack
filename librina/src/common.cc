@@ -744,44 +744,44 @@ bool Parameter::operator!=(const Parameter &other) const {
 	return !(*this == other);
 }
 
-// CLASS SerializedMessage
+// Class SerializedObject
 SerializedObject::SerializedObject() {
-	size_ = 0;
-	message_ = 0;
+        size_ = 0;
+        message_ = 0;
 }
 
 SerializedObject::SerializedObject(const SerializedObject& other ) {
-	initialize(other);
+        initialize(other);
 }
 
 SerializedObject& SerializedObject::operator= (const SerializedObject &other) {
-	initialize(other);
-	return *this;
+        initialize(other);
+        return *this;
 }
 
 void SerializedObject::initialize(const SerializedObject& other ) {
-	size_ = other.size_;
-	message_ = new char[size_];
-	memcpy(message_, other.message_, size_);
+        size_ = other.size_;
+        message_ = new char[size_];
+        memcpy(message_, other.message_, size_);
 }
 
 SerializedObject::SerializedObject(char* message, int size){
-	size_ = size;
-	message_ = message;
+        size_ = size;
+        message_ = message;
 }
 SerializedObject::~SerializedObject(){
-	if (message_) {
-		delete message_;
-		message_ = 0;
-	}
+        if (message_) {
+                delete message_;
+                message_ = 0;
+        }
 }
 
 int SerializedObject::get_size() const {
-	return size_;
+        return size_;
 }
 
 char* SerializedObject::get_message() const {
-	return message_;
+        return message_;
 }
 
 /* INITIALIZATION OPERATIONS */

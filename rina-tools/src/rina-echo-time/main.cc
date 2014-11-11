@@ -1,19 +1,19 @@
 //
 // Echo time main
-// 
+//
 // Addy Bombeke <addy.bombeke@ugent.be>
 // Vincenzo Maffione <v.maffione@nextworks.it>
-// 
+//
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation; either version 2 of the License, or
 // (at your option) any later version.
-// 
+//
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU General Public License
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -45,6 +45,8 @@ int wrapped_main(int argc, char** argv)
         unsigned int size;
         unsigned int wait;
         int gap;
+        int perf_interval;
+        int dw;
         string test_type;
         string server_apn;
         string server_api;
@@ -126,6 +128,18 @@ int wrapped_main(int argc, char** argv)
                                              false,
                                              -1,
                                              "integer");
+                TCLAP::ValueArg<int> perf_interval_arg("",
+                                             "perf-interval",
+                                             "packet count interval to report perf results",
+                                             false,
+                                             -1,
+                                             "integer");
+                TCLAP::ValueArg<int> dealloc_wait_arg("",
+                                             "dealloc-wait",
+                                             "Deallocate the flow after specified timeout (s)",
+                                             false,
+                                             -1,
+                                             "integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -140,6 +154,8 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(dif_arg);
                 cmd.add(test_type_arg);
                 cmd.add(gap_arg);
+                cmd.add(perf_interval_arg);
+                cmd.add(dealloc_wait_arg);
 
                 cmd.parse(argc, argv);
 
@@ -156,6 +172,8 @@ int wrapped_main(int argc, char** argv)
                 dif_name = dif_arg.getValue();
                 test_type = test_type_arg.getValue();
                 gap = gap_arg.getValue();
+                perf_interval = perf_interval_arg.getValue();
+                dw = dealloc_wait_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -173,14 +191,15 @@ int wrapped_main(int argc, char** argv)
 
         if (listen) {
                 // Server mode
-                Server s(test_type, dif_name, server_apn, server_api);
+                Server s(test_type, dif_name, server_apn, server_api,
+                                perf_interval, dw);
 
                 s.run();
         } else {
                 // Client mode
                 Client c(test_type, dif_name, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait, gap);
+                         registration, size, wait, gap, dw);
 
                 c.run();
         }

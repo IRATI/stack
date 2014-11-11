@@ -30,7 +30,6 @@
 #include <vector>
 #include <string>
 
-#include <librina/cdap.h>
 #include <librina/ipc-process.h>
 
 #include "common/encoder.h"
@@ -146,7 +145,7 @@ public:
 
 /// Interface that must be implementing by classes that provide
 /// the behavior of an enrollment task
-class IEnrollmentTask : public IPCProcessComponent {
+class IEnrollmentTask : public IPCProcessComponent, public rina::IApplicationConnectionHandler {
 public:
 	virtual ~IEnrollmentTask(){};
 	virtual const std::list<rina::Neighbor *> get_neighbors() const = 0;
@@ -481,7 +480,7 @@ public:
 	virtual IPDUForwardingTableGenerator * get_pdu_forwarding_table_generator() const = 0;
 };
 
-/// Security Management Ð A DIF requires three security functions:
+/// Security Management ï¿½ A DIF requires three security functions:
 ///  1) Authentication to ensure that an IPC-Process wishing to join the DIF is who it
 ///  says it is and is an allowable member of the DIF (Enrollment);
 ///  2) Confidentiality and integrity of all PDUs; and
@@ -529,524 +528,30 @@ public:
 	~SecurityManager() {};
 };
 
-class IRIBDaemon;
+class IPCPRIBDaemon;
 
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
-class BaseRIBObject {
+class BaseIPCPRIBObject: public rina::BaseRIBObject {
 public:
-	virtual ~BaseRIBObject(){};
-	BaseRIBObject(IPCProcess* ipc_process,
+	virtual ~BaseIPCPRIBObject(){};
+	BaseIPCPRIBObject(IPCProcess* ipc_process,
                       const std::string& object_class,
                       long object_instance,
                       const std::string& object_name);
-	rina::RIBObjectData get_data();
-	virtual std::string get_displayable_value();
-	virtual const void* get_value() const = 0;
 
-	/// Parent-child management operations
-	const std::list<BaseRIBObject*>& get_children() const;
-	void add_child(BaseRIBObject * child);
-	void remove_child(const std::string& objectName);
-
-	/// Local invocations
-	virtual void createObject(const std::string& objectClass,
-                                  const std::string& objectName,
-                                  const void* objectValue);
-	virtual void deleteObject(const void* objectValue);
-	virtual BaseRIBObject * readObject();
-	virtual void writeObject(const void* object_value);
-	virtual void startObject(const void* object);
-	virtual void stopObject(const void* object);
-
-	/// Remote invocations, resulting from CDAP messages
-	virtual void remoteCreateObject(void * object_value, const std::string& object_name,
-			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	virtual void remoteDeleteObject(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
-	virtual void remoteReadObject(int invoke_id,
-			rina::CDAPSessionDescriptor * session_descriptor);
-	virtual void remoteCancelReadObject(int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteWriteObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteStartObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	virtual void remoteStopObject(void * object_value, int invoke_id,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-
-	std::string class_;
-	std::string name_;
-	long instance_;
-	BaseRIBObject * parent_;
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
-	Encoder * encoder_;
-
-private:
-	std::list<BaseRIBObject*> children_;
-	void operation_not_supported();
-	void operation_not_supported(const void* object);
-	void operation_not_supported(const rina::CDAPMessage * cdapMessage,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor);
-	void operartion_not_supported(const std::string& objectClass,
-                                      const std::string& objectName,
-			const void* objectValue);
-};
-
-/// Common interface for update strategies implementations. Can be on demand, scheduled, periodic
-class IUpdateStrategy {
-public:
-	virtual ~IUpdateStrategy(){};
-};
-
-/// Interface of classes that handle CDAP response message.
-class ICDAPResponseMessageHandler {
-public:
-	virtual ~ICDAPResponseMessageHandler(){};
-	virtual void createResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void deleteResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void readResponse(int result, const std::string& result_reason,
-			void * object_value, const std::string& object_name,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void cancelReadResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void writeResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void startResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
-	virtual void stopResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) = 0;
-};
-
-class BaseCDAPResponseMessageHandler: public ICDAPResponseMessageHandler {
-public:
-	virtual void createResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-                (void) result; // Stop compiler barfs
-                (void) result_reason; //Stop compiler barfs
-                (void) object_value; //Stop compiler barfs
-                (void) session_descriptor; // Stop compiler barfs
-	}
-	virtual void deleteResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * session_descriptor) {
-				(void) result; // Stop compiler barfs
-				(void) result_reason; //Stop compiler barfs
-				(void) session_descriptor; // Stop compiler barfs
-	}
-	virtual void readResponse(int result, const std::string& result_reason,
-			void * object_value, const std::string& object_name,
-			rina::CDAPSessionDescriptor * session_descriptor) {
-				(void) result; // Stop compiler barfs
-				(void) result_reason; //Stop compiler barfs
-				(void) object_value; //Stop compiler barfs
-				(void) object_name; //Stop compiler barfs
-				(void) session_descriptor; // Stop compiler barfs
-	}
-	virtual void cancelReadResponse(int result, const std::string& result_reason,
-			rina::CDAPSessionDescriptor * cdapSessionDescriptor) {
-				(void) result; // Stop compiler barfs
-				(void) result_reason; //Stop compiler barfs
-                (void) cdapSessionDescriptor; // Stop compiler barfs
-	}
-	virtual void writeResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-                (void) result; // Stop compiler barfs
-                (void) result_reason; // Stop compiler barfs
-                (void) object_value; // Stop compiler barfs
-                (void) session_descriptor; // Stop compiler barfs
-	}
-	virtual void startResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-				(void) result; // Stop compiler barfs
-				(void) result_reason; // Stop compiler barfs
-				(void) object_value; // Stop compiler barfs
-				(void) session_descriptor; // Stop compiler barfs
-	}
-	virtual void stopResponse(int result, const std::string& result_reason,
-			void * object_value, rina::CDAPSessionDescriptor * session_descriptor) {
-				(void) result; // Stop compiler barfs
-				(void) result_reason; // Stop compiler barfs
-				(void) object_value; // Stop compiler barfs
-				(void) session_descriptor; // Stop compiler barfs
-	}
-};
-
-/// Part of the RIB Daemon API to control if the changes have to be notified
-class NotificationPolicy {
-public:
-	NotificationPolicy(const std::list<int>& cdap_session_ids);
-	std::list<int> cdap_session_ids_;
-};
-
-///Identifies a remote IPC Process by address
-///or N-1 port-id of a flow we have in common with him
-class RemoteIPCProcessId {
-public:
-	RemoteIPCProcessId();
-	bool use_address_;
-	int port_id_;
-	unsigned int address_;
-};
-
-class RIBObjectValue {
-public:
-	enum objectType{
-		notype,
-		inttype,
-		longtype,
-		stringtype,
-		complextype,
-		floattype,
-		doubletype,
-		booltype,
-	};
-
-	RIBObjectValue();
-
-	objectType type_;
-	int int_value_;
-	bool bool_value_;
-	long long_value_;
-	double double_value_;
-	float float_value_;
-	std::string string_value_;
-	void * complex_value_;
+	IPCPRIBDaemon * rib_daemon_;
 };
 
 /// Interface that provides the RIB Daemon API
-class IRIBDaemon : public IPCProcessComponent, public EventManager {
+class IPCPRIBDaemon : public rina::RIBDaemon, public IPCProcessComponent, public EventManager {
 public:
-	virtual ~IRIBDaemon(){};
-
-	/// Add an object to the RIB
-	/// @param ribHandler
-	/// @param objectName
-	/// @throws Exception
-	virtual void addRIBObject(BaseRIBObject * ribObject) = 0;
-
-	/// Remove an object from the RIB. Ownership is passed to the RIB daemon,
-	/// who will delete the memory associated to the object.
-	/// @param ribObject
-	/// @throws Exception
-	virtual void removeRIBObject(BaseRIBObject * ribObject) = 0;
-
-	/// Remove an object from the RIB by objectname. Ownership is passed to the RIB daemon,
-	/// who will delete the memory associated to the object.
-	/// @param objectName
-	/// @throws Exception
-	virtual void removeRIBObject(const std::string& objectName) = 0;
-
-	/// Send an information update, consisting on a set of CDAP messages, using the updateStrategy update strategy
-	/// (on demand, scheduled). Takes ownership of the CDAP messages
-	/// @param cdapMessages
-	/// @param updateStrategy
-	virtual void sendMessages(const std::list<const rina::CDAPMessage*>& cdapMessages,
-			const IUpdateStrategy& updateStrategy) = 0;
-
-	/// Causes a CDAP message to be sent. Takes ownership of the CDAP message
-	/// @param cdapMessage the message to be sent
-	/// @param sessionId the CDAP session id
-	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
-	/// @throws Exception
-	virtual void sendMessage(const rina::CDAPMessage & cdapMessage,
-                                 int sessionId,
-                                 ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
-
-	/// Causes a CDAP message to be sent. Takes ownership of the CDAPMessage
-	/// @param cdapMessage the message to be sent
-	/// @param sessionId the CDAP session id
-	/// @param address the address of the IPC Process to send the Message To
-	/// @param cdapMessageHandler the class to be called when the response message is received (if required)
-	/// @throws Exception
-	virtual void sendMessageToAddress(const rina::CDAPMessage & cdapMessage,
-                                          int sessionId,
-                                          unsigned int address,
-                                          ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
-
-	/// The RIB Daemon has to process the CDAP message and,
-	/// if valid, it will either pass it to interested subscribers and/or write to storage and/or modify other
-	/// tasks data structures. It may be the case that the CDAP message is not addressed to an application
-	/// entity within this IPC process, then the RMT may decide to rely the message to the right destination
-	/// (after consulting an adequate forwarding table).
-	///
-	/// This operation takes ownership of the message argument.
-	///
-	/// @param message the encoded CDAP message
-	/// @param length the length of the encoded message
-	/// @param portId the portId the message came from
-	virtual void cdapMessageDelivered(char* message,
-                                          int length,
-                                          int portId) = 0;
-
-	/// Create or update an object in the RIB
-	/// @param objectClass the class of the object
-	/// @param objectName the name of the object
-	/// @param objectInstance the instance of the object
-	/// @param objectValue the value of the object
-	/// @param notify if not null notify some of the neighbors about the change
-	/// @throws Exception
-	virtual void createObject(const std::string& objectClass,
-                                  const std::string& objectName,
-                                  const void* objectValue,
-                                  const NotificationPolicy * notificationPolicy) = 0;
-
-	/// Delete an object from the RIB
-	/// @param objectClass the class of the object
-	/// @param objectName the name of the object
-	/// @param objectInstance the instance of the object
-	/// @param object the value of the object
-	/// @param notify if not null notify some of the neighbors about the change
-	/// @throws Exception
-	virtual void deleteObject(const std::string& objectClass,
-                                  const std::string& objectName,
-                                  const void* objectValue,
-                                  const NotificationPolicy * notificationPolicy) = 0;
-
-	/// Read an object from the RIB
-	/// @param objectClass the class of the object
-	/// @param objectName the name of the object
-	/// @param objectInstance the instance of the object
-	/// @return a RIB object
-	/// @throws Exception
-	virtual BaseRIBObject * readObject(const std::string& objectClass,
-			const std::string& objectName) = 0;
-
-	/// Update the value of an object in the RIB
-    /// @param objectClass the class of the object
-	/// @param objectName the name of the object
-	/// @param objectInstance the instance of the object
-	/// @param objectValue the new value of the object
-	/// @param notify if not null notify some of the neighbors about the change
-	/// @throws Exception
-	virtual void writeObject(const std::string& objectClass,
-                                 const std::string& objectName,
-                                 const void* objectValue) = 0;
-
-	/// Start an object at the RIB
-	/// @param objectClass the class of the object
-	/// @param objectName the name of the object
-	/// @param objectInstance the instance of the object
-	/// @param objectValue the new value of the object
-	/// @throws Exception
-	virtual void startObject(const std::string& objectClass,
-                                 const std::string& objectName,
-                                 const void* objectValue) = 0;
-
-	/// Stop an object at the RIB
-	/// @param objectClass the class of the object
-	/// @param objectName the name of the object
-	/// @param objectInstance the instance of the object
-	/// @param objectValue the new value of the object
-	/// @throws Exception
-	virtual void stopObject(const std::string& objectClass,
-                                const std::string& objectName,
-                                const void* objectValue) = 0;
+	virtual ~IPCPRIBDaemon(){};
 
 	/// Process a Query RIB Request from the IPC Manager
 	/// @param event
 	virtual void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event) = 0;
-
-	virtual std::list<BaseRIBObject *> getRIBObjects() = 0;
-
-	/// Request the establishment of an application connection with another IPC Process
-	/// @param auth_mech
-	/// @param auth_value
-	/// @param dest_ae_inst
-	/// @param dest_ae_name
-	/// @param dest_ap_inst
-	/// @param dest_ap_name
-	/// @param src_ae_inst
-	/// @param src_ae_name
-	/// @param src_ap_inst
-	/// @param src_ap_name
-	/// @param remote_id
-	virtual void openApplicationConnection(rina::CDAPMessage::AuthTypes auth_mech,
-			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
-			const std::string &dest_ae_name, const std::string &dest_ap_inst,
-			const std::string &dest_ap_name, const std::string &src_ae_inst,
-			const std::string &src_ae_name, const std::string &src_ap_inst,
-			const std::string &src_ap_name, const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Request an application connection to be closed
-	/// @param remote_id
-	/// @param response_handler
-	virtual void closeApplicationConnection(const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Invoke a create operation on an object in the RIB of a remote IPC Process
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param scope
-	/// @param remote_id
-	/// @param response_handler
-	virtual void remoteCreateObject(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Invoke a delete operation on an object in the RIB of a remote IPC Process
-	/// @param object_class
-	/// @param object_name
-	/// @param scope
-	/// @param remote_id
-	/// @param response_handler
-	virtual void remoteDeleteObject(const std::string& object_class, const std::string& object_name,
-			int scope, const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Invoke a read operation on an object in the RIB of a remote IPC Process
-	/// @param object_class
-	/// @param object_name
-	/// @param scope
-	/// @param remote_id
-	/// @param response_handler
-	virtual void remoteReadObject(const std::string& object_class, const std::string& object_name,
-			int scope, const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Invoke a write operation on an object in the RIB of a remote IPC Process
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param scope
-	/// @param remote_id
-	/// @param response_handler
-	virtual void remoteWriteObject(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Invoke a start operation on an object in the RIB of a remote IPC Process
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param scope
-	/// @param remote_id
-	/// @param response_handler
-	virtual void remoteStartObject(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Invoke a stop operation on an object in the RIB of a remote IPC Process
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param scope
-	/// @param remote_id
-	/// @param response_handler
-	virtual void remoteStopObject(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int scope, const RemoteIPCProcessId& remote_id,
-			ICDAPResponseMessageHandler * response_handler) = 0;
-
-	/// Causes the RIB Daemon to send an open connection response message to the IPC Process identified
-	/// by remote_id
-	/// @param auth_mech
-	/// @param auth_value
-	/// @param dest_ae_inst
-	/// @param dest_ae_name
-	/// @param dest_ap_inst
-	/// @param dest_ap_name
-	/// @param result
-	/// @param result_reason
-	/// @param src_ae_inst
-	/// @param src_ae_name
-	/// @param src_ap_inst
-	/// @param src_ap_name
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void openApplicationConnectionResponse(rina::CDAPMessage::AuthTypes auth_mech,
-			const rina::AuthValue &auth_value, const std::string &dest_ae_inst,
-			const std::string &dest_ae_name, const std::string &dest_ap_inst, const std::string &dest_ap_name,
-			int result, const std::string &result_reason, const std::string &src_ae_inst,
-			const std::string &src_ae_name, const std::string &src_ap_inst, const std::string &src_ap_name,
-			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to terminate an application connection with an IPC Process identified
-	/// by remote_id
-	/// @param result
-	/// @param result_reason
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void closeApplicationConnectionResponse(int result, const std::string result_reason,
-			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to send a create response message to the IPC Process identified
-	/// by remote_id
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param result
-	/// @param result_reason
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void remoteCreateObjectResponse(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
-			const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to send a delete response message to the IPC Process identified
-	/// by remote_id
-	/// @param object_class
-	/// @param object_name
-	/// @param result
-	/// @param result_reason
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void remoteDeleteObjectResponse(const std::string& object_class, const std::string& object_name,
-			int result, const std::string result_reason, int invoke_id,
-			const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to send a read response message to the IPC Process identified
-	/// by remote_id
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param result
-	/// @param result_reason
-	/// @param read_incomplete
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void remoteReadObjectResponse(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int result, const std::string result_reason, bool read_incomplete,
-			int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
-	/// by remote_id
-	/// @param object_class
-	/// @param object_name
-	/// @param result
-	/// @param result_reason
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void remoteWriteObjectResponse(const std::string& object_class, const std::string& object_name,
-			int result, const std::string result_reason, int invoke_id, const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
-	/// by remote_id
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param result
-	/// @param result_reason
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void remoteStartObjectResponse(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
-			const RemoteIPCProcessId& remote_id) = 0;
-
-	/// Causes the RIB Daemon to send a start response message to the IPC Process identified
-	/// by remote_id
-	/// @param object_class
-	/// @param object_name
-	/// @param object_value
-	/// @param result
-	/// @param result_reason
-	/// @param invoke_id
-	/// @param remote_id
-	virtual void remoteStopObjectResponse(const std::string& object_class, const std::string& object_name,
-			RIBObjectValue& object_value, int result, const std::string result_reason, int invoke_id,
-			const RemoteIPCProcessId& remote_id) = 0;
 };
 
 /// IPC Process interface
@@ -1056,16 +561,16 @@ public:
 	static const std::string DATA_TRANSFER_AE;
 	static const int DEFAULT_MAX_SDU_SIZE_IN_BYTES;
 
-	IDelimiter * delimiter;
-	Encoder * encoder;
-	rina::CDAPSessionManagerInterface* cdap_session_manager;
-	IEnrollmentTask * enrollment_task;
-	IFlowAllocator * flow_allocator;
-	INamespaceManager * namespace_manager;
-	IResourceAllocator * resource_allocator;
-	SecurityManager * security_manager;
-	IRIBDaemon * rib_daemon;
-	rina::ApplicationProcessNamingInformation name;
+	IDelimiter * delimiter_;
+	Encoder * encoder_;
+	rina::CDAPSessionManagerInterface* cdap_session_manager_;
+	IEnrollmentTask * enrollment_task_;
+	IFlowAllocator * flow_allocator_;
+	INamespaceManager * namespace_manager_;
+	IResourceAllocator * resource_allocator_;
+	SecurityManager * security_manager_;
+	IPCPRIBDaemon * rib_daemon_;
+	rina::ApplicationProcessNamingInformation name_;
 
         IPCProcess();
 	virtual ~IPCProcess(){};
@@ -1093,25 +598,12 @@ public:
                                             IPolicySet * instance) = 0;
 };
 
-/// Generates unique object instances
-class ObjectInstanceGenerator: public rina::Lockable {
-public:
-	ObjectInstanceGenerator();
-	long getObjectInstance();
-private:
-	long instance_;
-};
-
-/// Make Object instance generator singleton
-extern Singleton<ObjectInstanceGenerator> objectInstanceGenerator;
-
-
 /// A simple RIB object that just acts as a wrapper. Represents an object in the RIB that just
 /// can be read or written, and whose read/write operations have no side effects other than
 /// updating the value of the object
-class SimpleRIBObject: public BaseRIBObject {
+class SimpleIPCPRIBObject: public BaseIPCPRIBObject {
 public:
-	SimpleRIBObject(IPCProcess* ipc_process,
+        SimpleIPCPRIBObject(IPCProcess* ipc_process,
                         const std::string& object_class,
 			const std::string& object_name,
                         const void* object_value);
@@ -1128,9 +620,9 @@ private:
 };
 
 /// Class SimpleSetRIBObject. A RIB object that is a set and has no side effects
-class SimpleSetRIBObject: public SimpleRIBObject {
+class SimpleSetIPCPRIBObject: public SimpleIPCPRIBObject {
 public:
-	SimpleSetRIBObject(IPCProcess * ipc_process,
+        SimpleSetIPCPRIBObject(IPCProcess * ipc_process,
                            const std::string& object_class,
                            const std::string& set_member_object_class,
                            const std::string& object_name);
@@ -1143,9 +635,9 @@ private:
 };
 
 /// Class SimpleSetMemberRIBObject. A RIB object that is member of a set
-class SimpleSetMemberRIBObject: public SimpleRIBObject {
+class SimpleSetMemberIPCPRIBObject: public SimpleIPCPRIBObject {
 public:
-	SimpleSetMemberRIBObject(IPCProcess* ipc_process,
+        SimpleSetMemberIPCPRIBObject(IPCProcess* ipc_process,
                                  const std::string& object_class,
                                  const std::string& object_name,
                                  const void* object_value);

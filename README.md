@@ -1,6 +1,15 @@
-This repository holds a RINA stack implementation
+This source code was developed by members of the IRATI project, funded by
+the European commission under the 7th Framework Programme grant number 317814. 
 
-Please refer to https://github.com/dana-i2cat/irati/blob/irati/README-install.md
-for installation related instructions
+The contributing members of the project are (alphabetical order):
 
-This work is partially funded by the EU FP7 IRATI Project
+Addy Bombeke          - Ghent University/iMinds, BE
+Bernat Gaston         - Fundacio i2cat, ES
+Dimitri Staessens     - Ghent University/iMinds, BE
+Douwe De Bock         - Ghent University/iMinds, BE
+Eduard Grasa          - Fundacio i2cat, ES
+Francesco Salvestrini - Nextworks s.r.l., IT
+Leonardo Bergesio     - Fundacio i2cat, ES
+Miquel Tarzan         - Fundacio i2cat, ES
+Sander Vrijders       - Ghent University/iMinds, BE
+Vincenzo Maffione     - Nextworks s.r.l., IT

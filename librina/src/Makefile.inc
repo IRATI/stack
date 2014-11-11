@@ -1,5 +1,5 @@
 protoSOURCES =
-
+DISTCLEANFILES =
 
 CDAP.stamp: CDAP.proto
 	rm -f CDAP.tmp
@@ -22,12 +22,14 @@ CDAP.pb.h CDAP.pb.cc: CDAP.stamp
 	  fi; \
 	fi
 
-MOSTLYCLEANFILES +=				\
-	CDAP.tmp
+DISTCLEANFILES +=                               \
+        CDAP.pb.h CDAP.pb.cc CDAP.stamp
 
-EXTRA_DIST +=					\
-	CDAP.proto				\
-	CDAP.stamp
+MOSTLYCLEANFILES +=                             \
+        CDAP.tmp
+
+EXTRA_DIST +=                                   \
+        CDAP.proto
 
 protoSOURCES += CDAP.pb.cc CDAP.pb.h
 

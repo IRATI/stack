@@ -175,6 +175,7 @@ void log(LOG_LEVEL level, const char * fmt, ...)
         if (logOutputStream) {
                 fprintf(logOutputStream, "%d(%ld)", getProcessId(), time(0));
                 vfprintf(logOutputStream, fmt, args);
+                fflush(logOutputStream);
         }
 	pthread_rwlock_unlock(&outputStreamLock);
 

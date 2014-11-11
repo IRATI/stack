@@ -63,7 +63,7 @@ private:
 	int delay_;
 };
 
-class WatchdogRIBObject: public BaseRIBObject, public BaseCDAPResponseMessageHandler {
+class WatchdogRIBObject: public BaseIPCPRIBObject, public rina::BaseCDAPResponseMessageHandler {
 public:
 	WatchdogRIBObject(IPCProcess * ipc_process, const rina::DIFConfiguration& dif_configuration);
 	~WatchdogRIBObject();
@@ -88,7 +88,7 @@ private:
 	rina::Lockable * lock_;
 };
 
-class NeighborRIBObject: public SimpleSetMemberRIBObject {
+class NeighborRIBObject: public SimpleSetMemberIPCPRIBObject {
 public:
 	NeighborRIBObject(IPCProcess* ipc_process,
 			const std::string& object_class,
@@ -97,7 +97,7 @@ public:
 	std::string get_displayable_value();
 };
 
-class NeighborSetRIBObject: public BaseRIBObject {
+class NeighborSetRIBObject: public BaseIPCPRIBObject {
 public:
 	NeighborSetRIBObject(IPCProcess * ipc_process);
 	~NeighborSetRIBObject();
@@ -117,7 +117,7 @@ private:
 };
 
 /// Handles the operations related to the "daf.management.naming.currentsynonym" objects
-class AddressRIBObject: public BaseRIBObject {
+class AddressRIBObject: public BaseIPCPRIBObject {
 public:
 	AddressRIBObject(IPCProcess * ipc_process);
 	~AddressRIBObject();
@@ -146,7 +146,7 @@ public:
 /// The base class that contains the common aspects of both
 /// enrollment state machines: the enroller side and the enrolle
 /// side
-class BaseEnrollmentStateMachine : public BaseCDAPResponseMessageHandler {
+class BaseEnrollmentStateMachine : public rina::BaseCDAPResponseMessageHandler {
 	friend class EnrollmentFailedTimerTask;
 public:
 	static const std::string CONNECT_RESPONSE_TIMEOUT;
@@ -231,7 +231,7 @@ protected:
 	void sendCreateInformation(const std::string& objectClass, const std::string& objectName);
 
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	Encoder * encoder_;
 	IEnrollmentTask * enrollment_task_;
@@ -429,7 +429,7 @@ private:
 	void nMinusOneFlowAllocationFailed(NMinusOneFlowAllocationFailedEvent * event);
 
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	IResourceAllocator * resource_allocator_;
 	INamespaceManager * namespace_manager_;
@@ -441,13 +441,13 @@ private:
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	ThreadSafeMapOfPointers<std::string, BaseEnrollmentStateMachine> state_machines_;
+	rina::ThreadSafeMapOfPointers<std::string, BaseEnrollmentStateMachine> state_machines_;
 
-	ThreadSafeMapOfPointers<unsigned int, EnrollmentRequest> port_ids_pending_to_be_allocated_;
+	rina::ThreadSafeMapOfPointers<unsigned int, EnrollmentRequest> port_ids_pending_to_be_allocated_;
 };
 
 /// Handles the operations related to the "daf.management.enrollment" objects
-class EnrollmentRIBObject: public BaseRIBObject {
+class EnrollmentRIBObject: public BaseIPCPRIBObject {
 public:
 	EnrollmentRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
@@ -464,7 +464,7 @@ private:
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object
-class OperationalStatusRIBObject: public BaseRIBObject {
+class OperationalStatusRIBObject: public BaseIPCPRIBObject {
 public:
 	OperationalStatusRIBObject(IPCProcess * ipc_process);
 	const void* get_value() const;
@@ -482,7 +482,7 @@ private:
 };
 
 /// Encoder of a list of EnrollmentInformationRequest
-class EnrollmentInformationRequestEncoder: public EncoderInterface {
+class EnrollmentInformationRequestEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;

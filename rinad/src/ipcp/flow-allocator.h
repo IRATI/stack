@@ -120,7 +120,7 @@ public:
 };
 
 /// Representation of a flow object in the RIB
-class FlowRIBObject: public SimpleSetMemberRIBObject {
+class FlowRIBObject: public SimpleSetMemberIPCPRIBObject {
 public:
 	FlowRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			const std::string& object_class,
@@ -133,12 +133,12 @@ private:
 };
 
 /// Representation of a set of Flow objects in the RIB
-class FlowSetRIBObject: public BaseRIBObject {
+class FlowSetRIBObject: public BaseIPCPRIBObject {
 public:
 	FlowSetRIBObject(IPCProcess * ipc_process, IFlowAllocator * flow_allocator);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
 			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	using BaseRIBObject::createObject;
+	using rina::BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
 	const void* get_value() const;
@@ -147,7 +147,7 @@ private:
 	IFlowAllocator * flow_allocator_;
 };
 
-class QoSCubeRIBObject: public SimpleSetMemberRIBObject {
+class QoSCubeRIBObject: public SimpleSetMemberIPCPRIBObject {
 public:
 	QoSCubeRIBObject(IPCProcess* ipc_process,
 			const std::string& object_class,
@@ -157,12 +157,12 @@ public:
 };
 
 /// Representation of a set of QoS cubes in the RIB
-class QoSCubeSetRIBObject: public BaseRIBObject {
+class QoSCubeSetRIBObject: public BaseIPCPRIBObject {
 public:
 	QoSCubeSetRIBObject(IPCProcess * ipc_process);
 	void remoteCreateObject(void * object_value, const std::string& object_name,
 			int invoke_id, rina::CDAPSessionDescriptor * session_descriptor);
-	using BaseRIBObject::createObject;
+	using rina::BaseRIBObject::createObject;
 	void createObject(const std::string& objectClass,
 			const std::string& objectName, const void* objectValue);
 	void deleteObject(const void* objectValue);
@@ -191,10 +191,10 @@ public:
 
 private:
 	/// Flow allocator instances, each one associated to a port-id
-	ThreadSafeMapOfPointers<int, IFlowAllocatorInstance> flow_allocator_instances_;
+	rina::ThreadSafeMapOfPointers<int, IFlowAllocatorInstance> flow_allocator_instances_;
 
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	Encoder * encoder_;
 	INamespaceManager * namespace_manager_;
@@ -237,7 +237,7 @@ private:
 
 ///Implementation of the FlowAllocatorInstance
 class FlowAllocatorInstance: public IFlowAllocatorInstance,
-		public BaseCDAPResponseMessageHandler {
+		public rina::BaseCDAPResponseMessageHandler {
 public:
 	enum FAIState {
 		NO_STATE,
@@ -299,7 +299,7 @@ private:
 	IFlowAllocator * flow_allocator_;
 	rina::CDAPSessionManagerInterface * cdap_session_manager_;
 	Encoder * encoder_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 	SecurityManager * security_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;
@@ -351,7 +351,7 @@ private:
 	bool requestor_;
 };
 
-class DataTransferConstantsRIBObject: public BaseRIBObject {
+class DataTransferConstantsRIBObject: public BaseIPCPRIBObject {
 public:
 	DataTransferConstantsRIBObject(IPCProcess * ipc_process);
 	void remoteReadObject(int invoke_id,
@@ -370,7 +370,7 @@ private:
 };
 
 /// Encoder of the Flow
-class FlowEncoder: public EncoderInterface {
+class FlowEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;

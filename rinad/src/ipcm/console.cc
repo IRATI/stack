@@ -54,7 +54,6 @@ console_function(void *opaque)
 }
 
 IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
-                rina::Thread(&ta, console_function, this),
                 ipcm(r)
 {
         commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,
@@ -108,10 +107,13 @@ IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
                         ConsoleCmdInfo(&IPCMConsole::set_policy_set_param,
                                 "USAGE: set-policy-set-param <ipcp-id> "
                                 "<policy-path> <param-name> <param-value>");
+
+        worker = new rina::Thread(&ta, console_function, this);
 }
 
 IPCMConsole::~IPCMConsole() throw()
 {
+        delete worker;
 }
 
 int

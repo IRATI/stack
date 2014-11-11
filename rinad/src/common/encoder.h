@@ -115,43 +115,18 @@ public:
 	static const std::string WHATEVERCAST_NAME_RIB_OBJECT_CLASS;
 };
 
-/// Encodes and Decodes an object to/from bytes)
-class EncoderInterface {
-public:
-	virtual ~EncoderInterface(){};
-	 /// Converts an object to a byte array, if this object is recognized by the encoder
-	 /// @param object
-	 /// @throws exception if the object is not recognized by the encoder
-	 /// @return
-	virtual const rina::SerializedObject* encode(const void* object) = 0;
-	 /// Converts a byte array to an object of the type specified by "className"
-	 /// @param byte[] serializedObject
-	 /// @param objectClass The type of object to be decoded
-	 /// @throws exception if the byte array is not an encoded in a way that the encoder can recognize, or the
-	 /// byte array value doesn't correspond to an object of the type "className"
-	 /// @return
-	virtual void* decode(const rina::ObjectValueInterface * serialized_object) const = 0;
-};
-
-/// Factory that provides and Encoder instance
-class EncoderFactoryInterface {
-public:
-	virtual ~EncoderFactoryInterface(){};
-	virtual EncoderInterface* createEncoderInstance() = 0;
-};
-
 /// Implements an encoder that delegates the encoding/decoding
 /// tasks to different subencoders. A different encoder is registered
 /// by each type of object. The encoder also implements static helper functions
 /// to encode/decode sub-objects that are shared between two or more classes.
-class Encoder {
+class Encoder: public rina::IEncoder {
 public:
 	~Encoder();
 	/// Set the class that serializes/unserializes an object class
 	/// @param objectClass The object class
 	/// @param serializer
 
-	void addEncoder(const std::string& object_class, EncoderInterface *encoder);
+	void addEncoder(const std::string& object_class, rina::EncoderInterface *encoder);
 	/// Converts an object of the type specified by "className" to a byte array.
 	/// @param object
 	/// @return
@@ -200,20 +175,20 @@ private:
 	/// and exception if no encoder is found
 	/// @param object_class
 	/// @return A pointer to the encoder associated to object class
-	EncoderInterface * get_encoder(const std::string& object_class);
+	rina::EncoderInterface * get_encoder(const std::string& object_class);
 
-	std::map<std::string, EncoderInterface*> encoders_;
+	std::map<std::string, rina::EncoderInterface*> encoders_;
 };
 
 /// Encoder of the DataTransferConstants object
-class DataTransferConstantsEncoder: public EncoderInterface {
+class DataTransferConstantsEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of DirectoryForwardingTableEntry object
-class DirectoryForwardingTableEntryEncoder: public EncoderInterface {
+class DirectoryForwardingTableEntryEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
@@ -224,14 +199,14 @@ public:
 };
 
 /// Encoder of a list of DirectoryForwardingTableEntries
-class DirectoryForwardingTableEntryListEncoder: public EncoderInterface {
+class DirectoryForwardingTableEntryListEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of QoSCube object
-class QoSCubeEncoder: public EncoderInterface {
+class QoSCubeEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
@@ -242,14 +217,14 @@ public:
 };
 
 /// Encoder of a list of QoSCubes
-class QoSCubeListEncoder: public EncoderInterface {
+class QoSCubeListEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of WhatevercastName object
-class WhatevercastNameEncoder: public EncoderInterface {
+class WhatevercastNameEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
@@ -260,14 +235,14 @@ public:
 };
 
 /// Encoder of a list of WhatevercastNames
-class WhatevercastNameListEncoder: public EncoderInterface {
+class WhatevercastNameListEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of Neighbor object
-class NeighborEncoder: public EncoderInterface {
+class NeighborEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
@@ -278,14 +253,14 @@ public:
 };
 
 /// Encoder of a list of Neighbors
-class NeighborListEncoder: public EncoderInterface {
+class NeighborListEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;
 };
 
 /// Encoder of Watchdog
-class WatchdogEncoder: public EncoderInterface {
+class WatchdogEncoder: public rina::EncoderInterface {
 public:
 	const rina::SerializedObject* encode(const void* object);
 	void* decode(const rina::ObjectValueInterface * object_value) const;

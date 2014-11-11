@@ -277,6 +277,11 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 #endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
+        if (dtcp_snd_lf_win_set(dtcp,
+                                pci_sequence_number_get(pdu_pci_get_ro(pdu))))
+                LOG_ERR("Problems setting sender left window edge "
+                        "in default_transmission");
+
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
                         pci_qos_id(pdu_pci_get_ro(pdu)),
@@ -888,7 +893,8 @@ static int post_worker(void * o)
         }
 
         if (!seqq_is_empty(dtp->seqq)) {
-                LOG_DBG("Going to restart A timer with a = %d and a/AF = %d", a, a/AF);
+                LOG_DBG("Going to restart A timer with a = %d and a/AF = %d",
+                        a, a/AF);
                 rtimer_start(dtp->timers.a, a/AF);
         }
         LOG_DBG("Finished post worker for dtp: %pK", dtp);
@@ -1061,10 +1067,10 @@ int dtp_destroy(struct dtp * instance)
         return 0;
 }
 
-static bool cwq_is_closed(struct dtp_sv * sv,
-                          struct dt *     dt,
-                          struct dtcp *   dtcp,
-                          seq_num_t       seq_num)
+static bool window_is_closed(struct dtp_sv * sv,
+                             struct dt *     dt,
+                             struct dtcp *   dtcp,
+                             seq_num_t       seq_num)
 {
         bool retval = false;
 
@@ -1212,10 +1218,10 @@ int dtp_write(struct dtp * instance,
         if (dtcp) {
                 if (sv->window_based || sv->rate_based) {
                         /* NOTE: Might close window */
-                        if (cwq_is_closed(sv,
-                                          dt,
-                                          dtcp,
-                                          pci_sequence_number_get(pci))) {
+                        if (window_is_closed(sv,
+                                             dt,
+                                             dtcp,
+                                             pci_sequence_number_get(pci))) {
                                 if (policies->closed_window(instance, pdu)) {
                                         LOG_ERR("Problems with the "
                                                 "closed window policy");

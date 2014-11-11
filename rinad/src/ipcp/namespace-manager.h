@@ -30,7 +30,7 @@
 
 namespace rinad {
 
-class WhateverCastNameSetRIBObject: public BaseRIBObject {
+class WhateverCastNameSetRIBObject: public BaseIPCPRIBObject {
 public:
 	WhateverCastNameSetRIBObject(IPCProcess * ipc_process);
 	~WhateverCastNameSetRIBObject();
@@ -47,7 +47,7 @@ private:
 	rina::Lockable * lock_;
 };
 
-class DirectoryForwardingTableEntryRIBObject: public SimpleSetMemberRIBObject {
+class DirectoryForwardingTableEntryRIBObject: public SimpleSetMemberIPCPRIBObject {
 public:
 	DirectoryForwardingTableEntryRIBObject(IPCProcess * ipc_process, const std::string& object_name,
 			rina::DirectoryForwardingTableEntry * entry);
@@ -64,7 +64,7 @@ private:
 	rina::ApplicationProcessNamingInformation ap_name_entry_;
 };
 
-class DirectoryForwardingTableEntrySetRIBObject: public BaseRIBObject, public EventListener {
+class DirectoryForwardingTableEntrySetRIBObject: public BaseIPCPRIBObject, public EventListener {
 public:
 	DirectoryForwardingTableEntrySetRIBObject(IPCProcess * ipc_process);
 
@@ -122,13 +122,13 @@ public:
 
 private:
 	/// The directory forwarding table
-	ThreadSafeMapOfPointers<std::string, rina::DirectoryForwardingTableEntry> dft_;
+	rina::ThreadSafeMapOfPointers<std::string, rina::DirectoryForwardingTableEntry> dft_;
 
 	/// Applications registered in this IPC Process
-	ThreadSafeMapOfPointers<std::string, rina::ApplicationRegistrationInformation> registrations_;
+	rina::ThreadSafeMapOfPointers<std::string, rina::ApplicationRegistrationInformation> registrations_;
 
 	IPCProcess * ipc_process_;
-	IRIBDaemon * rib_daemon_;
+	IPCPRIBDaemon * rib_daemon_;
 
 	void populateRIB();
 	int replyToIPCManagerRegister(const rina::ApplicationRegistrationRequestEvent& event,

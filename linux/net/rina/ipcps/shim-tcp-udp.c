@@ -45,6 +45,7 @@ static struct workqueue_struct * rcv_wq;
 static struct work_struct        rcv_work;
 static struct list_head          rcv_wq_data;
 static DEFINE_SPINLOCK(rcv_wq_lock);
+static DEFINE_SPINLOCK(rcv_stop_lock);
 
 /* Structure for the workqueue */
 struct rcv_data {
@@ -54,8 +55,19 @@ struct rcv_data {
 
 extern struct kipcm * default_kipcm;
 
-/* FIXME Remove this */
-static struct ipcp_instance_data * inst_data;
+/*
+ * Mapping of ipcp_instance_data to host_name
+ * Needed for handling incomming SDUs
+ */
+struct host_ipcp_instance_mapping {
+        struct list_head            list;
+
+        struct ipcp_instance_data * data;
+        __be32                      host_name;
+};
+
+static DEFINE_SPINLOCK(data_instances_lock);
+static struct list_head data_instances_list;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -63,11 +75,11 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
-/* FIXME: Rename: Is actually socket related things for the flow */
-struct app_data {
+/* data for registrated applications */
+struct reg_app_data {
         struct list_head list;
 
-        struct socket *  lsock;
+        struct socket *  tcpsock;
         struct socket *  udpsock;
 
         struct name *    app_name;
@@ -79,8 +91,6 @@ struct shim_tcp_udp_flow {
 
         port_id_t          port_id;
         enum port_id_state port_id_state;
-
-        struct name *      app_name;
 
         spinlock_t         lock;
 
@@ -113,8 +123,8 @@ struct ipcp_instance_data {
         struct list_head    flows;
 
         spinlock_t          app_lock;
-        /* Holds app_data, e.g. socket related things */
-        struct list_head    apps;
+        /* Holds reg_app_data, e.g. the registrated applications */
+        struct list_head    reg_apps;
 
         spinlock_t          dir_lock;
         struct list_head    directory;
@@ -143,9 +153,30 @@ struct exp_reg {
         int              port;
 };
 
+static struct host_ipcp_instance_mapping *
+inst_data_mapping_get(__be32 host_name)
+{
+        struct host_ipcp_instance_mapping * mapping;
+
+        ASSERT(host_name);
+
+        spin_lock(&data_instances_lock);
+
+        list_for_each_entry(mapping, &data_instances_list, list) {
+                if (mapping->host_name == host_name) {
+                        spin_unlock(&data_instances_lock);
+                        return mapping;
+                }
+        }
+
+        spin_unlock(&data_instances_lock);
+
+        return NULL;
+}
+
 static struct dir_entry *
 find_dir_entry(struct ipcp_instance_data * data,
-               const struct name * app_name)
+               const struct name *         app_name)
 {
         struct dir_entry * entry;
 
@@ -156,6 +187,7 @@ find_dir_entry(struct ipcp_instance_data * data,
 
         list_for_each_entry(entry, &data->directory, list) {
                 if (name_is_equal(entry->app_name, app_name)) {
+                        spin_unlock(&data->dir_lock);
                         return entry;
                 }
         }
@@ -167,7 +199,7 @@ find_dir_entry(struct ipcp_instance_data * data,
 
 static struct exp_reg *
 find_exp_reg(struct ipcp_instance_data * data,
-             const struct name * app_name)
+             const struct name *         app_name)
 {
         struct exp_reg * exp;
 
@@ -178,6 +210,7 @@ find_exp_reg(struct ipcp_instance_data * data,
 
         list_for_each_entry(exp, &data->exp_regs, list) {
                 if (name_is_equal(exp->app_name, app_name)) {
+                        spin_unlock(&data->exp_lock);
                         return exp;
                 }
         }
@@ -222,6 +255,7 @@ find_tcp_flow_by_socket(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock) {
+                        spin_unlock(&data->flow_lock);
                         return flow;
                 }
         }
@@ -264,11 +298,11 @@ find_udp_flow(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static struct app_data *
+static struct reg_app_data *
 find_app_by_socket(struct ipcp_instance_data * data,
                    const struct socket *       sock)
 {
-        struct app_data * app;
+        struct reg_app_data * app;
 
         ASSERT(data);
         ASSERT(sock);
@@ -276,14 +310,18 @@ find_app_by_socket(struct ipcp_instance_data * data,
         spin_lock(&data->flow_lock);
 
         if (sock->type == SOCK_DGRAM) {
-                list_for_each_entry(app, &data->apps, list) {
-                        if (app->udpsock == sock)
+                list_for_each_entry(app, &data->reg_apps, list) {
+                        if (app->udpsock == sock) {
+                                spin_unlock(&data->flow_lock);
                                 return app;
+                        }
                 }
         } else {
-                list_for_each_entry(app, &data->apps, list) {
-                        if (app->lsock == sock)
+                list_for_each_entry(app, &data->reg_apps, list) {
+                        if (app->tcpsock == sock) {
+                                spin_unlock(&data->flow_lock);
                                 return app;
+                        }
                 }
         }
 
@@ -292,19 +330,21 @@ find_app_by_socket(struct ipcp_instance_data * data,
         return NULL;
 }
 
-static struct app_data * find_app_by_name(struct ipcp_instance_data * data,
-                                          const struct name *         name)
+static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
+                                              const struct name *             name)
 {
-        struct app_data * app;
+        struct reg_app_data * app;
 
         ASSERT(data);
         ASSERT(name);
 
         spin_lock(&data->app_lock);
 
-        list_for_each_entry(app, &data->apps, list) {
-                if (name_is_equal(app->app_name, name))
+        list_for_each_entry(app, &data->reg_apps, list) {
+                if (name_is_equal(app->app_name, name)) {
+                        spin_unlock(&data->app_lock);
                         return app;
+                }
         }
 
         spin_unlock(&data->app_lock);
@@ -380,7 +420,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                               port_id_t                   id)
 {
         struct shim_tcp_udp_flow * flow;
-        struct app_data *          app;
+        struct sockaddr_in         sin;
         struct dir_entry *         entry;
         int                        err;
 
@@ -389,17 +429,6 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
-
-        /*
-         * FIXME: app_data should be created here, not retrieved
-         * Client applications should not register in the DIF to
-         * be able to issue flow allocation requests ...
-         */
-        app = find_app_by_name(data, source);
-        if (!app) {
-                LOG_ERR("app not registered, so can't send allocate request");
-                return -1;
-        }
 
         flow = find_flow(data, id);
         if (!flow) {
@@ -411,7 +440,6 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 
                 flow->port_id       = id;
                 flow->port_id_state = PORT_STATE_PENDING;
-                flow->app_name      = name_dup(source);
 
                 INIT_LIST_HEAD(&flow->list);
                 spin_lock(&data->flow_lock);
@@ -423,29 +451,55 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 entry = find_dir_entry(data, dest);
                 if (!entry) {
                         LOG_ERR("Directory entry not found");
+                        list_del(&flow->list);
+                        rkfree(flow);
+                        return -1;
                 }
 
-                LOG_DBG("application data found");
+                LOG_DBG("directory entry found");
 
                 flow->addr.sin_addr.s_addr = htonl(entry->ip_address);
                 flow->addr.sin_family      = AF_INET;
                 flow->addr.sin_port        = htons(entry->port);
 
-                if (!fspec->ordered_delivery) {
+                if (!fspec->max_allowable_gap == 0) {
                         LOG_DBG("unreliable flow requested");
-                        flow->sock = app->udpsock;
                         flow->fspec_id = 0;
+
+                        err = sock_create_kern(PF_INET, SOCK_DGRAM,
+                                               IPPROTO_UDP, &flow->sock);
+                        if (err < 0) {
+                                LOG_ERR("could not create udp socket");
+                                deallocate_and_destroy_flow(data, flow);
+                                return -1;
+                        }
+
+                        sin.sin_addr.s_addr = htonl(data->host_name);
+                        sin.sin_family = AF_INET;
+                        sin.sin_port = htons(0);
+
+                        err = kernel_bind(flow->sock, (struct sockaddr*) &sin,
+                                          sizeof(sin));
+                        if (err < 0) {
+                                LOG_ERR("Could not bind UDP socket for alloc");
+                                sock_release(flow->sock);
+                                deallocate_and_destroy_flow(data, flow);
+                                return -1;
+                        }
+
+                        write_lock_bh(&flow->sock->sk->sk_callback_lock);
+                        flow->sock->sk->sk_user_data =
+                                flow->sock->sk->sk_data_ready;
+                        flow->sock->sk->sk_data_ready = tcp_udp_rcv;
+                        write_unlock_bh(&flow->sock->sk->sk_callback_lock);
                 } else {
                         LOG_DBG("reliable flow requested");
                         flow->fspec_id = 1;
+
                         err = sock_create_kern(PF_INET, SOCK_STREAM,
                                                IPPROTO_TCP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("could not create tcp socket");
-                                /*
-                                 * FIXME: Is the flow already created in the
-                                 *        KFA?
-                                 */
                                 deallocate_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -463,8 +517,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         write_lock_bh(&flow->sock->sk->sk_callback_lock);
                         flow->sock->sk->sk_user_data =
                                 flow->sock->sk->sk_data_ready;
-                        flow->sock->sk->sk_data_ready =
-                                tcp_udp_rcv;
+                        flow->sock->sk->sk_data_ready = tcp_udp_rcv;
                         write_unlock_bh(&flow->sock->sk->sk_callback_lock);
                 }
 
@@ -507,6 +560,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                                           int                         result)
 {
         struct shim_tcp_udp_flow * flow;
+        struct reg_app_data *      app;
 
         LOG_HBEAT;
 
@@ -565,11 +619,20 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_NULL;
                 spin_unlock(&data->flow_lock);
 
+                app = find_app_by_socket(data, flow->sock);
+
+                /* FIXME: wq cleanup */
                 if (flow->fspec_id == 1 &&
                     flow->port_id_state == PORT_STATE_ALLOCATED) {
                         kernel_sock_shutdown(flow->sock, SHUT_RDWR);
-                        sock_release(flow->sock);
                 }
+
+                /*
+                 * UDP flows on server side use the application socket, so we
+                 * don't want to close this socket
+                 */
+                if (!app)
+                        sock_release(flow->sock);
 
                 /*
                  *  If we would destroy the flow, the application
@@ -590,6 +653,9 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
                                    port_id_t                   id)
 {
         struct shim_tcp_udp_flow * flow;
+        struct reg_app_data *      app;
+        struct rcv_data *          recvd;
+        unsigned long              flags;
 
         LOG_HBEAT;
         ASSERT(data);
@@ -600,11 +666,29 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (flow->fspec_id == 1 && flow->port_id == PORT_STATE_ALLOCATED) {
+        app = find_app_by_socket(data, flow->sock);
+
+        if (flow->fspec_id == 1 &&
+            flow->port_id_state == PORT_STATE_ALLOCATED) {
+
+                /* FIXME: more efficient locking and better cleanup */
+                spin_lock(&rcv_stop_lock);
+                spin_lock_irqsave(&rcv_wq_lock, flags);
+                list_for_each_entry(recvd, &rcv_wq_data, list) {
+                        if (recvd->sk->sk_socket == flow->sock) {
+                                LOG_DBG("set sock to null");
+                                recvd->sk = NULL;
+                        }
+                }
+                spin_unlock_irqrestore(&rcv_wq_lock, flags);
+                spin_unlock(&rcv_stop_lock);
+
                 LOG_DBG("closing socket");
                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
-                sock_release(flow->sock);
         }
+
+        if (!app)
+                sock_release(flow->sock);
 
         deallocate_and_destroy_flow(data, flow);
 
@@ -631,7 +715,7 @@ int recv_msg(struct socket *      sock,
         msg.msg_namelen    = lother;
 
         size = kernel_recvmsg(sock, &msg, &iov, 1, len, msg.msg_flags);
-        if (size > 0)
+        if (size >= 0)
                 LOG_DBG("received message with %d bytes", size);
 
         return size;
@@ -663,38 +747,38 @@ int send_msg(struct socket *      sock,
         return size;
 }
 
-static int udp_process_msg(struct socket * sock)
+static int udp_process_msg(struct ipcp_instance_data * data,
+                           struct socket * sock)
 {
-        struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
         struct sockaddr_in          addr;
-        struct app_data *           app;
+        struct reg_app_data *       app;
         struct buffer *             sdubuf;
         struct name *               sname;
         struct sdu *                du;
-        char                        buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
+        char *                      buf;
         int                         size;
 
-        /*
-         * FIXME: Remove this compile-time assertion once the stack-overflow
-         *        potential problem is resolved
-         */
-        BUILD_BUG_ON((BUFFER_SIZE > 512));
+        LOG_HBEAT;
 
-        LOG_DBG("udp_process_msg");
+        buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
 
         memset(&addr, 0, sizeof(struct sockaddr_in));
         if ((size = recv_msg(sock, &addr, sizeof(addr),
                              buf, BUFFER_SIZE)) < 0) {
                 LOG_ERR("error during udp recv");
+                rkfree(buf);
                 return -1;
         }
 
         sdubuf = buffer_create_from(buf, size);
         if (!sdubuf) {
                 LOG_ERR("could not create buffer");
+                rkfree(buf);
                 return -1;
         }
+
+        rkfree(buf);
 
         du = sdu_create_buffer_with_ni(sdubuf);
         if (!du) {
@@ -702,8 +786,6 @@ static int udp_process_msg(struct socket * sock)
                 buffer_destroy(sdubuf);
                 return -1;
         }
-
-        data = inst_data;
 
         spin_lock(&data->flow_lock);
         flow = find_udp_flow(data, &addr, sock);
@@ -790,8 +872,7 @@ static int udp_process_msg(struct socket * sock)
                 app = find_app_by_socket(data, sock);
                 ASSERT(app);
 
-                flow->app_name = app->app_name;
-                sname          = name_create_ni();
+                sname = name_create_ni();
                 if (!name_init_from_ni(sname,
                                        "Unknown app", "", "", "")) {
                         name_destroy(sname);
@@ -849,22 +930,21 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 {
         struct buffer * sdubuf;
         struct sdu *    du;
-        char            buf[BUFFER_SIZE]; /* FIXME: Remove ASAP! */
+        char *          buf;
         int             size;
         __be16          nlen;
 
-        /*
-         * FIXME: Remove this compile-time assertion once the stack-overflow
-         *        potential problem is resolved
-         */
-        BUILD_BUG_ON((BUFFER_SIZE > 512));
+        buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
 
         size = recv_msg(sock, NULL, 0, buf, 2);
-        if (!size)
+        if (!size) {
+                rkfree(buf);
                 return 0;
+        }
 
         if (size != 2) {
                 LOG_ERR("could not read size: %d", size);
+                rkfree(buf);
                 return -1;
         }
 
@@ -876,6 +956,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         size = recv_msg(sock, NULL, 0, buf, flow->bytes_left);
         if (size <= 0) {
                 LOG_ERR("Error during tcp receive: %d", size);
+                rkfree(buf);
                 return size;
         }
 
@@ -884,8 +965,11 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 sdubuf = buffer_create_from(buf, size);
                 if (!sdubuf) {
                         LOG_ERR("Could not create buffer");
+                        rkfree(buf);
                         return -1;
                 }
+
+                rkfree(buf);
 
                 du = sdu_create_buffer_with_ni(sdubuf);
                 if (!du) {
@@ -930,6 +1014,8 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 flow->bytes_left = flow->bytes_left - size;
 
                 memcpy(&flow->buf[0], &buf[0], size);
+
+                rkfree(buf);
 
                 return -1;
         }
@@ -1009,6 +1095,8 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                            struct socket *             sock)
 {
         struct shim_tcp_udp_flow * flow;
+        struct rcv_data *          recvd;
+        unsigned long              flags;
         int                        size;
 
         ASSERT(data);
@@ -1022,22 +1110,46 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
         else
                 size = tcp_recv_partial_message(data, sock, flow);
 
-        if (size == 0 && flow->port_id_state == PORT_STATE_ALLOCATED) {
+        if (size == 0 && (flow->port_id_state == PORT_STATE_ALLOCATED ||
+                          flow->port_id_state == PORT_STATE_PENDING)) {
                 LOG_DBG("closing flow");
-                kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+
+                if (flow->port_id_state == PORT_STATE_ALLOCATED)
+                        flow->port_id_state = PORT_STATE_NULL;
+
+                write_lock_bh(&flow->sock->sk->sk_callback_lock);
+                flow->sock->sk->sk_data_ready = flow->sock->sk->sk_user_data;
+                flow->sock->sk->sk_user_data = NULL;
+                write_unlock_bh(&flow->sock->sk->sk_callback_lock);
+
+                /* FIXME: better cleanup */
+                spin_lock_irqsave(&rcv_wq_lock, flags);
+                list_for_each_entry(recvd, &rcv_wq_data, list) {
+                        if (recvd->sk->sk_socket == flow->sock)
+                                recvd->sk = NULL;
+                }
+                spin_unlock_irqrestore(&rcv_wq_lock, flags);
+
                 sock_release(flow->sock);
-                /* FIXME: Isn't more cleanup needed? */
+
+                /* FIXME: remove the msleep */
+                while (flow->sdu_queue != NULL) {
+                        msleep(2);
+                }
+                LOG_DBG("notifying kipcm aboud deallocate");
+                kfa_flow_deallocate(data->kfa, flow->port_id);
+                kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+
                 return 0;
         }
 
         return size;
 }
 
-static int tcp_process(struct socket * sock)
+static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 {
-        struct ipcp_instance_data * data;
         struct shim_tcp_udp_flow *  flow;
-        struct app_data *           app;
+        struct reg_app_data *       app;
         struct socket *             acsock;
         struct name *               sname;
         int                         err;
@@ -1046,9 +1158,7 @@ static int tcp_process(struct socket * sock)
 
         LOG_DBG("tcp process on %p", sock);
 
-        data = inst_data;
         app = find_app_by_socket(data, sock);
-
         if (!app) {
                 //connection exists
                 err = tcp_process_msg(data, sock);
@@ -1058,7 +1168,7 @@ static int tcp_process(struct socket * sock)
                 return err;
         } else {
                 //accept connection
-                err = kernel_accept(app->lsock, &acsock, O_NONBLOCK);
+                err = kernel_accept(app->tcpsock, &acsock, O_NONBLOCK);
                 if (err < 0) {
                         LOG_ERR("could not accept socket");
                         return -1;
@@ -1166,16 +1276,30 @@ static int tcp_process(struct socket * sock)
 
 static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
-        int res;
+        struct host_ipcp_instance_mapping * mapping;
+        struct sockaddr_in own;
+        struct socket * sock;
+        int res, len;
+
+        sock = sk->sk_socket;
+
+        len = sizeof(struct sockaddr_in);
+        if (kernel_getsockname(sock, (struct sockaddr*) &own, &len)) {
+                LOG_ERR("Couldn't retrieve hostname");
+        }
+        LOG_DBG("found sockname: %d", ntohl(own.sin_addr.s_addr));
+        mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
+
+        ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
-                res = udp_process_msg(sk->sk_socket);
+                res = udp_process_msg(mapping->data, sock);
                 while (res > 0) {
-                        res = udp_process_msg(sk->sk_socket);
+                        res = udp_process_msg(mapping->data, sock);
                 }
                 return res;
         } else {
-                return tcp_process(sk->sk_socket);
+                return tcp_process(mapping->data, sock);
         }
 }
 
@@ -1183,31 +1307,26 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 {
         struct rcv_data * recvd, * next;
         unsigned long     flags;
-        struct sock *     last = NULL;
 
         LOG_HBEAT;
 
+        /* FIXME: more efficient locking and better cleanup */
         spin_lock_irqsave(&rcv_wq_lock, flags);
         list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
-                spin_unlock_irqrestore(&rcv_wq_lock, flags);
-
-                LOG_DBG("worker on %p", recvd->sk->sk_socket);
-                if (recvd->sk != last) {
-                        if (tcp_udp_rcv_process_msg(recvd->sk) == EAGAIN) {
-                                last = recvd->sk;
-                        } else {
-                                last = NULL;
-                        }
-                } else {
-                        last = NULL;
-                }
-
-                spin_lock_irqsave(&rcv_wq_lock, flags);
+                spin_lock(&rcv_stop_lock);
                 list_del(&recvd->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
+                LOG_DBG("worker on %p", recvd->sk);
+
+                if (recvd->sk != NULL)
+                        tcp_udp_rcv_process_msg(recvd->sk);
+                else
+                        LOG_DBG("null pointer in worker (good thing)");
+
                 rkfree(recvd);
 
+                spin_unlock(&rcv_stop_lock);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
@@ -1218,7 +1337,7 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                         const struct name *         name)
 {
-        struct app_data *          app;
+        struct reg_app_data *      app;
         struct sockaddr_in         sin;
         struct exp_reg *           exp_reg;
         int                        err;
@@ -1233,7 +1352,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        app = rkzalloc(sizeof(struct app_data), GFP_KERNEL);
+        app = rkzalloc(sizeof(struct reg_app_data), GFP_KERNEL);
         if (!app) {
                 LOG_ERR("Could not allocate mem for application data");
                 return -1;
@@ -1285,7 +1404,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
-        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &app->lsock);
+        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &app->tcpsock);
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");
                 sock_release(app->udpsock);
@@ -1294,37 +1413,37 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        err = kernel_bind(app->lsock, (struct sockaddr*) &sin, sizeof(sin));
+        err = kernel_bind(app->tcpsock, (struct sockaddr*) &sin, sizeof(sin));
         if (err < 0) {
                 LOG_ERR("Could not bind TCP socket for registration");
-                sock_release(app->lsock);
+                sock_release(app->tcpsock);
                 sock_release(app->udpsock);
                 name_destroy(app->app_name);
                 rkfree(app);
                 return -1;
         }
 
-        err = kernel_listen(app->lsock, 5);
+        err = kernel_listen(app->tcpsock, 5);
         if (err < 0) {
                 LOG_ERR("Could not listen on TCP socket for registration");
-                sock_release(app->lsock);
+                sock_release(app->tcpsock);
                 sock_release(app->udpsock);
                 name_destroy(app->app_name);
                 rkfree(app);
                 return -1;
         }
 
-        write_lock_bh(&app->lsock->sk->sk_callback_lock);
-        app->lsock->sk->sk_user_data = app->lsock->sk->sk_data_ready;
-        app->lsock->sk->sk_data_ready = tcp_udp_rcv;
-        write_unlock_bh(&app->lsock->sk->sk_callback_lock);
+        write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
+        app->tcpsock->sk->sk_user_data = app->tcpsock->sk->sk_data_ready;
+        app->tcpsock->sk->sk_data_ready = tcp_udp_rcv;
+        write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
 
         LOG_DBG("TCP socket ready");
 
         INIT_LIST_HEAD(&(app->list));
 
         spin_lock(&data->app_lock);
-        list_add(&(app->list), &(data->apps));
+        list_add(&(app->list), &(data->reg_apps));
         spin_unlock(&data->app_lock);
 
         return 0;
@@ -1333,7 +1452,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
                                           const struct name *         name)
 {
-        struct app_data * app;
+        struct reg_app_data * app;
 
         LOG_HBEAT;
 
@@ -1357,15 +1476,15 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket destroyed");
 
-        lock_sock(app->lsock->sk);
-        write_lock_bh(&app->lsock->sk->sk_callback_lock);
-        app->lsock->sk->sk_data_ready = app->lsock->sk->sk_user_data;
-        app->lsock->sk->sk_user_data = NULL;
-        write_unlock_bh(&app->lsock->sk->sk_callback_lock);
-        release_sock(app->lsock->sk);
+        lock_sock(app->tcpsock->sk);
+        write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
+        app->tcpsock->sk->sk_data_ready = app->tcpsock->sk->sk_user_data;
+        app->tcpsock->sk->sk_user_data = NULL;
+        write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
+        release_sock(app->tcpsock->sk);
 
-        kernel_sock_shutdown(app->lsock, SHUT_RDWR);
-        sock_release(app->lsock);
+        kernel_sock_shutdown(app->tcpsock, SHUT_RDWR);
+        sock_release(app->tcpsock);
 
         LOG_DBG("TCP socket destroyed");
 
@@ -1728,6 +1847,8 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                  const struct dif_info *     dif_information)
 {
+        struct host_ipcp_instance_mapping * mapping;
+
         LOG_HBEAT;
         ASSERT(data);
         ASSERT(dif_information);
@@ -1755,12 +1876,32 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
+                           GFP_KERNEL);
+        if (!mapping) {
+                LOG_ERR("Failed to allocate memory");
+                name_destroy(data->dif_name);
+                data->dif_name = NULL;
+                undo_assignment(data);
+                return -1;
+        }
+
+        mapping->host_name = data->host_name;
+        mapping->data = data;
+        INIT_LIST_HEAD(&mapping->list);
+
+        spin_lock(&data_instances_lock);
+        list_add(&mapping->list, &data_instances_list);
+        spin_unlock(&data_instances_lock);
+
         return 0;
 }
 
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
                                      const struct dif_config *   new_config)
 {
+        struct host_ipcp_instance_mapping * mapping;
+
         LOG_HBEAT;
 
         ASSERT(data);
@@ -1775,12 +1916,36 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
 
         undo_assignment(data);
 
+        mapping = inst_data_mapping_get(data->host_name);
+        if (mapping) {
+                spin_lock(&data_instances_lock);
+                list_del(&mapping->list);
+                spin_unlock(&data_instances_lock);
+                kfree(mapping);
+        }
+
         if (parse_assign_conf(data, new_config)) {
                 LOG_ERR("Failed to update configuration");
                 undo_assignment(data);
                 /* FIXME: If this fails, DIF is no longer functional */
                 return -1;
         }
+
+        mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
+                           GFP_KERNEL);
+        if (!mapping) {
+                LOG_ERR("Failed to allocate memory");
+                undo_assignment(data);
+                return -1;
+        }
+
+        mapping->host_name = data->host_name;
+        mapping->data = data;
+        INIT_LIST_HEAD(&mapping->list);
+
+        spin_lock(&data_instances_lock);
+        list_add(&mapping->list, &data_instances_list);
+        spin_unlock(&data_instances_lock);
 
         return 0;
 }
@@ -1937,6 +2102,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 
         INIT_LIST_HEAD(&rcv_wq_data);
 
+        INIT_LIST_HEAD(&data_instances_list);
+
         spin_lock_init(&data->lock);
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
@@ -2083,15 +2250,13 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         LOG_DBG("KFA instance %pK bound to the shim tcp-udp", inst->data->kfa);
 
-        inst_data = inst->data;
-
         spin_lock_init(&inst->data->flow_lock);
         spin_lock_init(&inst->data->app_lock);
         spin_lock_init(&inst->data->dir_lock);
         spin_lock_init(&inst->data->exp_lock);
 
         INIT_LIST_HEAD(&(inst->data->flows));
-        INIT_LIST_HEAD(&(inst->data->apps));
+        INIT_LIST_HEAD(&(inst->data->reg_apps));
         INIT_LIST_HEAD(&(inst->data->directory));
         INIT_LIST_HEAD(&(inst->data->exp_regs));
 
@@ -2107,9 +2272,10 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         return inst;
 }
 
-static int tcp_udp_destroy(struct ipcp_factory_data *data,
-                           struct ipcp_instance *instance)
+static int tcp_udp_destroy(struct ipcp_factory_data * data,
+                           struct ipcp_instance *     instance)
 {
+        struct host_ipcp_instance_mapping * mapping;
         struct ipcp_instance_data * pos, * next;
 
         LOG_HBEAT;
@@ -2139,6 +2305,15 @@ static int tcp_udp_destroy(struct ipcp_factory_data *data,
                                 name_destroy(pos->name);
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
+
+                        mapping = inst_data_mapping_get(pos->host_name);
+                        if (mapping) {
+                                LOG_DBG("removing mapping from list");
+                                spin_lock(&data_instances_lock);
+                                list_del(&mapping->list);
+                                spin_unlock(&data_instances_lock);
+                                kfree(mapping);
+                        }
 
                         rkfree(pos);
                         rkfree(instance);

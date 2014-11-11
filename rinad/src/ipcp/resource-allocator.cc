@@ -40,8 +40,8 @@ NMinusOneFlowManager::NMinusOneFlowManager() {
 
 void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process) {
 	ipc_process_ = ipc_process;
-	rib_daemon_ = ipc_process->rib_daemon;
-	cdap_session_manager_ = ipc_process->cdap_session_manager;
+	rib_daemon_ = ipc_process->rib_daemon_;
+	cdap_session_manager_ = ipc_process->cdap_session_manager_;
 	populateRIB();
 }
 
@@ -51,7 +51,7 @@ void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& d
 
 void NMinusOneFlowManager::populateRIB(){
 	try {
-		BaseRIBObject * object = new DIFRegistrationSetRIBObject(ipc_process_);
+		BaseIPCPRIBObject * object = new DIFRegistrationSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
 		object = new NMinusOneFlowSetRIBObject(ipc_process_);
 		rib_daemon_->addRIBObject(object);
@@ -118,9 +118,9 @@ void NMinusOneFlowManager::allocateRequestResult(const rina::AllocateFlowRequest
 
 void NMinusOneFlowManager::flowAllocationRequested(const rina::FlowRequestEvent& event) {
 	if (event.localApplicationName.processName.compare(
-			ipc_process_->name.processName) != 0 ||
+			ipc_process_->name_.processName) != 0 ||
 			event.localApplicationName.processInstance.compare(
-					ipc_process_->name.processInstance) != 0) {
+					ipc_process_->name_.processInstance) != 0) {
 		LOG_ERR("Rejected flow request from %s-%s since this IPC Process is not the intended target of this flow",
 				event.remoteApplicationName.processName.c_str(),
 				event.remoteApplicationName.processInstance.c_str());
@@ -363,7 +363,7 @@ IPDUForwardingTableGenerator * ResourceAllocator::get_pdu_forwarding_table_gener
 DIFRegistrationRIBObject::DIFRegistrationRIBObject(IPCProcess* ipc_process,
 		const std::string& object_class,
 		const std::string& object_name,
-		const std::string* dif_name) : SimpleSetMemberRIBObject(ipc_process,
+		const std::string* dif_name) : SimpleSetMemberIPCPRIBObject(ipc_process,
 				object_class, object_name, dif_name) {
 }
 
@@ -386,8 +386,8 @@ void DIFRegistrationRIBObject::deleteObject(const void* objectValue) {
 
 // Class DIF registration set RIB Object
 DIFRegistrationSetRIBObject::DIFRegistrationSetRIBObject(IPCProcess * ipc_process):
-	BaseRIBObject(ipc_process, EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
-			objectInstanceGenerator->getObjectInstance(),
+	BaseIPCPRIBObject(ipc_process, EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_CLASS,
+			rina::objectInstanceGenerator->getObjectInstance(),
 			EncoderConstants::DIF_REGISTRATION_SET_RIB_OBJECT_NAME){
 }
 
@@ -408,7 +408,7 @@ void DIFRegistrationSetRIBObject::createObject(const std::string& objectClass,
 NMinusOneFlowRIBObject::NMinusOneFlowRIBObject(IPCProcess* ipc_process,
 		const std::string& object_class,
 		const std::string& object_name,
-		const rina::FlowInformation* flow_info) : SimpleSetMemberRIBObject(ipc_process,
+		const rina::FlowInformation* flow_info) : SimpleSetMemberIPCPRIBObject(ipc_process,
 				object_class, object_name, flow_info) {
 }
 
@@ -429,8 +429,8 @@ std::string NMinusOneFlowRIBObject::get_displayable_value() {
 
 // Class N-1 Flow set RIB Object
 NMinusOneFlowSetRIBObject::NMinusOneFlowSetRIBObject(IPCProcess * ipc_process):
-	BaseRIBObject(ipc_process, EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
-			objectInstanceGenerator->getObjectInstance(),
+	BaseIPCPRIBObject(ipc_process, EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_CLASS,
+			rina::objectInstanceGenerator->getObjectInstance(),
 			EncoderConstants::N_MINUS_ONE_FLOW_SET_RIB_OBJECT_NAME){
 }
 
