@@ -59,7 +59,8 @@ static void rwq_worker(struct work_struct * work)
 
 #define RWQ_MAX_ACTIVE 1 /* Only temporary */
 
-struct workqueue_struct * rwq_create(const char * name)
+static struct workqueue_struct * rwq_create_priority(const char * name,
+                                                     const int    priority)
 {
         struct workqueue_struct * wq;
 
@@ -72,7 +73,7 @@ struct workqueue_struct * rwq_create(const char * name)
         wq = alloc_workqueue(name,
                              WQ_UNBOUND      |
                              WQ_MEM_RECLAIM  |
-                             WQ_HIGHPRI      |
+                             priority        |
                              WQ_CPU_INTENSIVE,
                              RWQ_MAX_ACTIVE);
 #else
@@ -87,7 +88,14 @@ struct workqueue_struct * rwq_create(const char * name)
 
         return wq;
 }
+
+struct workqueue_struct * rwq_create(const char * name)
+{ return rwq_create_priority(name, 0); }
 EXPORT_SYMBOL(rwq_create);
+
+struct workqueue_struct * rwq_create_hp(const char * name)
+{ return rwq_create_priority(name, WQ_HIGHPRI); }
+EXPORT_SYMBOL(rwq_create_hp);
 
 static struct rwq_work_item * rwq_work_create_gfp(gfp_t    flags,
                                                   int   (* work)(void * data),

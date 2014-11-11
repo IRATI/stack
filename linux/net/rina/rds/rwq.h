@@ -28,6 +28,7 @@
  */
 
 struct workqueue_struct * rwq_create(const char * name);
+struct workqueue_struct * rwq_create_hp(const char * name);
 int                       rwq_flush(struct workqueue_struct * q);
 int                       rwq_destroy(struct workqueue_struct * q);
 

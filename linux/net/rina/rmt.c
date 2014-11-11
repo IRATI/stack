@@ -257,7 +257,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-        tmp->egress.wq = rwq_create(name);
+        tmp->egress.wq = rwq_create_hp(name);
         if (!tmp->egress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -278,7 +278,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-        tmp->ingress.wq = rwq_create(name);
+        tmp->ingress.wq = rwq_create_hp(name);
         if (!tmp->ingress.wq) {
                 rmt_destroy(tmp);
                 return NULL;
@@ -1533,7 +1533,7 @@ static bool regression_tests_ingress_queue(void)
                 rmt_destroy(rmt);
                 return false;
         }
-        rmt->ingress.wq = rwq_create(name);
+        rmt->ingress.wq = rwq_create_hp(name);
         if (!rmt->ingress.wq) {
                 rmt_destroy(rmt);
                 return false;
