@@ -194,6 +194,7 @@ struct rmt {
 
         struct {
                 struct workqueue_struct * wq;
+                struct rwq_work_item *    item;
                 struct rmt_qmap *         queues;
                 struct pft_cache          cache;
         } ingress;
@@ -224,80 +225,6 @@ static const char * create_name(const char *       prefix,
 
         return name;
 }
-
-struct rmt * rmt_create(struct ipcp_instance *  parent,
-                        struct kfa *            kfa,
-                        struct efcp_container * efcpc)
-{
-        struct rmt * tmp;
-        const char * name;
-
-        if (!parent || !kfa || !efcpc) {
-                LOG_ERR("Bogus input parameters");
-                return NULL;
-        }
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->address = address_bad();
-        tmp->parent  = parent;
-        tmp->kfa     = kfa;
-        tmp->efcpc   = efcpc;
-        tmp->pft     = pft_create();
-        if (!tmp->pft) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        /* Egress */
-        name = create_name("egress-wq", tmp);
-        if (!name) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        tmp->egress.wq = rwq_create(name);
-        if (!tmp->egress.wq) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        tmp->egress.queues = qmap_create();
-        if (!tmp->egress.queues) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        if (pft_cache_init(&tmp->egress.cache)) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        /* Ingress */
-        name = create_name("ingress-wq", tmp);
-        if (!name) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        tmp->ingress.wq = rwq_create(name);
-        if (!tmp->ingress.wq) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        tmp->ingress.queues = qmap_create();
-        if (!tmp->ingress.queues) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        if (pft_cache_init(&tmp->ingress.cache)) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-
-        LOG_DBG("Instance %pK initialized successfully", tmp);
-
-        return tmp;
-}
-EXPORT_SYMBOL(rmt_create);
 
 int rmt_destroy(struct rmt * instance)
 {
@@ -1109,7 +1036,6 @@ int rmt_receive(struct rmt * instance,
                 struct sdu * sdu,
                 port_id_t    from)
 {
-        struct rwq_work_item * item;
         struct rmt_queue *     r_queue;
 
         if (!sdu_is_ok(sdu)) {
@@ -1135,15 +1061,6 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        /* Is this _ni() call really necessary ??? */
-        item = rwq_work_create_ni(receive_worker, instance);
-        if (!item) {
-                LOG_ERR("Cannot receive SDU from port-id %d", from);
-
-                sdu_destroy(sdu);
-                return -1;
-        }
-
         spin_lock(&instance->ingress.queues->lock);
         r_queue = qmap_find(instance->ingress.queues, from);
         if (!r_queue) {
@@ -1160,25 +1077,6 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
         spin_unlock(&instance->ingress.queues->lock);
-
-        ASSERT(instance->ingress.wq);
-        if (rwq_work_post(instance->ingress.wq, item)) {
-                LOG_ERR("Cannot post work (SDU) to ingress work-queue");
-
-                spin_lock(&instance->ingress.queues->lock);
-                r_queue = qmap_find(instance->ingress.queues, from);
-                if (r_queue) {
-                        struct sdu * tmp;
-
-                        tmp = rfifo_pop(r_queue->queue);
-                        if (tmp)
-                                sdu_destroy(tmp);
-                }
-                spin_unlock(&instance->ingress.queues->lock);
-
-                sdu_destroy(sdu);
-                return -1;
-        }
 
         return 0;
 }
@@ -1216,6 +1114,88 @@ int rmt_restart_work(struct rmt * rmt)
 
         return 0;
 }
+
+struct rmt * rmt_create(struct ipcp_instance *  parent,
+                        struct kfa *            kfa,
+                        struct efcp_container * efcpc)
+{
+        struct rmt * tmp;
+        const char * name;
+
+        if (!parent || !kfa || !efcpc) {
+                LOG_ERR("Bogus input parameters");
+                return NULL;
+        }
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if (!tmp)
+                return NULL;
+
+        tmp->address = address_bad();
+        tmp->parent  = parent;
+        tmp->kfa     = kfa;
+        tmp->efcpc   = efcpc;
+        tmp->pft     = pft_create();
+        if (!tmp->pft) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
+        /* Egress */
+        name = create_name("egress-wq", tmp);
+        if (!name) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        tmp->egress.wq = rwq_create(name);
+        if (!tmp->egress.wq) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        tmp->egress.queues = qmap_create();
+        if (!tmp->egress.queues) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        if (pft_cache_init(&tmp->egress.cache)) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+
+        /* Ingress */
+        name = create_name("ingress-wq", tmp);
+        if (!name) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        tmp->ingress.wq = rwq_create(name);
+        if (!tmp->ingress.wq) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        tmp->ingress.queues = qmap_create();
+        if (!tmp->ingress.queues) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        if (pft_cache_init(&tmp->ingress.cache)) {
+                rmt_destroy(tmp);
+                return NULL;
+        }
+        tmp->ingress.item = rwq_work_create(receive_worker, tmp);
+        if (!tmp->ingress.item) {
+                rmt_destroy(tmp);
+                return -1;
+        }
+        if (rwq_work_post(tmp->ingress.wq, tmp->ingress.item)) {
+                rmt_destroy(tmp);
+                return -1;
+        }
+        LOG_DBG("Instance %pK initialized successfully", tmp);
+
+        return tmp;
+}
+EXPORT_SYMBOL(rmt_create);
 
 /* FIXME: To be rearranged */
 static bool is_rmt_pft_ok(struct rmt * instance)
