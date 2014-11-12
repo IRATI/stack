@@ -150,6 +150,10 @@ struct rwq_work_item * rwq_work_create_single_ni(int   (* work)(void * data),
 { return rwq_work_create_gfp(GFP_ATOMIC, work, data, true); }
 EXPORT_SYMBOL(rwq_work_create_single_ni);
 
+void rwq_work_destroy(struct rwq_work_item * item)
+{ rkfree(item); }
+EXPORT_SYMBOL(rwq_work_destroy);
+
 int rwq_work_post(struct workqueue_struct * wq,
                   struct rwq_work_item *    item)
 {

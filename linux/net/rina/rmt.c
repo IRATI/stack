@@ -234,6 +234,7 @@ int rmt_destroy(struct rmt * instance)
         }
 
         if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
+        if (instance->ingress.item)   rwq_work_destroy(instance->ingress.item);
         if (instance->ingress.queues) qmap_destroy(instance->ingress.queues,
                                                    instance->kfa);
         pft_cache_fini(&instance->ingress.cache);
