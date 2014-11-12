@@ -183,28 +183,32 @@ class IPCManager : public EventLoopData {
 
 class DIFConfigValidator {
 public:
-	enum Types{
-		SHIM_ETH,
-		NORMAL,
-		SHIM_DUMMY
-	};
-	DIFConfigValidator(const rina::DIFConfiguration &dif_config,
-			const rina::DIFInformation &dif_info, std::string type);
-	bool validateConfigs();
+        enum Types{
+                NORMAL,
+                SHIM_ETH,
+                SHIM_DUMMY,
+                SHIM_TCP_UDP,
+                SHIM_HV
+        };
+        DIFConfigValidator(const rina::DIFConfiguration &dif_config,
+                        const rina::DIFInformation &dif_info, std::string type);
+        bool validateConfigs();
 private:
-	Types type_;
-	const rina::DIFConfiguration &dif_config_;
+        Types type_;
+        const rina::DIFConfiguration &dif_config_;
     const rina::DIFInformation &dif_info_;
 
-	bool validateShimEth();
-	bool validateShimDummy();
-	bool validateNormal();
-	bool validateBasicDIFConfigs();
-	bool validateConfigParameters();
-	bool dataTransferConstants();
-	bool qosCubes();
-	bool knownIPCProcessAddresses();
-	bool pdufTableGeneratorConfiguration();
+        bool validateShimEth();
+        bool validateShimDummy();
+        bool validateShimTcpUdp();
+        bool validateShimHv();
+        bool validateNormal();
+        bool validateBasicDIFConfigs();
+        bool validateConfigParameters();
+        bool dataTransferConstants();
+        bool qosCubes();
+        bool knownIPCProcessAddresses();
+        bool pdufTableGeneratorConfiguration();
 };
 
 void register_handlers_all(EventLoop& loop);
