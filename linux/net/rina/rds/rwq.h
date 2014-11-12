@@ -42,8 +42,8 @@ struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
                                              void * data);
 struct rwq_work_item *    rwq_work_create_single(int (* worker)(void * data),
                                                  void * data);
-struct rwq_work_item *    rwq_work_create_ni_sigle(int (* worker)(void * data),
-                                                   void * data);
+struct rwq_work_item *    rwq_work_create_single_ni(int (* worker)(void * data),
+                                                    void * data);
 
 /*
  * NOTE: This function will dispose the rwq_work_item on failure. The item

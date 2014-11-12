@@ -53,7 +53,10 @@ static void rwq_worker(struct work_struct * work)
                 LOG_ERR("The worker could not process its data!");
         }
 
-        if (!item->single)
+        if (item->single)
+                clear_bit(WORK_STRUCT_PENDING_BIT,
+                          work_data_bits((struct work_struct *)item));
+        else
                 rkfree(item);
 
         return;
@@ -142,10 +145,10 @@ struct rwq_work_item * rwq_work_create_single(int   (* work)(void * data),
 { return rwq_work_create_gfp(GFP_KERNEL, work, data, true); }
 EXPORT_SYMBOL(rwq_work_create_single);
 
-struct rwq_work_item * rwq_work_create_ni_single(int   (* work)(void * data),
+struct rwq_work_item * rwq_work_create_single_ni(int   (* work)(void * data),
                                                  void *   data)
 { return rwq_work_create_gfp(GFP_ATOMIC, work, data, true); }
-EXPORT_SYMBOL(rwq_work_create_ni_single);
+EXPORT_SYMBOL(rwq_work_create_single_ni);
 
 int rwq_work_post(struct workqueue_struct * wq,
                   struct rwq_work_item *    item)
@@ -158,10 +161,6 @@ int rwq_work_post(struct workqueue_struct * wq,
                 LOG_ERR("No item passed, cannot post work");
                 return -1;
         }
-
-        if (item->single)
-                test_and_set_bit(WORK_STRUCT_PENDING_BIT,
-                                 work_data_bits((struct work_struct *)item));
 
         if (!queue_work(wq, (struct work_struct *) item)) {
                 /* FIXME: Add workqueue name in the log */

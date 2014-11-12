@@ -1044,19 +1044,16 @@ int rmt_receive(struct rmt * instance,
         }
         if (!instance) {
                 LOG_ERR("No RMT passed");
-
                 sdu_destroy(sdu);
                 return -1;
         }
         if (!is_port_id_ok(from)) {
                 LOG_ERR("Wrong port-id %d", from);
-
                 sdu_destroy(sdu);
                 return -1;
         }
         if (!instance->ingress.queues) {
                 LOG_ERR("No ingress queues in RMT: %pK", instance);
-
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -1065,18 +1062,19 @@ int rmt_receive(struct rmt * instance,
         r_queue = qmap_find(instance->ingress.queues, from);
         if (!r_queue) {
                 spin_unlock(&instance->ingress.queues->lock);
-
                 sdu_destroy(sdu);
                 return -1;
         }
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {
                 spin_unlock(&instance->ingress.queues->lock);
-
                 sdu_destroy(sdu);
                 return -1;
         }
         spin_unlock(&instance->ingress.queues->lock);
+
+        if (rwq_work_post(instance->ingress.wq, instance->ingress.item))
+                LOG_DBG("There was a pending work already in the ingress queue");
 
         return 0;
 }
@@ -1183,10 +1181,6 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
         tmp->ingress.item = rwq_work_create_single(receive_worker, tmp);
         if (!tmp->ingress.item) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
-        if (rwq_work_post(tmp->ingress.wq, tmp->ingress.item)) {
                 rmt_destroy(tmp);
                 return NULL;
         }
