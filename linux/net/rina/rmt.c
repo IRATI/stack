@@ -1096,21 +1096,20 @@ int rmt_flush_work(struct rmt * rmt)
 
 int rmt_restart_work(struct rmt * rmt)
 {
-        struct rwq_work_item * item;
-
         if (!rmt) {
                 LOG_ERR("No RMT passed");
                 return -1;
         }
 
-        item = rwq_work_create_ni(receive_worker, rmt);
-        if (!item)
+        if (!rmt->ingress.item) {
+                LOG_ERR("RMT Ingress wq has not work item");
                 return -1;
+        }
 
-        rwq_work_post(rmt->ingress.wq, item);
+        rwq_work_post(rmt->ingress.wq, rmt->ingress.item);
 
         LOG_DBG("RMT Ingress WQ  %p has been restarted with WI %p",
-                rmt->ingress.wq, item);
+                rmt->ingress.wq, rmt->ingress.item);
 
         return 0;
 }
@@ -1182,14 +1181,14 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-        tmp->ingress.item = rwq_work_create(receive_worker, tmp);
+        tmp->ingress.item = rwq_work_create_single(receive_worker, tmp);
         if (!tmp->ingress.item) {
                 rmt_destroy(tmp);
-                return -1;
+                return NULL;
         }
         if (rwq_work_post(tmp->ingress.wq, tmp->ingress.item)) {
                 rmt_destroy(tmp);
-                return -1;
+                return NULL;
         }
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
@@ -1513,7 +1512,7 @@ static bool regression_tests_ingress_queue(void)
                 rmt_destroy(rmt);
                 return false;
         }
-        rmt->ingress.wq = rwq_create(name);
+        rmt->ingress.wq = rwq_create_hp(name);
         if (!rmt->ingress.wq) {
                 rmt_destroy(rmt);
                 return false;

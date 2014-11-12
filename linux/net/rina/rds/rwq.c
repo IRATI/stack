@@ -35,6 +35,7 @@ struct rwq_work_item {
         struct work_struct work; /* KEEP AT TOP AND DO NOT MOVE ! */
         int                (* worker)(void * data);
         void *             data;
+        bool               single;
 };
 
 static void rwq_worker(struct work_struct * work)
@@ -52,14 +53,16 @@ static void rwq_worker(struct work_struct * work)
                 LOG_ERR("The worker could not process its data!");
         }
 
-        rkfree(item);
+        if (!item->single)
+                rkfree(item);
 
         return;
 }
 
 #define RWQ_MAX_ACTIVE 1 /* Only temporary */
 
-struct workqueue_struct * rwq_create(const char * name)
+static struct workqueue_struct * rwq_create_priority(const char * name,
+                                                     const int    priority)
 {
         struct workqueue_struct * wq;
 
@@ -72,7 +75,7 @@ struct workqueue_struct * rwq_create(const char * name)
         wq = alloc_workqueue(name,
                              WQ_UNBOUND      |
                              WQ_MEM_RECLAIM  |
-                             WQ_HIGHPRI      |
+                             priority        |
                              WQ_CPU_INTENSIVE,
                              RWQ_MAX_ACTIVE);
 #else
@@ -87,11 +90,19 @@ struct workqueue_struct * rwq_create(const char * name)
 
         return wq;
 }
+
+struct workqueue_struct * rwq_create(const char * name)
+{ return rwq_create_priority(name, 0); }
 EXPORT_SYMBOL(rwq_create);
+
+struct workqueue_struct * rwq_create_hp(const char * name)
+{ return rwq_create_priority(name, WQ_HIGHPRI); }
+EXPORT_SYMBOL(rwq_create_hp);
 
 static struct rwq_work_item * rwq_work_create_gfp(gfp_t    flags,
                                                   int   (* work)(void * data),
-                                                  void *   data)
+                                                  void *   data,
+                                                  bool     single)
 {
         struct rwq_work_item * tmp;
 
@@ -111,19 +122,30 @@ static struct rwq_work_item * rwq_work_create_gfp(gfp_t    flags,
         INIT_WORK((struct work_struct *) tmp, rwq_worker);
         tmp->worker = work;
         tmp->data   = data;
+        tmp->single = single;
 
         return tmp;
 }
 
 struct rwq_work_item * rwq_work_create(int   (* work)(void * data),
                                        void *   data)
-{ return rwq_work_create_gfp(GFP_KERNEL, work, data); }
+{ return rwq_work_create_gfp(GFP_KERNEL, work, data, false); }
 EXPORT_SYMBOL(rwq_work_create);
 
 struct rwq_work_item * rwq_work_create_ni(int   (* work)(void * data),
                                           void *   data)
-{ return rwq_work_create_gfp(GFP_ATOMIC, work, data); }
+{ return rwq_work_create_gfp(GFP_ATOMIC, work, data, false); }
 EXPORT_SYMBOL(rwq_work_create_ni);
+
+struct rwq_work_item * rwq_work_create_single(int   (* work)(void * data),
+                                              void *   data)
+{ return rwq_work_create_gfp(GFP_KERNEL, work, data, true); }
+EXPORT_SYMBOL(rwq_work_create_single);
+
+struct rwq_work_item * rwq_work_create_ni_single(int   (* work)(void * data),
+                                                 void *   data)
+{ return rwq_work_create_gfp(GFP_ATOMIC, work, data, true); }
+EXPORT_SYMBOL(rwq_work_create_ni_single);
 
 int rwq_work_post(struct workqueue_struct * wq,
                   struct rwq_work_item *    item)
@@ -136,6 +158,10 @@ int rwq_work_post(struct workqueue_struct * wq,
                 LOG_ERR("No item passed, cannot post work");
                 return -1;
         }
+
+        if (item->single)
+                test_and_set_bit(WORK_STRUCT_PENDING_BIT,
+                                 work_data_bits((struct work_struct *)item));
 
         if (!queue_work(wq, (struct work_struct *) item)) {
                 /* FIXME: Add workqueue name in the log */

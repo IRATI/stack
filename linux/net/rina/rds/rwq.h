@@ -28,6 +28,7 @@
  */
 
 struct workqueue_struct * rwq_create(const char * name);
+struct workqueue_struct * rwq_create_hp(const char * name);
 int                       rwq_flush(struct workqueue_struct * q);
 int                       rwq_destroy(struct workqueue_struct * q);
 
@@ -39,6 +40,10 @@ struct rwq_work_item *    rwq_work_create(int (* worker)(void * data),
                                           void * data);
 struct rwq_work_item *    rwq_work_create_ni(int (* worker)(void * data),
                                              void * data);
+struct rwq_work_item *    rwq_work_create_single(int (* worker)(void * data),
+                                                 void * data);
+struct rwq_work_item *    rwq_work_create_ni_sigle(int (* worker)(void * data),
+                                                   void * data);
 
 /*
  * NOTE: This function will dispose the rwq_work_item on failure. The item

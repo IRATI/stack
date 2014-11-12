@@ -254,6 +254,10 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
         struct dt  *  dt;
         struct dtcp * dtcp;
 
+        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
+        struct timeval te;
+        long long milliseconds;
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -282,6 +286,14 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                                 pci_sequence_number_get(pdu_pci_get_ro(pdu))))
                 LOG_ERR("Problems setting sender left window edge "
                         "in default_transmission");
+
+        /*  SYSTEM TIME DBG_MESSAGE */
+       do_gettimeofday(&te);
+       milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+       LOG_DBG("DTP (default tx) Sent PDU %d of type %d at %lld",
+                pci_sequence_number_get(pdu_pci_get_ro(pdu)),
+                pci_type(pdu_pci_get_ro(pdu)),
+                milliseconds);
 
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
@@ -1142,6 +1154,10 @@ int dtp_write(struct dtp * instance,
         struct pdu *          cpdu;
         struct dtp_policies * policies;
 
+        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
+        struct timeval te;
+        long long milliseconds;
+
         if (!sdu_is_ok(sdu))
                 return -1;
 
@@ -1314,6 +1330,15 @@ int dtp_write(struct dtp * instance,
         }
 
         /* Post SDU to RMT */
+
+       /* SYSTEM TIME DBG MESSAGE */
+       do_gettimeofday(&te); // get current time
+       milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+       LOG_DBG("DTP Sent PDU %d of type %d at %lld",
+                pci_sequence_number_get(pci),
+                pci_type(pdu_pci_get_ro(pdu)),
+                milliseconds);
+
         return rmt_send(instance->rmt,
                         pci_destination(pci),
                         pci_qos_id(pci),
@@ -1412,6 +1437,10 @@ static int rcv_worker(void * o)
         seq_num_t             max_sdu_gap;
         struct rqueue *       to_post;
 
+        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long milliseconds;
+
         ritem = (struct rcv_item *) o;
         if (!ritem) {
                 LOG_ERR("Bogus rcv_item...");
@@ -1480,6 +1509,11 @@ static int rcv_worker(void * o)
         }
 #endif
         seq_num = pci_sequence_number_get(pci);
+
+        /* SYSTEM TIMESTAMP DBG MESSAGE */
+        do_gettimeofday(&te); // get current time
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTP Received PDU %d at %lld", seq_num, milliseconds);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
@@ -1577,6 +1611,7 @@ static int rcv_worker(void * o)
         to_post = rqueue_create();
         if (!to_post) {
                 LOG_ERR("Could not create to_post list at reception");
+                pdu_destroy(pdu);
                 return -1;
         }
         spin_lock(&instance->seqq->lock);
