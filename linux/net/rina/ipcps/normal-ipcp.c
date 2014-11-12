@@ -230,6 +230,7 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
 }
 
 static int connection_update_request(struct ipcp_instance_data * data,
+                                     struct ipcp_instance *      user_ipcp,
                                      port_id_t                   port_id,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
@@ -273,13 +274,17 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
         return -1;
 }
 
-static int ipcp_flow_notification(struct ipcp_instance_data * data,
-                                  port_id_t                   pid)
+static int ipcp_flow_notification(struct ipcp_instance_data * user_data,
+                                  port_id_t                   pid,
+                                  struct ipcp_instance * n1_ipcp)
 {
-        if (kfa_flow_rmt_bind(data->kfa, pid, data->rmt))
+        /* Review
+        if (kfa_flow_rmt_bind(user_data->kfa, pid, user_data->rmt))
                 return -1;
 
-        if (rmt_n1port_bind(data->rmt, pid))
+        */
+
+        if (rmt_n1port_bind(user_data->rmt, pid, n1_ipcp))
                 return -1;
 
         return 0;
@@ -311,6 +316,7 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
 
 static cep_id_t
 connection_create_arrived(struct ipcp_instance_data * data,
+                          struct ipcp_instance *      user_ipcp,
                           port_id_t                   port_id,
                           address_t                   source,
                           address_t                   dest,

@@ -27,6 +27,8 @@
 #include "du.h"
 #include "connection.h"
 
+struct ipcp_instance;
+
 enum ipcp_config_type {
         IPCP_CONFIG_UINT   = 1,
         IPCP_CONFIG_STRING,
@@ -158,6 +160,7 @@ struct ipcp_instance_ops {
                                        struct conn_policies *      cp_params);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
+                                       struct ipcp_instance *      user_ipcp,
                                        port_id_t                   port_id,
                                        cep_id_t                    src_id,
                                        cep_id_t                    dst_id);
@@ -167,6 +170,7 @@ struct ipcp_instance_ops {
 
         cep_id_t
         (* connection_create_arrived)(struct ipcp_instance_data * data,
+                                      struct ipcp_instance *      user_ipcp,
                                       port_id_t                   port_id,
                                       address_t                   source,
                                       address_t                   dest,
@@ -174,8 +178,9 @@ struct ipcp_instance_ops {
                                       cep_id_t                    dst_cep_id,
                                       struct conn_policies *      cp_params);
 
-        int      (* flow_binding_ipcp)(struct ipcp_instance_data * data,
-                                       port_id_t                   port_id);
+        int      (* flow_binding_ipcp)(struct ipcp_instance_data * user_data,
+                                       port_id_t                   port_id,
+                                       struct ipcp_instance *      n1_ipcp);
 
         int      (* flow_destroy)(struct ipcp_instance_data * data,
                                   port_id_t                   port_id);

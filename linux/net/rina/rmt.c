@@ -43,12 +43,14 @@
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct rmt_queue {
-        struct rfifo *    queue;
-        port_id_t         port_id;
-        struct hlist_node hlist;
+        struct rfifo *              queue;
+        port_id_t                   port_id;
+        struct ipcp_instance * n1_ipcp;
+        struct hlist_node           hlist;
 };
 
-static struct rmt_queue * queue_create(port_id_t id)
+static struct rmt_queue * queue_create(port_id_t id,
+                                       struct ipcp_instance * n1_ipcp)
 {
         struct rmt_queue * tmp;
 
@@ -67,6 +69,7 @@ static struct rmt_queue * queue_create(port_id_t id)
         INIT_HLIST_NODE(&tmp->hlist);
 
         tmp->port_id = id;
+        tmp->n1_ipcp = n1_ipcp;
 
         LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
@@ -396,6 +399,7 @@ static int send_worker(void * o)
                 port_id_t        port_id;
                 struct buffer *  buffer;
                 struct serdes *  serdes;
+                struct ipcp_instance * n1_ipcp;
 
                 ASSERT(entry);
 
@@ -408,6 +412,7 @@ static int send_worker(void * o)
                 }
 
                 port_id = entry->port_id;
+                n1_ipcp = entry->n1_ipcp;
                 spin_unlock(&tmp->egress.queues->lock);
 
                 ASSERT(pdu);
@@ -450,7 +455,7 @@ static int send_worker(void * o)
                 }
 
                 LOG_DBG("Gonna send SDU to port-id %d", port_id);
-                if (kfa_flow_sdu_write(tmp->kfa, port_id, sdu)) {
+                if (n1_ipcp->ops->sdu_write(n1_ipcp->data,port_id, sdu)) {
                         LOG_ERR("Couldn't write SDU to KFA");
                         spin_lock(&tmp->egress.queues->lock);
                         continue; /* Useless for the moment */
@@ -593,11 +598,12 @@ int rmt_send(struct rmt * instance,
 EXPORT_SYMBOL(rmt_send);
 
 static int __queue_send_add(struct rmt * instance,
-                            port_id_t    id)
+                            port_id_t    id,
+                            struct ipcp_instance * n1_ipcp)
 {
         struct rmt_queue * tmp;
 
-        tmp = queue_create(id);
+        tmp = queue_create(id, n1_ipcp);
         if (!tmp)
                 return -1;
 
@@ -610,7 +616,8 @@ static int __queue_send_add(struct rmt * instance,
 }
 
 static int rmt_queue_send_add(struct rmt * instance,
-                              port_id_t    id)
+                              port_id_t    id,
+                              struct ipcp_instance * n1_ipcp)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -632,7 +639,7 @@ static int rmt_queue_send_add(struct rmt * instance,
                 return -1;
         }
 
-        return __queue_send_add(instance, id);
+        return __queue_send_add(instance, id, n1_ipcp);
 }
 
 static int rmt_queue_send_delete(struct rmt * instance,
@@ -665,11 +672,12 @@ static int rmt_queue_send_delete(struct rmt * instance,
 }
 
 static int __queue_recv_add(struct rmt * instance,
-                            port_id_t    id)
+                            port_id_t    id,
+                            struct ipcp_instance * n1_ipcp)
 {
         struct rmt_queue * tmp;
 
-        tmp = queue_create(id);
+        tmp = queue_create(id, n1_ipcp);
         if (!tmp)
                 return -1;
 
@@ -681,8 +689,9 @@ static int __queue_recv_add(struct rmt * instance,
         return 0;
 }
 
-static int rmt_queue_recv_add(struct rmt * instance,
-                              port_id_t    id)
+static int rmt_queue_recv_add(struct rmt *                instance,
+                              port_id_t                   id,
+                              struct ipcp_instance * n1_ipcp)
 {
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -704,7 +713,7 @@ static int rmt_queue_recv_add(struct rmt * instance,
                 return -1;
         }
 
-        return __queue_recv_add(instance, id);
+        return __queue_recv_add(instance, id, n1_ipcp);
 }
 
 static int rmt_queue_recv_delete(struct rmt * instance,
@@ -737,12 +746,13 @@ static int rmt_queue_recv_delete(struct rmt * instance,
 }
 
 int rmt_n1port_bind(struct rmt * instance,
-                    port_id_t    id)
+                    port_id_t    id,
+                    struct ipcp_instance * n1_ipcp)
 {
-        if (rmt_queue_send_add(instance, id))
+        if (rmt_queue_send_add(instance, id, n1_ipcp))
                 return -1;
 
-        if (rmt_queue_recv_add(instance, id)) {
+        if (rmt_queue_recv_add(instance, id, n1_ipcp)) {
                 rmt_queue_send_delete(instance, id);
                 return -1;
         }

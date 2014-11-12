@@ -56,7 +56,8 @@ int          rmt_dt_cons_set(struct rmt *     instance,
                              struct dt_cons * dt_cons);
 
 int          rmt_n1port_bind(struct rmt * instance,
-                             port_id_t    id);
+                             port_id_t    id,
+                             struct ipcp_instance * n1_ipcp);
 int          rmt_n1port_unbind(struct rmt * instance,
                                port_id_t    id);
 int          rmt_pft_add(struct rmt *       instance,
