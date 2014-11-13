@@ -677,5 +677,21 @@ int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
                  struct sdu *  sdu)
 {
-        return -1;
+        if (!sdu_is_ok(sdu)) {
+                LOG_ERR("Bad sdu, cannot enqueue it");
+                return -1;
+        }
+        if (!efcp) {
+                LOG_ERR("Bogus efcp passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->sdu_enqueue(efcp->user_ipcp->data,
+                                              port,
+                                              sdu)) {
+                LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
+                return -1;
+        }
+        return 0;
 }

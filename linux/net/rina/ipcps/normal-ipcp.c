@@ -1009,7 +1009,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        /* FIXME: Probably missing normal flow structures creation */
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);
         list_add(&(instance->data->list), &(data->instances));
@@ -1022,6 +1021,7 @@ static int normal_deallocate_all(struct ipcp_instance_data * data)
 {
         struct normal_flow *flow, *next;
 
+        spin_lock(&data->lock);
         list_for_each_entry_safe(flow, next, &(data->flows), list) {
                 if (remove_all_cepid(data, flow))
                         LOG_ERR("Some efcp structures could not be destroyed"
@@ -1029,10 +1029,13 @@ static int normal_deallocate_all(struct ipcp_instance_data * data)
 
                 if (kfa_port_id_release(data->kfa, flow->port_id))
                         LOG_ERR("Port id %d in IPCP instance %d"
-                                "could not be destroyed", flow->port_id, data->id);
+                                "could not be destroyed",
+                                flow->port_id,
+                                data->id);
                 list_del(&flow->list);
                 rkfree(flow);
         }
+        spin_lock(&data->lock);
 
         return 0;
 }
@@ -1054,7 +1057,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         list_del(&tmp->list);
 
-        /* FIXME: flow deallocation not implemented */
         if (normal_deallocate_all(tmp)) {
                 LOG_ERR("Could not deallocate normal ipcp flows");
                 return -1;
