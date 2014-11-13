@@ -126,6 +126,7 @@ struct ipcp_instance_data;
 
 struct ipcp_instance_ops {
         int  (* flow_allocate_request)(struct ipcp_instance_data * data,
+                                       struct ipcp_instance *      usr_ipcp,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    flow_spec,

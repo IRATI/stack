@@ -132,6 +132,7 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
+                                       struct ipcp_instance *      usr_ipcp,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
@@ -503,39 +504,26 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         struct dummy_flow *    flow;
         struct write_data *    tmp;
         struct rwq_work_item * item;
-        struct sdu *           copy_sdu;
 
         LOG_DBG("Dummy SDU write invoked.");
 
         if (!sdu)
                 return -1;
 
-        /*
-         * FIXME: rearrange this comment (outdated)
-         *
-         * We are going to dup the SDU since the shim has now the ownership
-         * and it is always its burden to free it whenever the processing of
-         * the SDU is finished (e.g. the SDU has been sent through a wire).
-         * For the shim-dummy the processing consists of sending the new SDU
-         * to the sdu-ready fifo, which will take the ownership of this copy.
-         */
-        copy_sdu = sdu_dup_ni(sdu);
-        if (!copy_sdu)
-                return -1;
-
-        sdu_destroy(sdu);
-
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
                         tmp = write_data_create(data->kfa,
-                                                copy_sdu,
+                                                sdu,
                                                 flow->dst_port_id);
-                        if (!is_write_data_complete(tmp))
+                        if (!is_write_data_complete(tmp)) {
+                                sdu_destroy(sdu);
                                 return -1;
+                        }
 
                         item = rwq_work_create_ni(dummy_write, tmp);
                         if (!item) {
                                 write_data_destroy(tmp);
+                                sdu_destroy(sdu);
                                 return -1;
                         }
 
@@ -543,7 +531,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
                         if (rwq_work_post(dummy_wq, item)) {
                                 write_data_destroy(tmp);
-                                sdu_destroy(copy_sdu);
+                                sdu_destroy(sdu);
                                 return -1;
                         }
 
@@ -551,14 +539,17 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                 }
                 if (flow->dst_port_id == id) {
                         tmp = write_data_create(data->kfa,
-                                                copy_sdu,
+                                                sdu,
                                                 flow->port_id);
-                        if (!is_write_data_complete(tmp))
+                        if (!is_write_data_complete(tmp)) {
+                                sdu_destroy(sdu);
                                 return -1;
+                        }
 
                         item = rwq_work_create_ni(dummy_write, tmp);
                         if (!item) {
                                 write_data_destroy(tmp);
+                                sdu_destroy(sdu);
                                 return -1;
                         }
 
@@ -566,7 +557,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
                         if (rwq_work_post(dummy_wq, item)) {
                                 write_data_destroy(tmp);
-                                sdu_destroy(copy_sdu);
+                                sdu_destroy(sdu);
                                 return -1;
                         }
 

@@ -143,7 +143,7 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         flow = find_flow(data, id);
-        if (!flow || flow->state == PORT_STATE_DEALLOCATED) {
+        if (!flow || flow->state != PORT_STATE_ALLOCATED) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Enqueue: There is no flow bound to this port_id: %d", id);
                 sdu_destroy(sdu);
@@ -174,7 +174,7 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         flow = find_flow(data, id);
-        if (!flow || flow->state == PORT_STATE_DEALLOCATED) {
+        if (!flow || flow->state != PORT_STATE_ALLOCATED) {
                 spin_unlock(&data->lock);
                 LOG_ERR("Write: There is no flow bound to this port_id: %d", id);
                 sdu_destroy(sdu);
@@ -278,6 +278,9 @@ static int connection_update_request(struct ipcp_instance_data * data,
                                      cep_id_t                    dst_cep_id)
 {
         struct normal_flow * flow;
+
+        if (!user_ipcp)
+                return cep_id_bad();
 
         if (efcp_connection_update(data->efcpc,
                                    user_ipcp,
@@ -396,10 +399,13 @@ connection_create_arrived(struct ipcp_instance_data * data,
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
 
+        if (!user_ipcp)
+                return cep_id_bad();
+
         conn = rkzalloc(sizeof(*conn), GFP_KERNEL);
         if (!conn) {
                 LOG_ERR("Failed connection creation");
-                return -1;
+                return cep_id_bad();
         }
         conn->destination_address = dest;
         conn->source_address      = source;

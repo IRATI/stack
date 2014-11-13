@@ -174,12 +174,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
-        if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
-                LOG_ERR("Could not create flow at KFA");
-                kfa_port_id_release(kipcm->kfa, pid);
-                goto fail;
-        }
-
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
@@ -187,6 +181,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
+        usr_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (user_ipc_id) {
                 usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!usr_ipcp) {
@@ -203,18 +198,26 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                      ipc_process)) {
                         LOG_DBG("Could not bind the user ipcp' RMT "
                                 "with the flow");
+                        /* FIXME: Where's the kfa_port_id_release? Cohones!' */
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
                 }
 
                 LOG_DBG("Binding user IPCP %d' RMT to flow in port %d",
                         user_ipc_id, pid);
+        } else {
+                if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+                        LOG_ERR("Could not create flow at KFA");
+                        kfa_port_id_release(kipcm->kfa, pid);
+                        goto fail;
+                }
         }
 
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_allocate_request);
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
+                                                    usr_ipcp,
                                                     attrs->source,
                                                     attrs->dest,
                                                     attrs->fspec,

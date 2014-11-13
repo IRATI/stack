@@ -390,6 +390,7 @@ static void rinarp_resolve_handler(void *             opaque,
 }
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
+                                          struct ipcp_instance *      usr_ipcp,
                                           const struct name *         source,
                                           const struct name *         dest,
                                           const struct flow_spec *    fspec,
