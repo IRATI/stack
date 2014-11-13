@@ -246,10 +246,12 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&cep_entry->list);
         cep_entry->cep_id = cep_id;
 
+        spin_lock(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow) {
+                        spin_unlock(&data->lock);
                         LOG_ERR("Could not create a flow in normal-ipcp");
                         efcp_connection_destroy(data->efcpc, cep_id);
                         return cep_id_bad();
@@ -262,6 +264,9 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
 
         list_add(&cep_entry->list, &flow->cep_ids_list);
         flow->active = cep_id;
+        flow->state = PORT_STATE_PENDING;
+
+        spin_unlock(&data->lock);
 
         return cep_id;
 }
@@ -342,7 +347,6 @@ static int ipcp_flow_notification(struct ipcp_instance_data * user_data,
                 return -1;
 
         */
-
         if (rmt_n1port_bind(user_data->rmt, pid, n1_ipcp))
                 return -1;
 
@@ -360,15 +364,19 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
         if (!(&data->flows))
                 return -1;
 
+        spin_lock(&data->lock);
         flow = find_flow_cepid(data, src_cep_id);
         if (!flow) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not retrieve flow by cep_id :%d", src_cep_id);
         }
         if (remove_cep_id_from_flow(flow, src_cep_id)) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not remove cep_id: %d", src_cep_id);
         }
         if (list_empty(&flow->cep_ids_list))
                 rkfree(flow);
+        spin_unlock(&data->lock);
 
         return 0;
 }
