@@ -227,63 +227,6 @@ int  kfa_port_id_release(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_port_id_release);
 
-int kfa_flow_bind(struct kfa *           instance,
-                  port_id_t              pid,
-                  struct ipcp_instance * ipc_process,
-                  ipc_process_id_t       ipc_id)
-{
-        struct ipcp_flow * flow;
-
-        IRQ_BARRIER;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-        if (!is_port_id_ok(pid)) {
-                LOG_ERR("Bogus port-id, bailing out");
-                return -1;
-        }
-        if (!ipc_process) {
-                LOG_ERR("Bogus ipc process instance passed, bailing out");
-                return -1;
-        }
-        /* FIXME: Check the ipc-id */
-
-        mutex_lock(&instance->lock);
-
-        flow = kfa_pmap_find(instance->flows, pid);
-        if (!flow) {
-                LOG_ERR("The flow with port-id %d is not pending, "
-                        "cannot commit it", pid);
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
-
-        if (flow->state != PORT_STATE_PENDING) {
-                LOG_ERR("Flow on port-id %d already committed", pid);
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
-
-        flow->state     = PORT_STATE_ALLOCATED;
-        flow->sdu_ready = rfifo_create_ni();
-        if (!flow->sdu_ready) {
-                kfa_pmap_remove(instance->flows, pid);
-                rkfree(flow);
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
-
-        LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
-                pid, &flow->wait_queue);
-
-        mutex_unlock(&instance->lock);
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_flow_bind);
-
 int kfa_flow_rmt_bind(struct kfa * instance,
                       port_id_t    pid,
                       struct rmt * rmt)
@@ -848,6 +791,8 @@ int kfa_flow_ipcp_bind(struct kfa *           instance,
 {
         struct ipcp_flow * flow;
 
+        IRQ_BARRIER;
+
         if (!instance)
                 return -1;
 
@@ -867,6 +812,24 @@ int kfa_flow_ipcp_bind(struct kfa *           instance,
                 return -1;
         }
         flow->ipc_process = ipcp;
+
+        if (flow->state != PORT_STATE_PENDING) {
+                LOG_ERR("Flow on port-id %d already committed", pid);
+                mutex_unlock(&instance->lock);
+                return -1;
+        }
+
+        flow->state     = PORT_STATE_ALLOCATED;
+        flow->sdu_ready = rfifo_create_ni();
+        if (!flow->sdu_ready) {
+                kfa_pmap_remove(instance->flows, pid);
+                rkfree(flow);
+                mutex_unlock(&instance->lock);
+                return -1;
+        }
+
+        LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
+                pid, &flow->wait_queue);
 
         mutex_unlock(&instance->lock);
 

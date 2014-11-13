@@ -42,6 +42,7 @@
 
 struct efcp {
         struct connection *     connection;
+        struct ipcp_instance *  user_ipcp;
         struct dt *             dt;
         struct efcp_container * container;
 };
@@ -430,7 +431,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /* FIXME: dtp_create() takes ownership of the connection parameter */
         dtp = dtp_create(tmp->dt,
                          container->rmt,
-                         container->kfa,
+                         tmp,
                          connection);
         if (!dtp) {
                 efcp_destroy(tmp);
@@ -595,6 +596,7 @@ int efcp_connection_destroy(struct efcp_container * container,
 EXPORT_SYMBOL(efcp_connection_destroy);
 
 int efcp_connection_update(struct efcp_container * container,
+                           struct ipcp_instance *  user_ipcp,
                            cep_id_t                from,
                            cep_id_t                to)
 {
@@ -620,6 +622,7 @@ int efcp_connection_update(struct efcp_container * container,
                 return -1;
         }
         tmp->connection->destination_cep_id = to;
+        tmp->user_ipcp = user_ipcp;
 
         LOG_DBG("Connection updated");
         LOG_DBG("  Source address:     %d",
@@ -665,3 +668,10 @@ int efcp_unbind_rmt(struct efcp_container * container)
         return 0;
 }
 EXPORT_SYMBOL(efcp_unbind_rmt);
+
+int efcp_enqueue(struct efcp * efcp,
+                 port_id_t     port,
+                 struct sdu *  sdu)
+{
+        return -1;
+}

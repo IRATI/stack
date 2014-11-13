@@ -54,6 +54,7 @@ cep_id_t                efcp_connection_create(struct efcp_container * cont,
 int                     efcp_connection_destroy(struct efcp_container * cont,
                                                 cep_id_t                id);
 int                     efcp_connection_update(struct efcp_container * cont,
+                                               struct ipcp_instance *  user_ipcp,
                                                cep_id_t                from,
                                                cep_id_t                to);
 
@@ -66,5 +67,8 @@ struct efcp_config *    efcp_container_config(struct efcp_container * c);
 int                     efcp_bind_rmt(struct efcp_container * container,
                                       struct rmt *            rmt);
 int                     efcp_unbind_rmt(struct efcp_container * container);
+int                     efcp_enqueue(struct efcp * efcp,
+                                     port_id_t     port,
+                                     struct sdu *  sdu);
 
 #endif

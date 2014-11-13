@@ -77,7 +77,7 @@ struct dtp {
 
         struct dtp_policies *     policies;
         struct rmt *              rmt;
-        struct kfa *              kfa;
+        struct efcp *              efcp;
         struct squeue *           seqq;
         struct workqueue_struct * twq;
         struct workqueue_struct * rcv_wq;
@@ -648,10 +648,10 @@ static int pdu_post(struct dtp * instance,
 
         ASSERT(instance->sv->connection);
 
-        if (kfa_sdu_post(instance->kfa,
+        if (efcp_enqueue(instance->efcp,
                          instance->sv->connection->port_id,
                          sdu)) {
-                LOG_ERR("Could not post SDU to KFA");
+                LOG_ERR("Could not enqueue SDU to EFCP");
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -971,7 +971,7 @@ static const char * twq_name_format(const char *       prefix,
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
-                        struct kfa *        kfa,
+                        struct efcp *       efcp,
                         struct connection * connection)
 {
         struct dtp * tmp;
@@ -1014,7 +1014,7 @@ struct dtp * dtp_create(struct dt *         dt,
         /* FIXME: fixups to the policies should be placed here */
 
         tmp->rmt            = rmt;
-        tmp->kfa            = kfa;
+        tmp->efcp           = efcp;
         tmp->seqq           = squeue_create(tmp);
         if (!tmp->seqq) {
                 LOG_ERR("Could not create Sequencing queue");
@@ -1421,7 +1421,7 @@ static int rcv_worker(void * o)
         }
 
         if (!instance                  ||
-            !instance->kfa             ||
+            !instance->efcp            ||
             !instance->sv              ||
             !instance->sv->connection) {
                 LOG_ERR("Bogus instance passed, bailing out");
