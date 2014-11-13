@@ -1192,6 +1192,7 @@ int rmt_receive(struct rmt * instance,
 
         return 0;
 }
+EXPORT_SYMBOL(rmt_receive);
 
 int rmt_flush_work(struct rmt * rmt)
 {

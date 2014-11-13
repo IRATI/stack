@@ -46,6 +46,7 @@ int          kfa_flow_create(struct kfa *     instance,
                              port_id_t        pid);
 
 /* Commits the flow, binds the flow to a port-id */
+/* FIXME: kfa_flow_bind to be deleted */
 int          kfa_flow_bind(struct kfa *           instance,
                            port_id_t              pid,
                            struct ipcp_instance * ipc_process,

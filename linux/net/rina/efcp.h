@@ -50,6 +50,7 @@ int                     efcp_container_mgmt_write(struct efcp_container * c,
 
 /* FIXME: Rename efcp_connection_*() as efcp_*() */
 cep_id_t                efcp_connection_create(struct efcp_container * cont,
+                                               struct ipcp_instance *  user_ipcp,
                                                struct connection     * conn);
 int                     efcp_connection_destroy(struct efcp_container * cont,
                                                 cep_id_t                id);

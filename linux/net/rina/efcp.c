@@ -380,6 +380,7 @@ static bool is_connection_ok(const struct connection * connection)
 }
 
 cep_id_t efcp_connection_create(struct efcp_container * container,
+                                struct ipcp_instance *  user_ipcp,
                                 struct connection *     connection)
 {
         struct efcp * tmp;
@@ -405,6 +406,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         tmp = efcp_create();
         if (!tmp)
                 return cep_id_bad();
+
+        if (user_ipcp)
+                tmp->user_ipcp = user_ipcp;
 
         tmp->dt = dt_create();
         if (!tmp->dt) {

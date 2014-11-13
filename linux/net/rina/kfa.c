@@ -836,6 +836,16 @@ int kfa_flow_ipcp_bind(struct kfa *           instance,
         return 0;
 }
 
+/* FIXME: To be deleted, just keeped to let the shims compile */
+int kfa_flow_bind(struct kfa * instance,
+                  port_id_t pid,
+                  struct ipcp_instance * ipc_process,
+                  ipc_process_id_t ipc_id)
+{
+        LOG_MISSING;
+        return 0;
+}
+
 struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance)
 {
         if (!instance)

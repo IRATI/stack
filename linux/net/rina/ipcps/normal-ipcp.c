@@ -81,7 +81,8 @@ struct ipcp_instance_data {
 enum normal_flow_state {
         PORT_STATE_NULL = 1,
         PORT_STATE_PENDING,
-        PORT_STATE_ALLOCATED
+        PORT_STATE_ALLOCATED,
+        PORT_STATE_DEALLOCATED
 };
 
 struct cep_ids_entry {
@@ -134,22 +135,57 @@ static int normal_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
+static int normal_sdu_enqueue(struct ipcp_instance_data * data,
+                              port_id_t                   id,
+                              struct sdu *                sdu)
+{
+        struct normal_flow * flow;
+
+        spin_lock(&data->lock);
+        flow = find_flow(data, id);
+        if (!flow || flow->state == PORT_STATE_DEALLOCATED) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Enqueue: There is no flow bound to this port_id: %d", id);
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (!data->rmt) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Enqueue: There is no RMT in ipcp: %d", data->id);
+                sdu_destroy(sdu);
+                return -1;
+        }
+        if (rmt_receive(data->rmt, sdu, id)) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Enqueue :Could not post SDU into the RMT");
+                return -1;
+        }
+        spin_unlock(&data->lock);
+
+        return 0;
+}
+
 static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
                             struct sdu *                sdu)
 {
         struct normal_flow * flow;
 
+        spin_lock(&data->lock);
         flow = find_flow(data, id);
-        if (!flow) {
-                LOG_ERR("There is no flow bound to this port_id: %d", id);
+        if (!flow || flow->state == PORT_STATE_DEALLOCATED) {
+                spin_unlock(&data->lock);
+                LOG_ERR("Write: There is no flow bound to this port_id: %d", id);
                 sdu_destroy(sdu);
                 return -1;
         }
         if (efcp_container_write(data->efcpc, flow->active, sdu)) {
+                spin_unlock(&data->lock);
                 LOG_ERR("Could not send sdu to EFCP Container");
                 return -1;
         }
+        spin_unlock(&data->lock);
 
         return 0;
 }
@@ -194,7 +230,7 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         conn->qos_id              = qos_id;
         conn->policies_params     = cp_params;
 
-        cep_id = efcp_connection_create(data->efcpc, conn);
+        cep_id = efcp_connection_create(data->efcpc, NULL, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 connection_destroy(conn);
@@ -238,28 +274,31 @@ static int connection_update_request(struct ipcp_instance_data * data,
 {
         struct normal_flow * flow;
 
-        if (efcp_connection_update(data->efcpc, user_ipcp, src_cep_id, dst_cep_id))
+        if (efcp_connection_update(data->efcpc,
+                                   user_ipcp,
+                                   src_cep_id,
+                                   dst_cep_id))
                 return -1;
 
         spin_lock(&data->lock);
 
-        flow = find_flow(data->flows, port_id);
+        flow = find_flow(data, port_id);
         if (!flow) {
                 LOG_ERR("The flow with port-id %d is not pending, "
-                        "cannot commit it", pid);
+                        "cannot commit it", port_id);
                 spin_unlock(&data->lock);
                 return -1;
         }
 
         if (flow->state != PORT_STATE_PENDING) {
-                LOG_ERR("Flow on port-id %d already committed", pid);
+                LOG_ERR("Flow on port-id %d already committed", port_id);
                 spin_unlock(&data->lock);
                 return -1;
         }
 
-        flow->state     = PORT_STATE_ALLOCATED;
+        flow->state = PORT_STATE_ALLOCATED;
 
-        LOG_DBG("Flow bound to port-id %d", pid);
+        LOG_DBG("Flow bound to port-id %d", port_id);
 
         spin_unlock(&data->lock);
 
@@ -361,7 +400,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
         conn->destination_cep_id  = dst_cep_id;
         conn->policies_params     = cp_params;
 
-        cep_id = efcp_connection_create(data->efcpc, conn);
+        cep_id = efcp_connection_create(data->efcpc, user_ipcp, conn);
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Failed EFCP connection creation");
                 connection_destroy(conn);
@@ -384,12 +423,14 @@ connection_create_arrived(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&cep_entry->list);
         cep_entry->cep_id = cep_id;
 
+        spin_lock(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow) {
                         LOG_ERR("Could not create a flow in normal-ipcp");
                         efcp_connection_destroy(data->efcpc, cep_id);
+                        spin_unlock(&data->lock);
                         return cep_id_bad();
                 }
                 flow->port_id = port_id;
@@ -400,6 +441,8 @@ connection_create_arrived(struct ipcp_instance_data * data,
 
         list_add(&cep_entry->list, &flow->cep_ids_list);
         flow->active = cep_id;
+        flow->state = PORT_STATE_ALLOCATED;
+        spin_unlock(&data->lock);
 
         return cep_id;
 }
@@ -797,7 +840,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
 
-        .sdu_enqueue               = NULL,
+        .sdu_enqueue               = normal_sdu_enqueue,
         .sdu_write                 = normal_sdu_write,
 
         .mgmt_sdu_read             = normal_mgmt_sdu_read,
