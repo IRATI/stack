@@ -74,14 +74,15 @@ enum dummy_flow_state {
 };
 
 struct dummy_flow {
-        port_id_t             port_id;
-        port_id_t             dst_port_id;
-        struct name *         source;
-        struct name *         dest;
-        struct list_head      list;
-        enum dummy_flow_state state;
-        ipc_process_id_t      dst_id;
-        struct flow_spec *    fspec;
+        port_id_t              port_id;
+        port_id_t              dst_port_id;
+        struct name *          source;
+        struct name *          dest;
+        struct list_head       list;
+        enum dummy_flow_state  state;
+        ipc_process_id_t       dst_id;
+        struct flow_spec *     fspec;
+        struct ipcp_instance * usr_ipcp;
 };
 
 struct app_register {
@@ -193,6 +194,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
         flow->fspec   = flow_spec_dup(fspec);
+        flow->usr_ipcp = usr_ipcp;
         flow->dst_port_id = kfa_port_id_reserve(data->kfa, data->id);
         kfa_flow_create(data->kfa, data->id, flow->dst_port_id);
         ASSERT(is_port_id_ok(flow->dst_port_id));
