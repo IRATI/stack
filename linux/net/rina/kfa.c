@@ -67,57 +67,9 @@ struct ipcp_flow {
         struct rmt *           rmt;
 };
 
-struct kfa * kfa_create(void)
-{
-        struct kfa * instance;
-
-        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance)
-                return NULL;
-
-        instance->pidm = pidm_create();
-        if (!instance->pidm) {
-                rkfree(instance);
-                return NULL;
-        }
-
-        instance->flows = kfa_pmap_create();
-
-        if (!instance->flows) {
-                pidm_destroy(instance->pidm);
-                rkfree(instance);
-                return NULL;
-        }
-
-        instance->ipcp = rkzalloc(sizeof(struct ipcp_instance), GFP_KERNEL);
-        if (!instance->ipcp) {
-                pidm_destroy(instance->pidm);
-                kfa_pmap_destroy(instance->flows);
-                rkfree(instance);
-                return NULL;
-        }
-
-        mutex_init(&instance->lock);
-
-        return instance;
-}
-
-int kfa_destroy(struct kfa * instance)
-{
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        /* FIXME: Destroy all the committed flows */
-        ASSERT(kfa_pmap_empty(instance->flows));
-        kfa_pmap_destroy(instance->flows);
-
-        pidm_destroy(instance->pidm);
-        rkfree(instance);
-
-        return 0;
-}
+struct ipcp_instance_data {
+        struct kfa * kfa;
+};
 
 int kfa_flow_create(struct kfa *     instance,
                     ipc_process_id_t id,
@@ -785,14 +737,19 @@ int kfa_sdu_post_to_user_space(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_sdu_post_to_user_space);
 
-int kfa_flow_ipcp_bind(struct kfa *           instance,
-                       port_id_t              pid,
-                       struct ipcp_instance * ipcp)
+static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
+                              port_id_t              pid,
+                              struct ipcp_instance * ipcp)
 {
         struct ipcp_flow * flow;
+        struct kfa * instance;
 
         IRQ_BARRIER;
 
+        if (!data)
+                return -1;
+
+        instance = data->kfa;
         if (!instance)
                 return -1;
 
@@ -853,3 +810,94 @@ struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance)
 
         return instance->ipcp;
 }
+
+static struct ipcp_instance_ops kfa_instance_ops = {
+        .flow_allocate_request     = NULL,
+        .flow_allocate_response    = NULL,
+        .flow_deallocate           = NULL,
+        .flow_binding_ipcp         = kfa_flow_ipcp_bind,
+        .flow_destroy              = NULL,
+        .application_register      = NULL,
+        .application_unregister    = NULL,
+        .assign_to_dif             = NULL,
+        .update_dif_config         = NULL,
+        .connection_create         = NULL,
+        .connection_update         = NULL,
+        .connection_destroy        = NULL,
+        .connection_create_arrived = NULL,
+        .sdu_enqueue               = NULL, /*kfa_sdu_post,*/
+        .sdu_write                 = NULL, /*kfa_sdu_write,*/
+        .mgmt_sdu_read             = NULL,
+        .mgmt_sdu_write            = NULL,
+        .mgmt_sdu_post             = NULL,
+        .pft_add                   = NULL,
+        .pft_remove                = NULL,
+        .pft_dump                  = NULL,
+        .pft_flush                 = NULL,
+        .ipcp_name                 = NULL
+};
+
+struct kfa * kfa_create(void)
+{
+        struct kfa * instance;
+
+        instance = rkzalloc(sizeof(*instance), GFP_KERNEL);
+        if (!instance)
+                return NULL;
+
+        instance->pidm = pidm_create();
+        if (!instance->pidm) {
+                rkfree(instance);
+                return NULL;
+        }
+
+        instance->flows = kfa_pmap_create();
+
+        if (!instance->flows) {
+                pidm_destroy(instance->pidm);
+                rkfree(instance);
+                return NULL;
+        }
+
+        instance->ipcp = rkzalloc(sizeof(struct ipcp_instance), GFP_KERNEL);
+        if (!instance->ipcp) {
+                pidm_destroy(instance->pidm);
+                kfa_pmap_destroy(instance->flows);
+                rkfree(instance);
+                return NULL;
+        }
+        instance->ipcp->ops  = &kfa_instance_ops;
+        instance->ipcp->data = rkzalloc(sizeof(struct ipcp_instance_data),
+                                        GFP_KERNEL);
+        if (!instance->ipcp->data) {
+                LOG_ERR("Could not allocate memory for kfa ipcp "
+                        "internal data");
+                pidm_destroy(instance->pidm);
+                kfa_pmap_destroy(instance->flows);
+                rkfree(instance);
+                return NULL;
+        }
+        instance->ipcp->data->kfa = instance;
+
+        mutex_init(&instance->lock);
+
+        return instance;
+}
+
+int kfa_destroy(struct kfa * instance)
+{
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        /* FIXME: Destroy all the committed flows */
+        ASSERT(kfa_pmap_empty(instance->flows));
+        kfa_pmap_destroy(instance->flows);
+
+        pidm_destroy(instance->pidm);
+        rkfree(instance);
+
+        return 0;
+}
+

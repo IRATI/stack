@@ -84,10 +84,6 @@ int          kfa_sdu_post_to_user_space(struct kfa * instance,
                                         struct sdu * sdu,
                                         port_id_t    to);
 
-int          kfa_flow_ipcp_bind(struct kfa *           instance,
-                                port_id_t              pid,
-                                struct ipcp_instance * ipcp);
-
 struct rmt;
 
 int          kfa_flow_rmt_bind(struct kfa * instance,

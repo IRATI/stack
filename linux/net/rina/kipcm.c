@@ -189,29 +189,34 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
                 }
+        }
 
-                ASSERT(usr_ipcp->ops);
-                ASSERT(usr_ipcp->ops->flow_binding_ipcp);
+        ASSERT(usr_ipcp->ops);
+        ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
-                                                     pid,
-                                                     ipc_process)) {
-                        LOG_DBG("Could not bind the user ipcp' RMT "
+        if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+                                             pid,
+                                             ipc_process)) {
+        /* FIXME: This if else should not be needed, check why
+         * kfa_port_deallocate or kfa_port_id_release. Since this is for
+         * shims, my guess is to destroy the shim flow and release the port
+         * in kfa, maybe the destroy flow operation can release the port in kfa
+         */
+                if (user_ipc_id) {
+                        LOG_DBG("Could not bind the user ipcp's RMT "
                                 "with the flow");
                         /* FIXME: Where's the kfa_port_id_release? Cohones!' */
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
-                }
-
-                LOG_DBG("Binding user IPCP %d' RMT to flow in port %d",
-                        user_ipc_id, pid);
-        } else {
-                if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+                } else {
                         LOG_ERR("Could not create flow at KFA");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
                 }
         }
+
+        LOG_DBG("Binding user IPCP %d' RMT to flow in port %d",
+                user_ipc_id, pid);
 
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_allocate_request);
@@ -906,21 +911,15 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         }
 
         user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-
         if (user_ipc_id) {
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!user_ipcp)
                         goto fail;
-
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      port_id,
-                                                      ipcp))
-                        goto fail;
-        } else {
-                if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
-                        LOG_ERR("Could not bind ipcp to flow at KFA");
-                        goto fail;
-                }
+        }
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              ipcp)) {
+                        LOG_ERR("Could not bind user_ipcp to flow");
         }
 
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
@@ -1029,18 +1028,14 @@ static int notify_ipcp_conn_update_req(void *             data,
                                                       attrs->src_cep);
                         goto fail;
                 }
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      port_id,
-                                                      ipcp)) {
-                        ipcp->ops->connection_destroy(ipcp->data,
-                                                      attrs->src_cep);
-                        goto fail;
-                }
-        } else {
-                if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
-                        LOG_ERR("Could not bind ipcp to flow at KFA");
-                        goto fail;
-                }
+        }
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                             ipcp)) {
+                LOG_ERR("Could not bind user_ipcp to flow");
+                ipcp->ops->connection_destroy(ipcp->data,
+                                              attrs->src_cep);
+                goto fail;
         }
 
         if (ipcp->ops->connection_update(ipcp->data,
@@ -1794,6 +1789,7 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
         uint_t             nl_port_id;
         rnl_sn_t           seq_num;
         struct ipcp_instance * ipc_process;
+        struct ipcp_instance * kfa_ipcp;
 
         IRQ_BARRIER;
 
@@ -1805,7 +1801,14 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 return -1;
         }
-        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipc_process)) {
+
+        /* FIXME: now using the IPCP API of the KFA, but
+         * this has to dissapear */
+        /*if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipc_process)) {*/
+        kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
+        if (kfa_ipcp->ops->flow_binding_ipcp(kfa_ipcp->data,
+                                             port_id,
+                                             ipc_process)) {
                 LOG_ERR("Could not bind ipcp to flow at KFA");
                 return -1;
         }
@@ -2023,6 +2026,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 {
         struct ipcp_instance * ipc_process, * user_ipc_process;
         port_id_t              pid;
+        struct ipcp_instance * kfa_ipcp;
 
         IRQ_BARRIER;
 
@@ -2069,7 +2073,13 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
-        if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {
+        /* FIXME: now using the IPCP API of the KFA, but
+         * this has to dissapear */
+        /*if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {*/
+        kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
+        if (kfa_ipcp->ops->flow_binding_ipcp(kfa_ipcp->data,
+                                             pid,
+                                             ipc_process)) {
                 LOG_ERR("Problems binding IPC process to flow");
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
