@@ -75,12 +75,12 @@ struct ipcp_instance_data {
         struct rmt *            rmt;
         address_t               address;
         struct mgmt_data *      mgmt_data;
+        spinlock_t              lock;
 };
 
 enum normal_flow_state {
         PORT_STATE_NULL = 1,
-        PORT_STATE_RECIPIENT_ALLOCATE_PENDING,
-        PORT_STATE_INITIATOR_ALLOCATE_PENDING,
+        PORT_STATE_PENDING,
         PORT_STATE_ALLOCATED
 };
 
@@ -90,10 +90,11 @@ struct cep_ids_entry {
 };
 
 struct normal_flow {
-        port_id_t        port_id;
-        cep_id_t         active;
-        struct list_head cep_ids_list;
-        struct list_head list;
+        port_id_t              port_id;
+        cep_id_t               active;
+        struct list_head       cep_ids_list;
+        struct list_head       list;
+        enum normal_flow_state state;
 };
 
 static struct normal_flow * find_flow(struct ipcp_instance_data * data,
@@ -235,13 +236,32 @@ static int connection_update_request(struct ipcp_instance_data * data,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
-        if (efcp_connection_update(data->efcpc, src_cep_id, dst_cep_id))
+        struct normal_flow * flow;
+
+        if (efcp_connection_update(data->efcpc, user_ipcp, src_cep_id, dst_cep_id))
                 return -1;
 
-        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
-                efcp_connection_destroy(data->efcpc, src_cep_id);
+        spin_lock(&data->lock);
+
+        flow = find_flow(data->flows, port_id);
+        if (!flow) {
+                LOG_ERR("The flow with port-id %d is not pending, "
+                        "cannot commit it", pid);
+                spin_unlock(&data->lock);
                 return -1;
         }
+
+        if (flow->state != PORT_STATE_PENDING) {
+                LOG_ERR("Flow on port-id %d already committed", pid);
+                spin_unlock(&data->lock);
+                return -1;
+        }
+
+        flow->state     = PORT_STATE_ALLOCATED;
+
+        LOG_DBG("Flow bound to port-id %d", pid);
+
+        spin_unlock(&data->lock);
 
         return 0;
 }
