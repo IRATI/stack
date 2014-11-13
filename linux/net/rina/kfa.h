@@ -95,4 +95,6 @@ int          kfa_flow_rmt_bind(struct kfa * instance,
 
 int          kfa_flow_rmt_unbind(struct kfa * instance,
                                  port_id_t    pid);
+
+struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance);
 #endif

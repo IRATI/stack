@@ -198,7 +198,9 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 ASSERT(usr_ipcp->ops);
                 ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data, pid)) {
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+                                                     pid,
+                                                     ipc_process)) {
                         LOG_DBG("Could not bind the user ipcp' RMT "
                                 "with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
@@ -309,7 +311,9 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 ASSERT(usr_ipcp->ops);
                 ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data, pid)) {
+                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+                                                     pid,
+                                                     ipc_process)) {
                         LOG_DBG("(response) Could not bind the user ipcp' "
                                 "RMT with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
@@ -793,11 +797,6 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (!ipcp)
                 goto fail;
 
-        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
-                LOG_ERR("Could not bind ipcp to flow at KFA");
-                goto fail;
-        }
-
         /* IPCP takes ownership of the cp_params */
         src_cep = ipcp->ops->connection_create(ipcp->data,
                                                attrs->port_id,
@@ -868,6 +867,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         ipc_process_id_t                                user_ipc_id;
         port_id_t                                       port_id;
         cep_id_t                                        src_cep;
+        struct ipcp_instance *                          user_ipcp;
 
         ipc_id  = 0;
         port_id = 0;
@@ -902,24 +902,26 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                 goto fail;
         }
 
-        if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
-                LOG_ERR("Could not bind ipcp to flow at KFA");
-                goto fail;
-        }
+        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
 
         if (user_ipc_id) {
-                struct ipcp_instance * user_ipcp;
-
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!user_ipcp)
                         goto fail;
 
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      port_id))
+                                                      port_id,
+                                                      ipcp))
                         goto fail;
+        } else {
+                if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
+                        LOG_ERR("Could not bind ipcp to flow at KFA");
+                        goto fail;
+                }
         }
 
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
+                                                       user_ipcp,
                                                        attrs->port_id,
                                                        attrs->src_addr,
                                                        attrs->dst_addr,
@@ -983,6 +985,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         ipc_process_id_t                            ipc_id;
         ipc_process_id_t                            user_ipc_id;
         port_id_t                                   port_id;
+        struct ipcp_instance *                      user_ipcp;
 
         ipc_id  = 0;
         port_id = 0;
@@ -1015,9 +1018,8 @@ static int notify_ipcp_conn_update_req(void *             data,
         if (!ipcp)
                 goto fail;
 
+        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (user_ipc_id) {
-                struct ipcp_instance * user_ipcp;
-
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!user_ipcp) {
                         ipcp->ops->connection_destroy(ipcp->data,
@@ -1025,14 +1027,21 @@ static int notify_ipcp_conn_update_req(void *             data,
                         goto fail;
                 }
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      port_id)) {
+                                                      port_id,
+                                                      ipcp)) {
                         ipcp->ops->connection_destroy(ipcp->data,
                                                       attrs->src_cep);
+                        goto fail;
+                }
+        } else {
+                if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipcp)) {
+                        LOG_ERR("Could not bind ipcp to flow at KFA");
                         goto fail;
                 }
         }
 
         if (ipcp->ops->connection_update(ipcp->data,
+                                         user_ipcp,
                                          port_id,
                                          attrs->src_cep,
                                          attrs->dst_cep))

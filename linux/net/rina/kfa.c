@@ -44,6 +44,7 @@ struct kfa {
         struct mutex     lock;
         struct pidm *     pidm;
         struct kfa_pmap * flows;
+        struct ipcp_instance * ipcp;
 };
 
 enum flow_state {
@@ -83,6 +84,15 @@ struct kfa * kfa_create(void)
         instance->flows = kfa_pmap_create();
 
         if (!instance->flows) {
+                pidm_destroy(instance->pidm);
+                rkfree(instance);
+                return NULL;
+        }
+
+        instance->ipcp = rkzalloc(sizeof(struct ipcp_instance), GFP_KERNEL);
+        if (!instance->ipcp) {
+                pidm_destroy(instance->pidm);
+                kfa_pmap_destroy(instance->flows);
                 rkfree(instance);
                 return NULL;
         }
@@ -861,4 +871,12 @@ int kfa_flow_ipcp_bind(struct kfa *           instance,
         mutex_unlock(&instance->lock);
 
         return 0;
+}
+
+struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance)
+{
+        if (!instance)
+                return NULL;
+
+        return instance->ipcp;
 }
