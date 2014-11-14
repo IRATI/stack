@@ -197,25 +197,14 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
                                              pid,
                                              ipc_process)) {
-        /* FIXME: This if else should not be needed, check why
-         * kfa_port_deallocate or kfa_port_id_release. Since this is for
-         * shims, my guess is to destroy the shim flow and release the port
-         * in kfa, maybe the destroy flow operation can release the port in kfa
-         */
-                if (user_ipc_id) {
-                        LOG_DBG("Could not bind the user ipcp's RMT "
-                                "with the flow");
-                        /* FIXME: Where's the kfa_port_id_release? Cohones!' */
-                        kfa_flow_deallocate(kipcm->kfa, pid);
-                        goto fail;
-                } else {
-                        LOG_ERR("Could not create flow at KFA");
-                        kfa_port_id_release(kipcm->kfa, pid);
-                        goto fail;
-                }
+                LOG_DBG("Could not bind the user ipcp's "
+                        "with the flow");
+
+                kfa_flow_deallocate(kipcm->kfa, pid);
+                goto fail;
         }
 
-        LOG_DBG("Binding user IPCP %d' RMT to flow in port %d",
+        LOG_DBG("Binding user IPCP %d to flow in port %d",
                 user_ipc_id, pid);
 
         ASSERT(ipc_process->ops);
@@ -253,7 +242,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         struct rnl_alloc_flow_resp_msg_attrs * attrs;
         struct rnl_msg *                       msg;
         struct ipcp_instance *                 ipc_process;
-        struct ipcp_instance *                 usr_ipcp;
+        struct ipcp_instance *                 user_ipcp;
         ipc_process_id_t                       ipc_id;
         ipc_process_id_t                       user_ipc_id;
         port_id_t                              pid;
@@ -306,9 +295,10 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 return -1;
         }
 
+        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (user_ipc_id) {
-                usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!usr_ipcp) {
+                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!user_ipcp) {
                         LOG_DBG("(response) Could not find the user ipcp "
                                 "of the flow...");
                         kfa_flow_deallocate(kipcm->kfa, pid);
@@ -319,7 +309,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 ASSERT(usr_ipcp->ops);
                 ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
-                if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                                      pid,
                                                      ipc_process)) {
                         LOG_DBG("(response) Could not bind the user ipcp' "
@@ -1031,7 +1021,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         }
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                               port_id,
-                                             ipcp)) {
+                                              ipcp)) {
                 LOG_ERR("Could not bind user_ipcp to flow");
                 ipcp->ops->connection_destroy(ipcp->data,
                                               attrs->src_cep);
@@ -1778,18 +1768,17 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         return 0;
 }
 
-int kipcm_flow_arrived(struct kipcm *     kipcm,
-                       ipc_process_id_t   ipc_id,
-                       port_id_t          port_id,
-                       struct name *      dif_name,
-                       struct name *      source,
-                       struct name *      dest,
-                       struct flow_spec * fspec)
+int kipcm_flow_arrived(struct kipcm *         kipcm,
+                       ipc_process_id_t       ipc_id,
+                       port_id_t              port_id,
+                       struct name *          dif_name,
+                       struct name *          source,
+                       struct name *          dest,
+                       struct flow_spec *     fspec)
 {
         uint_t             nl_port_id;
         rnl_sn_t           seq_num;
         struct ipcp_instance * ipc_process;
-        struct ipcp_instance * kfa_ipcp;
 
         IRQ_BARRIER;
 
@@ -1802,16 +1791,6 @@ int kipcm_flow_arrived(struct kipcm *     kipcm,
                 return -1;
         }
 
-        /* FIXME: now using the IPCP API of the KFA, but
-         * this has to dissapear */
-        /*if (kfa_flow_ipcp_bind(kipcm->kfa, port_id, ipc_process)) {*/
-        kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
-        if (kfa_ipcp->ops->flow_binding_ipcp(kfa_ipcp->data,
-                                             port_id,
-                                             ipc_process)) {
-                LOG_ERR("Could not bind ipcp to flow at KFA");
-                return -1;
-        }
         seq_num = rnl_get_next_seqn(kipcm->rnls);
         if (kipcm_smap_add_ni(kipcm->messages->egress, seq_num, port_id)) {
                 LOG_DBG("Could not get next sequence number");

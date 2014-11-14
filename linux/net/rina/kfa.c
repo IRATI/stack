@@ -738,8 +738,8 @@ int kfa_sdu_post_to_user_space(struct kfa * instance,
 EXPORT_SYMBOL(kfa_sdu_post_to_user_space);
 
 static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
-                              port_id_t              pid,
-                              struct ipcp_instance * ipcp)
+                              port_id_t                   pid,
+                              struct ipcp_instance *      ipcp)
 {
         struct ipcp_flow * flow;
         struct kfa * instance;
