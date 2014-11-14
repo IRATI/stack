@@ -310,8 +310,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 ASSERT(usr_ipcp->ops->flow_binding_ipcp);
 
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                     pid,
-                                                     ipc_process)) {
+                                                      pid,
+                                                      ipc_process)) {
                         LOG_DBG("(response) Could not bind the user ipcp' "
                                 "RMT with the flow");
                         kfa_flow_deallocate(kipcm->kfa, pid);
@@ -327,6 +327,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         ASSERT(ipc_process->ops->flow_allocate_response);
 
         if (ipc_process->ops->flow_allocate_response(ipc_process->data,
+                                                     user_ipcp,
                                                      pid,
                                                      attrs->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",

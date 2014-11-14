@@ -76,17 +76,18 @@ enum port_id_state {
 
 /* Holds the information related to one flow */
 struct shim_eth_flow {
-        struct list_head   list;
+        struct list_head       list;
 
-        struct gha *       dest_ha;
-        struct gpa *       dest_pa;
+        struct gha *           dest_ha;
+        struct gpa *           dest_pa;
 
         /* Only used once for allocate_response */
-        port_id_t          port_id;
-        enum port_id_state port_id_state;
+        port_id_t              port_id;
+        enum port_id_state     port_id_state;
 
         /* Used when flow is not allocated yet */
-        struct rfifo *     sdu_queue;
+        struct rfifo *         sdu_queue;
+        struct ipcp_instance * user_ipcp;
 };
 
 /*
@@ -457,6 +458,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
+                                           struct ipcp_instance *      user_ipcp,
                                            port_id_t                   port_id,
                                            int                         result)
 {
@@ -481,7 +483,8 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
-                flow->port_id = port_id;
+                flow->port_id   = port_id;
+                flow->user_ipcp = user_ipcp;
                 if (kipcm_flow_commit(default_kipcm, data->id,
                                       flow->port_id)) {
                         LOG_ERR("KIPCM flow add failed");
