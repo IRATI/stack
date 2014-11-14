@@ -611,24 +611,35 @@ int kfa_flow_sdu_read(struct kfa *  instance,
         return retval;
 }
 
-int kfa_sdu_post(struct kfa * instance,
-                 port_id_t    id,
-                 struct sdu * sdu)
+static int kfa_sdu_post(struct ipcp_instance_data * data,
+                        port_id_t                   id,
+                        struct sdu *                sdu)
 {
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
+        struct kfa *        instace;
         int                 retval = 0;
 
+        if (!data) {
+                LOG_ERR("Bogus ipcp data instance passed, cannot post SDU");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        instance = data->kfa;
         if (!instance) {
                 LOG_ERR("Bogus kfa instance passed, cannot post SDU");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bogus port-id, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus parameters passed, bailing out");
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -639,6 +650,7 @@ int kfa_sdu_post(struct kfa * instance,
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 mutex_unlock(&instance->lock);
+                sdu_destroy(sdu);
                 return -1;
         }
 
@@ -693,7 +705,6 @@ int kfa_sdu_post(struct kfa * instance,
 
         return retval;
 }
-EXPORT_SYMBOL(kfa_sdu_post);
 
 #if 0
 struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
@@ -711,31 +722,6 @@ struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
 }
 EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
-
-int kfa_sdu_post_to_user_space(struct kfa * instance,
-                               struct sdu * sdu,
-                               port_id_t    to)
-{
-        if (!instance) {
-                LOG_ERR("Bogus kfa instance passed, cannot post SDU");
-                return -1;
-        }
-        if (!is_port_id_ok(to)) {
-                LOG_ERR("Bogus port-id, bailing out");
-                return -1;
-        }
-        if (!sdu_is_ok(sdu)) {
-                LOG_ERR("Bogus parameters passed, bailing out");
-                return -1;
-        }
-
-        LOG_DBG("Posting SDU to queue for user space in port-id %d ", to);
-
-        LOG_MISSING;
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_sdu_post_to_user_space);
 
 static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                               port_id_t                   pid,
@@ -816,7 +802,7 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .flow_allocate_response    = NULL,
         .flow_deallocate           = NULL,
         .flow_binding_ipcp         = kfa_flow_ipcp_bind,
-        .flow_destroy              = NULL,
+        .flow_destroy              = NULL, /*kfa_flow_deallocate or kfa_port_id_release ?*/
         .application_register      = NULL,
         .application_unregister    = NULL,
         .assign_to_dif             = NULL,
@@ -825,15 +811,8 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
-        .sdu_enqueue               = NULL, /*kfa_sdu_post,*/
+        .sdu_enqueue               = kfa_sdu_post
         .sdu_write                 = NULL, /*kfa_sdu_write,*/
-        .mgmt_sdu_read             = NULL,
-        .mgmt_sdu_write            = NULL,
-        .mgmt_sdu_post             = NULL,
-        .pft_add                   = NULL,
-        .pft_remove                = NULL,
-        .pft_dump                  = NULL,
-        .pft_flush                 = NULL,
         .ipcp_name                 = NULL
 };
 

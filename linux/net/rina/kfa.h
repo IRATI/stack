@@ -67,22 +67,10 @@ int          kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id,
                                struct sdu ** sdu);
 
-int          kfa_sdu_post(struct kfa * instance,
-                          port_id_t    id,
-                          struct sdu * sdu);
-
 #if 0
 struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance,
                                         port_id_t    pid);
 #endif
-
-/*
- * Used by the RMT to push SDU intended for user
- * space apps, not to follow the flow through the DIF stack
- */
-int          kfa_sdu_post_to_user_space(struct kfa * instance,
-                                        struct sdu * sdu,
-                                        port_id_t    to);
 
 struct rmt;
 
