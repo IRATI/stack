@@ -184,6 +184,9 @@ struct ipcp_instance_ops {
                                        port_id_t                   port_id,
                                        struct ipcp_instance *      n1_ipcp);
 
+        int      (* flow_unbinding_ipcp)(struct ipcp_instance_data * user_data,
+                                         port_id_t                   port_id);
+
         int      (* flow_destroy)(struct ipcp_instance_data * data,
                                   port_id_t                   port_id);
 

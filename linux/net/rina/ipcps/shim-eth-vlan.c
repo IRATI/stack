@@ -882,19 +882,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         return -1;
                 }
 
-                if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
-                        LOG_DBG("Could not create flow in KFA");
-                        flow->port_id_state = PORT_STATE_NULL;
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        spin_unlock(&data->lock);
-                        sdu_destroy(du);
-                        gha_destroy(ghaddr);
-                        if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-eth-vlan "
-                                        "flow");
-                        return -1;
-                }
-
                 LOG_DBG("Added flow to the list");
 
                 flow->sdu_queue = rfifo_create();

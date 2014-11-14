@@ -168,11 +168,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         ASSERT(is_port_id_ok(pid));
-        if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
-                LOG_ERR("Could not create flow at KFA");
-                kfa_port_id_release(kipcm->kfa, pid);
-                goto fail;
-        }
 
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
@@ -1626,14 +1621,7 @@ int kipcm_ipcp_factory_unregister(struct kipcm *        kipcm,
                         KIPCM_UNLOCK(kipcm);
                         return -1;
                 }
-                /*
-                 * FIXME: Should we look for pending flows from this
-                 *        IPC Process ?
-                 */
-                if (kfa_remove_all_for_id(kipcm->kfa, id)) {
-                        KIPCM_UNLOCK(kipcm);
-                        return -1;
-                }
+
                 if (factory->ops->destroy(factory->data, instance)) {
                         KIPCM_UNLOCK(kipcm);
                         return -1;
@@ -1749,11 +1737,6 @@ int kipcm_ipcp_destroy(struct kipcm *   kipcm,
         factory = instance->factory;
         ASSERT(factory);
 
-        /* FIXME: Should we look for pending flows from this IPC Process ? */
-        if (kfa_remove_all_for_id(kipcm->kfa, id)) {
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
         if (factory->ops->destroy(factory->data, instance)) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -2042,13 +2025,6 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
-                name_destroy(process_name);
-                return port_id_bad();
-        }
-
-        if (kfa_flow_create(kipcm->kfa, ipc_id, pid)) {
-                LOG_ERR("Could not create flow");
-                kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return port_id_bad();
         }

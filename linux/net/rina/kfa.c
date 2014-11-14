@@ -71,50 +71,6 @@ struct ipcp_instance_data {
         struct kfa * kfa;
 };
 
-int kfa_flow_create(struct kfa *     instance,
-                    ipc_process_id_t id,
-                    port_id_t        pid)
-{
-        struct ipcp_flow * flow;
-
-        IRQ_BARRIER;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-        if (!is_port_id_ok(pid)) {
-                LOG_ERR("Bogus PID passed, bailing out");
-                return-1;
-        }
-
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
-        if (!flow)
-                return -1;
-
-        flow->state = PORT_STATE_PENDING;
-        atomic_set(&flow->readers, 0);
-        atomic_set(&flow->writers, 0);
-        atomic_set(&flow->posters, 0);
-
-        init_waitqueue_head(&flow->wait_queue);
-
-        mutex_lock(&instance->lock);
-
-        if (kfa_pmap_add_ni(instance->flows, pid, flow, id)) {
-                LOG_ERR("Could not map flow and port-id %d", pid);
-                rkfree(flow);
-
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
-
-        mutex_unlock(&instance->lock);
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_flow_create);
-
 port_id_t kfa_port_id_reserve(struct kfa *     instance,
                               ipc_process_id_t id)
 {
@@ -207,7 +163,7 @@ int kfa_flow_rmt_bind(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_rmt_bind);
-
+/*
 int kfa_flow_rmt_unbind(struct kfa * instance,
                         port_id_t    pid)
 {
@@ -235,7 +191,7 @@ int kfa_flow_rmt_unbind(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_rmt_unbind);
-
+*/
 /* NOTE: Add instance-locking IFF exporting to API */
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
@@ -270,13 +226,6 @@ static int kfa_flow_destroy(struct kfa *       instance,
                 retval = -1;
         }
 
-        if (flow->rmt) {
-                if (rmt_n1port_unbind(flow->rmt, id)) {
-                        LOG_ERR("Could not unbind port-id %d from "
-                                "RMT queues", id);
-                        retval = -1;
-                }
-        }
         rkfree(flow);
 
         ASSERT(ipcp);
@@ -336,24 +285,6 @@ int kfa_flow_deallocate(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_deallocate);
-
-/* FIXME: To be removed ASAP */
-int kfa_remove_all_for_id(struct kfa *     instance,
-                          ipc_process_id_t id)
-{
-        IRQ_BARRIER;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        if (kfa_pmap_remove_all_for_id(instance->flows, id))
-                return -1;
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_remove_all_for_id);
 
 int kfa_flow_sdu_write(struct kfa * instance,
                        port_id_t    id,
@@ -745,22 +676,28 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
         if (!ipcp)
                 return -1;
 
-        mutex_lock(&instance->lock);
+        IRQ_BARRIER;
 
-        flow = kfa_pmap_find(instance->flows, pid);
-        if (!flow) {
-                LOG_ERR("There is no flow with port-id %d, "
-                        "cannot bind it", pid);
-                mutex_unlock(&instance->lock);
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Bogus PID passed, bailing out");
+                return-1;
+        }
+
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow)
+                return -1;
+
+        atomic_set(&flow->readers, 0);
+        atomic_set(&flow->writers, 0);
+        atomic_set(&flow->posters, 0);
+
+        init_waitqueue_head(&flow->wait_queue);
+
         flow->ipc_process = ipcp;
-
-        if (flow->state != PORT_STATE_PENDING) {
-                LOG_ERR("Flow on port-id %d already committed", pid);
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
 
         flow->state     = PORT_STATE_ALLOCATED;
         flow->sdu_ready = rfifo_create_ni();
@@ -773,6 +710,16 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
+
+        mutex_lock(&instance->lock);
+
+        if (kfa_pmap_add_ni(instance->flows, pid, flow)) {
+                LOG_ERR("Could not map flow and port-id %d", pid);
+                rkfree(flow);
+
+                mutex_unlock(&instance->lock);
+                return -1;
+        }
 
         mutex_unlock(&instance->lock);
 
@@ -802,6 +749,7 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .flow_allocate_response    = NULL,
         .flow_deallocate           = NULL,
         .flow_binding_ipcp         = kfa_flow_ipcp_bind,
+        .flow_unbinding_ipcp       = NULL,
         .flow_destroy              = NULL, /*kfa_flow_deallocate or kfa_port_id_release ?*/
         .application_register      = NULL,
         .application_unregister    = NULL,

@@ -99,6 +99,7 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->pft_remove                ||
             ops->pft_dump                  ||
             ops->flow_binding_ipcp         ||
+            ops->flow_unbinding_ipcp       ||
             ops->flow_destroy              ||
             ops->sdu_enqueue)
                 return true;

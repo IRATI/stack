@@ -122,7 +122,7 @@ static int qmap_destroy(struct rmt_qmap * m, struct kfa * kfa)
         hash_for_each_safe(m->queues, bucket, tmp, entry, hlist) {
                 ASSERT(entry);
 
-                kfa_flow_rmt_unbind(kfa, entry->port_id);
+                /*kfa_flow_rmt_unbind(kfa, entry->port_id);*/
                 if (queue_destroy(entry)) {
                         LOG_ERR("Could not destroy entry %pK", entry);
                         return -1;
