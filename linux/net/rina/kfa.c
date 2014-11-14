@@ -286,16 +286,24 @@ int kfa_flow_deallocate(struct kfa * instance,
 }
 EXPORT_SYMBOL(kfa_flow_deallocate);
 
-int kfa_flow_sdu_write(struct kfa * instance,
-                       port_id_t    id,
-                       struct sdu * sdu)
+int kfa_flow_sdu_write(struct ipcp_instance_data * data,
+                       port_id_t                   id,
+                       struct sdu *                sdu)
 {
         struct ipcp_flow *     flow;
         struct ipcp_instance * ipcp;
+        struct kfa *           instance;
         int                    retval = 0;
 
         IRQ_BARRIER;
 
+        if (!data) {
+                LOG_ERR("Bogus ipcp data passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        instance = data->kfa;
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 sdu_destroy(sdu);
@@ -726,16 +734,6 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
         return 0;
 }
 
-/* FIXME: To be deleted, just keeped to let the shims compile */
-int kfa_flow_bind(struct kfa * instance,
-                  port_id_t pid,
-                  struct ipcp_instance * ipc_process,
-                  ipc_process_id_t ipc_id)
-{
-        LOG_MISSING;
-        return 0;
-}
-
 struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance)
 {
         if (!instance)
@@ -760,7 +758,7 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
         .sdu_enqueue               = kfa_sdu_post,
-        .sdu_write                 = NULL, /*kfa_sdu_write,*/
+        .sdu_write                 = kfa_flow_sdu_write,
         .ipcp_name                 = NULL
 };
 

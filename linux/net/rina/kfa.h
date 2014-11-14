@@ -40,18 +40,10 @@ port_id_t    kfa_port_id_reserve(struct kfa *     instance,
 int          kfa_port_id_release(struct kfa * instance,
                                  port_id_t    port_id);
 
-/* Commits the flow, binds the flow to a port-id */
-/* FIXME: kfa_flow_bind to be deleted */
-int          kfa_flow_bind(struct kfa *           instance,
-                           port_id_t              pid,
-                           struct ipcp_instance * ipc_process,
-                           ipc_process_id_t       ipc_id);
-
 int          kfa_flow_deallocate(struct kfa * instance,
                                  port_id_t    id);
 
-/* Once the flow is bound to a port, we can write/read SDUs */
-int          kfa_flow_sdu_write(struct kfa *  instance,
+int          kfa_flow_sdu_write(struct ipcp_instance_data * data,
                                 port_id_t     id,
                                 struct sdu *  sdu);
 

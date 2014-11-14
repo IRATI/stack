@@ -1816,7 +1816,7 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
-
+/*
         if (kfa_flow_bind(kipcm->kfa,
                           port_id,
                           ipc_process,
@@ -1825,7 +1825,7 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
-
+*/
         KIPCM_UNLOCK(kipcm);
 
         return 0;
@@ -1836,6 +1836,8 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)
 {
+        struct ipcp_instance * kfa_ipcp;
+
         IRQ_BARRIER;
 
         if (!kipcm) {
@@ -1850,9 +1852,15 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -1;
         }
 
+        kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
+        if (!kfa_ipcp) {
+                LOG_ERR("Could not resolve KFA IPCP API");
+                sdu_destroy(sdu);
+                return -1;
+        }
         LOG_DBG("Tring to write SDU to port_id %d", port_id);
 
-        if (kfa_flow_sdu_write(kipcm->kfa, port_id, sdu))
+        if (kfa_ipcp->ops->sdu_write(kfa_ipcp->data, port_id, sdu))
                 return -1;
 
         /* The SDU is ours */

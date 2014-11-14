@@ -43,10 +43,10 @@
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct rmt_queue {
-        struct rfifo *              queue;
-        port_id_t                   port_id;
+        struct rfifo *         queue;
+        port_id_t              port_id;
         struct ipcp_instance * n1_ipcp;
-        struct hlist_node           hlist;
+        struct hlist_node      hlist;
 };
 
 static struct rmt_queue * queue_create(port_id_t id,
@@ -872,11 +872,12 @@ static int forward_pdu(struct rmt * rmt,
                        qos_id_t     qos_id,
                        struct pdu * pdu)
 {
-        int              i;
-        struct sdu *     sdu;
-        struct pdu_ser * pdu_ser;
-        struct buffer *  buffer;
-        struct serdes *  serdes;
+        int                i;
+        struct sdu *       sdu;
+        struct pdu_ser *   pdu_ser;
+        struct buffer *    buffer;
+        struct serdes *    serdes;
+        struct rmt_queue * queue;
 
         if (!is_address_ok(dst_addr)) {
                 LOG_ERR("PDU has Wrong destination address");
@@ -943,17 +944,31 @@ static int forward_pdu(struct rmt * rmt,
                         if (!tmp)
                                 continue;
 
-                        if (kfa_flow_sdu_write(rmt->kfa,
-                                               rmt->ingress.cache.pids[i],
-                                               tmp))
-                                LOG_ERR("Cannot write SDU to KFA port-id %d",
+                        queue = qmap_find(rmt->ingress.queues, i);
+                        if (!queue)
+                                continue;
+
+                        ASSERT(queue->n1_ipcp);
+                        ASSERT(queue->n1_ipcp->ops->sdu_write);
+                        if (queue->n1_ipcp->ops->sdu_write(queue->n1_ipcp->data,
+                                                           rmt->ingress.cache.pids[i],
+                                                           tmp))
+                                LOG_ERR("Cannot write SDU to N-1 IPCP port-id %d",
                                         rmt->ingress.cache.pids[i]);
                 }
 
-                if (kfa_flow_sdu_write(rmt->kfa,
-                                       rmt->ingress.cache.pids[0],
-                                       sdu))
-                        LOG_ERR("Cannot write SDU to KFA port-id %d",
+                queue = qmap_find(rmt->ingress.queues, i);
+                if (!queue)
+                        /* FIXME: As in the continue before, some port could not
+                         * be used */
+                        return 0;
+
+                ASSERT(queue->n1_ipcp);
+                ASSERT(queue->n1_ipcp->ops->sdu_write);
+                if (queue->n1_ipcp->ops->sdu_write(queue->n1_ipcp->data,
+                                                   rmt->ingress.cache.pids[0],
+                                                   sdu))
+                        LOG_ERR("Cannot write SDU to N-1 IPCP port-id %d",
                                 rmt->ingress.cache.pids[0]);
         } else {
                 LOG_DBG("Could not forward PDU");
