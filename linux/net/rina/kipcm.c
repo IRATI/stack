@@ -129,7 +129,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         struct rnl_ipcm_alloc_flow_req_msg_attrs * attrs;
         struct rnl_msg *                           msg;
         struct ipcp_instance *                     ipc_process;
-        struct ipcp_instance *                     usr_ipcp;
+        struct ipcp_instance *                     user_ipcp;
         ipc_process_id_t                           ipc_id;
         ipc_process_id_t                           user_ipc_id;
         struct kipcm *                             kipcm;
@@ -181,20 +181,20 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
-        usr_ipcp = kfa_ipcp_instance(kipcm->kfa);
+        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (user_ipc_id) {
-                usr_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!usr_ipcp) {
+                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!user_ipcp) {
                         LOG_DBG("Could not find the user ipcp of the flow...");
                         kfa_flow_deallocate(kipcm->kfa, pid);
                         goto fail;
                 }
         }
 
-        ASSERT(usr_ipcp->ops);
-        ASSERT(usr_ipcp->ops->flow_binding_ipcp);
+        ASSERT(user_ipcp->ops);
+        ASSERT(user_ipcp->ops->flow_binding_ipcp);
 
-        if (usr_ipcp->ops->flow_binding_ipcp(usr_ipcp->data,
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                              pid,
                                              ipc_process)) {
                 LOG_DBG("Could not bind the user ipcp's "
@@ -211,7 +211,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         ASSERT(ipc_process->ops->flow_allocate_request);
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
-                                                    usr_ipcp,
+                                                    user_ipcp,
                                                     attrs->source,
                                                     attrs->dest,
                                                     attrs->fspec,
@@ -306,8 +306,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                         return -1;
                 }
 
-                ASSERT(usr_ipcp->ops);
-                ASSERT(usr_ipcp->ops->flow_binding_ipcp);
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
 
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                                       pid,

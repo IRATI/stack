@@ -617,7 +617,7 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
 {
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
-        struct kfa *        instace;
+        struct kfa *        instance;
         int                 retval = 0;
 
         if (!data) {
@@ -811,7 +811,7 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
-        .sdu_enqueue               = kfa_sdu_post
+        .sdu_enqueue               = kfa_sdu_post,
         .sdu_write                 = NULL, /*kfa_sdu_write,*/
         .ipcp_name                 = NULL
 };

@@ -368,8 +368,12 @@ static void rinarp_resolve_handler(void *             opaque,
 
                         LOG_DBG("Got a new element from the fifo");
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
-                                LOG_ERR("Couldn't post SDU to KFA ...");
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              tmp)) {
+                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return;
                         }
                 }
@@ -506,8 +510,12 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
                         LOG_DBG("Got a new element from the fifo");
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
-                                LOG_ERR("Couldn't post SDU to KFA ...");
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              tmp)) {
+                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return -1;
                         }
                 }
@@ -967,8 +975,14 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->lock);
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, du))
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              du)) {
+                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return -1;
+                        }
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");

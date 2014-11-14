@@ -65,12 +65,14 @@ enum channel_state {
 
 struct shim_hv_channel {
         /* Internal state associated to the channel. */
-        enum channel_state state;
+        enum channel_state   state;
         /* In ALLOCATED state, this is the port-id supported by the channel. */
-        port_id_t          port_id;
+        port_id_t            port_id;
         /* In PENDING or ALLOCATED state, this is the application that
            currently holds the channel. */
-        struct name        application_name;
+        struct name          application_name;
+        /* The user IPCP that uses this channel */
+        struct ipcp_instance *user_ipcp;
 };
 
 enum shim_hv_command {
@@ -266,6 +268,7 @@ shim_hv_send_deallocate(struct ipcp_instance_data *priv, unsigned int ch)
  */
 static int
 shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
+                              struct ipcp_instance      *user_ipcp,
                               const struct name *src_application,
                               const struct name *dst_application,
                               const struct flow_spec *fspec,
@@ -284,6 +287,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         ASSERT(priv);
         ASSERT(src_application);
         ASSERT(dst_application);
+        ASSERT(user_ipcp);
 
         if (unlikely(!priv->assigned)) {
                 LOG_ERR("%s: IPC process not ready", __func__);
@@ -344,6 +348,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         err = 0;
         priv->vmpi.channels[ch].state = CHANNEL_STATE_PENDING;
         priv->vmpi.channels[ch].port_id = port_id;
+        priv->vmpi.channels[ch].user_ipcp = user_ipcp;
         name_cpy(src_application, &priv->vmpi.channels[ch].application_name);
 
         LOG_DBGF("channel %d --> PENDING", ch);
@@ -371,6 +376,7 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
  */
 static int
 shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
+                               struct ipcp_instance      *user_ipcp,
                                port_id_t port_id, int result)
 {
         unsigned int ch;
@@ -419,6 +425,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 kfa_port_id_release(priv->kfa, port_id);
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
+                priv->vmpi.channels[ch].user_ipcp = NULL;
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
         }
@@ -454,6 +461,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
 
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
         priv->vmpi.channels[ch].port_id = port_id_bad();
+        priv->vmpi.channels[ch].user_ipcp = NULL;
         name_fini(&priv->vmpi.channels[ch].application_name);
         LOG_DBGF("channel %d --> NULL", ch);
 
@@ -781,9 +789,11 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
                 return;
         }
 
-        ret = kfa_sdu_post(priv->kfa, port_id, sdu);
+        ASSERT(priv->user_ipcp->ops);
+        ASSERT(priv->user_ipcp->ops->sdu_enqueue);
+        ret = priv->user_ipcp->ops->sdu_enqueue(priv->user_ipcp->data, port_id, sdu);
         if (unlikely(ret)) {
-                LOG_ERR("%s: kfa_sdu_post() failed", __func__);
+                LOG_ERR("%s: sdu_enqueue() failed", __func__);
                 return;
         }
         LOG_DBGF("SDU received");
