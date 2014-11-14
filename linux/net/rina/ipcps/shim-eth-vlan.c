@@ -395,7 +395,7 @@ static void rinarp_resolve_handler(void *             opaque,
 }
 
 static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
-                                          struct ipcp_instance *      usr_ipcp,
+                                          struct ipcp_instance *      user_ipcp,
                                           const struct name *         source,
                                           const struct name *         dest,
                                           const struct flow_spec *    fspec,
@@ -422,6 +422,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
                 flow->port_id       = id;
                 flow->port_id_state = PORT_STATE_PENDING;
+                flow->user_ipcp     = user_ipcp;
                 flow->dest_pa       = name_to_gpa(dest);
 
                 if (!gpa_is_ok(flow->dest_pa)) {
@@ -980,7 +981,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
                                                               flow->port_id,
                                                               du)) {
-                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
                                 return -1;
                         }
 

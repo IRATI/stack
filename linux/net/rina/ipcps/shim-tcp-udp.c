@@ -89,21 +89,23 @@ struct reg_app_data {
 struct shim_tcp_udp_flow {
         struct list_head   list;
 
-        port_id_t          port_id;
-        enum port_id_state port_id_state;
+        port_id_t              port_id;
+        enum port_id_state     port_id_state;
 
-        spinlock_t         lock;
+        spinlock_t             lock;
 
-        int                fspec_id;
+        int                    fspec_id;
 
-        struct socket *    sock;
-        struct sockaddr_in addr;
+        struct socket *        sock;
+        struct sockaddr_in     addr;
 
-        struct rfifo *     sdu_queue;
+        struct rfifo *         sdu_queue;
 
-        int                bytes_left;
-        int                lbuf;
-        char *             buf;
+        int                    bytes_left;
+        int                    lbuf;
+        char *                 buf;
+
+        struct ipcp_instance * user_ipcp;
 };
 
 struct ipcp_instance_data {
@@ -414,6 +416,7 @@ static void tcp_udp_rcv(struct sock * sk)
 
 static int
 tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
+                              struct ipcp_instance *      user_ipcp,
                               const struct name *         source,
                               const struct name *         dest,
                               const struct flow_spec *    fspec,
@@ -440,6 +443,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 
                 flow->port_id       = id;
                 flow->port_id_state = PORT_STATE_PENDING;
+                flow->user_ipcp     = user_ipcp;
 
                 INIT_LIST_HEAD(&flow->list);
                 spin_lock(&data->flow_lock);
@@ -556,6 +560,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
+                                          struct ipcp_instance *      user_ipcp,
                                           port_id_t                   port_id,
                                           int                         result)
 {
@@ -592,6 +597,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
                 spin_lock(&data->flow_lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
+                flow->user_ipcp = user_ipcp;
                 spin_unlock(&data->flow_lock);
 
                 ASSERT(flow->sdu_queue);
@@ -604,9 +610,12 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
                         LOG_DBG("Got a new element from the fifo");
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, tmp)) {
-                                LOG_ERR("Couldn't post SDU to KFA ...");
-                                /* FIXME: Deallocate flow? */
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              tmp)) {
+                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return -1;
                         }
                 }
@@ -897,8 +906,14 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->flow_lock);
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, du))
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
                                 return -1;
+                        }
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
@@ -982,8 +997,14 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->flow_lock);
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, du))
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
                                 return -1;
+                        }
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
@@ -1058,8 +1079,14 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->flow_lock);
 
-                        if (kfa_sdu_post(data->kfa, flow->port_id, du))
+                        ASSERT(flow->user_ipcp->ops);
+                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
+                                                              flow->port_id,
+                                                              du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
                                 return -1;
+                        }
 
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");

@@ -753,6 +753,7 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
         port_id_t port_id;
         struct sdu *sdu;
         struct buffer *buf;
+        struct shim_hv_channel channel;
         int ret = 0;
 
         if (unlikely(ch == 0)) {
@@ -774,7 +775,8 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
                 return;
         }
 
-        port_id = priv->vmpi.channels[ch].port_id;
+        channel = priv->vmpi.channels[ch];
+        port_id = channel.port_id;
 
         buf = buffer_create_from(data, len);
         if (unlikely(buf == NULL)) {
@@ -789,9 +791,9 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
                 return;
         }
 
-        ASSERT(priv->user_ipcp->ops);
-        ASSERT(priv->user_ipcp->ops->sdu_enqueue);
-        ret = priv->user_ipcp->ops->sdu_enqueue(priv->user_ipcp->data, port_id, sdu);
+        ASSERT(channel.user_ipcp->ops);
+        ASSERT(channel.user_ipcp->ops->sdu_enqueue);
+        ret = channel.user_ipcp->ops->sdu_enqueue(channel.user_ipcp->data, port_id, sdu);
         if (unlikely(ret)) {
                 LOG_ERR("%s: sdu_enqueue() failed", __func__);
                 return;
