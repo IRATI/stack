@@ -58,11 +58,6 @@ int          kfa_flow_deallocate(struct kfa * instance,
 int          kfa_remove_all_for_id(struct kfa *     instance,
                                    ipc_process_id_t id);
 
-/* Once the flow is bound to a port, we can write/read SDUs */
-int          kfa_flow_sdu_write(struct kfa *  instance,
-                                port_id_t     id,
-                                struct sdu *  sdu);
-
 int          kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id,
                                struct sdu ** sdu);

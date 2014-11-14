@@ -793,7 +793,9 @@ shim_hv_recv_callback(void *opaque, unsigned int ch, const char *data, int len)
 
         ASSERT(channel.user_ipcp->ops);
         ASSERT(channel.user_ipcp->ops->sdu_enqueue);
-        ret = channel.user_ipcp->ops->sdu_enqueue(channel.user_ipcp->data, port_id, sdu);
+        ret = channel.user_ipcp->ops->sdu_enqueue(channel.user_ipcp->data,
+                                                  port_id,
+                                                  sdu);
         if (unlikely(ret)) {
                 LOG_ERR("%s: sdu_enqueue() failed", __func__);
                 return;

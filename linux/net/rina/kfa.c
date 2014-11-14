@@ -355,16 +355,24 @@ int kfa_remove_all_for_id(struct kfa *     instance,
 }
 EXPORT_SYMBOL(kfa_remove_all_for_id);
 
-int kfa_flow_sdu_write(struct kfa * instance,
-                       port_id_t    id,
-                       struct sdu * sdu)
+static int kfa_flow_sdu_write(struct ipcp_instance_data * data,
+                              port_id_t                   id,
+                              struct sdu *                sdu)
 {
         struct ipcp_flow *     flow;
         struct ipcp_instance * ipcp;
+        struct kfa *           instance;
         int                    retval = 0;
 
         IRQ_BARRIER;
 
+        if (!data) {
+                LOG_ERR("Bogus ipcp data passed, bailing out");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        instance = data->kfa;
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 sdu_destroy(sdu);
@@ -812,7 +820,7 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
         .sdu_enqueue               = kfa_sdu_post,
-        .sdu_write                 = NULL, /*kfa_sdu_write,*/
+        .sdu_write                 = kfa_flow_sdu_write,
         .ipcp_name                 = NULL
 };
 
