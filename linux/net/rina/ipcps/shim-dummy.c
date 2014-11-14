@@ -64,6 +64,8 @@ struct ipcp_instance_data {
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *        kfa;
+
+        spinlock_t          lock;
 };
 
 enum dummy_flow_state {
@@ -83,6 +85,7 @@ struct dummy_flow {
         ipc_process_id_t       dst_id;
         struct flow_spec *     fspec;
         struct ipcp_instance * usr_ipcp;
+        struct ipcp_instance * dest_usr_ipcp;
 };
 
 struct app_register {
@@ -216,6 +219,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
+                                        struct ipcp_instance *      dest_usr_ipcp,
                                         port_id_t                   port_id,
                                         int                         result)
 {
@@ -246,8 +250,9 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (result == 0) {
-                flow->dst_port_id = port_id;
-                flow->state = PORT_STATE_ALLOCATED;
+                flow->dst_port_id   = port_id;
+                flow->dest_usr_ipcp = dest_usr_ipcp;
+                flow->state         = PORT_STATE_ALLOCATED;
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, flow->port_id)) {
                         list_del(&flow->list);
@@ -433,16 +438,16 @@ static int dummy_unregister_all(struct ipcp_instance_data * data)
 static struct workqueue_struct * dummy_wq = NULL;
 
 struct write_data {
-        struct kfa * kfa;
-        port_id_t    port_id;
-        struct sdu * sdu;
+        struct ipcp_instance * ipcp;
+        port_id_t              port_id;
+        struct sdu *           sdu;
 };
 
 static bool is_write_data_complete(const struct write_data * data)
 {
         bool ret;
 
-        ret = ((!data || !data->kfa || !data->sdu) ? false : true);
+        ret = ((!data || !data->ipcp || !data->sdu) ? false : true);
 
         LOG_DBG("Write data complete? %d", ret);
 
@@ -456,9 +461,9 @@ static void write_data_destroy(struct write_data * data)
         rkfree(data);
 }
 
-static struct write_data * write_data_create(struct kfa * kfa,
-                                             struct sdu * sdu,
-                                             port_id_t    port_id)
+static struct write_data * write_data_create(struct ipcp_instance * ipcp,
+                                             struct sdu *           sdu,
+                                             port_id_t              port_id)
 {
         struct write_data * tmp;
 
@@ -466,7 +471,7 @@ static struct write_data * write_data_create(struct kfa * kfa,
         if (!tmp)
                 return NULL;
 
-        tmp->kfa     = kfa;
+        tmp->ipcp    = ipcp;
         tmp->sdu     = sdu;
         tmp->port_id = port_id;
 
@@ -489,9 +494,10 @@ static int dummy_write(void * o)
                 return -1;
         }
 
-        if (kfa_sdu_post(tmp->kfa,
-                         tmp->port_id,
-                         tmp->sdu))
+        /* FIXME */
+        if (tmp->ipcp->ops->sdu_enqueue(tmp->ipcp->data,
+                                        tmp->port_id,
+                                        tmp->sdu))
                 return -1;
 
         write_data_destroy(tmp);
@@ -514,7 +520,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        tmp = write_data_create(data->kfa,
+                        tmp = write_data_create(flow->dest_usr_ipcp,
                                                 sdu,
                                                 flow->dst_port_id);
                         if (!is_write_data_complete(tmp)) {
@@ -540,7 +546,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        tmp = write_data_create(data->kfa,
+                        tmp = write_data_create(flow->usr_ipcp,
                                                 sdu,
                                                 flow->port_id);
                         if (!is_write_data_complete(tmp)) {
