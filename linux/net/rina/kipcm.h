@@ -70,6 +70,11 @@ int            kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 port_id_t      kipcm_allocate_port(struct kipcm *   kipcm,
                                    ipc_process_id_t ipc_id,
                                    struct name *    process_name);
+
+int            kipcm_deallocate_port(struct kipcm *   kipcm,
+                                     ipc_process_id_t ipc_id,
+                                     port_id_t        port_id);
+
 /*
  * The following functions represent the KIPCM southbound interface
  */

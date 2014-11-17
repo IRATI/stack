@@ -40,9 +40,6 @@ port_id_t    kfa_port_id_reserve(struct kfa *     instance,
 int          kfa_port_id_release(struct kfa * instance,
                                  port_id_t    port_id);
 
-int          kfa_flow_deallocate(struct kfa * instance,
-                                 port_id_t    id);
-
 int          kfa_flow_sdu_write(struct ipcp_instance_data * data,
                                 port_id_t     id,
                                 struct sdu *  sdu);

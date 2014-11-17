@@ -73,7 +73,9 @@ bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops)
             ops->flow_allocate_request  &&
             ops->flow_allocate_response &&
             ops->application_register   &&
-            ops->application_unregister)
+            ops->application_unregister &&
+            ops->flow_unbinding_ipcp    &&
+            ops->sdu_write)
                 return true;
 
         return false;
@@ -92,6 +94,7 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->connection_update         ||
             ops->connection_destroy        ||
             ops->connection_create_arrived ||
+            ops->sdu_write                 ||
             ops->mgmt_sdu_write            ||
             ops->mgmt_sdu_read             ||
             ops->mgmt_sdu_post             ||
@@ -100,7 +103,7 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->pft_dump                  ||
             ops->flow_binding_ipcp         ||
             ops->flow_unbinding_ipcp       ||
-            ops->flow_destroy              ||
+            ops->flow_deallocate           ||
             ops->sdu_enqueue)
                 return true;
 

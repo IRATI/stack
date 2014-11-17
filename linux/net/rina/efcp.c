@@ -75,6 +75,12 @@ static int efcp_destroy(struct efcp * instance)
                 return -1;
         }
 
+        if (instance->user_ipcp) {
+                instance->user_ipcp->ops->flow_unbinding_ipcp(
+                                instance->user_ipcp->data,
+                                instance->connection->port_id);
+        }
+
         if (instance->dt) {
                 /*
                  * FIXME:
@@ -100,12 +106,6 @@ static int efcp_destroy(struct efcp * instance)
         } else
                 LOG_WARN("No DT instance present");
 
-
-        if (instance->user_ipcp) {
-                instance->user_ipcp->ops->flow_unbinding_ipcp(
-                                instance->user_ipcp->data,
-                                instance->connection->port_id);
-        }
 
         if (instance->connection) {
                 if (is_cep_id_ok(instance->connection->source_cep_id)) {
