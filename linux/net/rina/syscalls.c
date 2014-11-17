@@ -348,7 +348,7 @@ SYSCALL_DEFINE2(deallocate_port,
 
         SYSCALL_DUMP_ENTER;
 
-        CALL_DEFAULT_PERSONALITY(retval, deallocate_port, id);
+        CALL_DEFAULT_PERSONALITY(retval, deallocate_port, ipcp_id, id);
 
         SYSCALL_DUMP_EXIT;
 

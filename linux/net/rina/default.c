@@ -115,7 +115,7 @@ static int default_deallocate_port(struct personality_data * data,
 
         LOG_DBG("Calling wrapped function");
 
-        return kipcm_deallocate_port(kipcm, ipc_id, port_id);
+        return kipcm_deallocate_port(data->kipcm, ipc_id, port_id);
 }
 
 static int default_mgmt_sdu_write(struct personality_data * data,

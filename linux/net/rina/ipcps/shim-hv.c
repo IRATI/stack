@@ -399,13 +399,6 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
 
         if (result == 0) {
                 /* Positive response */
-                /*
-                ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
-                if (ret) {
-                        LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
-                        goto resp;
-                }
-                */
                 ipcp = kipcm_find_ipcp(default_kipcm, priv->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
@@ -453,6 +446,7 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
 {
         int ret = 0;
         port_id_t port_id;
+        struct ipcp_instance * user_ipcp;
 
         if (!ch || ch >= vmpi_num_channels) {
                 LOG_ERR("%s: invalid channel %u", __func__, ch);
@@ -469,16 +463,16 @@ shim_hv_flow_deallocate_common(struct ipcp_instance_data *priv,
                 goto out;
         }
 
+        user_ipcp = priv->vmpi.channels[ch].user_ipcp;
+        ASSERT(user_ipcp);
+        user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
+                                            port_id);
         priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
         priv->vmpi.channels[ch].port_id = port_id_bad();
         priv->vmpi.channels[ch].user_ipcp = NULL;
         name_fini(&priv->vmpi.channels[ch].application_name);
         LOG_DBGF("channel %d --> NULL", ch);
 
-        ret = kfa_flow_deallocate(priv->kfa, port_id);
-        if (ret) {
-                LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
-        }
  out:
         if (locked)
                 mutex_unlock(&priv->vc_lock);
@@ -703,7 +697,7 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 priv->vmpi.channels[ch].user_ipcp = NULL;
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
-
+                kfa_port_id_release(priv->kfa, port_id);
                 user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
                                                     port_id);
         }
@@ -728,6 +722,7 @@ static void shim_hv_handle_deallocate(struct ipcp_instance_data *priv,
 
         LOG_DBGF("received DEALLOCATE(ch = %d)", ch);
 
+        kfa_port_id_release(priv->kfa, priv->vmpi.channels[ch].port_id);
         shim_hv_flow_deallocate_common(priv, ch, 1);
 }
 
@@ -1066,7 +1061,6 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .flow_allocate_response    = shim_hv_flow_allocate_response,
         .flow_deallocate           = shim_hv_flow_deallocate,
         .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
 
         .application_register      = shim_hv_application_register,
         .application_unregister    = shim_hv_application_unregister,
