@@ -1795,47 +1795,8 @@ int kipcm_flow_arrived(struct kipcm *         kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
-/*
-int kipcm_flow_commit(struct kipcm *   kipcm,
-                      ipc_process_id_t ipc_id,
-                      port_id_t        port_id)
-{
-        struct ipcp_instance * ipc_process;
-
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
-        }
-
-        KIPCM_LOCK(kipcm);
-
-        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
-        if (!ipc_process) {
-                LOG_ERR("Couldn't find the ipc process %d", ipc_id);
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-
-        if (kfa_flow_bind(kipcm->kfa,
-                          port_id,
-                          ipc_process,
-                          ipc_id)) {
-                LOG_ERR("Couldn't commit flow");
-                KIPCM_UNLOCK(kipcm);
-                return -1;
-        }
-        KIPCM_UNLOCK(kipcm);
-
-        return 0;
-}
-EXPORT_SYMBOL(kipcm_flow_commit);
-*/
-
-/* FIXME: Required to retrieve an ipcp_instance from an ipcp_instance_data */
 struct ipcp_instance * kipcm_find_ipcp(struct kipcm *   kipcm,
-                                       ipc_process_id_t ipc_id )
+                                       ipc_process_id_t ipc_id)
 {
         struct ipcp_instance * ipcp;
 
@@ -2018,7 +1979,6 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 {
         struct ipcp_instance * ipc_process, * user_ipc_process;
         port_id_t              pid;
-        struct ipcp_instance * kfa_ipcp;
 
         IRQ_BARRIER;
 
@@ -2041,16 +2001,13 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 
         user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
                                                   process_name);
-        if (!user_ipc_process) {
-                /*
-                 * FIXME: Here we should distinguish between a flow for an
-                 *        application in user-space or an ipc process in the
-                 *        system
-                 */
-                LOG_DBG("This flow should go for an app");
-        }
 
         KIPCM_UNLOCK(kipcm);
+
+        if (!user_ipc_process) {
+                LOG_DBG("This flow is for an app");
+                user_ipc_process = kfa_ipcp_instance(kipcm->kfa);
+        }
 
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
@@ -2058,13 +2015,9 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
-        /* FIXME: now using the IPCP API of the KFA, but
-         * this has to dissapear */
-        /*if (kfa_flow_ipcp_bind(kipcm->kfa, pid, ipc_process)) {*/
-        kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
-        if (kfa_ipcp->ops->flow_binding_ipcp(kfa_ipcp->data,
-                                             pid,
-                                             ipc_process)) {
+        if (user_ipc_process->ops->flow_binding_ipcp(user_ipc_process->data,
+                                                     pid,
+                                                     ipc_process)) {
                 LOG_ERR("Problems binding IPC process to flow");
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);

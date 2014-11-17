@@ -41,10 +41,11 @@
 #include "rmt.h"
 
 struct kfa {
-        struct mutex     lock;
-        struct pidm *     pidm;
-        struct kfa_pmap * flows;
+        struct mutex           lock;
+        struct pidm *          pidm;
+        struct kfa_pmap *      flows;
         struct ipcp_instance * ipcp;
+        struct list_head       list;
 };
 
 enum flow_state {
@@ -163,35 +164,7 @@ int kfa_flow_rmt_bind(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_flow_rmt_bind);
-/*
-int kfa_flow_rmt_unbind(struct kfa * instance,
-                        port_id_t    pid)
-{
-        struct ipcp_flow * flow;
 
-        if (!instance)
-                return -1;
-
-        if (!is_port_id_ok(pid))
-                return -1;
-
-        mutex_lock(&instance->lock);
-
-        flow = kfa_pmap_find(instance->flows, pid);
-        if (!flow) {
-                LOG_ERR("The flow with port-id %d does not exist, "
-                        "cannot unbind rmt", pid);
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
-        flow->rmt = NULL;
-
-        mutex_unlock(&instance->lock);
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_flow_rmt_unbind);
-*/
 /* NOTE: Add instance-locking IFF exporting to API */
 static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
