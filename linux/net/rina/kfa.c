@@ -715,7 +715,6 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .flow_deallocate           = NULL,
         .flow_binding_ipcp         = kfa_flow_ipcp_bind,
         .flow_unbinding_ipcp       = kfa_flow_deallocate,
-        .flow_destroy              = NULL,
         .application_register      = NULL,
         .application_unregister    = NULL,
         .assign_to_dif             = NULL,

@@ -270,8 +270,10 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                                            port_id,
                                                            ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
-                        kfa_flow_deallocate(data->kfa, port_id);
+                        flow->user_ipcp->ops->flow_unbinding_ipcp(
+                                        flow->user_ipcp->data, flow->port_id);
                         kfa_port_id_release(data->kfa, port_id);
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -295,8 +297,14 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                                        data->id,
                                                        flow->port_id,
                                                        0)) {
-                        kfa_flow_deallocate(data->kfa, flow->port_id);
-                        kfa_flow_deallocate(data->kfa, port_id);
+                        flow->user_ipcp->ops->flow_unbinding_ipcp(
+                                        flow->user_ipcp->data,
+                                        flow->port_id);
+                        flow->dest_user_ipcp->ops->flow_unbinding_ipcp(
+                                        flow->dest_user_ipcp->data,
+                                        flow->dst_port_id);
+                        kfa_port_id_release(data->kfa, port_id);
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
@@ -308,6 +316,11 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                                    data->id,
                                                    flow->port_id,
                                                    result);
+                flow->user_ipcp->ops->flow_unbinding_ipcp(
+                                flow->user_ipcp->data,
+                                flow->port_id);
+                kfa_port_id_release(data->kfa, port_id);
+                kfa_port_id_release(data->kfa, flow->port_id);
                 list_del(&flow->list);
                 name_destroy(flow->source);
                 name_destroy(flow->dest);
@@ -347,19 +360,24 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
          *        to be deleted. Is it really needed to unbind+destroy?
          */
 
-        if (kfa_flow_deallocate(data->kfa, id) ||
-            kfa_flow_deallocate(data->kfa, dest_port_id)) {
-                return -1;
-        }
 
-        /* Notify the destination application */
-        kipcm_notify_flow_dealloc(data->id, 0, dest_port_id, 1);
+        flow->user_ipcp->ops->flow_unbinding_ipcp(
+                        flow->user_ipcp->data,
+                        flow->port_id);
+        flow->dest_user_ipcp->ops->flow_unbinding_ipcp(
+                        flow->dest_user_ipcp->data,
+                        flow->dst_port_id);
+        kfa_port_id_release(data->kfa, port_id);
+        kfa_port_id_release(data->kfa, flow->port_id);
 
         list_del(&flow->list);
         name_destroy(flow->dest);
         name_destroy(flow->source);
         rkfree(flow->fspec);
         rkfree(flow);
+
+        /* Notify the destination application */
+        kipcm_notify_flow_dealloc(data->id, 0, dest_port_id, 1);
 
         return 0;
 }
@@ -707,7 +725,6 @@ static struct ipcp_instance_ops dummy_instance_ops = {
         .flow_allocate_response    = dummy_flow_allocate_response,
         .flow_deallocate           = dummy_flow_deallocate,
         .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
 
         .application_register      = dummy_application_register,
         .application_unregister    = dummy_application_unregister,
