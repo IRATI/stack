@@ -360,13 +360,6 @@ shim_hv_flow_allocate_request(struct ipcp_instance_data *priv,
         rkfree(src_name);
  src_name_alloc:
         mutex_unlock(&priv->vc_lock);
-        if (err) {
-                /* The flow was allocated outside this module. Are we
-                 * in charge of deallocate it this method fails?
-                 */
-                if (kfa_flow_deallocate(priv->kfa, port_id))
-                        LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
-        }
 
         return err;
 }
@@ -434,11 +427,12 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 LOG_DBGF("channel %d --> ALLOCATED", ch);
         } else {
                 /* Negative response */
+                /* This should be done in kipcm
                 kfa_flow_deallocate(priv->kfa, port_id);
+                */
                 /* XXX The following call should be useless because of the last
                  * call.
                  */
-                kfa_port_id_release(priv->kfa, port_id);
                 priv->vmpi.channels[ch].state = CHANNEL_STATE_NULL;
                 priv->vmpi.channels[ch].port_id = port_id_bad();
                 priv->vmpi.channels[ch].user_ipcp = NULL;
@@ -588,13 +582,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 LOG_ERR("%s: kfa_port_id_reserve() failed", __func__);
                 goto port_alloc;
         }
-/*
-        err = kfa_flow_create(priv->kfa, priv->id, port_id);
-        if (err) {
-                LOG_ERR("%s: kfa_flow_create() failed", __func__);
-                goto flow_alloc;
-        }
-*/
+
         err = kipcm_flow_arrived(default_kipcm, priv->id, port_id,
                                  &priv->dif_name, src_application,
                                  dst_application, &priv->fspec);
@@ -613,9 +601,6 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         LOG_DBGF("channel %d --> PENDING", ch);
 
  flow_arrived:
-        /* FIXME: kfa_flow_deallocate to be removed */
-        if (err)
-                kfa_flow_deallocate(priv->kfa, port_id);
         if (err)
                 kfa_port_id_release(priv->kfa, port_id);
  port_alloc:
@@ -685,13 +670,6 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 wmb();
         }
 
-        /*
-        ret = kipcm_flow_commit(default_kipcm, priv->id, port_id);
-        if (ret) {
-                LOG_ERR("%s: kipcm_flow_commit() failed", __func__);
-                goto resp_ko;
-        }
-        */
         ipcp = kipcm_find_ipcp(default_kipcm, priv->id);
         if (!ipcp) {
                 LOG_ERR("KIPCM could not retrieve this IPCP");
@@ -726,8 +704,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 name_fini(&priv->vmpi.channels[ch].application_name);
                 LOG_DBGF("channel %d --> NULL", ch);
 
-                if (kfa_flow_deallocate(priv->kfa, port_id))
-                        LOG_ERR("%s: kfa_flow_deallocate() failed", __func__);
+                user_ipcp->ops->flow_unbinding_ipcp(user_ipcp->data,
+                                                    port_id);
         }
  out:
         mutex_unlock(&priv->vc_lock);

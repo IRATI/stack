@@ -370,26 +370,29 @@ static int flow_destroy(struct ipcp_instance_data * data,
         return 0;
 }
 
-static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
-                                        struct shim_tcp_udp_flow *  flow)
+static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
+                                   struct shim_tcp_udp_flow *  flow)
 {
         ASSERT(data);
         ASSERT(flow);
 
-        if (kfa_flow_deallocate(data->kfa, flow->port_id))
-                LOG_ERR("Failed to destroy KFA flow");
-        if (flow_destroy(data, flow))
+        flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
+                                                  flow->port_id);
+        if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy shim-tcp-udp flow");
+                return -1;
+        }
+        return 0;
 }
 
-static void tcp_deallocate_and_destroy_flow(struct ipcp_instance_data * data,
+static int tcp_unbind_and_destroy_flow(struct ipcp_instance_data * data,
                                             struct shim_tcp_udp_flow *  flow)
 {
         ASSERT(data);
         ASSERT(flow);
 
         sock_release(flow->sock);
-        deallocate_and_destroy_flow(data, flow);
+        return unbind_and_destroy_flow(data, flow);
 }
 
 static void tcp_udp_rcv(struct sock * sk)
@@ -476,7 +479,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                                IPPROTO_UDP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("could not create udp socket");
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -489,7 +492,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         if (err < 0) {
                                 LOG_ERR("Could not bind UDP socket for alloc");
                                 sock_release(flow->sock);
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -506,7 +509,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                                IPPROTO_TCP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("could not create tcp socket");
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -516,7 +519,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         if (err < 0) {
                                 LOG_ERR("could not connect tcp socket");
                                 sock_release(flow->sock);
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -535,7 +538,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
                 ASSERT(user_ipcp);
@@ -549,22 +552,10 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
-                /*
-                if (kipcm_flow_commit(default_kipcm, data->id,
-                                      flow->port_id)) {
-                        LOG_ERR("Cannot add flow");
-                        if (fspec->ordered_delivery) {
-                                kernel_sock_shutdown(flow->sock, SHUT_RDWR);
-                                sock_release(flow->sock);
-                        }
-                        deallocate_and_destroy_flow(data, flow);
-                        return -1;
-                }
-*/
                 flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
@@ -574,7 +565,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
                         }
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
@@ -622,7 +613,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 if (kipcm_flow_commit(default_kipcm, data->id,
                                       flow->port_id)) {
                         LOG_ERR("KIPCM flow add failed");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
                 */
@@ -634,7 +625,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
                 ASSERT(user_ipcp->ops);
@@ -643,7 +634,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                                                       flow->port_id,
                                                       ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
                 ASSERT(flow->sdu_queue);
@@ -745,7 +736,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
         if (!app)
                 sock_release(flow->sock);
 
-        deallocate_and_destroy_flow(data, flow);
+        unbind_and_destroy_flow(data, flow);
 
         return 0;
 }
@@ -878,21 +869,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 LOG_DBG("added udp flow");
-/*
-                if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->flow_lock);
 
-                        LOG_ERR("Could not create flow in KFA");
-
-                        sdu_destroy(du);
-                        if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-tcp-udp "
-                                        "flow");
-                        return -1;
-                }
-*/
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
                         flow->port_id_state = PORT_STATE_NULL;
@@ -902,7 +879,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 "for a new flow");
 
                         sdu_destroy(du);
-                        deallocate_and_destroy_flow(data, flow);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -917,7 +895,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 sizeof(struct sdu *));
 
                         sdu_destroy(du);
-                        deallocate_and_destroy_flow(data, flow);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -931,6 +910,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 if (!name_init_from_ni(sname,
                                        "Unknown app", "", "", "")) {
                         name_destroy(sname);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -942,7 +923,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                        app->app_name,
                                        data->qos[0])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
-                        deallocate_and_destroy_flow(data, flow);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
                         name_destroy(sname);
                         return -1;
                 }
@@ -1210,8 +1192,9 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                         msleep(2);
                 }
                 LOG_DBG("notifying kipcm aboud deallocate");
-                kfa_flow_deallocate(data->kfa, flow->port_id);
                 kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+                kfa_port_id_release(data->kfa, flow->port_id);
+                unbind_and_destroy_flow(data, flow);
 
                 return 0;
         }
@@ -1289,21 +1272,6 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                         "flow");
                         return -1;
                 }
-/*
-                if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
-                        flow->port_id_state = PORT_STATE_NULL;
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        spin_unlock(&data->flow_lock);
-
-                        LOG_ERR("Could not create flow in KFA");
-
-                        sock_release(acsock);
-                        if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-tcp-udp "
-                                        "flow");
-                        return -1;
-                }
-*/
                 LOG_DBG("Added flow to the list");
 
                 flow->sdu_queue = rfifo_create();
@@ -1312,8 +1280,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
-
-                        tcp_deallocate_and_destroy_flow(data, flow);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        tcp_unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -1324,7 +1292,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 sname = name_create_ni();
                 if (!name_init_from_ni(sname, "Unknown app", "", "", "")) {
                         name_destroy(sname);
-                        tcp_deallocate_and_destroy_flow(data, flow);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        tcp_unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -1336,7 +1305,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                        app->app_name,
                                        data->qos[1])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
-                        tcp_deallocate_and_destroy_flow(data, flow);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        tcp_unbind_and_destroy_flow(data, flow);
                         name_destroy(sname);
                         return -1;
                 }
@@ -2129,7 +2099,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .flow_allocate_response    = tcp_udp_flow_allocate_response,
         .flow_deallocate           = tcp_udp_flow_deallocate,
         .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
 
         .application_register      = tcp_udp_application_register,
         .application_unregister    = tcp_udp_application_unregister,

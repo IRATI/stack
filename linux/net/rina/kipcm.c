@@ -186,22 +186,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 }
         }
 
-        ASSERT(user_ipcp->ops);
-        ASSERT(user_ipcp->ops->flow_binding_ipcp);
-
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                             pid,
-                                             ipc_process)) {
-                LOG_DBG("Could not bind the user ipcp's "
-                        "with the flow");
-
-                kfa_flow_deallocate(kipcm->kfa, pid);
-                goto fail;
-        }
-
-        LOG_DBG("Binding user IPCP %d to flow in port %d",
-                user_ipc_id, pid);
-
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_allocate_request);
 
@@ -296,26 +280,10 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                 if (!user_ipcp) {
                         LOG_DBG("(response) Could not find the user ipcp "
                                 "of the flow...");
-                        kfa_flow_deallocate(kipcm->kfa, pid);
+                        kfa_port_id_release(kipcm->kfa, pid);
                         rnl_msg_destroy(msg);
                         return -1;
                 }
-
-                ASSERT(user_ipcp->ops);
-                ASSERT(user_ipcp->ops->flow_binding_ipcp);
-
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      pid,
-                                                      ipc_process)) {
-                        LOG_DBG("(response) Could not bind the user ipcp' "
-                                "RMT with the flow");
-                        kfa_flow_deallocate(kipcm->kfa, pid);
-                        rnl_msg_destroy(msg);
-                        return -1;
-                }
-
-                LOG_DBG("(response) Binding user IPCP %d' RMT "
-                        "to flow in port %d", user_ipc_id, pid);
         }
 
         ASSERT(ipc_process->ops);
@@ -327,7 +295,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                                                      attrs->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-                kfa_flow_deallocate(kipcm->kfa, pid);
+                kfa_port_id_release(kipcm->kfa, pid);
                 rnl_msg_destroy(msg);
                 return -1;
         }
@@ -902,11 +870,6 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                 if (!user_ipcp)
                         goto fail;
         }
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              port_id,
-                                              ipcp)) {
-                        LOG_ERR("Could not bind user_ipcp to flow");
-        }
 
         src_cep = ipcp->ops->connection_create_arrived(ipcp->data,
                                                        user_ipcp,
@@ -1014,14 +977,6 @@ static int notify_ipcp_conn_update_req(void *             data,
                                                       attrs->src_cep);
                         goto fail;
                 }
-        }
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              port_id,
-                                              ipcp)) {
-                LOG_ERR("Could not bind user_ipcp to flow");
-                ipcp->ops->connection_destroy(ipcp->data,
-                                              attrs->src_cep);
-                goto fail;
         }
 
         if (ipcp->ops->connection_update(ipcp->data,
@@ -1987,7 +1942,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 name_destroy(process_name);
                 return port_id_bad();
         }
-
+/*
         KIPCM_LOCK(kipcm);
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
@@ -2008,13 +1963,13 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 LOG_DBG("This flow is for an app");
                 user_ipc_process = kfa_ipcp_instance(kipcm->kfa);
         }
-
+*/
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 name_destroy(process_name);
                 return port_id_bad();
         }
-
+/*
         if (user_ipc_process->ops->flow_binding_ipcp(user_ipc_process->data,
                                                      pid,
                                                      ipc_process)) {
@@ -2023,7 +1978,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 name_destroy(process_name);
                 return port_id_bad();
         }
-
+*/
         name_destroy(process_name);
         return pid;
 }
@@ -2052,6 +2007,8 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
 
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_deallocate);
+
+        kfa_port_id_release(kipcm->kfa, port_id);
 
         if (ipc_process->ops->flow_deallocate(ipc_process->data, port_id)) {
                 LOG_ERR("Failed deallocate flow request "
@@ -2086,6 +2043,9 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                 LOG_ERR("Could not destroy ingress messages map entry");
                 return -1;
         }
+
+        if (res)
+                kfa_port_id_release(kipcm->kfa, pid);
 
         /* FIXME: The rnl_port_id shouldn't be hardcoded as 1 */
         if (rnl_app_alloc_flow_result_msg(ipc_id, res, pid, seq_num, 1))

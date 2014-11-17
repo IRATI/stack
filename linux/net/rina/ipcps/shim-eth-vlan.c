@@ -429,8 +429,6 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
         if (!data->app_name || !name_is_equal(source, data->app_name)) {
                 LOG_ERR("Wrong request, app is not registered");
-                if (kfa_flow_deallocate(data->kfa, id))
-                        LOG_ERR("Failed to destroy KFA flow");
                 return -1;
         }
 
@@ -912,6 +910,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                 "for a new flow");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
@@ -923,6 +922,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         LOG_ERR("Could not push a SDU into the flow queue");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
@@ -936,6 +936,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         if (!flow->dest_pa) {
                                 LOG_ERR("Failed to duplicate gpa");
                                 sdu_destroy(du);
+                                kfa_port_id_release(data->kfa, flow->port_id);
                                 unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -943,6 +944,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         sname = string_toname_ni(gpa_address_value(gpaddr));
                         if (!sname) {
                                 LOG_ERR("Failed to convert name to string");
+                                kfa_port_id_release(data->kfa, flow->port_id);
                                 unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -953,12 +955,15 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         if (!name_init_from_ni(sname,
                                                "Unknown app", "", "", "")) {
                                 name_destroy(sname);
+                                kfa_port_id_release(data->kfa, flow->port_id);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
                         flow->dest_pa = name_to_gpa(sname);
                         if (!flow->dest_pa) {
                                 LOG_ERR("Failed to create gpa");
+                                kfa_port_id_release(data->kfa, flow->port_id);
                                 unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -974,6 +979,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                        data->app_name,
                                        data->fspec)) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
+                        kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         name_destroy(sname);
                         return -1;
