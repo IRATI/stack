@@ -426,12 +426,14 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
         struct sockaddr_in         sin;
         struct dir_entry *         entry;
         int                        err;
+        struct ipcp_instance *     ipcp;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
+        ASSERT(user_ipcp);
 
         flow = find_flow(data, id);
         if (!flow) {
@@ -526,6 +528,32 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 }
 
                 flow->port_id_state = PORT_STATE_ALLOCATED;
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!ipcp) {
+                        LOG_ERR("KIPCM could not retrieve this IPCP");
+                        if (fspec->ordered_delivery) {
+                                kernel_sock_shutdown(flow->sock, SHUT_RDWR);
+                                sock_release(flow->sock);
+                        }
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                ASSERT(user_ipcp);
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      flow->port_id,
+                                                      ipcp)) {
+                        LOG_ERR("Could not bind flow with user_ipcp");
+                        if (fspec->ordered_delivery) {
+                                kernel_sock_shutdown(flow->sock, SHUT_RDWR);
+                                sock_release(flow->sock);
+                        }
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
+                /*
                 if (kipcm_flow_commit(default_kipcm, data->id,
                                       flow->port_id)) {
                         LOG_ERR("Cannot add flow");
@@ -536,7 +564,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
                 }
-
+*/
                 flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
@@ -566,11 +594,13 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
+        struct ipcp_instance *     ipcp;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(is_port_id_ok(port_id));
+        ASSERT(user_ipcp);
 
         flow = find_flow(data, port_id);
         if (!flow) {
@@ -588,18 +618,34 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
+                /*
                 if (kipcm_flow_commit(default_kipcm, data->id,
                                       flow->port_id)) {
                         LOG_ERR("KIPCM flow add failed");
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
                 }
-
+                */
                 spin_lock(&data->flow_lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 flow->user_ipcp = user_ipcp;
                 spin_unlock(&data->flow_lock);
 
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!ipcp) {
+                        LOG_ERR("KIPCM could not retrieve this IPCP");
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      flow->port_id,
+                                                      ipcp)) {
+                        LOG_ERR("Could not bind flow with user_ipcp");
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
                 ASSERT(flow->sdu_queue);
 
                 while (!rfifo_is_empty(flow->sdu_queue)) {
@@ -832,7 +878,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 LOG_DBG("added udp flow");
-
+/*
                 if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
                         kfa_port_id_release(data->kfa, flow->port_id);
                         flow->port_id_state = PORT_STATE_NULL;
@@ -846,7 +892,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                         "flow");
                         return -1;
                 }
-
+*/
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
                         flow->port_id_state = PORT_STATE_NULL;
@@ -1243,7 +1289,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                         "flow");
                         return -1;
                 }
-
+/*
                 if (kfa_flow_create(data->kfa, data->id, flow->port_id)) {
                         flow->port_id_state = PORT_STATE_NULL;
                         kfa_port_id_release(data->kfa, flow->port_id);
@@ -1257,7 +1303,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                         "flow");
                         return -1;
                 }
-
+*/
                 LOG_DBG("Added flow to the list");
 
                 flow->sdu_queue = rfifo_create();

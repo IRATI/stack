@@ -333,6 +333,8 @@ static void rinarp_resolve_handler(void *             opaque,
                                    const struct gha * dest_ha)
 {
         struct ipcp_instance_data * data;
+        struct ipcp_instance *      user_ipcp;
+        struct ipcp_instance *      ipcp;
         struct shim_eth_flow *      flow;
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
@@ -351,9 +353,30 @@ static void rinarp_resolve_handler(void *             opaque,
 
                 flow->dest_ha = gha_dup_ni(dest_ha);
 
+                user_ipcp = flow->user_ipcp;
+                ASSERT(user_ipcp);
+
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!ipcp) {
+                        LOG_ERR("KIPCM could not retrieve this IPCP");
+                        deallocate_and_destroy_flow(data, flow);
+                        return;
+                }
+/*
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, flow->port_id)) {
                         LOG_ERR("Cannot add flow");
+                        deallocate_and_destroy_flow(data, flow);
+                        return;
+                }
+*/
+                ASSERT(user_ipcp);
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      flow->port_id,
+                                                      ipcp)) {
+                        LOG_ERR("Could not bind flow with user_ipcp");
                         deallocate_and_destroy_flow(data, flow);
                         return;
                 }
@@ -368,11 +391,10 @@ static void rinarp_resolve_handler(void *             opaque,
 
                         LOG_DBG("Got a new element from the fifo");
 
-                        ASSERT(flow->user_ipcp->ops);
-                        ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              tmp)) {
+                        ASSERT(user_ipcp->ops->sdu_enqueue);
+                        if (user_ipcp->ops->sdu_enqueue(user_ipcp->data,
+                                                        flow->port_id,
+                                                        tmp)) {
                                 LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return;
                         }
@@ -468,9 +490,11 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                            int                         result)
 {
         struct shim_eth_flow * flow;
+        struct ipcp_instance * ipcp;
 
         ASSERT(data);
         ASSERT(is_port_id_ok(port_id));
+        ASSERT(user_ipcp);
 
         flow = find_flow(data, port_id);
         if (!flow) {
@@ -490,12 +514,30 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         if (!result) {
                 flow->port_id   = port_id;
                 flow->user_ipcp = user_ipcp;
+
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!ipcp) {
+                        LOG_ERR("KIPCM could not retrieve this IPCP");
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                ASSERT(user_ipcp);
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      port_id,
+                                                      ipcp)) {
+                        LOG_ERR("Could not bind flow with user_ipcp");
+                        deallocate_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                /*
                 if (kipcm_flow_commit(default_kipcm, data->id,
                                       flow->port_id)) {
                         LOG_ERR("KIPCM flow add failed");
                         deallocate_and_destroy_flow(data, flow);
                         return -1;
-                }
+                }*/
 
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
@@ -511,7 +553,6 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
                         LOG_DBG("Got a new element from the fifo");
 
-                        ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
                         if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
                                                               flow->port_id,

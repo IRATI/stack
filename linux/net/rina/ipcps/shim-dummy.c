@@ -84,8 +84,8 @@ struct dummy_flow {
         enum dummy_flow_state  state;
         ipc_process_id_t       dst_id;
         struct flow_spec *     fspec;
-        struct ipcp_instance * usr_ipcp;
-        struct ipcp_instance * dest_usr_ipcp;
+        struct ipcp_instance * user_ipcp;
+        struct ipcp_instance * dest_user_ipcp;
 };
 
 struct app_register {
@@ -136,7 +136,7 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
-                                       struct ipcp_instance *      usr_ipcp,
+                                       struct ipcp_instance *      user_ipcp,
                                        const struct name *         source,
                                        const struct name *         dest,
                                        const struct flow_spec *    fspec,
@@ -197,7 +197,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->state   = PORT_STATE_INITIATOR_ALLOCATE_PENDING;
         flow->port_id = id;
         flow->fspec   = flow_spec_dup(fspec);
-        flow->usr_ipcp = usr_ipcp;
+        flow->user_ipcp = user_ipcp;
         flow->dst_port_id = kfa_port_id_reserve(data->kfa, data->id);
         ASSERT(is_port_id_ok(flow->dst_port_id));
 
@@ -218,13 +218,15 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
-                                        struct ipcp_instance *      dest_usr_ipcp,
+                                        struct ipcp_instance *      dest_user_ipcp,
                                         port_id_t                   port_id,
                                         int                         result)
 {
-        struct dummy_flow * flow;
+        struct dummy_flow *    flow;
+        struct ipcp_instance * ipcp;
 
         ASSERT(data);
+        ASSERT(dest_user_ipcp);
 
         if (!data->info) {
                 LOG_ERR("There is not info in this IPC Process");
@@ -250,16 +252,34 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
         /* On positive response, flow should transition to allocated state */
         if (result == 0) {
                 flow->dst_port_id   = port_id;
-                flow->dest_usr_ipcp = dest_usr_ipcp;
+                flow->dest_user_ipcp = dest_user_ipcp;
                 flow->state         = PORT_STATE_ALLOCATED;
-                if (kipcm_flow_commit(default_kipcm,
-                                      data->id, flow->port_id)) {
+
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!ipcp) {
+                        LOG_ERR("KIPCM could not retrieve this IPCP");
                         list_del(&flow->list);
                         name_destroy(flow->source);
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
                 }
+                ASSERT(dest_user_ipcp->ops);
+                ASSERT(dest_user_ipcp->ops->flow_binding_ipcp);
+                if (dest_user_ipcp->ops->flow_binding_ipcp(dest_user_ipcp->data,
+                                                           port_id,
+                                                           ipcp)) {
+                        LOG_ERR("Could not bind flow with user_ipcp");
+                        kfa_flow_deallocate(data->kfa, port_id);
+                        kfa_port_id_release(data->kfa, port_id);
+                        list_del(&flow->list);
+                        name_destroy(flow->source);
+                        name_destroy(flow->dest);
+                        rkfree(flow);
+                        return -1;
+                }
+
+                /*
                 if (kipcm_flow_commit(default_kipcm,
                                       data->id, port_id)) {
                         kfa_flow_deallocate(data->kfa, port_id);
@@ -269,7 +289,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         name_destroy(flow->dest);
                         rkfree(flow);
                         return -1;
-                }
+                }*/
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -519,7 +539,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        tmp = write_data_create(flow->dest_usr_ipcp,
+                        tmp = write_data_create(flow->dest_user_ipcp,
                                                 sdu,
                                                 flow->dst_port_id);
                         if (!is_write_data_complete(tmp)) {
@@ -545,7 +565,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
                         return 0;
                 }
                 if (flow->dst_port_id == id) {
-                        tmp = write_data_create(flow->usr_ipcp,
+                        tmp = write_data_create(flow->user_ipcp,
                                                 sdu,
                                                 flow->port_id);
                         if (!is_write_data_complete(tmp)) {

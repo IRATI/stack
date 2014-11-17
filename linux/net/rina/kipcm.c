@@ -1795,6 +1795,7 @@ int kipcm_flow_arrived(struct kipcm *         kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_arrived);
 
+/*
 int kipcm_flow_commit(struct kipcm *   kipcm,
                       ipc_process_id_t ipc_id,
                       port_id_t        port_id)
@@ -1816,7 +1817,7 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
-/*
+
         if (kfa_flow_bind(kipcm->kfa,
                           port_id,
                           ipc_process,
@@ -1825,12 +1826,32 @@ int kipcm_flow_commit(struct kipcm *   kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
-*/
         KIPCM_UNLOCK(kipcm);
 
         return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_commit);
+*/
+
+/* FIXME: Required to retrieve an ipcp_instance from an ipcp_instance_data */
+struct ipcp_instance * kipcm_find_ipcp(struct kipcm *   kipcm,
+                                       ipc_process_id_t ipc_id )
+{
+        struct ipcp_instance * ipcp;
+
+        KIPCM_LOCK(kipcm);
+
+        ipcp = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipcp) {
+                LOG_ERR("Couldn't find the ipc process %d", ipc_id);
+                KIPCM_UNLOCK(kipcm);
+                return NULL;
+        }
+        KIPCM_UNLOCK(kipcm);
+
+        return ipcp;
+}
+EXPORT_SYMBOL(kipcm_find_ipcp);
 
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
