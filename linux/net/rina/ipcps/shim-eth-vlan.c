@@ -319,13 +319,18 @@ static int flow_destroy(struct ipcp_instance_data * data,
         return 0;
 }
 
-static void deallocate_and_destroy_flow(struct ipcp_instance_data * data,
-                                        struct shim_eth_flow *      flow)
+static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
+                                   struct shim_eth_flow *      flow)
 {
-        if (kfa_flow_deallocate(data->kfa, flow->port_id))
-                LOG_ERR("Failed to destroy KFA flow");
-        if (flow_destroy(data, flow))
+        if (flow->user_ipcp)
+                flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
+                                                          flow->port_id);
+        if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy shim-eth-vlan flow");
+                return -1;
+        }
+
+        return 0;
 }
 
 static void rinarp_resolve_handler(void *             opaque,
@@ -359,17 +364,10 @@ static void rinarp_resolve_handler(void *             opaque,
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return;
                 }
-/*
-                if (kipcm_flow_commit(default_kipcm,
-                                      data->id, flow->port_id)) {
-                        LOG_ERR("Cannot add flow");
-                        deallocate_and_destroy_flow(data, flow);
-                        return;
-                }
-*/
+
                 ASSERT(user_ipcp);
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
@@ -377,7 +375,7 @@ static void rinarp_resolve_handler(void *             opaque,
                                                       flow->port_id,
                                                       ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return;
                 }
 
@@ -408,7 +406,7 @@ static void rinarp_resolve_handler(void *             opaque,
                                                        flow->port_id,
                                                        0)) {
                         LOG_ERR("Couldn't tell flow is allocated to KIPCM");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return;
                 }
         } else {
@@ -449,7 +447,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 
                 if (!gpa_is_ok(flow->dest_pa)) {
                         LOG_ERR("Destination protocol address is not ok");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -462,7 +460,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 if (!flow->sdu_queue) {
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -471,7 +469,7 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                        rinarp_resolve_handler,
                                        data)) {
                         LOG_ERR("Failed to lookup ARP entry");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
         } else if (flow->port_id_state == PORT_STATE_PENDING) {
@@ -518,7 +516,7 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
                 ASSERT(user_ipcp);
@@ -528,16 +526,9 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                                       port_id,
                                                       ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
-                /*
-                if (kipcm_flow_commit(default_kipcm, data->id,
-                                      flow->port_id)) {
-                        LOG_ERR("KIPCM flow add failed");
-                        deallocate_and_destroy_flow(data, flow);
-                        return -1;
-                }*/
 
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
@@ -596,17 +587,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        if (kfa_flow_deallocate(data->kfa, flow->port_id)) {
-                LOG_ERR("Failed to deallocate flow in KFA");
-                return -1;
-        }
-
-        if (flow_destroy(data, flow)) {
-                LOG_ERR("Failed to destroy shim-eth-vlan flow");
-                return -1;
-        }
-
-        return 0;
+        return unbind_and_destroy_flow(data, flow);
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
@@ -931,7 +912,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                 "for a new flow");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -942,7 +923,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         LOG_ERR("Could not push a SDU into the flow queue");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
@@ -955,14 +936,14 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         if (!flow->dest_pa) {
                                 LOG_ERR("Failed to duplicate gpa");
                                 sdu_destroy(du);
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
                         sname = string_toname_ni(gpa_address_value(gpaddr));
                         if (!sname) {
                                 LOG_ERR("Failed to convert name to string");
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -978,7 +959,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         flow->dest_pa = name_to_gpa(sname);
                         if (!flow->dest_pa) {
                                 LOG_ERR("Failed to create gpa");
-                                deallocate_and_destroy_flow(data, flow);
+                                unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
 
@@ -993,7 +974,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                        data->app_name,
                                        data->fspec)) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
-                        deallocate_and_destroy_flow(data, flow);
+                        unbind_and_destroy_flow(data, flow);
                         name_destroy(sname);
                         return -1;
                 }
@@ -1340,7 +1321,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .flow_allocate_response    = eth_vlan_flow_allocate_response,
         .flow_deallocate           = eth_vlan_flow_deallocate,
         .flow_binding_ipcp         = NULL,
-        .flow_destroy              = NULL,
+        .flow_unbinding_ipcp       = NULL,
 
         .application_register      = eth_vlan_application_register,
         .application_unregister    = eth_vlan_application_unregister,

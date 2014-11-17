@@ -865,10 +865,9 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
-        .flow_deallocate           = NULL,
+        .flow_deallocate           = normal_deallocate,
         .flow_binding_ipcp         = ipcp_flow_notification,
         .flow_unbinding_ipcp       = normal_flow_unbinding_ipcp,
-        .flow_destroy              = normal_deallocate,
 
         .application_register      = NULL,
         .application_unregister    = NULL,
@@ -1060,11 +1059,6 @@ static int normal_deallocate_all(struct ipcp_instance_data * data)
                         LOG_ERR("Some efcp structures could not be destroyed"
                                 "in flow %d", flow->port_id);
 
-                if (kfa_port_id_release(data->kfa, flow->port_id))
-                        LOG_ERR("Port id %d in IPCP instance %d"
-                                "could not be destroyed",
-                                flow->port_id,
-                                data->id);
                 list_del(&flow->list);
                 rkfree(flow);
         }

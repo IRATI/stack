@@ -197,14 +197,11 @@ static int kfa_flow_destroy(struct kfa *       instance,
                             struct ipcp_flow * flow,
                             port_id_t          id)
 {
-        struct ipcp_instance * ipcp;
         int                    retval = 0;
 
         ASSERT(flow);
 
         LOG_DBG("We are destroying flow %d", id);
-
-        ipcp = flow->ipc_process;
 
         /* FIXME: Should we ASSERT() here ? */
         if (!flow->sdu_ready)
@@ -228,26 +225,23 @@ static int kfa_flow_destroy(struct kfa *       instance,
 
         rkfree(flow);
 
-        ASSERT(ipcp);
-        ASSERT(ipcp->ops);
-
-        if (ipcp->ops->flow_destroy)
-                if (ipcp->ops->flow_destroy(ipcp->data, id)) {
-                        LOG_ERR("Problems destroying the flow "
-                                "on port-id %d", id);
-                        retval = -1;
-                }
-
         return retval;
 }
 
-int kfa_flow_deallocate(struct kfa * instance,
-                        port_id_t    id)
+static int kfa_flow_deallocate(struct ipcp_instance_data * data,
+                               port_id_t    id)
 {
         struct ipcp_flow * flow;
+        struct kfa *       instance;
 
         IRQ_BARRIER;
 
+        if (!data) {
+                LOG_ERR("Bogus ipcp data passed, bailing out");
+                return -1;
+        }
+
+        instance = data->kfa;
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -747,8 +741,8 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .flow_allocate_response    = NULL,
         .flow_deallocate           = NULL,
         .flow_binding_ipcp         = kfa_flow_ipcp_bind,
-        .flow_unbinding_ipcp       = NULL,
-        .flow_destroy              = NULL, /*kfa_flow_deallocate or kfa_port_id_release ?*/
+        .flow_unbinding_ipcp       = kfa_flow_deallocate,
+        .flow_destroy              = NULL,
         .application_register      = NULL,
         .application_unregister    = NULL,
         .assign_to_dif             = NULL,
