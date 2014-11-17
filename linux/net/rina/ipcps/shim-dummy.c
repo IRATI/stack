@@ -367,7 +367,7 @@ static int dummy_flow_deallocate(struct ipcp_instance_data * data,
         flow->dest_user_ipcp->ops->flow_unbinding_ipcp(
                         flow->dest_user_ipcp->data,
                         flow->dst_port_id);
-        kfa_port_id_release(data->kfa, port_id);
+        kfa_port_id_release(data->kfa, flow->dst_port_id);
         kfa_port_id_release(data->kfa, flow->port_id);
 
         list_del(&flow->list);
