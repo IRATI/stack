@@ -139,8 +139,6 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
                               port_id_t                   id,
                               struct sdu *                sdu)
 {
-        struct normal_flow * flow;
-
         if (rmt_receive(data->rmt, sdu, id)) {
                 LOG_ERR("Enqueue :Could not post SDU into the RMT");
                 return -1;
