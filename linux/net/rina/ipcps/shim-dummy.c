@@ -206,7 +206,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         }
 
         if (!user_ipcp) {
-                destroy(flow);
+                destroy_flow(flow);
                 return -1;
         }
 
