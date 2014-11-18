@@ -211,6 +211,8 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                flow->source,
                                flow->dest,
                                flow->fspec)) {
+                kfa_port_id_release(data->kfa, flow->dst_port_id);
+
                 return -1;
         }
 

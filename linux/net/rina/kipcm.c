@@ -172,6 +172,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, info->snd_seq)) {
                 LOG_ERR("Could not add map [pid, seq_num]: [%d, %d]",
                         pid, info->snd_seq);
+                kfa_port_id_release(kipcm->kfa, pid);
                 goto fail;
         }
 
@@ -180,6 +181,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
                 if (!user_ipcp) {
                         LOG_DBG("Could not find the user ipcp of the flow...");
+                        kipcm_pmap_remove(kipcm->messages->ingress, pid);
+                        kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
                 }
         }
@@ -194,6 +197,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                                                     attrs->fspec,
                                                     pid)) {
                 LOG_ERR("Failed allocating flow request");
+                kfa_port_id_release(kipcm->kfa, pid);
                 goto fail;
         }
 
@@ -202,7 +206,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         return 0;
 
  fail:
-        if (!is_port_id_ok(pid)) kfa_port_id_release(kipcm->kfa, pid);
         return alloc_flow_req_free_and_reply(msg,
                                              ipc_id,
                                              -1,
@@ -1933,7 +1936,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
                               struct name *    process_name)
 {
-        /*struct ipcp_instance * ipc_process, * user_ipc_process;*/
+        /* struct ipcp_instance * ipc_process, * user_ipc_process; */
         port_id_t              pid;
 
         IRQ_BARRIER;
@@ -1989,7 +1992,7 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                           ipc_process_id_t ipc_id,
                           port_id_t        port_id)
 {
-        struct ipcp_instance *                       ipc_process;
+        struct ipcp_instance * ipc_process;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
