@@ -219,6 +219,16 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+static void release_and_destroy(struct dummy_flow * flow, struct kfa * kfa)
+{
+        kfa_port_id_release(kfa, flow->dst_port_id);
+        kfa_port_id_release(kfa, flow->port_id);
+        list_del(&flow->list);
+        name_destroy(flow->source);
+        name_destroy(flow->dest);
+        rkfree(flow);
+}
+
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                                         struct ipcp_instance *      dest_user_ipcp,
                                         port_id_t                   port_id,
@@ -257,13 +267,19 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->dest_user_ipcp = dest_user_ipcp;
                 flow->state         = PORT_STATE_ALLOCATED;
 
+                if (!dest_user_ipcp) {
+                        flow->user_ipcp->ops->flow_unbinding_ipcp(
+                                        flow->user_ipcp->data, flow->port_id);
+                        release_and_destroy(flow, data->kfa);
+                        return -1;
+                }
+
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
-                        list_del(&flow->list);
-                        name_destroy(flow->source);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
+                        flow->user_ipcp->ops->flow_unbinding_ipcp(
+                                        flow->user_ipcp->data, flow->port_id);
+                        release_and_destroy(flow, data->kfa);
                         return -1;
                 }
                 ASSERT(dest_user_ipcp->ops);
@@ -274,26 +290,9 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         LOG_ERR("Could not bind flow with user_ipcp");
                         flow->user_ipcp->ops->flow_unbinding_ipcp(
                                         flow->user_ipcp->data, flow->port_id);
-                        kfa_port_id_release(data->kfa, port_id);
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        list_del(&flow->list);
-                        name_destroy(flow->source);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
+                        release_and_destroy(flow, data->kfa);
                         return -1;
                 }
-
-                /*
-                if (kipcm_flow_commit(default_kipcm,
-                                      data->id, port_id)) {
-                        kfa_flow_deallocate(data->kfa, port_id);
-                        kfa_port_id_release(data->kfa, port_id);
-                        list_del(&flow->list);
-                        name_destroy(flow->source);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
-                        return -1;
-                }*/
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
                                                        data->id,
@@ -305,12 +304,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                         flow->dest_user_ipcp->ops->flow_unbinding_ipcp(
                                         flow->dest_user_ipcp->data,
                                         flow->dst_port_id);
-                        kfa_port_id_release(data->kfa, port_id);
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        list_del(&flow->list);
-                        name_destroy(flow->source);
-                        name_destroy(flow->dest);
-                        rkfree(flow);
+                        release_and_destroy(flow, data->kfa);
                         return -1;
                 }
         } else {
@@ -321,12 +315,7 @@ static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->user_ipcp->ops->flow_unbinding_ipcp(
                                 flow->user_ipcp->data,
                                 flow->port_id);
-                kfa_port_id_release(data->kfa, port_id);
-                kfa_port_id_release(data->kfa, flow->port_id);
-                list_del(&flow->list);
-                name_destroy(flow->source);
-                name_destroy(flow->dest);
-                rkfree(flow);
+                release_and_destroy(flow, data->kfa);
                 return -1;
         }
 
