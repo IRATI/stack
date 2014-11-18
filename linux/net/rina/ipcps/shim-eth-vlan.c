@@ -488,8 +488,11 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
         struct ipcp_instance * ipcp;
 
-        if (!data || !is_port_id_ok(port_id) ||!user_ipcp) {
-                LOG_ERR("Wrong parameters passed, bailing out");
+        ASSERT(data);
+        ASSERT(is_port_id_ok(port_id));
+
+        if (!user_ipcp) {
+                LOG_ERR("Wrong user_ipcp passed, bailing out");
                 kfa_port_id_release(data->kfa, port_id);
                 return -1;
         }

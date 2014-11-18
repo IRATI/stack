@@ -248,31 +248,29 @@ static int notify_ipcp_allocate_flow_response(void *             data,
 
         attrs = msg->attrs;
 
-        if (rnl_parse_msg(info, msg)) {
-                rnl_msg_destroy(msg);
-                return -1;
-        }
+        if (rnl_parse_msg(info, msg))
+                goto fail;
+
 
         user_ipc_id  = msg->header.src_ipc_id;
         ipc_id       = msg->header.dst_ipc_id;
         ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
+        pid = kipcm_smap_find(kipcm->messages->egress, info->snd_seq);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
-                rnl_msg_destroy(msg);
-                return -1;
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
         }
-
-        pid = kipcm_smap_find(kipcm->messages->egress, info->snd_seq);
         if (!is_port_id_ok(pid)) {
                 LOG_ERR("Could not find port id %d for response %d",
                         pid, info->snd_seq);
-                rnl_msg_destroy(msg);
-                return -1;
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
         }
         if (kipcm_smap_remove(kipcm->messages->egress, info->snd_seq)) {
                 LOG_ERR("Could not destroy egress messages map entry");
-                rnl_msg_destroy(msg);
-                return -1;
+                kfa_port_id_release(kipcm->kfa, pid);
+                goto fail;
         }
 
         user_ipcp = kfa_ipcp_instance(kipcm->kfa);
@@ -288,13 +286,15 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                                                      attrs->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-                rnl_msg_destroy(msg);
-                return -1;
+                goto fail;
         }
 
         rnl_msg_destroy(msg);
 
         return 0;
+fail:
+        rnl_msg_destroy(msg);
+        return -1;
 }
 
 static int

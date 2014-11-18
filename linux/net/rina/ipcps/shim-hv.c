@@ -376,8 +376,18 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         int response = RESP_KO;
         struct ipcp_instance * ipcp;
 
+        ASSERT(priv);
+        ASSERT(is_port_id_ok(port_id));
+
+        if (!user_ipcp) {
+                LOG_ERR("Wrong user_ipcp passed, bailing out");
+                kfa_port_id_release(priv->kfa, port_id);
+                return -1;
+        }
+
         if (unlikely(!priv->assigned)) {
                 LOG_ERR("%s: IPC process not ready", __func__);
+                kfa_port_id_release(priv->kfa, port_id);
                 return -ENOENT;
         }
 
@@ -388,6 +398,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
         if (!ch) {
                 LOG_ERR("%s: unknown port-id %d", __func__, port_id);
                 mutex_unlock(&priv->vc_lock);
+                kfa_port_id_release(priv->kfa, port_id);
                 return -1;
         }
 
@@ -420,9 +431,7 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
                 LOG_DBGF("channel %d --> ALLOCATED", ch);
         } else {
                 /* Negative response */
-                /* This should be done in kipcm
-                kfa_flow_deallocate(priv->kfa, port_id);
-                */
+                kfa_port_id_release(priv->kfa, port_id);
                 /* XXX The following call should be useless because of the last
                  * call.
                  */
@@ -437,6 +446,8 @@ shim_hv_flow_allocate_response(struct ipcp_instance_data *priv,
 
         shim_hv_send_allocate_resp(priv, ch, response);
 
+        if (response != RESP_OK)
+                kfa_port_id_release(priv->kfa, port_id);
         return (response == RESP_OK) ? 0 : -1;
 }
 
@@ -650,6 +661,8 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 goto out;
         }
         port_id = priv->vmpi.channels[ch].port_id;
+        user_ipcp = priv->vmpi.channels[ch].user_ipcp;
+        ASSERT(user_ipcp);
 
         if (response == RESP_OK) {
                 /* Everything is ok: Let's do the transition to the ALLOCATED
@@ -670,8 +683,6 @@ static void shim_hv_handle_allocate_resp(struct ipcp_instance_data *priv,
                 response = RESP_KO;
                 goto resp_ko;
         }
-        user_ipcp = priv->vmpi.channels[ch].user_ipcp;
-        ASSERT(user_ipcp);
         ASSERT(user_ipcp->ops);
         ASSERT(user_ipcp->ops->flow_binding_ipcp);
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
