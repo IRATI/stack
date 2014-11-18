@@ -179,12 +179,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         user_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (user_ipc_id) {
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!user_ipcp) {
+                if (!user_ipcp)
                         LOG_DBG("Could not find the user ipcp of the flow...");
-                        kipcm_pmap_remove(kipcm->messages->ingress, pid);
-                        kfa_port_id_release(kipcm->kfa, pid);
-                        goto fail;
-                }
         }
 
         ASSERT(ipc_process->ops);

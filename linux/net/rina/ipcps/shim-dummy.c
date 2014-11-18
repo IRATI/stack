@@ -135,6 +135,21 @@ static struct dummy_flow * find_flow(struct ipcp_instance_data * data,
         return NULL;
 }
 
+static void destroy_flow(struct dummy_flow * flow)
+{
+        list_del(&flow->list);
+        name_destroy(flow->source);
+        name_destroy(flow->dest);
+        rkfree(flow);
+}
+
+static void release_and_destroy(struct dummy_flow * flow, struct kfa * kfa)
+{
+        kfa_port_id_release(kfa, flow->dst_port_id);
+        kfa_port_id_release(kfa, flow->port_id);
+        destroy_flow(flow);
+}
+
 static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        struct ipcp_instance *      user_ipcp,
                                        const struct name *         source,
@@ -212,21 +227,12 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                flow->dest,
                                flow->fspec)) {
                 kfa_port_id_release(data->kfa, flow->dst_port_id);
+                destroy_flow(flow);
 
                 return -1;
         }
 
         return 0;
-}
-
-static void release_and_destroy(struct dummy_flow * flow, struct kfa * kfa)
-{
-        kfa_port_id_release(kfa, flow->dst_port_id);
-        kfa_port_id_release(kfa, flow->port_id);
-        list_del(&flow->list);
-        name_destroy(flow->source);
-        name_destroy(flow->dest);
-        rkfree(flow);
 }
 
 static int dummy_flow_allocate_response(struct ipcp_instance_data * data,
