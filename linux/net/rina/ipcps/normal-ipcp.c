@@ -277,10 +277,25 @@ static int connection_update_request(struct ipcp_instance_data * data,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
-        struct normal_flow * flow;
+        struct normal_flow *   flow;
+        struct ipcp_instance * n1_ipcp;
 
         if (!user_ipcp)
                 return cep_id_bad();
+
+        n1_ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!n1_ipcp) {
+                LOG_ERR("KIPCM cannot retrieve this IPCP");
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
+        ASSERT(user_ipcp->ops);
+        ASSERT(user_ipcp->ops->flow_binding_ipcp);
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data, port_id, n1_ipcp)) {
+                LOG_ERR("Cannot bind flow with user ipcp");
+                efcp_connection_destroy(data->efcpc, src_cep_id);
+                return -1;
+        }
 
         if (efcp_connection_update(data->efcpc,
                                    user_ipcp,
