@@ -433,27 +433,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
         LOG_DBG("Cep_id allocated for the arrived connection request: %d",
                 cep_id);
 
-        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-        if (!ipcp) {
-        LOG_ERR("KIPCM could not retrieve this IPCP");
-                efcp_connection_destroy(data->efcpc, cep_id);
-                return cep_id_bad();
-        }
-        ASSERT(user_ipcp->ops);
-        ASSERT(user_ipcp->ops->flow_binding_ipcp);
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              conn->port_id,
-                                              ipcp)) {
-        LOG_ERR("Could not bind flow with user_ipcp");
-                efcp_connection_destroy(data->efcpc, cep_id);
-                return cep_id_bad();
-        }
-        /*
-        if (kipcm_flow_commit(default_kipcm, data->id, port_id)) {
-                efcp_connection_destroy(data->efcpc, cep_id);
-                return cep_id_bad();
-        }*/
-
         cep_entry = rkzalloc(sizeof(*cep_entry), GFP_KERNEL);
         if (!cep_entry) {
                 LOG_ERR("Could not create a cep_id entry, bailing out");
@@ -477,6 +456,21 @@ connection_create_arrived(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 INIT_LIST_HEAD(&flow->cep_ids_list);
                 list_add(&flow->list, &data->flows);
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!ipcp) {
+                LOG_ERR("KIPCM could not retrieve this IPCP");
+                        efcp_connection_destroy(data->efcpc, cep_id);
+                        return cep_id_bad();
+                }
+                ASSERT(user_ipcp->ops);
+                ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                      conn->port_id,
+                                                      ipcp)) {
+                LOG_ERR("Could not bind flow with user_ipcp");
+                        efcp_connection_destroy(data->efcpc, cep_id);
+                        return cep_id_bad();
+                }
         }
 
         list_add(&cep_entry->list, &flow->cep_ids_list);
