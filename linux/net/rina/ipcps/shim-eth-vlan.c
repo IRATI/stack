@@ -488,13 +488,16 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
         struct ipcp_instance * ipcp;
 
-        ASSERT(data);
-        ASSERT(is_port_id_ok(port_id));
-        ASSERT(user_ipcp);
+        if (!data || !is_port_id_ok(port_id) ||!user_ipcp) {
+                LOG_ERR("Wrong parameters passed, bailing out");
+                kfa_port_id_release(data->kfa, port_id);
+                return -1;
+        }
 
         flow = find_flow(data, port_id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
+                kfa_port_id_release(data->kfa, port_id);
                 return -1;
         }
 
@@ -508,12 +511,10 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
-                flow->port_id   = port_id;
-                flow->user_ipcp = user_ipcp;
-
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
+                        kfa_port_id_release(data->kfa, port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
@@ -524,12 +525,15 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                                                       port_id,
                                                       ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
+                        kfa_port_id_release(data->kfa, port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
 
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
+                flow->port_id   = port_id;
+                flow->user_ipcp = user_ipcp;
                 spin_unlock(&data->lock);
 
                 ASSERT(flow->sdu_queue);

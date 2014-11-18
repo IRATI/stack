@@ -276,16 +276,8 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         }
 
         user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-        if (user_ipc_id) {
+        if (user_ipc_id)
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!user_ipcp) {
-                        LOG_DBG("(response) Could not find the user ipcp "
-                                "of the flow...");
-                        kfa_port_id_release(kipcm->kfa, pid);
-                        rnl_msg_destroy(msg);
-                        return -1;
-                }
-        }
 
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_allocate_response);
@@ -296,7 +288,6 @@ static int notify_ipcp_allocate_flow_response(void *             data,
                                                      attrs->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-                kfa_port_id_release(kipcm->kfa, pid);
                 rnl_msg_destroy(msg);
                 return -1;
         }
