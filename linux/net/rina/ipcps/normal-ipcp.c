@@ -141,27 +141,10 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
 {
         struct normal_flow * flow;
 
-        spin_lock(&data->lock);
-        flow = find_flow(data, id);
-        if (!flow || flow->state != PORT_STATE_ALLOCATED) {
-                spin_unlock(&data->lock);
-                LOG_ERR("Enqueue: There is no flow bound to this port_id: %d", id);
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        if (!data->rmt) {
-                spin_unlock(&data->lock);
-                LOG_ERR("Enqueue: There is no RMT in ipcp: %d", data->id);
-                sdu_destroy(sdu);
-                return -1;
-        }
         if (rmt_receive(data->rmt, sdu, id)) {
-                spin_unlock(&data->lock);
                 LOG_ERR("Enqueue :Could not post SDU into the RMT");
                 return -1;
         }
-        spin_unlock(&data->lock);
 
         return 0;
 }

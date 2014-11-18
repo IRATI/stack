@@ -146,7 +146,6 @@ static void destroy_flow(struct dummy_flow * flow)
 static void release_and_destroy(struct dummy_flow * flow, struct kfa * kfa)
 {
         kfa_port_id_release(kfa, flow->dst_port_id);
-        kfa_port_id_release(kfa, flow->port_id);
         destroy_flow(flow);
 }
 
@@ -157,7 +156,8 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                                        const struct flow_spec *    fspec,
                                        port_id_t                   id)
 {
-        struct dummy_flow * flow;
+        struct dummy_flow *    flow;
+        struct ipcp_instance * ipcp;
 
         ASSERT(data);
         ASSERT(source);
@@ -223,6 +223,16 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
 
         INIT_LIST_HEAD(&flow->list);
         list_add(&flow->list, &data->flows);
+
+        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!ipcp) {
+                LOG_ERR("KIPCM could not retrieve this IPCP");
+                release_and_destroy(flow, data->kfa);
+                return -1;
+        }
+        flow->user_ipcp->ops->flow_binding_ipcp(flow->user_ipcp->data,
+                                                flow->port_id,
+                                                ipcp);
 
         if (kipcm_flow_arrived(default_kipcm,
                                data->id,
