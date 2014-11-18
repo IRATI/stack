@@ -591,11 +591,17 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
         ASSERT(data);
         ASSERT(is_port_id_ok(port_id));
-        ASSERT(user_ipcp);
+        if (!user_ipcp) {
+                LOG_ERR("Wrong user_ipcp passed, bailing out");
+                kfa_port_id_release(data->kfa, port_id);
+                return -1;
+        }
+
 
         flow = find_flow(data, port_id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
+                kfa_port_id_release(data->kfa, port_id);
                 return -1;
         }
 
@@ -609,14 +615,6 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
-                /*
-                if (kipcm_flow_commit(default_kipcm, data->id,
-                                      flow->port_id)) {
-                        LOG_ERR("KIPCM flow add failed");
-                        unbind_and_destroy_flow(data, flow);
-                        return -1;
-                }
-                */
                 spin_lock(&data->flow_lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 flow->user_ipcp = user_ipcp;
@@ -625,6 +623,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
                         LOG_ERR("KIPCM could not retrieve this IPCP");
+                        kfa_port_id_release(data->kfa, port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
@@ -634,6 +633,7 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                                                       flow->port_id,
                                                       ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
+                        kfa_port_id_release(data->kfa, port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
