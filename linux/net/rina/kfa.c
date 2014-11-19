@@ -629,6 +629,66 @@ struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
 EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
 
+int kfa_flow_create(struct kfa *           instance,
+                    port_id_t              pid,
+                    struct ipcp_instance * ipcp)
+{
+        struct ipcp_flow * flow;
+
+        IRQ_BARRIER;
+
+        if (!instance)
+                return -1;
+
+        if (!is_port_id_ok(pid))
+                return -1;
+
+        if (!ipcp)
+                return -1;
+
+        IRQ_BARRIER;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+        if (!is_port_id_ok(pid)) {
+                LOG_ERR("Bogus PID passed, bailing out");
+                return-1;
+        }
+
+        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        if (!flow)
+                return -1;
+
+        atomic_set(&flow->readers, 0);
+        atomic_set(&flow->writers, 0);
+        atomic_set(&flow->posters, 0);
+
+        init_waitqueue_head(&flow->wait_queue);
+
+        flow->ipc_process = ipcp;
+
+        flow->state     = PORT_STATE_PENDING;
+        LOG_DBG("Flow PRE bound to port-id %d with waitqueue %pK",
+                pid, &flow->wait_queue);
+
+        mutex_lock(&instance->lock);
+
+        if (kfa_pmap_add_ni(instance->flows, pid, flow)) {
+                LOG_ERR("Could not map flow and port-id %d", pid);
+                rkfree(flow);
+
+                mutex_unlock(&instance->lock);
+                return -1;
+        }
+
+        mutex_unlock(&instance->lock);
+
+        return 0;
+}
+EXPORT_SYMBOL(kfa_flow_create);
+
 static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                               port_id_t                   pid,
                               struct ipcp_instance *      ipcp)
@@ -662,15 +722,10 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                 return-1;
         }
 
-        flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+        mutex_lock(&instance->lock);
+        flow = kfa_pmap_find(instance->flows, pid);
         if (!flow)
                 return -1;
-
-        atomic_set(&flow->readers, 0);
-        atomic_set(&flow->writers, 0);
-        atomic_set(&flow->posters, 0);
-
-        init_waitqueue_head(&flow->wait_queue);
 
         flow->ipc_process = ipcp;
 
@@ -685,16 +740,6 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
 
         LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
                 pid, &flow->wait_queue);
-
-        mutex_lock(&instance->lock);
-
-        if (kfa_pmap_add_ni(instance->flows, pid, flow)) {
-                LOG_ERR("Could not map flow and port-id %d", pid);
-                rkfree(flow);
-
-                mutex_unlock(&instance->lock);
-                return -1;
-        }
 
         mutex_unlock(&instance->lock);
 

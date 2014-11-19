@@ -337,20 +337,10 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
         return -1;
 }
 
-static int ipcp_flow_notification(struct ipcp_instance_data * user_data,
-                                  port_id_t                   pid,
-                                  struct ipcp_instance *      n1_ipcp)
-{
-        /* Review
-        if (kfa_flow_rmt_bind(user_data->kfa, pid, user_data->rmt))
-                return -1;
-
-        */
-        if (rmt_n1port_bind(user_data->rmt, pid, n1_ipcp))
-                return -1;
-
-        return 0;
-}
+static int ipcp_flow_binding(struct ipcp_instance_data * user_data,
+                             port_id_t                   pid,
+                             struct ipcp_instance *      n1_ipcp)
+{ return rmt_n1port_bind(user_data->rmt, pid, n1_ipcp); }
 
 static int normal_flow_unbinding_ipcp(struct ipcp_instance_data * user_data,
                                       port_id_t                   pid)
@@ -856,7 +846,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
         .flow_deallocate           = normal_deallocate,
-        .flow_binding_ipcp         = ipcp_flow_notification,
+        .flow_binding_ipcp         = ipcp_flow_binding,
         .flow_unbinding_ipcp       = normal_flow_unbinding_ipcp,
 
         .application_register      = NULL,
