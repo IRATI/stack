@@ -121,4 +121,7 @@ int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
                                          uint_t           code,
                                          port_id_t        port_id,
                                          u32              nl_port_id);
+
+struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
+                                               struct name *  name);
 #endif

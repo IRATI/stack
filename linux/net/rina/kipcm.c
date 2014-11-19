@@ -2063,6 +2063,23 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(kipcm_notify_flow_dealloc);
 
+struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
+                                               struct name * name)
+{
+        struct ipcp_instance * ipc_process;
+
+        IRQ_BARRIER;
+
+        KIPCM_LOCK(kipcm);
+
+        ipc_process = ipcp_imap_find_by_name(kipcm->instances, name);
+
+        KIPCM_UNLOCK(kipcm);
+
+        return ipc_process;
+}
+EXPORT_SYMBOL(kipcm_find_ipcp_by_name);
+
 /* FIXME: This "method" is only temporary, do not rely on its presence */
 struct kfa * kipcm_kfa(struct kipcm * kipcm)
 {
