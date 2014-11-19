@@ -230,6 +230,10 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
                 release_and_destroy(flow, data->kfa);
                 return -1;
         }
+
+        if (!user_ipcp->ops->ipcp_name(user_ipcp->data))
+                kfa_flow_create(data->kfa, flow->dst_port_id, ipcp);
+
         flow->user_ipcp->ops->flow_binding_ipcp(flow->user_ipcp->data,
                                                 flow->port_id,
                                                 ipcp);

@@ -754,6 +754,9 @@ struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance)
         return instance->ipcp;
 }
 
+static const struct name * kfa_name(struct ipcp_instance_data * data)
+{ return NULL; }
+
 static struct ipcp_instance_ops kfa_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
@@ -770,7 +773,7 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .connection_create_arrived = NULL,
         .sdu_enqueue               = kfa_sdu_post,
         .sdu_write                 = kfa_flow_sdu_write,
-        .ipcp_name                 = NULL
+        .ipcp_name                 = kfa_name
 };
 
 struct kfa * kfa_create(void)
@@ -836,4 +839,3 @@ int kfa_destroy(struct kfa * instance)
 
         return 0;
 }
-
