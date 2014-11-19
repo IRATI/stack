@@ -371,9 +371,12 @@ static void rinarp_resolve_handler(void *             opaque,
                 ASSERT(user_ipcp);
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      flow->port_id,
-                                                      ipcp)) {
+                if (user_ipcp->ops->flow_pre_binding_ipcp(user_ipcp->data,
+                                                          flow->port_id,
+                                                          ipcp)             ||
+                user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                  flow->port_id,
+                                                  ipcp)) {
                         LOG_ERR("Could not bind flow with user_ipcp");
                         unbind_and_destroy_flow(data, flow);
                         return;
