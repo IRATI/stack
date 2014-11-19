@@ -218,7 +218,7 @@ static int dummy_flow_allocate_request(struct ipcp_instance_data * data,
         flow->port_id = id;
         flow->fspec   = flow_spec_dup(fspec);
         flow->user_ipcp = user_ipcp;
-        flow->dst_port_id = kfa_port_id_reserve(data->kfa, data->id);
+        flow->dst_port_id = kipcm_allocate_port(default_kipcm, data->id, (const) dest);
         ASSERT(is_port_id_ok(flow->dst_port_id));
 
         INIT_LIST_HEAD(&flow->list);

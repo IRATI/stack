@@ -47,6 +47,9 @@ int          kfa_flow_sdu_write(struct ipcp_instance_data * data,
 int          kfa_flow_sdu_read(struct kfa *  instance,
                                port_id_t     id,
                                struct sdu ** sdu);
+int          kfa_flow_create(struct ipcp_instance_data * data,
+                             port_id_t                   pid,
+                             struct ipcp_instance *      n1_ipcp);
 
 #if 0
 struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance,

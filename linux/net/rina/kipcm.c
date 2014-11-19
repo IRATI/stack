@@ -1923,7 +1923,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                               ipc_process_id_t ipc_id,
                               struct name *    process_name)
 {
-        /* struct ipcp_instance * ipc_process, * user_ipc_process; */
+        struct ipcp_instance * ipc_process, * user_ipc_process;
         port_id_t              pid;
 
         IRQ_BARRIER;
@@ -1933,7 +1933,7 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 name_destroy(process_name);
                 return port_id_bad();
         }
-/*
+
         KIPCM_LOCK(kipcm);
 
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
@@ -1950,15 +1950,26 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
 
         KIPCM_UNLOCK(kipcm);
 
-        if (!user_ipc_process) {
-                LOG_DBG("This flow is for an app");
-                user_ipc_process = kfa_ipcp_instance(kipcm->kfa);
-        }
-*/
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 name_destroy(process_name);
                 return port_id_bad();
+        }
+
+        if (!user_ipc_process) {
+                LOG_DBG("This flow is for an app");
+                user_ipc_process = kfa_ipcp_instance(kipcm->kfa);
+
+                if (kfa_flow_create(user_ipc_process->data,
+                                    pid,
+                                    ipc_process)) {
+                        kfa_port_id_release(kipcm->kfa, pid);
+                        name_destroy(process_name);
+                        return port_id_bad();
+                }
+
+                name_destroy(process_name);
+                return pid;
         }
 /*
         if (user_ipc_process->ops->flow_binding_ipcp(user_ipc_process->data,
@@ -1986,12 +1997,11 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                 return -1;
         }
 
+        KIPCM_LOCK(kipcm);
+
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
-                LOG_ERR("IPC process %d not found", ipc_id);
-                return -1;
-        }
-        if (!ipc_process) {
+                KIPCM_UNLOCK(kipcm);
                 LOG_ERR("IPC process %d not found", ipc_id);
                 return -1;
         }
@@ -2002,10 +2012,13 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
         kfa_port_id_release(kipcm->kfa, port_id);
 
         if (ipc_process->ops->flow_deallocate(ipc_process->data, port_id)) {
+                KIPCM_UNLOCK(kipcm);
                 LOG_ERR("Failed deallocate flow request "
                         "for port id: %d", port_id);
                 return -1;
         }
+
+        KIPCM_UNLOCK(kipcm);
 
         return 0;
 }
