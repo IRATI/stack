@@ -788,6 +788,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct buffer *                 buffer;
         struct name *                   sname;
         char *                          sk_data;
+        struct ipcp_instance          * ipcp, * user_ipcp;
 
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
@@ -875,10 +876,19 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 return -1;
         }
 
+
+        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                            data->app_name);
+        ipcp      = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!user_ipcp || ipcp) {
+                LOG_ERR("Could not find required ipcps");
+                sdu_destroy(du);
+                gha_destroy(ghaddr);
+                return -1;
+        }
+
         spin_lock(&data->lock);
-
         flow = find_flow_by_gha(data, ghaddr);
-
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
 
@@ -895,12 +905,12 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 flow->dest_ha       = ghaddr;
+                flow->user_ipcp     = user_ipcp;
                 flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
 
                 if (!is_port_id_ok(flow->port_id)) {
-                        LOG_DBG("Port id is not ok");
-                        flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->lock);
+                        LOG_DBG("Port id is not ok");
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
                         if (flow_destroy(data, flow))
@@ -909,6 +919,20 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         return -1;
                 }
 
+                if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
+                        LOG_ERR("This flow goes for an app");
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                                spin_unlock(&data->lock);
+                                LOG_DBG("Could not create flow in KFA");
+                                sdu_destroy(du);
+                                gha_destroy(ghaddr);
+                                kfa_port_id_release(data->kfa, flow->port_id);
+                                if (flow_destroy(data, flow))
+                                        LOG_ERR("Problems destroying shim-eth-vlan "
+                                                "flow");
+                                return -1;
+                        }
+                }
                 LOG_DBG("Added flow to the list");
 
                 flow->sdu_queue = rfifo_create();
@@ -917,6 +941,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                 "for a new flow");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
+                        gha_destroy(ghaddr);
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
@@ -929,6 +954,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         LOG_ERR("Could not push a SDU into the flow queue");
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
+                        gha_destroy(ghaddr);
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
