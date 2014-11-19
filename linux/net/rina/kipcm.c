@@ -160,6 +160,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         user_ipc_id  = msg->header.src_ipc_id;
         ipc_id       = msg->header.dst_ipc_id;
+        /* FIXME: Here we should take the lock */
         ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
@@ -176,11 +177,20 @@ static int notify_ipcp_allocate_flow_request(void *             data,
                 goto fail;
         }
 
-        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (user_ipc_id) {
                 user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!user_ipcp)
-                        LOG_DBG("Could not find the user ipcp of the flow...");
+                if (!user_ipcp) {
+                        LOG_ERR("Could not find the user ipcp of the flow...");
+                        kfa_port_id_release(kipcm->kfa, pid);
+                        goto fail;
+                }
+        } else {
+                user_ipcp = kfa_ipcp_instance(kipcm->kfa);
+                if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
+                        LOG_ERR("Could not find the user ipcp of the flow...");
+                        kfa_port_id_release(kipcm->kfa, pid);
+                        goto fail;
+                }
         }
 
         ASSERT(ipc_process->ops);
