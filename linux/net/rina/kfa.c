@@ -629,19 +629,14 @@ struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance, port_id_t pid)
 EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
 
-static int kfa_flow_ipcp_prebind(struct ipcp_instance_data * data,
-                                 port_id_t                   pid,
-                                 struct ipcp_instance *      ipcp)
+int kfa_flow_create(struct kfa *           instance,
+                    port_id_t              pid,
+                    struct ipcp_instance * ipcp)
 {
         struct ipcp_flow * flow;
-        struct kfa * instance;
 
         IRQ_BARRIER;
 
-        if (!data)
-                return -1;
-
-        instance = data->kfa;
         if (!instance)
                 return -1;
 
@@ -692,6 +687,8 @@ static int kfa_flow_ipcp_prebind(struct ipcp_instance_data * data,
 
         return 0;
 }
+EXPORT_SYMBOL(kfa_flow_create);
+
 static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                               port_id_t                   pid,
                               struct ipcp_instance *      ipcp)
@@ -761,7 +758,6 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
         .flow_deallocate           = NULL,
-        .flow_pre_binding_ipcp     = kfa_flow_ipcp_prebind,
         .flow_binding_ipcp         = kfa_flow_ipcp_bind,
         .flow_unbinding_ipcp       = kfa_flow_deallocate,
         .application_register      = NULL,

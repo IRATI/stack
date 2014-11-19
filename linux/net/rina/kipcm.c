@@ -1947,24 +1947,25 @@ port_id_t kipcm_allocate_port(struct kipcm *   kipcm,
                 return port_id_bad();
         }
 
-        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
-                                                  process_name);
-
-        if (!user_ipc_process) {
-                LOG_DBG("This flow is for an app");
-                user_ipc_process = kfa_ipcp_instance(kipcm->kfa);
-        }
-
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
+                KIPCM_UNLOCK(kipcm);
                 name_destroy(process_name);
                 return port_id_bad();
         }
 
-        if (user_ipc_process->ops->flow_pre_binding_ipcp(user_ipc_process->data,
-                                                         pid,
-                                                         ipc_process)) {
-                LOG_ERR("Problems PRE binding IPC process to flow");
+        user_ipc_process = ipcp_imap_find_by_name(kipcm->instances,
+                                                  process_name);
+
+        if (user_ipc_process) {
+                KIPCM_UNLOCK(kipcm);
+                LOG_DBG("This flow is for an ipcp");
+                name_destroy(process_name);
+                return pid;
+        }
+
+        if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
+                KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
                 name_destroy(process_name);
                 return port_id_bad();

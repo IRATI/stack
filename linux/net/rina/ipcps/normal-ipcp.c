@@ -337,11 +337,6 @@ static int remove_cep_id_from_flow(struct normal_flow * flow,
         return -1;
 }
 
-static int ipcp_flow_prebinding(struct ipcp_instance_data * user_data,
-                                port_id_t                   pid,
-                                struct ipcp_instance *      n1_ipcp)
-{ return 1; }
-
 static int ipcp_flow_binding(struct ipcp_instance_data * user_data,
                              port_id_t                   pid,
                              struct ipcp_instance *      n1_ipcp)
@@ -851,7 +846,6 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
         .flow_deallocate           = normal_deallocate,
-        .flow_pre_binding_ipcp     = ipcp_flow_prebinding,
         .flow_binding_ipcp         = ipcp_flow_binding,
         .flow_unbinding_ipcp       = normal_flow_unbinding_ipcp,
 

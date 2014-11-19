@@ -180,10 +180,6 @@ struct ipcp_instance_ops {
                                       cep_id_t                    dst_cep_id,
                                       struct conn_policies *      cp_params);
 
-        int      (* flow_pre_binding_ipcp)(struct ipcp_instance_data * user_data,
-                                           port_id_t                   port_id,
-                                           struct ipcp_instance *      n1_ipcp);
-
         int      (* flow_binding_ipcp)(struct ipcp_instance_data * user_data,
                                        port_id_t                   port_id,
                                        struct ipcp_instance *      n1_ipcp);

@@ -55,6 +55,10 @@ struct ipcp_flow * kfa_flow_find_by_pid(struct kfa * instance,
 
 struct rmt;
 
+int          kfa_flow_create(struct kfa *           instance,
+                             port_id_t              pid,
+                             struct ipcp_instance * ipcp);
+
 int          kfa_flow_rmt_bind(struct kfa * instance,
                                port_id_t    pid,
                                struct rmt * rmt);

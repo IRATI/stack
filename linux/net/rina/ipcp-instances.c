@@ -101,7 +101,6 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->pft_add                   ||
             ops->pft_remove                ||
             ops->pft_dump                  ||
-            ops->flow_pre_binding_ipcp     ||
             ops->flow_binding_ipcp         ||
             ops->flow_unbinding_ipcp       ||
             ops->flow_deallocate           ||
