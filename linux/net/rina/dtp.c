@@ -86,7 +86,6 @@ struct dtp {
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
-        spinlock_t                a_lock;
 };
 
 static struct dtp_sv default_sv = {
@@ -255,6 +254,10 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
         struct dt  *  dt;
         struct dtcp * dtcp;
 
+        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
+        struct timeval te;
+        long long milliseconds;
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
@@ -283,6 +286,14 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                                 pci_sequence_number_get(pdu_pci_get_ro(pdu))))
                 LOG_ERR("Problems setting sender left window edge "
                         "in default_transmission");
+
+        /*  SYSTEM TIME DBG_MESSAGE */
+       do_gettimeofday(&te);
+       milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+       LOG_DBG("DTP (default tx) Sent PDU %d of type %d at %lld",
+                pci_sequence_number_get(pdu_pci_get_ro(pdu)),
+                pci_type(pdu_pci_get_ro(pdu)),
+                milliseconds);
 
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
@@ -732,6 +743,8 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seq_num_t                max_sdu_gap;
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
+        struct rqueue *          to_post;
+        seq_num_t                ret;
 
         ASSERT(dtp);
 
@@ -760,9 +773,15 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LOG_DBG("Processing A timer expiration");
 
-        spin_lock(&dtp->a_lock);
+        to_post = rqueue_create();
+        if (!to_post) {
+                LOG_ERR("Could not create to_post list in A timer");
+                return -1;
+        }
+
         spin_lock(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
+        ret = LWE;
         LOG_DBG("LWEU: Original LWE = %u", LWE);
         LOG_DBG("LWEU: MAX GAPS     = %u", max_sdu_gap);
 
@@ -788,6 +807,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
+                        /*
                         spin_unlock(&seqq->lock);
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
@@ -798,7 +818,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
 
                         spin_lock(&seqq->lock);
+                        */
+
+                        rqueue_tail_push_ni(to_post, pdu);
+
                         LWE = dt_sv_rcv_lft_win(dt);
+                        ret = LWE;
                         continue;
                 }
 
@@ -807,25 +832,21 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         LOG_DBG("Processing A timer expired");
 
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
-                                spin_unlock(&seqq->lock);
-                                spin_unlock(&dtp->a_lock);
-
                                 LOG_DBG("Retransmissions will be required");
-                                return seq_num;
+                                ret = seq_num;
+                                goto finish;
                         }
 
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
-                                spin_unlock(&seqq->lock);
-                                spin_unlock(&dtp->a_lock);
-
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
-                                return -1;
+                                ret = -1;
+                                goto finish;
                         }
                         pos->pdu = NULL;
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
-
+                        /*
                         spin_unlock(&seqq->lock);
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
@@ -834,8 +855,11 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         }
 
                         spin_lock(&seqq->lock);
+                        */
+                        rqueue_tail_push_ni(to_post, pdu);
 
                         LWE = dt_sv_rcv_lft_win(dt);
+                        ret = LWE;
 
                         continue;
                 }
@@ -843,10 +867,17 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 break;
 
         }
+finish:
         spin_unlock(&seqq->lock);
-        spin_unlock(&dtp->a_lock);
 
-        return LWE;
+        while (!rqueue_is_empty(to_post)) {
+                pdu = (struct pdu *) rqueue_head_pop(to_post);
+                if (pdu)
+                        pdu_post(dtp, pdu);
+        }
+        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
+
+        return ret;
 }
 
 static bool seqq_is_empty(struct squeue * queue)
@@ -1123,6 +1154,10 @@ int dtp_write(struct dtp * instance,
         struct pdu *          cpdu;
         struct dtp_policies * policies;
 
+        /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
+        struct timeval te;
+        long long milliseconds;
+
         if (!sdu_is_ok(sdu))
                 return -1;
 
@@ -1295,6 +1330,15 @@ int dtp_write(struct dtp * instance,
         }
 
         /* Post SDU to RMT */
+
+       /* SYSTEM TIME DBG MESSAGE */
+       do_gettimeofday(&te); // get current time
+       milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+       LOG_DBG("DTP Sent PDU %d of type %d at %lld",
+                pci_sequence_number_get(pci),
+                pci_type(pdu_pci_get_ro(pdu)),
+                milliseconds);
+
         return rmt_send(instance->rmt,
                         pci_destination(pci),
                         pci_qos_id(pci),
@@ -1391,6 +1435,11 @@ static int rcv_worker(void * o)
         timeout_t             LWE;
         bool                  in_order;
         seq_num_t             max_sdu_gap;
+        struct rqueue *       to_post;
+
+        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        struct timeval te;
+        long long milliseconds;
 
         ritem = (struct rcv_item *) o;
         if (!ritem) {
@@ -1460,6 +1509,11 @@ static int rcv_worker(void * o)
         }
 #endif
         seq_num = pci_sequence_number_get(pci);
+
+        /* SYSTEM TIMESTAMP DBG MESSAGE */
+        do_gettimeofday(&te); // get current time
+        milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+        LOG_DBG("DTP Received PDU %d at %lld", seq_num, milliseconds);
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
@@ -1554,16 +1608,24 @@ static int rcv_worker(void * o)
                 return -1;
         }
 
-        spin_lock(&instance->a_lock);
+        to_post = rqueue_create();
+        if (!to_post) {
+                LOG_ERR("Could not create to_post list at reception");
+                pdu_destroy(pdu);
+                return -1;
+        }
         spin_lock(&instance->seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
+
+               /*
                 spin_unlock(&instance->seqq->lock);
-
                 pdu_post(instance, pdu);
+                spin_lock(&instance->seqq->lock); */
 
-                spin_lock(&instance->seqq->lock);
+                rqueue_tail_push_ni(to_post, pdu);
+
                 pdu     = seq_queue_pop(instance->seqq->queue);
                 seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
                 LWE     = dt_sv_rcv_lft_win(dt);
@@ -1571,12 +1633,19 @@ static int rcv_worker(void * o)
         if (pdu)
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
-        spin_unlock(&instance->a_lock);
 
         if (a) {
                 LOG_DBG("Going to start A timer with t = %d", a/AF);
                 rtimer_start(instance->timers.a, a/AF);
         }
+
+        while (!rqueue_is_empty(to_post)) {
+                pdu = (struct pdu *) rqueue_head_pop(to_post);
+                if (pdu)
+                        pdu_post(instance, pdu);
+        }
+        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
+
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */
