@@ -621,7 +621,7 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 
         /* Invoke the plugin initialization function, that will publish
          * pluggable components. */
-        ret = init_func(this);
+        ret = init_func(this, plugin_name);
         if (ret) {
                 dlclose(handle);
                 LOG_ERR("Failed to initialize plugin %s",
@@ -639,24 +639,37 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
 {
         std::map< std::string, void * >::iterator mit;
+        std::vector< std::vector<PsFactory>::iterator > unpublish_list;
 
         mit = plugins_handles.find(plugin_name);
         if (mit == plugins_handles.end()) {
-                LOG_ERR("plugin %s already loaded", plugin_name.c_str());
+                LOG_ERR("plugin %s not found", plugin_name.c_str());
                 return -1;
         }
 
-        // Unload all the pluggable components published by this plugin
+        // Look for all the policy-sets published by the plugin
         // Note: Here we assume the plugin name is used as the "name"
         // argument in the psFactoryPublish() calls.
         for (std::vector<PsFactory>::iterator
                 it = components_factories.begin();
                         it != components_factories.end(); it++) {
-                if (it->name == plugin_name) {
-                        psFactoryUnpublish(it->component, it->name);
+                if (it->plugin_name == plugin_name) {
+                        if (it->refcnt > 0) {
+                                LOG_ERR("Cannot unload plugin %s: it is "
+                                                "in use", plugin_name.c_str());
+                                return -1;
+                        }
+                        unpublish_list.push_back(it);
                 }
         }
 
+        // Unpublish all the policy sets published by this plugin
+        for (unsigned int i = 0; i < unpublish_list.size(); i++) {
+                psFactoryUnpublish(unpublish_list[i]->component,
+                                   unpublish_list[i]->name);
+        }
+
+        /* Unload the plugin only if */
         dlclose(mit->second);
         plugins_handles.erase(mit);
 
@@ -695,9 +708,11 @@ int IPCProcessImpl::psFactoryPublish(const PsFactory& factory)
 
         // Add the new factory
         components_factories.push_back(factory);
+        components_factories.back().refcnt = 0;
 
-        LOG_INFO("Pluggable component %s/%s published",
-                 factory.component.c_str(), factory.name.c_str());
+        LOG_INFO("Pluggable component '%s'/'%s' [%s] published",
+                 factory.component.c_str(), factory.name.c_str(),
+                 factory.plugin_name.c_str());
 
         return 0;
 }
@@ -715,10 +730,11 @@ int IPCProcessImpl::psFactoryUnpublish(const std::string& component,
                 return -1;
         }
 
-        components_factories.erase(fi);
+        LOG_INFO("Pluggable component '%s'/'%s' [%s] unpublished",
+                 fi->component.c_str(), fi->name.c_str(),
+                 fi->plugin_name.c_str());
 
-        LOG_INFO("Pluggable component %s/%s unpublished",
-                 component.c_str(), name.c_str());
+        components_factories.erase(fi);
 
         return 0;
 }
@@ -729,6 +745,7 @@ IPCProcessImpl::psCreate(const std::string& component,
                                        IPCProcessComponent * context)
 {
         std::vector<PsFactory>::iterator it;
+        IPolicySet *ps = NULL;
 
         it = psFactoryLookup(component, name);
         if (it == components_factories.end()) {
@@ -737,7 +754,12 @@ IPCProcessImpl::psCreate(const std::string& component,
                 return NULL;
         }
 
-        return it->create(context);
+        ps = it->create(context);
+        if (ps) {
+                it->refcnt++;
+        }
+
+        return ps;
 }
 
 int IPCProcessImpl::psDestroy(const std::string& component,
@@ -754,6 +776,7 @@ int IPCProcessImpl::psDestroy(const std::string& component,
         }
 
         it->destroy(instance);
+        it->refcnt--;
 
         return 0;
 }

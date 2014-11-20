@@ -85,11 +85,12 @@ destroySecurityManagerPasswdPs(IPolicySet * ps)
 }
 
 extern "C" int
-init(IPCProcess * ipc_process)
+init(IPCProcess * ipc_process, const std::string& plugin_name)
 {
         struct PsFactory factory;
         int ret;
 
+        factory.plugin_name = plugin_name;
         factory.name = "passwd";
         factory.component = "security-manager";
         factory.create = createSecurityManagerPasswdPs;

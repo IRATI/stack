@@ -80,7 +80,8 @@ extern "C" {
         typedef IPolicySet *(*component_factory_create_t)(
                                                 IPCProcessComponent * ctx);
         typedef void (*component_factory_destroy_t)(IPolicySet * ps);
-        typedef int (*plugin_init_function_t)(IPCProcess * ipc_process);
+        typedef int (*plugin_init_function_t)(IPCProcess * ipc_process,
+                                              const std::string& plugin_name);
 }
 
 struct PsFactory {
@@ -90,11 +91,18 @@ struct PsFactory {
         // Name of the component where this plugin applies.
         std::string component;
 
+        // Name of the plugin that published this policy set
+        std::string plugin_name;
+
         // Constructor method for instances of this pluggable policy set.
         component_factory_create_t create;
 
         // Destructor method for instances of this pluggable policy set.
         component_factory_destroy_t destroy;
+
+        // Reference counter for the number of policy sets created
+        // by this factory
+        unsigned int refcnt;
 };
 
 /// Interface
