@@ -536,6 +536,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         port_id_t port_id;
         uint32_t ch;
         int err = -1;
+        struct ipcp_instance * ipcp, * user_ipcp;
 
         if (des_uint32(&msg, &ch, &len)) {
                 LOG_ERR("%s: truncated msg: while reading channel", __func__);
@@ -582,10 +583,28 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 goto dst_app;
         }
 
+        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                            dst_application);
+        if (!user_ipcp)
+                user_ipcp = kfa_ipcp_instance(priv->kfa);
+        ipcp = kipcm_find_ipcp(default_kipcm, priv->id);
+        if (!user_ipcp || !ipcp) {
+                LOG_ERR("Could not find required ipcps");
+                goto port_alloc;
+        }
+
         port_id = kfa_port_id_reserve(priv->kfa, priv->id);
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("%s: kfa_port_id_reserve() failed", __func__);
                 goto port_alloc;
+        }
+
+        if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
+                LOG_DBG("This flow goes for an app");
+                if (kfa_flow_create(priv->kfa, port_id, ipcp)) {
+                        LOG_ERR("Could not create flow in KFA");
+                        goto flow_arrived;
+                }
         }
 
         err = kipcm_flow_arrived(default_kipcm, priv->id, port_id,

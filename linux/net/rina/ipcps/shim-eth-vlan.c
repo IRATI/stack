@@ -896,7 +896,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
-                        flow->port_id_state = PORT_STATE_NULL;
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
@@ -922,10 +921,10 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
-                        LOG_ERR("This flow goes for an app");
+                        LOG_DBG("This flow goes for an app");
                         if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
                                 spin_unlock(&data->lock);
-                                LOG_DBG("Could not create flow in KFA");
+                                LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 gha_destroy(ghaddr);
                                 kfa_port_id_release(data->kfa, flow->port_id);
