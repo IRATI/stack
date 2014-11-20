@@ -140,6 +140,9 @@ class IPCManager : public EventLoopData {
                                  const std::string& name,
                                  const std::string& value);
 
+        int plugin_load(rina::IPCProcess *ipcp,
+                        const std::string& plugin_name, bool load);
+
         std::string query_rib(rina::IPCProcess *ipcp);
 
         rinad::RINAConfiguration config;
@@ -189,6 +192,9 @@ class IPCManager : public EventLoopData {
 
         std::map<unsigned int,
                  rina::IPCProcess *> pending_select_policy_set_ops;
+
+        std::map<unsigned int,
+                 rina::IPCProcess *> pending_plugin_load_ops;
 
         IPCMConcurrency concurrency;
 

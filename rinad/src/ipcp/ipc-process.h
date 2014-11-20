@@ -56,6 +56,8 @@ public:
                 const rina::SelectPolicySetRequestEvent& event);
         void processSelectPolicySetResponseEvent(
                 const rina::SelectPolicySetResponseEvent& event);
+        void processPluginLoadRequestEvent(
+                const rina::PluginLoadRequestEvent& event);
 
         std::vector<PsFactory>::iterator
                         psFactoryLookup(const std::string& component,

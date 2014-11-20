@@ -934,6 +934,43 @@ IPCManager::select_policy_set(rina::IPCProcess *ipcp,
         return ret;
 }
 
+int
+IPCManager::plugin_load(rina::IPCProcess *ipcp,
+                        const std::string& plugin_name, bool load)
+{
+        ostringstream ss;
+        unsigned int seqnum;
+        bool arrived = false;
+        int ret = -1;
+
+        concurrency.lock();
+
+        try {
+                seqnum = ipcp->pluginLoad(plugin_name, load);
+
+                pending_plugin_load_ops[seqnum] = ipcp;
+                ss << "Issued plugin-load to IPC process " <<
+                        ipcp->name.toString() << endl;
+                FLUSH_LOG(INFO, ss);
+                arrived = concurrency.wait_for_event(
+                                rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+                                seqnum, ret);
+        } catch (rina::PluginLoadException) {
+                ss << "Error while issuing plugin-load request "
+                        "to IPC Process " << ipcp->name.toString() << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        concurrency.unlock();
+
+        if (!arrived) {
+                ss  << ": Timed out" << endl;
+                FLUSH_LOG(ERR, ss);
+        }
+
+        return ret;
+}
+
 static void
 application_unregistered_event_handler(rina::IPCEvent * event,
                                        EventLoopData *  opaque)
@@ -1330,6 +1367,33 @@ ipc_process_set_policy_set_param_response_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_plugin_load_response_handler(rina::IPCEvent *e,
+                                         EventLoopData *opaque)
+{
+        DOWNCAST_DECL(e, rina::PluginLoadResponseEvent, event);
+        DOWNCAST_DECL(opaque, IPCManager, ipcm);
+        map<unsigned int, rina::IPCProcess *>::iterator mit;
+        bool success = (event->result == 0);
+        ostringstream ss;
+        int ret = -1;
+
+        mit = ipcm->pending_plugin_load_ops.find(event->sequenceNumber);
+        if (mit != ipcm->pending_plugin_load_ops.end()) {
+                ipcm->pending_plugin_load_ops.erase(mit);
+                ss << "plugin-load-op completed on IPC process "
+                       << mit->second->name.toString() <<
+                        " [success=" << success << "]" << endl;
+                FLUSH_LOG(INFO, ss);
+                ret = event->result;
+        } else {
+                ss << "Warning: unmatched event received" << endl;
+                FLUSH_LOG(WARN, ss);
+        }
+
+        ipcm->concurrency.set_event_result(ret);
+}
+
+static void
 ipc_process_select_policy_set_response_handler(rina::IPCEvent *e,
                                                EventLoopData *opaque)
 {
@@ -1486,6 +1550,8 @@ register_handlers_all(EventLoop& loop)
                         ipc_process_set_policy_set_param_response_handler);
         loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
                         ipc_process_select_policy_set_response_handler);
+        loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+                        ipc_process_plugin_load_response_handler);
 }
 
 }

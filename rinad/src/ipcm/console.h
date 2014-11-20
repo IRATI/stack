@@ -75,6 +75,8 @@ class IPCMConsole {
                 int init();
                 int process_command(int cfd, char *cmdbuf, int size);
                 int flush_output(int cfd);
+                int plugin_load_unload(std::vector<std::string>& args,
+                                       bool load);
 
                 // Console commands functions
                 int quit(std::vector<std::string>& args);
@@ -91,6 +93,8 @@ class IPCMConsole {
                 int enroll_to_dif(std::vector<std::string>& args);
                 int select_policy_set(std::vector<std::string>& args);
                 int set_policy_set_param(std::vector<std::string>& args);
+                int plugin_load(std::vector<std::string>& args);
+                int plugin_unload(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta);

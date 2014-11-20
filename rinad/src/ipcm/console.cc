@@ -107,6 +107,14 @@ IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
                         ConsoleCmdInfo(&IPCMConsole::set_policy_set_param,
                                 "USAGE: set-policy-set-param <ipcp-id> "
                                 "<policy-path> <param-name> <param-value>");
+        commands_map["plugin-load"] =
+                        ConsoleCmdInfo(&IPCMConsole::plugin_load,
+                                "USAGE: plugin-load <ipcp-id> "
+                                "<plugin-name>");
+        commands_map["plugin-unload"] =
+                        ConsoleCmdInfo(&IPCMConsole::plugin_unload,
+                                "USAGE: plugin-unload <ipcp-id> "
+                                "<plugin-name>");
 
         worker = new rina::Thread(&ta, console_function, this);
 }
@@ -679,6 +687,60 @@ IPCMConsole::set_policy_set_param(std::vector<std::string>& args)
         }
 
         return CMDRETCONT;
+}
+
+int
+IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
+{
+        rina::IPCProcess *ipcp = NULL;
+        int ipcp_id;
+        int ret;
+
+        if (args.size() < 3) {
+                outstream << commands_map[args[0]].usage << endl;
+                return CMDRETCONT;
+        }
+
+        ret = string2int(args[1], ipcp_id);
+        if (ret) {
+                outstream << "Invalid IPC process id" << endl;
+                return CMDRETCONT;
+        }
+
+        ipcp = lookup_ipcp_by_id(ipcp_id);
+
+        if (!ipcp) {
+                outstream << "No such IPC process id" << endl;
+        } else {
+                string un;
+
+                if (!load) {
+                        un = "un";
+                }
+
+                ret = ipcm.plugin_load(ipcp, args[2], load);
+                if (ret) {
+                        outstream << "Plugin " << un <<
+                                "loading failed" << endl;
+                } else {
+                        outstream << "Plugin " << un <<
+                                "loaded succesfully" << endl;
+                }
+        }
+
+        return CMDRETCONT;
+}
+
+int
+IPCMConsole::plugin_load(std::vector<std::string>& args)
+{
+        return plugin_load_unload(args, true);
+}
+
+int
+IPCMConsole::plugin_unload(std::vector<std::string>& args)
+{
+        return plugin_load_unload(args, false);
 }
 
 }

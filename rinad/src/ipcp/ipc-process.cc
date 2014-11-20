@@ -567,6 +567,21 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 	}
 }
 
+void IPCProcessImpl::processPluginLoadRequestEvent(
+                        const rina::PluginLoadRequestEvent& event) {
+	rina::AccessGuard g(*lock_);
+        int result;
+
+        if (event.load) {
+                result = plugin_load(event.name);
+        } else {
+                result = plugin_unload(event.name);
+        }
+        rina::extendedIPCManager->pluginLoadResponse(event, result);
+
+        return;
+}
+
 int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 {
 #define STRINGIFY(s) STRINGIFY1(s)
@@ -989,6 +1004,17 @@ ipc_process_select_policy_set_response_handler(rina::IPCEvent *e,
 }
 
 static void
+ipc_process_plugin_load_handler(rina::IPCEvent *e,
+		                EventLoopData *opaque)
+
+{
+	DOWNCAST_DECL(e, rina::PluginLoadRequestEvent, event);
+	DOWNCAST_DECL(opaque, IPCProcessImpl, ipcp);
+
+	ipcp->processPluginLoadRequestEvent(*event);
+}
+
+static void
 ipc_process_default_handler(rina::IPCEvent *e,
 		EventLoopData *opaque)
 {
@@ -1042,6 +1068,8 @@ void register_handlers_all(EventLoop& loop) {
                         ipc_process_select_policy_set_handler);
         loop.register_event(rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
                         ipc_process_select_policy_set_response_handler);
+        loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD,
+                        ipc_process_plugin_load_handler);
 
 	//Unsupported events
 	loop.register_event(rina::APPLICATION_UNREGISTERED_EVENT,
@@ -1080,6 +1108,8 @@ void register_handlers_all(EventLoop& loop) {
 			ipc_process_default_handler);
 	loop.register_event(rina::TIMER_EXPIRED_EVENT,
 			ipc_process_default_handler);
+        loop.register_event(rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+                        ipc_process_default_handler);
 }
 
 }
