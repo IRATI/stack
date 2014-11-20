@@ -152,9 +152,9 @@ int kfa_flow_rmt_bind(struct kfa * instance,
 
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
+                mutex_unlock(&instance->lock);
                 LOG_ERR("The flow with port-id %d does not exist, "
                         "cannot bind rmt", pid);
-                mutex_unlock(&instance->lock);
                 return -1;
         }
         flow->rmt = rmt;
