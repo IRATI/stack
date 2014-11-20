@@ -199,7 +199,8 @@ struct rmt {
         struct efcp_container *   efcpc;
         struct serdes *           serdes;
         struct rmt_ps *           ps;
-        struct ps_factory   *     ps_factory;
+        struct ps_factory *       ps_factory;
+        struct mutex              ps_lock;
 
         struct {
                 struct workqueue_struct * wq;
@@ -246,6 +247,7 @@ int rmt_select_policy_set(struct rmt * rmt,
                           const string_t * name)
 {
         struct ps_base *candidate_ps = NULL;
+        struct rmt_ps *old_ps;
         struct ps_factory *candidate_ps_factory = NULL;
 
         if (!name || !path) {
@@ -264,7 +266,10 @@ int rmt_select_policy_set(struct rmt * rmt,
                 return -1;
         }
 
+        mutex_lock(&rmt->ps_lock);
+
         if (candidate_ps_factory == rmt->ps_factory) {
+                mutex_unlock(&rmt->ps_lock);
                 LOG_INFO("Policy-set '%s' already selected", name);
                 return 0;
         }
@@ -272,6 +277,7 @@ int rmt_select_policy_set(struct rmt * rmt,
         /* Take a reference to the plugin module, to prevent
          * rmmodding. */
         if (!try_module_get(candidate_ps_factory->owner)) {
+                mutex_unlock(&rmt->ps_lock);
                 LOG_ERR("Module %p is not alive as it should",
                         candidate_ps_factory->owner);
                 return -1;
@@ -281,20 +287,29 @@ int rmt_select_policy_set(struct rmt * rmt,
         candidate_ps = candidate_ps_factory->create(&rmt->base);
         if (!candidate_ps) {
                 module_put(candidate_ps_factory->owner);
+                mutex_unlock(&rmt->ps_lock);
                 LOG_ERR("Policy-set instantiation failed");
                 return -1;
         }
 
-        if (rmt->ps) {
-                /* Free the old one. */
+        /* Save old RCU-protected pointer. */
+        old_ps = rmt->ps;
+
+        /* Removal old pointer and replace it with a new one. */
+        rcu_assign_pointer(rmt->ps, container_of(candidate_ps,
+                                                 struct rmt_ps, base));
+        if (old_ps) {
+                /* Wait for a grace period. */
+                synchronize_rcu();
                 ASSERT(rmt->ps_factory);
-                rmt->ps_factory->destroy(&rmt->ps->base);
+                /* Reclaim the content pointed by the old pointer. */
+                rmt->ps_factory->destroy(&old_ps->base);
                 module_put(rmt->ps_factory->owner);
         }
 
-        /* Do the transaction. */
         rmt->ps_factory = candidate_ps_factory;
-        rmt->ps = container_of(candidate_ps, struct rmt_ps, base);
+
+        mutex_unlock(&rmt->ps_lock);
 
         return 0;
 }
@@ -305,6 +320,9 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                              const char * name,
                              const char * value)
 {
+        struct rmt_ps *ps;
+        int ret = -1;
+
         if (!rmt || !path || !name || !value) {
                 LOG_ERRF("NULL arguments %p %p %p %p", rmt, path, name, value);
                 return -1;
@@ -312,35 +330,37 @@ int rmt_set_policy_set_param(struct rmt * rmt,
 
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
+        mutex_lock(&rmt->ps_lock);
+        rcu_read_lock();
+        ps = rcu_dereference(rmt->ps);
+
         if (strcmp(path, "") == 0) {
                 /* The request addresses this RMT instance. */
-                if (!rmt->ps) {
+                if (!ps) {
                         LOG_ERR("No policy-set selected for this RMT");
-                        return -1;
-                }
-                if (strcmp(name, "max_q") == 0) {
-                        return kstrtoint(value, 10, &rmt->ps->max_q);
+                } else if (strcmp(name, "max_q") == 0) {
+                        ret = kstrtoint(value, 10, &ps->max_q);
                 } else {
                         LOG_ERR("Unknown RMT parameter policy '%s'", name);
-                        return -1;
                 }
 
-        } else if (rmt->ps && rmt->ps->base.set_policy_set_param) {
+        } else if (ps && ps->base.set_policy_set_param) {
                 if (strcmp(path, rmt->ps_factory->name) == 0) {
                         /* The request addresses the RMT policy set. */
-                        return rmt->ps->base.set_policy_set_param(
-                                        &rmt->ps->base, name, value);
+                        ret = ps->base.set_policy_set_param(
+                                        &ps->base, name, value);
                 } else {
                         LOG_ERR("Policy set %s not selected for this "
                                  "component", path);
-                        return -1;
                 }
         } else {
                 LOG_ERRF("No policy set selected");
-                return -1;
         }
 
-        return -1;
+        rcu_read_unlock();
+        mutex_unlock(&rmt->ps_lock);
+
+        return ret;
 }
 EXPORT_SYMBOL(rmt_set_policy_set_param);
 
@@ -413,6 +433,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         /* Try to select the default policy set factory. */
+        mutex_init(&tmp->ps_lock);
         tmp->ps = NULL;
         tmp->ps_factory = NULL;
         rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME);
@@ -425,6 +446,8 @@ EXPORT_SYMBOL(rmt_create);
 
 int rmt_destroy(struct rmt * instance)
 {
+        struct rmt_ps *ps;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -443,10 +466,15 @@ int rmt_destroy(struct rmt * instance)
         if (instance->pft)            pft_destroy(instance->pft);
         if (instance->serdes)         serdes_destroy(instance->serdes);
 
-        if (instance->ps) {
-                instance->ps_factory->destroy(&instance->ps->base);
+        rcu_read_lock();
+        ps = rcu_dereference(instance->ps);
+        if (ps) {
+                mutex_lock(&instance->ps_lock);
+                instance->ps_factory->destroy(&ps->base);
                 module_put(instance->ps_factory->owner);
+                mutex_unlock(&instance->ps_lock);
         }
+        rcu_read_unlock();
 
         rkfree(instance);
 
@@ -610,7 +638,7 @@ int rmt_send_port_id(struct rmt * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
-        ps = instance->ps;
+
         if (!instance->egress.queues) {
                 LOG_ERR("No queues to push into");
 
@@ -634,10 +662,13 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
+        rcu_read_lock();
+        ps = rcu_dereference(instance->ps);
         if (ps && ps->max_q_policy_tx &&
                         rfifo_length(s_queue->queue) >= ps->max_q) {
                 ps->max_q_policy_tx(ps, pdu, s_queue->queue);
         }
+        rcu_read_unlock();
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
                 spin_unlock(&instance->egress.queues->lock);
@@ -1259,7 +1290,6 @@ int rmt_receive(struct rmt * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-        ps = instance->ps;
         if (!is_port_id_ok(from)) {
                 LOG_ERR("Wrong port-id %d", from);
 
@@ -1291,10 +1321,13 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
+        rcu_read_lock();
+        ps = rcu_dereference(instance->ps);
         if (ps && ps->max_q_policy_rx &&
                         rfifo_length(r_queue->queue) >= ps->max_q) {
                 ps->max_q_policy_rx(ps, sdu, r_queue->queue);
         }
+        rcu_read_unlock();
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {
                 spin_unlock(&instance->ingress.queues->lock);
