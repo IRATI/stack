@@ -724,8 +724,10 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
 
         mutex_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, pid);
-        if (!flow)
+        if (!flow) {
+                mutex_unlock(&instance->lock);
                 return -1;
+        }
 
         flow->ipc_process = ipcp;
 
