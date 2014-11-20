@@ -1042,7 +1042,7 @@ static int normal_deallocate_all(struct ipcp_instance_data * data)
                 list_del(&flow->list);
                 rkfree(flow);
         }
-        spin_lock(&data->lock);
+        spin_unlock(&data->lock);
 
         return 0;
 }
