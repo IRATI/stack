@@ -702,8 +702,7 @@ public:
 	 * @returns the handle to the response message
 	 */
 	unsigned int selectPolicySet(const std::string& path,
-                                     const std::string& name,
-                                     std::string plugin_name = "");
+                                     const std::string& name);
 
 	/**
 	 * Invoked by the IPC Manager to load or unload a plugin for an

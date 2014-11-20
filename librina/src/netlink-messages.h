@@ -1072,9 +1072,6 @@ public:
 	/** The name of the policy-set to be selected */
 	std::string name;
 
-        /** The name of the plugin where to find this policy set. */
-        std::string plugin_name;
-
 	IpcmSelectPolicySetRequestMessage();
 	IPCEvent* toIPCEvent();
 };

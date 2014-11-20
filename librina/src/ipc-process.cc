@@ -167,13 +167,12 @@ SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
 /* CLASS SELECT POLICY SET REQUEST EVENT */
 SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
                 const std::string& path, const std::string& name,
-                const std::string& plugin_name, unsigned int sequenceNumber) :
+                                        unsigned int sequenceNumber) :
 				IPCEvent(IPC_PROCESS_SELECT_POLICY_SET,
                                          sequenceNumber)
 {
         this->path = path;
         this->name = name;
-        this->plugin_name = plugin_name;
 }
 
 /* CLASS PLUGIN LOAD REQUEST EVENT */

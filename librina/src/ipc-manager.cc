@@ -815,19 +815,16 @@ unsigned int IPCProcess::setPolicySetParam(const std::string& path,
 }
 
 unsigned int IPCProcess::selectPolicySet(const std::string& path,
-                                         const std::string& name,
-                                         std::string plugin_name)
+                                         const std::string& name)
 {
 #if STUB_API
         (void)path;
         (void)name;
-        (void)plugin_name;
 	return 0;
 #else
 	IpcmSelectPolicySetRequestMessage message;
         message.path = path;
         message.name = name;
-        message.plugin_name = plugin_name;
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);

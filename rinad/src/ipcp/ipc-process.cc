@@ -476,11 +476,6 @@ void IPCProcessImpl::processSelectPolicySetRequestEvent(
 
         parse_path(event.path, component, remainder);
 
-        // If the request specifies a plugin name, load it
-        if (event.plugin_name != std::string()) {
-                plugin_load(event.plugin_name);
-        }
-
         // First check if the request should be served by this daemon
         // or should be forwarded to kernelspace
         if (component == "security-manager") {
