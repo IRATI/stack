@@ -804,6 +804,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         struct sdu *                du;
         char *                      buf;
         int                         size;
+        struct ipcp_instance      * ipcp, * user_ipcp;
 
         LOG_HBEAT;
 
@@ -833,6 +834,25 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 return -1;
         }
 
+        app = find_app_by_socket(data, sock);
+        if (!app) {
+                LOG_ERR("No app registered yet! "
+                        "Someone is doing something bad on the network");
+                sdu_destroy(du);
+                return -1;
+        }
+
+        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                            app->app_name);
+        if (!user_ipcp)
+                user_ipcp = kfa_ipcp_instance(data->kfa);
+        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!user_ipcp || !ipcp) {
+                LOG_ERR("Could not find required ipcps");
+                sdu_destroy(du);
+                return -1;
+        }
+
         spin_lock(&data->flow_lock);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
@@ -848,6 +868,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+                flow->user_ipcp     = user_ipcp;
                 flow->sock          = sock;
                 flow->fspec_id      = 0;
 
@@ -869,6 +890,20 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
                 LOG_DBG("added udp flow");
+
+                if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
+                        LOG_DBG("This flow goes for an app");
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                                spin_unlock(&data->flow_lock);
+                                LOG_ERR("Could not create flow in KFA");
+                                sdu_destroy(du);
+                                kfa_port_id_release(data->kfa, flow->port_id);
+                                if (flow_destroy(data, flow))
+                                        LOG_ERR("Problems destroying shim-eth-vlan "
+                                                "flow");
+                                return -1;
+                        }
+                }
 
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
@@ -903,9 +938,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 spin_unlock(&data->flow_lock);
 
                 /* FIXME: This sets the name to the server? */
-                app = find_app_by_socket(data, sock);
-                ASSERT(app);
-
                 sname = name_create_ni();
                 if (!name_init_from_ni(sname,
                                        "Unknown app", "", "", "")) {
