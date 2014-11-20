@@ -1770,6 +1770,7 @@ struct ipcp_instance * kipcm_find_ipcp(struct kipcm *   kipcm,
 }
 EXPORT_SYMBOL(kipcm_find_ipcp);
 
+/* ONLY USED BY APPS */
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
                     struct sdu *   sdu)

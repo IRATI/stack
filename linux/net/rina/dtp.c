@@ -1293,7 +1293,7 @@ int dtp_write(struct dtp * instance,
                                 return -1;
                         }
 
-                        cpdu = pdu_dup(pdu);
+                        cpdu = pdu_dup_ni(pdu);
                         if (!cpdu) {
                                 LOG_ERR("Failed to copy PDU");
                                 LOG_ERR("PDU ok? %d", pdu_pci_present(pdu));
