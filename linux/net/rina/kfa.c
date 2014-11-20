@@ -753,6 +753,7 @@ struct ipcp_instance * kfa_ipcp_instance(struct kfa * instance)
 
         return instance->ipcp;
 }
+EXPORT_SYMBOL(kfa_ipcp_instance);
 
 static const struct name * kfa_name(struct ipcp_instance_data * data)
 { return NULL; }
