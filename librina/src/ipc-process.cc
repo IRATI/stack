@@ -176,6 +176,16 @@ SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
         this->plugin_name = plugin_name;
 }
 
+/* CLASS PLUGIN LOAD REQUEST EVENT */
+PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
+                                bool load, unsigned int sequenceNumber) :
+				IPCEvent(IPC_PROCESS_PLUGIN_LOAD,
+                                         sequenceNumber)
+{
+        this->name = name;
+        this->load = load;
+}
+
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
         int cepId, unsigned int sequenceNumber):
@@ -730,6 +740,27 @@ void ExtendedIPCManager::selectPolicySetResponse(
 		rinaManager->sendMessage(&responseMessage);
 	} catch (NetlinkException &e) {
 		throw SelectPolicySetException(e.what());
+	}
+#endif
+}
+
+void ExtendedIPCManager::pluginLoadResponse(
+		const PluginLoadRequestEvent& event, int result) {
+#if STUB_API
+	//Do nothing
+        (void) event;
+        (void) result;
+#else
+	IpcmPluginLoadResponseMessage responseMessage;
+	responseMessage.result = result;
+	responseMessage.setSequenceNumber(event.sequenceNumber);
+	responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
+	responseMessage.setResponseMessage(true);
+	try {
+		rinaManager->sendMessage(&responseMessage);
+	} catch (NetlinkException &e) {
+		throw PluginLoadException(e.what());
 	}
 #endif
 }

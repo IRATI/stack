@@ -842,6 +842,30 @@ unsigned int IPCProcess::selectPolicySet(const std::string& path,
 #endif
 }
 
+unsigned int IPCProcess::pluginLoad(const std::string& name, bool load)
+{
+#if STUB_API
+        (void)name;
+        (void)load;
+	return 0;
+#else
+	IpcmPluginLoadRequestMessage message;
+        message.name = name;
+        message.load = load;
+	message.setDestIpcProcessId(id);
+	message.setDestPortId(portId);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message);
+	} catch (NetlinkException &e) {
+	        throw PluginLoadException(e.what());
+	}
+
+	return message.getSequenceNumber();
+#endif
+}
+
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =
 		"Could not find an IPC Process with the provided id";

@@ -325,6 +325,12 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION:
 		result = "56_NEIGHBORS_MODIFIED_NOTIFICATION";
 		break;
+	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST:
+		result = "57_PLUGIN_LOAD_REQUEST";
+		break;
+	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
+		result = "58_PLUGIN_LOAD_RESPONSE";
+		break;
 	default:
 		result = "Unknown operation";
 	}
@@ -1610,6 +1616,28 @@ IpcmSelectPolicySetResponseMessage::IpcmSelectPolicySetResponseMessage():
 
 IPCEvent* IpcmSelectPolicySetResponseMessage::toIPCEvent(){
 	IPCEvent * event = new SelectPolicySetResponseEvent(result,
+			                        getSequenceNumber());
+	return event;
+}
+
+/* CLASS PLUGIN LOAD REQUEST MESSAGE */
+IpcmPluginLoadRequestMessage::IpcmPluginLoadRequestMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_PLUGIN_LOAD_REQUEST) {
+}
+
+IPCEvent* IpcmPluginLoadRequestMessage::toIPCEvent(){
+	IPCEvent * event = new PluginLoadRequestEvent(name, load,
+			                              getSequenceNumber());
+	return event;
+}
+
+/* CLASS PLUGIN LOAD RESPONSE MESSAGE */
+IpcmPluginLoadResponseMessage::IpcmPluginLoadResponseMessage():
+                BaseNetlinkResponseMessage(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE) {
+}
+
+IPCEvent* IpcmPluginLoadResponseMessage::toIPCEvent(){
+	IPCEvent * event = new PluginLoadResponseEvent(result,
 			                        getSequenceNumber());
 	return event;
 }

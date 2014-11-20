@@ -356,6 +356,12 @@ void NetlinkPortIdMap::updateMessageOrPortIdMap(
 		}
 		break;
 	}
+	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:{
+		if(send){
+			message->setDestPortId(getIPCManagerPortId());
+		}
+		break;
+	}
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
 	        if(send){
 	        }else{

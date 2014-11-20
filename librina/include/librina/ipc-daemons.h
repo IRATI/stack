@@ -175,6 +175,21 @@ public:
 };
 
 /**
+ * Thrown when there are problems while trying to load or unload
+ * plugins
+ */
+class PluginLoadException: public IPCException {
+public:
+	PluginLoadException():
+		IPCException("Problems while loading or unloading "
+                                "a plugin for an IPC Process") {
+	}
+	PluginLoadException(const std::string& description):
+		IPCException(description) {
+	}
+};
+
+/**
  * Event informing about the result of an assign to DIF operation
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {
@@ -204,6 +219,18 @@ public:
 
 	SelectPolicySetResponseEvent(int result,
                                      unsigned int sequenceNumber);
+};
+
+/**
+ * An IPC process reports the result of the loading or
+ * unloading of a plugin
+ */
+class PluginLoadResponseEvent: public IPCEvent {
+public:
+        int result;
+
+	PluginLoadResponseEvent(int result,
+                                unsigned int sequenceNumber);
 };
 
 }

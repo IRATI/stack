@@ -91,6 +91,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 54 Application -> IPC Manager */
 	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 55 IPC Manager -> Application */
 	RINA_C_IPCM_NEIGHBORS_MODIFIED_NOTIFICATION, /* 56 IPC Process -> IPC Manager */
+        RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 57, IPC Manager -> IPC Process */
+        RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 58, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -1086,6 +1088,36 @@ class IpcmSelectPolicySetResponseMessage:
                 public BaseNetlinkResponseMessage {
 public:
         IpcmSelectPolicySetResponseMessage();
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager to ask an IPC process to load or
+ * unload a plugin.
+ * IPC Manager -> IPC Process
+ */
+class IpcmPluginLoadRequestMessage:
+		public BaseNetlinkMessage {
+public:
+	/** The name of the plugin to be loaded or unloaded */
+	std::string name;
+
+	/** Specifies whether the plugin is to be loaded or unloaded */
+	bool load;
+
+	IpcmPluginLoadRequestMessage();
+	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of a plugin-load
+ * request operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmPluginLoadResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+        IpcmPluginLoadResponseMessage();
         IPCEvent* toIPCEvent();
 };
 

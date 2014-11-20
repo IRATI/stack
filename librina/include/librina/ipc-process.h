@@ -201,6 +201,22 @@ public:
 };
 
 /**
+ * The IPC Manager wants to load or unload a plugin for
+ * an IPC process
+ */
+class PluginLoadRequestEvent: public IPCEvent {
+public:
+	/** The name of the plugin to be loaded or unloaded */
+	std::string name;
+
+	/** Specifies whether the plugin is to be loaded or unloaded */
+	bool load;
+
+	PluginLoadRequestEvent(const std::string& name, bool load,
+                               unsigned int sequenceNumber);
+};
+
+/**
  * The Kernel components of the IPC Process report about the result of a
  * create EFCP connection operation
  */
@@ -726,6 +742,17 @@ public:
 	 */
 	void selectPolicySetResponse(
                 const SelectPolicySetRequestEvent& event, int result);
+
+	/**
+	 * Reply to the IPC Manager, informing it about the result of a
+         * pluginLoad operation
+	 * @param event the event that trigered the operation
+	 * @param result the result of the operation (0 successful)
+	 * @throws PluginLoadException
+	 */
+	void pluginLoadResponse(const PluginLoadRequestEvent& event,
+                                int result);
+
 };
 
 /**

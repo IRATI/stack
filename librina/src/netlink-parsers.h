@@ -1397,6 +1397,36 @@ int putIpcmSelectPolicySetResponseMessageObject(nl_msg* netlinkMessage,
 IpcmSelectPolicySetResponseMessage *parseIpcmSelectPolicySetResponseMessage(
 		nlmsghdr *hdr);
 
+/* IpcmPluginLoadRequestMessage CLASS*/
+enum IpcmPluginLoadRequestMessageAttributes {
+	IPLR_ATTR_NAME = 1,
+	IPLR_ATTR_LOAD,
+	__IPLR_ATTR_MAX,
+};
+
+#define IPLR_ATTR_MAX (__IPLR_ATTR_MAX -1)
+
+int putIpcmPluginLoadRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmPluginLoadRequestMessage& object);
+
+IpcmPluginLoadRequestMessage * parseIpcmPluginLoadRequestMessage(
+		nlmsghdr *hdr);
+
+
+/* IpcmPluginLoadResponseMessage CLASS*/
+enum IpcmPluginLoadResponseMessageAttributes {
+	IPLRE_ATTR_RESULT = 1,
+	__IPLRE_ATTR_MAX,
+};
+
+#define IPLRE_ATTR_MAX (__IPLRE_ATTR_MAX -1)
+
+int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmPluginLoadResponseMessage& object);
+
+IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
+		nlmsghdr *hdr);
+
 }
 
 #endif

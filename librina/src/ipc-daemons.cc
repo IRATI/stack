@@ -172,5 +172,12 @@ SelectPolicySetResponseEvent::SelectPolicySetResponseEvent(
                                          sequenceNumber)
 { this->result = result; }
 
+/* CLASS PLUGIN LOAD RESPONSE EVENT */
+PluginLoadResponseEvent::PluginLoadResponseEvent(
+                int result, unsigned int sequenceNumber) :
+			IPCEvent(IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
+                                         sequenceNumber)
+{ this->result = result; }
+
 }
 

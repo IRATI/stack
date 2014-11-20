@@ -704,6 +704,19 @@ public:
 	unsigned int selectPolicySet(const std::string& path,
                                      const std::string& name,
                                      std::string plugin_name = "");
+
+	/**
+	 * Invoked by the IPC Manager to load or unload a plugin for an
+         * IPC process.
+	 *
+	 * @param name The name of the plugin to be loaded or unloaded
+         * @param load True if the plugin is to be loaded, false if the
+         *             plugin is to be unloaded
+	 * @throws PluginLoadException if an error happens during
+         *         the process
+	 * @returns the handle to the response message
+	 */
+	unsigned int pluginLoad(const std::string& name, bool load);
 };
 
 /**

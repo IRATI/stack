@@ -491,6 +491,24 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST: {
+		IpcmPluginLoadRequestMessage * requestObject =
+			dynamic_cast<IpcmPluginLoadRequestMessage *>(message);
+		if (putIpcmPluginLoadRequestMessageObject(netlinkMessage,
+				*requestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
+		IpcmPluginLoadResponseMessage * responseObject =
+			dynamic_cast<IpcmPluginLoadResponseMessage *>(message);
+		if (putIpcmPluginLoadResponseMessageObject(netlinkMessage,
+				*responseObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
 	default: {
 		return -1;
 	}
@@ -705,6 +723,14 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE: {
 		return parseIpcmSelectPolicySetResponseMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST: {
+		return parseIpcmPluginLoadRequestMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
+		return parseIpcmPluginLoadResponseMessage(
 		                netlinkMessageHeader);
 	}
 	default: {
@@ -4933,6 +4959,34 @@ int putIpcmSelectPolicySetResponseMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIpcmPluginLoadRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmPluginLoadRequestMessage& object){
+	NLA_PUT_STRING(netlinkMessage, IPLR_ATTR_NAME,
+			object.name.c_str());
+	NLA_PUT_U32(netlinkMessage, IPLR_ATTR_LOAD,
+			object.load);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmPluginLoadRequestMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
+		const IpcmPluginLoadResponseMessage& object){
+
+	NLA_PUT_U32(netlinkMessage, IPLRE_ATTR_RESULT, object.result);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmPluginLoadResponseMessage "
+                        "Netlink object");
+        return -1;
+}
+
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
@@ -8601,6 +8655,65 @@ parseIpcmSelectPolicySetResponseMessage(nlmsghdr *hdr){
 
 	if (attrs[ISPSRE_ATTR_RESULT]) {
 		result->result = nla_get_u32(attrs[ISPSRE_ATTR_RESULT]);
+	}
+
+	return result;
+}
+
+IpcmPluginLoadRequestMessage *
+parseIpcmPluginLoadRequestMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IPLR_ATTR_MAX + 1];
+	attr_policy[IPLR_ATTR_NAME].type = NLA_STRING;
+	attr_policy[IPLR_ATTR_NAME].minlen = 0;
+	attr_policy[IPLR_ATTR_NAME].maxlen = 65535;
+        attr_policy[IPLR_ATTR_LOAD].type = NLA_U32;
+        attr_policy[IPLR_ATTR_LOAD].minlen = 4;
+        attr_policy[IPLR_ATTR_LOAD].maxlen = 4;
+	struct nlattr *attrs[IPLR_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IPLR_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmPluginLoadRequestMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmPluginLoadRequestMessage * result =
+			new IpcmPluginLoadRequestMessage();
+
+	if (attrs[IPLR_ATTR_NAME])
+		result->name = nla_get_string(
+                                attrs[IPLR_ATTR_NAME]);
+
+	if (attrs[IPLR_ATTR_LOAD])
+		result->load = nla_get_u32(
+                                attrs[IPLR_ATTR_LOAD]);
+
+	return result;
+}
+
+IpcmPluginLoadResponseMessage *
+parseIpcmPluginLoadResponseMessage(nlmsghdr *hdr){
+	struct nla_policy attr_policy[IPLRE_ATTR_MAX + 1];
+        attr_policy[IPLRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IPLRE_ATTR_RESULT].minlen = 4;
+        attr_policy[IPLRE_ATTR_RESULT].maxlen = 4;
+	struct nlattr *attrs[IPLRE_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IPLRE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmPluginLoadResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmPluginLoadResponseMessage * result =
+			new IpcmPluginLoadResponseMessage();
+
+	if (attrs[IPLRE_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IPLRE_ATTR_RESULT]);
 	}
 
 	return result;

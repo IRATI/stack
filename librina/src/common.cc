@@ -429,8 +429,14 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
         case IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
                 result = "39_SELECT_POLICY_SET_RESPONSE";
                 break;
+        case IPC_PROCESS_PLUGIN_LOAD:
+                result = "40_PLUGIN_LOAD";
+                break;
+        case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
+                result = "41_PLUGIN_LOAD_RESPONSE";
+                break;
 	case NO_EVENT:
-		result = "40_NO_EVENT";
+		result = "42_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";
