@@ -879,7 +879,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
         user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
                                             data->app_name);
-        ipcp      = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!user_ipcp)
+                user_ipcp = data->kfa;
+        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
         if (!user_ipcp || !ipcp) {
                 LOG_ERR("Could not find required ipcps");
                 sdu_destroy(du);
