@@ -315,15 +315,17 @@ DIFConfigValidator::DIFConfigValidator(const rina::DIFConfiguration &dif_config,
                 :dif_config_(dif_config), dif_info_(dif_info)
 {
         if (type == "normal-ipc")
-                        type_ = NORMAL;
+                type_ = NORMAL;
         else if (type == "shim-dummy")
-                        type_ = SHIM_DUMMY;
+                type_ = SHIM_DUMMY;
         else if (type == "shim-eth-vlan")
-                        type_ = SHIM_ETH;
+                type_ = SHIM_ETH;
         else if (type == "shim-tcp-udp")
-                        type_ = SHIM_TCP_UDP;
+                type_ = SHIM_TCP_UDP;
         else if (type == "shim-hv")
-                        type_ = SHIM_HV;
+                type_ = SHIM_HV;
+        else
+                type_ = SHIM_NOT_DEFINED;
 }
 
 bool DIFConfigValidator::validateConfigs()

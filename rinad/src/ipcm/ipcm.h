@@ -188,7 +188,8 @@ public:
                 SHIM_ETH,
                 SHIM_DUMMY,
                 SHIM_TCP_UDP,
-                SHIM_HV
+                SHIM_HV,
+                SHIM_NOT_DEFINED
         };
         DIFConfigValidator(const rina::DIFConfiguration &dif_config,
                         const rina::DIFInformation &dif_info, std::string type);
