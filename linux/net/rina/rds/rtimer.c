@@ -161,7 +161,7 @@ static int __rtimer_restart(struct rtimer * timer,
 
         LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
                 "expires = %ld",
-                status ? "active" : "inative",
+                status ? "active" : "inactive",
                 timer,
                 (void *) timer->tl.function,
                 (void *) timer->tl.data,
