@@ -24,14 +24,20 @@
 
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include "common.h"
 
 #define RINA_PS_DEFAULT_NAME            "default"
 
 #define POLICY_SET_NAME_MAX_LEN 64
 
+struct ps_factory;
+
 /* Base class for the IPCP components. */
 struct rina_component {
+        struct ps_factory *       ps_factory;
+        struct ps_base *          ps;
+        struct mutex              ps_lock;
 };
 
 /* A base class for policy sets. */
