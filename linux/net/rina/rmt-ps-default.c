@@ -106,8 +106,6 @@ static void rmt_ps_default_destroy(struct ps_base * bps)
 
 struct ps_factory rmt_factory = {
         .owner          = THIS_MODULE,
-        .parameters     = NULL,
-        .num_parameters = 0,
         .create  = rmt_ps_default_create,
         .destroy = rmt_ps_default_destroy,
 };

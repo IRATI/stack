@@ -26,6 +26,7 @@
 #include "du.h"
 #include "efcp.h"
 #include "ipcp-factories.h"
+#include "ps-factory.h"
 
 struct rmt;
 

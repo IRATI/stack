@@ -104,8 +104,6 @@ static void rmt_ps_skeleton_destroy(struct ps_base * bps)
 
 static struct ps_factory factory = {
         .owner          = THIS_MODULE,
-        .parameters     = NULL,
-        .num_parameters = 0,
         .create  = rmt_ps_skeleton_create,
         .destroy = rmt_ps_skeleton_destroy,
 };

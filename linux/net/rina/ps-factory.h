@@ -28,12 +28,10 @@
 
 #define RINA_PS_DEFAULT_NAME            "default"
 
-#define PARAMETER_DESC_MAX_LEN  32
 #define POLICY_SET_NAME_MAX_LEN 64
 
-struct parameter_desc {
-        char type;
-        char name[PARAMETER_DESC_MAX_LEN];
+/* Base class for the IPCP components. */
+struct rina_component {
 };
 
 /* A base class for policy sets. */
@@ -47,10 +45,6 @@ struct ps_base {
 struct ps_factory {
         /* A name for this policy-set. */
         char                    name[POLICY_SET_NAME_MAX_LEN];
-
-        /* Policy-set-specific parameters. */
-        struct parameter_desc * parameters;
-        unsigned int            num_parameters;
 
         /* Factory callbacks. */
         struct ps_base * (*create)(struct rina_component * component);
