@@ -77,6 +77,8 @@ int                      ps_unpublish(struct policy_set_list * list,
 
 void rina_component_init(struct rina_component * comp);
 
+void rina_component_fini(struct rina_component * comp);
+
 int base_select_policy_set(struct rina_component * comp,
                            struct policy_set_list *list,
                            const string_t * name);

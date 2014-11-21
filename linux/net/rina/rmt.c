@@ -367,8 +367,6 @@ EXPORT_SYMBOL(rmt_create);
 
 int rmt_destroy(struct rmt * instance)
 {
-        struct rmt_ps *ps;
-
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -387,15 +385,7 @@ int rmt_destroy(struct rmt * instance)
         if (instance->pft)            pft_destroy(instance->pft);
         if (instance->serdes)         serdes_destroy(instance->serdes);
 
-        rcu_read_lock();
-        ps = container_of(rcu_dereference(instance->base.ps), struct rmt_ps, base);
-        if (ps) {
-                mutex_lock(&instance->base.ps_lock);
-                instance->base.ps_factory->destroy(&ps->base);
-                module_put(instance->base.ps_factory->owner);
-                mutex_unlock(&instance->base.ps_lock);
-        }
-        rcu_read_unlock();
+        rina_component_fini(&instance->base);
 
         rkfree(instance);
 

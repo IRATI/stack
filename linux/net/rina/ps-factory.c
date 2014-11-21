@@ -204,3 +204,18 @@ int base_set_policy_set_param(struct rina_component *comp,
 
         return ret;
 }
+
+void rina_component_fini(struct rina_component * comp)
+{
+        struct ps_base *ps;
+
+        rcu_read_lock();
+        ps = rcu_dereference(comp->ps);
+        if (ps) {
+                mutex_lock(&comp->ps_lock);
+                comp->ps_factory->destroy(ps);
+                module_put(comp->ps_factory->owner);
+                mutex_unlock(&comp->ps_lock);
+        }
+        rcu_read_unlock();
+}
