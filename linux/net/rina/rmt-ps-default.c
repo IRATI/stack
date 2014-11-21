@@ -40,6 +40,16 @@ static void default_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { }
 
+static void default_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
+                                    struct pdu *    pdu,
+                                    struct rfifo *  queue)
+{ }
+
+static void default_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
+                                    struct sdu *    sdu,
+                                    struct rfifo *  queue)
+{ }
+
 static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
@@ -79,6 +89,8 @@ rmt_ps_default_create(struct rina_component * component)
         ps->priv            = NULL;
         ps->max_q_policy_tx = default_max_q_policy_tx;
         ps->max_q_policy_rx = default_max_q_policy_rx;
+        ps->rmt_q_monitor_policy_tx = default_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_rx = default_rmt_q_monitor_policy_rx;
 
         return &ps->base;
 }

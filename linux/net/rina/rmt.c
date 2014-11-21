@@ -664,9 +664,17 @@ int rmt_send_port_id(struct rmt * instance,
 
         rcu_read_lock();
         ps = rcu_dereference(instance->ps);
-        if (ps && ps->max_q_policy_tx &&
+        if (ps) {
+                /* MaxQPolicy hook. */
+                if (ps->max_q_policy_tx &&
                         rfifo_length(s_queue->queue) >= ps->max_q) {
-                ps->max_q_policy_tx(ps, pdu, s_queue->queue);
+                        ps->max_q_policy_tx(ps, pdu, s_queue->queue);
+                }
+
+                /* RMTQMonitorPolicy hook. */
+                if (ps->rmt_q_monitor_policy_tx) {
+                        ps->rmt_q_monitor_policy_tx(ps, pdu, s_queue->queue);
+                }
         }
         rcu_read_unlock();
 
@@ -1323,9 +1331,17 @@ int rmt_receive(struct rmt * instance,
 
         rcu_read_lock();
         ps = rcu_dereference(instance->ps);
-        if (ps && ps->max_q_policy_rx &&
+        if (ps) {
+                /* MaxQPolicy hook. */
+                if (ps->max_q_policy_rx &&
                         rfifo_length(r_queue->queue) >= ps->max_q) {
-                ps->max_q_policy_rx(ps, sdu, r_queue->queue);
+                        ps->max_q_policy_rx(ps, sdu, r_queue->queue);
+                }
+
+                /* RMTQMonitorPolicy hook. */
+                if (ps->rmt_q_monitor_policy_rx) {
+                        ps->rmt_q_monitor_policy_rx(ps, sdu, r_queue->queue);
+                }
         }
         rcu_read_unlock();
 
