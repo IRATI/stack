@@ -129,7 +129,7 @@ static int __rtimer_stop(struct rtimer * timer)
                 return 0;
         }
 
-        del_timer(&timer->tl);
+        del_timer_sync(&timer->tl);
         LOG_DBG("Timer %pK stopped", timer);
 
         return 0;
@@ -144,16 +144,39 @@ int rtimer_stop(struct rtimer * timer)
 }
 EXPORT_SYMBOL(rtimer_stop);
 
+static int __rtimer_restart(struct rtimer * timer,
+                          unsigned int    millisecs)
+{
+        int status;
+
+        ASSERT(timer);
+
+        /* FIXME: Crappy, rearrange */
+        timer->tl.function = (void (*)(unsigned long)) timer->function;
+        timer->tl.data     = (unsigned long)           timer->data;
+        timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
+
+        status = mod_timer(&timer->tl, timer->tl.expires);
+
+
+        LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
+                "expires = %ld",
+                status ? "active" : "inative",
+                timer,
+                (void *) timer->tl.function,
+                (void *) timer->tl.data,
+                timer->tl.expires);
+
+        return 0;
+}
+
 int rtimer_restart(struct rtimer * timer,
                    unsigned int    millisecs)
 {
         if (!timer)
                 return -1;
 
-        if (__rtimer_stop(timer))
-                return -1;
-
-        return __rtimer_start(timer, millisecs);
+        return __rtimer_restart(timer, millisecs);
 }
 EXPORT_SYMBOL(rtimer_restart);
 

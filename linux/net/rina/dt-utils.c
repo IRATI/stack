@@ -781,7 +781,7 @@ int rtxq_push_ni(struct rtxq * q,
         spin_lock(&q->lock);
         /* is the first transmitted PDU */
         if (!rtimer_is_pending(q->r_timer))
-                rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+                rtimer_start(q->r_timer, dt_sv_tr(q->parent));
 
         rtxqueue_push_ni(q->queue, pdu);
         spin_unlock(&q->lock);
