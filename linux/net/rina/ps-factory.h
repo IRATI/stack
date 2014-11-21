@@ -75,4 +75,15 @@ struct ps_factory * ps_lookup(struct policy_set_list * list,
 int                      ps_unpublish(struct policy_set_list * list,
                                       const char *       name);
 
+void rina_component_init(struct rina_component * comp);
+
+int base_select_policy_set(struct rina_component * comp,
+                           struct policy_set_list *list,
+                           const string_t * name);
+
+int base_set_policy_set_param(struct rina_component *comp,
+                              const char * path,
+                              const char * name,
+                              const char * value);
+
 #endif

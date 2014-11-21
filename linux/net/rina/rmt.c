@@ -239,82 +239,16 @@ rmt_from_component(struct rina_component * component)
 }
 EXPORT_SYMBOL(rmt_from_component);
 
-static int base_select_policy_set(struct rina_component * comp,
-                           const string_t * path,
-                           const string_t * name)
-{
-        struct ps_base *candidate_ps = NULL;
-        struct ps_base *old_ps;
-        struct ps_factory *candidate_ps_factory = NULL;
-
-        if (!name || !path) {
-                LOG_ERR("NULL args %p %p", path, name);
-                return -1;
-        }
-
-        if (strcmp(path, "")) {
-                LOG_ERR("RMT has no selectable subcomponents");
-                return -1;
-        }
-
-        candidate_ps_factory = ps_lookup(&policy_sets, name);
-        if (!candidate_ps_factory) {
-                LOG_ERR("No policy-set '%s' published", name);
-                return -1;
-        }
-
-        mutex_lock(&comp->ps_lock);
-
-        if (candidate_ps_factory == comp->ps_factory) {
-                mutex_unlock(&comp->ps_lock);
-                LOG_INFO("Policy-set '%s' already selected", name);
-                return 0;
-        }
-
-        /* Take a reference to the plugin module, to prevent
-         * rmmodding. */
-        if (!try_module_get(candidate_ps_factory->owner)) {
-                mutex_unlock(&comp->ps_lock);
-                LOG_ERR("Module %p is not alive as it should",
-                        candidate_ps_factory->owner);
-                return -1;
-        }
-
-        /* Instantiate the new policy set. */
-        candidate_ps = candidate_ps_factory->create(comp);
-        if (!candidate_ps) {
-                module_put(candidate_ps_factory->owner);
-                mutex_unlock(&comp->ps_lock);
-                LOG_ERR("Policy-set instantiation failed");
-                return -1;
-        }
-
-        /* Save old RCU-protected pointer. */
-        old_ps = comp->ps;
-
-        /* Removal old pointer and replace it with a new one. */
-        rcu_assign_pointer(comp->ps, candidate_ps);
-        if (old_ps) {
-                /* Wait for a grace period. */
-                synchronize_rcu();
-                ASSERT(comp->ps_factory);
-                /* Reclaim the content pointed by the old pointer. */
-                comp->ps_factory->destroy(old_ps);
-                module_put(comp->ps_factory->owner);
-        }
-
-        comp->ps_factory = candidate_ps_factory;
-
-        mutex_unlock(&comp->ps_lock);
-
-        return 0;
-}
-
 int rmt_select_policy_set(struct rmt * rmt,
                           const string_t * path,
                           const string_t * name)
 {
-        return base_select_policy_set(&rmt->base, path, name);
+        if (path && strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
+
+        return base_select_policy_set(&rmt->base, &policy_sets, name);
 }
 EXPORT_SYMBOL(rmt_select_policy_set);
 
@@ -333,12 +267,10 @@ int rmt_set_policy_set_param(struct rmt * rmt,
 
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
-        mutex_lock(&rmt->base.ps_lock);
-        rcu_read_lock();
-        ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
-
         if (strcmp(path, "") == 0) {
                 /* The request addresses this RMT instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(rmt->base.ps), struct rmt_ps, base);
                 if (!ps) {
                         LOG_ERR("No policy-set selected for this RMT");
                 } else if (strcmp(name, "max_q") == 0) {
@@ -346,22 +278,10 @@ int rmt_set_policy_set_param(struct rmt * rmt,
                 } else {
                         LOG_ERR("Unknown RMT parameter policy '%s'", name);
                 }
-
-        } else if (ps && ps->base.set_policy_set_param) {
-                if (strcmp(path, rmt->base.ps_factory->name) == 0) {
-                        /* The request addresses the RMT policy set. */
-                        ret = ps->base.set_policy_set_param(
-                                        &ps->base, name, value);
-                } else {
-                        LOG_ERR("Policy set %s not selected for this "
-                                 "component", path);
-                }
+                rcu_read_unlock();
         } else {
-                LOG_ERRF("No policy set selected");
+                ret = base_set_policy_set_param(&rmt->base, path, name, value);
         }
-
-        rcu_read_unlock();
-        mutex_unlock(&rmt->base.ps_lock);
 
         return ret;
 }
@@ -436,9 +356,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
         }
 
         /* Try to select the default policy set factory. */
-        mutex_init(&tmp->base.ps_lock);
-        tmp->base.ps = NULL;
-        tmp->base.ps_factory = NULL;
+        rina_component_init(&tmp->base);
         rmt_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME);
 
         LOG_DBG("Instance %pK initialized successfully", tmp);

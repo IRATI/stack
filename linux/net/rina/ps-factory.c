@@ -27,6 +27,7 @@
 
 #include "logs.h"
 #include "ps-factory.h"
+#include "debug.h"
 
 int ps_publish(struct policy_set_list * list,
                struct ps_factory * factory)
@@ -99,4 +100,107 @@ int ps_unpublish(struct policy_set_list * list, const char * name)
                  factory->name);
 
         return 0;
+}
+
+void rina_component_init(struct rina_component * comp)
+{
+        mutex_init(&comp->ps_lock);
+        comp->ps = NULL;
+        comp->ps_factory = NULL;
+}
+
+int base_select_policy_set(struct rina_component * comp,
+                           struct policy_set_list *list,
+                           const string_t * name)
+{
+        struct ps_base *candidate_ps = NULL;
+        struct ps_base *old_ps;
+        struct ps_factory *candidate_ps_factory = NULL;
+
+        if (!name) {
+                LOG_ERR("NULL name");
+                return -1;
+        }
+
+        candidate_ps_factory = ps_lookup(list, name);
+        if (!candidate_ps_factory) {
+                LOG_ERR("No policy-set '%s' published", name);
+                return -1;
+        }
+
+        mutex_lock(&comp->ps_lock);
+
+        if (candidate_ps_factory == comp->ps_factory) {
+                mutex_unlock(&comp->ps_lock);
+                LOG_INFO("Policy-set '%s' already selected", name);
+                return 0;
+        }
+
+        /* Take a reference to the plugin module, to prevent
+         * rmmodding. */
+        if (!try_module_get(candidate_ps_factory->owner)) {
+                mutex_unlock(&comp->ps_lock);
+                LOG_ERR("Module %p is not alive as it should",
+                        candidate_ps_factory->owner);
+                return -1;
+        }
+
+        /* Instantiate the new policy set. */
+        candidate_ps = candidate_ps_factory->create(comp);
+        if (!candidate_ps) {
+                module_put(candidate_ps_factory->owner);
+                mutex_unlock(&comp->ps_lock);
+                LOG_ERR("Policy-set instantiation failed");
+                return -1;
+        }
+
+        /* Save old RCU-protected pointer. */
+        old_ps = comp->ps;
+
+        /* Removal old pointer and replace it with a new one. */
+        rcu_assign_pointer(comp->ps, candidate_ps);
+        if (old_ps) {
+                /* Wait for a grace period. */
+                synchronize_rcu();
+                ASSERT(comp->ps_factory);
+                /* Reclaim the content pointed by the old pointer. */
+                comp->ps_factory->destroy(old_ps);
+                module_put(comp->ps_factory->owner);
+        }
+
+        comp->ps_factory = candidate_ps_factory;
+
+        mutex_unlock(&comp->ps_lock);
+
+        return 0;
+}
+
+int base_set_policy_set_param(struct rina_component *comp,
+                              const char * path,
+                              const char * name,
+                              const char * value)
+{
+        struct ps_base *ps;
+        int ret = -1;
+
+        mutex_lock(&comp->ps_lock);
+        rcu_read_lock();
+        ps = rcu_dereference(comp->ps);
+
+        if (ps && ps->set_policy_set_param) {
+                if (strcmp(path, comp->ps_factory->name) == 0) {
+                        /* The request addresses the RMT policy set. */
+                        ret = ps->set_policy_set_param(ps, name, value);
+                } else {
+                        LOG_ERR("Policy set %s not selected for this "
+                                 "component", path);
+                }
+        } else {
+                LOG_ERRF("No policy set selected");
+        }
+
+        rcu_read_unlock();
+        mutex_unlock(&comp->ps_lock);
+
+        return ret;
 }
