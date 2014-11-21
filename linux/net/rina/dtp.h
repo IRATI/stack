@@ -26,6 +26,7 @@
 #include "rmt.h"
 #include "kfa.h"
 #include "dt.h"
+#include "ps-factory.h"
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
@@ -56,5 +57,15 @@ int          dtp_receive(struct dtp * instance,
 int dtp_initial_sequence_number(struct dtp * instance);
 
 seq_num_t    dtp_sv_last_seq_nr_sent(struct dtp * instance);
+
+int          dtp_select_policy_set(struct dtp * dtp, const string_t *path,
+                                   const string_t * name);
+
+int          dtp_set_policy_set_param(struct dtp* dtp,
+                                      const string_t * path,
+                                      const string_t * name,
+                                      const string_t * value);
+
+struct dtp* dtp_from_component(struct rina_component * component);
 
 #endif

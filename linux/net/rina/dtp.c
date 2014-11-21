@@ -33,8 +33,14 @@
 #include "dt-utils.h"
 #include "dtcp.h"
 #include "dtcp-utils.h"
+#include "ps-factory.h"
+#include "dtp-ps.h"
 
 #define DTP_INACTIVITY_TIMERS_ENABLE 0
+
+static struct policy_set_list policy_sets = {
+        .head = LIST_HEAD_INIT(policy_sets.head)
+};
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
@@ -75,6 +81,7 @@ struct dtp {
          */
         struct dtp_sv *           sv; /* The state-vector */
 
+        struct rina_component     base;
         struct dtp_policies *     policies;
         struct rmt *              rmt;
         struct kfa *              kfa;
@@ -963,6 +970,59 @@ static const char * twq_name_format(const char *       prefix,
         return name;
 }
 
+struct dtp *
+dtp_from_component(struct rina_component * component)
+{
+        return container_of(component, struct dtp, base);
+}
+EXPORT_SYMBOL(dtp_from_component);
+
+int dtp_select_policy_set(struct dtp * dtp,
+                          const string_t * path,
+                          const string_t * name)
+{
+        if (path && strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
+
+        return base_select_policy_set(&dtp->base, &policy_sets, name);
+}
+EXPORT_SYMBOL(dtp_select_policy_set);
+
+int dtp_set_policy_set_param(struct dtp* dtp,
+                             const char * path,
+                             const char * name,
+                             const char * value)
+{
+        struct dtp_ps *ps;
+        int ret = -1;
+
+        if (!dtp|| !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", dtp, path, name, value);
+                return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this DTP instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this DTP");
+                } else {
+                        LOG_ERR("Unknown DTP parameter policy '%s'", name);
+                }
+                rcu_read_unlock();
+        } else {
+                ret = base_set_policy_set_param(&dtp->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(dtp_set_policy_set_param);
+
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct kfa *        kfa,
@@ -1038,6 +1098,8 @@ struct dtp * dtp_create(struct dt *         dt,
                 return NULL;
         }
 
+        rina_component_init(&tmp->base);
+
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -1060,6 +1122,8 @@ int dtp_destroy(struct dtp * instance)
         if (instance->twq)  rwq_destroy(instance->twq);
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
+        rina_component_fini(&instance->base);
+
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -1539,3 +1603,19 @@ int dtp_receive(struct dtp * instance,
 #endif
         return 0;
 }
+
+int dtp_ps_publish(struct ps_factory * factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        return ps_publish(&policy_sets, factory);
+}
+EXPORT_SYMBOL(dtp_ps_publish);
+
+int dtp_ps_unpublish(const char * name)
+{ return ps_unpublish(&policy_sets, name); }
+EXPORT_SYMBOL(dtp_ps_unpublish);
+
