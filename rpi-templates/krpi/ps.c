@@ -38,6 +38,16 @@ static void skeleton_max_q_policy_rx(struct rmt_ps * ps,
                                     struct rfifo *  queue)
 { printk("%s: called()\n", __func__); }
 
+static void skeleton_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
+                                    struct pdu *    pdu,
+                                    struct rfifo *  queue)
+{ printk("%s: called()\n", __func__); }
+
+static void skeleton_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
+                                    struct sdu *    sdu,
+                                    struct rfifo *  queue)
+{ printk("%s: called()\n", __func__); }
+
 static int rmt_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
@@ -77,6 +87,8 @@ rmt_ps_skeleton_create(struct rina_component * component)
         ps->priv            = NULL;
         ps->max_q_policy_tx = skeleton_max_q_policy_tx;
         ps->max_q_policy_rx = skeleton_max_q_policy_rx;
+        ps->rmt_q_monitor_policy_tx = skeleton_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_rx = skeleton_rmt_q_monitor_policy_rx;
 
         return &ps->base;
 }
