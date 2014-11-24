@@ -22,6 +22,7 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/string.h>
+#include <linux/random.h>
 
 #define RINA_PREFIX "dtp-ps-default"
 
@@ -169,7 +170,19 @@ default_flow_control_overrun(struct dtp_ps * ps,
 static int
 default_initial_sequence_number(struct dtp_ps * ps)
 {
-        return 0;
+        struct dtp * dtp = ps->dm;
+        seq_num_t seq_num;
+
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        get_random_bytes(&seq_num, sizeof(seq_num_t));
+        nxt_seq_reset(dtp_dtp_sv(dtp), seq_num);
+
+        LOG_DBG("initial_seq_number reset");
+        return seq_num;
 }
 
 

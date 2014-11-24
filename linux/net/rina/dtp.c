@@ -128,7 +128,7 @@ struct connection * dtp_sv_connection(struct dtp_sv * sv)
 }
 EXPORT_SYMBOL(dtp_sv_connection);
 
-static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
+void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
         ASSERT(sv);
 
@@ -138,6 +138,7 @@ static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 
         return;
 }
+EXPORT_SYMBOL(nxt_seq_reset);
 
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
