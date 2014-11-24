@@ -122,6 +122,7 @@ int cwq_push(struct cwq * queue,
 
         return 0;
 }
+EXPORT_SYMBOL(cwq_push);
 
 struct pdu * cwq_pop(struct cwq * queue)
 {
@@ -191,6 +192,7 @@ ssize_t cwq_size(struct cwq * queue)
 
         return tmp;
 }
+EXPORT_SYMBOL(cwq_size);
 
 void cwq_deliver(struct cwq * queue,
                  struct dt *  dt,

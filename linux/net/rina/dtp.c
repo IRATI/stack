@@ -116,6 +116,18 @@ struct rmt * dtp_rmt(struct dtp * dtp)
 }
 EXPORT_SYMBOL(dtp_rmt);
 
+struct dtp_sv * dtp_dtp_sv(struct dtp * dtp)
+{
+        return dtp->sv;
+}
+EXPORT_SYMBOL(dtp_dtp_sv);
+
+struct connection * dtp_sv_connection(struct dtp_sv * sv)
+{
+        return sv->connection;
+}
+EXPORT_SYMBOL(dtp_sv_connection);
+
 static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
         ASSERT(sv);

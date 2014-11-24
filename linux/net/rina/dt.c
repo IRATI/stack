@@ -380,6 +380,7 @@ struct cwq * dt_cwq(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_cwq);
 
 struct rtxq * dt_rtxq(struct dt * dt)
 {

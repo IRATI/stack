@@ -72,5 +72,7 @@ struct dtp* dtp_from_component(struct rina_component * component);
 
 struct dt * dtp_dt(struct dtp * dtp);
 struct rmt * dtp_rmt(struct dtp * dtp);
+struct dtp_sv * dtp_dtp_sv(struct dtp * dtp);
+struct connection * dtp_sv_connection(struct dtp_sv * sv);
 
 #endif

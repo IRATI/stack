@@ -30,6 +30,9 @@
 #include "dtp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
+#include "dtcp-utils.h"
+#include "dt-utils.h"
+#include "debug.h"
 
 static int
 default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
@@ -74,8 +77,63 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 }
 
 static int
-default_closed_window(struct dtp * instance, struct pdu * pdu)
+default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 {
+        struct dtp * dtp = ps->dm;
+        struct cwq * cwq;
+        struct dt *  dt;
+        struct dtp_sv * sv;
+        struct connection * connection;
+        uint_t       max_len;
+
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok, cannot run policy");
+                return -1;
+        }
+
+        dt = dtp_dt(dtp);
+        ASSERT(dt);
+
+        cwq = dt_cwq(dt);
+        if (!cwq) {
+                LOG_ERR("Failed to get cwq");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        LOG_DBG("Closed Window Queue");
+
+        ASSERT(dtp);
+
+        sv = dtp_dtp_sv(dtp);
+        ASSERT(sv);
+        connection = dtp_sv_connection(sv);
+        ASSERT(connection);
+        ASSERT(connection->policies_params);
+
+        max_len = dtcp_max_closed_winq_length(connection->
+                                              policies_params->
+                                              dtcp_cfg);
+        if (cwq_size(cwq) < max_len - 1) {
+                if (cwq_push(cwq, pdu)) {
+                        LOG_ERR("Failed to push into cwq");
+                        return -1;
+                }
+
+                return 0;
+        }
+
+        ASSERT(ps->flow_control_overrun);
+
+        if (ps->flow_control_overrun(ps, pdu)) {
+                LOG_ERR("Failed Flow Control Overrun");
+                return -1;
+        }
+
         return 0;
 }
 
