@@ -38,7 +38,6 @@
 #include "pidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
-#include "rmt.h"
 
 struct kfa {
         struct mutex           lock;
@@ -65,7 +64,6 @@ struct ipcp_flow {
         atomic_t               readers;
         atomic_t               writers;
         atomic_t               posters;
-        struct rmt *           rmt;
 };
 
 struct ipcp_instance_data {
@@ -135,35 +133,6 @@ int  kfa_port_id_release(struct kfa * instance,
         return 0;
 }
 EXPORT_SYMBOL(kfa_port_id_release);
-
-int kfa_flow_rmt_bind(struct kfa * instance,
-                      port_id_t    pid,
-                      struct rmt * rmt)
-{
-        struct ipcp_flow * flow;
-
-        if (!instance)
-                return -1;
-
-        if (!is_port_id_ok(pid))
-                return -1;
-
-        mutex_lock(&instance->lock);
-
-        flow = kfa_pmap_find(instance->flows, pid);
-        if (!flow) {
-                mutex_unlock(&instance->lock);
-                LOG_ERR("The flow with port-id %d does not exist, "
-                        "cannot bind rmt", pid);
-                return -1;
-        }
-        flow->rmt = rmt;
-
-        mutex_unlock(&instance->lock);
-
-        return 0;
-}
-EXPORT_SYMBOL(kfa_flow_rmt_bind);
 
 /* NOTE: Add instance-locking IFF exporting to API */
 static int kfa_flow_destroy(struct kfa *       instance,
@@ -569,23 +538,13 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
 
         atomic_inc(&flow->posters);
 
-        if (!flow->rmt) {
-                if (rfifo_push_ni(flow->sdu_ready, sdu)) {
-                        LOG_ERR("Could not write %zd bytes into "
-                                "port-id %d fifo",
-                                sizeof(struct sdu *), id);
-                        retval = -1;
-                        goto finish;
-                }
-                goto finish;
-        } else {
-                if (rmt_receive(flow->rmt, sdu, id)) {
-                        LOG_ERR("Could not post SDU into the RMT");
-                        retval = -1;
-                        goto finish;
-                }
+        if (rfifo_push_ni(flow->sdu_ready, sdu)) {
+                LOG_ERR("Could not write %zd bytes into "
+                        "port-id %d fifo",
+                        sizeof(struct sdu *), id);
+                retval = -1;
         }
- finish:
+
         if (atomic_dec_and_test(&flow->posters) &&
             (atomic_read(&flow->writers) == 0)  &&
             (atomic_read(&flow->readers) == 0)  &&
@@ -597,7 +556,7 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
 
         mutex_unlock(&instance->lock);
 
-        if (flow && !flow->rmt && (retval == 0)) {
+        if (flow && (retval == 0)) {
                 wq = &flow->wait_queue;
                 ASSERT(wq);
 
