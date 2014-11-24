@@ -241,6 +241,52 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
 static int
 default_sender_inactivity_timer(struct dtp_ps * ps)
 {
+        struct dtp * dtp = ps->dm;
+        struct dt *          dt;
+        struct dtcp *        dtcp;
+        struct dtcp_config * cfg;
+
+        LOG_DBG("default_sender_inactivity launched");
+
+        if (!dtp) return 0;
+
+        dt = dtp_dt(dtp);
+        if (!dt)
+                return -1;
+
+        dtcp = dt_dtcp(dt);
+        if (!dtp)
+                return -1;
+
+        dt_sv_drf_flag_set(dt, true);
+        dtp_initial_sequence_number(dtp);
+
+        cfg = dtcp_config_get(dtcp);
+        if (!cfg)
+                return -1;
+
+        if (dtcp_rtx_ctrl(cfg)) {
+                struct rtxq * q;
+
+                q = dt_rtxq(dt);
+                if (!q) {
+                        LOG_ERR("Couldn't find the Retransmission queue");
+                        return -1;
+                }
+                rtxq_flush(q);
+        }
+        if (dtcp_flow_ctrl(cfg)) {
+                struct cwq * cwq;
+
+                cwq = dt_cwq(dt);
+                ASSERT(cwq);
+                if (cwq_flush(cwq)) {
+                        LOG_ERR("Coudln't flush cwq");
+                        return -1;
+                }
+        }
+
+        /*FIXME: Missing sending the control ack pdu */
         return 0;
 }
 
