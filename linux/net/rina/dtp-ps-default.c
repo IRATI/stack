@@ -141,6 +141,28 @@ static int
 default_flow_control_overrun(struct dtp_ps * ps,
                              struct pdu * pdu)
 {
+        struct dtp * dtp = ps->dm;
+
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        /* FIXME: How to block further write API calls? */
+
+        LOG_MISSING;
+
+        LOG_DBG("Default Flow Control");
+
+#if 0
+        /* FIXME: Re-enable or remove depending on the missing code */
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("PDU is not ok, cannot run policy");
+                return -1;
+        }
+#endif
+        pdu_destroy(pdu);
+
         return 0;
 }
 
