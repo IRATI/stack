@@ -1237,3 +1237,4 @@ int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
 
         return 0;
 }
+EXPORT_SYMBOL(dtcp_snd_lf_win_set);

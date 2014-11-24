@@ -365,6 +365,7 @@ struct dtcp * dt_dtcp(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_dtcp);
 
 struct cwq * dt_cwq(struct dt * dt)
 {

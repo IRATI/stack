@@ -28,6 +28,8 @@
 #include "dt.h"
 #include "ps-factory.h"
 
+#define DTP_INACTIVITY_TIMERS_ENABLE 0
+
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct kfa *        kfa,
@@ -67,5 +69,8 @@ int          dtp_set_policy_set_param(struct dtp* dtp,
                                       const string_t * value);
 
 struct dtp* dtp_from_component(struct rina_component * component);
+
+struct dt * dtp_dt(struct dtp * dtp);
+struct rmt * dtp_rmt(struct dtp * dtp);
 
 #endif

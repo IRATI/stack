@@ -29,11 +29,48 @@
 #include "rds/rmem.h"
 #include "dtp-ps.h"
 #include "dtp.h"
+#include "dtcp.h"
 
 static int
 default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
-        return 0;
+        struct dtp * dtp = ps->dm;
+        struct dt  *  dt;
+        struct dtcp * dtcp;
+
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        dt = dtp_dt(dtp);
+        if (!dt) {
+                LOG_ERR("Passed instance has no parent, cannot run policy");
+                return -1;
+        }
+
+        dtcp = dt_dtcp(dt);
+
+#if DTP_INACTIVITY_TIMERS_ENABLE
+        /* Start SenderInactivityTimer */
+        if (dtcp &&
+            rtimer_restart(dtp->timers.sender_inactivity,
+                           3 * (dt_sv_mpl(dt) + dt_sv_r(dt) + dt_sv_a(dt)))) {
+                LOG_ERR("Failed to start sender_inactiviy timer");
+                return 0;
+        }
+#endif
+        /* Post SDU to RMT */
+        LOG_DBG("defaultTxPolicy - sending to rmt");
+        if (dtcp_snd_lf_win_set(dtcp,
+                                pci_sequence_number_get(pdu_pci_get_ro(pdu))))
+                LOG_ERR("Problems setting sender left window edge "
+                        "in default_transmission");
+
+        return rmt_send(dtp_rmt(dtp),
+                        pci_destination(pdu_pci_get_ro(pdu)),
+                        pci_qos_id(pdu_pci_get_ro(pdu)),
+                        pdu);
 }
 
 static int

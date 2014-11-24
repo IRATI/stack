@@ -36,8 +36,6 @@
 #include "ps-factory.h"
 #include "dtp-ps.h"
 
-#define DTP_INACTIVITY_TIMERS_ENABLE 0
-
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
 };
@@ -105,6 +103,18 @@ static struct dtp_sv default_sv = {
         .window_based                  = false,
         .a                             = 0,
 };
+
+struct dt * dtp_dt(struct dtp * dtp)
+{
+        return dtp->parent;
+}
+EXPORT_SYMBOL(dtp_dt);
+
+struct rmt * dtp_rmt(struct dtp * dtp)
+{
+        return dtp->rmt;
+}
+EXPORT_SYMBOL(dtp_rmt);
 
 static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
