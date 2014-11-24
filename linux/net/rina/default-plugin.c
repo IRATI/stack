@@ -28,14 +28,17 @@
 #include "logs.h"
 #include "rds/rmem.h"
 #include "rmt-ps.h"
+#include "dtp-ps.h"
 
 extern struct ps_factory rmt_factory;
+extern struct ps_factory dtp_factory;
 
 static int __init mod_init(void)
 {
         int ret;
 
         strcpy(rmt_factory.name, RINA_PS_DEFAULT_NAME);
+        strcpy(dtp_factory.name, RINA_PS_DEFAULT_NAME);
 
         ret = rmt_ps_publish(&rmt_factory);
         if (ret) {
@@ -45,19 +48,36 @@ static int __init mod_init(void)
 
         LOG_INFO("RMT default policy set loaded successfully");
 
+        ret = dtp_ps_publish(&dtp_factory);
+        if (ret) {
+                LOG_ERR("Failed to publish DTP policy set factory");
+                return -1;
+        }
+
+        LOG_INFO("DTP default policy set loaded successfully");
+
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-        int ret = rmt_ps_unpublish(RINA_PS_DEFAULT_NAME);
+        int ret;
 
+        ret = rmt_ps_unpublish(RINA_PS_DEFAULT_NAME);
         if (ret) {
                 LOG_ERR("Failed to unpublish RMT policy set factory");
                 return;
         }
 
         LOG_INFO("RMT default policy set unloaded successfully");
+
+        ret = dtp_ps_unpublish(RINA_PS_DEFAULT_NAME);
+        if (ret) {
+                LOG_ERR("Failed to unpublish DTP policy set factory");
+                return;
+        }
+
+        LOG_INFO("DTP default policy set unloaded successfully");
 }
 
 module_init(mod_init);

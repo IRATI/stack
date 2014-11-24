@@ -33,7 +33,15 @@ struct dtp_ps {
         struct ps_base base;
 
         /* Behavioural policies. */
-        // TODO
+        int (* transmission_control)(struct dtp_ps * ps,
+                                     struct pdu * pdu);
+        int (* closed_window)(struct dtp * instance,
+                              struct pdu * pdu);
+        int (* flow_control_overrun)(struct dtp_ps * ps,
+                                     struct pdu * pdu);
+        int (* initial_sequence_number)(struct dtp_ps * ps);
+        int (* receiver_inactivity_timer)(struct dtp_ps * ps);
+        int (* sender_inactivity_timer)(struct dtp_ps * ps);
 
         /* Parametric policies. */
         // TODO
