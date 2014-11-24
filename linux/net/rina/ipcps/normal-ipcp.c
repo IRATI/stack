@@ -754,22 +754,6 @@ static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
         return data->info->name;
 }
 
-static void parse_component_id(const string_t *path, size_t *cmplen,
-                               size_t *offset)
-{
-        const string_t *dot = strchr(path, '.');
-
-        if (!dot) {
-                /* Emulate strchrnul(). */
-                dot = path + strlen(path);
-        }
-
-        *offset = *cmplen = dot - path;
-        if (path[*offset] == '.') {
-                (*offset)++;
-        }
-}
-
 static int normal_set_policy_set_param(struct ipcp_instance_data * data,
                                        const string_t *path,
                                        const string_t *param_name,
@@ -803,6 +787,9 @@ static int normal_select_policy_set(struct ipcp_instance_data *data,
         if (strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_select_policy_set(data->rmt, path + offset,
                                              ps_name);
+        } else if (strncmp(path, "efcp", cmplen) == 0) {
+                return efcp_container_select_policy_set(data->efcpc,
+                                                path + offset, ps_name);
         } else {
                 LOG_ERR("The selected component does not exist");
                 return -1;

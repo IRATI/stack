@@ -219,3 +219,21 @@ void rina_component_fini(struct rina_component * comp)
         }
         rcu_read_unlock();
 }
+
+void parse_component_id(const string_t *path, size_t *cmplen,
+                               size_t *offset)
+{
+        const string_t *dot = strchr(path, '.');
+
+        if (!dot) {
+                /* Emulate strchrnul(). */
+                dot = path + strlen(path);
+        }
+
+        *offset = *cmplen = dot - path;
+        if (path[*offset] == '.') {
+                (*offset)++;
+        }
+}
+EXPORT_SYMBOL(parse_component_id);
+

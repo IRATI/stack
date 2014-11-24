@@ -54,6 +54,66 @@ struct efcp_container {
         struct kfa *         kfa;
 };
 
+static int efcp_select_policy_set(struct efcp * efcp,
+                                  const string_t * path,
+                                  const string_t * ps_name)
+{
+        size_t cmplen;
+        size_t offset;
+
+        parse_component_id(path, &cmplen, &offset);
+
+        if (strncmp(path, "dtp", cmplen) == 0) {
+                return dtp_select_policy_set(dt_dtp(efcp->dt), path + offset,
+                                             ps_name);
+        } else {
+                LOG_ERR("The selected component does not exist");
+                return -1;
+        }
+
+        return -1;
+}
+
+int efcp_container_select_policy_set(struct efcp_container * container,
+                                     const string_t * path,
+                                     const string_t * ps_name)
+{
+        struct efcp * efcp;
+        cep_id_t cep_id;
+        size_t cmplen;
+        size_t offset;
+        char numbuf[8];
+        int ret;
+
+        if (!path) {
+                LOG_ERR("NULL path");
+                return -1;
+        }
+
+        parse_component_id(path, &cmplen, &offset);
+        if (cmplen > sizeof(numbuf)-1) {
+                LOG_ERR("Invalid cep-id' %s'", path);
+                return -1;
+        }
+
+        memcpy(numbuf, path, cmplen);
+        numbuf[cmplen] = '\0';
+        ret = kstrtoint(numbuf, 10, &cep_id);
+        if (ret) {
+                LOG_ERR("Invalid cep-id '%s'", path);
+                return -1;
+        }
+
+        efcp = efcp_imap_find(container->instances, cep_id);
+        if (!efcp) {
+                LOG_ERR("No connection with cep-id %d", cep_id);
+                return -1;
+        }
+
+        return efcp_select_policy_set(efcp, path + offset, ps_name);
+}
+EXPORT_SYMBOL(efcp_container_select_policy_set);
+
 static struct efcp * efcp_create(void)
 {
         struct efcp * instance;

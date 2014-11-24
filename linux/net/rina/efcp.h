@@ -67,4 +67,8 @@ int                     efcp_bind_rmt(struct efcp_container * container,
                                       struct rmt *            rmt);
 int                     efcp_unbind_rmt(struct efcp_container * container);
 
+int efcp_container_select_policy_set(struct efcp_container * container,
+                                     const string_t * path,
+                                     const string_t * name);
+
 #endif
