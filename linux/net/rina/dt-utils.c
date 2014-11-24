@@ -178,6 +178,7 @@ int cwq_flush(struct cwq * queue)
 
         return 0;
 }
+EXPORT_SYMBOL(cwq_flush);
 
 ssize_t cwq_size(struct cwq * queue)
 {
@@ -802,6 +803,7 @@ int rtxq_flush(struct rtxq * q)
         return 0;
 
 }
+EXPORT_SYMBOL(rtxq_flush);
 
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,

@@ -395,6 +395,7 @@ struct rtxq * dt_rtxq(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_rtxq);
 
 uint_t dt_sv_max_pdu_size(struct dt * dt)
 {
@@ -557,4 +558,5 @@ void dt_sv_drf_flag_set(struct dt * dt, bool value)
 
         return;
 }
+EXPORT_SYMBOL(dt_sv_drf_flag_set);
 

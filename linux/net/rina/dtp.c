@@ -458,6 +458,7 @@ int dtp_initial_sequence_number(struct dtp * instance)
 
         return 0;
 }
+EXPORT_SYMBOL(dtp_initial_sequence_number);
 
 /* Sequencing/reassembly queue */
 
