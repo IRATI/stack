@@ -960,6 +960,7 @@ static void tf_a(void * data)
                 LOG_ERR("Could not add twq item to the wq");
                 return;
         }
+        LOG_DBG("A timer handler finished");
 
         return;
 }
