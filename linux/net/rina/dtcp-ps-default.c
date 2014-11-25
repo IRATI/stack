@@ -103,8 +103,37 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
 }
 
 static int
-default_lost_control_pdu(struct dtcp_ps * instance)
+default_lost_control_pdu(struct dtcp_ps * ps)
 {
+        struct dtcp * dtcp = ps->dm;
+
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+#if 0
+        struct pdu * pdu_ctrl;
+        seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
+
+        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+        snd_lft       = snd_lft_win(dtcp);
+        snd_rt        = snd_rt_wind_edge(dtcp);
+        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                            last_rcv_ctrl,
+                                            snd_lft,
+                                            snd_rt);
+        if (!pdu_ctrl) {
+                LOG_ERR("Failed Lost Control PDU policy");
+                return -1;
+        }
+
+        if (pdu_send(dtcp, pdu_ctrl))
+                return -1;
+#endif
+
+        LOG_DBG("Default lost control pdu policy");
+
         return 0;
 }
 
