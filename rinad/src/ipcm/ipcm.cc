@@ -316,22 +316,30 @@ DIFConfigValidator::DIFConfigValidator(const rina::DIFConfiguration &dif_config,
                 type_ = NORMAL;
         else if (type == "shim-dummy")
                 type_ = SHIM_DUMMY;
+        else if (type == "shim-eth-vlan")
+                type_ = SHIM_ETH;
+        else if (type == "shim-tcp-udp")
+                type_ = SHIM_TCP_UDP;
         else if (type == "shim-hv")
                 type_ = SHIM_HV;
         else
-                type_ = SHIM_ETH;
+                type_ = SHIM_NOT_DEFINED;
 }
 
 bool DIFConfigValidator::validateConfigs()
 {
-        if (type_ == SHIM_ETH)
+        if (type_ == NORMAL)
+                return validateNormal();
+        else if (type_ == SHIM_ETH)
                 return validateShimEth();
         else if (type_ == SHIM_DUMMY)
                 return validateShimDummy();
-        else if (type_ == SHIM_HV)
+        else if(type_ == SHIM_TCP_UDP)
+                return validateShimTcpUdp();
+        else if(type_ == SHIM_HV)
                 return validateShimHv();
         else
-                return validateNormal();
+                return validateBasicDIFConfigs();
 }
 
 bool DIFConfigValidator::validateShimEth()
@@ -342,6 +350,11 @@ bool DIFConfigValidator::validateShimEth()
 
         return validateBasicDIFConfigs() &&
                 validateConfigParameters(expected_params);
+}
+
+bool DIFConfigValidator::validateShimTcpUdp()
+{
+        return validateBasicDIFConfigs();
 }
 
 bool DIFConfigValidator::validateShimHv()
