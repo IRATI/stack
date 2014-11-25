@@ -322,14 +322,22 @@ default_flow_control_overrun(struct dtcp_ps * instance, struct pdu * pdu)
 }
 
 static int
-default_reconcile_flow_conflict(struct dtcp_ps * instance)
+default_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 {
-        return 0;
-}
+        struct dtcp * dtcp = ps->dm;
+        seq_num_t LWE;
 
-static int
-default_rcvr_flow_control(struct dtcp_ps * instance, seq_num_t seq)
-{
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        LWE = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
+        update_rt_wind_edge(dtcp);
+
+        LOG_DBG("DTCP: %pK", dtcp);
+        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
+
         return 0;
 }
 
@@ -407,7 +415,7 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->receiving_flow_control      = default_receiving_flow_control;
         ps->update_credit               = NULL;
         ps->flow_control_overrun        = default_flow_control_overrun;
-        ps->reconcile_flow_conflict     = default_reconcile_flow_conflict;
+        ps->reconcile_flow_conflict     = NULL;
         ps->rcvr_flow_control           = default_rcvr_flow_control;
         ps->rate_reduction              = default_rate_reduction;
         ps->rcvr_control_ack            = default_rcvr_control_ack;

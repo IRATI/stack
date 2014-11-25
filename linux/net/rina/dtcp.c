@@ -922,7 +922,7 @@ static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
         return 0;
 }
 
-static void update_rt_wind_edge(struct dtcp * dtcp)
+void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t seq;
 
@@ -935,6 +935,7 @@ static void update_rt_wind_edge(struct dtcp * dtcp)
         dtcp->sv->rcvr_rt_wind_edge = seq;
         spin_unlock(&dtcp->sv->lock);
 }
+EXPORT_SYMBOL(update_rt_wind_edge);
 
 static int default_rcvr_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {

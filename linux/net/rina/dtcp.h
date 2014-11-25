@@ -83,5 +83,6 @@ struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
                                  seq_num_t     last_ctrl_seq_rcvd,
                                  seq_num_t     snd_left_wind_edge,
                                  seq_num_t     snd_rt_wind_edge);
+void update_rt_wind_edge(struct dtcp * dtcp);
 
 #endif
