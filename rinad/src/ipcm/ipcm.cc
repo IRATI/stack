@@ -315,52 +315,31 @@ DIFConfigValidator::DIFConfigValidator(const rina::DIFConfiguration &dif_config,
                 :dif_config_(dif_config), dif_info_(dif_info)
 {
         if (type == "normal-ipc")
-                type_ = NORMAL;
+                        type_ = NORMAL;
         else if (type == "shim-dummy")
-                type_ = SHIM_DUMMY;
-        else if (type == "shim-hv")
-                type_ = SHIM_HV;
+                        type_ = SHIM_DUMMY;
         else
-                type_ = SHIM_ETH;
+                        type_ = SHIM_ETH;
 }
 
 bool DIFConfigValidator::validateConfigs()
 {
         if (type_ == SHIM_ETH)
                 return validateShimEth();
-        else if (type_ == SHIM_DUMMY)
+        else if(type_ == SHIM_DUMMY)
                 return validateShimDummy();
-        else if (type_ == SHIM_HV)
-                return validateShimHv();
         else
                 return validateNormal();
 }
 
 bool DIFConfigValidator::validateShimEth()
 {
-        vector<string> expected_params;
-
-        expected_params.push_back("interface-name");
-
-        return validateBasicDIFConfigs() &&
-                validateConfigParameters(expected_params);
+        return validateBasicDIFConfigs() && validateConfigParameters();
 }
-
-bool DIFConfigValidator::validateShimHv()
-{
-        vector<string> expected_params;
-
-        expected_params.push_back("vmpi-id");
-
-        return validateBasicDIFConfigs() &&
-                validateConfigParameters(expected_params);
-}
-
 bool DIFConfigValidator::validateShimDummy()
 {
         return validateBasicDIFConfigs();
 }
-
 bool DIFConfigValidator::validateNormal()
 {
         return  dataTransferConstants() && qosCubes() &&
@@ -372,33 +351,18 @@ bool DIFConfigValidator::validateBasicDIFConfigs()
         return !dif_info_.dif_name_.processName.empty();
 }
 
-bool DIFConfigValidator::validateConfigParameters(
-                        const vector<string>& expected_params)
+bool DIFConfigValidator::validateConfigParameters()
 {
-        vector<bool> found_params(expected_params.size());
-
-        for (unsigned int i = 0; i < found_params.size(); i++) {
-                found_params[i] = false;
-        }
-
-        for (unsigned int i = 0; i < expected_params.size(); i++) {
-                for (std::list<rina::Parameter>::const_iterator it =
-                        dif_config_.parameters_.begin();
-                                it != dif_config_.parameters_.end(); it++) {
-                        if (it->name == expected_params[i]) {
-                                found_params[i] = true;
-                                break;
-                        }
+        for (std::list<rina::Parameter>::const_iterator it =
+                     dif_config_.parameters_.begin();
+             it != dif_config_.parameters_.end();
+             ++it) {
+                if (it->name.compare("interface-name") == 0) {
+                        return true;
                 }
         }
 
-        for (unsigned int i = 0; i < found_params.size(); i++) {
-                if (!found_params[i]) {
-                        return false;
-                }
-        }
-
-        return true;
+        return false;
 }
 
 bool DIFConfigValidator::dataTransferConstants() {
