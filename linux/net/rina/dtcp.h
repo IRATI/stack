@@ -71,5 +71,12 @@ int          dtcp_set_policy_set_param(struct dtcp * dtcp,
 struct dtcp * dtcp_from_component(struct rina_component * component);
 
 struct dt * dtcp_dt(struct dtcp * dtcp);
+pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq);
+struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type);
+seq_num_t snd_lft_win(struct dtcp * dtcp);
+seq_num_t snd_rt_wind_edge(struct dtcp * dtcp);
+seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp);
+void dump_we(struct dtcp * dtcp, struct pci *  pci);
+int pdu_send(struct dtcp * dtcp, struct pdu * pdu);
 
 #endif

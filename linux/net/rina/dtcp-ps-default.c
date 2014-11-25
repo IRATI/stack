@@ -138,9 +138,90 @@ default_lost_control_pdu(struct dtcp_ps * ps)
 }
 
 static int
-default_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq)
+default_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
-        return 0;
+        struct dtcp * dtcp = ps->dm;
+        struct pdu * pdu;
+        struct pci * pci;
+        struct dtcp_config * dtcp_cfg;
+        seq_num_t    LWE;
+        seq_num_t    snd_lft;
+        seq_num_t    snd_rt;
+        pdu_type_t   type;
+
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        dtcp_cfg = dtcp_config_get(dtcp);
+        if (!dtcp_cfg)
+                return -1;
+
+        LWE  = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
+        type = pdu_ctrl_type_get(dtcp, seq);
+        if (!type)
+                return 0;
+
+        pdu  = pdu_ctrl_create_ni(dtcp, type);
+        if (!pdu)
+                return -1;
+
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        /*
+         * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
+         * PDU_TYPE_NACK_AND_FC ?
+         */
+        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                if (dtcp_window_based_fctrl(dtcp_cfg)) {
+                        snd_lft = snd_lft_win(dtcp);
+                        snd_rt  = snd_rt_wind_edge(dtcp);
+
+                        pci_control_new_left_wind_edge_set(pci, LWE);
+                        pci_control_new_rt_wind_edge_set(pci,
+                                                         rcvr_rt_wind_edge(dtcp));
+                        pci_control_my_left_wind_edge_set(pci, snd_lft);
+                        pci_control_my_rt_wind_edge_set(pci, snd_rt);
+                }
+
+                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
+                        LOG_MISSING;
+                }
+        }
+
+        switch (pci_type(pci)) {
+        case PDU_TYPE_ACK_AND_FC:
+        case PDU_TYPE_ACK:
+                if (pci_control_ack_seq_num_set(pci, LWE)) {
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                dump_we(dtcp,pci);
+                if (pdu_send(dtcp, pdu))
+                        return -1;
+
+                return 0;
+        case PDU_TYPE_NACK_AND_FC:
+        case PDU_TYPE_NACK:
+                if (pci_control_ack_seq_num_set(pci, LWE + 1)) {
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                if (pdu_send(dtcp, pdu))
+                        return -1;
+
+                return 0;
+        default:
+                LOG_ERR("A PDU type not considered here has been produced");
+                break;
+        }
+
+        return -1;
 }
 
 static int
@@ -272,29 +353,29 @@ dtcp_ps_default_create(struct rina_component * component)
                 return NULL;
         }
 
-        ps->base.set_policy_set_param = dtcp_ps_set_policy_set_param;
-        ps->dm              = dtcp;
-        ps->priv            = NULL;
-        ps->flow_init = NULL;
-        ps->sv_update = default_sv_update;
-        ps->lost_control_pdu = default_lost_control_pdu;
-        ps->rtt_estimator = NULL;
+        ps->base.set_policy_set_param   = dtcp_ps_set_policy_set_param;
+        ps->dm                          = dtcp;
+        ps->priv                        = NULL;
+        ps->flow_init                   = NULL;
+        ps->sv_update                   = default_sv_update;
+        ps->lost_control_pdu            = default_lost_control_pdu;
+        ps->rtt_estimator               = NULL;
         ps->retransmission_timer_expiry = NULL;
-        ps->received_retransmission = NULL;
-        ps->rcvr_ack = default_rcvr_ack;
-        ps->sender_ack = default_sender_ack;
-        ps->sending_ack = default_sending_ack;
-        ps->receiving_ack_list = default_receiving_ack_list;
-        ps->initial_rate = default_initial_rate;
-        ps->receiving_flow_control = default_receiving_flow_control;
-        ps->update_credit = default_update_credit;
-        ps->flow_control_overrun = default_flow_control_overrun;
-        ps->reconcile_flow_conflict = default_reconcile_flow_conflict;
-        ps->rcvr_flow_control = default_rcvr_flow_control;
-        ps->rate_reduction = default_rate_reduction;
-        ps->rcvr_control_ack = default_rcvr_control_ack;
-        ps->no_rate_slow_down = default_no_rate_slow_down;
-        ps->no_override_default_peak = default_no_override_default_peak;
+        ps->received_retransmission     = NULL;
+        ps->rcvr_ack                    = default_rcvr_ack;
+        ps->sender_ack                  = default_sender_ack;
+        ps->sending_ack                 = default_sending_ack;
+        ps->receiving_ack_list          = default_receiving_ack_list;
+        ps->initial_rate                = default_initial_rate;
+        ps->receiving_flow_control      = default_receiving_flow_control;
+        ps->update_credit               = default_update_credit;
+        ps->flow_control_overrun        = default_flow_control_overrun;
+        ps->reconcile_flow_conflict     = default_reconcile_flow_conflict;
+        ps->rcvr_flow_control           = default_rcvr_flow_control;
+        ps->rate_reduction              = default_rate_reduction;
+        ps->rcvr_control_ack            = default_rcvr_control_ack;
+        ps->no_rate_slow_down           = default_no_rate_slow_down;
+        ps->no_override_default_peak    = default_no_override_default_peak;
 
         return &ps->base;
 }

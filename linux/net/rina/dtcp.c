@@ -196,7 +196,7 @@ struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(dtcp_config_get);
 
-static int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
+int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
         ASSERT(dtcp);
         ASSERT(pdu);
@@ -209,6 +209,7 @@ static int pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 
         return 0;
 }
+EXPORT_SYMBOL(pdu_send);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                  seq_num_t     last_rcv_ctrl_seq)
@@ -269,7 +270,7 @@ static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
         return 0;
 }
 
-static seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
+seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t tmp;
 
@@ -282,8 +283,9 @@ static seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
 
         return tmp;
 }
+EXPORT_SYMBOL(snd_rt_wind_edge);
 
-static seq_num_t snd_lft_win(struct dtcp * dtcp)
+seq_num_t snd_lft_win(struct dtcp * dtcp)
 {
         seq_num_t tmp;
 
@@ -296,8 +298,9 @@ static seq_num_t snd_lft_win(struct dtcp * dtcp)
 
         return tmp;
 }
+EXPORT_SYMBOL(snd_lft_win);
 
-static seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
+seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t tmp;
 
@@ -310,6 +313,7 @@ static seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 
         return tmp;
 }
+EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
@@ -370,7 +374,7 @@ static int push_pdus_rmt(struct dtcp * dtcp)
         return 0;
 }
 
-static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
+struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 {
         struct pdu *    pdu;
         struct pci *    pci;
@@ -420,6 +424,7 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 
         return pdu;
 }
+EXPORT_SYMBOL(pdu_ctrl_create_ni);
 
 /* This is 0x8803 PDU type */
 /* NOTE: Specs do not detail it structure */
@@ -484,8 +489,7 @@ static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
         return 0;
 }
 
-static void dump_we(struct dtcp * dtcp,
-                    struct pci *  pci)
+void dump_we(struct dtcp * dtcp, struct pci *  pci)
 {
         struct dtp * dtp;
         seq_num_t    snd_rt_we;
@@ -522,6 +526,7 @@ static void dump_we(struct dtcp * dtcp,
                  new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
 
 }
+EXPORT_SYMBOL(dump_we);
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct pci *  pci,
@@ -739,7 +744,7 @@ static int default_sending_ack(struct dtcp * dtcp, seq_num_t seq)
         return 0;
 }
 
-static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
+pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 {
         struct dtcp_config * dtcp_cfg;
         seq_num_t    LWE;
@@ -793,6 +798,7 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 
         return 0;
 }
+EXPORT_SYMBOL(pdu_ctrl_type_get);
 
 static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 {
