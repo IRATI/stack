@@ -138,32 +138,32 @@ default_lost_control_pdu(struct dtcp_ps * ps)
 }
 
 static int
-default_rtt_estimator(struct dtcp_ps * instance)
-{
-        return 0;
-}
-
-static int
-default_retransmission_timer_expiry(struct dtcp_ps * instance)
-{
-        return 0;
-}
-
-static int
-default_received_retransmission(struct dtcp_ps * instance)
-{
-        return 0;
-}
-
-static int
 default_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq)
 {
         return 0;
 }
 
 static int
-default_sender_ack(struct dtcp_ps * instance, seq_num_t seq)
+default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 {
+        struct dtcp * dtcp = ps->dm;
+
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                struct rtxq * q;
+
+                q = dt_rtxq(dtcp_dt(dtcp));
+                if (!q) {
+                        LOG_ERR("Couldn't find the Retransmission queue");
+                        return -1;
+                }
+                rtxq_ack(q, seq_num, dt_sv_tr(dtcp_dt(dtcp)));
+        }
+
         return 0;
 }
 
@@ -278,9 +278,9 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->flow_init = NULL;
         ps->sv_update = default_sv_update;
         ps->lost_control_pdu = default_lost_control_pdu;
-        ps->rtt_estimator = default_rtt_estimator;
-        ps->retransmission_timer_expiry = default_retransmission_timer_expiry;
-        ps->received_retransmission = default_received_retransmission;
+        ps->rtt_estimator = NULL;
+        ps->retransmission_timer_expiry = NULL;
+        ps->received_retransmission = NULL;
         ps->rcvr_ack = default_rcvr_ack;
         ps->sender_ack = default_sender_ack;
         ps->sending_ack = default_sending_ack;

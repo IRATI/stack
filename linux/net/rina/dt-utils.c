@@ -822,6 +822,7 @@ int rtxq_ack(struct rtxq * q,
 
         return 0;
 }
+EXPORT_SYMBOL(rtxq_ack);
 
 int rtxq_nack(struct rtxq * q,
               seq_num_t     seq_num,

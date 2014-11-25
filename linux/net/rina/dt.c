@@ -533,6 +533,7 @@ timeout_t dt_sv_tr(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_sv_tr);
 
 bool dt_sv_drf_flag(struct dt * dt)
 {
