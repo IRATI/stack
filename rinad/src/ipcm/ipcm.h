@@ -207,7 +207,8 @@ public:
 	enum Types{
 		SHIM_ETH,
 		NORMAL,
-		SHIM_DUMMY
+		SHIM_DUMMY,
+                SHIM_HV
 	};
 	DIFConfigValidator(const rina::DIFConfiguration &dif_config,
 			const rina::DIFInformation &dif_info, std::string type);
@@ -218,10 +219,12 @@ private:
     const rina::DIFInformation &dif_info_;
 
 	bool validateShimEth();
+	bool validateShimHv();
 	bool validateShimDummy();
 	bool validateNormal();
 	bool validateBasicDIFConfigs();
-	bool validateConfigParameters();
+	bool validateConfigParameters(const std::vector< std::string >&
+                                      expected_params);
 	bool dataTransferConstants();
 	bool qosCubes();
 	bool knownIPCProcessAddresses();
