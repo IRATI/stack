@@ -314,14 +314,10 @@ default_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 }
 
 static int
-default_update_credit(struct dtcp_ps * instance)
-{
-        return 0;
-}
-
-static int
 default_flow_control_overrun(struct dtcp_ps * instance, struct pdu * pdu)
 {
+        pdu_destroy(pdu);
+
         return 0;
 }
 
@@ -409,7 +405,7 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->receiving_ack_list          = NULL;
         ps->initial_rate                = NULL;
         ps->receiving_flow_control      = default_receiving_flow_control;
-        ps->update_credit               = default_update_credit;
+        ps->update_credit               = NULL;
         ps->flow_control_overrun        = default_flow_control_overrun;
         ps->reconcile_flow_conflict     = default_reconcile_flow_conflict;
         ps->rcvr_flow_control           = default_rcvr_flow_control;
