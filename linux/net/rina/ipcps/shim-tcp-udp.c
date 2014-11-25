@@ -309,6 +309,7 @@ find_app_by_socket(struct ipcp_instance_data * data,
 
         spin_lock(&data->flow_lock);
 
+        /* FIXME: Shrink this code */
         if (sock->type == SOCK_DGRAM) {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->udpsock == sock) {
@@ -331,7 +332,7 @@ find_app_by_socket(struct ipcp_instance_data * data,
 }
 
 static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
-                                              const struct name *             name)
+                                              const struct name *         name)
 {
         struct reg_app_data * app;
 
@@ -851,7 +852,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                LOG_DBG("Created the queue");
+                LOG_DBG("Flow's SDU queue created");
 
                 /* Store SDU in queue */
                 if (rfifo_push(flow->sdu_queue, du)) {
@@ -1277,9 +1278,9 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
         struct host_ipcp_instance_mapping * mapping;
-        struct sockaddr_in own;
-        struct socket * sock;
-        int res, len;
+        struct sockaddr_in                  own;
+        struct socket *                     sock;
+        int                                 res, len;
 
         sock = sk->sk_socket;
 
@@ -1288,6 +1289,7 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
                 LOG_ERR("Couldn't retrieve hostname");
         }
         LOG_DBG("found sockname: %d", ntohl(own.sin_addr.s_addr));
+
         mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
 
         ASSERT(mapping);
@@ -1404,7 +1406,8 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
-        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP, &app->tcpsock);
+        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP,
+                               &app->tcpsock);
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");
                 sock_release(app->udpsock);
@@ -1468,7 +1471,7 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         lock_sock(app->udpsock->sk);
         write_lock_bh(&app->udpsock->sk->sk_callback_lock);
         app->udpsock->sk->sk_data_ready = app->udpsock->sk->sk_user_data;
-        app->udpsock->sk->sk_user_data = NULL;
+        app->udpsock->sk->sk_user_data  = NULL;
         write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
         release_sock(app->udpsock->sk);
 
@@ -1479,7 +1482,7 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         lock_sock(app->tcpsock->sk);
         write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
         app->tcpsock->sk->sk_data_ready = app->tcpsock->sk->sk_user_data;
-        app->tcpsock->sk->sk_user_data = NULL;
+        app->tcpsock->sk->sk_user_data  = NULL;
         write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
         release_sock(app->tcpsock->sk);
 
@@ -1566,7 +1569,7 @@ static int get_nxt_val(char ** dst,
 static int ip_string_to_int(char *   ip_s,
                             __be32 * ip_a)
 {
-        char         *tmp;
+        char *       tmp;
         unsigned int nr, i;
 
         ASSERT(ip_s);
@@ -1618,6 +1621,177 @@ static void undo_assignment(struct ipcp_instance_data * data)
         clear_exp_reg(data);
 }
 
+static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
+{
+        unsigned int       len, port_nr;
+        __be32             ip_addr;
+        char               * ap, * ae, * ip, * port;
+        struct name *      app_name;
+        struct dir_entry * dir_entry;
+
+        ASSERT(*blob);
+
+        dir_entry = rkmalloc(sizeof(struct dir_entry),
+                             GFP_KERNEL);
+
+        /* len:aplen:aelen:iplen:port */
+        /* Get AP name */
+        len = 0;
+        ap  = 0;
+        if (get_nxt_val(&ap, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(dir_entry);
+                return -1;
+        }
+
+        /* Get AE name */
+        ae = 0;
+        if (get_nxt_val(&ae, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(ap);
+                rkfree(dir_entry);
+                return -1;
+        }
+
+        /* Get IP address */
+        ip = 0;
+        if (get_nxt_val(&ip, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(dir_entry);
+                return -1;
+        }
+
+        if (ip_string_to_int(ip, &ip_addr)) {
+                LOG_ERR("Failed to convert ip to int");
+                rkfree(ip);
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(dir_entry);
+                return -1;
+        }
+        rkfree(ip);
+
+        /* Get port number */
+        port = 0;
+        if (get_nxt_val(&port, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(dir_entry);
+                return -1;
+        }
+
+        if (kstrtouint(port, 10, &port_nr)) {
+                LOG_ERR("Failed to convert int");
+                rkfree(port);
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(dir_entry);
+                return -1;
+        }
+        rkfree(port);
+
+        app_name = name_create();
+        if (!name_init_with(app_name,
+                            ap, rkstrdup_ni(""),
+                            ae, rkstrdup_ni(""))) {
+                LOG_ERR("Failed to init name");
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(dir_entry);
+                return -1;
+        }
+
+        INIT_LIST_HEAD(&dir_entry->list);
+        dir_entry->app_name   = app_name;
+        dir_entry->ip_address = ip_addr;
+        dir_entry->port       = port_nr;
+
+        spin_lock(&data->dir_lock);
+        list_add(&dir_entry->list, &data->directory);
+        spin_unlock(&data->dir_lock);
+
+        LOG_DBG("Added a new dir entry");
+
+        return 0;
+}
+
+static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
+{
+        struct exp_reg * exp_reg;
+        unsigned int     len, port_nr;
+        char           * ap, * ae, * port;
+        struct name *    app_name;
+
+        ASSERT(*blob);
+
+        exp_reg = rkmalloc(sizeof(struct exp_reg),
+                           GFP_KERNEL);
+
+        /* len:aplen:aelen:port */
+        /* Get AP name */
+        len = 0;
+        ap  = 0;
+        if (get_nxt_val(&ap, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(exp_reg);
+                return -1;
+        }
+
+        /* Get AE name */
+        ae = 0;
+        if (get_nxt_val(&ae, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(ap);
+                rkfree(exp_reg);
+                return -1;
+        }
+
+        /* Get port number */
+        port = 0;
+        if (get_nxt_val(&port, blob, &len)) {
+                LOG_ERR("Failed to get next value");
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(exp_reg);
+                return -1;
+        }
+
+        if (kstrtouint(port, 10, &port_nr)) {
+                LOG_ERR("Failed to convert int");
+                rkfree(port);
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(exp_reg);
+                return -1;
+        }
+        rkfree(port);
+
+        INIT_LIST_HEAD(&exp_reg->list);
+        app_name = name_create();
+        if (!name_init_with(app_name,
+                            ap, rkstrdup_ni(""),
+                            ae, rkstrdup_ni(""))) {
+                LOG_ERR("Failed to init name");
+                rkfree(ae);
+                rkfree(ap);
+                rkfree(exp_reg);
+                return -1;
+        }
+        exp_reg->app_name = app_name;
+        exp_reg->port     = port_nr;
+
+        spin_lock(&data->exp_lock);
+        list_add(&exp_reg->list, &data->exp_regs);
+        spin_unlock(&data->exp_lock);
+
+        LOG_DBG("Added a new exp reg entry");
+
+        return 0;
+}
+
 static int parse_assign_conf(struct ipcp_instance_data * data,
                              const struct dif_config *   config)
 {
@@ -1626,8 +1800,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(config);
 
-        list_for_each_entry(tmp, &(config->
-                                   ipcp_config_entries), next) {
+        list_for_each_entry(tmp, &(config->ipcp_config_entries), next) {
                 const struct ipcp_config_entry * entry = tmp->entry;
                 /*
                  *  Want to get an interface name here
@@ -1658,17 +1831,10 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         LOG_DBG("Got hostname %u", data->host_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
-                        unsigned int       len, port_nr;
-                        __be32             ip_addr;
-                        char               *val, *copy;
-                        char               *ap, *ae, *ip, *port;
-                        struct name *      app_name;
-                        struct dir_entry * dir_entry;
+                        int  count;
+                        char * val, * copy;
 
                         ASSERT(entry->value);
-
-                        dir_entry = rkmalloc(sizeof(struct dir_entry),
-                                             GFP_KERNEL);
 
                         copy = rkstrdup_ni(entry->value);
                         if (!copy) {
@@ -1677,98 +1843,25 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         }
                         val = copy;
 
-                        /* len:aplen:aelen:iplen:port */
-                        /* Get AP name */
-                        len = 0;
-                        ap = 0;
-                        if (get_nxt_val(&ap, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
+                        if (get_nxt_len(&val, &count)) {
+                                LOG_ERR("Failed to get number of objects");
                                 rkfree(copy);
                                 return -1;
                         }
 
-                        /* Get AE name */
-                        ae = 0;
-                        if (get_nxt_val(&ae, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
+                        while (count-- > 0) {
+                                if (parse_dir_entry(data, &val) < 0) {
+                                        rkfree(copy);
+                                        return -1;
+                                }
                         }
-
-                        /* Get IP address */
-                        ip = 0;
-                        if (get_nxt_val(&ip, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-
-                        if (ip_string_to_int(ip, &ip_addr)) {
-                                LOG_ERR("Failed to convert ip to int");
-                                rkfree(ip);
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-                        rkfree(ip);
-
-                        /* Get port number */
-                        port = 0;
-                        if (get_nxt_val(&port, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-
-                        if (kstrtouint(port, 10, &port_nr)) {
-                                LOG_ERR("Failed to convert int");
-                                rkfree(port);
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-                        rkfree(port);
-
-                        INIT_LIST_HEAD(&dir_entry->list);
-                        app_name = name_create();
-                        if (!name_init_with(app_name,
-                                            ap, rkstrdup_ni(""),
-                                            ae, rkstrdup_ni(""))) {
-                                LOG_ERR("Failed to init name");
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-                        dir_entry->app_name = app_name;
-                        dir_entry->ip_address = ip_addr;
-                        dir_entry->port = port_nr;
-
-                        spin_lock(&data->dir_lock);
-                        list_add(&dir_entry->list, &data->directory);
-                        spin_unlock(&data->dir_lock);
 
                         rkfree(copy);
-
-                        LOG_DBG("Added a new dir entry");
                 } else if (!strcmp(entry->name, "expReg")) {
-                        struct exp_reg * exp_reg;
-                        char           * val, * copy;
-                        unsigned int     len, port_nr;
-                        char           * ap, * ae, * port;
-                        struct name    * app_name;
+                        char * val, * copy;
+                        int  count;
 
                         ASSERT(entry->value);
-
-                        exp_reg = rkmalloc(sizeof(struct exp_reg),
-                                           GFP_KERNEL);
 
                         copy = rkstrdup_ni(entry->value);
                         if (!copy) {
@@ -1777,66 +1870,20 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                         }
                         val = copy;
 
-                        /* len:aplen:aelen:port */
-                        /* Get AP name */
-                        len = 0;
-                        ap = 0;
-                        if (get_nxt_val(&ap, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
+                        if (get_nxt_len(&val, &count)) {
+                                LOG_ERR("Failed to get number of objects");
                                 rkfree(copy);
                                 return -1;
                         }
 
-                        /* Get AE name */
-                        ae = 0;
-                        if (get_nxt_val(&ae, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
+                        while (count-- > 0) {
+                                if (parse_exp_reg_entry(data, &val) < 0) {
+                                        rkfree(copy);
+                                        return -1;
+                                }
                         }
-
-                        /* Get port number */
-                        port = 0;
-                        if (get_nxt_val(&port, &val, &len)) {
-                                LOG_ERR("Failed to get next value");
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-
-                        if (kstrtouint(port, 10, &port_nr)) {
-                                LOG_ERR("Failed to convert int");
-                                rkfree(port);
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-                        rkfree(port);
-
-                        INIT_LIST_HEAD(&exp_reg->list);
-                        app_name = name_create();
-                        if (!name_init_with(app_name,
-                                            ap, rkstrdup_ni(""),
-                                            ae, rkstrdup_ni(""))) {
-                                LOG_ERR("Failed to init name");
-                                rkfree(ae);
-                                rkfree(ap);
-                                rkfree(copy);
-                                return -1;
-                        }
-                        exp_reg->app_name = app_name;
-                        exp_reg->port = port_nr;
-
-                        spin_lock(&data->exp_lock);
-                        list_add(&exp_reg->list, &data->exp_regs);
-                        spin_unlock(&data->exp_lock);
 
                         rkfree(copy);
-
-                        LOG_DBG("Added a new exp reg entry");
                 } else
                         LOG_WARN("Unknown config param: %s", entry->name);
         }
@@ -1986,7 +2033,7 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                              struct sdu *                sdu)
 {
         struct shim_tcp_udp_flow * flow;
-        int size;
+        int                        size;
 
         ASSERT(data);
         ASSERT(sdu);
