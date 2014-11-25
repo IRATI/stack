@@ -878,22 +878,22 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
 
-        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
-                                            data->app_name);
-        if (!user_ipcp)
-                user_ipcp = kfa_ipcp_instance(data->kfa);
-        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-        if (!user_ipcp || !ipcp) {
-                LOG_ERR("Could not find required ipcps");
-                sdu_destroy(du);
-                gha_destroy(ghaddr);
-                return -1;
-        }
-
         spin_lock(&data->lock);
         flow = find_flow_by_gha(data, ghaddr);
         if (!flow) {
                 LOG_DBG("Have to create a new flow");
+
+                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                                    data->app_name);
+                if (!user_ipcp)
+                        user_ipcp = kfa_ipcp_instance(data->kfa);
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                if (!user_ipcp || !ipcp) {
+                        LOG_ERR("Could not find required ipcps");
+                        sdu_destroy(du);
+                        gha_destroy(ghaddr);
+                        return -1;
+                }
 
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
