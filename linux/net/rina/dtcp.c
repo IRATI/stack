@@ -178,6 +178,12 @@ struct dtcp {
         /* FIXME: Add QUEUE(rx_control_queue, ...) */
 };
 
+struct dt * dtcp_dt(struct dtcp * dtcp)
+{
+        return dtcp->parent;
+}
+EXPORT_SYMBOL(dtcp_dt);
+
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 {
         if (!dtcp)

@@ -480,6 +480,7 @@ seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 
         return tmp;
 }
+EXPORT_SYMBOL(dt_sv_rcv_lft_win);
 
 int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 {

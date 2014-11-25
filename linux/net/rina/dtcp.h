@@ -70,4 +70,6 @@ int          dtcp_set_policy_set_param(struct dtcp * dtcp,
 
 struct dtcp * dtcp_from_component(struct rina_component * component);
 
+struct dt * dtcp_dt(struct dtcp * dtcp);
+
 #endif

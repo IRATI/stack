@@ -36,15 +36,70 @@
 #include "debug.h"
 
 static int
-default_flow_init(struct dtcp_ps * instance)
+default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
 {
-        return 0;
-}
+        struct dtcp * dtcp = ps->dm;
+        int                  retval = 0;
+        struct dtcp_config * dtcp_cfg;
 
-static int
-default_sv_update(struct dtcp_ps * instance, seq_num_t seq)
-{
-        return 0;
+        bool                 flow_ctrl;
+        bool                 win_based;
+        bool                 rate_based;
+        bool                 rtx_ctrl;
+        seq_num_t            LWE;
+
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        dtcp_cfg = dtcp_config_get(dtcp);
+        if (!dtcp_cfg)
+                return -1;
+
+        flow_ctrl  = dtcp_flow_ctrl(dtcp_cfg);
+        win_based  = dtcp_window_based_fctrl(dtcp_cfg);
+        rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
+        rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
+
+        if (flow_ctrl) {
+                if (win_based) {
+                        if (ps->rcvr_flow_control(ps, seq)) {
+                                LOG_ERR("Failed Rcvr Flow Control policy");
+                                retval = -1;
+                        }
+                }
+
+                if (rate_based) {
+                        LOG_DBG("Rate based fctrl invoked");
+                        if (ps->rate_reduction(ps)) {
+                                LOG_ERR("Failed Rate Reduction policy");
+                                retval = -1;
+                        }
+                }
+
+                if (!rtx_ctrl) {
+                        LOG_DBG("Receiving flow ctrl invoked");
+                        if (ps->receiving_flow_control(ps, seq)) {
+                                LOG_ERR("Failed Receiving Flow Control "
+                                        "policy");
+                                retval = -1;
+                        }
+
+                        return retval;
+                }
+        }
+        LWE = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
+
+        if (rtx_ctrl) {
+                LOG_DBG("Retransmission ctrl invoked");
+                if (ps->rcvr_ack(ps, seq)) {
+                        LOG_ERR("Failed Rcvr Ack policy");
+                        retval = -1;
+                }
+        }
+
+        return retval;
 }
 
 static int
@@ -191,7 +246,7 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->base.set_policy_set_param = dtcp_ps_set_policy_set_param;
         ps->dm              = dtcp;
         ps->priv            = NULL;
-        ps->flow_init = default_flow_init;
+        ps->flow_init = NULL;
         ps->sv_update = default_sv_update;
         ps->lost_control_pdu = default_lost_control_pdu;
         ps->rtt_estimator = default_rtt_estimator;
