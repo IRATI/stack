@@ -197,19 +197,20 @@ public:
 private:
         Types type_;
         const rina::DIFConfiguration &dif_config_;
-    const rina::DIFInformation &dif_info_;
+        const rina::DIFInformation &dif_info_;
 
-        bool validateShimEth();
-        bool validateShimDummy();
+	bool validateShimEth();
+	bool validateShimHv();
+	bool validateShimDummy();
         bool validateShimTcpUdp();
-        bool validateShimHv();
         bool validateNormal();
-        bool validateBasicDIFConfigs();
-        bool validateConfigParameters();
-        bool dataTransferConstants();
-        bool qosCubes();
-        bool knownIPCProcessAddresses();
-        bool pdufTableGeneratorConfiguration();
+	bool validateBasicDIFConfigs();
+	bool validateConfigParameters(const std::vector< std::string >&
+                                      expected_params);
+	bool dataTransferConstants();
+	bool qosCubes();
+	bool knownIPCProcessAddresses();
+	bool pdufTableGeneratorConfiguration();
 };
 
 void register_handlers_all(EventLoop& loop);
