@@ -342,26 +342,17 @@ default_rcvr_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 }
 
 static int
-default_rate_reduction(struct dtcp_ps * instance)
+default_rate_reduction(struct dtcp_ps * ps)
 {
-        return 0;
-}
+        struct dtcp * dtcp = ps->dm;
 
-static int
-default_rcvr_control_ack(struct dtcp_ps * instance)
-{
-        return 0;
-}
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
 
-static int
-default_no_rate_slow_down(struct dtcp_ps * instance)
-{
-        return 0;
-}
+        LOG_MISSING;
 
-static int
-default_no_override_default_peak(struct dtcp_ps * instance)
-{
         return 0;
 }
 
@@ -418,9 +409,9 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->reconcile_flow_conflict     = NULL;
         ps->rcvr_flow_control           = default_rcvr_flow_control;
         ps->rate_reduction              = default_rate_reduction;
-        ps->rcvr_control_ack            = default_rcvr_control_ack;
-        ps->no_rate_slow_down           = default_no_rate_slow_down;
-        ps->no_override_default_peak    = default_no_override_default_peak;
+        ps->rcvr_control_ack            = NULL;
+        ps->no_rate_slow_down           = NULL;
+        ps->no_override_default_peak    = NULL;
 
         return &ps->base;
 }
