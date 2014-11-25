@@ -35,6 +35,126 @@
 #include "dt-utils.h"
 #include "debug.h"
 
+static int
+default_flow_init(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_sv_update(struct dtcp_ps * instance, seq_num_t seq)
+{
+        return 0;
+}
+
+static int
+default_lost_control_pdu(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_rtt_estimator(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_retransmission_timer_expiry(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_received_retransmission(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_rcvr_ack(struct dtcp_ps * instance, seq_num_t seq)
+{
+        return 0;
+}
+
+static int
+default_sender_ack(struct dtcp_ps * instance, seq_num_t seq)
+{
+        return 0;
+}
+
+static int
+default_sending_ack(struct dtcp_ps * instance, seq_num_t seq)
+{
+        return 0;
+}
+
+static int
+default_receiving_ack_list(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_initial_rate(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_receiving_flow_control(struct dtcp_ps * instance, seq_num_t seq)
+{
+        return 0;
+}
+
+static int
+default_update_credit(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_flow_control_overrun(struct dtcp_ps * instance, struct pdu * pdu)
+{
+        return 0;
+}
+
+static int
+default_reconcile_flow_conflict(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_rcvr_flow_control(struct dtcp_ps * instance, seq_num_t seq)
+{
+        return 0;
+}
+
+static int
+default_rate_reduction(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_rcvr_control_ack(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_no_rate_slow_down(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
+static int
+default_no_override_default_peak(struct dtcp_ps * instance)
+{
+        return 0;
+}
+
 static int dtcp_ps_set_policy_set_param(struct ps_base * bps,
                                        const char    * name,
                                        const char    * value)
@@ -71,7 +191,26 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->base.set_policy_set_param = dtcp_ps_set_policy_set_param;
         ps->dm              = dtcp;
         ps->priv            = NULL;
-        // TODO
+        ps->flow_init = default_flow_init;
+        ps->sv_update = default_sv_update;
+        ps->lost_control_pdu = default_lost_control_pdu;
+        ps->rtt_estimator = default_rtt_estimator;
+        ps->retransmission_timer_expiry = default_retransmission_timer_expiry;
+        ps->received_retransmission = default_received_retransmission;
+        ps->rcvr_ack = default_rcvr_ack;
+        ps->sender_ack = default_sender_ack;
+        ps->sending_ack = default_sending_ack;
+        ps->receiving_ack_list = default_receiving_ack_list;
+        ps->initial_rate = default_initial_rate;
+        ps->receiving_flow_control = default_receiving_flow_control;
+        ps->update_credit = default_update_credit;
+        ps->flow_control_overrun = default_flow_control_overrun;
+        ps->reconcile_flow_conflict = default_reconcile_flow_conflict;
+        ps->rcvr_flow_control = default_rcvr_flow_control;
+        ps->rate_reduction = default_rate_reduction;
+        ps->rcvr_control_ack = default_rcvr_control_ack;
+        ps->no_rate_slow_down = default_no_rate_slow_down;
+        ps->no_override_default_peak = default_no_override_default_peak;
 
         return &ps->base;
 }

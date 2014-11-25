@@ -33,6 +33,28 @@ struct dtcp_ps {
         struct ps_base base;
 
         /* Behavioural policies. */
+        int (* flow_init)(struct dtcp_ps * instance);
+        int (* sv_update)(struct dtcp_ps * instance, seq_num_t seq);
+        int (* lost_control_pdu)(struct dtcp_ps * instance);
+        int (* rtt_estimator)(struct dtcp_ps * instance);
+        int (* retransmission_timer_expiry)(struct dtcp_ps * instance);
+        int (* received_retransmission)(struct dtcp_ps * instance);
+        int (* rcvr_ack)(struct dtcp_ps * instance, seq_num_t seq);
+        int (* sender_ack)(struct dtcp_ps * instance, seq_num_t seq);
+        int (* sending_ack)(struct dtcp_ps * instance, seq_num_t seq);
+        int (* receiving_ack_list)(struct dtcp_ps * instance);
+        int (* initial_rate)(struct dtcp_ps * instance);
+        int (* receiving_flow_control)(struct dtcp_ps * instance,
+                                       seq_num_t seq);
+        int (* update_credit)(struct dtcp_ps * instance);
+        int (* flow_control_overrun)(struct dtcp_ps * instance,
+                                     struct pdu * pdu);
+        int (* reconcile_flow_conflict)(struct dtcp_ps * instance);
+        int (* rcvr_flow_control)(struct dtcp_ps * instance, seq_num_t seq);
+        int (* rate_reduction)(struct dtcp_ps * instance);
+        int (* rcvr_control_ack)(struct dtcp_ps * instance);
+        int (* no_rate_slow_down)(struct dtcp_ps * instance);
+        int (* no_override_default_peak)(struct dtcp_ps * instance);
 
         /* Parametric policies. */
         // TODO
