@@ -1077,6 +1077,8 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
 
                 num_frames++;
 
+                LOG_DBG("rcv_worker processed one packet");
+
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);

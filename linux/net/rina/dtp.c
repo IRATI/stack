@@ -944,6 +944,7 @@ static void tf_a(void * data)
         struct dtp *           dtp;
         struct rwq_work_item * item;
 
+        LOG_DBG("A timer handler started");
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
