@@ -277,20 +277,39 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 }
 
 static int
-default_receiving_ack_list(struct dtcp_ps * instance)
+default_receiving_flow_control(struct dtcp_ps * ps, seq_num_t seq)
 {
-        return 0;
-}
+        struct dtcp * dtcp = ps->dm;
+        struct pdu * pdu;
+        struct pci * pci;
+        seq_num_t    snd_lft, snd_rt, LWE;
 
-static int
-default_initial_rate(struct dtcp_ps * instance)
-{
-        return 0;
-}
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_FC);
+        if (!pdu)
+                return -1;
 
-static int
-default_receiving_flow_control(struct dtcp_ps * instance, seq_num_t seq)
-{
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        snd_lft = snd_lft_win(dtcp);
+        snd_rt  = snd_rt_wind_edge(dtcp);
+        LWE     = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
+
+        pci_control_new_left_wind_edge_set(pci, LWE);
+        pci_control_new_rt_wind_edge_set(pci, rcvr_rt_wind_edge(dtcp));
+        pci_control_my_left_wind_edge_set(pci, snd_lft);
+        pci_control_my_rt_wind_edge_set(pci, snd_rt);
+
+        if (pdu_send(dtcp, pdu))
+                return -1;
+
         return 0;
 }
 
@@ -387,8 +406,8 @@ dtcp_ps_default_create(struct rina_component * component)
         ps->rcvr_ack                    = default_rcvr_ack;
         ps->sender_ack                  = default_sender_ack;
         ps->sending_ack                 = default_sending_ack;
-        ps->receiving_ack_list          = default_receiving_ack_list;
-        ps->initial_rate                = default_initial_rate;
+        ps->receiving_ack_list          = NULL;
+        ps->initial_rate                = NULL;
         ps->receiving_flow_control      = default_receiving_flow_control;
         ps->update_credit               = default_update_credit;
         ps->flow_control_overrun        = default_flow_control_overrun;
