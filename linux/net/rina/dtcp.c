@@ -31,6 +31,12 @@
 #include "dtp.h"
 #include "dt-utils.h"
 #include "dtcp-utils.h"
+#include "ps-factory.h"
+#include "dtcp-ps.h"
+
+static struct policy_set_list policy_sets = {
+        .head = LIST_HEAD_INIT(policy_sets.head)
+};
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
@@ -162,6 +168,7 @@ struct dtcp {
          *       no traffic
          */
         struct dtcp_sv *       sv; /* The state-vector */
+        struct rina_component  base;
         struct dtcp_policies * policies;
         struct connection *    conn;
         struct rmt *           rmt;
@@ -1109,6 +1116,59 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         return 0;
 }
 
+struct dtcp *
+dtcp_from_component(struct rina_component * component)
+{
+        return container_of(component, struct dtcp, base);
+}
+EXPORT_SYMBOL(dtcp_from_component);
+
+int dtcp_select_policy_set(struct dtcp * dtcp,
+                           const string_t * path,
+                           const string_t * name)
+{
+        if (path && strcmp(path, "")) {
+                LOG_ERR("This component has no selectable subcomponents");
+                return -1;
+        }
+
+        return base_select_policy_set(&dtcp->base, &policy_sets, name);
+}
+EXPORT_SYMBOL(dtcp_select_policy_set);
+
+int dtcp_set_policy_set_param(struct dtcp* dtcp,
+                              const char * path,
+                              const char * name,
+                              const char * value)
+{
+        struct dtcp_ps *ps;
+        int ret = -1;
+
+        if (!dtcp|| !path || !name || !value) {
+                LOG_ERRF("NULL arguments %p %p %p %p", dtcp, path, name, value);
+                return -1;
+        }
+
+        LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
+
+        if (strcmp(path, "") == 0) {
+                /* The request addresses this DTP instance. */
+                rcu_read_lock();
+                ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
+                if (!ps) {
+                        LOG_ERR("No policy-set selected for this DTP");
+                } else {
+                        LOG_ERR("Unknown DTP parameter policy '%s'", name);
+                }
+                rcu_read_unlock();
+        } else {
+                ret = base_set_policy_set_param(&dtcp->base, path, name, value);
+        }
+
+        return ret;
+}
+EXPORT_SYMBOL(dtcp_set_policy_set_param);
+
 struct dtcp * dtcp_create(struct dt *         dt,
                           struct connection * conn,
                           struct rmt *        rmt)
@@ -1238,3 +1298,19 @@ int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
         return 0;
 }
 EXPORT_SYMBOL(dtcp_snd_lf_win_set);
+
+int dtcp_ps_publish(struct ps_factory * factory)
+{
+        if (factory == NULL) {
+                LOG_ERR("%s: NULL factory", __func__);
+                return -1;
+        }
+
+        return ps_publish(&policy_sets, factory);
+}
+EXPORT_SYMBOL(dtcp_ps_publish);
+
+int dtcp_ps_unpublish(const char * name)
+{ return ps_unpublish(&policy_sets, name); }
+EXPORT_SYMBOL(dtcp_ps_unpublish);
+

@@ -24,6 +24,7 @@
 #include "common.h"
 #include "du.h"
 #include "dt.h"
+#include "ps-factory.h"
 
 struct dtcp_config;
 struct dtcp_fctrl_config;
@@ -58,5 +59,15 @@ int                  dtcp_snd_lf_win_set(struct dtcp * instance,
                                          seq_num_t seq_num);
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
+
+int          dtcp_select_policy_set(struct dtcp * dtcp, const string_t *path,
+                                    const string_t * name);
+
+int          dtcp_set_policy_set_param(struct dtcp * dtcp,
+                                       const string_t * path,
+                                       const string_t * name,
+                                       const string_t * value);
+
+struct dtcp * dtcp_from_component(struct rina_component * component);
 
 #endif

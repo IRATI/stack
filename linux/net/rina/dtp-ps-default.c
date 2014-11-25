@@ -1,5 +1,5 @@
 /*
- * Default policy set for RMT
+ * Default policy set for DTP
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>

@@ -39,7 +39,8 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina-default-plugin.o
 
 rina-default-plugin-y := default-plugin.o rmt-ps-default.o	\
-				dtp-ps-default.o
+				dtp-ps-default.o		\
+				dtcp-ps-default.o
 
 obj-$(CONFIG_VMPI) += vmpi/
 obj-$(CONFIG_RINA) += ipcps/
