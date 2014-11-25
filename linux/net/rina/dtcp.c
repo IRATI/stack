@@ -224,7 +224,7 @@ static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
         return 0;
 }
 
-static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
+seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 {
         seq_num_t tmp;
 
@@ -237,6 +237,7 @@ static seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 
         return tmp;
 }
+EXPORT_SYMBOL(last_rcv_ctrl_seq);
 
 static void flow_ctrl_inc(struct dtcp * dtcp)
 {
@@ -428,10 +429,10 @@ EXPORT_SYMBOL(pdu_ctrl_create_ni);
 
 /* This is 0x8803 PDU type */
 /* NOTE: Specs do not detail it structure */
-static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
-                                        seq_num_t     last_ctrl_seq_rcvd,
-                                        seq_num_t     snd_left_wind_edge,
-                                        seq_num_t     snd_rt_wind_edge)
+struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
+                                 seq_num_t     last_ctrl_seq_rcvd,
+                                 seq_num_t     snd_left_wind_edge,
+                                 seq_num_t     snd_rt_wind_edge)
 {
         struct pdu * pdu;
         struct pci * pci;
@@ -451,6 +452,7 @@ static struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
 
         return pdu;
 }
+EXPORT_SYMBOL(pdu_ctrl_ack_create);
 
 static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 {

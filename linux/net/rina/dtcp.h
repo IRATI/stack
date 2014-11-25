@@ -78,5 +78,10 @@ seq_num_t snd_rt_wind_edge(struct dtcp * dtcp);
 seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp);
 void dump_we(struct dtcp * dtcp, struct pci *  pci);
 int pdu_send(struct dtcp * dtcp, struct pdu * pdu);
+seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp);
+struct pdu * pdu_ctrl_ack_create(struct dtcp * dtcp,
+                                 seq_num_t     last_ctrl_seq_rcvd,
+                                 seq_num_t     snd_left_wind_edge,
+                                 seq_num_t     snd_rt_wind_edge);
 
 #endif

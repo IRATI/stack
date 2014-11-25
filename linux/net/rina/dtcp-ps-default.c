@@ -249,8 +249,30 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 }
 
 static int
-default_sending_ack(struct dtcp_ps * instance, seq_num_t seq)
+default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
+        struct dtcp * dtcp = ps->dm;
+        struct pdu * pdu_ctrl;
+        seq_num_t    last_rcv_ctrl, snd_lft, snd_rt;
+
+        if (!dtcp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
+        snd_lft       = snd_lft_win(dtcp);
+        snd_rt        = snd_rt_wind_edge(dtcp);
+        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                            last_rcv_ctrl,
+                                            snd_lft,
+                                            snd_rt);
+        if (!pdu_ctrl)
+                return -1;
+
+        if (pdu_send(dtcp, pdu_ctrl))
+                return -1;
+
         return 0;
 }
 
