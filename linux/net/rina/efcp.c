@@ -66,10 +66,14 @@ static int efcp_select_policy_set(struct efcp * efcp,
         if (strncmp(path, "dtp", cmplen) == 0) {
                 return dtp_select_policy_set(dt_dtp(efcp->dt), path + offset,
                                              ps_name);
-        } else {
-                LOG_ERR("The selected component does not exist");
-                return -1;
+        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
+                return dtcp_select_policy_set(dt_dtcp(efcp->dt), path + offset,
+                                             ps_name);
         }
+
+        /* Currently there are no policy sets specified for EFCP (strictly
+         * speaking). */
+        LOG_ERR("The selected component does not exist");
 
         return -1;
 }
