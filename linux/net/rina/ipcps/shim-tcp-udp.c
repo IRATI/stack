@@ -1041,7 +1041,8 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
         size = recv_msg(sock, NULL, 0, &flow->buf[start], flow->bytes_left);
         if (size <= 0) {
-                LOG_ERR("error during tcp receive: %d", size);
+                if (size != -EAGAIN)
+                        LOG_ERR("error during tcp receive: %d", size);
                 return size;
         }
 
@@ -1328,8 +1329,6 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 
                 if (recvd->sk != NULL)
                         tcp_udp_rcv_process_msg(recvd->sk);
-                else
-                        LOG_DBG("null pointer in worker (good thing)");
 
                 rkfree(recvd);
 
