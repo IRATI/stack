@@ -23,6 +23,7 @@ obj-$(CONFIG_RINA_PERSONALITY_DEFAULT) +=	\
 	rina-personality-default.o
 
 rina-personality-default-y :=					\
+	sdu-protection.o					\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pft.o rmt.o						\
