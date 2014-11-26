@@ -287,6 +287,15 @@ public:
 	bool source;
 };
 
+class IFlowAllocatorPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
+public:
+        virtual Flow *newFlowRequest(IPCProcess * ipc_process,
+                        const rina::FlowRequestEvent& flowRequestEvent) = 0;
+
+        virtual ~IFlowAllocatorPs() {}
+};
+
 /// Interface that must be implementing by classes that provide
 /// the behavior of a Flow Allocator task
 class IFlowAllocator : public IPCProcessComponent {
