@@ -215,35 +215,6 @@ private:
 	void replyToIPCManager(const rina::FlowRequestEvent& event, int result);
 };
 
-/// This policy is used to convert an Allocate Request is into a create_flow request.
-/// Its primary task is to translate the request into the proper QoS-class-set, flow set,
-/// and access control capabilities.
-class INewFlowRequetPolicy {
-public:
-	virtual ~INewFlowRequetPolicy() {
-	}
-	;
-	virtual Flow * generateFlowObject(IPCProcess * ipc_process,
-			const rina::FlowRequestEvent& flowRequestEvent) = 0;
-};
-
-class SimpleNewFlowRequestPolicy: public INewFlowRequetPolicy {
-public:
-	SimpleNewFlowRequestPolicy() {
-	}
-	;
-	~SimpleNewFlowRequestPolicy() {
-	}
-	;
-	Flow * generateFlowObject(IPCProcess * ipc_process,
-			const rina::FlowRequestEvent& flowRequestEvent);
-
-private:
-	rina::QoSCube * selectQoSCube(IPCProcess * ipc_process,
-			const rina::FlowSpecification& flowSpec);
-	std::list<rina::QoSCube*> getQoSCubes(IPCProcess * ipc_process);
-};
-
 ///Implementation of the FlowAllocatorInstance
 class FlowAllocatorInstance: public IFlowAllocatorInstance,
 		public rina::BaseCDAPResponseMessageHandler {
@@ -311,7 +282,6 @@ private:
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 	ISecurityManager * security_manager_;
-	INewFlowRequetPolicy * new_flow_request_policy_;
 	FAIState state;
 
 	rina::Timer timer;

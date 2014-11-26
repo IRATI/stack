@@ -490,98 +490,6 @@ std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
 	return qosCubes;
 }
 
-//Class Simple New flow Request Policy
-Flow * SimpleNewFlowRequestPolicy::generateFlowObject(IPCProcess * ipc_process,
-		const rina::FlowRequestEvent& event)
-{
-	Flow* flow;
-	rina::QoSCube * qosCube = 0;
-
-	flow = new Flow();
-	flow->destination_naming_info = event.remoteApplicationName;
-	flow->source_naming_info = event.localApplicationName;
-	flow->hop_count = 3;
-	flow->max_create_flow_retries = 1;
-	flow->source = true;
-	flow->state = Flow::ALLOCATION_IN_PROGRESS;
-
-	std::list<rina::Connection*> connections;
-	try {
-		qosCube = selectQoSCube(ipc_process, event.flowSpecification);
-	} catch (Exception &e) {
-		delete flow;
-		throw e;
-	}
-	LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
-
-	rina::Connection * connection = new rina::Connection();
-	connection->portId = event.portId;
-	connection->sourceAddress = ipc_process->get_address();
-	connection->setQosId(1);
-	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
-	rina::ConnectionPolicies connectionPolicies = rina::ConnectionPolicies(
-			qosCube->get_efcp_policies());
-	connectionPolicies.set_in_order_delivery(qosCube->is_ordered_delivery());
-	connectionPolicies.set_partial_delivery(qosCube->is_partial_delivery());
-	if (event.flowSpecification.maxAllowableGap < 0) {
-		connectionPolicies.set_max_sdu_gap(INT_MAX);
-	} else {
-		connectionPolicies.set_max_sdu_gap(qosCube->get_max_allowable_gap());
-	}
-	connection->setPolicies(connectionPolicies);
-	connections.push_back(connection);
-
-	flow->connections = connections;
-	flow->current_connection_index = 0;
-	flow->flow_specification = event.flowSpecification;
-
-	return flow;
-}
-
-rina::QoSCube * SimpleNewFlowRequestPolicy::selectQoSCube(
-		IPCProcess * ipc_process, const rina::FlowSpecification& flowSpec)
-{
-	std::list<rina::QoSCube*> qosCubes = getQoSCubes(ipc_process);
-	if (flowSpec.maxAllowableGap < 0) {
-		return *(qosCubes.begin());
-	}
-
-	std::list<rina::QoSCube*>::const_iterator iterator;
-	rina::QoSCube* cube;
-	for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
-		cube = *iterator;
-		if (cube->get_efcp_policies().is_dtcp_present()) {
-			if (flowSpec.maxAllowableGap >= 0
-					&& cube->get_efcp_policies().get_dtcp_configuration().is_rtx_control()) {
-				return cube;
-			}
-		}
-	}
-
-	throw Exception("Could not find a QoS Cube");
-}
-
-std::list<rina::QoSCube*> SimpleNewFlowRequestPolicy::getQoSCubes(
-		IPCProcess * ipc_process)
-{
-	std::list<rina::QoSCube *> qosCubes;
-	std::list<rina::BaseRIBObject *> children;
-
-	rina::BaseRIBObject * ribObject = 0;
-	ribObject = ipc_process->rib_daemon_->readObject(
-			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
-			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
-	if (ribObject != 0) {
-		children = ribObject->get_children();
-		for (std::list<rina::BaseRIBObject *>::const_iterator it = children.begin();
-				it != children.end(); ++it) {
-			qosCubes.push_back((rina::QoSCube *) (*it)->get_value());
-		}
-	}
-
-	return qosCubes;
-}
-
 //Class Flow Allocator Instance
 FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 		IFlowAllocator * flow_allocator,
@@ -589,7 +497,6 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 {
 	initialize(ipc_process, flow_allocator, port_id);
 	cdap_session_manager_ = cdap_session_manager;
-	new_flow_request_policy_ = new SimpleNewFlowRequestPolicy();
 	LOG_DBG(
 			"Created flow allocator instance to manage the flow identified by portId %d ",
 			port_id);
@@ -599,7 +506,6 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 		IFlowAllocator * flow_allocator, int port_id)
 {
 	initialize(ipc_process, flow_allocator, port_id);
-	new_flow_request_policy_ = 0;
 	LOG_DBG(
 			"Created flow allocator instance to manage the flow identified by portId %d ",
 			port_id);
@@ -607,10 +513,6 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 
 FlowAllocatorInstance::~FlowAllocatorInstance()
 {
-	if (new_flow_request_policy_) {
-		delete new_flow_request_policy_;
-	}
-
 	if (flow_) {
 		delete flow_;
 	}
@@ -677,11 +579,12 @@ void FlowAllocatorInstance::set_allocate_response_message_handle(
 void FlowAllocatorInstance::submitAllocateRequest(
 		const rina::FlowRequestEvent& event)
 {
+        IFlowAllocatorPs * faps = dynamic_cast<IFlowAllocatorPs *>(
+                                                flow_allocator_->ps);
 	rina::AccessGuard g(*lock_);
 
 	flow_request_event_ = event;
-	flow_ = new_flow_request_policy_->generateFlowObject(ipc_process_,
-			flow_request_event_);
+	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
 
 	LOG_DBG("Generated flow object");
 
