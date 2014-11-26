@@ -29,7 +29,7 @@ struct sdup_cksum * sdup_cksum_create();
 int                 sdup_cksum_destroy(struct sdup_cksum * inst);
 
 int                 sdup_cksum_add(struct sdup_cksum * inst,
-                                   struct pdu_ser * pdu); 
+                                   struct pdu_ser * pdu);
 int                 sdup_cksum_update(struct sdup_cksum * inst,
                                       struct pdu_ser * pdu);
 int                 sdup_cksum_check(struct sdup_cksum * inst,
