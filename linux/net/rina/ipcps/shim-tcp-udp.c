@@ -794,7 +794,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         if (!flow) {
                 LOG_DBG("udp_process_msg: no flow found, creating it");
 
-                flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
+                flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
                         spin_unlock(&data->flow_lock);
                         LOG_ERR("Could not allocate flow");
@@ -1188,17 +1188,15 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 acsock->sk->sk_data_ready = tcp_udp_rcv;
                 write_unlock_bh(&acsock->sk->sk_callback_lock);
 
-                spin_lock(&data->flow_lock);
-
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
                 if (!flow) {
-                        spin_unlock(&data->flow_lock);
-
                         LOG_ERR("Could not allocate flow");
 
                         sock_release(acsock);
                         return -1;
                 }
+
+                spin_lock(&data->flow_lock);
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->fspec_id = 1;
