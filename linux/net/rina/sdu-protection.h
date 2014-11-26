@@ -25,49 +25,32 @@
 
 struct sdup_cksum;
 
-struct sdup_cksum * sdup_cksum_create(const char * name,
-                                      (size_t)(* cksum_sizeof)(void),
-                                      (void)  (* cksum_calc)(void * buffer,
-                                                             size_t size),
-                                      (void)  (* cksum_update)(void * buffer,
-                                                               size_t size));
-void                sdup_cksum_destroy(sdup_cksum * d);
+struct sdup_cksum * sdup_cksum_create();
+int                 sdup_cksum_destroy(struct sdup_cksum * inst);
 
-bool                sdup_cksum_is_present(struct sdup_cksum * d,
-                                          struct sdu *        s);
-bool                sdup_cksum_add(struct sdup_cksum * d,    struct sdu * s);
-bool                sdup_cksum_remove(struct sdup_cksum * d, struct sdu * s);
-bool                sdup_cksum_is_ok(struct sdup_cksum * d,  struct sdu * s);
-void                sdup_cksum_update(struct sdup_cksum * d, struct sdu * s);
+int                 sdup_cksum_add(struct sdup_cksum * inst,
+                                   struct pdu_ser * p); 
+int                 sdup_cksum_add_with_cksum(struct sdup_cksum * inst,
+                                              struct pdu_ser * p,
+                                              struct buffer * cksum);
+int                 sdup_cksum_is_ok(struct sdup_cksum * inst,
+                                     struct pdu_ser * p);
+int                 sdup_cksum_remove(struct sdup_cksum * inst,
+                                      struct pdu_ser * p, 
+                                      struct buffer * cksum);
 
 struct sdup_ttl;
 
-#if 0
-struct sdup_cksum * sdup_cksum_create(const char * name,
-                                      (size_t)(* cksum_sizeof)(void),
-                                      (void)  (* cksum_calc)(void * buffer,
-                                                             size_t size),
-                                      (void)  (* cksum_update)(void * buffer,
-                                                               size_t size));
-void              sdup_ttl_destroy(sdup_ttl * d);
+struct sdup_ttl * sdup_ttl_create();
+int               sdup_ttl_destroy(struct sdup_ttl * inst);
 
-bool              sdup_ttl_is_present(struct sdup_ttl * d,
-                                      struct sdu *      s);
-bool              sdup_ttl_add(struct sdup_ttl * d,    struct sdu * s);
-bool              sdup_ttl_remove(struct sdup_ttl * d, struct sdu * s);
-bool              sdup_ttl_inc(struct sdup_ttl * d,  struct sdu * s);
-bool              sdup_ttl_dec(struct sdup_ttl * d,  struct sdu * s);
-void              sdup_ttl_value(struct sdup_ttl * d, struct sdu * s);
-#endif
-
-struct sdup_compr;
-
-sdup_compr *  sdup_compr_create();
-void          sdup_compr_destroy(sdup_compr * d);
-
-struct sdup_encdec;
-
-sdup_encdec * sdup_encdec_create();
-void          sdup_encdec_destroy(sdup_encdec * d);
+int               sdup_ttl_add(struct sdup_ttl * inst,
+                               struct pdu_ser * pdu);
+int               sdup_ttl_decrement(struct sdup_ttl * inst,
+                                     struct pdu_ser * pdu);
+int               sdup_ttl_is_zero(struct sdup_ttl * inst,
+                                   struct pdu_ser * pdu);
+int               sdup_ttl_remove(struct sdup_ttl * inst,
+                                  struct pdu_ser * pdu);
 
 #endif
