@@ -2,7 +2,7 @@
  * SDU Protection
  *
  *    Dimitri Staessens     <dimitri.staessens@intec.ugent.be>
- *    Sander Sander         <sander.vrijders@intec.ugent.be>
+ *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
