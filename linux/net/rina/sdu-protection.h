@@ -2,6 +2,7 @@
  * SDU Protection
  *
  *    Dimitri Staessens     <dimitri.staessens@intec.ugent.be>
+ *    Sander Sander         <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -21,5 +22,37 @@
 
 #ifndef RINA_SDU_PROTECTION_H
 #define RINA_SDU_PROTECTION_H
+
+struct sdup_cksum;
+
+struct sdup_cksum *  sdup_cksum_create(const char * name,
+                                       (size_t)(* cksum_sizeof)(void),
+                                       (void)  (* cksum_calc)(void * buffer,
+                                                              size_t size),
+                                       (void)  (* cksum_update)(void * buffer,
+                                                                size_t size));
+void                 sdup_cksum_destroy(sdup_cksum * d);
+
+bool                 sdup_cksum_is_present(struct sdup_cksum * d,
+                                           struct sdu *        s);
+bool                 sdup_cksum_add(struct sdup_cksum * d, struct sdu * s);
+bool                 sdup_cksum_remove(struct sdup_cksum * d, struct sdu * s);
+bool                 sdup_cksum_is_ok(struct sdup_cksum * d, struct sdu * s);
+void                 sdup_cksum_update(struct sdup_cksum * d, struct sdu * s);
+
+struct sdup_ttl;
+
+sdup_ttl *    sdup_ttl_create();
+void          sdup_ttl_destroy(sdup_ttl * d);
+
+struct sdup_compr;
+
+sdup_compr *  sdup_compr_create();
+void          sdup_compr_destroy(sdup_compr * d);
+
+struct sdup_encdec;
+
+sdup_encdec * sdup_encdec_create();
+void          sdup_encdec_destroy(sdup_encdec * d);
 
 #endif
