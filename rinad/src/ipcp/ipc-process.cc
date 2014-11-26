@@ -88,6 +88,11 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 throw Exception("Cannot create security manager policy-set");
         }
 
+        flow_allocator_->select_policy_set(std::string(), "default");
+        if (!flow_allocator_->ps) {
+                throw Exception("Cannot create flow allocator policy-set");
+        }
+
 	try {
 		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
 	} catch (Exception &e) {
@@ -123,6 +128,9 @@ IPCProcessImpl::~IPCProcessImpl() {
 	}
 
 	if (flow_allocator_) {
+		psDestroy("flow-allocator",
+                                flow_allocator_->selected_ps_name,
+                                flow_allocator_->ps);
 		delete flow_allocator_;
 	}
 

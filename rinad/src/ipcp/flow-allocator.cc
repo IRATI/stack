@@ -220,6 +220,21 @@ void FlowAllocator::set_dif_configuration(
 	}
 }
 
+int FlowAllocator::select_policy_set(const std::string& path,
+                                     const std::string& name)
+{
+        return select_policy_set_common(ipc_process_, "flow-allocator",
+                                        path, name);
+}
+
+int FlowAllocator::set_policy_set_param(const std::string& path,
+                                        const std::string& name,
+                                        const std::string& value)
+{
+        return set_policy_set_param_common(ipc_process_,
+                                           path, name, value);
+}
+
 void FlowAllocator::populateRIB()
 {
 	try {
@@ -453,6 +468,26 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId)
 	if (fai) {
 		delete fai;
 	}
+}
+
+std::list<rina::QoSCube*> FlowAllocator::getQoSCubes()
+{
+	std::list<rina::QoSCube *> qosCubes;
+	std::list<rina::BaseRIBObject *> children;
+
+	rina::BaseRIBObject * ribObject = 0;
+	ribObject = ipc_process_->rib_daemon_->readObject(
+			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
+			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
+	if (ribObject != 0) {
+		children = ribObject->get_children();
+		for (std::list<rina::BaseRIBObject *>::const_iterator it = children.begin();
+				it != children.end(); ++it) {
+			qosCubes.push_back((rina::QoSCube *) (*it)->get_value());
+		}
+	}
+
+	return qosCubes;
 }
 
 //Class Simple New flow Request Policy
@@ -772,6 +807,10 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(
 void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 		const std::string& object_name, int invoke_id, int underlyingPortId)
 {
+        ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
+
+        assert(smps);
+
 	lock_->lock();
 
 	LOG_DBG("Create flow request received: %s", flow->toString().c_str());
@@ -799,7 +838,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 
 	//2 Check if the source application process has access to the destination application process.
 	// If not send negative M_CREATE_R back to the sender IPC process, and do housekeeping.
-	if (!security_manager_->ps->acceptFlow(*flow_)) {
+	if (!smps->acceptFlow(*flow_)) {
 		LOG_WARN(
 				"Security Manager denied incoming flow request from application %s",
 				flow_->source_naming_info.getEncodedString().c_str());

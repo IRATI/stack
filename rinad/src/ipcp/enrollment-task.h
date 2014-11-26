@@ -357,7 +357,7 @@ private:
 
     void enrollmentCompleted();
 
-	SecurityManager * security_manager_;
+	ISecurityManager * security_manager_;
 	INamespaceManager * namespace_manager_;
 };
 

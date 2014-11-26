@@ -176,6 +176,10 @@ public:
 	~FlowAllocator();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+        int select_policy_set(const std::string& path, const std::string& name);
+        int set_policy_set_param(const std::string& path,
+                                 const std::string& name,
+                                 const std::string& value);
 	void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
 			int invoke_id, int underlying_port_id);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
@@ -188,6 +192,11 @@ public:
 			const rina::UpdateConnectionResponseEvent& event);
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
 	void removeFlowAllocatorInstance(int portId);
+
+        // Plugin support
+	std::list<rina::QoSCube*> getQoSCubes();
+        Flow * createFlow() { return new Flow(); }
+        void destroyFlow(Flow *flow) { if (flow) delete flow; }
 
 private:
 	/// Flow allocator instances, each one associated to a port-id
@@ -301,7 +310,7 @@ private:
 	Encoder * encoder_;
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
-	SecurityManager * security_manager_;
+	ISecurityManager * security_manager_;
 	INewFlowRequetPolicy * new_flow_request_policy_;
 	FAIState state;
 

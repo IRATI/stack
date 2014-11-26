@@ -41,9 +41,7 @@ private:
         // Data model of the security manager component.
         IFlowAllocator * dm;
 
-        rina::QoSCube * selectQoSCube(IPCProcess * ipc_process,
-                                      const rina::FlowSpecification& flowSpec);
-	std::list<rina::QoSCube*> getQoSCubes(IPCProcess * ipc_process);
+        rina::QoSCube * selectQoSCube(const rina::FlowSpecification& flowSpec);
 };
 
 FlowAllocatorPs::FlowAllocatorPs(IFlowAllocator * dm_) : dm(dm_)
@@ -57,7 +55,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	Flow* flow;
 	rina::QoSCube * qosCube = 0;
 
-	flow = new Flow();
+	flow = dm->createFlow();
 	flow->destination_naming_info = event.remoteApplicationName;
 	flow->source_naming_info = event.localApplicationName;
 	flow->hop_count = 3;
@@ -67,9 +65,9 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 
 	std::list<rina::Connection*> connections;
 	try {
-		qosCube = selectQoSCube(ipc_process, event.flowSpecification);
+		qosCube = selectQoSCube(event.flowSpecification);
 	} catch (Exception &e) {
-		delete flow;
+		dm->destroyFlow(flow);
 		throw e;
 	}
 	LOG_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
@@ -99,9 +97,9 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 }
 
 rina::QoSCube * FlowAllocatorPs::selectQoSCube(
-		IPCProcess * ipc_process, const rina::FlowSpecification& flowSpec)
+                const rina::FlowSpecification& flowSpec)
 {
-	std::list<rina::QoSCube*> qosCubes = getQoSCubes(ipc_process);
+	std::list<rina::QoSCube*> qosCubes = dm->getQoSCubes();
 	if (flowSpec.maxAllowableGap < 0) {
 		return *(qosCubes.begin());
 	}
@@ -119,27 +117,6 @@ rina::QoSCube * FlowAllocatorPs::selectQoSCube(
 	}
 
 	throw Exception("Could not find a QoS Cube");
-}
-
-std::list<rina::QoSCube*> FlowAllocatorPs::getQoSCubes(
-		IPCProcess * ipc_process)
-{
-	std::list<rina::QoSCube *> qosCubes;
-	std::list<rina::BaseRIBObject *> children;
-
-	rina::BaseRIBObject * ribObject = 0;
-	ribObject = ipc_process->rib_daemon_->readObject(
-			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_CLASS,
-			EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME);
-	if (ribObject != 0) {
-		children = ribObject->get_children();
-		for (std::list<rina::BaseRIBObject *>::const_iterator it = children.begin();
-				it != children.end(); ++it) {
-			qosCubes.push_back((rina::QoSCube *) (*it)->get_value());
-		}
-	}
-
-	return qosCubes;
 }
 
 int FlowAllocatorPs::set_policy_set_param(const std::string& name,

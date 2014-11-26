@@ -211,4 +211,76 @@ IPCProcess::IPCProcess()
 	rib_daemon_ = 0;
 }
 
+//Class IPCProcessComponent
+int IPCProcessComponent::select_policy_set_common(struct IPCProcess * ipcp,
+                                           const std::string& component,
+                                           const std::string& path,
+                                           const std::string& ps_name)
+{
+        IPolicySet *candidate = NULL;
+
+        if (path != std::string()) {
+                LOG_ERR("No subcomponents to address");
+                return -1;
+        }
+
+        if (!ipcp) {
+                LOG_ERR("bug: NULL ipcp reference");
+                return -1;
+        }
+
+        if (ps_name == selected_ps_name) {
+                LOG_INFO("policy set %s already selected", ps_name.c_str());
+                return 0;
+        }
+
+        candidate = ipcp->psCreate(component, ps_name, this);
+        if (!candidate) {
+                LOG_ERR("failed to allocate instance of policy set %s", ps_name.c_str());
+                return -1;
+        }
+
+        if (ps) {
+                // Remove the old one.
+                ipcp->psDestroy(component, selected_ps_name, ps);
+        }
+
+        // Install the new one.
+        ps = candidate;
+        selected_ps_name = ps_name;
+        LOG_INFO("Policy-set %s selected for component %s",
+                        ps_name.c_str(), component.c_str());
+
+        return ps ? 0 : -1;
+}
+
+int IPCProcessComponent::set_policy_set_param_common(IPCProcess * ipcp,
+                                              const std::string& path,
+                                              const std::string& param_name,
+                                              const std::string& param_value)
+{
+        LOG_DBG("set_policy_set_param(%s, %s) called",
+                param_name.c_str(), param_value.c_str());
+
+        if (!ipcp) {
+                LOG_ERR("bug: NULL ipcp reference");
+                return -1;
+        }
+
+        if (path == selected_ps_name) {
+                // This request is for the currently selected
+                // policy set, forward to it
+                return ps->set_policy_set_param(param_name, param_value);
+        } else if (path != std::string()) {
+                LOG_ERR("Invalid component address '%s'", path.c_str());
+                return -1;
+        }
+
+        // This request is for the component itself
+        LOG_ERR("No such parameter '%s' exists", param_name.c_str());
+
+        return -1;
+}
+
+
 }

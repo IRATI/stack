@@ -48,32 +48,47 @@ enum IPCProcessOperationalState {
 
 class IPCProcess;
 
-/// IPC process component interface
-class IPCProcessComponent {
-public:
-        std::string selected_ps_name;
-
-	virtual ~IPCProcessComponent(){};
-	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
-        virtual int select_policy_set(const std::string& path,
-                                      const std::string& name) {
-                (void) (path + name);
-                return -1;
-        }
-        virtual int set_policy_set_param(const std::string& path,
-                                         const std::string& name,
-                                         const std::string& value) {
-                (void) (path + name + value);
-                return -1;
-        }
-};
-
 class IPolicySet {
 public:
         virtual int set_policy_set_param(const std::string& name,
                                          const std::string& value) = 0;
         virtual ~IPolicySet() {}
+};
+
+/// IPC process component interface
+class IPCProcessComponent {
+public:
+        std::string selected_ps_name;
+        IPolicySet *ps;
+
+        IPCProcessComponent() : ps(NULL) { }
+	virtual ~IPCProcessComponent() { };
+	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+        virtual int select_policy_set(const std::string& path,
+                                      const std::string& name) {
+                // TODO it will be pure virtual as soon as overridden
+                // by all existing components
+                (void) (path+name);
+                return -1;
+        }
+        virtual int set_policy_set_param(const std::string& path,
+                                         const std::string& name,
+                                         const std::string& value) {
+                // TODO it will be pure virtual as soon as overridden
+                // by all existing components
+                (void) (path+name+value);
+                return -1;
+        }
+
+        int select_policy_set_common(struct IPCProcess * ipcp,
+                                     const std::string& component,
+                                     const std::string& path,
+                                     const std::string& ps_name);
+        int set_policy_set_param_common(IPCProcess * ipcp,
+                                        const std::string& path,
+                                        const std::string& param_name,
+                                        const std::string& param_value);
 };
 
 extern "C" {
@@ -342,6 +357,11 @@ public:
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
+
+        // Plugin support
+	virtual std::list<rina::QoSCube*> getQoSCubes() = 0;
+        virtual Flow * createFlow() = 0;
+        virtual void destroyFlow(Flow *) = 0;
 };
 
 /// Namespace Manager Interface
@@ -533,8 +553,6 @@ class SecurityManager: public ISecurityManager {
 private:
         IPCProcess *ipcp;
 public:
-        ISecurityManagerPs * ps;
-
 	SecurityManager();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
@@ -585,7 +603,7 @@ public:
 	IFlowAllocator * flow_allocator_;
 	INamespaceManager * namespace_manager_;
 	IResourceAllocator * resource_allocator_;
-	SecurityManager * security_manager_;
+	ISecurityManager * security_manager_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::ApplicationProcessNamingInformation name_;
 
