@@ -767,7 +767,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         memset(&addr, 0, sizeof(struct sockaddr_in));
         if ((size = recv_msg(sock, &addr, sizeof(addr),
                              buf, BUFFER_SIZE)) < 0) {
-                LOG_ERR("error during udp recv");
+                if (size != -EAGAIN)
+                        LOG_ERR("error during udp recv: %d", size);
                 rkfree(buf);
                 return -1;
         }
@@ -781,7 +782,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
         rkfree(buf);
 
-        du = sdu_create_buffer_with_ni(sdubuf);
+        du = sdu_create_buffer_with(sdubuf);
         if (!du) {
                 LOG_ERR("Couldn't create sdu");
                 buffer_destroy(sdubuf);
@@ -932,47 +933,57 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         struct buffer * sdubuf;
         struct sdu *    du;
         char *          buf;
+        char            sbuf[2];
         int             size;
         __be16          nlen;
 
-        buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
 
-        size = recv_msg(sock, NULL, 0, buf, 2);
-        if (!size) {
-                rkfree(buf);
-                return 0;
+        size = recv_msg(sock, NULL, 0, sbuf, 2);
+        if (size <= 0) {
+                return size;
         }
 
         if (size != 2) {
-                LOG_ERR("could not read size: %d", size);
-                rkfree(buf);
-                return -1;
+                LOG_DBG("didn't read both bytes for size: %d", size);
+
+                /* Shim can't function correct when only one size byte is read,
+                 * loop till the second byte is received
+                 */
+                size = -EAGAIN;
+                while (size == -EAGAIN) {
+                        size = recv_msg(sock, NULL, 0, &sbuf[1], 1);
+                        if (size != -EAGAIN && size <= 0) {
+                                LOG_ERR("Can't read 2nd size byte: %d", size);
+                                return size;
+                        }
+                }
         }
 
-        memcpy(&nlen, &buf[0], 2);
-        /* FIXME: Locking? */
+        memcpy(&nlen, &sbuf[0], 2);
         flow->bytes_left = (int) ntohs(nlen);
         LOG_DBG("Incoming message is %d bytes long", flow->bytes_left);
 
+        buf = rkmalloc(flow->bytes_left, GFP_KERNEL);
+
         size = recv_msg(sock, NULL, 0, buf, flow->bytes_left);
         if (size <= 0) {
-                LOG_ERR("Error during tcp receive: %d", size);
-                rkfree(buf);
+                if (size != -EAGAIN) {
+                        LOG_ERR("Error during tcp receive: %d", size);
+                        rkfree(buf);
+                }
                 return size;
         }
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_from(buf, size);
+                sdubuf = buffer_create_with(buf, size);
                 if (!sdubuf) {
                         LOG_ERR("Could not create buffer");
                         rkfree(buf);
                         return -1;
                 }
 
-                rkfree(buf);
-
-                du = sdu_create_buffer_with_ni(sdubuf);
+                du = sdu_create_buffer_with(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
@@ -1010,13 +1021,9 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         } else {
                 LOG_DBG("didn't receive complete message");
 
-                flow->buf = rkmalloc(flow->bytes_left, GFP_KERNEL);
+                flow->buf = buf;
                 flow->lbuf = flow->bytes_left;
                 flow->bytes_left = flow->bytes_left - size;
-
-                memcpy(&flow->buf[0], &buf[0], size);
-
-                rkfree(buf);
 
                 return -1;
         }
@@ -2019,7 +2026,7 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                 size = send_msg(flow->sock, NULL, 0, &buf[total],
                                 len + sizeof(__be16) - total);
                 if (size < 0) {
-                        LOG_ERR("error during sdu write");
+                        LOG_ERR("error during sdu write (tcp): %d", size);
                         return -1;
                 }
                 total += size;
@@ -2065,7 +2072,7 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                                 (char*)buffer_data_rw(sdu->buffer),
                                 buffer_length(sdu->buffer));
                 if (size < 0) {
-                        LOG_ERR("error during sdu write");
+                        LOG_ERR("error during sdu write (udp): %d", size);
                         sdu_destroy(sdu);
                         return -1;
                 } else if (size < buffer_length(sdu->buffer)) {
