@@ -23,19 +23,17 @@
 #ifndef RINA_SDU_PROTECTION_H
 #define RINA_SDU_PROTECTION_H
 
-struct sdup_cksum;
+struct sdup_chksum;
 
-struct sdup_cksum * sdup_cksum_create();
-int                 sdup_cksum_destroy(struct sdup_cksum * inst);
+struct sdup_chksum * sdup_chksum_create();
+int                  sdup_chksum_destroy(struct sdup_chksum * inst);
 
-int                 sdup_cksum_add(struct sdup_cksum * inst,
-                                   struct pdu_ser * pdu);
-int                 sdup_cksum_update(struct sdup_cksum * inst,
-                                      struct pdu_ser * pdu);
-int                 sdup_cksum_check(struct sdup_cksum * inst,
+int                  sdup_chksum_add(struct sdup_chksum * inst,
                                      struct pdu_ser * pdu);
-int                 sdup_cksum_remove(struct sdup_cksum * inst,
-                                      struct pdu_ser * pdu);
+int                  sdup_chksum_check(struct sdup_chksum * inst,
+                                       struct pdu_ser * pdu);
+int                  sdup_chksum_remove(struct sdup_chksum * inst,
+                                        struct pdu_ser * pdu);
 
 struct sdup_ttl;
 
