@@ -23,45 +23,45 @@
 #ifndef RINA_DU_PROTECTION_H
 #define RINA_DU_PROTECTION_H
 
-#include "pdu.h"
+#include "pdu-ser.h"
 
-struct sdup_chksum;
+struct dup_chksum;
 
-struct sdup_chksum * sdup_chksum_create(size_t (* size)(void),
-                                        bool   (* compute)(void * buffer,
-                                                           size_t size,
-                                                           void * value),
-                                        bool   (* update)(void * buffer,
-                                                          size_t size,
-                                                          void * old,
-                                                          void * new));
-int                  sdup_chksum_destroy(struct sdup_chksum * inst);
+struct dup_chksum * dup_chksum_create(size_t (* size)(void),
+                                      bool   (* compute)(void * buffer,
+                                                         size_t size,
+                                                         void * value),
+                                      bool   (* update)(void * buffer,
+                                                        size_t size,
+                                                        void * old,
+                                                        void * new));
+int                 dup_chksum_destroy(struct dup_chksum * inst);
 
-int                  sdup_chksum_add(struct sdup_chksum * inst,
+int                 dup_chksum_add(struct dup_chksum * inst,
+                                   struct pdu_ser *     pdu);
+int                 dup_chksum_remove(struct dup_chksum * inst,
+                                      struct pdu_ser *     pdu);
+int                 dup_chksum_is_ok(struct dup_chksum * inst,
                                      struct pdu_ser *     pdu);
-int                  sdup_chksum_remove(struct sdup_chksum * inst,
-                                        struct pdu_ser *     pdu);
-int                  sdup_chksum_is_ok(struct sdup_chksum * inst,
-                                       struct pdu_ser *     pdu);
-int                  sdup_chksum_set(struct sdup_chksum * inst,
-                                     struct pdu_ser *     pdu);
-int                  sdup_chksum_update(struct sdup_chksum * inst,
-                                        struct pdu_ser *     pdu);
+int                 dup_chksum_set(struct dup_chksum * inst,
+                                   struct pdu_ser *     pdu);
+int                 dup_chksum_update(struct dup_chksum * inst,
+                                      struct pdu_ser *     pdu);
 
 #if 0
-struct sdup_ttl;
+struct dup_ttl;
 
-struct sdup_ttl * sdup_ttl_create();
-int               sdup_ttl_destroy(struct sdup_ttl * inst);
+struct dup_ttl * dup_ttl_create();
+int              dup_ttl_destroy(struct dup_ttl * inst);
 
-int               sdup_ttl_add(struct sdup_ttl * inst,
-                               struct pdu_ser * pdu);
-int               sdup_ttl_decrement(struct sdup_ttl * inst,
-                                     struct pdu_ser * pdu);
-int               sdup_ttl_is_zero(struct sdup_ttl * inst,
+int              dup_ttl_add(struct dup_ttl * inst,
+                             struct pdu_ser * pdu);
+int              dup_ttl_decrement(struct dup_ttl * inst,
                                    struct pdu_ser * pdu);
-int               sdup_ttl_remove(struct sdup_ttl * inst,
-                                  struct pdu_ser * pdu);
+int              dup_ttl_is_zero(struct dup_ttl * inst,
+                                 struct pdu_ser * pdu);
+int              dup_ttl_remove(struct dup_ttl * inst,
+                                struct pdu_ser * pdu);
 #endif
 
 #endif
