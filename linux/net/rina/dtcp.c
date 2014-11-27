@@ -835,11 +835,7 @@ int dtcp_set_policy_set_param(struct dtcp* dtcp,
                 /* The request addresses this DTP instance. */
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
-                if (!ps) {
-                        LOG_ERR("No policy-set selected for this DTP");
-                } else {
-                        LOG_ERR("Unknown DTP parameter policy '%s'", name);
-                }
+                LOG_ERR("Unknown DTP parameter policy '%s'", name);
                 rcu_read_unlock();
         } else {
                 ret = base_set_policy_set_param(&dtcp->base, path, name, value);

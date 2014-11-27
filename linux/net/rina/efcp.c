@@ -154,8 +154,8 @@ static int efcp_set_policy_set_param(struct efcp * efcp,
                 return dtp_set_policy_set_param(dt_dtp(efcp->dt),
                                         path + offset, name, value);
         } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
-                LOG_ERR("MISSING dtcp_set_policy_set_param()");
-                return -1;
+                return dtcp_set_policy_set_param(dt_dtcp(efcp->dt),
+                                        path + offset, name, value);
         }
 
         /* Currently there are no parametric policies specified for EFCP
