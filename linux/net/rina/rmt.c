@@ -1370,18 +1370,6 @@ int rmt_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(rmt_ps_unpublish);
 
-struct rmt_qmap * rmt_get_ingress_queues(struct rmt * rmt)
-{
-        return rmt->ingress.queues;
-}
-EXPORT_SYMBOL(rmt_get_ingress_queues);
-
-struct rmt_qmap * rmt_get_egress_queues(struct rmt * rmt)
-{
-        return rmt->egress.queues;
-}
-EXPORT_SYMBOL(rmt_get_egress_queues);
-
 #ifdef CONFIG_RINA_RMT_REGRESSION_TESTS
 #if 0
 /* FIXME: THese regressions are outdated */

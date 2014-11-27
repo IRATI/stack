@@ -115,7 +115,4 @@ struct rmt_qmap {
         DECLARE_HASHTABLE(queues, 7);
 };
 
-struct rmt_qmap * rmt_get_ingress_queues(struct rmt * rmt);
-struct rmt_qmap * rmt_get_egress_queues(struct rmt * rmt);
-
 #endif

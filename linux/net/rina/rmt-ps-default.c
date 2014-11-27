@@ -30,8 +30,14 @@
 #include "rmt-ps.h"
 #include "rmt.h"
 
-struct scheduler_state {
-        int foo;
+struct sched_substate {
+        int last_bucket;
+        struct rmt_queue * last_queue;
+};
+
+struct sched_state {
+        struct sched_substate rx;
+        struct sched_substate tx;
 };
 
 static void
@@ -58,24 +64,70 @@ default_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
                                 struct rfifo *  queue)
 { }
 
+/* Round robin scheduler. */
+static struct rmt_queue *
+rmt_scheduling_policy_common(struct sched_substate * sss,
+                             struct rmt_qmap * qmap, bool restart)
+{
+        struct rmt_queue *queue;
+        struct rmt_queue *selected_queue = NULL;
+        int bkt;
+
+        if (restart) {
+                sss->last_bucket = 0;
+                sss->last_queue = NULL;
+        }
+
+        LOG_DBG("SCHED-START: lb = %d, lq = %p",
+                sss->last_bucket, sss->last_queue);
+
+        for (bkt = sss->last_bucket, queue = NULL;
+                        queue == NULL && bkt < HASH_SIZE(qmap->queues); bkt++) {
+                if (sss->last_queue) {
+                        queue = sss->last_queue;
+                        hlist_for_each_entry_continue(queue, hlist) {
+                                selected_queue = queue;
+                                break;
+                        }
+                } else {
+                        hlist_for_each_entry(queue, &qmap->queues[bkt], hlist) {
+                                selected_queue = queue;
+                                break;
+                        }
+                }
+                if (selected_queue) {
+                        break;
+                }
+        }
+
+        sss->last_bucket = bkt;
+        sss->last_queue = selected_queue;
+
+        LOG_DBG("SCHED-END: lb = %d, lq = %p",
+                sss->last_bucket, sss->last_queue);
+
+        return selected_queue;
+}
+
+
 static struct rmt_queue *
 default_rmt_scheduling_policy_tx(struct rmt_ps * ps,
-                                 struct rmt_qmap * qmap)
+                                 struct rmt_qmap * qmap,
+                                 bool restart)
 {
-        (void) ps;
-        (void) qmap;
+        struct sched_state * ss = ps->priv;
 
-        return NULL;
+        return rmt_scheduling_policy_common(&ss->tx, qmap, restart);
 }
 
 static struct rmt_queue *
 default_rmt_scheduling_policy_rx(struct rmt_ps * ps,
-                                 struct rmt_qmap * qmap)
+                                 struct rmt_qmap * qmap,
+                                 bool restart)
 {
-        (void) ps;
-        (void) qmap;
+        struct sched_state * ss = ps->priv;
 
-        return NULL;
+        return rmt_scheduling_policy_common(&ss->rx, qmap, restart);
 }
 
 static int
@@ -107,7 +159,7 @@ rmt_ps_default_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-        struct scheduler_state *ss;
+        struct sched_state *ss;
 
         if (!ps) {
                 return NULL;
