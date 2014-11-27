@@ -27,7 +27,6 @@
 #include "common.h"
 #include "qos.h"
 
-struct policies;
 struct dtcp_config;
 
 /* FIXME: Move RNL structure to RNL placeholder files */
