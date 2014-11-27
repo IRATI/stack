@@ -97,6 +97,10 @@ rmt_scheduling_policy_common(struct sched_substate * sss,
                 }
                 if (selected_queue) {
                         break;
+                } else {
+                        /* When the bucket changes we must invalidate
+                         * sss->last_queue. */
+                        sss->last_queue = NULL;
                 }
         }
 
