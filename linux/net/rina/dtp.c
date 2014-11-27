@@ -80,11 +80,13 @@ struct dtp {
         struct kfa *              kfa;
         struct squeue *           seqq;
         struct workqueue_struct * twq;
+        struct workqueue_struct * rcv_wq;
         struct {
                 struct rtimer * sender_inactivity;
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
         } timers;
+        spinlock_t                a_lock;
 };
 
 static struct dtp_sv default_sv = {
@@ -758,11 +760,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LOG_DBG("Processing A timer expiration");
 
+        spin_lock(&dtp->a_lock);
+        spin_lock(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %u", LWE);
         LOG_DBG("LWEU: MAX GAPS     = %u", max_sdu_gap);
 
-        spin_lock(&seqq->lock);
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
 
                 pdu = pos->pdu;
@@ -805,6 +808,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                                 spin_unlock(&seqq->lock);
+                                spin_unlock(&dtp->a_lock);
 
                                 LOG_DBG("Retransmissions will be required");
                                 return seq_num;
@@ -812,6 +816,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 spin_unlock(&seqq->lock);
+                                spin_unlock(&dtp->a_lock);
 
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
@@ -839,6 +844,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         }
         spin_unlock(&seqq->lock);
+        spin_unlock(&dtp->a_lock);
 
         return LWE;
 }
@@ -970,6 +976,7 @@ struct dtp * dtp_create(struct dt *         dt,
 {
         struct dtp * tmp;
         const char * twq_name;
+        const char * rwq_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -1025,6 +1032,17 @@ struct dtp * dtp_create(struct dt *         dt,
                 dtp_destroy(tmp);
                 return NULL;
         }
+	/* FIXME: This function must change */
+        rwq_name = twq_name_format("rwq", tmp);
+        if (!rwq_name) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
+        tmp->rcv_wq = rwq_create(rwq_name);
+        if (!tmp->rcv_wq) {
+                dtp_destroy(tmp);
+                return NULL;
+        }
 
         tmp->timers.sender_inactivity   = rtimer_create(tf_sender_inactivity,
                                                         tmp);
@@ -1057,9 +1075,10 @@ int dtp_destroy(struct dtp * instance)
         if (instance->timers.a)
                 rtimer_destroy(instance->timers.a);
 
-        if (instance->twq)  rwq_destroy(instance->twq);
-        if (instance->seqq) squeue_destroy(instance->seqq);
-        if (instance->sv)   rkfree(instance->sv);
+        if (instance->twq)    rwq_destroy(instance->twq);
+        if (instance->rcv_wq) rwq_destroy(instance->rcv_wq);
+        if (instance->seqq)   squeue_destroy(instance->seqq);
+        if (instance->sv)     rkfree(instance->sv);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
@@ -1352,9 +1371,16 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
-int dtp_receive(struct dtp * instance,
-                struct pdu * pdu)
+struct rcv_item {
+        struct dtp * dtp;
+        struct pdu * pdu;
+};
+
+static int rcv_worker(void * o)
 {
+        struct dtp *          instance;
+        struct pdu *          pdu;
+        struct rcv_item *     ritem;
         struct dtp_policies * policies;
         struct pci *          pci;
         struct dtp_sv *       sv;
@@ -1365,6 +1391,29 @@ int dtp_receive(struct dtp * instance,
         timeout_t             LWE;
         bool                  in_order;
         seq_num_t             max_sdu_gap;
+
+        ritem = (struct rcv_item *) o;
+        if (!ritem) {
+                LOG_ERR("Bogus rcv_item...");
+                return -1;
+        }
+
+        pdu = ritem->pdu;
+        if (!pdu_is_ok(pdu)) {
+                LOG_ERR("Receive_item contained bogus pdu");
+                rkfree(ritem);
+                return -1;
+        }
+
+        instance = ritem->dtp;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                rkfree(ritem);
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        rkfree(ritem);
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus data, bailing out");
@@ -1505,6 +1554,7 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
+        spin_lock(&instance->a_lock);
         spin_lock(&instance->seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         while (pdu && (seq_num == LWE + 1)) {
@@ -1521,6 +1571,7 @@ int dtp_receive(struct dtp * instance,
         if (pdu)
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
+        spin_unlock(&instance->a_lock);
 
         if (a) {
                 LOG_DBG("Going to start A timer with t = %d", a/AF);
@@ -1537,5 +1588,49 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 #endif
+        return 0;
+}
+
+int dtp_receive(struct dtp * instance,
+                struct pdu * pdu)
+{
+        struct rwq_work_item * item;
+        struct rcv_item *      ritem;
+
+        if (!pdu_is_ok(pdu)) {
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        ritem = rkzalloc(sizeof(*ritem), GFP_KERNEL);
+        if (!ritem) {
+                pdu_destroy(pdu);
+                LOG_ERR("Could not create receive item");
+                return -1;
+        }
+
+        ritem->dtp = instance;
+        ritem->pdu = pdu;
+
+        item = rwq_work_create_ni(rcv_worker, ritem);
+        if (!item) {
+                LOG_ERR("Could not create wwq item");
+                pdu_destroy(pdu);
+                rkfree(ritem);
+                return -1;
+        }
+
+        if (rwq_work_post(instance->rcv_wq, item)) {
+                LOG_ERR("Could not add rcv wq item to the wq");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
         return 0;
 }
