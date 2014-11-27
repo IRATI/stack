@@ -103,6 +103,12 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
 struct rmt * rmt_from_component(struct rina_component * component);
 
 /* Plugin support */
+struct rmt_queue {
+        struct rfifo *    queue;
+        port_id_t         port_id;
+        struct hlist_node hlist;
+};
+
 struct rmt_qmap {
         spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
 

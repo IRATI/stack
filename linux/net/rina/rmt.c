@@ -48,12 +48,6 @@ static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
 };
 
-struct rmt_queue {
-        struct rfifo *    queue;
-        port_id_t         port_id;
-        struct hlist_node hlist;
-};
-
 static struct rmt_queue * queue_create(port_id_t id)
 {
         struct rmt_queue * tmp;

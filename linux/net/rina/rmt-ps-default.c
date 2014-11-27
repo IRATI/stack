@@ -30,29 +30,58 @@
 #include "rmt-ps.h"
 #include "rmt.h"
 
-static void default_max_q_policy_tx(struct rmt_ps * ps,
-                                    struct pdu *    pdu,
-                                    struct rfifo *  queue)
+struct scheduler_state {
+        int foo;
+};
+
+static void
+default_max_q_policy_tx(struct rmt_ps * ps,
+                        struct pdu *    pdu,
+                        struct rfifo *  queue)
 { }
 
-static void default_max_q_policy_rx(struct rmt_ps * ps,
-                                    struct sdu *    sdu,
-                                    struct rfifo *  queue)
+static void
+default_max_q_policy_rx(struct rmt_ps * ps,
+                        struct sdu *    sdu,
+                        struct rfifo *  queue)
 { }
 
-static void default_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
-                                    struct pdu *    pdu,
-                                    struct rfifo *  queue)
+static void
+default_rmt_q_monitor_policy_tx(struct rmt_ps * ps,
+                                struct pdu *    pdu,
+                                struct rfifo *  queue)
 { }
 
-static void default_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
-                                    struct sdu *    sdu,
-                                    struct rfifo *  queue)
+static void
+default_rmt_q_monitor_policy_rx(struct rmt_ps * ps,
+                                struct sdu *    sdu,
+                                struct rfifo *  queue)
 { }
 
-static int rmt_ps_set_policy_set_param(struct ps_base * bps,
-                                       const char    * name,
-                                       const char    * value)
+static struct rmt_queue *
+default_rmt_scheduling_policy_tx(struct rmt_ps * ps,
+                                 struct rmt_qmap * qmap)
+{
+        (void) ps;
+        (void) qmap;
+
+        return NULL;
+}
+
+static struct rmt_queue *
+default_rmt_scheduling_policy_rx(struct rmt_ps * ps,
+                                 struct rmt_qmap * qmap)
+{
+        (void) ps;
+        (void) qmap;
+
+        return NULL;
+}
+
+static int
+rmt_ps_set_policy_set_param(struct ps_base * bps,
+                            const char    * name,
+                            const char    * value)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 
@@ -78,28 +107,42 @@ rmt_ps_default_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
+        struct scheduler_state *ss;
 
         if (!ps) {
                 return NULL;
         }
 
+        /* Allocate policy-set private data. */
+        ss = rkzalloc(sizeof(*ss), GFP_KERNEL);
+        if (!ss) {
+                rkfree(ps);
+                return NULL;
+        }
+        ps->priv = ss;
+
         ps->base.set_policy_set_param = rmt_ps_set_policy_set_param;
-        ps->dm              = rmt;
-        ps->max_q           = 256;
-        ps->priv            = NULL;
-        ps->max_q_policy_tx = default_max_q_policy_tx;
-        ps->max_q_policy_rx = default_max_q_policy_rx;
-        ps->rmt_q_monitor_policy_tx = default_rmt_q_monitor_policy_tx;
-        ps->rmt_q_monitor_policy_rx = default_rmt_q_monitor_policy_rx;
+        ps->dm          = rmt;
+
+        ps->max_q_policy_tx             = default_max_q_policy_tx;
+        ps->max_q_policy_rx             = default_max_q_policy_rx;
+        ps->rmt_q_monitor_policy_tx     = default_rmt_q_monitor_policy_tx;
+        ps->rmt_q_monitor_policy_rx     = default_rmt_q_monitor_policy_rx;
+        ps->rmt_scheduling_policy_tx    = default_rmt_scheduling_policy_tx;
+        ps->rmt_scheduling_policy_rx    = default_rmt_scheduling_policy_rx;
+
+        ps->max_q       = 256;
 
         return &ps->base;
 }
 
-static void rmt_ps_default_destroy(struct ps_base * bps)
+static void
+rmt_ps_default_destroy(struct ps_base * bps)
 {
         struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 
         if (bps) {
+                rkfree(ps->priv);
                 rkfree(ps);
         }
 }

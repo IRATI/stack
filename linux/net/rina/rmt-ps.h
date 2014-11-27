@@ -45,6 +45,10 @@ struct rmt_ps {
         void (* rmt_q_monitor_policy_rx)(struct rmt_ps *,
                                  struct sdu *,
                                  struct rfifo *);
+        struct rmt_queue * (* rmt_scheduling_policy_tx)(struct rmt_ps *,
+                                                        struct rmt_qmap *);
+        struct rmt_queue * (* rmt_scheduling_policy_rx)(struct rmt_ps *,
+                                                        struct rmt_qmap *);
 
         /* Parametric policies. */
         int          max_q;
