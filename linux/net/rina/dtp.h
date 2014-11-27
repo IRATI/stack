@@ -68,6 +68,8 @@ int          dtp_set_policy_set_param(struct dtp* dtp,
                                       const string_t * name,
                                       const string_t * value);
 
+struct dtp_ps * dtp_ps_get(struct dtp * dtp);
+
 struct dtp* dtp_from_component(struct rina_component * component);
 
 struct dt * dtp_dt(struct dtp * dtp);

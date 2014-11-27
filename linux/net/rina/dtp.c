@@ -742,6 +742,13 @@ static const char * twq_name_format(const char *       prefix,
         return name;
 }
 
+/* Must be called under RCU read lock. */
+struct dtp_ps *
+dtp_ps_get(struct dtp * dtp)
+{
+        return container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
+}
+
 struct dtp *
 dtp_from_component(struct rina_component * component)
 {

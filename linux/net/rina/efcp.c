@@ -39,6 +39,7 @@
 #include "dtcp-utils.h"
 #include "rmt.h"
 #include "dt-utils.h"
+#include "dtp-ps.h"
 
 struct efcp {
         struct connection *     connection;
@@ -453,6 +454,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         struct rtxq * rtxq;
         uint_t        mfps, mfss;
         timeout_t     mpl, a, r = 0, tr = 0;
+        struct dtp_ps *dtp_ps;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -511,19 +513,24 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         dtcp = NULL;
 
-        if (connection->policies_params->dtcp_present) {
+        rcu_read_lock();
+        dtp_ps = dtp_ps_get(dtp);
+        if (dtp_ps->dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
+                        rcu_read_unlock();
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
 
                 if (dt_dtcp_bind(tmp->dt, dtcp)) {
+                        rcu_read_unlock();
                         dtcp_destroy(dtcp);
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
         }
+        rcu_read_unlock();
 
         if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg)) {
                 cwq = cwq_create();
