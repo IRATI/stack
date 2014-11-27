@@ -22,6 +22,8 @@
 #ifndef RINA_RMT_H
 #define RINA_RMT_H
 
+#include <linux/hashtable.h>
+
 #include "common.h"
 #include "du.h"
 #include "efcp.h"
@@ -99,5 +101,15 @@ int          rmt_set_policy_set_param(struct rmt * rmt,
                                       const string_t * value);
 
 struct rmt * rmt_from_component(struct rina_component * component);
+
+/* Plugin support */
+struct rmt_qmap {
+        spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
+
+        DECLARE_HASHTABLE(queues, 7);
+};
+
+struct rmt_qmap * rmt_get_ingress_queues(struct rmt * rmt);
+struct rmt_qmap * rmt_get_egress_queues(struct rmt * rmt);
 
 #endif
