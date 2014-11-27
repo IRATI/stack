@@ -753,12 +753,35 @@ int dtp_select_policy_set(struct dtp * dtp,
                           const string_t * path,
                           const string_t * name)
 {
+        struct conn_policies *params = dtp->sv->connection->policies_params;
+        struct dtp_ps * ps;
+        int ret;
+
         if (path && strcmp(path, "")) {
                 LOG_ERR("This component has no selectable subcomponents");
                 return -1;
         }
 
-        return base_select_policy_set(&dtp->base, &policy_sets, name);
+        ret = base_select_policy_set(&dtp->base, &policy_sets, name);
+        if (ret) {
+                return ret;
+        }
+
+        /* Copy the connection parameter to the policy-set. From now on
+         * these connection parameters must be accessed by the DTP policy set,
+         * and not from the struct connection. */
+        mutex_lock(&dtp->base.ps_lock);
+        ps = container_of(dtp->base.ps, struct dtp_ps, base);
+        ps->dtcp_present        = params->dtcp_present;
+        ps->seq_num_ro_th       = params->seq_num_ro_th;
+        ps->initial_a_timer     = params->initial_a_timer;
+        ps->partial_delivery    = params->partial_delivery;
+        ps->incomplete_delivery = params->incomplete_delivery;
+        ps->in_order_delivery   = params->in_order_delivery;
+        ps->max_sdu_gap         = params->max_sdu_gap;
+        mutex_unlock(&dtp->base.ps_lock);
+
+        return 0;
 }
 EXPORT_SYMBOL(dtp_select_policy_set);
 

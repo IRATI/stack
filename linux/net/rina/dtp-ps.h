@@ -44,7 +44,13 @@ struct dtp_ps {
         int (* sender_inactivity_timer)(struct dtp_ps * ps);
 
         /* Parametric policies. */
-        // TODO
+        bool            dtcp_present;
+        int             seq_num_ro_th; /* Sequence number rollover threshold */
+        timeout_t       initial_a_timer;
+        bool            partial_delivery;
+        bool            incomplete_delivery;
+        bool            in_order_delivery;
+        seq_num_t       max_sdu_gap;
 
         /* Reference used to access the DTP data model. */
         struct dtp * dm;

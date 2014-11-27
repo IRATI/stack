@@ -326,12 +326,21 @@ dtp_ps_default_create(struct rina_component * component)
         ps->base.set_policy_set_param = dtp_ps_set_policy_set_param;
         ps->dm              = dtp;
         ps->priv            = NULL;
-        ps->transmission_control = default_transmission_control;
-        ps->closed_window = default_closed_window;
-        ps->flow_control_overrun = default_flow_control_overrun;
-        ps->initial_sequence_number = default_initial_sequence_number;
-        ps->receiver_inactivity_timer = default_receiver_inactivity_timer;
-        ps->sender_inactivity_timer = default_sender_inactivity_timer;
+
+        ps->transmission_control        = default_transmission_control;
+        ps->closed_window               = default_closed_window;
+        ps->flow_control_overrun        = default_flow_control_overrun;
+        ps->initial_sequence_number     = default_initial_sequence_number;
+        ps->receiver_inactivity_timer   = default_receiver_inactivity_timer;
+        ps->sender_inactivity_timer     = default_sender_inactivity_timer;
+
+        ps->dtcp_present = 0;
+        ps->seq_num_ro_th = 0;
+        ps->initial_a_timer = 0;
+        ps->partial_delivery = 0;
+        ps->incomplete_delivery = 0;
+        ps->in_order_delivery = 0;
+        ps->max_sdu_gap = 0;
 
         return &ps->base;
 }
