@@ -25,16 +25,28 @@
 
 struct sdup_chksum;
 
-struct sdup_chksum * sdup_chksum_create();
+struct sdup_chksum * sdup_chksum_create(size_t (* size)(void),
+                                        bool   (* compute)(void * buffer,
+                                                           size_t size,
+                                                           void * value),
+                                        bool   (* update)(void * buffer,
+                                                          size_t size,
+                                                          void * old,
+                                                          void * new));
 int                  sdup_chksum_destroy(struct sdup_chksum * inst);
 
 int                  sdup_chksum_add(struct sdup_chksum * inst,
-                                     struct pdu_ser * pdu);
-int                  sdup_chksum_check(struct sdup_chksum * inst,
-                                       struct pdu_ser * pdu);
+                                     struct pdu_ser *     pdu);
 int                  sdup_chksum_remove(struct sdup_chksum * inst,
-                                        struct pdu_ser * pdu);
+                                        struct pdu_ser *     pdu);
+int                  sdup_chksum_is_ok(struct sdup_chksum * inst,
+                                       struct pdu_ser *     pdu);
+int                  sdup_chksum_set(struct sdup_chksum * inst,
+                                     struct pdu_ser *     pdu);
+int                  sdup_chksum_update(struct sdup_chksum * inst,
+                                        struct pdu_ser *     pdu);
 
+#if 0
 struct sdup_ttl;
 
 struct sdup_ttl * sdup_ttl_create();
@@ -48,5 +60,6 @@ int               sdup_ttl_is_zero(struct sdup_ttl * inst,
                                    struct pdu_ser * pdu);
 int               sdup_ttl_remove(struct sdup_ttl * inst,
                                   struct pdu_ser * pdu);
+#endif
 
 #endif
