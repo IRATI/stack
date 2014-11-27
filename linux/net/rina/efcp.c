@@ -79,9 +79,12 @@ static int efcp_select_policy_set(struct efcp * efcp,
         return -1;
 }
 
-int efcp_container_select_policy_set(struct efcp_container * container,
-                                     const string_t * path,
-                                     const string_t * ps_name)
+typedef const string_t *const_string;
+
+/* Helper function to parse the component id path for EFCP container. */
+struct efcp *
+efcp_container_parse_component_id(struct efcp_container * container,
+                                  const_string * path)
 {
         struct efcp * efcp;
         cep_id_t cep_id;
@@ -90,34 +93,95 @@ int efcp_container_select_policy_set(struct efcp_container * container,
         char numbuf[8];
         int ret;
 
-        if (!path) {
+        if (!*path) {
                 LOG_ERR("NULL path");
-                return -1;
+                return NULL;
         }
 
-        parse_component_id(path, &cmplen, &offset);
+        parse_component_id(*path, &cmplen, &offset);
         if (cmplen > sizeof(numbuf)-1) {
-                LOG_ERR("Invalid cep-id' %s'", path);
-                return -1;
+                LOG_ERR("Invalid cep-id' %s'", *path);
+                return NULL;
         }
 
-        memcpy(numbuf, path, cmplen);
+        memcpy(numbuf, *path, cmplen);
         numbuf[cmplen] = '\0';
         ret = kstrtoint(numbuf, 10, &cep_id);
         if (ret) {
-                LOG_ERR("Invalid cep-id '%s'", path);
-                return -1;
+                LOG_ERR("Invalid cep-id '%s'", *path);
+                return NULL;
         }
 
         efcp = efcp_imap_find(container->instances, cep_id);
         if (!efcp) {
                 LOG_ERR("No connection with cep-id %d", cep_id);
+                return NULL;
+        }
+
+        *path += offset;
+
+        return efcp;
+
+}
+
+int efcp_container_select_policy_set(struct efcp_container * container,
+                                     const string_t * path,
+                                     const string_t * ps_name)
+{
+        struct efcp * efcp;
+        const string_t * new_path = path;
+
+        efcp = efcp_container_parse_component_id(container, &new_path);
+        if (!efcp) {
                 return -1;
         }
 
-        return efcp_select_policy_set(efcp, path + offset, ps_name);
+        return efcp_select_policy_set(efcp, new_path, ps_name);
 }
 EXPORT_SYMBOL(efcp_container_select_policy_set);
+
+static int efcp_set_policy_set_param(struct efcp * efcp,
+                                     const char * path,
+                                     const char * name,
+                                     const char * value)
+{
+        size_t cmplen;
+        size_t offset;
+
+        parse_component_id(path, &cmplen, &offset);
+
+        if (strncmp(path, "dtp", cmplen) == 0) {
+                return dtp_set_policy_set_param(dt_dtp(efcp->dt),
+                                        path + offset, name, value);
+        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp->dt)) {
+                LOG_ERR("MISSING dtcp_set_policy_set_param()");
+                return -1;
+        }
+
+        /* Currently there are no parametric policies specified for EFCP
+         * (strictly speaking). */
+        LOG_ERR("No parametric policies for this EFCP component");
+
+        return -1;
+}
+EXPORT_SYMBOL(efcp_set_policy_set_param);
+
+int efcp_container_set_policy_set_param(struct efcp_container * container,
+                                        const char * path, const char * name,
+                                        const char * value)
+{
+
+        struct efcp * efcp;
+        const string_t * new_path = path;
+
+        efcp = efcp_container_parse_component_id(container, &new_path);
+        if (!efcp) {
+                return -1;
+        }
+
+        return efcp_set_policy_set_param(efcp, new_path, name, value);
+}
+EXPORT_SYMBOL(efcp_container_set_policy_set_param);
 
 static struct efcp * efcp_create(void)
 {

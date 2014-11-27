@@ -811,11 +811,41 @@ int dtp_set_policy_set_param(struct dtp* dtp,
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
         if (strcmp(path, "") == 0) {
+                int bool_value;
+
                 /* The request addresses this DTP instance. */
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
-                if (!ps) {
-                        LOG_ERR("No policy-set selected for this DTP");
+
+                if (strcmp(name, "dtcp_present") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->dtcp_present = bool_value;
+                        }
+                } else if (strcmp(name, "seq_num_ro_th") == 0) {
+                        ret = kstrtoint(value, 10, &ps->seq_num_ro_th);
+                } else if (strcmp(name, "initial_a_timer") == 0) {
+                        ret = kstrtouint(value, 10, &ps->initial_a_timer);
+                } else if (strcmp(name, "partial_delivery") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->partial_delivery = bool_value;
+                        }
+                } else if (strcmp(name, "incomplete_delivery") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->incomplete_delivery = bool_value;
+                        }
+                } else if (strcmp(name, "in_order_delivery") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->in_order_delivery = bool_value;
+                        }
+                } else if (strcmp(name, "max_sdu_gap") == 0) {
+                        ret = kstrtouint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->max_sdu_gap = bool_value;
+                        }
                 } else {
                         LOG_ERR("Unknown DTP parameter policy '%s'", name);
                 }

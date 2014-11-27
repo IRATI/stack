@@ -767,6 +767,9 @@ static int normal_set_policy_set_param(struct ipcp_instance_data * data,
         if (strncmp(path, "rmt", cmplen) == 0) {
                 return rmt_set_policy_set_param(data->rmt, path + offset,
                                                 param_name, param_value);
+        } else if (strncmp(path, "efcp", cmplen) == 0) {
+                return efcp_container_set_policy_set_param(data->efcpc,
+                                path + offset, param_name, param_value);
         } else {
                 LOG_ERR("The selected component does not exist");
                 return -1;

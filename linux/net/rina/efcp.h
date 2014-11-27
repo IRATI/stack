@@ -71,4 +71,8 @@ int efcp_container_select_policy_set(struct efcp_container * container,
                                      const string_t * path,
                                      const string_t * name);
 
+int efcp_container_set_policy_set_param(struct efcp_container * container,
+                                        const char * path, const char * name,
+                                        const char * value);
+
 #endif
