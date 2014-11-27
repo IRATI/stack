@@ -1,5 +1,5 @@
 /*
- * SDU Protection
+ * Data Unit Protection
  *
  *    Dimitri Staessens     <dimitri.staessens@intec.ugent.be>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -20,8 +20,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_SDU_PROTECTION_H
-#define RINA_SDU_PROTECTION_H
+#ifndef RINA_DU_PROTECTION_H
+#define RINA_DU_PROTECTION_H
 
 struct sdup_chksum;
 
