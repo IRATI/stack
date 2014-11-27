@@ -509,6 +509,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seq_num_t                max_sdu_gap;
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
+        struct dtp_ps * ps;
 
         ASSERT(dtp);
 
@@ -528,10 +529,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         ASSERT(sv->connection);
         ASSERT(sv->connection->policies_params);
 
-        in_order_del   = sv->connection->policies_params->in_order_delivery;
-        incomplete_del = sv->connection->policies_params->incomplete_delivery;
-
-        max_sdu_gap    = sv->connection->policies_params->max_sdu_gap;
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtp->base.ps), struct dtp_ps, base);
+        in_order_del   = ps->in_order_delivery;
+        incomplete_del = ps->incomplete_delivery;
+        max_sdu_gap    = ps->max_sdu_gap;
+        rcu_read_unlock();
 
         /* FIXME: Invoke delimiting */
 
@@ -1269,8 +1272,12 @@ int dtp_receive(struct dtp * instance,
 
         a           = instance->sv->a;
         LWE         = dt_sv_rcv_lft_win(dt);
-        in_order    = sv->connection->policies_params->in_order_delivery;
-        max_sdu_gap = sv->connection->policies_params->max_sdu_gap;
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct dtp_ps, base);
+        in_order    = ps->in_order_delivery;
+        max_sdu_gap = ps->max_sdu_gap;
+        rcu_read_unlock();
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop ReceiverInactivityTimer */
         if (dtcp && rtimer_stop(instance->timers.receiver_inactivity)) {

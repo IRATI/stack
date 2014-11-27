@@ -334,6 +334,8 @@ dtp_ps_default_create(struct rina_component * component)
         ps->receiver_inactivity_timer   = default_receiver_inactivity_timer;
         ps->sender_inactivity_timer     = default_sender_inactivity_timer;
 
+        /* Just zero here. These fields are really initialized by
+         * dtp_select_policy_set. */
         ps->dtcp_present = 0;
         ps->seq_num_ro_th = 0;
         ps->initial_a_timer = 0;
