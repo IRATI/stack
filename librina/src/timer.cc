@@ -37,7 +37,7 @@ Time::Time(timeval t) {
 	time_ = t;
 }
 int Time::get_current_time_in_ms() const {
-	return get_time_seconds() * 1000 + get_only_milliseconds();
+	return (int) get_time_seconds() * 1000 + get_only_milliseconds();
 }
 int Time::get_time_seconds() const {
 	return (int) time_.tv_sec;
@@ -49,7 +49,7 @@ bool Time::operator<(const Time &other) const {
 	if ((int) time_.tv_sec != (int) other.get_time_seconds())
 		return (int) time_.tv_sec < (int) other.get_time_seconds();
 	else
-		return (int) time_.tv_usec < (int) other.get_only_milliseconds();
+		return (int) (time_.tv_usec / 1000) < (int) other.get_only_milliseconds();
 }
 void Time::set_timeval(timeval t) {
 	time_ = t;
@@ -121,11 +121,14 @@ void TaskScheduler::cancelTask(TimerTask *task) {
 			if (*iter_list == task){
 				delete *iter_list;
 				*iter_list = 0;
-				if (iter_map->second->size() == 0){
-					delete iter_map->second;
-					tasks_.erase(iter_map);
-				}
+				std::list<TimerTask*>::iterator removeIter = iter_list;
+				--iter_list;
+				iter_map->second->erase(removeIter);
 			}
+		}
+		if (iter_map->second->size() == 0){
+			delete iter_map->second;
+			tasks_.erase(iter_map);
 		}
 	}
 unlock();
@@ -169,9 +172,11 @@ Timer::~Timer() {
 void Timer::scheduleTask(TimerTask* task, long delay_ms) {
 	Time executeTime;
 	timeval t;
-	t.tv_sec = executeTime.get_time_seconds() + (delay_ms / 1000);
-	t.tv_usec = executeTime.get_only_milliseconds()
-			+ ((delay_ms % 1000) * 1000);
+	int milisecondsNotNorm = executeTime.get_only_milliseconds() + (delay_ms % 1000);
+	int miliseconds = milisecondsNotNorm % 1000;
+	int seconds = executeTime.get_time_seconds() + (delay_ms / 1000) + (milisecondsNotNorm / 1000);
+	t.tv_sec = seconds;
+	t.tv_usec = miliseconds * 1000;
 	executeTime.set_timeval(t);
 	task_scheduler->insert(executeTime, task);
 }
