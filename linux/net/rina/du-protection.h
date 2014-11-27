@@ -23,6 +23,8 @@
 #ifndef RINA_DU_PROTECTION_H
 #define RINA_DU_PROTECTION_H
 
+#include "pdu.h"
+
 struct sdup_chksum;
 
 struct sdup_chksum * sdup_chksum_create(size_t (* size)(void),
