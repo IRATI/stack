@@ -1106,6 +1106,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 
         struct rcv_struct * packet;
 
+        LOG_DBG("eth_vlan_rcv started, skb received");
+
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("Couldn't obtain ownership of the skb");
