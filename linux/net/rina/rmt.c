@@ -432,8 +432,8 @@ static int send_worker(void * o)
 {
         struct rmt *        tmp;
         struct rmt_queue *  entry;
-        struct hlist_node * ntmp;
-        int                 bucket;
+        struct rmt_ps * ps;
+        bool sched_restart = true;
 
         LOG_DBG("Send worker called");
 
@@ -444,11 +444,8 @@ static int send_worker(void * o)
         }
 
         spin_lock(&tmp->egress.queues->lock);
-        hash_for_each_safe(tmp->egress.queues->queues,
-                           bucket,
-                           ntmp,
-                           entry,
-                           hlist) {
+        rcu_read_lock();
+        for (;;) {
                 struct sdu *     sdu;
                 struct pdu *     pdu;
                 struct pdu_ser * pdu_ser;
@@ -456,7 +453,15 @@ static int send_worker(void * o)
                 struct buffer *  buffer;
                 struct serdes *  serdes;
 
-                ASSERT(entry);
+                ps = container_of(rcu_dereference(tmp->base.ps),
+                                  struct rmt_ps, base);
+                entry = ps->rmt_scheduling_policy_tx(ps,
+                                tmp->egress.queues, sched_restart);
+                if (!entry) {
+                        /* No more queues to serve. */
+                        break;
+                }
+                sched_restart = false;
 
                 pdu = (struct pdu *) rfifo_pop(entry->queue);
 
@@ -517,6 +522,7 @@ static int send_worker(void * o)
 
                 spin_lock(&tmp->egress.queues->lock);
         }
+        rcu_read_unlock();
         spin_unlock(&tmp->egress.queues->lock);
 
         return 0;
@@ -1034,8 +1040,8 @@ static int receive_worker(void * o)
 {
         struct rmt *        tmp;
         struct rmt_queue *  entry;
-        int                 bucket;
-        struct hlist_node * ntmp;
+        struct rmt_ps * ps;
+        bool sched_restart = true;
 
         LOG_DBG("Receive worker called");
 
@@ -1046,12 +1052,8 @@ static int receive_worker(void * o)
         }
 
         spin_lock(&tmp->ingress.queues->lock);
-        hash_for_each_safe(tmp->ingress.queues->queues,
-                           bucket,
-                           ntmp,
-                           entry,
-                           hlist) {
-
+        rcu_read_lock();
+        for (;;) {
                 port_id_t          port_id;
                 pdu_type_t         pdu_type;
                 const struct pci * pci;
@@ -1063,7 +1065,15 @@ static int receive_worker(void * o)
                 struct buffer *    buf;
                 struct sdu *       sdu;
 
-                ASSERT(entry);
+                ps = container_of(rcu_dereference(tmp->base.ps),
+                                  struct rmt_ps, base);
+                entry = ps->rmt_scheduling_policy_rx(ps,
+                                tmp->ingress.queues, sched_restart);
+                if (!entry) {
+                        /* No more queues to serve. */
+                        break;
+                }
+                sched_restart = false;
 
                 sdu = (struct sdu *) rfifo_pop(entry->queue);
                 if (!sdu) {
@@ -1177,6 +1187,7 @@ static int receive_worker(void * o)
                 }
                 spin_lock(&tmp->ingress.queues->lock);
         }
+        rcu_read_unlock();
         spin_unlock(&tmp->ingress.queues->lock);
 
         return 0;
