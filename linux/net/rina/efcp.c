@@ -642,7 +642,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         /*a = msecs_to_jiffies(connection->policies_params->initial_a_timer); */
         a = dtp_ps->initial_a_timer;
         if (dtcp && dtcp_ps->rtx_ctrl) {
-                tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
+                tr = dtcp_ps->rtx.initial_tr;
                 /* tr = msecs_to_jiffies(tr); */
                 /* FIXME: r should be passed and must be a bound */
                 r  = dtcp_ps->rtx.data_retransmit_max * tr;
