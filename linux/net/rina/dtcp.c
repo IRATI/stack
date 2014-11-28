@@ -1013,13 +1013,6 @@ struct dtcp * dtcp_create(struct dt *         dt,
         tmp->conn = conn;
         tmp->rmt  = rmt;
 
-        if (dtcp_sv_init(tmp, default_sv)) {
-                LOG_ERR("Could not load DTCP config in the SV");
-                dtcp_destroy(tmp);
-                return NULL;
-        }
-        /* FIXME: fixups to the state-vector should be placed here */
-
         rina_component_init(&tmp->base);
 
         /* Try to select the default policy-set. */
@@ -1027,6 +1020,13 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 dtcp_destroy(tmp);
                 return NULL;
         }
+
+        if (dtcp_sv_init(tmp, default_sv)) {
+                LOG_ERR("Could not load DTCP config in the SV");
+                dtcp_destroy(tmp);
+                return NULL;
+        }
+        /* FIXME: fixups to the state-vector should be placed here */
 
         LOG_DBG("Instance %pK created successfully", tmp);
 
