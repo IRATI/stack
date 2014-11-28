@@ -508,6 +508,13 @@ static bool is_connection_ok(const struct connection * connection)
         return true;
 }
 
+/* FIXME This function has not ported yet to use the DTCP policy set
+ * parameters in place of struct dtcp_config. This because the code
+ * tries to access "connection parameters" that are defined as DTCP
+ * policies (in RINA) even if DTCP is not present. This has to
+ * be fixed, because the DTCP policy set can exist only if DTCP
+ * is present.
+ */
 cep_id_t efcp_connection_create(struct efcp_container * container,
                                 struct connection *     connection)
 {
@@ -520,7 +527,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         uint_t        mfps, mfss;
         timeout_t     mpl, a, r = 0, tr = 0;
         struct dtp_ps * dtp_ps;
-        struct dtcp_ps * dtcp_ps;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -581,7 +587,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         rcu_read_lock();
         dtp_ps = dtp_ps_get(dtp);
-        dtcp_ps = dtcp_ps_get(dtcp);
         if (dtp_ps->dtcp_present) {
                 dtcp = dtcp_create(tmp->dt, connection, container->rmt);
                 if (!dtcp) {
@@ -598,7 +603,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_ps->flowctrl.window_based) {
+        if (dtcp_window_based_fctrl(connection->policies_params->dtcp_cfg)) {
                 cwq = cwq_create();
                 if (!cwq) {
                         LOG_ERR("Failed to create closed window queue");
@@ -614,7 +619,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_ps->rtx_ctrl) {
+        if (dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt, container->rmt);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
@@ -641,11 +646,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         mpl  = container->config->dt_cons->max_pdu_life;
         /*a = msecs_to_jiffies(connection->policies_params->initial_a_timer); */
         a = dtp_ps->initial_a_timer;
-        if (dtcp && dtcp_ps->rtx_ctrl) {
-                tr = dtcp_ps->rtx.initial_tr;
+        if (dtcp && dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg)) {
+                tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
                 /* tr = msecs_to_jiffies(tr); */
                 /* FIXME: r should be passed and must be a bound */
-                r  = dtcp_ps->rtx.data_retransmit_max * tr;
+                r  = dtcp_data_retransmit_max(connection->policies_params->
+                                              dtcp_cfg) * tr;
         }
 
         LOG_DBG("DT SV initialized with:");
@@ -660,9 +666,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         }
 
         if (dtp_sv_init(dtp,
-                        dtcp_ps->rtx_ctrl,
-                        dtcp_ps->flowctrl.window_based,
-                        dtcp_ps->flowctrl.rate_based,
+                        dtcp_rtx_ctrl(connection->policies_params->dtcp_cfg),
+                        dtcp_window_based_fctrl(connection->policies_params
+                                                ->dtcp_cfg),
+                        dtcp_rate_based_fctrl(connection->policies_params
+                                              ->dtcp_cfg),
                         a)) {
                 LOG_ERR("Could not init dtp_sv");
                 rcu_read_unlock();
