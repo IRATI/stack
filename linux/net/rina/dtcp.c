@@ -844,6 +844,9 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
         }
 
         ret = base_select_policy_set(&dtcp->base, &policy_sets, name);
+        if (ret) {
+                return ret;
+        }
 
         /* Copy the connection parameter to the policy-set. From now on
          * these connection parameters must be accessed by the DTCP policy set,
