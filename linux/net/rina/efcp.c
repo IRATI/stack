@@ -508,7 +508,7 @@ static bool is_connection_ok(const struct connection * connection)
         return true;
 }
 
-/* FIXME This function has not ported yet to use the DTCP policy set
+/* FIXME This function has not been ported yet to use the DTCP policy set
  * parameters in place of struct dtcp_config. This because the code
  * tries to access "connection parameters" that are defined as DTCP
  * policies (in RINA) even if DTCP is not present. This has to
