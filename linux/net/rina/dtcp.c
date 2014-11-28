@@ -794,12 +794,12 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         if (ps->rtx_ctrl)
                 instance->sv->data_retransmit_max =
                         ps->rtx.data_retransmit_max;
-        rcu_read_unlock();
 
-        instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
-        instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg);
-        instance->sv->rcvr_credit         = dtcp_initial_credit(cfg);
-        instance->sv->rcvr_rt_wind_edge   = dtcp_initial_credit(cfg);
+        instance->sv->sndr_credit         = ps->flowctrl.window.initial_credit;
+        instance->sv->snd_rt_wind_edge    = ps->flowctrl.window.initial_credit;
+        instance->sv->rcvr_credit         = ps->flowctrl.window.initial_credit;
+        instance->sv->rcvr_rt_wind_edge   = ps->flowctrl.window.initial_credit;
+        rcu_read_unlock();
 
         LOG_DBG("DTCP SV initialized with dtcp_conf:");
         LOG_DBG("  data_retransmit_max: %d",
