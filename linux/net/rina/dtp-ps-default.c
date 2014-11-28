@@ -31,6 +31,7 @@
 #include "dtp-ps.h"
 #include "dtp.h"
 #include "dtcp.h"
+#include "dtcp-ps.h"
 #include "dtcp-utils.h"
 #include "dt-utils.h"
 #include "debug.h"
@@ -193,6 +194,7 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         struct dt *          dt;
         struct dtcp *        dtcp;
         struct dtcp_config * cfg;
+        struct dtcp_ps * dtcp_ps;
 
         LOG_DBG("default_receiver_inactivity launched");
 
@@ -213,26 +215,32 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         if (!cfg)
                 return -1;
 
+        rcu_read_lock();
+        dtcp_ps = dtcp_ps_get(dtcp);
+
         if (dtcp_rtx_ctrl(cfg)) {
                 struct rtxq * q;
 
                 q = dt_rtxq(dt);
                 if (!q) {
                         LOG_ERR("Couldn't find the Retransmission queue");
+                        rcu_read_unlock();
                         return -1;
                 }
                 rtxq_flush(q);
         }
-        if (dtcp_flow_ctrl(cfg)) {
+        if (dtcp_ps->flow_ctrl) {
                 struct cwq * cwq;
 
                 cwq = dt_cwq(dt);
                 ASSERT(cwq);
                 if (cwq_flush(cwq)) {
+                        rcu_read_unlock();
                         LOG_ERR("Coudln't flush cwq");
                         return -1;
                 }
         }
+        rcu_read_unlock();
 
         /*FIXME: Missing sending the control ack pdu */
         return 0;
@@ -244,6 +252,7 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         struct dtp * dtp = ps->dm;
         struct dt *          dt;
         struct dtcp *        dtcp;
+        struct dtcp_ps * dtcp_ps;
         struct dtcp_config * cfg;
 
         LOG_DBG("default_sender_inactivity launched");
@@ -265,26 +274,32 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         if (!cfg)
                 return -1;
 
+        rcu_read_lock();
+        dtcp_ps = dtcp_ps_get(dtcp);
+
         if (dtcp_rtx_ctrl(cfg)) {
                 struct rtxq * q;
 
                 q = dt_rtxq(dt);
                 if (!q) {
+                        rcu_read_unlock();
                         LOG_ERR("Couldn't find the Retransmission queue");
                         return -1;
                 }
                 rtxq_flush(q);
         }
-        if (dtcp_flow_ctrl(cfg)) {
+        if (dtcp_ps->flow_ctrl) {
                 struct cwq * cwq;
 
                 cwq = dt_cwq(dt);
                 ASSERT(cwq);
                 if (cwq_flush(cwq)) {
+                        rcu_read_unlock();
                         LOG_ERR("Coudln't flush cwq");
                         return -1;
                 }
         }
+        rcu_read_unlock();
 
         /*FIXME: Missing sending the control ack pdu */
         return 0;

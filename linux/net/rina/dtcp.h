@@ -70,6 +70,8 @@ int          dtcp_set_policy_set_param(struct dtcp * dtcp,
 
 struct dtcp * dtcp_from_component(struct rina_component * component);
 
+struct dtcp_ps * dtcp_ps_get(struct dtcp * dtcp);
+
 struct dt * dtcp_dt(struct dtcp * dtcp);
 pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq);
 struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type);

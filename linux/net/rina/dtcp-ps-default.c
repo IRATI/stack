@@ -57,7 +57,7 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
         if (!dtcp_cfg)
                 return -1;
 
-        flow_ctrl  = dtcp_flow_ctrl(dtcp_cfg);
+        flow_ctrl  = ps->flow_ctrl;
         win_based  = dtcp_window_based_fctrl(dtcp_cfg);
         rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
         rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
@@ -177,7 +177,7 @@ default_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
          * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
          * PDU_TYPE_NACK_AND_FC ?
          */
-        if (dtcp_flow_ctrl(dtcp_cfg)) {
+        if (ps->flow_ctrl) {
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
                         snd_rt  = snd_rt_wind_edge(dtcp);

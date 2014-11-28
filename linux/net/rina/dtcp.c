@@ -661,6 +661,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 {
         struct dtcp_config * dtcp_cfg;
+        struct dtcp_ps *ps;
+        bool flow_ctrl;
         seq_num_t    LWE;
         timeout_t    a;
 
@@ -669,6 +671,11 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 
         dtcp_cfg = dtcp_config_get(dtcp);
         ASSERT(dtcp_cfg);
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
+        flow_ctrl = ps->flow_ctrl;
+        rcu_read_unlock();
 
         a = dt_sv_a(dtcp->parent);
 
@@ -680,14 +687,14 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                         if (seq > LWE) {
                                 LOG_DBG("This is a NACK, "
                                         "LWE couldn't be updated");
-                                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                                if (flow_ctrl) {
                                         return PDU_TYPE_NACK_AND_FC;
                                 }
                                 return PDU_TYPE_NACK;
                         }
 #endif
                         LOG_DBG("This is an ACK");
-                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                        if (flow_ctrl) {
                                 return PDU_TYPE_ACK_AND_FC;
                         }
                         return PDU_TYPE_ACK;
@@ -697,14 +704,14 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                         /* FIXME: This should be a SEL ACK */
                         LOG_DBG("This is a NACK, "
                                 "LWE couldn't be updated");
-                        if (dtcp_flow_ctrl(dtcp_cfg)) {
+                        if (flow_ctrl) {
                                 return PDU_TYPE_NACK_AND_FC;
                         }
                         return PDU_TYPE_NACK;
                 }
 #endif
                 LOG_DBG("This is an ACK");
-                if (dtcp_flow_ctrl(dtcp_cfg)) {
+                if (flow_ctrl) {
                         return PDU_TYPE_ACK_AND_FC;
                 }
                 return PDU_TYPE_ACK;
@@ -795,6 +802,13 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 
         return 0;
 }
+
+struct dtcp_ps * dtcp_ps_get(struct dtcp * dtcp)
+{
+        return container_of(rcu_dereference(dtcp->base.ps),
+                            struct dtcp_ps, base);
+}
+EXPORT_SYMBOL(dtcp_ps_get);
 
 struct dtcp *
 dtcp_from_component(struct rina_component * component)
