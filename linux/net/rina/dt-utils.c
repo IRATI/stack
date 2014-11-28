@@ -596,6 +596,7 @@ static int rtx_worker(void * o)
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
         unsigned int         tr;
+        unsigned int data_retransmit_max;
 
         q = (struct rtxq *) o;
         if (!q) {
@@ -609,12 +610,17 @@ static int rtx_worker(void * o)
                 return -1;
         }
 
+        rcu_read_lock();
+        data_retransmit_max = dtcp_ps_get(dt_dtcp(q->parent))
+                                        ->rtx.data_retransmit_max;
+        rcu_read_unlock();
+
         tr = dt_sv_tr(q->parent);
         spin_lock(&q->lock);
         if (rtxqueue_rtx(q->queue,
                          tr,
                          q->rmt,
-                         dtcp_data_retransmit_max(dtcp_cfg)))
+                         data_retransmit_max))
                 LOG_ERR("RTX failed");
         spin_unlock(&q->lock);
 
@@ -835,6 +841,7 @@ int rtxq_nack(struct rtxq * q,
               unsigned int  tr)
 {
         struct dtcp_config * dtcp_cfg;
+        unsigned int data_retransmit_max;
 
         if (!q)
                 return -1;
@@ -843,11 +850,16 @@ int rtxq_nack(struct rtxq * q,
         if (!dtcp_cfg)
                 return -1;
 
+        rcu_read_lock();
+        data_retransmit_max = dtcp_ps_get(dt_dtcp(q->parent))->
+                                        rtx.data_retransmit_max;
+        rcu_read_unlock();
+
         spin_lock(&q->lock);
         rtxqueue_entries_nack(q->queue,
                               q->rmt,
                               seq_num,
-                              dtcp_data_retransmit_max(dtcp_cfg));
+                              data_retransmit_max);
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;

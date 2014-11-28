@@ -645,8 +645,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 tr = dtcp_initial_tr(connection->policies_params->dtcp_cfg);
                 /* tr = msecs_to_jiffies(tr); */
                 /* FIXME: r should be passed and must be a bound */
-                r  = dtcp_data_retransmit_max(connection->policies_params->
-                                              dtcp_cfg) * tr;
+                r  = dtcp_ps->rtx.data_retransmit_max * tr;
         }
 
         LOG_DBG("DT SV initialized with:");

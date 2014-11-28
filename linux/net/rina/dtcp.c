@@ -793,7 +793,7 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                           struct dtcp_ps, base);
         if (ps->rtx_ctrl)
                 instance->sv->data_retransmit_max =
-                        dtcp_data_retransmit_max(cfg);
+                        ps->rtx.data_retransmit_max;
         rcu_read_unlock();
 
         instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
