@@ -150,7 +150,10 @@ void Server::servePingFlow(Flow* flow)
                 // This thread was blocked in the readSDU() function
                 // when the flow gets deallocated
         }
-        timer_delete(timer_id);
+
+        if  (timer_id) {
+                timer_delete(timer_id);
+        }
 
         delete [] buffer;
 }
@@ -228,7 +231,10 @@ void Server::servePerfFlow(Flow* flow)
                 // This thread was blocked in the readSDU() function
                 // when the flow gets deallocated
         }
-        timer_delete(timer_id);
+
+        if  (timer_id) {
+                timer_delete(timer_id);
+        }
 
         /* When dealloc_wait is not set, we can safely add the remaining packets
          * to the total count */
