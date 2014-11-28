@@ -87,9 +87,9 @@ struct dtcp_ps {
 
         /* Parametric policies. */
         bool flow_ctrl;
-        struct dtcp_flowctrl_params flowctrl_params;
+        struct dtcp_flowctrl_params flowctrl;
         bool rtx_ctrl;
-        struct dtcp_rtx_params rtx_params;
+        struct dtcp_rtx_params rtx;
 
         /* Reference used to access the DTCP data model. */
         struct dtcp * dm;

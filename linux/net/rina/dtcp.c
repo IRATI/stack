@@ -825,36 +825,25 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
         ps = container_of(dtcp->base.ps, struct dtcp_ps, base);
         ps->flow_ctrl                   = dtcp_flow_ctrl(cfg);
         ps->rtx_ctrl                    = dtcp_rtx_ctrl(cfg);
-        ps->flowctrl_params.window_based
-                        = dtcp_window_based_fctrl(cfg);
-        ps->flowctrl_params.rate_based
-                        = dtcp_rate_based_fctrl(cfg);
-        ps->flowctrl_params.sent_bytes_th
-                        = dtcp_sent_bytes_th(cfg);
-        ps->flowctrl_params.sent_bytes_percent_th
-                        = dtcp_sent_bytes_percent_th(cfg);
-        ps->flowctrl_params.sent_buffers_th
-                        = dtcp_sent_buffers_th(cfg);
-        ps->flowctrl_params.rcvd_bytes_th
-                        = dtcp_rcvd_bytes_th(cfg);
-        ps->flowctrl_params.rcvd_bytes_percent_th
-                        = dtcp_rcvd_bytes_percent_th(cfg);
-        ps->flowctrl_params.rcvd_buffers_th
-                        = dtcp_rcvd_buffers_th(cfg);
-        ps->rtx_params.max_time_retry
-                        = dtcp_max_time_retry(cfg);
-        ps->rtx_params.data_retransmit_max
-                        = dtcp_data_retransmit_max(cfg);
-        ps->rtx_params.initial_tr
-                        = dtcp_initial_tr(cfg);
-        ps->flowctrl_params.window.max_closed_winq_length
-                        = dtcp_max_closed_winq_length(cfg);
-        ps->flowctrl_params.window.initial_credit
-                        = dtcp_initial_credit(cfg);
-        ps->flowctrl_params.rate.sending_rate
-                        = dtcp_sending_rate(cfg);
-        ps->flowctrl_params.rate.time_period
-                        = dtcp_time_period(cfg);
+        ps->flowctrl.window_based       = dtcp_window_based_fctrl(cfg);
+        ps->flowctrl.rate_based         = dtcp_rate_based_fctrl(cfg);
+        ps->flowctrl.sent_bytes_th      = dtcp_sent_bytes_th(cfg);
+        ps->flowctrl.sent_bytes_percent_th
+                                        = dtcp_sent_bytes_percent_th(cfg);
+        ps->flowctrl.sent_buffers_th    = dtcp_sent_buffers_th(cfg);
+        ps->flowctrl.rcvd_bytes_th      = dtcp_rcvd_bytes_th(cfg);
+        ps->flowctrl.rcvd_bytes_percent_th
+                                        = dtcp_rcvd_bytes_percent_th(cfg);
+        ps->flowctrl.rcvd_buffers_th    = dtcp_rcvd_buffers_th(cfg);
+        ps->rtx.max_time_retry          = dtcp_max_time_retry(cfg);
+        ps->rtx.data_retransmit_max     = dtcp_data_retransmit_max(cfg);
+        ps->rtx.initial_tr              = dtcp_initial_tr(cfg);
+        ps->flowctrl.window.max_closed_winq_length
+                                        = dtcp_max_closed_winq_length(cfg);
+        ps->flowctrl.window.initial_credit
+                                        = dtcp_initial_credit(cfg);
+        ps->flowctrl.rate.sending_rate  = dtcp_sending_rate(cfg);
+        ps->flowctrl.rate.time_period   = dtcp_time_period(cfg);
         mutex_unlock(&dtcp->base.ps_lock);
 
         return ret;
