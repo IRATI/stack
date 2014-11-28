@@ -59,7 +59,7 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
 
         flow_ctrl  = ps->flow_ctrl;
         win_based  = ps->flowctrl.window_based;
-        rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
+        rate_based = ps->flowctrl.rate_based;
         rtx_ctrl   = ps->rtx_ctrl;
 
         if (flow_ctrl) {
@@ -189,7 +189,7 @@ default_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
                         pci_control_my_rt_wind_edge_set(pci, snd_rt);
                 }
 
-                if (dtcp_rate_based_fctrl(dtcp_cfg)) {
+                if (ps->flowctrl.rate_based) {
                         LOG_MISSING;
                 }
         }

@@ -663,8 +663,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (dtp_sv_init(dtp,
                         dtcp_ps->rtx_ctrl,
                         dtcp_ps->flowctrl.window_based,
-                        dtcp_rate_based_fctrl(connection->policies_params
-                                              ->dtcp_cfg),
+                        dtcp_ps->flowctrl.rate_based,
                         a)) {
                 LOG_ERR("Could not init dtp_sv");
                 rcu_read_unlock();
