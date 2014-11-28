@@ -29,6 +29,35 @@
 #include "rds/rfifo.h"
 #include "ps-factory.h"
 
+struct dtcp_flowctrl_window_params {
+        unsigned int max_closed_winq_length; /* in cwq */
+        unsigned int initial_credit; /* to initialize sv */
+};
+
+struct dtcp_flowctrl_rate_params {
+        unsigned int sending_rate;
+        unsigned int time_period;
+};
+
+struct dtcp_flowctrl_params {
+        bool window_based;
+        struct dtcp_flowctrl_window_params window;
+        bool rate_based;
+        struct dtcp_flowctrl_rate_params rate;
+        unsigned int sent_bytes_th;
+        unsigned int sent_bytes_percent_th;
+        unsigned int sent_buffers_th;
+        unsigned int rcvd_bytes_th;
+        unsigned int rcvd_bytes_percent_th;
+        unsigned int rcvd_buffers;
+};
+
+struct dtcp_rtx_params {
+        unsigned int max_time_retry;
+        unsigned int data_retransmit_max;
+        unsigned int initial_tr;
+};
+
 struct dtcp_ps {
         struct ps_base base;
 
@@ -57,7 +86,10 @@ struct dtcp_ps {
         int (* no_override_default_peak)(struct dtcp_ps * instance);
 
         /* Parametric policies. */
-        // TODO
+        bool flow_ctrl;
+        struct dtcp_flowctrl_params flowctrl_params;
+        bool rtx_ctrl;
+        struct dtcp_rtx_params rtx_params;
 
         /* Reference used to access the DTCP data model. */
         struct dtcp * dm;
