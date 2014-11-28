@@ -218,7 +218,7 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         rcu_read_lock();
         dtcp_ps = dtcp_ps_get(dtcp);
 
-        if (dtcp_rtx_ctrl(cfg)) {
+        if (dtcp_ps->rtx_ctrl) {
                 struct rtxq * q;
 
                 q = dt_rtxq(dt);
@@ -277,7 +277,7 @@ default_sender_inactivity_timer(struct dtp_ps * ps)
         rcu_read_lock();
         dtcp_ps = dtcp_ps_get(dtcp);
 
-        if (dtcp_rtx_ctrl(cfg)) {
+        if (dtcp_ps->rtx_ctrl) {
                 struct rtxq * q;
 
                 q = dt_rtxq(dt);

@@ -31,6 +31,7 @@
 #include "dt-utils.h"
 /* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this */
 #include "dtcp.h"
+#include "dtcp-ps.h"
 #include "dtcp-utils.h"
 #include "dt.h"
 #include "dtp.h"
@@ -204,6 +205,7 @@ void cwq_deliver(struct cwq * queue,
         struct rtxq * rtxq;
         struct dtcp * dtcp;
         struct pdu  * tmp;
+        bool rtx_ctrl;
 
         if (!queue)
                 return;
@@ -218,6 +220,10 @@ void cwq_deliver(struct cwq * queue,
         if (!dtcp)
                 return;
 
+        rcu_read_lock();
+        rtx_ctrl = dtcp_ps_get(dtcp)->rtx_ctrl;
+        rcu_read_unlock();
+
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q) &&
                (dtcp_snd_lf_win(dtcp) < dtcp_snd_rt_win(dtcp))) {
@@ -230,7 +236,7 @@ void cwq_deliver(struct cwq * queue,
                         return;
                 }
 
-                if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                if (rtx_ctrl) {
                         rtxq = dt_rtxq(dt);
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);

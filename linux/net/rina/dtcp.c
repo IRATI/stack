@@ -434,15 +434,23 @@ EXPORT_SYMBOL(pdu_ctrl_ack_create);
 static int rcv_nack_ctl(struct dtcp * dtcp, seq_num_t seq_num)
 {
         struct rtxq * q;
+        struct dtcp_ps * ps;
 
-        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+
+        if (ps->rtx_ctrl) {
                 q = dt_rtxq(dtcp->parent);
                 if (!q) {
+                        rcu_read_unlock();
                         LOG_ERR("Couldn't find the Retransmission queue");
                         return -1;
                 }
                 rtxq_nack(q, seq_num, dt_sv_tr(dtcp->parent));
         }
+        rcu_read_unlock();
+
         return 0;
 }
 
@@ -761,6 +769,7 @@ static struct dtcp_sv default_sv = {
 static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
 {
         struct dtcp_config * cfg;
+        struct dtcp_ps * ps;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -779,9 +788,13 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         *instance->sv = sv;
         spin_lock_init(&instance->sv->lock);
 
-        if (dtcp_rtx_ctrl(cfg))
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct dtcp_ps, base);
+        if (ps->rtx_ctrl)
                 instance->sv->data_retransmit_max =
                         dtcp_data_retransmit_max(cfg);
+        rcu_read_unlock();
 
         instance->sv->sndr_credit         = dtcp_initial_credit(cfg);
         instance->sv->snd_rt_wind_edge    = dtcp_initial_credit(cfg);

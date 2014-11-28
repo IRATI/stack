@@ -32,6 +32,7 @@
 #include "dt.h"
 #include "dt-utils.h"
 #include "dtcp.h"
+#include "dtcp-ps.h"
 #include "dtcp-utils.h"
 #include "ps-factory.h"
 #include "dtp-ps.h"
@@ -506,10 +507,12 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         struct pdu *             pdu;
         bool                     in_order_del;
         bool                     incomplete_del;
+        bool                     rtx_ctrl;
         seq_num_t                max_sdu_gap;
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
         struct dtp_ps * ps;
+        struct dtcp_ps * dtcp_ps;
 
         ASSERT(dtp);
 
@@ -534,6 +537,8 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         in_order_del   = ps->in_order_delivery;
         incomplete_del = ps->incomplete_delivery;
         max_sdu_gap    = ps->max_sdu_gap;
+        dtcp_ps = dtcp_ps_get(dtcp);
+        rtx_ctrl = dtcp_ps->rtx_ctrl;
         rcu_read_unlock();
 
         /* FIXME: Invoke delimiting */
@@ -585,7 +590,7 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                                    jiffies)) {
                         LOG_DBG("Processing A timer expired");
 
-                        if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                        if (dtcp && rtx_ctrl) {
                                 spin_unlock(&seqq->lock);
 
                                 LOG_DBG("Retransmissions will be required");
@@ -1264,11 +1269,13 @@ int dtp_receive(struct dtp * instance,
         struct pci *          pci;
         struct dtp_sv *       sv;
         struct dtcp *         dtcp;
+        struct dtcp_ps *      dtcp_ps;
         struct dt *           dt;
         seq_num_t             seq_num;
         timeout_t             a;
         timeout_t             LWE;
         bool                  in_order;
+        bool                  rtx_ctrl;
         seq_num_t             max_sdu_gap;
 
         if (!pdu_is_ok(pdu)) {
@@ -1307,6 +1314,8 @@ int dtp_receive(struct dtp * instance,
                           struct dtp_ps, base);
         in_order    = ps->in_order_delivery;
         max_sdu_gap = ps->max_sdu_gap;
+        dtcp_ps = dtcp_ps_get(dtcp);
+        rtx_ctrl = dtcp_ps->rtx_ctrl;
         rcu_read_unlock();
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop ReceiverInactivityTimer */
@@ -1384,7 +1393,7 @@ int dtp_receive(struct dtp * instance,
                 }
 
                 set_lft_win_edge = !(dtcp                                 &&
-                                     dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
+                                     rtx_ctrl    &&
                                      ((seq_num -LWE) > max_sdu_gap));
 
                 if (set_lft_win_edge) {

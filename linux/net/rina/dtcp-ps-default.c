@@ -60,7 +60,7 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
         flow_ctrl  = ps->flow_ctrl;
         win_based  = dtcp_window_based_fctrl(dtcp_cfg);
         rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
-        rtx_ctrl   = dtcp_rtx_ctrl(dtcp_cfg);
+        rtx_ctrl   = ps->rtx_ctrl;
 
         if (flow_ctrl) {
                 if (win_based) {
@@ -234,7 +234,7 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
                 return -1;
         }
 
-        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+        if (ps->rtx_ctrl) {
                 struct rtxq * q;
 
                 q = dt_rtxq(dtcp_dt(dtcp));
