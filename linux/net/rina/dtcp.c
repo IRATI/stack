@@ -893,10 +893,77 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
         if (strcmp(path, "") == 0) {
+                int bool_value;
+
                 /* The request addresses this DTP instance. */
                 rcu_read_lock();
                 ps = container_of(rcu_dereference(dtcp->base.ps), struct dtcp_ps, base);
-                LOG_ERR("Unknown DTP parameter policy '%s'", name);
+                if (strcmp(name, "flow_ctrl") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->flow_ctrl = bool_value;
+                        }
+                } else if (strcmp(name, "rtx_ctrl") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->rtx_ctrl = bool_value;
+                        }
+                } else if (strcmp(name, "flowctrl.window_based") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->flowctrl.window_based = bool_value;
+                        }
+                } else if (strcmp(name, "flowctrl.rate_based") == 0) {
+                        ret = kstrtoint(value, 10, &bool_value);
+                        if (ret == 0) {
+                                ps->flowctrl.rate_based = bool_value;
+                        }
+                } else if (strcmp(name, "flowctrl.sent_bytes_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.sent_bytes_th);
+                } else if (strcmp(name, "flowctrl.sent_bytes_percent_th")
+                                == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.sent_bytes_percent_th);
+                } else if (strcmp(name, "flowctrl.sent_buffers_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.sent_buffers_th);
+                } else if (strcmp(name, "flowctrl.rcvd_bytes_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rcvd_bytes_th);
+                } else if (strcmp(name, "flowctrl.rcvd_bytes_percent_th")
+                                == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rcvd_bytes_percent_th);
+                } else if (strcmp(name, "flowctrl.rcvd_buffers_th") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rcvd_buffers_th);
+                } else if (strcmp(name, "rtx.max_time_retry") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->rtx.max_time_retry);
+                } else if (strcmp(name, "rtx.data_retransmit_max") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->rtx.data_retransmit_max);
+                } else if (strcmp(name, "rtx.initial_tr") == 0) {
+                        ret = kstrtouint(value, 10, &ps->rtx.initial_tr);
+                } else if (strcmp(name,
+                                "flowctrl.window.max_closed_winq_length")
+                                        == 0) {
+                        ret = kstrtouint(value, 10,
+                                &ps->flowctrl.window.max_closed_winq_length);
+                } else if (strcmp(name, "flowctrl.window.initial_credit")
+                                == 0) {
+                        ret = kstrtouint(value, 10,
+                                &ps->flowctrl.window.initial_credit);
+                } else if (strcmp(name, "flowctrl.rate.sending_rate") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rate.sending_rate);
+                } else if (strcmp(name, "flowctrl.rate.time_period") == 0) {
+                        ret = kstrtouint(value, 10,
+                                         &ps->flowctrl.rate.time_period);
+                } else {
+                        LOG_ERR("Unknown DTP parameter policy '%s'", name);
+                }
                 rcu_read_unlock();
         } else {
                 ret = base_set_policy_set_param(&dtcp->base, path, name, value);
