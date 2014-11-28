@@ -807,16 +807,61 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                            const string_t * path,
                            const string_t * name)
 {
+        struct dtcp_config * cfg = dtcp->conn->policies_params->dtcp_cfg;
+        struct dtcp_ps *ps;
+        int ret;
+
         if (path && strcmp(path, "")) {
                 LOG_ERR("This component has no selectable subcomponents");
                 return -1;
         }
 
-        return base_select_policy_set(&dtcp->base, &policy_sets, name);
+        ret = base_select_policy_set(&dtcp->base, &policy_sets, name);
+
+        /* Copy the connection parameter to the policy-set. From now on
+         * these connection parameters must be accessed by the DTCP policy set,
+         * and not from the struct connection. */
+        mutex_lock(&dtcp->base.ps_lock);
+        ps = container_of(dtcp->base.ps, struct dtcp_ps, base);
+        ps->flow_ctrl                   = dtcp_flow_ctrl(cfg);
+        ps->rtx_ctrl                    = dtcp_rtx_ctrl(cfg);
+        ps->flowctrl_params.window_based
+                        = dtcp_window_based_fctrl(cfg);
+        ps->flowctrl_params.rate_based
+                        = dtcp_rate_based_fctrl(cfg);
+        ps->flowctrl_params.sent_bytes_th
+                        = dtcp_sent_bytes_th(cfg);
+        ps->flowctrl_params.sent_bytes_percent_th
+                        = dtcp_sent_bytes_percent_th(cfg);
+        ps->flowctrl_params.sent_buffers_th
+                        = dtcp_sent_buffers_th(cfg);
+        ps->flowctrl_params.rcvd_bytes_th
+                        = dtcp_rcvd_bytes_th(cfg);
+        ps->flowctrl_params.rcvd_bytes_percent_th
+                        = dtcp_rcvd_bytes_percent_th(cfg);
+        ps->flowctrl_params.rcvd_buffers_th
+                        = dtcp_rcvd_buffers_th(cfg);
+        ps->rtx_params.max_time_retry
+                        = dtcp_max_time_retry(cfg);
+        ps->rtx_params.data_retransmit_max
+                        = dtcp_data_retransmit_max(cfg);
+        ps->rtx_params.initial_tr
+                        = dtcp_initial_tr(cfg);
+        ps->flowctrl_params.window.max_closed_winq_length
+                        = dtcp_max_closed_winq_length(cfg);
+        ps->flowctrl_params.window.initial_credit
+                        = dtcp_initial_credit(cfg);
+        ps->flowctrl_params.rate.sending_rate
+                        = dtcp_sending_rate(cfg);
+        ps->flowctrl_params.rate.time_period
+                        = dtcp_time_period(cfg);
+        mutex_unlock(&dtcp->base.ps_lock);
+
+        return ret;
 }
 EXPORT_SYMBOL(dtcp_select_policy_set);
 
-int dtcp_set_policy_set_param(struct dtcp* dtcp,
+int dtcp_set_policy_set_param(struct dtcp * dtcp,
                               const char * path,
                               const char * name,
                               const char * value)

@@ -49,7 +49,7 @@ struct dtcp_flowctrl_params {
         unsigned int sent_buffers_th;
         unsigned int rcvd_bytes_th;
         unsigned int rcvd_bytes_percent_th;
-        unsigned int rcvd_buffers;
+        unsigned int rcvd_buffers_th;
 };
 
 struct dtcp_rtx_params {
