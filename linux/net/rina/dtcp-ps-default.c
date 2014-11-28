@@ -58,7 +58,7 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
                 return -1;
 
         flow_ctrl  = ps->flow_ctrl;
-        win_based  = dtcp_window_based_fctrl(dtcp_cfg);
+        win_based  = ps->flowctrl.window_based;
         rate_based = dtcp_rate_based_fctrl(dtcp_cfg);
         rtx_ctrl   = ps->rtx_ctrl;
 
@@ -178,7 +178,7 @@ default_rcvr_ack(struct dtcp_ps * ps, seq_num_t seq)
          * PDU_TYPE_NACK_AND_FC ?
          */
         if (ps->flow_ctrl) {
-                if (dtcp_window_based_fctrl(dtcp_cfg)) {
+                if (ps->flowctrl.window_based) {
                         snd_lft = snd_lft_win(dtcp);
                         snd_rt  = snd_rt_wind_edge(dtcp);
 
