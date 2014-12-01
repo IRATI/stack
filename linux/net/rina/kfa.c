@@ -116,6 +116,15 @@ int  kfa_port_id_release(struct kfa * instance,
 
         mutex_lock(&instance->lock);
 
+        /* To avoid releasing the port if the it is used by a flow in the kfa */
+        /* which will be automatically destroyed when the flow is unbound by  */
+        /* the provider ipcp and the writers/readers/posters in kfa are 0     */
+        flow = kfa_pmap_find(instance->flows, id);
+        if (flow) {
+                mutex_unlock(&instance->lock);
+                return 0;
+        }
+
         if (!instance->pidm) {
                 LOG_ERR("This KFA instance doesn't have a PIDM");
                 mutex_unlock(&instance->lock);
