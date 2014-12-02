@@ -70,15 +70,15 @@ int main()
 
 	delete timer;
 
-	std::cout<<std::endl <<	"//////////////////////////////////////" << std::endl <<
+	std::cout<<std::endl <<	"////////////////////////////////////////////////" << std::endl <<
 							"//// test-timer TEST 2 : two timer not equal ///" << std::endl <<
-							"//////////////////////////////////////" << std::endl;
+							"////////////////////////////////////////////////" << std::endl;
 	timer = new Timer();
 
 	hello = new HelloWorldTimerTask();
 	GoodbyeWorldTimerTask *bye = new GoodbyeWorldTimerTask();
 	timer->scheduleTask(hello, 100);
-	sleep.sleepForMili(100);
+	sleep.sleepForMili(500);
 	timer->scheduleTask(bye, 100);
 
 	sleep.sleepForMili(1000);
@@ -91,7 +91,7 @@ int main()
 	delete timer;
 
 	std::cout<<std::endl <<	"//////////////////////////////////////" << std::endl <<
-							"/ test-timer TEST 2 : two timer equal/" << std::endl <<
+							"/ test-timer TEST 3 : two timer equal/" << std::endl <<
 							"//////////////////////////////////////" << std::endl;
 	timer = new Timer();
 
@@ -105,6 +105,26 @@ int main()
 	if (!hello->check_){
 		result = false;
 		std::cout<< "TEST 3 FAILED"<<std::endl;
+	}
+
+	delete timer;
+
+	std::cout<<std::endl <<	"////////////////////////////////////////////////////" << std::endl <<
+							"/ test-timer TEST 4 : Cancel tasks of the same time/" << std::endl <<
+							"////////////////////////////////////////////////////" << std::endl;
+	timer = new Timer();
+
+	hello = new HelloWorldTimerTask();
+	bye = new GoodbyeWorldTimerTask();
+	timer->scheduleTask(hello, 100);
+	timer->scheduleTask(bye, 100);
+
+	timer->cancelTask(hello);
+	sleep.sleepForMili(1000);
+
+	if (!bye->check_){
+		result = false;
+		std::cout<< "TEST 4 FAILED"<<std::endl;
 	}
 
 	delete timer;

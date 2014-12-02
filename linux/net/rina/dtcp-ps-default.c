@@ -46,7 +46,6 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
         bool                 win_based;
         bool                 rate_based;
         bool                 rtx_ctrl;
-        seq_num_t            LWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -89,7 +88,6 @@ default_sv_update(struct dtcp_ps * ps, seq_num_t seq)
                         return retval;
                 }
         }
-        LWE = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
 
         if (rtx_ctrl) {
                 LOG_DBG("Retransmission ctrl invoked");

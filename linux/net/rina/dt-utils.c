@@ -545,8 +545,9 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
-                LOG_DBG("Checking RTX of PDU %u, now: %lu >?< %lu + %lu",
-                        seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr));
+                LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %lu (%u ms)",
+                        seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr),
+                        tr);
                 if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
                                    jiffies)) {
                         cur->retries++;

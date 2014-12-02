@@ -27,7 +27,6 @@
 #include "common.h"
 #include "qos.h"
 
-struct policies;
 struct dtcp_config;
 
 /* FIXME: Move RNL structure to RNL placeholder files */
@@ -36,6 +35,10 @@ struct conn_policies {
         /* FIXME: Anyone using this variable? To be removed */
         bool                 dtcp_present;
         struct dtcp_config * dtcp_cfg;
+        /* FIXME The following three "policies" are unused, useless
+         * and duplicated - they already exist as function pointers
+         * (dtp-ps.h). They have to be removed here, and therefore
+         * from netlink (kernespace+userspace) and from librina. */
         struct policy *      initial_sequence_number;
         struct policy *      receiver_inactivity_timer;
         struct policy *      sender_inactivity_timer;
