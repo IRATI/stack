@@ -25,28 +25,11 @@
 
 #include "pdu-ser.h"
 
-struct dup_chksum;
-
-struct dup_chksum * dup_chksum_create(size_t (* size)(void),
-                                      bool   (* compute)(void * buffer,
-                                                         size_t size,
-                                                         void * value),
-                                      bool   (* update)(void * buffer,
-                                                        size_t size,
-                                                        void * old,
-                                                        void * new));
-int                 dup_chksum_destroy(struct dup_chksum * inst);
-
-int                 dup_chksum_add(struct dup_chksum * inst,
-                                   struct pdu_ser *     pdu);
-int                 dup_chksum_remove(struct dup_chksum * inst,
-                                      struct pdu_ser *     pdu);
-int                 dup_chksum_is_ok(struct dup_chksum * inst,
-                                     struct pdu_ser *     pdu);
-int                 dup_chksum_set(struct dup_chksum * inst,
-                                   struct pdu_ser *     pdu);
-int                 dup_chksum_update(struct dup_chksum * inst,
-                                      struct pdu_ser *     pdu);
+int dup_chksum_add(struct pdu_ser * pdu);
+int dup_chksum_remove(struct pdu_ser * pdu);
+int dup_chksum_is_ok(struct pdu_ser * pdu);
+int dup_chksum_set(struct pdu_ser * pdu);
+int dup_chksum_update(struct pdu_ser * pdu);
 
 #if 0
 struct dup_ttl;
