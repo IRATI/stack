@@ -25,26 +25,20 @@
 
 #include "pdu-ser.h"
 
-int dup_chksum_add(struct pdu_ser * pdu);
-int dup_chksum_remove(struct pdu_ser * pdu);
-int dup_chksum_is_ok(struct pdu_ser * pdu);
-int dup_chksum_set(struct pdu_ser * pdu);
-int dup_chksum_update(struct pdu_ser * pdu);
+/* Adds the checksum field, computes its value and sets it */
+bool dup_chksum_add(struct pdu_ser * pdu);
 
-#if 0
-struct dup_ttl;
+bool dup_chksum_remove(struct pdu_ser * pdu);
+bool dup_chksum_is_present(struct pdu_ser * pdu);
+bool dup_chksum_is_ok(struct pdu_ser * pdu);
 
-struct dup_ttl * dup_ttl_create();
-int              dup_ttl_destroy(struct dup_ttl * inst);
+/* Adds the TTL field and sets its initial value */
+bool dup_ttl_add(struct pdu_ser * pdu, size_t value);
+bool dup_ttl_remove(struct pdu_ser * pdu);
+bool dup_ttl_is_present(struct pdu_ser * pdu);
 
-int              dup_ttl_add(struct dup_ttl * inst,
-                             struct pdu_ser * pdu);
-int              dup_ttl_decrement(struct dup_ttl * inst,
-                                   struct pdu_ser * pdu);
-int              dup_ttl_is_zero(struct dup_ttl * inst,
-                                 struct pdu_ser * pdu);
-int              dup_ttl_remove(struct dup_ttl * inst,
-                                struct pdu_ser * pdu);
-#endif
+/* Decrements the TTL until it expires (does anything otherwise) */
+bool dup_ttl_decrement(struct pdu_ser * pdu);
+bool dup_ttl_is_expired(struct pdu_ser * pdu);
 
 #endif
