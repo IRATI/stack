@@ -2003,10 +2003,6 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 return -1;
         }
-        if (!ipc_process) {
-                LOG_ERR("IPC process %d not found", ipc_id);
-                return -1;
-        }
 
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_deallocate);
