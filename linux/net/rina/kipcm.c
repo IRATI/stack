@@ -2004,21 +2004,17 @@ int kipcm_deallocate_port(struct kipcm *   kipcm,
                 LOG_ERR("IPC process %d not found", ipc_id);
                 return -1;
         }
-        if (!ipc_process) {
-                LOG_ERR("IPC process %d not found", ipc_id);
-                return -1;
-        }
 
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_deallocate);
-
-        kfa_port_id_release(kipcm->kfa, port_id);
 
         if (ipc_process->ops->flow_deallocate(ipc_process->data, port_id)) {
                 LOG_ERR("Failed deallocate flow request "
                         "for port id: %d", port_id);
                 return -1;
         }
+
+        kfa_port_id_release(kipcm->kfa, port_id);
 
         return 0;
 }
