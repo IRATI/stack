@@ -59,4 +59,6 @@ int                  dtcp_snd_lf_win_set(struct dtcp * instance,
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp);
 
+/*FIXME: wrapper to be called by dtp in the post_worker */
+int                  dtcp_sending_ack_policy(struct dtcp * dtcp);
 #endif

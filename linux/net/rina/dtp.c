@@ -729,8 +729,10 @@ static void tf_receiver_inactivity(void * data)
  *   period of the A-timer: Ta = A / AF
  */
 #define AF 1
-
-static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
+/* FIXME: removed the static so that dtcp's sending_ack policy can use this
+ * function. This has to be refactored and evaluate how much code would be
+ * repeated */
+seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
         struct dt *              dt;
         struct dtp_sv *          sv;
@@ -786,7 +788,6 @@ static seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         LOG_DBG("LWEU: MAX GAPS     = %u", max_sdu_gap);
 
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
-
                 pdu = pos->pdu;
                 if (!pdu_is_ok(pdu)) {
                         spin_unlock(&seqq->lock);
@@ -876,7 +877,7 @@ finish:
                         pdu_post(dtp, pdu);
         }
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
-
+        LOG_DBG("Finish process_Atimer_expiration");
         return ret;
 }
 
@@ -896,6 +897,7 @@ static bool seqq_is_empty(struct squeue * queue)
 
 static int post_worker(void * o)
 {
+        struct dt *   dt;
         struct dtp *  dtp;
         struct dtcp * dtcp;
         seq_num_t     seq_num_sv_update;
@@ -910,20 +912,30 @@ static int post_worker(void * o)
         }
 
         dtcp = dt_dtcp(dtp->parent);
-
+        dt   = dtp->parent;
         /* Invoke delimiting and update left window edge */
 
         a = dt_sv_a(dtp->parent);
-        seq_num_sv_update =  process_A_expiration(dtp, dtcp);
+
         if (dtcp) {
+                if (dtcp_sending_ack_policy(dtcp)){
+                        LOG_ERR("sending_ack failed");
+                        rtimer_start(dtp->timers.a, a/AF);
+                        return 0;
+                }
+        } else {
+                seq_num_sv_update =  process_A_expiration(dtp, dtcp);
                 if ((int) seq_num_sv_update < 0) {
                         LOG_ERR("ULWE returned no seq num to update");
                         rtimer_start(dtp->timers.a, a/AF);
                         return -1;
                 }
 
-                if (dtcp_sv_update(dtcp, seq_num_sv_update)) {
-                        LOG_ERR("Failed to update dtcp sv");
+                if (rtimer_restart(dtp->timers.sender_inactivity,
+                                   2 * (dt_sv_mpl(dt) +
+                                        dt_sv_r(dt)   +
+                                        dt_sv_a(dt)))) {
+                        LOG_ERR("Failed to start sender_inactiviy timer");
                         rtimer_start(dtp->timers.a, a/AF);
                         return -1;
                 }
@@ -1639,6 +1651,12 @@ static int rcv_worker(void * o)
         if (a) {
                 LOG_DBG("Going to start A timer with t = %d", a/AF);
                 rtimer_start(instance->timers.a, a/AF);
+        }
+
+        if (dtcp) {
+                if (dtcp_sv_update(dtcp, seq_num)) {
+                        LOG_ERR("Failed to update dtcp sv");
+                }
         }
 
         while (!rqueue_is_empty(to_post)) {
