@@ -27,3 +27,60 @@
 #include "debug.h"
 
 #include "du-protection.h"
+
+bool dup_chksum_set(struct pdu_ser * pdu)
+{
+        if (!pdu_ser_is_ok(pdu))
+                return false;
+
+        LOG_MISSING;
+
+        return true;
+}
+EXPORT_SYMBOL(dup_chksum_set);
+
+bool dup_chksum_is_ok(struct pdu_ser * pdu)
+{
+        if (!pdu_ser_is_ok(pdu))
+                return false;
+
+        LOG_MISSING;
+
+        return true;
+}
+EXPORT_SYMBOL(dup_chksum_is_ok);
+
+bool dup_ttl_set(struct pdu_ser * pdu,
+                 int              value)
+{
+        if (!pdu_ser_is_ok(pdu))
+                return false;
+
+        LOG_MISSING;
+
+        return true;
+}
+EXPORT_SYMBOL(dup_ttl_set);
+
+bool dup_ttl_decrement(struct pdu_ser * pdu,
+                      int *            value)
+{
+        if (!pdu_ser_is_ok(pdu))
+                return false;
+
+        LOG_MISSING;
+
+        return true;
+}
+EXPORT_SYMBOL(dup_ttl_decrement);
+
+bool dup_ttl_is_expired(struct pdu_ser * pdu)
+{
+        if (!pdu_ser_is_ok(pdu))
+                return false;
+
+        LOG_MISSING;
+
+        return true;
+}
+EXPORT_SYMBOL(dup_ttl_is_expired);
