@@ -228,6 +228,9 @@ struct LocalConfiguration {
         /* The path to the RINA libraries in the system */
         std::string libraryPath;
 
+        /* The path to the RINA log folder in the system */
+        std::string logPath;
+
         std::string toString() const;
 
         LocalConfiguration() :
