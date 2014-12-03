@@ -30,7 +30,7 @@
 #define SHIM_NAME   "shim-tcp-udp"
 
 #define RINA_PREFIX SHIM_NAME
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 1500
 
 #include "logs.h"
 #include "common.h"
