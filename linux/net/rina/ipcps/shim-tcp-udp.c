@@ -2007,12 +2007,13 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
 {
         __be16 length;
         int    size, total;
-        char   buf[len + sizeof(__be16)];
+        char * buf;
 
         ASSERT(flow);
         ASSERT(len);
         ASSERT(sbuf);
 
+        buf = rkmalloc(len + sizeof(__be16), GFP_KERNEL);
         length = htons((short)len);
 
         memcpy(&buf[0], &length, sizeof(__be16));
@@ -2028,6 +2029,8 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                 }
                 total += size;
         }
+
+        rkfree(buf);
 
         return 0;
 }
