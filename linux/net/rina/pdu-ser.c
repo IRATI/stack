@@ -92,3 +92,29 @@ int pdu_ser_buffer_disown(struct pdu_ser * pdu)
         return 0;
 }
 EXPORT_SYMBOL(pdu_ser_buffer_disown);
+
+int pdu_ser_head_grow(struct pdu_ser * pdu, size_t bytes)
+{
+        if (!pdu)
+                return false;
+        if (!bytes)
+                return true; /* This is a NO-OP */
+
+        LOG_MISSING;
+
+        return false;
+}
+EXPORT_SYMBOL(pdu_ser_head_grow);
+
+int pdu_ser_head_shrink(struct pdu_ser * pdu, size_t bytes)
+{
+        if (!pdu)
+                return false;
+        if (!bytes)
+                return true; /* This is a NO-OP */
+
+        LOG_MISSING;
+
+        return false;
+}
+EXPORT_SYMBOL(pdu_ser_head_shrink);
