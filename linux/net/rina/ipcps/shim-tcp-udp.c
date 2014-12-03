@@ -1049,15 +1049,14 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_from(flow->buf, flow->lbuf);
+                sdubuf = buffer_create_with(flow->buf, flow->lbuf);
                 if (!sdubuf) {
                         rkfree(flow->buf);
                         LOG_ERR("could not create buffer");
                         return -1;
                 }
-                rkfree(flow->buf);
 
-                du = sdu_create_buffer_with_ni(sdubuf);
+                du = sdu_create_buffer_with(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
