@@ -233,6 +233,11 @@ EXPORT_SYMBOL(buffer_data_rw);
 int buffer_head_grow(struct buffer * buffer,
                      size_t          bytes)
 {
+        if (!buffer)
+                return -1;
+        if (!bytes)
+                return 1; /* This is a NO-OP */
+
         LOG_MISSING;
 
         return -1;
@@ -242,6 +247,11 @@ EXPORT_SYMBOL(buffer_head_grow);
 int buffer_head_shrink(struct buffer * buffer,
                        size_t          bytes)
 {
+        if (!buffer)
+                return -1;
+        if (!bytes)
+                return 1; /* This is a NO-OP */
+
         LOG_MISSING;
 
         return -1;
@@ -251,6 +261,11 @@ EXPORT_SYMBOL(buffer_head_shrink);
 int buffer_tail_grow(struct buffer * buffer,
                      size_t          bytes)
 {
+        if (!buffer)
+                return -1;
+        if (!bytes)
+                return 1; /* This is a NO-OP */
+
         LOG_MISSING;
 
         return -1;
@@ -260,6 +275,11 @@ EXPORT_SYMBOL(buffer_tail_grow);
 int buffer_tail_shrink(struct buffer * buffer,
                        size_t          bytes)
 {
+        if (!buffer)
+                return -1;
+        if (!bytes)
+                return 1; /* This is a NO-OP */
+
         LOG_MISSING;
 
         return -1;
