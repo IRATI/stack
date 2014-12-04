@@ -230,19 +230,23 @@ void * buffer_data_rw(struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_data_rw);
 
-static void set_new_buffer(struct buffer * buffer,
-                           char * new_data,
-                           size_t new_len)
+/* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
+static void buffer_assign(struct buffer * buffer,
+                          char *          new_data,
+                          size_t          new_len)
 {
         ASSERT(buffer);
         ASSERT(new_data);
         ASSERT(new_len);
 
-        rkfree(buffer->data);
+        if (buffer->data)
+                rkfree(buffer->data);
+
         buffer->data = new_data;
         buffer->size = new_len;
 }
 
+/* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_head_grow(struct buffer * buffer,
                      size_t          bytes)
 {
@@ -259,12 +263,13 @@ int buffer_head_grow(struct buffer * buffer,
 
         memcpy(new_data + bytes, buffer->data, buffer->size);
 
-        set_new_buffer(buffer, new_data, buffer->size + bytes);
+        buffer_assign(buffer, new_data, buffer->size + bytes);
 
-        return 0;
+        return 1;
 }
 EXPORT_SYMBOL(buffer_head_grow);
 
+/* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_head_shrink(struct buffer * buffer,
                        size_t          bytes)
 {
@@ -281,12 +286,13 @@ int buffer_head_shrink(struct buffer * buffer,
 
         memcpy(new_data, buffer->data + bytes, buffer->size - bytes);
 
-        set_new_buffer(buffer, new_data, buffer->size - bytes);
+        buffer_assign(buffer, new_data, buffer->size - bytes);
 
-        return 0;
+        return 1;
 }
 EXPORT_SYMBOL(buffer_head_shrink);
 
+/* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_tail_grow(struct buffer * buffer,
                      size_t          bytes)
 {
@@ -303,12 +309,13 @@ int buffer_tail_grow(struct buffer * buffer,
 
         memcpy(new_data, buffer->data, buffer->size);
 
-        set_new_buffer(buffer, new_data, buffer->size + bytes);
+        buffer_assign(buffer, new_data, buffer->size + bytes);
 
-        return 0;
+        return 1;
 }
 EXPORT_SYMBOL(buffer_tail_grow);
 
+/* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_tail_shrink(struct buffer * buffer,
                        size_t          bytes)
 {
@@ -325,8 +332,8 @@ int buffer_tail_shrink(struct buffer * buffer,
 
         memcpy(new_data, buffer->data, buffer->size - bytes);
 
-        set_new_buffer(buffer, new_data, buffer->size - bytes);
+        buffer_assign(buffer, new_data, buffer->size - bytes);
 
-        return 0;
+        return 1;
 }
 EXPORT_SYMBOL(buffer_tail_shrink);
