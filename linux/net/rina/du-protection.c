@@ -1,5 +1,5 @@
 /*
- * SDU Protection
+ * Data Unit Protection
  *
  *    Dimitri Staessens     <dimitri.staessens@intec.ugent.be>
  *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -20,12 +20,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "sdu-protection"
+#define RINA_PREFIX "du-protection"
 
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
 
-#if 0
-#include "sdu-protection.h"
-#endif
+#include "du-protection.h"
