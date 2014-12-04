@@ -22,18 +22,73 @@
 
 #define RINA_PREFIX "du-protection"
 
+#include <linux/export.h>
+#include <linux/types.h>
+#include <linux/crc32.h>
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-
 #include "du-protection.h"
+
+static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
+                                  unsigned char *  data,
+                                  ssize_t *        len)
+{
+        struct buffer * buf;
+
+        buf = pdu_ser_buffer(pdu);
+        if (!buf) {
+                LOG_ERR("Cannot get buffer");
+                return false;
+        }
+
+        *len = buffer_length(buf);
+        LOG_DBG("Length is %zd", *len);
+
+        data = (unsigned char *) buffer_data_rw(buf);
+        if (!data) {
+                LOG_ERR("Cannot get data");
+                return false;
+        }
+
+        return true;
+}
+
+static bool crc32_pdu_ser(struct pdu_ser * pdu,
+                          u32 *            crc)
+{
+        ssize_t         len;
+        unsigned char * data;
+
+        ASSERT(pdu_ser_is_ok(pdu));
+
+        data = 0;
+
+        if (data_len_from_pdu_ser(pdu, data, &len))
+                return false;
+
+        *crc = crc32_le(0, data + sizeof(*crc), len - sizeof(*crc));
+        LOG_DBG("Calculated a crc of %d", *crc);
+
+        return true;
+}
 
 bool dup_chksum_set(struct pdu_ser * pdu)
 {
+        u32             crc;
+        unsigned char * data;
+        ssize_t         len;
+
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
-        LOG_MISSING;
+        crc32_pdu_ser(pdu, &crc);
+
+        if (data_len_from_pdu_ser(pdu, data, &len))
+                return false;
+
+        memcpy(data, &crc, sizeof(crc));
 
         return true;
 }
@@ -41,10 +96,23 @@ EXPORT_SYMBOL(dup_chksum_set);
 
 bool dup_chksum_is_ok(struct pdu_ser * pdu)
 {
+        u32             crc;
+        unsigned char * data;
+        ssize_t         len;
+
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
-        LOG_MISSING;
+        data = 0;
+
+        if (crc32_pdu_ser(pdu, &crc))
+                return false;
+
+        if (data_len_from_pdu_ser(pdu, data, &len))
+                return false;
+
+        if (memcmp(&crc, data, sizeof(crc)))
+                return false;
 
         return true;
 }

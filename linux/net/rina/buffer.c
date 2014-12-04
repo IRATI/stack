@@ -230,58 +230,103 @@ void * buffer_data_rw(struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_data_rw);
 
+static void set_new_buffer(struct buffer * buffer,
+                           char * new_data,
+                           size_t new_len)
+{
+        ASSERT(buffer);
+        ASSERT(new_data);
+        ASSERT(new_len);
+
+        rkfree(buffer->data);
+        buffer->data = new_data;
+        buffer->size = new_len;
+}
+
 int buffer_head_grow(struct buffer * buffer,
                      size_t          bytes)
 {
-        if (!buffer)
+        char * new_data;
+
+        if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
                 return 1; /* This is a NO-OP */
 
-        LOG_MISSING;
+        new_data = rkmalloc(buffer->size + bytes, GFP_KERNEL);
+        if (!new_data)
+                return -1;
 
-        return -1;
+        memcpy(new_data + bytes, buffer->data, buffer->size);
+
+        set_new_buffer(buffer, new_data, buffer->size + bytes);
+
+        return 0;
 }
 EXPORT_SYMBOL(buffer_head_grow);
 
 int buffer_head_shrink(struct buffer * buffer,
                        size_t          bytes)
 {
-        if (!buffer)
+        char * new_data;
+
+        if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
                 return 1; /* This is a NO-OP */
 
-        LOG_MISSING;
+        new_data = rkmalloc(buffer->size - bytes, GFP_KERNEL);
+        if (!new_data)
+                return -1;
 
-        return -1;
+        memcpy(new_data, buffer->data + bytes, buffer->size - bytes);
+
+        set_new_buffer(buffer, new_data, buffer->size - bytes);
+
+        return 0;
 }
 EXPORT_SYMBOL(buffer_head_shrink);
 
 int buffer_tail_grow(struct buffer * buffer,
                      size_t          bytes)
 {
-        if (!buffer)
+        char * new_data;
+
+        if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
                 return 1; /* This is a NO-OP */
 
-        LOG_MISSING;
+        new_data = rkmalloc(buffer->size + bytes, GFP_KERNEL);
+        if (!new_data)
+                return -1;
 
-        return -1;
+        memcpy(new_data, buffer->data, buffer->size);
+
+        set_new_buffer(buffer, new_data, buffer->size + bytes);
+
+        return 0;
 }
 EXPORT_SYMBOL(buffer_tail_grow);
 
 int buffer_tail_shrink(struct buffer * buffer,
                        size_t          bytes)
 {
-        if (!buffer)
+        char * new_data;
+
+        if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
                 return 1; /* This is a NO-OP */
 
-        LOG_MISSING;
+        new_data = rkmalloc(buffer->size - bytes, GFP_KERNEL);
+        if (!new_data)
+                return -1;
 
-        return -1;
+        memcpy(new_data, buffer->data, buffer->size - bytes);
+
+        set_new_buffer(buffer, new_data, buffer->size - bytes);
+
+        return 0;
 }
 EXPORT_SYMBOL(buffer_tail_shrink);

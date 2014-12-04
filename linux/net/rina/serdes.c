@@ -33,6 +33,7 @@
 #include "ipcp-instances.h"
 #include "buffer.h"
 #include "pci.h"
+#include "du-protection.h"
 
 /* FIXME: This is wrong, use a version value and use sifeof later */
 #define VERSION_SIZE  1
@@ -716,6 +717,26 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 return NULL;
         }
 
+
+#ifdef CONFIG_RINA_IPCPS_CRC
+
+        /* Assuming CRC32 */
+        if (pdu_ser_head_grow(tmp, 4)) {
+                LOG_ERR("Failed to grow ser PDU");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+
+        if (!dup_chksum_set(tmp)) {
+                LOG_ERR("Failed to add CRC");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+
+        ASSERT(dup_chksum_is_ok(tmp));
+
+#endif
+
         pdu_destroy(pdu);
 
         return tmp;
@@ -745,6 +766,21 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
 
         if (!instance)
                 return NULL;
+
+#ifdef CONFIG_RINA_IPCPS_CRC
+
+        if (!dup_chksum_is_ok(pdu)) {
+                LOG_ERR("Bad CRC. PDU has been corrupted.");
+                return NULL;
+        }
+
+        /* Assuming CRC32 */
+        if (pdu_ser_head_shrink(pdu, 4)) {
+                LOG_ERR("Failed to shrink ser PDU");
+                return NULL;
+        }
+
+#endif
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
