@@ -1641,12 +1641,20 @@ static int rcv_worker(void * o)
                 rqueue_tail_push_ni(to_post, pdu);
 
                 pdu     = seq_queue_pop(instance->seqq->queue);
-                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
                 LWE     = dt_sv_rcv_lft_win(dt);
+                if (!pdu)
+                        break;
+                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
         }
         if (pdu)
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
+
+        while (!rqueue_is_empty(to_post)) {
+                pdu = (struct pdu *) rqueue_head_pop(to_post);
+                if (pdu)
+                        pdu_post(instance, pdu);
+        }
 
         if (a) {
                 LOG_DBG("Going to start A timer with t = %d", a/AF);
@@ -1659,11 +1667,6 @@ static int rcv_worker(void * o)
                 }
         }
 
-        while (!rqueue_is_empty(to_post)) {
-                pdu = (struct pdu *) rqueue_head_pop(to_post);
-                if (pdu)
-                        pdu_post(instance, pdu);
-        }
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
 
  exit:

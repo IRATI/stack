@@ -791,6 +791,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         char *                          sk_data;
         struct ipcp_instance          * ipcp, * user_ipcp;
 
+        LOG_DBG("eth_vlan_recv_process_packet starts....");
+
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
         if (!mapping) {
@@ -877,6 +879,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 return -1;
         }
 
+        LOG_DBG("eth_vlan_recv_process_packet checks and allocs done....");
 
         spin_lock(&data->lock);
         flow = find_flow_by_gha(data, ghaddr);
@@ -1054,6 +1057,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
         }
 
+        LOG_DBG("eth_vlan_recv_process_packet ends....");
+
         return 0;
 }
 
@@ -1088,8 +1093,11 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMITING
                 BUILD_BUG_ON(CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT <= 0);
 
-                if (num_frames >= CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT)
+                if (num_frames >= CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT){
+                        LOG_DBG("Worker limited by burst, processed %d frames",
+                                num_frames);
                         return;
+                }
 #endif
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
