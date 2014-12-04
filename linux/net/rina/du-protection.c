@@ -20,11 +20,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define RINA_PREFIX "du-protection"
-
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/crc32.h>
+
+#define RINA_PREFIX "du-protection"
 
 #include "logs.h"
 #include "utils.h"
