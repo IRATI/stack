@@ -77,14 +77,22 @@ menuconfig IPC_PROCESSES
 
 if IPC_PROCESSES
 
+config RINA_DUP
+        bool "Enable system-wide DU protection"
+        default n
+        help
+          no help for the time being
+
 config RINA_IPCPS_CRC
         bool "Enable CRC on IPCPs (system-wide)"
         default n
+        depends on RINA_DUP
         help
           no help for the time being
 
 config RINA_IPCPS_TTL
         bool "Enable TTL on IPCPs (system-wide)"
+        depends on RINA_DUP
         default n
         help
           no help for the time being
