@@ -721,7 +721,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
 #ifdef CONFIG_RINA_IPCPS_CRC
 
         /* Assuming CRC32 */
-        if (pdu_ser_head_grow(tmp, 4) < 0) {
+        if (pdu_ser_head_grow(tmp, 4)) {
                 LOG_ERR("Failed to grow ser PDU");
                 pdu_ser_destroy(tmp);
                 return NULL;
@@ -775,7 +775,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         }
 
         /* Assuming CRC32 */
-        if (pdu_ser_head_shrink(pdu, 4) < 0) {
+        if (pdu_ser_head_shrink(pdu, 4)) {
                 LOG_ERR("Failed to shrink ser PDU");
                 return NULL;
         }

@@ -265,7 +265,7 @@ int buffer_head_grow(struct buffer * buffer,
 
         buffer_assign(buffer, new_data, buffer->size + bytes);
 
-        return 1;
+        return 0;
 }
 EXPORT_SYMBOL(buffer_head_grow);
 
@@ -288,7 +288,7 @@ int buffer_head_shrink(struct buffer * buffer,
 
         buffer_assign(buffer, new_data, buffer->size - bytes);
 
-        return 1;
+        return 0;
 }
 EXPORT_SYMBOL(buffer_head_shrink);
 
@@ -311,7 +311,7 @@ int buffer_tail_grow(struct buffer * buffer,
 
         buffer_assign(buffer, new_data, buffer->size + bytes);
 
-        return 1;
+        return 0;
 }
 EXPORT_SYMBOL(buffer_tail_grow);
 
@@ -334,6 +334,6 @@ int buffer_tail_shrink(struct buffer * buffer,
 
         buffer_assign(buffer, new_data, buffer->size - bytes);
 
-        return 1;
+        return 0;
 }
 EXPORT_SYMBOL(buffer_tail_shrink);
