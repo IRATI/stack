@@ -65,7 +65,7 @@ static bool crc32_pdu_ser(struct pdu_ser * pdu,
 
         data = 0;
 
-        if (data_len_from_pdu_ser(pdu, data, &len))
+        if (!data_len_from_pdu_ser(pdu, data, &len))
                 return false;
 
         *crc = crc32_le(0, data + sizeof(*crc), len - sizeof(*crc));
@@ -83,9 +83,10 @@ bool dup_chksum_set(struct pdu_ser * pdu)
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
-        crc32_pdu_ser(pdu, &crc);
+        if (!crc32_pdu_ser(pdu, &crc))
+                return false;
 
-        if (data_len_from_pdu_ser(pdu, data, &len))
+        if (!data_len_from_pdu_ser(pdu, data, &len))
                 return false;
 
         memcpy(data, &crc, sizeof(crc));
@@ -105,10 +106,10 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
 
         data = 0;
 
-        if (crc32_pdu_ser(pdu, &crc))
+        if (!crc32_pdu_ser(pdu, &crc))
                 return false;
 
-        if (data_len_from_pdu_ser(pdu, data, &len))
+        if (!data_len_from_pdu_ser(pdu, data, &len))
                 return false;
 
         if (memcmp(&crc, data, sizeof(crc)))
