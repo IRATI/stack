@@ -255,7 +255,7 @@ int buffer_head_grow(struct buffer * buffer,
         if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
-                return 1; /* This is a NO-OP */
+                return 0; /* This is a NO-OP */
 
         new_data = rkmalloc(buffer->size + bytes, GFP_KERNEL);
         if (!new_data)
@@ -278,7 +278,7 @@ int buffer_head_shrink(struct buffer * buffer,
         if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
-                return 1; /* This is a NO-OP */
+                return 0; /* This is a NO-OP */
 
         new_data = rkmalloc(buffer->size - bytes, GFP_KERNEL);
         if (!new_data)
@@ -301,7 +301,7 @@ int buffer_tail_grow(struct buffer * buffer,
         if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
-                return 1; /* This is a NO-OP */
+                return 0; /* This is a NO-OP */
 
         new_data = rkmalloc(buffer->size + bytes, GFP_KERNEL);
         if (!new_data)
@@ -324,7 +324,7 @@ int buffer_tail_shrink(struct buffer * buffer,
         if (!buffer_is_ok(buffer))
                 return -1;
         if (!bytes)
-                return 1; /* This is a NO-OP */
+                return 0; /* This is a NO-OP */
 
         new_data = rkmalloc(buffer->size - bytes, GFP_KERNEL);
         if (!new_data)
