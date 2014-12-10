@@ -1374,14 +1374,18 @@ static void inst_cleanup(struct ipcp_instance * inst)
 {
         ASSERT(inst);
 
-        if (inst->data->info)
-                rkfree(inst->data->info);
-        if (inst->data->name)
-                name_destroy(inst->data->name);
-        if (inst->data->eth_vlan_packet_type)
-                rkfree(inst->data->eth_vlan_packet_type);
-        if (inst->data)
+        if (inst->data) {
+                if (inst->data->fspec)
+                        rkfree(inst->data->fspec);
+                if (inst->data->info)
+                        rkfree(inst->data->info);
+                if (inst->data->name)
+                        name_destroy(inst->data->name);
+                if (inst->data->eth_vlan_packet_type)
+                        rkfree(inst->data->eth_vlan_packet_type);
+
                 rkfree(inst->data);
+        }
 
         rkfree(inst);
 }
