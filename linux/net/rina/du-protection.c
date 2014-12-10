@@ -32,7 +32,7 @@
 #include "du-protection.h"
 
 static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
-                                  unsigned char *  data,
+                                  unsigned char ** data,
                                   ssize_t *        len)
 {
         struct buffer * buf;
@@ -46,8 +46,8 @@ static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
         *len = buffer_length(buf);
         LOG_DBG("Length is %zd", *len);
 
-        data = (unsigned char *) buffer_data_rw(buf);
-        if (!data) {
+        *data = (unsigned char *) buffer_data_rw(buf);
+        if (!*data) {
                 LOG_ERR("Cannot get data");
                 return false;
         }
@@ -64,9 +64,13 @@ static bool crc32_pdu_ser(struct pdu_ser * pdu,
         ASSERT(pdu_ser_is_ok(pdu));
 
         data = 0;
+        len = 0;
 
-        if (!data_len_from_pdu_ser(pdu, data, &len))
+        if (!data_len_from_pdu_ser(pdu, &data, &len))
                 return false;
+
+        LOG_DBG("Going to calculate the CRC now");
+        LOG_DBG("Length is %zd", len);
 
         *crc = crc32_le(0, data + sizeof(*crc), len - sizeof(*crc));
         LOG_DBG("Calculated a crc of %d", *crc);
@@ -80,13 +84,17 @@ bool dup_chksum_set(struct pdu_ser * pdu)
         unsigned char * data;
         ssize_t         len;
 
+        len = 0;
+        crc = 0;
+        data = 0;
+
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
         if (!crc32_pdu_ser(pdu, &crc))
                 return false;
 
-        if (!data_len_from_pdu_ser(pdu, data, &len))
+        if (!data_len_from_pdu_ser(pdu, &data, &len))
                 return false;
 
         memcpy(data, &crc, sizeof(crc));
@@ -105,11 +113,13 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
                 return false;
 
         data = 0;
+        crc = 0;
+        len = 0;
 
         if (!crc32_pdu_ser(pdu, &crc))
                 return false;
 
-        if (!data_len_from_pdu_ser(pdu, data, &len))
+        if (!data_len_from_pdu_ser(pdu, &data, &len))
                 return false;
 
         if (memcmp(&crc, data, sizeof(crc)))
