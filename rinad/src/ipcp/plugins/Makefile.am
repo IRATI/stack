@@ -11,6 +11,7 @@ COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
+	-I$(srcdir)/../..			\
 	-I$(srcdir)/../common
 
 libps_sm_passwd_la_CFLAGS =
