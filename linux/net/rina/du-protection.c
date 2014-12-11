@@ -38,10 +38,8 @@ static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
         struct buffer * buf;
 
         buf = pdu_ser_buffer(pdu);
-        if (!buf) {
-                LOG_ERR("Cannot get buffer");
+        if (!buffer_is_ok(buf))
                 return false;
-        }
 
         *len = buffer_length(buf);
         LOG_DBG("Length is %zd", *len);
@@ -120,7 +118,7 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
 EXPORT_SYMBOL(dup_chksum_is_ok);
 
 bool dup_ttl_set(struct pdu_ser * pdu,
-                 int              value)
+                 size_t           value)
 {
         if (!pdu_ser_is_ok(pdu))
                 return false;
@@ -131,15 +129,16 @@ bool dup_ttl_set(struct pdu_ser * pdu,
 }
 EXPORT_SYMBOL(dup_ttl_set);
 
-bool dup_ttl_decrement(struct pdu_ser * pdu,
-                      int *            value)
+size_t dup_ttl_decrement(struct pdu_ser * pdu)
 {
+        size_t val = 0;
+
         if (!pdu_ser_is_ok(pdu))
-                return false;
+                return val;
 
         LOG_MISSING;
 
-        return true;
+        return val;
 }
 EXPORT_SYMBOL(dup_ttl_decrement);
 
