@@ -97,6 +97,13 @@ config RINA_IPCPS_TTL
         help
           no help for the time being
 
+config RINA_IPCPS_TTL_DEFAULT
+        int "TTL default value"
+        depends on RINA_IPCPS_TTL
+        default 50
+        help
+          no help for the time being
+
 source "net/rina/ipcps/Kconfig"
 source "net/rina/rinarp/Kconfig"
 source "net/rina/vmpi/Kconfig"
