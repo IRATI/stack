@@ -2,6 +2,7 @@
  * RINA Work Queues
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,15 +33,17 @@
  */
 
 struct rwq_work_item {
-        struct work_struct work; /* KEEP AT TOP AND DO NOT MOVE ! */
-        int                (* worker)(void * data);
-        void *             data;
-        bool               single;
+        struct work_struct        work; /* KEEP AT TOP AND DO NOT MOVE ! */
+        int                       (* worker)(void * data);
+        void *                    data;
+        bool                      single;
+        struct workqueue_struct * wq;
 };
 
 static void rwq_worker(struct work_struct * work)
 {
         struct rwq_work_item * item = (struct rwq_work_item *) work;
+        int    ret;
 
         if (!item) {
                 LOG_ERR("No item to work on, bailing out");
@@ -48,15 +51,18 @@ static void rwq_worker(struct work_struct * work)
         }
         ASSERT(item->worker); /* Ensured by post */
 
-        /* We're the owner of the data, let's free it */
-        if (item->worker(item->data)) {
+        ret = item->worker(item->data);
+        if (ret == -RWQ_WORKERROR )
                 LOG_ERR("The worker could not process its data!");
-        }
 
-        if (item->single)
+
+        if (item->single) {
                 clear_bit(WORK_STRUCT_PENDING_BIT,
                           work_data_bits((struct work_struct *)item));
-        else
+                if (item->wq && ret == RWQ_RESCHEDULE)
+                        queue_work(item->wq, (struct work_struct *) item);
+        } else
+                /* We're the owner of the data, let's free it */
                 rkfree(item);
 
         return;
@@ -126,6 +132,7 @@ static struct rwq_work_item * rwq_work_create_gfp(gfp_t    flags,
         tmp->worker = work;
         tmp->data   = data;
         tmp->single = single;
+        tmp->wq     = NULL;
 
         return tmp;
 }
@@ -140,12 +147,12 @@ struct rwq_work_item * rwq_work_create_ni(int   (* work)(void * data),
 { return rwq_work_create_gfp(GFP_ATOMIC, work, data, false); }
 EXPORT_SYMBOL(rwq_work_create_ni);
 
-struct rwq_work_item * rwq_work_create_single(int   (* work)(void * data),
+struct rwq_work_item * rwq_work_create_single(int  (* work)(void * data),
                                               void *   data)
 { return rwq_work_create_gfp(GFP_KERNEL, work, data, true); }
 EXPORT_SYMBOL(rwq_work_create_single);
 
-struct rwq_work_item * rwq_work_create_single_ni(int   (* work)(void * data),
+struct rwq_work_item * rwq_work_create_single_ni(int  (* work)(void * data),
                                                  void *   data)
 { return rwq_work_create_gfp(GFP_ATOMIC, work, data, true); }
 EXPORT_SYMBOL(rwq_work_create_single_ni);
@@ -165,6 +172,8 @@ int rwq_work_post(struct workqueue_struct * wq,
                 LOG_ERR("No item passed, cannot post work");
                 return -1;
         }
+
+        item->wq = wq;
 
         if (!queue_work(wq, (struct work_struct *) item)) {
                 /* FIXME: Add workqueue name in the log */

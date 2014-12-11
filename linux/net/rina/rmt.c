@@ -906,6 +906,29 @@ static int forward_pdu(struct rmt * rmt,
         return 0;
 }
 
+static bool ev_resch(struct rmt_qmap * queues) {
+        struct rmt_queue *  entry;
+        int                 bucket;
+
+        if (!queues) {
+                LOG_ERR("No queues passed...");
+                return false;
+        }
+
+        spin_lock(&queues->lock);
+        hash_for_each(queues->queues,
+                      bucket,
+                      entry,
+                      hlist) {
+                if (!rfifo_is_empty(entry->queue)) {
+                        spin_unlock(&queues->lock);
+                        return true;
+                }
+        }
+        spin_unlock(&queues->lock);
+        return false;
+}
+
 static int receive_worker(void * o)
 {
         struct rmt *        tmp;
@@ -918,7 +941,7 @@ static int receive_worker(void * o)
         tmp = (struct rmt *) o;
         if (!tmp) {
                 LOG_ERR("No instance passed to receive worker !!!");
-                return -1;
+                return -RWQ_WORKERROR;
         }
 
         spin_lock(&tmp->ingress.queues->lock);
@@ -1055,7 +1078,10 @@ static int receive_worker(void * o)
         }
         spin_unlock(&tmp->ingress.queues->lock);
 
-        return 0;
+        if (ev_resch(tmp->ingress.queues))
+                return RWQ_RESCHEDULE;
+
+        return RWQ_NORESCHEDULE;
 }
 
 int rmt_receive(struct rmt * instance,
