@@ -2206,7 +2206,7 @@ static void inst_cleanup(struct ipcp_instance * inst)
                                 rkfree(inst->data->qos[0]);
                         if (inst->data->qos[1])
                                 rkfree(inst->data->qos[1]);
-                        
+
                         rkfree(inst->data->qos);
                 }
                 if (inst->data->name)
