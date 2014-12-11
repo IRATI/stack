@@ -42,7 +42,6 @@ static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
                 return false;
 
         *len = buffer_length(buf);
-        LOG_DBG("Length is %zd", *len);
 
         *data = (unsigned char *) buffer_data_rw(buf);
         if (!*data) {
@@ -67,11 +66,8 @@ static bool crc32_pdu_ser(struct pdu_ser * pdu,
         if (!data_len_from_pdu_ser(pdu, &data, &len))
                 return false;
 
-        LOG_DBG("Going to calculate the CRC now");
-        LOG_DBG("Length is %zd", len);
-
         *crc = crc32_le(0, data + sizeof(*crc), len - sizeof(*crc));
-        LOG_DBG("Calculated a crc of %d", *crc);
+        LOG_DBG("Calculated a crc of %X", *crc);
 
         return true;
 }
@@ -122,6 +118,8 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
 
         if (memcmp(&crc, data, sizeof(crc)))
                 return false;
+
+        LOG_DBG("CRC is ok");
 
         return true;
 }
