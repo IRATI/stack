@@ -28,8 +28,8 @@
 bool   dup_chksum_set(struct pdu_ser * pdu);
 bool   dup_chksum_is_ok(struct pdu_ser * pdu);
 
-bool   dup_ttl_set(struct pdu_ser * pdu, size_t value);
-size_t dup_ttl_decrement(struct pdu_ser * pdu);
-bool   dup_ttl_is_expired(struct pdu_ser * pdu);
+bool    dup_ttl_set(struct pdu_ser * pdu, size_t value);
+ssize_t dup_ttl_decrement(struct pdu_ser * pdu);
+bool    dup_ttl_is_expired(struct pdu_ser * pdu);
 
 #endif

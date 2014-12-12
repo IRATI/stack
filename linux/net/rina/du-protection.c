@@ -137,9 +137,9 @@ bool dup_ttl_set(struct pdu_ser * pdu,
 }
 EXPORT_SYMBOL(dup_ttl_set);
 
-size_t dup_ttl_decrement(struct pdu_ser * pdu)
+ssize_t dup_ttl_decrement(struct pdu_ser * pdu)
 {
-        size_t val = 0;
+        ssize_t val = -1;
 
         if (!pdu_ser_is_ok(pdu))
                 return val;
