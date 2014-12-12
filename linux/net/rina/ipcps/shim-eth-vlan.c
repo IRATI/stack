@@ -1062,6 +1062,20 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         return 0;
 }
 
+static bool evaluate_packet_list_end(struct rcv_struct * pos,
+                                     struct rcv_struct * next,
+                                     struct list_head  * head) {
+                if (&pos->list == head) {
+                        if (&next->list == head)
+                                return false;
+                        pos = next;
+                        next   = list_entry(next->list.next,
+                                            struct rcv_struct,
+                                            list);
+                }
+                return true;
+}
+
 static void eth_vlan_rcv_worker(struct work_struct *work)
 {
         struct rcv_struct * packet, * next;
@@ -1073,7 +1087,23 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         spin_lock_irqsave(&rcv_wq_lock, flags);
 
         num_frames = 0;
-        list_for_each_entry_safe(packet, next, &rcv_wq_packets, list) {
+        LOG_DBG("packets head: %pk", &rcv_wq_packets);
+
+        for (packet = list_entry((&rcv_wq_packets)->next, struct rcv_struct, list),
+             next = list_entry(packet->list.next, struct rcv_struct, list);
+             /*evaluate_packet_list_end(packet, next, &rcv_wq_packets);*/
+             !(&packet->list == &rcv_wq_packets &&
+               &next->list == &rcv_wq_packets);
+             packet = next, next = list_entry(next->list.next,
+                                              struct rcv_struct,
+                                              list)) {
+                if (&packet->list == &rcv_wq_packets) {
+                        packet = next;
+                        next   = list_entry(next->list.next,
+                                            struct rcv_struct,
+                                            list);
+                }
+                list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
                 /* Call eth_vlan_recv_process_packet */
@@ -1083,10 +1113,6 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 num_frames++;
 
                 LOG_DBG("rcv_worker processed one packet");
-
-                spin_lock_irqsave(&rcv_wq_lock, flags);
-                list_del(&packet->list);
-                spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
                 rkfree(packet);
 
@@ -1100,6 +1126,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 }
 #endif
                 spin_lock_irqsave(&rcv_wq_lock, flags);
+                LOG_DBG("next packet: %pk", &next->list);
         }
 
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
@@ -1137,6 +1164,7 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         spin_lock(&rcv_wq_lock);
         list_add_tail(&packet->list, &rcv_wq_packets);
         spin_unlock(&rcv_wq_lock);
+        LOG_DBG("eth_vlan_rcv packet added");
 
         queue_work(rcv_wq, &rcv_work);
 
