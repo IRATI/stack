@@ -269,6 +269,13 @@ static int disable_write(struct ipcp_instance_data * data, port_id_t id)
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 return -1;
         }
+
+        if (flow->state == PORT_STATE_DEALLOCATED) {
+                mutex_unlock(&instance->lock);
+                LOG_DBG("Flow with port-id %d is already deallocated", id);
+                return 0;
+        }
+
         flow->state = PORT_STATE_DISABLED;
         mutex_unlock(&instance->lock);
 
