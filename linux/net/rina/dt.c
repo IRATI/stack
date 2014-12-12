@@ -42,6 +42,7 @@ struct dt {
         struct dt_sv *      sv;
         struct dtp *        dtp;
         struct dtcp *       dtcp;
+        struct efcp *       efcp;
 
         struct cwq *        cwq;
         struct rtxq *       rtxq;
@@ -329,10 +330,58 @@ int dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq)
         if (dt->rtxq) {
                 spin_unlock(&dt->lock);
 
-                LOG_ERR("A CWQ already bound to instance %pK", dt);
+                LOG_ERR("A RTXQ already bound to instance %pK", dt);
                 return -1;
         }
         dt->rtxq = rtxq;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
+struct efcp * dt_efcp_unbind(struct dt * dt)
+{
+        struct efcp * tmp;
+
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot unbind EFCP");
+                return NULL;
+        }
+
+        spin_lock(&dt->lock);
+        if (!dt->efcp) {
+                spin_unlock(&dt->lock);
+
+                LOG_ERR("No EFCP bound to instance %pK", dt);
+                return NULL;
+        }
+        tmp = dt->efcp;
+        dt->efcp = NULL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_efcp_bind(struct dt * dt, struct efcp * efcp)
+{
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot bind EFCP");
+                return -1;
+        }
+
+        if (!efcp) {
+                LOG_ERR("Cannot bind NULL EFCP to instance %pK", dt);
+                return -1;
+        }
+
+        spin_lock(&dt->lock);
+        if (dt->efcp) {
+                spin_unlock(&dt->lock);
+
+                LOG_ERR("A EFCP already bound to instance %pK", dt);
+                return -1;
+        }
+        dt->efcp = efcp;
         spin_unlock(&dt->lock);
 
         return 0;
@@ -389,6 +438,20 @@ struct rtxq * dt_rtxq(struct dt * dt)
 
         spin_lock(&dt->lock);
         tmp = dt->rtxq;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+struct efcp * dt_efcp(struct dt * dt)
+{
+        struct efcp * tmp;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock(&dt->lock);
+        tmp = dt->efcp;
         spin_unlock(&dt->lock);
 
         return tmp;

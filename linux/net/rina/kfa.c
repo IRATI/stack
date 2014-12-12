@@ -51,7 +51,8 @@ enum flow_state {
         PORT_STATE_NULL        = 1,
         PORT_STATE_PENDING,
         PORT_STATE_ALLOCATED,
-        PORT_STATE_DEALLOCATED
+        PORT_STATE_DEALLOCATED,
+        PORT_STATE_DISABLED
 };
 
 struct ipcp_flow {
@@ -235,6 +236,96 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
 }
 EXPORT_SYMBOL(kfa_flow_deallocate);
 
+static bool ok_write(struct ipcp_flow * flow)
+{
+        return !(flow->state == PORT_STATE_PENDING ||
+                 flow->state == PORT_STATE_DISABLED);
+}
+
+static int disable_write(struct ipcp_instance_data * data, port_id_t id)
+{
+        struct ipcp_flow * flow;
+        struct kfa *        instance;
+
+        if (!data) {
+                LOG_ERR("Bogus ipcp data instance passed, can't enable pid");
+                return -1;
+        }
+
+        instance = data->kfa;
+        if (!instance) {
+                LOG_ERR("Bogus kfa instance passed, can't enable pid");
+                return -1;
+        }
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
+
+        mutex_lock(&instance->lock);
+        flow = kfa_pmap_find(instance->flows, id);
+        if (!flow) {
+                mutex_unlock(&instance->lock);
+                LOG_ERR("There is no flow bound to port-id %d", id);
+                return -1;
+        }
+        flow->state = PORT_STATE_DISABLED;
+        mutex_unlock(&instance->lock);
+
+        LOG_DBG("IPCP notified CWQ exhausted");
+
+        return 0;
+}
+
+static int enable_write(struct ipcp_instance_data * data, port_id_t id)
+{
+        struct ipcp_flow *  flow;
+        struct kfa *        instance;
+        wait_queue_head_t * wq;
+
+        if (!data) {
+                LOG_ERR("Bogus ipcp data instance passed, can't enable pid");
+                return -1;
+        }
+
+        instance = data->kfa;
+        if (!instance) {
+                LOG_ERR("Bogus kfa instance passed, can't enable pid");
+                return -1;
+        }
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Bogus port-id, bailing out");
+                return -1;
+        }
+
+        LOG_DBG("Posting SDU to port-id %d ", id);
+
+        mutex_lock(&instance->lock);
+        flow = kfa_pmap_find(instance->flows, id);
+        if (!flow) {
+                mutex_unlock(&instance->lock);
+                LOG_ERR("There is no flow bound to port-id %d", id);
+                return -1;
+        }
+
+        if (flow->state == PORT_STATE_DEALLOCATED) {
+                mutex_unlock(&instance->lock);
+                LOG_DBG("Flow with port-id %d is already deallocated", id);
+                return 0;
+        }
+        if (flow->state == PORT_STATE_DISABLED) {
+                flow->state = PORT_STATE_ALLOCATED;
+                wq = &flow->wait_queue;
+                mutex_unlock(&instance->lock);
+                wake_up_interruptible_all(wq);
+                LOG_DBG("Enabled port id");
+                return 0;
+        }
+        mutex_unlock(&instance->lock);
+
+        return 0;
+}
+
 int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                        port_id_t                   id,
                        struct sdu *                sdu)
@@ -289,14 +380,13 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
 
         atomic_inc(&flow->writers);
 
-        while (flow->state == PORT_STATE_PENDING) {
+        while (!ok_write(flow)) {
                 mutex_unlock(&instance->lock);
 
                 LOG_DBG("Going to sleep on wait queue %pK (writing)",
                         &flow->wait_queue);
                 retval = wait_event_interruptible(flow->wait_queue,
-                                                  (flow->state !=
-                                                   PORT_STATE_PENDING));
+                                                  ok_write(flow));
                 LOG_DBG("Write woken up (%d)", retval);
 
                 if (retval) {
@@ -748,7 +838,9 @@ static struct ipcp_instance_ops kfa_instance_ops = {
         .connection_create_arrived = NULL,
         .sdu_enqueue               = kfa_sdu_post,
         .sdu_write                 = kfa_flow_sdu_write,
-        .ipcp_name                 = kfa_name
+        .ipcp_name                 = kfa_name,
+        .enable_write              = enable_write,
+        .disable_write             = disable_write
 };
 
 struct kfa * kfa_create(void)

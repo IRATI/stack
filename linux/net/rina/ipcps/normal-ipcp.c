@@ -82,7 +82,8 @@ enum normal_flow_state {
         PORT_STATE_NULL = 1,
         PORT_STATE_PENDING,
         PORT_STATE_ALLOCATED,
-        PORT_STATE_DEALLOCATED
+        PORT_STATE_DEALLOCATED,
+        PORT_STATE_DISABLED
 };
 
 struct cep_ids_entry {
@@ -513,6 +514,23 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int enable_write(struct ipcp_instance_data * data,
+                        port_id_t                   port_id)
+{
+        if (rmt_enable_port_id(data->rmt, port_id))
+                return -1;
+
+        return 0;
+}
+
+static int disable_write(struct ipcp_instance_data * data,
+                         port_id_t                   port_id) {
+        if (rmt_disable_port_id(data->rmt, port_id))
+                return -1;
+
+        return 0;
+}
+
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
                                 const struct dif_info *     dif_information)
 {
@@ -878,7 +896,9 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pft_dump                  = normal_pft_dump,
         .pft_flush                 = normal_pft_flush,
 
-        .ipcp_name                 = normal_ipcp_name
+        .ipcp_name                 = normal_ipcp_name,
+        .enable_write              = enable_write,
+        .disable_write             = disable_write
 };
 
 static struct mgmt_data * normal_mgmt_data_create(void)

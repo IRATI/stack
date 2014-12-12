@@ -192,6 +192,36 @@ ssize_t cwq_size(struct cwq * queue)
         return tmp;
 }
 
+static void enable_write(struct cwq * cwq,
+                         struct dt *  dt)
+{
+        struct dtcp *        dtcp;
+        struct dtp *         dtp;
+        struct dtcp_config * cfg;
+        uint_t               max_len;
+
+        if (!dt)
+                return;
+
+        dtcp = dt_dtcp(dt);
+        if (!dtcp)
+                return;
+
+        cfg = dtcp_config_get(dtcp);
+        if (!cfg)
+                return;
+
+        dtp = dt_dtp(dt);
+        if (!dtp)
+                return;
+
+        max_len = dtcp_max_closed_winq_length(cfg);
+        if (cwq_size(cwq) < max_len)
+                efcp_enable_write(dt_efcp(dt));
+
+        return;
+}
+
 void cwq_deliver(struct cwq * queue,
                  struct dt *  dt,
                  struct rmt * rmt,
@@ -258,9 +288,11 @@ void cwq_deliver(struct cwq * queue,
 
         if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
                 dt_sv_window_closed_set(dt, true);
+                enable_write(queue, dt);
                 return;
         }
         dt_sv_window_closed_set(dt, false);
+        enable_write(queue, dt);
 
         return;
 }

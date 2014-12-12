@@ -224,6 +224,9 @@ struct ipcp_instance_ops {
         int (* pft_flush)(struct ipcp_instance_data * data);
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
+
+        int (* enable_write)(struct ipcp_instance_data * data, port_id_t id);
+        int (* disable_write)(struct ipcp_instance_data * data, port_id_t id);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

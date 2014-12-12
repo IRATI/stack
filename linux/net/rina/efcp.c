@@ -386,6 +386,42 @@ static bool is_connection_ok(const struct connection * connection)
         return true;
 }
 
+int efcp_enable_write(struct efcp * efcp)
+{
+        if (!efcp                 ||
+            !efcp->user_ipcp      ||
+            !efcp->user_ipcp->ops ||
+            !efcp->user_ipcp->data) {
+                LOG_ERR("No EFCP or user IPCP provided");
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->enable_write(efcp->user_ipcp->data,
+                                               efcp->connection->port_id)) {
+                return -1;
+        }
+
+        return 0;
+}
+
+int efcp_disable_write(struct efcp * efcp)
+{
+        if (!efcp                 ||
+            !efcp->user_ipcp      ||
+            !efcp->user_ipcp->ops ||
+            !efcp->user_ipcp->data) {
+                LOG_ERR("No user IPCP provided");
+                return -1;
+        }
+
+        if (efcp->user_ipcp->ops->disable_write(efcp->user_ipcp->data,
+                                                efcp->connection->port_id)) {
+                return -1;
+        }
+
+        return 0;
+}
+
 cep_id_t efcp_connection_create(struct efcp_container * container,
                                 struct ipcp_instance *  user_ipcp,
                                 struct connection *     connection)
@@ -499,6 +535,11 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
+        }
+
+        if (dt_efcp_bind(tmp->dt, tmp)) {
+                efcp_destroy(tmp);
+                return cep_id_bad();
         }
 
         /* FIXME: This is crap and have to be rethinked */

@@ -42,11 +42,17 @@
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
+enum flow_state {
+        PORT_STATE_ENABLED,
+        PORT_STATE_DISABLED
+};
+
 struct rmt_queue {
         struct rfifo *         queue;
         port_id_t              port_id;
         struct ipcp_instance * n1_ipcp;
         struct hlist_node      hlist;
+        enum flow_state        state;
 };
 
 static struct rmt_queue * queue_create(port_id_t id,
@@ -70,6 +76,7 @@ static struct rmt_queue * queue_create(port_id_t id,
 
         tmp->port_id = id;
         tmp->n1_ipcp = n1_ipcp;
+        tmp->state   = PORT_STATE_ENABLED;
 
         LOG_DBG("Queue %pK created successfully (port-id = %d)", tmp, id);
 
@@ -321,15 +328,22 @@ static int send_worker(void * o)
                            ntmp,
                            entry,
                            hlist) {
-                struct sdu *     sdu;
-                struct pdu *     pdu;
-                struct pdu_ser * pdu_ser;
-                port_id_t        port_id;
-                struct buffer *  buffer;
-                struct serdes *  serdes;
+                struct sdu *           sdu;
+                struct pdu *           pdu;
+                struct pdu_ser *       pdu_ser;
+                port_id_t              port_id;
+                struct buffer *        buffer;
+                struct serdes *        serdes;
                 struct ipcp_instance * n1_ipcp;
+                enum flow_state        state;
 
                 ASSERT(entry);
+
+                state = entry->state;
+                if (state == PORT_STATE_DISABLED) {
+                        LOG_DBG("Port state is DISABLED");
+                        continue;
+                }
 
                 pdu = (struct pdu *) rfifo_pop(entry->queue);
 
@@ -569,6 +583,101 @@ static int rmt_queue_send_add(struct rmt * instance,
 
         return __queue_send_add(instance, id, n1_ipcp);
 }
+
+int rmt_enable_port_id(struct rmt * instance,
+                       port_id_t    id)
+{
+        struct rmt_queue *     queue;
+        struct rwq_work_item * item;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id %d", id);
+                return -1;
+        }
+
+        if (!instance->egress.queues) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        item = rwq_work_create_ni(send_worker, instance);
+        if (!item) {
+                LOG_ERR("Cannot create send item for port-id %d", id);
+                return -1;
+        }
+
+        spin_lock(&instance->egress.queues->lock);
+        queue = qmap_find(instance->egress.queues, id);
+        if (!queue) {
+                spin_unlock(&instance->egress.queues->lock);
+                LOG_ERR("No queue associated to this port-id, %d", id);
+                return -1;
+        }
+
+        if (queue->state != PORT_STATE_DISABLED) {
+                spin_unlock(&instance->egress.queues->lock);
+                LOG_DBG("Nothing to do for port-id %d", id);
+                return 0;
+        }
+        queue->state = PORT_STATE_ENABLED;
+        spin_unlock(&instance->egress.queues->lock);
+
+        LOG_DBG("Changed state to ENABLED");
+        ASSERT(instance->egress.wq);
+        if (rwq_work_post(instance->egress.wq, item)) {
+                LOG_ERR("Cannot post work (PDU) to egress work-queue");
+                return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_enable_port_id);
+
+int rmt_disable_port_id(struct rmt * instance,
+                        port_id_t    id)
+{
+        struct rmt_queue * queue;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+
+        if (!is_port_id_ok(id)) {
+                LOG_ERR("Wrong port-id %d", id);
+                return -1;
+        }
+
+        if (!instance->egress.queues) {
+                LOG_ERR("Invalid RMT");
+                return -1;
+        }
+
+        spin_lock(&instance->egress.queues->lock);
+        queue = qmap_find(instance->egress.queues, id);
+        if (!queue) {
+                spin_unlock(&instance->egress.queues->lock);
+                LOG_ERR("No queue associated to this port-id, %d", id);
+                return -1;
+        }
+
+        if (queue->state == PORT_STATE_DISABLED) {
+                spin_unlock(&instance->egress.queues->lock);
+                LOG_DBG("Nothing to do for port-id %d", id);
+                return 0;
+        }
+        queue->state = PORT_STATE_DISABLED;
+        spin_unlock(&instance->egress.queues->lock);
+        LOG_DBG("Changed state to DISABLED");
+
+        return 0;
+}
+EXPORT_SYMBOL(rmt_disable_port_id);
 
 static int rmt_queue_send_delete(struct rmt * instance,
                                  port_id_t    id)

@@ -71,5 +71,7 @@ int                     efcp_unbind_rmt(struct efcp_container * container);
 int                     efcp_enqueue(struct efcp * efcp,
                                      port_id_t     port,
                                      struct sdu *  sdu);
+int                     efcp_enable_write(struct efcp * efcp);
+int                     efcp_disable_write(struct efcp * efcp);
 
 #endif

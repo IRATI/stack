@@ -167,25 +167,39 @@ static void dropped_pdus_inc(struct dtp_sv * sv)
 
 static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
 {
+        struct cwq * cwq;
+        struct dt *  dt;
+
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
 
-        /* FIXME: How to block further write API calls? */
+        dt = dtp->parent;
+        ASSERT(dt);
 
-        LOG_MISSING;
+        cwq = dt_cwq(dt);
+        if (!cwq) {
+                LOG_ERR("Failed to get cwq");
+                pdu_destroy(pdu);
+                return -1;
+        }
 
         LOG_DBG("Default Flow Control");
 
-#if 0
-        /* FIXME: Re-enable or remove depending on the missing code */
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("PDU is not ok, cannot run policy");
+                pdu_destroy(pdu);
                 return -1;
         }
-#endif
-        pdu_destroy(pdu);
+
+        if (cwq_push(cwq, pdu)) {
+                LOG_ERR("Failed to push into cwq");
+                return -1;
+        }
+
+        if (efcp_disable_write(dtp->efcp))
+                return -1;
 
         return 0;
 }
@@ -228,7 +242,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                                               connection->
                                               policies_params->
                                               dtcp_cfg);
-        if (cwq_size(cwq) < max_len - 1) {
+        if (cwq_size(cwq) < max_len) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push into cwq");
                         return -1;
