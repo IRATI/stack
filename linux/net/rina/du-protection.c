@@ -131,6 +131,8 @@ bool dup_ttl_set(struct pdu_ser * pdu,
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
+        BUILD_BUG_ON(CONFIG_RINA_IPCPS_TTL_DEFAULT <= 0);
+
         LOG_MISSING;
 
         return true;

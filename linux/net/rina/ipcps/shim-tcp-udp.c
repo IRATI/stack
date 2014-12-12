@@ -2196,6 +2196,28 @@ find_instance(struct ipcp_factory_data * data,
 
 }
 
+static void inst_cleanup(struct ipcp_instance * inst)
+{
+        ASSERT(inst);
+
+        if (inst->data) {
+                if (inst->data->qos) {
+                        if (inst->data->qos[0])
+                                rkfree(inst->data->qos[0]);
+                        if (inst->data->qos[1])
+                                rkfree(inst->data->qos[1]);
+
+                        rkfree(inst->data->qos);
+                }
+                if (inst->data->name)
+                        name_destroy(inst->data->name);
+
+                rkfree(inst->data);
+        }
+
+        rkfree(inst);
+}
+
 static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                                              const struct name *        name,
                                              ipc_process_id_t           id)
@@ -2224,7 +2246,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
                 LOG_ERR("could not allocate mem for inst data");
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
@@ -2232,39 +2254,29 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         inst->data->name = name_dup(name);
         if (!inst->data->name) {
-                LOG_ERR("Failed creation of qos cubes");
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of ipc name");
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->qos = rkzalloc(2*sizeof(struct flow_spec*), GFP_KERNEL);
         if (!inst->data->qos) {
-                LOG_ERR("Failed creation of qos cube 1");
-                name_destroy(inst->data->name);
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of qos cubes");
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->qos[0] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
         if (!inst->data->qos[0]) {
-                LOG_ERR("Failed creation of qos cube 2");
-                rkfree(inst->data->qos);
-                name_destroy(inst->data->name);
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of qos cube 1");
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->qos[1] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
         if (!inst->data->qos[1]) {
-                LOG_ERR("Failed creation of ipc name");
-                rkfree(inst->data->qos[0]);
-                rkfree(inst->data->qos);
-                name_destroy(inst->data->name);
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of qos cube 2");
+                inst_cleanup(inst);
                 return NULL;
         }
 
