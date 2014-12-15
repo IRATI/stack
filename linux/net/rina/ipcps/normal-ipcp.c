@@ -450,19 +450,19 @@ connection_create_arrived(struct ipcp_instance_data * data,
                         return cep_id_bad();
                 }
 
-                spin_lock(&data->lock);
-                list_add(&flow->list, &data->flows);
-
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                                       conn->port_id,
                                                       ipcp)) {
-                        spin_unlock(&data->lock);
                         LOG_ERR("Could not bind flow with user_ipcp");
                         efcp_connection_destroy(data->efcpc, cep_id);
                         return cep_id_bad();
                 }
+
+                spin_lock(&data->lock);
+                list_add(&flow->list, &data->flows);
+
         }
 
         list_add(&cep_entry->list, &flow->cep_ids_list);

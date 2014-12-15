@@ -1113,6 +1113,10 @@ int dtp_destroy(struct dtp * instance)
                 return -1;
         }
 
+        /* tf_a posts workers that restart sender_inactivity timer, so the wq
+         * must be flushed before destroying the timer */
+        if (instance->twq)    rwq_destroy(instance->twq);
+
         if (instance->timers.sender_inactivity)
                 rtimer_destroy(instance->timers.sender_inactivity);
         if (instance->timers.receiver_inactivity)
@@ -1120,7 +1124,6 @@ int dtp_destroy(struct dtp * instance)
         if (instance->timers.a)
                 rtimer_destroy(instance->timers.a);
 
-        if (instance->twq)    rwq_destroy(instance->twq);
         if (instance->rcv_wq) rwq_destroy(instance->rcv_wq);
         if (instance->seqq)   squeue_destroy(instance->seqq);
         if (instance->sv)     rkfree(instance->sv);
