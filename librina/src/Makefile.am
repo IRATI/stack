@@ -16,7 +16,8 @@ allsources =							\
         logs.cc							\
         utils.cc             utils.h				\
         concurrency.cc						\
-        timer.cc						\
+        time.cc							\
+	timer.cc						\
         core.cc              core.h				\
         exceptions.cc						\
         librina.cc						\
