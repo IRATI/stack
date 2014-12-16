@@ -238,8 +238,9 @@ EXPORT_SYMBOL(kfa_flow_deallocate);
 
 static bool ok_write(struct ipcp_flow * flow)
 {
-        return !(flow->state == PORT_STATE_PENDING ||
-                 flow->state == PORT_STATE_DISABLED);
+        return (!(flow->state == PORT_STATE_PENDING  ||
+                 flow->state == PORT_STATE_DISABLED) ||
+                 flow->state == PORT_STATE_DEALLOCATED);
 }
 
 static int disable_write(struct ipcp_instance_data * data, port_id_t id)
@@ -422,6 +423,11 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                 }
 
                 if (retval) {
+                        sdu_destroy(sdu);
+                        goto finish;
+                }
+
+                if (flow->state == PORT_STATE_DEALLOCATED) {
                         sdu_destroy(sdu);
                         goto finish;
                 }
