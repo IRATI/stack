@@ -290,24 +290,23 @@ static int connection_update_request(struct ipcp_instance_data * data,
 
         flow = find_flow(data, port_id);
         if (!flow) {
+                spin_unlock(&data->lock);
                 LOG_ERR("The flow with port-id %d is not pending, "
                         "cannot commit it", port_id);
-                spin_unlock(&data->lock);
                 return -1;
         }
 
         if (flow->state != PORT_STATE_PENDING) {
-                LOG_ERR("Flow on port-id %d already committed", port_id);
                 spin_unlock(&data->lock);
+                LOG_ERR("Flow on port-id %d already committed", port_id);
                 return -1;
         }
 
         flow->state = PORT_STATE_ALLOCATED;
 
-        LOG_DBG("Flow bound to port-id %d", port_id);
-
         spin_unlock(&data->lock);
 
+        LOG_DBG("Flow bound to port-id %d", port_id);
         return 0;
 }
 
