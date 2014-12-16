@@ -243,6 +243,10 @@ static bool ok_write(struct ipcp_flow * flow)
                  flow->state == PORT_STATE_DEALLOCATED);
 }
 
+/*
+ * NOTE: This function does NOT take the mutex, because it will be called only
+ *       during a write operation and then the mutex will be already taken.
+ */
 static int disable_write(struct ipcp_instance_data * data, port_id_t id)
 {
         struct ipcp_flow * flow;
@@ -264,22 +268,18 @@ static int disable_write(struct ipcp_instance_data * data, port_id_t id)
         }
         LOG_DBG("DISABLED write op");
 
-        mutex_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
-                mutex_unlock(&instance->lock);
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 return -1;
         }
 
         if (flow->state == PORT_STATE_DEALLOCATED) {
-                mutex_unlock(&instance->lock);
                 LOG_DBG("Flow with port-id %d is already deallocated", id);
                 return 0;
         }
 
         flow->state = PORT_STATE_DISABLED;
-        mutex_unlock(&instance->lock);
 
         LOG_DBG("IPCP notified CWQ exhausted");
 
@@ -443,7 +443,6 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 goto finish;
         }
-        mutex_unlock(&instance->lock);
 
         ASSERT(ipcp->ops);
         ASSERT(ipcp->ops->sdu_write);
@@ -451,8 +450,8 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 retval = -1;
+                goto finish;
         }
-        mutex_lock(&instance->lock);
 
  finish:
         LOG_DBG("Finishing (write)");
