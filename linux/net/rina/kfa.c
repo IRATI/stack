@@ -262,6 +262,7 @@ static int disable_write(struct ipcp_instance_data * data, port_id_t id)
                 LOG_ERR("Bogus port-id, bailing out");
                 return -1;
         }
+        LOG_DBG("DISABLED write op");
 
         mutex_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);
@@ -306,7 +307,7 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
                 return -1;
         }
 
-        LOG_DBG("Posting SDU to port-id %d ", id);
+        LOG_DBG("ENABLED write op");
 
         mutex_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, id);
@@ -325,11 +326,13 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
                 flow->state = PORT_STATE_ALLOCATED;
                 wq = &flow->wait_queue;
                 mutex_unlock(&instance->lock);
-                wake_up_interruptible_all(wq);
+                LOG_DBG("IPCP notified CWQ enabled but port deallocated");
                 LOG_DBG("Enabled port id");
+                wake_up_interruptible_all(wq);
                 return 0;
         }
         mutex_unlock(&instance->lock);
+        LOG_DBG("IPCP notified CWQ enabled");
 
         return 0;
 }
@@ -393,6 +396,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
 
                 LOG_DBG("Going to sleep on wait queue %pK (writing)",
                         &flow->wait_queue);
+                LOG_DBG("OK_write check called: %d", flow->state);
                 retval = wait_event_interruptible(flow->wait_queue,
                                                   ok_write(flow));
                 LOG_DBG("Write woken up (%d)", retval);
