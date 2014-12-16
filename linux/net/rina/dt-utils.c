@@ -39,6 +39,7 @@
 struct cwq {
         struct rqueue * q;
         spinlock_t      lock;
+        bool            write_enable;
 };
 
 struct cwq * cwq_create(void)
@@ -55,6 +56,8 @@ struct cwq * cwq_create(void)
                 rkfree(tmp);
                 return NULL;
         }
+
+        tmp->write_enable = true;
 
         spin_lock_init(&tmp->lock);
 
@@ -96,6 +99,16 @@ int cwq_destroy(struct cwq * queue)
         rkfree(queue);
 
         return 0;
+}
+
+bool cwq_write_enable(struct cwq * queue)
+{ return queue ? queue->write_enable : false; }
+
+void cwq_write_enable_set(struct cwq * queue, bool flag)
+{
+        if (queue)
+                queue->write_enable = flag;
+        return;
 }
 
 int cwq_push(struct cwq * queue,
@@ -216,8 +229,12 @@ static void enable_write(struct cwq * cwq,
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
-        if (cwq_size(cwq) < max_len)
-                efcp_enable_write(dt_efcp(dt));
+        if (cwq_size(cwq) < max_len) {
+                if (!cwq_write_enable(cwq)) {
+                        cwq_write_enable_set(cwq, true);
+                        efcp_enable_write(dt_efcp(dt));
+                }
+        }
 
         return;
 }

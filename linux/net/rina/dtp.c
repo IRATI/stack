@@ -198,8 +198,11 @@ static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
                 return -1;
         }
 
-        if (efcp_disable_write(dtp->efcp))
-                return -1;
+        if (!cwq_write_enable(cwq)) {
+                cwq_write_enable_set(cwq, false);
+                if (efcp_disable_write(dtp->efcp))
+                        return -1;
+        }
 
         return 0;
 }
