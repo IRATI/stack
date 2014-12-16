@@ -443,6 +443,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 goto finish;
         }
+        mutex_unlock(&instance->lock);
 
         ASSERT(ipcp->ops);
         ASSERT(ipcp->ops->sdu_write);
@@ -450,8 +451,8 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 retval = -1;
-                goto finish;
         }
+        mutex_lock(&instance->lock);
 
  finish:
         LOG_DBG("Finishing (write)");
