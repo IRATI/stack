@@ -954,7 +954,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         /* Get correct flow based on hwaddr */
-        ghaddr = gha_create_gfp(GFP_KERNEL, MAC_ADDR_802_3, saddr);
+        ghaddr = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, saddr);
         if (!ghaddr) {
                 kfree_skb(skb);
                 return -1;
