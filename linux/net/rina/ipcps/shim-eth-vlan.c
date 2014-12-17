@@ -954,7 +954,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         /* Get correct flow based on hwaddr */
-        ghaddr = gha_create_gfp(GFP_ATOMIC, MAC_ADDR_802_3, saddr);
+        ghaddr = gha_create_ni(MAC_ADDR_802_3, saddr);
         if (!ghaddr) {
                 kfree_skb(skb);
                 return -1;
@@ -962,7 +962,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         ASSERT(gha_is_ok(ghaddr));
 
         /* Get the SDU out of the sk_buff */
-        sk_data = rkmalloc(skb->len, GFP_KERNEL);
+        sk_data = rkmalloc(skb->len, GFP_ATOMIC);
         if (!sk_data) {
                 gha_destroy(ghaddr);
                 kfree_skb(skb);
