@@ -48,16 +48,11 @@
 
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
-static struct work_struct        rcv_work;
-static struct list_head          rcv_wq_packets;
-static DEFINE_SPINLOCK(rcv_wq_lock);
 
-struct rcv_struct {
-        struct list_head     list;
-        struct sk_buff *     skb;
-        struct net_device *  dev;
-        struct packet_type * pt;
-        struct net_device *  orig_dev;
+struct rcv_work_data {
+        struct sk_buff *       skb;
+        struct net_device *    dev;
+        struct shim_eth_flow * flow;
 };
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -775,6 +770,174 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
+
+static int eth_vlan_rcv_worker(void * o)
+{
+        struct ethhdr *                 mh;
+        unsigned char *                 saddr;
+        struct ipcp_instance_data *     data;
+        struct interface_data_mapping * mapping;
+        struct gha *                    ghaddr;
+        const struct gpa *              gpaddr;
+        struct name *                   sname;
+        struct ipcp_instance          * ipcp, * user_ipcp;
+
+        struct shim_eth_flow *          flow;
+        struct rcv_work_data *          wdata;
+        struct sk_buff *                skb;
+        struct net_device *             dev;
+
+        LOG_DBG("Worker waking up");
+        LOG_DBG("Have to create a new flow");
+
+        wdata = (struct rcv_work_data *) o;
+
+        skb  = wdata->skb;
+        dev  = wdata->dev;
+        flow = wdata->flow;
+        rkfree(wdata);
+
+        /* C-c-c-checks */
+        mapping = inst_data_mapping_get(dev);
+        if (!mapping) {
+                LOG_ERR("Failed to get mapping");
+                kfree_skb(skb);
+                return -1;
+        }
+
+        data = mapping->data;
+        if (!data) {
+                kfree_skb(skb);
+                return -1;
+        }
+
+        if (!data->app_name) {
+                LOG_ERR("No app registered yet! "
+                        "Someone is doing something bad on the network");
+                kfree_skb(skb);
+                return -1;
+        }
+
+        if (skb->pkt_type == PACKET_OTHERHOST ||
+            skb->pkt_type == PACKET_LOOPBACK) {
+                kfree_skb(skb);
+                return -1;
+        }
+
+        mh    = eth_hdr(skb);
+        saddr = mh->h_source;
+        if (!saddr) {
+                LOG_ERR("Couldn't get source address");
+                kfree_skb(skb);
+                return -1;
+        }
+
+        /* Get correct flow based on hwaddr */
+        ghaddr = gha_create_gfp(GFP_KERNEL, MAC_ADDR_802_3, saddr);
+        if (!ghaddr) {
+                kfree_skb(skb);
+                return -1;
+        }
+        ASSERT(gha_is_ok(ghaddr));
+        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                                    data->app_name);
+        if (!user_ipcp)
+                user_ipcp = kfa_ipcp_instance(data->kfa);
+
+        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!user_ipcp || !ipcp) {
+                LOG_ERR("Could not find required ipcps");
+                gha_destroy(ghaddr);
+                return -1;
+        }
+
+        /* Continue filling the flow data that was started in the interrupt */
+        flow->dest_ha       = ghaddr;
+        flow->user_ipcp     = user_ipcp;
+        flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+
+        if (!is_port_id_ok(flow->port_id)) {
+                LOG_DBG("Port id is not ok");
+                gha_destroy(ghaddr);
+                if (flow_destroy(data, flow))
+                        LOG_ERR("Problems destroying shim-eth-vlan "
+                                "flow");
+                return -1;
+        }
+
+        if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
+                LOG_DBG("This flow goes for an app");
+                if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                        LOG_ERR("Could not create flow in KFA");
+                        gha_destroy(ghaddr);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        if (flow_destroy(data, flow))
+                                LOG_ERR("Problems destroying shim-eth-vlan "
+                                        "flow");
+                        return -1;
+                }
+        }
+        LOG_DBG("Added flow to the list");
+
+        sname  = NULL;
+        gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+        if (gpaddr && gpa_is_ok(gpaddr)) {
+                flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
+                if (!flow->dest_pa) {
+                        LOG_ERR("Failed to duplicate gpa");
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
+                sname = string_toname_ni(gpa_address_value(gpaddr));
+                if (!sname) {
+                        LOG_ERR("Failed to convert name to string");
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
+                LOG_DBG("Got the address from ARP");
+        } else {
+                sname = name_create_ni();
+                if (!name_init_from_ni(sname,
+                        "Unknown app", "", "", "")) {
+                         name_destroy(sname);
+                         kfa_port_id_release(data->kfa, flow->port_id);
+                         unbind_and_destroy_flow(data, flow);
+                         return -1;
+                }
+
+                flow->dest_pa = name_to_gpa(sname);
+                if (!flow->dest_pa) {
+                        LOG_ERR("Failed to create gpa");
+
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
+                LOG_DBG("Flow request from unkown app received");
+        }
+
+        if (kipcm_flow_arrived(default_kipcm,
+                               data->id,
+                               flow->port_id,
+                               data->dif_name,
+                               sname,
+                               data->app_name,
+                               data->fspec)) {
+                LOG_ERR("Couldn't tell the KIPCM about the flow");
+                kfa_port_id_release(data->kfa, flow->port_id);
+                unbind_and_destroy_flow(data, flow);
+                name_destroy(sname);
+                return -1;
+        }
+        name_destroy(sname);
+        return 0;
+}
+
 static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                         struct net_device * dev)
 {
@@ -784,12 +947,12 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct interface_data_mapping * mapping;
         struct shim_eth_flow *          flow;
         struct gha *                    ghaddr;
-        const struct gpa *              gpaddr;
         struct sdu *                    du;
         struct buffer *                 buffer;
-        struct name *                   sname;
         char *                          sk_data;
-        struct ipcp_instance          * ipcp, * user_ipcp;
+
+        struct rcv_work_data          * wdata;
+        struct rwq_work_item          * item;
 
         LOG_DBG("eth_vlan_recv_process_packet starts....");
 
@@ -884,23 +1047,10 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         spin_lock(&data->lock);
         flow = find_flow_by_gha(data, ghaddr);
         if (!flow) {
-                LOG_DBG("Have to create a new flow");
-
-                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
-                                                    data->app_name);
-                if (!user_ipcp)
-                        user_ipcp = kfa_ipcp_instance(data->kfa);
-                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-                if (!user_ipcp || !ipcp) {
-                        LOG_ERR("Could not find required ipcps");
-                        sdu_destroy(du);
-                        gha_destroy(ghaddr);
-                        return -1;
-                }
-
+                spin_unlock(&data->lock);
+                /* Create flow and its queue to handle next packets */
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
-                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
                         return -1;
@@ -908,121 +1058,40 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 INIT_LIST_HEAD(&flow->list);
-                list_add(&flow->list, &data->flows);
-                flow->dest_ha       = ghaddr;
-                flow->user_ipcp     = user_ipcp;
-                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
-
-                if (!is_port_id_ok(flow->port_id)) {
-                        spin_unlock(&data->lock);
-                        LOG_DBG("Port id is not ok");
-                        sdu_destroy(du);
-                        gha_destroy(ghaddr);
-                        if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-eth-vlan "
-                                        "flow");
-                        return -1;
-                }
-
-                if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
-                        LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
-                                spin_unlock(&data->lock);
-                                LOG_ERR("Could not create flow in KFA");
-                                sdu_destroy(du);
-                                gha_destroy(ghaddr);
-                                kfa_port_id_release(data->kfa, flow->port_id);
-                                if (flow_destroy(data, flow))
-                                        LOG_ERR("Problems destroying shim-eth-vlan "
-                                                "flow");
-                                return -1;
-                        }
-                }
-                LOG_DBG("Added flow to the list");
-
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
-                        LOG_ERR("Couldn't create the sdu queue "
-                                "for a new flow");
-                        spin_unlock(&data->lock);
+                        LOG_ERR("Couldn't create the sdu queue for a new flow");
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        unbind_and_destroy_flow(data, flow);
+                        rkfree(flow);
                         return -1;
                 }
-
-                LOG_DBG("Created the queue");
 
                 /* Store SDU in queue */
                 if (rfifo_push(flow->sdu_queue, du)) {
                         LOG_ERR("Could not push a SDU into the flow queue");
-                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        unbind_and_destroy_flow(data, flow);
+                        rkfree (flow);
+                        rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
                         return -1;
                 }
 
+                spin_lock(&data->lock);
+                list_add(&flow->list, &data->flows);
                 spin_unlock(&data->lock);
 
-                sname  = NULL;
-                gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
-                if (gpaddr && gpa_is_ok(gpaddr)) {
-                        flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
-                        if (!flow->dest_pa) {
-                                LOG_ERR("Failed to duplicate gpa");
-                                sdu_destroy(du);
-                                kfa_port_id_release(data->kfa, flow->port_id);
-                                unbind_and_destroy_flow(data, flow);
-                                return -1;
-                        }
+                /*FIXME: add checks */
 
-                        sname = string_toname_ni(gpa_address_value(gpaddr));
-                        if (!sname) {
-                                LOG_ERR("Failed to convert name to string");
-                                kfa_port_id_release(data->kfa, flow->port_id);
-                                unbind_and_destroy_flow(data, flow);
-                                return -1;
-                        }
+                wdata = rkzalloc(sizeof(* wdata), GFP_KERNEL);
+                wdata->skb  = skb;
+                wdata->dev  = dev;
+                wdata->flow = flow;
+                item  = rwq_work_create(eth_vlan_rcv_worker, wdata);
 
-                        LOG_DBG("Got the address from ARP");
-                } else {
-                        sname = name_create_ni();
-                        if (!name_init_from_ni(sname,
-                                               "Unknown app", "", "", "")) {
-                                name_destroy(sname);
-                                kfa_port_id_release(data->kfa, flow->port_id);
-                                unbind_and_destroy_flow(data, flow);
-                                return -1;
-                        }
+                rwq_work_post(rcv_wq, item);
 
-                        flow->dest_pa = name_to_gpa(sname);
-                        if (!flow->dest_pa) {
-                                LOG_ERR("Failed to create gpa");
-                                kfa_port_id_release(data->kfa, flow->port_id);
-                                unbind_and_destroy_flow(data, flow);
-                                return -1;
-                        }
-
-                        LOG_DBG("Flow request from unkown app received");
-                }
-
-                if (kipcm_flow_arrived(default_kipcm,
-                                       data->id,
-                                       flow->port_id,
-                                       data->dif_name,
-                                       sname,
-                                       data->app_name,
-                                       data->fspec)) {
-                        LOG_ERR("Couldn't tell the KIPCM about the flow");
-                        kfa_port_id_release(data->kfa, flow->port_id);
-                        unbind_and_destroy_flow(data, flow);
-                        name_destroy(sname);
-                        return -1;
-                }
-                name_destroy(sname);
+                return 0;
         } else {
                 gha_destroy(ghaddr);
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
@@ -1062,6 +1131,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         return 0;
 }
 
+/*
 static bool evaluate_packet_list_end(struct rcv_struct * pos,
                                      struct rcv_struct * next,
                                      struct list_head  * head) {
@@ -1091,7 +1161,6 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
 
         for (packet = list_entry((&rcv_wq_packets)->next, struct rcv_struct, list),
              next = list_entry(packet->list.next, struct rcv_struct, list);
-             /*evaluate_packet_list_end(packet, next, &rcv_wq_packets);*/
              !(&packet->list == &rcv_wq_packets &&
                &next->list == &rcv_wq_packets);
              packet = next, next = list_entry(next->list.next,
@@ -1106,7 +1175,6 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
                 list_del(&packet->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
-                /* Call eth_vlan_recv_process_packet */
                 if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
                         LOG_DBG("Failed to process packet");
 
@@ -1132,6 +1200,7 @@ static void eth_vlan_rcv_worker(struct work_struct *work)
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
         LOG_DBG("Worker finished for now, processed %d frames", num_frames);
 }
+*/
 
 static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct net_device *  dev,
@@ -1139,22 +1208,14 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct net_device *  orig_dev)
 {
 
-        struct rcv_struct * packet;
-
         LOG_DBG("eth_vlan_rcv started, skb received");
-
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("Couldn't obtain ownership of the skb");
                 return 0;
         }
 
-        packet = rkmalloc(sizeof(*packet), GFP_ATOMIC);
-        if (!packet) {
-                LOG_ERR("Couldn't malloc packet");
-                return 0;
-        }
-
+        /*
         packet->skb      = skb;
         packet->dev      = dev;
         packet->pt       = pt;
@@ -1167,6 +1228,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
         LOG_DBG("eth_vlan_rcv packet added");
 
         queue_work(rcv_wq, &rcv_work);
+        */
+        if (eth_vlan_recv_process_packet(skb, dev))
+                LOG_DBG("Failed to process packet");
 
         return 0;
 };
@@ -1442,10 +1506,6 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&data_instances_list);
-
-        INIT_LIST_HEAD(&rcv_wq_packets);
-
-        INIT_WORK(&rcv_work, eth_vlan_rcv_worker);
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
@@ -1805,18 +1865,10 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        struct rcv_struct *  packet;
-
         ASSERT(shim);
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
-
-        list_for_each_entry(packet, &rcv_wq_packets, list) {
-                kfree_skb(packet->skb);
-                list_del(&packet->list);
-                rkfree(packet);
-        }
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim);
 }
