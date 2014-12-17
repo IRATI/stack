@@ -50,9 +50,10 @@
 static struct workqueue_struct * rcv_wq;
 
 struct rcv_work_data {
-        struct sk_buff *       skb;
-        struct net_device *    dev;
-        struct shim_eth_flow * flow;
+        struct sk_buff *            skb;
+        struct net_device *         dev;
+        struct shim_eth_flow *      flow;
+        struct ipcp_instance_data * data;
 };
 
 /* FIXME: To be removed ABSOLUTELY */
@@ -773,11 +774,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
 static int eth_vlan_rcv_worker(void * o)
 {
-        struct ethhdr *                 mh;
-        unsigned char *                 saddr;
         struct ipcp_instance_data *     data;
-        struct interface_data_mapping * mapping;
-        struct gha *                    ghaddr;
         const struct gpa *              gpaddr;
         struct name *                   sname;
         struct ipcp_instance          * ipcp, * user_ipcp;
@@ -792,24 +789,11 @@ static int eth_vlan_rcv_worker(void * o)
 
         wdata = (struct rcv_work_data *) o;
 
-        skb  = wdata->skb;
-        dev  = wdata->dev;
-        flow = wdata->flow;
+        skb    = wdata->skb;
+        dev    = wdata->dev;
+        flow   = wdata->flow;
+        data   = wdata->data;
         rkfree(wdata);
-
-        /* C-c-c-checks */
-        mapping = inst_data_mapping_get(dev);
-        if (!mapping) {
-                LOG_ERR("Failed to get mapping");
-                kfree_skb(skb);
-                return -1;
-        }
-
-        data = mapping->data;
-        if (!data) {
-                kfree_skb(skb);
-                return -1;
-        }
 
         if (!data->app_name) {
                 LOG_ERR("No app registered yet! "
@@ -818,27 +802,6 @@ static int eth_vlan_rcv_worker(void * o)
                 return -1;
         }
 
-        if (skb->pkt_type == PACKET_OTHERHOST ||
-            skb->pkt_type == PACKET_LOOPBACK) {
-                kfree_skb(skb);
-                return -1;
-        }
-
-        mh    = eth_hdr(skb);
-        saddr = mh->h_source;
-        if (!saddr) {
-                LOG_ERR("Couldn't get source address");
-                kfree_skb(skb);
-                return -1;
-        }
-
-        /* Get correct flow based on hwaddr */
-        ghaddr = gha_create_gfp(GFP_KERNEL, MAC_ADDR_802_3, saddr);
-        if (!ghaddr) {
-                kfree_skb(skb);
-                return -1;
-        }
-        ASSERT(gha_is_ok(ghaddr));
         user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
                                                     data->app_name);
         if (!user_ipcp)
@@ -847,18 +810,18 @@ static int eth_vlan_rcv_worker(void * o)
         ipcp = kipcm_find_ipcp(default_kipcm, data->id);
         if (!user_ipcp || !ipcp) {
                 LOG_ERR("Could not find required ipcps");
-                gha_destroy(ghaddr);
+                if (flow_destroy(data, flow))
+                        LOG_ERR("Problems destroying shim-eth-vlan "
+                                "flow");
                 return -1;
         }
 
         /* Continue filling the flow data that was started in the interrupt */
-        flow->dest_ha       = ghaddr;
         flow->user_ipcp     = user_ipcp;
         flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
 
         if (!is_port_id_ok(flow->port_id)) {
                 LOG_DBG("Port id is not ok");
-                gha_destroy(ghaddr);
                 if (flow_destroy(data, flow))
                         LOG_ERR("Problems destroying shim-eth-vlan "
                                 "flow");
@@ -869,7 +832,6 @@ static int eth_vlan_rcv_worker(void * o)
                 LOG_DBG("This flow goes for an app");
                 if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
                         LOG_ERR("Could not create flow in KFA");
-                        gha_destroy(ghaddr);
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Problems destroying shim-eth-vlan "
@@ -1057,6 +1019,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
 
                 flow->port_id_state = PORT_STATE_PENDING;
+                flow->dest_ha       = ghaddr;
                 INIT_LIST_HEAD(&flow->list);
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
@@ -1087,6 +1050,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 wdata->skb  = skb;
                 wdata->dev  = dev;
                 wdata->flow = flow;
+                wdata->data = data;
                 item  = rwq_work_create(eth_vlan_rcv_worker, wdata);
 
                 rwq_work_post(rcv_wq, item);
