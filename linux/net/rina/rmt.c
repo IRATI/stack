@@ -1188,11 +1188,10 @@ static int receive_worker(void * o)
         }
         spin_unlock(&tmp->ingress.queues->lock);
 
-        /*if (ev_resch(tmp->ingress.queues))
+        if (ev_resch(tmp->ingress.queues))
                 return RWQ_RESCHEDULE;
 
-        return RWQ_NORESCHEDULE;*/
-        return RWQ_RESCHEDULE;
+        return RWQ_NORESCHEDULE;
 }
 
 int rmt_receive(struct rmt * instance,
