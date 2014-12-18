@@ -1021,7 +1021,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->dest_ha       = ghaddr;
                 INIT_LIST_HEAD(&flow->list);
-                flow->sdu_queue = rfifo_create();
+                flow->sdu_queue = rfifo_create_ni();
                 if (!flow->sdu_queue) {
                         LOG_ERR("Couldn't create the sdu queue for a new flow");
                         sdu_destroy(du);
