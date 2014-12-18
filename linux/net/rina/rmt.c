@@ -1018,23 +1018,24 @@ static int forward_pdu(struct rmt * rmt,
 static bool ev_resch(struct rmt_qmap * queues) {
         struct rmt_queue *  entry;
         int                 bucket;
+        unsigned long       flags;
 
         if (!queues) {
                 LOG_ERR("No queues passed...");
                 return false;
         }
 
-        spin_lock(&queues->lock);
+        spin_lock_irqsave(&queues->lock, flags);
         hash_for_each(queues->queues,
                       bucket,
                       entry,
                       hlist) {
                 if (!rfifo_is_empty(entry->queue)) {
-                        spin_unlock(&queues->lock);
+                        spin_unlock_irqrestore(&queues->lock, flags);
                         return true;
                 }
         }
-        spin_unlock(&queues->lock);
+        spin_unlock_irqrestore(&queues->lock, flags);
         return false;
 }
 
