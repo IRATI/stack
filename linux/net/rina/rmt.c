@@ -1045,6 +1045,18 @@ static int receive_worker(void * o)
         struct rmt_queue *  entry;
         int                 bucket;
         struct hlist_node * ntmp;
+        unsigned long       flags;
+
+        port_id_t           port_id;
+        pdu_type_t          pdu_type;
+        const struct pci *  pci;
+        struct pdu_ser *    pdu_ser;
+        struct pdu *        pdu;
+        address_t           dst_addr;
+        qos_id_t            qos_id;
+        struct serdes *     serdes;
+        struct buffer *     buf;
+        struct sdu *        sdu;
 
         LOG_DBG("Receive worker called");
 
@@ -1054,24 +1066,12 @@ static int receive_worker(void * o)
                 return -RWQ_WORKERROR;
         }
 
-        spin_lock(&tmp->ingress.queues->lock);
+        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
         hash_for_each_safe(tmp->ingress.queues->queues,
                            bucket,
                            ntmp,
                            entry,
                            hlist) {
-
-                port_id_t          port_id;
-                pdu_type_t         pdu_type;
-                const struct pci * pci;
-                struct pdu_ser *   pdu_ser;
-                struct pdu *       pdu;
-                address_t          dst_addr;
-                qos_id_t           qos_id;
-                struct serdes *    serdes;
-                struct buffer *    buf;
-                struct sdu *       sdu;
-
                 ASSERT(entry);
 
                 sdu = (struct sdu *) rfifo_pop(entry->queue);
@@ -1081,20 +1081,20 @@ static int receive_worker(void * o)
                 }
 
                 port_id = entry->port_id;
-                spin_unlock(&tmp->ingress.queues->lock);
+                spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
 
                 buf = sdu_buffer_rw(sdu);
                 if (!buf) {
                         LOG_DBG("No buffer present");
                         sdu_destroy(sdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
                 if (sdu_buffer_disown(sdu)) {
                         LOG_DBG("Could not disown SDU");
                         sdu_destroy(sdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1104,7 +1104,7 @@ static int receive_worker(void * o)
                 if (!pdu_ser) {
                         LOG_DBG("No ser PDU to work with");
                         buffer_destroy(buf);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1115,7 +1115,7 @@ static int receive_worker(void * o)
                 if (!pdu) {
                         LOG_ERR("Failed to deserialize PDU!");
                         pdu_ser_destroy(pdu_ser);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1123,7 +1123,7 @@ static int receive_worker(void * o)
                 if (!pci) {
                         LOG_ERR("No PCI to work with, dropping SDU!");
                         pdu_destroy(pdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1139,7 +1139,7 @@ static int receive_worker(void * o)
                                 " dropping SDU! %u, %u, %u",
                                 pdu_type, dst_addr, qos_id);
                         pdu_destroy(pdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1184,9 +1184,9 @@ static int receive_worker(void * o)
                                 break;
                         }
                 }
-                spin_lock(&tmp->ingress.queues->lock);
+                spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
         }
-        spin_unlock(&tmp->ingress.queues->lock);
+        spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
 
         if (ev_resch(tmp->ingress.queues))
                 return RWQ_RESCHEDULE;
