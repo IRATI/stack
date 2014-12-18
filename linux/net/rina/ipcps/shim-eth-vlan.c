@@ -1057,8 +1057,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 rwq_work_post(rcv_wq, item);
 
                 LOG_DBG("eth_vlan_recv_process_packet added work");
-
-                return 0;
         } else {
                 gha_destroy(ghaddr);
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
@@ -1077,7 +1075,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
 
-                        if (rfifo_push(flow->sdu_queue, du)) {
+                        if (rfifo_push_ni(flow->sdu_queue, du)) {
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
                                         sizeof(struct sdu *));
@@ -1091,9 +1089,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         spin_unlock(&data->lock);
                         sdu_destroy(du);
                 }
-        }
 
-        LOG_DBG("eth_vlan_recv_process_packet ends....");
+                LOG_DBG("eth_vlan_recv_process_packet ends....");
+        }
 
         return 0;
 }
