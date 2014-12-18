@@ -784,8 +784,7 @@ static int eth_vlan_rcv_worker(void * o)
         struct sk_buff *                skb;
         struct net_device *             dev;
 
-        LOG_DBG("Worker waking up");
-        LOG_DBG("Have to create a new flow");
+        LOG_DBG("Worker waking up, going to create a flow");
 
         wdata = (struct rcv_work_data *) o;
 
@@ -897,6 +896,8 @@ static int eth_vlan_rcv_worker(void * o)
                 return -1;
         }
         name_destroy(sname);
+
+        LOG_DBG("Worker ends...");
         return 0;
 }
 
@@ -1055,6 +1056,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 rwq_work_post(rcv_wq, item);
 
+                LOG_DBG("eth_vlan_recv_process_packet added work");
+
                 return 0;
         } else {
                 gha_destroy(ghaddr);
@@ -1095,77 +1098,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         return 0;
 }
 
-/*
-static bool evaluate_packet_list_end(struct rcv_struct * pos,
-                                     struct rcv_struct * next,
-                                     struct list_head  * head) {
-                if (&pos->list == head) {
-                        if (&next->list == head)
-                                return false;
-                        pos = next;
-                        next   = list_entry(next->list.next,
-                                            struct rcv_struct,
-                                            list);
-                }
-                return true;
-}
-
-static void eth_vlan_rcv_worker(struct work_struct *work)
-{
-        struct rcv_struct * packet, * next;
-        unsigned long       flags;
-        int                 num_frames;
-
-        LOG_DBG("Worker waking up");
-
-        spin_lock_irqsave(&rcv_wq_lock, flags);
-
-        num_frames = 0;
-        LOG_DBG("packets head: %pk", &rcv_wq_packets);
-
-        for (packet = list_entry((&rcv_wq_packets)->next, struct rcv_struct, list),
-             next = list_entry(packet->list.next, struct rcv_struct, list);
-             !(&packet->list == &rcv_wq_packets &&
-               &next->list == &rcv_wq_packets);
-             packet = next, next = list_entry(next->list.next,
-                                              struct rcv_struct,
-                                              list)) {
-                if (&packet->list == &rcv_wq_packets) {
-                        packet = next;
-                        next   = list_entry(next->list.next,
-                                            struct rcv_struct,
-                                            list);
-                }
-                list_del(&packet->list);
-                spin_unlock_irqrestore(&rcv_wq_lock, flags);
-
-                if (eth_vlan_recv_process_packet(packet->skb, packet->dev))
-                        LOG_DBG("Failed to process packet");
-
-                num_frames++;
-
-                LOG_DBG("rcv_worker processed one packet");
-
-                rkfree(packet);
-
-#ifdef CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMITING
-                BUILD_BUG_ON(CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT <= 0);
-
-                if (num_frames >= CONFIG_RINA_SHIM_ETH_VLAN_BURST_LIMIT){
-                        LOG_DBG("Worker limited by burst, processed %d frames",
-                                num_frames);
-                        return;
-                }
-#endif
-                spin_lock_irqsave(&rcv_wq_lock, flags);
-                LOG_DBG("next packet: %pk", &next->list);
-        }
-
-        spin_unlock_irqrestore(&rcv_wq_lock, flags);
-        LOG_DBG("Worker finished for now, processed %d frames", num_frames);
-}
-*/
-
 static int eth_vlan_rcv(struct sk_buff *     skb,
                         struct net_device *  dev,
                         struct packet_type * pt,
@@ -1179,23 +1111,10 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
                 return 0;
         }
 
-        /*
-        packet->skb      = skb;
-        packet->dev      = dev;
-        packet->pt       = pt;
-        packet->orig_dev = orig_dev;
-        INIT_LIST_HEAD(&packet->list);
-
-        spin_lock(&rcv_wq_lock);
-        list_add_tail(&packet->list, &rcv_wq_packets);
-        spin_unlock(&rcv_wq_lock);
-        LOG_DBG("eth_vlan_rcv packet added");
-
-        queue_work(rcv_wq, &rcv_work);
-        */
         if (eth_vlan_recv_process_packet(skb, dev))
                 LOG_DBG("Failed to process packet");
 
+        LOG_DBG("eth_vlan_rcv ends");
         return 0;
 };
 
