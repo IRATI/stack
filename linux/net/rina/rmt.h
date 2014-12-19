@@ -87,8 +87,6 @@ int          rmt_receive(struct rmt * instance,
                          struct sdu * sdu,
                          port_id_t    from);
 
-int          rmt_flush_work(struct rmt * rmt);
-int          rmt_restart_work(struct rmt * rmt);
 int          rmt_enable_port_id(struct rmt * instance,
                                 port_id_t    id);
 int          rmt_disable_port_id(struct rmt * instance,

@@ -27,6 +27,7 @@
 #include <linux/kernel.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/interrupt.h>
 
 #define RINA_PREFIX "rmt"
 
@@ -100,6 +101,7 @@ static int queue_destroy(struct rmt_queue * q)
 
 struct rmt_qmap {
         spinlock_t lock; /* FIXME: Has to be moved in the pipelines */
+        atomic_t   n_sdus;
 
         DECLARE_HASHTABLE(queues, 7);
 };
@@ -114,6 +116,8 @@ static struct rmt_qmap * qmap_create(void)
 
         hash_init(tmp->queues);
         spin_lock_init(&tmp->lock);
+
+        atomic_set(&tmp->n_sdus, 0);
 
         return tmp;
 }
@@ -203,10 +207,9 @@ struct rmt {
         struct serdes *         serdes;
 
         struct {
-                struct workqueue_struct * wq;
-                struct rwq_work_item *    item;
                 struct rmt_qmap *         queues;
                 struct pft_cache          cache;
+                struct tasklet_struct     ingress_tasklet;
         } ingress;
 
         struct {
@@ -243,8 +246,6 @@ int rmt_destroy(struct rmt * instance)
                 return -1;
         }
 
-        if (instance->ingress.wq)     rwq_destroy(instance->ingress.wq);
-        if (instance->ingress.item)   rwq_work_destroy(instance->ingress.item);
         if (instance->ingress.queues) qmap_destroy(instance->ingress.queues,
                                                    instance->kfa);
         pft_cache_fini(&instance->ingress.cache);
@@ -1015,30 +1016,6 @@ static int forward_pdu(struct rmt * rmt,
         return 0;
 }
 
-static bool ev_resch(struct rmt_qmap * queues) {
-        struct rmt_queue *  entry;
-        int                 bucket;
-        unsigned long       flags;
-
-        if (!queues) {
-                LOG_ERR("No queues passed...");
-                return false;
-        }
-
-        spin_lock_irqsave(&queues->lock, flags);
-        hash_for_each(queues->queues,
-                      bucket,
-                      entry,
-                      hlist) {
-                if (!rfifo_is_empty(entry->queue)) {
-                        spin_unlock_irqrestore(&queues->lock, flags);
-                        return true;
-                }
-        }
-        spin_unlock_irqrestore(&queues->lock, flags);
-        return false;
-}
-
 static int receive_worker(void * o)
 {
         struct rmt *        tmp;
@@ -1079,6 +1056,8 @@ static int receive_worker(void * o)
                         LOG_DBG("No SDU to work with in this queue");
                         continue;
                 }
+
+                atomic_dec(&tmp->ingress.queues->n_sdus);
 
                 port_id = entry->port_id;
                 spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
@@ -1188,9 +1167,6 @@ static int receive_worker(void * o)
         }
         spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
 
-        if (ev_resch(tmp->ingress.queues))
-                return RWQ_RESCHEDULE;
-
         return RWQ_NORESCHEDULE;
 }
 
@@ -1233,46 +1209,34 @@ int rmt_receive(struct rmt * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
+        atomic_inc(&instance->ingress.queues->n_sdus);
         spin_unlock(&instance->ingress.queues->lock);
 
-        if (rwq_work_post(instance->ingress.wq, instance->ingress.item))
-                LOG_DBG("There was a pending work already in the ingress queue");
+        tasklet_schedule(&instance->ingress.ingress_tasklet);
 
         return 0;
 }
 EXPORT_SYMBOL(rmt_receive);
 
-int rmt_flush_work(struct rmt * rmt)
+void ingress_handler(unsigned long data)
 {
-        if (!rmt) {
-                LOG_ERR("No RMT passed");
-                return -1;
+        struct rmt * rmt;
+        unsigned long flags;
+
+        rmt = (struct rmt *) data;
+
+        receive_worker(rmt);
+
+        spin_lock_irqsave(&rmt->ingress.queues->lock, flags);
+        if (atomic_read(&rmt->ingress.queues->n_sdus) <= 0) {
+                atomic_set(&rmt->ingress.queues->n_sdus, 0);
+                spin_unlock_irqrestore(&rmt->ingress.queues->lock, flags);
+                return;
         }
+        spin_unlock_irqrestore(&rmt->ingress.queues->lock, flags);
+        tasklet_schedule(&rmt->ingress.ingress_tasklet);
 
-        rwq_flush(rmt->ingress.wq);
-        LOG_DBG("RMT Ingress WQ  %p has been flushed", rmt->ingress.wq);
-
-        return 0;
-}
-
-int rmt_restart_work(struct rmt * rmt)
-{
-        if (!rmt) {
-                LOG_ERR("No RMT passed");
-                return -1;
-        }
-
-        if (!rmt->ingress.item) {
-                LOG_ERR("RMT Ingress wq has not work item");
-                return -1;
-        }
-
-        rwq_work_post(rmt->ingress.wq, rmt->ingress.item);
-
-        LOG_DBG("RMT Ingress WQ  %p has been restarted with WI %p",
-                rmt->ingress.wq, rmt->ingress.item);
-
-        return 0;
+        return;
 }
 
 struct rmt * rmt_create(struct ipcp_instance *  parent,
@@ -1328,11 +1292,6 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-        tmp->ingress.wq = rwq_create(name);
-        if (!tmp->ingress.wq) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
         tmp->ingress.queues = qmap_create();
         if (!tmp->ingress.queues) {
                 rmt_destroy(tmp);
@@ -1342,11 +1301,7 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-        tmp->ingress.item = rwq_work_create_single(receive_worker, tmp);
-        if (!tmp->ingress.item) {
-                rmt_destroy(tmp);
-                return NULL;
-        }
+        tasklet_init(&tmp->ingress.ingress_tasklet, ingress_handler, (unsigned long) tmp);
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
