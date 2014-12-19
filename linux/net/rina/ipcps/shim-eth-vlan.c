@@ -1032,7 +1032,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 }
 
                 /* Store SDU in queue */
-                if (rfifo_push(flow->sdu_queue, du)) {
+                if (rfifo_push_ni(flow->sdu_queue, du)) {
                         LOG_ERR("Could not push a SDU into the flow queue");
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
@@ -1047,7 +1047,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 /*FIXME: add checks */
 
-                wdata = rkzalloc(sizeof(* wdata), GFP_KERNEL);
+                wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
                 wdata->skb  = skb;
                 wdata->dev  = dev;
                 wdata->flow = flow;
