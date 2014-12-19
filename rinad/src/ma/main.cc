@@ -13,6 +13,9 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#define RINA_PREFIX "mad"
+#include <librina/logs.h>
+
 
 #include "common/event-loop.h"
 #include "agent.h"

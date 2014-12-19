@@ -13,6 +13,7 @@ sbin_PROGRAMS = mad
 
 mad_SOURCES  = 					\
 	agent.cc 				\
+	bgtm.cc 				\
 	configuration.cc 			\
 	main.cc
 
