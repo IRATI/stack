@@ -771,7 +771,7 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp) {
                 sdu_destroy(sdu);
                 return -1;
