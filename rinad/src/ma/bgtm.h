@@ -41,7 +41,7 @@ public:
 	void* run(void* unused);
 
 	//Run flag
-	bool keep_running;
+	volatile bool keep_running;
 protected:
 	static BGTaskManager* inst;
 

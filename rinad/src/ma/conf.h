@@ -17,18 +17,34 @@
 namespace rinad{
 namespace mad{
 
-//fwd decl
-class ManagementAgent;
-
 /**
 * @brief MAD configuration
 */
 class ConfManager{
 
 public:
-	void load(ManagementAgent ma, std::string& file_path);
+	static void init(const std::string& conf,
+					const std::string& cl_logfile,
+					const std::string& cl_loglevel);
+	static inline ConfManager* get(){
+		return inst;
+	};
+	
+	void configure(void);
+	
+	static void destroy(void);
+
+protected:
+	static ConfManager* inst;
+
+	ConfManager(const std::string& conf,
+					const std::string& cl_logfile,
+					const std::string& cl_loglevel);
+	~ConfManager(void);
+
+
 private:
-	void validate(std::string& file_path);
+
 };
 
 

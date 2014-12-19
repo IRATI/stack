@@ -20,12 +20,17 @@
 #include "common/event-loop.h"
 #include "agent.h"
 
+#define DEFAULT_LOG_FILE ""
+#define DEFAULT_LOG_LEVEL "INFO"
+#define DEFAULT_CONF_FILE "/etc/rina/mad.conf"
+
+
 using namespace std;
 
 static
-void parse_args(int argc, char * argv[], std::string conf,
-					 std::string logfile,
-					 std::string loglevel){
+void parse_args(int argc, char * argv[], std::string& conf,
+					 std::string& logfile,
+					 std::string& loglevel){
 
         try {
                 // Define the command line object.
@@ -37,7 +42,7 @@ void parse_args(int argc, char * argv[], std::string conf,
                                  "config",
                                  "Configuration file to be loaded",
                                  false,
-                                 "/etc/mad.conf",
+                                 DEFAULT_CONF_FILE,
                                  "string");
                 cmd.add(conf_arg);
 
@@ -46,7 +51,7 @@ void parse_args(int argc, char * argv[], std::string conf,
                                     "logfile",
                                     "Log file",
                                     false,
-                                    "",
+                                    DEFAULT_LOG_FILE,
                                     "string");
                 cmd.add(logfile_arg);
 
@@ -55,7 +60,7 @@ void parse_args(int argc, char * argv[], std::string conf,
                                      "loglevel",
                                      "Log level",
                                      false,
-                                     "INFO",
+                                     DEFAULT_LOG_LEVEL,
                                      "string");
                 cmd.add(loglevel_arg);
 		/*
@@ -92,7 +97,9 @@ int main(int argc, char * argv[])
 {
 	//Recover initial basic parameters
 	std::string logfile, loglevel, conf;
-	parse_args(argc, argv, logfile, loglevel, conf);
+	
+	//Parse arguments
+	parse_args(argc, argv, conf, logfile, loglevel);
 
 	try {
 		//Initialize Agent class

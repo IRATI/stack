@@ -2,6 +2,7 @@
 
 //Subsystems
 #include "bgtm.h"
+#include "conf.h"
 
 #define RINA_PREFIX "mad"
 #include <librina/logs.h>
@@ -12,7 +13,7 @@ namespace mad {
 //Static initializations
 ManagementAgent* ManagementAgent::inst = NULL;
 
-void ManagementAgent::init(const std::string conf, const std::string& logfile,
+void ManagementAgent::init(const std::string& conf, const std::string& logfile,
 						const std::string& loglevel){
 	if(inst){
 		throw Exception(
@@ -35,7 +36,7 @@ ManagementAgent::ManagementAgent(const std::string& conf,
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
 	//or the config file
-	ConfManager::init(conf_file, cl_logfile, cl_loglevel);
+	ConfManager::init(conf, cl_logfile, cl_loglevel);
 
 	//Nice trace
 	LOG_INFO(" Initializing...");

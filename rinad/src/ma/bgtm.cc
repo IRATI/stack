@@ -54,7 +54,6 @@ BGTaskManager::BGTaskManager(){
 void* BGTaskManager::run(void* unused){
 
 	(void)unused;
-	keep_running = true;
 
 	while(keep_running){
 
