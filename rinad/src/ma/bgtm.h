@@ -38,7 +38,8 @@ public:
 	static void destroy(void);
 	
 	//Methods	
-	
+	void* run(void* unused);
+
 	//Run flag
 	bool keep_running;
 protected:
@@ -48,8 +49,6 @@ protected:
 	BGTaskManager(void);
 	~BGTaskManager(void);
 
-	//Methods	
-	void* run(void* unused);
 private:
 
 };

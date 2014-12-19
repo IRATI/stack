@@ -31,8 +31,9 @@ namespace mad{
 class ManagementAgent /*: public rina::Application*/{
 
 public:
-	static void init(const std::string& logfile, 
-						const std::string& loglevel);
+	static void init(const std::string& conf,
+					const std::string& cl_logfile,
+					const std::string& cl_loglevel);
 	static void destroy(void);
 	
 	//Methods	
@@ -41,10 +42,11 @@ public:
 protected:
 	static ManagementAgent* inst;
 
-	ManagementAgent(const std::string& logfile, 
-						const std::string& loglevel);
+	ManagementAgent(const std::string& conf,
+					const std::string& cl_logfile,
+					const std::string& cl_loglevel);
 	~ManagementAgent(void);
-	
+
 private:
 
 };

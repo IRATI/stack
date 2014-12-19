@@ -9,9 +9,9 @@
 * @file configuration.h
 * @author Marc Sune<marc.sune (at) bisdn.de>
 *
-* @brief Management agent Configuration module
+* @brief Management agent ConfManager module
 *
-* TODO: this module might be dropped in the future. 
+* TODO: this module might be dropped in the future.
 */
 
 namespace rinad{
@@ -23,7 +23,7 @@ class ManagementAgent;
 /**
 * @brief MAD configuration
 */
-class Configuration{
+class ConfManager{
 
 public:
 	void load(ManagementAgent ma, std::string& file_path);
@@ -32,7 +32,7 @@ private:
 };
 
 
-}; //namespace mad 
-}; //namespace rinad 
+}; //namespace mad
+}; //namespace rinad
 
 #endif  /* __MA_CONFIGURATION_H__ */

@@ -16,30 +16,95 @@
 #define RINA_PREFIX "mad"
 #include <librina/logs.h>
 
-
+#include "tclap/CmdLine.h"
 #include "common/event-loop.h"
 #include "agent.h"
 
 using namespace std;
 
+static
+void parse_args(int argc, char * argv[], std::string conf,
+					 std::string logfile,
+					 std::string loglevel){
+
+        try {
+                // Define the command line object.
+                TCLAP::CmdLine cmd("Management Agent Daemon",
+							' ', PACKAGE_VERSION);
+
+                TCLAP::ValueArg<std::string>
+                        conf_arg("c",
+                                 "config",
+                                 "Configuration file to be loaded",
+                                 false,
+                                 "/etc/mad.conf",
+                                 "string");
+                cmd.add(conf_arg);
+
+		TCLAP::ValueArg<std::string>
+                        logfile_arg("f",
+                                    "logfile",
+                                    "Log file",
+                                    false,
+                                    "",
+                                    "string");
+                cmd.add(logfile_arg);
+
+                TCLAP::ValueArg<std::string>
+                        loglevel_arg("l",
+                                     "loglevel",
+                                     "Log level",
+                                     false,
+                                     "INFO",
+                                     "string");
+                cmd.add(loglevel_arg);
+		/*
+                TCLAP::ValueArg<unsigned int>
+                        wait_time_arg("w",
+                                     "wait-time",
+                                     "Maximum time (in seconds) to wait for an event response",
+                                     false,
+                                     10,
+                                     "unsigned int");
+                cmd.add(wait_time_arg);
+		*/
+
+                // Parse the args.
+                cmd.parse(argc, argv);
+
+                // Get the value parsed by each arg.
+                conf     = conf_arg.getValue();
+                logfile  = logfile_arg.getValue();
+                loglevel = loglevel_arg.getValue();
+                //wait_time = wait_time_arg.getValue();
+
+                LOG_DBG("Opening config file: %s", conf.c_str());
+
+        } catch (TCLAP::ArgException &e) {
+                LOG_ERR("Error: %s for arg %d",
+                        e.error().c_str(),
+                        e.argId().c_str());
+			exit(EXIT_FAILURE);
+        }
+}
+
 int main(int argc, char * argv[])
 {
-	(void)argc;
-	(void)argv;
-
-	//TODO: Recover logfile loglevel
-	std::string logfile, loglevel;
+	//Recover initial basic parameters
+	std::string logfile, loglevel, conf;
+	parse_args(argc, argv, logfile, loglevel, conf);
 
 	try {
-		//Initialize 
-		rinad::mad::ManagementAgent::init(logfile, loglevel);
-		
-		//The mad is about to be stopped
+		//Initialize Agent class
+		rinad::mad::ManagementAgent::init(conf, logfile, loglevel);
+
+		//Destroy agent and the rest of subsystems
 		rinad::mad::ManagementAgent::destroy();
 	} catch (std::exception & e) {
 		LOG_ERR("Got unhandled exception (%s)", e.what());
 		throw e;
 	}
+
 
 	return EXIT_SUCCESS;
 }

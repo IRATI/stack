@@ -12,13 +12,13 @@ namespace mad {
 //Static initializations
 ManagementAgent* ManagementAgent::inst = NULL;
 
-void ManagementAgent::init(const std::string& logfile, 
+void ManagementAgent::init(const std::string conf, const std::string& logfile,
 						const std::string& loglevel){
 	if(inst){
 		throw Exception(
 			"Invalid double call to ManagementAgent::init()");	
 	}
-	inst = new ManagementAgent(logfile, loglevel);
+	inst = new ManagementAgent(conf, logfile, loglevel);
 }
 
 void ManagementAgent::destroy(void){
@@ -27,20 +27,38 @@ void ManagementAgent::destroy(void){
 }
 
 //Constructors destructors
-ManagementAgent::ManagementAgent(const std::string& logfile, 
-						const std::string& loglevel){
-	(void)logfile;
-	(void)loglevel;
+ManagementAgent::ManagementAgent(const std::string& conf,
+					const std::string& cl_logfile,
+					const std::string& cl_loglevel){
 	
+
+	//ConfManager must be initialized first, to
+	//proper configure the logging according to the cli level
+	//or the config file
+	ConfManager::init(conf_file, cl_logfile, cl_loglevel);
+
+	//Nice trace
+	LOG_INFO(" Initializing...");
+
 	/*
 	* Initialize subsystems
 	*/
 
 	//TODO
-	
+
 	//Background task manager; MUST be the last one
 	//Will not return until SIGINT is sent
-	BGTaskManager::init();	
+	BGTaskManager::init();
+
+	/*
+	* Load configuration
+	*/
+	ConfManager::get()->configure();
+
+	/*
+	* Run the bg task manager loop in the main thread
+	*/
+	BGTaskManager::get()->run(NULL);
 }
 
 ManagementAgent::~ManagementAgent(void){
@@ -50,9 +68,11 @@ ManagementAgent::~ManagementAgent(void){
 	*/
 
 	//TODO	
-	
+
 	//Bg
 	BGTaskManager::destroy();
+
+	LOG_INFO(" Goodbye!");
 }
 
 }; //namespace mad 

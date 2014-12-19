@@ -12,9 +12,9 @@ CLEANFILES   =
 sbin_PROGRAMS = mad 
 
 mad_SOURCES  = 					\
-	agent.cc 				\
-	bgtm.cc 				\
-	configuration.cc 			\
+	agent.cc				\
+	bgtm.cc					\
+	conf.cc					\
 	main.cc
 
 mad_CPPFLAGS =					\
