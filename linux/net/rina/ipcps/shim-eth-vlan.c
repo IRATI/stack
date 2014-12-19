@@ -1052,7 +1052,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 wdata->dev  = dev;
                 wdata->flow = flow;
                 wdata->data = data;
-                item  = rwq_work_create(eth_vlan_rcv_worker, wdata);
+                item  = rwq_work_create_ni(eth_vlan_rcv_worker, wdata);
 
                 rwq_work_post(rcv_wq, item);
 
