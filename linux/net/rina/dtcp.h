@@ -45,8 +45,8 @@ int                  dtcp_sv_update(struct dtcp * instance,
                                     seq_num_t     seq);
 
 /* Used by EFCP to send an incoming DTCP PDU */
-int                  dtcp_common_rcv_control(struct dtcp * dtcp,
-                                             struct pdu *  pdu);
+int                  dtcp_receive(struct dtcp * dtcp,
+                                  struct pdu *  pdu);
 
 /* Used by DTP to have an ack-control PDU sent by DTCP */
 int                  dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp);
