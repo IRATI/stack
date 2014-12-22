@@ -581,7 +581,7 @@ static void dump_we(struct dtcp * dtcp,
         struct dtp * dtp;
         seq_num_t    snd_rt_we;
         seq_num_t    snd_lf_we;
-        seq_num_t    cwq_lf_we;
+        seq_num_t    cwq_lf_we = 0;
         seq_num_t    rcv_rt_we;
         seq_num_t    rcv_lf_we;
         seq_num_t    new_rt_we;
@@ -599,7 +599,8 @@ static void dump_we(struct dtcp * dtcp,
 
         snd_rt_we = snd_rt_wind_edge(dtcp);
         snd_lf_we = dtcp_snd_lf_win(dtcp);
-        cwq_lf_we = cwq_peek(dt_cwq(dtcp->parent));
+        /* commented to avoid doing spin_lock_irqsave */
+        /* cwq_lf_we = cwq_peek(dt_cwq(dtcp->parent));*/
         rcv_rt_we = rcvr_rt_wind_edge(dtcp);
         rcv_lf_we = dt_sv_rcv_lft_win(dtcp->parent);
         new_rt_we = pci_control_new_rt_wind_edge(pci);
