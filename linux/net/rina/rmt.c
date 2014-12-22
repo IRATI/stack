@@ -1052,7 +1052,7 @@ static int forward_pdu(struct rmt * rmt,
         return 0;
 }
 
-static int receive_worker(void * o)
+static void receive_worker(unsigned long o)
 {
         struct rmt *        tmp;
         struct rmt_queue *  entry;
@@ -1069,16 +1069,17 @@ static int receive_worker(void * o)
         struct serdes *     serdes;
         struct buffer *     buf;
         struct sdu *        sdu;
+        unsigned long       flags;
 
         LOG_DBG("Receive worker called");
 
         tmp = (struct rmt *) o;
         if (!tmp) {
                 LOG_ERR("No instance passed to receive worker !!!");
-                return -RWQ_WORKERROR;
+                return;
         }
 
-        spin_lock(&tmp->ingress.queues->lock);
+        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
         hash_for_each_safe(tmp->ingress.queues->queues,
                            bucket,
                            ntmp,
@@ -1095,20 +1096,20 @@ static int receive_worker(void * o)
                 atomic_dec(&tmp->ingress.queues->n_sdus);
 
                 port_id = entry->port_id;
-                spin_unlock(&tmp->ingress.queues->lock);
+                spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
 
                 buf = sdu_buffer_rw(sdu);
                 if (!buf) {
                         LOG_DBG("No buffer present");
                         sdu_destroy(sdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
                 if (sdu_buffer_disown(sdu)) {
                         LOG_DBG("Could not disown SDU");
                         sdu_destroy(sdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1118,7 +1119,7 @@ static int receive_worker(void * o)
                 if (!pdu_ser) {
                         LOG_DBG("No ser PDU to work with");
                         buffer_destroy(buf);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1129,7 +1130,7 @@ static int receive_worker(void * o)
                 if (!pdu) {
                         LOG_ERR("Failed to deserialize PDU!");
                         pdu_ser_destroy(pdu_ser);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1137,7 +1138,7 @@ static int receive_worker(void * o)
                 if (!pci) {
                         LOG_ERR("No PCI to work with, dropping SDU!");
                         pdu_destroy(pdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1153,7 +1154,7 @@ static int receive_worker(void * o)
                                 " dropping SDU! %u, %u, %u",
                                 pdu_type, dst_addr, qos_id);
                         pdu_destroy(pdu);
-                        spin_lock(&tmp->ingress.queues->lock);
+                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
                         continue;
                 }
 
@@ -1198,11 +1199,17 @@ static int receive_worker(void * o)
                                 break;
                         }
                 }
-                spin_lock(&tmp->ingress.queues->lock);
+                spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
         }
-        spin_unlock(&tmp->ingress.queues->lock);
+        if (atomic_read(&tmp->ingress.queues->n_sdus) <= 0) {
+                atomic_set(&tmp->ingress.queues->n_sdus, 0);
+                spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
+                return;
+        }
+        spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
+        tasklet_schedule(&tmp->ingress.ingress_tasklet);
 
-        return RWQ_NORESCHEDULE;
+        return;
 }
 
 int rmt_receive(struct rmt * instance,
@@ -1252,27 +1259,6 @@ int rmt_receive(struct rmt * instance,
         return 0;
 }
 EXPORT_SYMBOL(rmt_receive);
-
-void ingress_handler(unsigned long data)
-{
-        struct rmt * rmt;
-        unsigned long flags;
-
-        rmt = (struct rmt *) data;
-
-        receive_worker(rmt);
-
-        spin_lock_irqsave(&rmt->ingress.queues->lock, flags);
-        if (atomic_read(&rmt->ingress.queues->n_sdus) <= 0) {
-                atomic_set(&rmt->ingress.queues->n_sdus, 0);
-                spin_unlock_irqrestore(&rmt->ingress.queues->lock, flags);
-                return;
-        }
-        spin_unlock_irqrestore(&rmt->ingress.queues->lock, flags);
-        tasklet_schedule(&rmt->ingress.ingress_tasklet);
-
-        return;
-}
 
 struct rmt * rmt_create(struct ipcp_instance *  parent,
                         struct kfa *            kfa,
@@ -1336,7 +1322,9 @@ struct rmt * rmt_create(struct ipcp_instance *  parent,
                 rmt_destroy(tmp);
                 return NULL;
         }
-        tasklet_init(&tmp->ingress.ingress_tasklet, ingress_handler, (unsigned long) tmp);
+        tasklet_init(&tmp->ingress.ingress_tasklet,
+                     receive_worker,
+                     (unsigned long) tmp);
         LOG_DBG("Instance %pK initialized successfully", tmp);
 
         return tmp;
