@@ -1720,7 +1720,7 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        ritem = rkzalloc(sizeof(*ritem), GFP_KERNEL);
+        ritem = rkzalloc(sizeof(*ritem), GFP_ATOMIC);
         if (!ritem) {
                 pdu_destroy(pdu);
                 LOG_ERR("Could not create receive item");
