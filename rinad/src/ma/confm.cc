@@ -1,4 +1,4 @@
-#include "conf.h"
+#include "confm.h"
 #include "agent.h"
 
 #define RINA_PREFIX "mad.conf"
@@ -14,7 +14,7 @@ void ConfManager::init(const std::string& conf, const std::string& logfile,
 						const std::string& loglevel){
 	if(inst){
 		throw Exception(
-			"Invalid double call to ConfManager::init()");	
+			"Invalid double call to ConfManager::init()");
 	}
 	inst = new ConfManager(conf, logfile, loglevel);
 }
@@ -28,7 +28,7 @@ ConfManager::ConfManager(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
 
-	(void)conf;	
+	(void)conf;
 	//TODO: read config and get logging level and file
 
 	setLogLevel(cl_loglevel);
@@ -36,7 +36,7 @@ ConfManager::ConfManager(const std::string& conf,
 }
 
 void ConfManager::configure(){
-	//TODO	
+	//TODO
 }
 
 }; //namespace mad

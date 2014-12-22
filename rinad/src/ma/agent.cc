@@ -2,7 +2,8 @@
 
 //Subsystems
 #include "bgtm.h"
-#include "conf.h"
+#include "confm.h"
+#include "flowm.h"
 
 #define RINA_PREFIX "mad"
 #include <librina/logs.h>
@@ -17,7 +18,7 @@ void ManagementAgent::init(const std::string& conf, const std::string& logfile,
 						const std::string& loglevel){
 	if(inst){
 		throw Exception(
-			"Invalid double call to ManagementAgent::init()");	
+			"Invalid double call to ManagementAgent::init()");
 	}
 	inst = new ManagementAgent(conf, logfile, loglevel);
 }
@@ -31,7 +32,7 @@ void ManagementAgent::destroy(void){
 ManagementAgent::ManagementAgent(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
-	
+
 
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
@@ -46,6 +47,8 @@ ManagementAgent::ManagementAgent(const std::string& conf,
 	*/
 
 	//TODO
+	//FlowManager
+	FlowManager::init();
 
 	//Background task manager; MUST be the last one
 	//Will not return until SIGINT is sent
@@ -68,7 +71,10 @@ ManagementAgent::~ManagementAgent(void){
 	* Destroy all subsystems
 	*/
 
-	//TODO	
+	//TODO
+
+	//FlowManager
+	FlowManager::destroy();
 
 	//Bg
 	BGTaskManager::destroy();
@@ -76,5 +82,5 @@ ManagementAgent::~ManagementAgent(void){
 	LOG_INFO(" Goodbye!");
 }
 
-}; //namespace mad 
+}; //namespace mad
 }; //namespace rinad

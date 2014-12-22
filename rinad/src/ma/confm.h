@@ -29,9 +29,9 @@ public:
 	static inline ConfManager* get(){
 		return inst;
 	};
-	
+
 	void configure(void);
-	
+
 	static void destroy(void);
 
 protected:

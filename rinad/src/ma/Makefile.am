@@ -14,7 +14,8 @@ sbin_PROGRAMS = mad
 mad_SOURCES  = 					\
 	agent.cc				\
 	bgtm.cc					\
-	conf.cc					\
+	confm.cc				\
+	flowm.cc				\
 	main.cc
 
 mad_CPPFLAGS =					\

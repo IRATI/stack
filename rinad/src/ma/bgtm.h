@@ -28,7 +28,7 @@ namespace mad{
 /**
 * @brief A background task manager. This runs on the main loop 
 */
-class BGTaskManager /*: public rina::Application*/{
+class BGTaskManager {
 
 public:
 	static void init(void);
