@@ -57,7 +57,10 @@ struct pdu_ser * pdu_ser_create_buffer_with_gfp(gfp_t           flags,
 
 struct pdu_ser * pdu_ser_create_buffer_with(struct buffer * buffer)
 { return pdu_ser_create_buffer_with_gfp(GFP_KERNEL, buffer); }
-EXPORT_SYMBOL(pdu_ser_create_buffer_with);
+
+struct pdu_ser * pdu_ser_create_buffer_with_ni(struct buffer * buffer)
+{ return pdu_ser_create_buffer_with_gfp(GFP_ATOMIC, buffer); }
+EXPORT_SYMBOL(pdu_ser_create_buffer_with_ni);
 
 int pdu_ser_destroy(struct pdu_ser * pdu)
 {

@@ -34,6 +34,10 @@ int                    serdes_destroy(struct serdes * instance);
 
 struct pdu_ser *       pdu_serialize(const struct serdes * instance,
                                      struct pdu *          pdu);
+struct pdu_ser *       pdu_serialize_ni(const struct serdes * instance,
+                                        struct pdu *          pdu);
 struct pdu *           pdu_deserialize(const struct serdes * instance,
                                        struct pdu_ser *      pdu);
+struct pdu *           pdu_deserialize_ni(const struct serdes * instance,
+                                          struct pdu_ser *      pdu);
 #endif

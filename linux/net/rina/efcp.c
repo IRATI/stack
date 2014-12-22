@@ -94,11 +94,7 @@ static int efcp_destroy(struct efcp * instance)
 
                 /* FIXME: We should watch for memleaks here ... */
                 if (rtxq) rtxq_destroy(rtxq);
-                if (instance->container->rmt)
-                        rmt_flush_work(instance->container->rmt);
                 if (dtp)  dtp_destroy(dtp);
-                if (instance->container->rmt)
-                        rmt_restart_work(instance->container->rmt);
                 if (dtcp) dtcp_destroy(dtcp);
                 if (cwq)  cwq_destroy(cwq);
 
