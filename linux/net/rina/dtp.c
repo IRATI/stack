@@ -947,7 +947,7 @@ static int post_worker(void * o)
                         rtimer_start(dtp->timers.a, a/AF);
                         return -1;
                 }
-
+#if DTP_INACTIVITY_TIMERS_ENABLE
                 if (rtimer_restart(dtp->timers.sender_inactivity,
                                    2 * (dt_sv_mpl(dt) +
                                         dt_sv_r(dt)   +
@@ -956,6 +956,7 @@ static int post_worker(void * o)
                         rtimer_start(dtp->timers.a, a/AF);
                         return -1;
                 }
+#endif
         }
 
         if (!seqq_is_empty(dtp->seqq)) {
@@ -1475,6 +1476,8 @@ static int rcv_worker(void * o)
         struct timeval te;
         long long milliseconds;
 
+        LOG_DBG("DTP receive worker called");
+
         ritem = (struct rcv_item *) o;
         if (!ritem) {
                 LOG_ERR("Bogus rcv_item...");
@@ -1687,7 +1690,9 @@ static int rcv_worker(void * o)
                 }
         }
 
+        LOG_DBG("Going to destroy local to_post...");
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
+        LOG_DBG("Local to_post destroyed, quiting...");
 
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE
@@ -1708,6 +1713,8 @@ int dtp_receive(struct dtp * instance,
 {
         struct rwq_work_item * item;
         struct rcv_item *      ritem;
+
+        LOG_DBG("DTP receive started...");
 
         if (!pdu_is_ok(pdu)) {
                 pdu_destroy(pdu);
@@ -1744,5 +1751,6 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
+        LOG_DBG("DTP receive worker posted...");
         return 0;
 }

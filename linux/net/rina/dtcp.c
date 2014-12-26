@@ -702,6 +702,8 @@ static int dtcp_common_rcv_control(void * o)
         struct timeval te;
         long long milliseconds;
 
+        LOG_DBG("dtcp_common_rcv_control called");
+
         ritem = (struct dtcp_rcv_item *) o;
         if (!ritem) {
                 LOG_ERR("Bogus dtcp rcv_item...");
@@ -782,6 +784,8 @@ static int dtcp_common_rcv_control(void * o)
          *        of this Ack and calculate the RTT with RTTEstimator policy
          */
 
+        LOG_DBG("dtcp_common_rcv_control sending to proper function...");
+
         switch (type) {
         case PDU_TYPE_ACK:
                 seq = pci_control_ack_seq_num(pci);
@@ -807,6 +811,8 @@ int dtcp_receive(struct dtcp * instance,
 {
         struct rwq_work_item * item;
         struct dtcp_rcv_item * ritem;
+
+        LOG_DBG("dtcp_receive called");
 
         if (!pdu_is_ok(pdu)) {
                 pdu_destroy(pdu);
@@ -843,6 +849,7 @@ int dtcp_receive(struct dtcp * instance,
                 return -1;
         }
 
+        LOG_DBG("dtcp_receive ends...");
         return 0;
 }
 

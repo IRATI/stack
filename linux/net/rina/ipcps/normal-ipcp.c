@@ -593,6 +593,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
 {
         struct mgmt_data * mgmt_data;
         int                retval;
+        unsigned long      flags;
 
         if (!data) {
                 LOG_ERR("Bogus instance data");
@@ -609,17 +610,17 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&mgmt_data->lock);
+        spin_lock_irqsave(&mgmt_data->lock, flags);
         if (mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_DBG("IPCP %d is being destroyed", data->id);
-                spin_unlock(&mgmt_data->lock);
+                spin_unlock_irqrestore(&mgmt_data->lock, flags);
                 return -1;
         }
 
         atomic_inc(&mgmt_data->readers);
 
         while (rfifo_is_empty(mgmt_data->sdu_ready)) {
-                spin_unlock(&mgmt_data->lock);
+                spin_unlock_irqrestore(&mgmt_data->lock, flags);
 
                 LOG_DBG("Mgmt read going to sleep...");
                 retval = wait_event_interruptible(mgmt_data->wait_q,
@@ -631,7 +632,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_lock(&mgmt_data->lock);
+                spin_lock_irqsave(&mgmt_data->lock, flags);
                 if (retval) {
                         LOG_DBG("Mgmt queue waken up by interruption, "
                                 "returned error %d", retval);
@@ -659,13 +660,13 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
  finish:
         if (atomic_dec_and_test(&mgmt_data->readers) &&
             (mgmt_data->state == MGMT_DATA_DESTROYED)) {
-                spin_unlock(&mgmt_data->lock);
+                spin_unlock_irqrestore(&mgmt_data->lock, flags);
                 if (mgmt_remove(mgmt_data))
                         LOG_ERR("Could not destroy mgmt_data");
                 return retval;
         }
 
-        spin_unlock(&mgmt_data->lock);
+        spin_unlock_irqrestore(&mgmt_data->lock, flags);
         return retval;
 }
 

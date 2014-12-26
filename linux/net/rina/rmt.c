@@ -249,6 +249,8 @@ int rmt_destroy(struct rmt * instance)
 
         if (instance->ingress.queues) qmap_destroy(instance->ingress.queues,
                                                    instance->kfa);
+
+        tasklet_kill(&instance->ingress.ingress_tasklet);
         pft_cache_fini(&instance->ingress.cache);
 
         if (instance->egress.wq)      rwq_destroy(instance->egress.wq);
@@ -938,6 +940,7 @@ static int process_dt_pdu(struct rmt * rmt,
                 return -1;
         }
 
+        LOG_DBG("process_dt_pdu internally finished");
         return 0;
 }
 
@@ -1070,9 +1073,8 @@ static void receive_worker(unsigned long o)
         struct serdes *     serdes;
         struct buffer *     buf;
         struct sdu *        sdu;
-        unsigned long       flags;
 
-        LOG_DBG("Receive worker called");
+        LOG_DBG("RMT tasklet receive worker called");
 
         tmp = (struct rmt *) o;
         if (!tmp) {
@@ -1080,7 +1082,7 @@ static void receive_worker(unsigned long o)
                 return;
         }
 
-        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+        spin_lock(&tmp->ingress.queues->lock);
         hash_for_each_safe(tmp->ingress.queues->queues,
                            bucket,
                            ntmp,
@@ -1097,20 +1099,20 @@ static void receive_worker(unsigned long o)
                 atomic_dec(&tmp->ingress.queues->n_sdus);
 
                 port_id = entry->port_id;
-                spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
+                spin_unlock(&tmp->ingress.queues->lock);
 
                 buf = sdu_buffer_rw(sdu);
                 if (!buf) {
                         LOG_DBG("No buffer present");
                         sdu_destroy(sdu);
-                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
                 if (sdu_buffer_disown(sdu)) {
                         LOG_DBG("Could not disown SDU");
                         sdu_destroy(sdu);
-                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
@@ -1120,7 +1122,7 @@ static void receive_worker(unsigned long o)
                 if (!pdu_ser) {
                         LOG_DBG("No ser PDU to work with");
                         buffer_destroy(buf);
-                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
@@ -1131,7 +1133,7 @@ static void receive_worker(unsigned long o)
                 if (!pdu) {
                         LOG_ERR("Failed to deserialize PDU!");
                         pdu_ser_destroy(pdu_ser);
-                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
@@ -1139,7 +1141,7 @@ static void receive_worker(unsigned long o)
                 if (!pci) {
                         LOG_ERR("No PCI to work with, dropping SDU!");
                         pdu_destroy(pdu);
-                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
@@ -1155,7 +1157,7 @@ static void receive_worker(unsigned long o)
                                 " dropping SDU! %u, %u, %u",
                                 pdu_type, dst_addr, qos_id);
                         pdu_destroy(pdu);
-                        spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                        spin_lock(&tmp->ingress.queues->lock);
                         continue;
                 }
 
@@ -1200,15 +1202,15 @@ static void receive_worker(unsigned long o)
                                 break;
                         }
                 }
-                spin_lock_irqsave(&tmp->ingress.queues->lock, flags);
+                spin_lock(&tmp->ingress.queues->lock);
         }
         if (atomic_read(&tmp->ingress.queues->n_sdus) <= 0) {
                 atomic_set(&tmp->ingress.queues->n_sdus, 0);
-                spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
+                spin_unlock(&tmp->ingress.queues->lock);
                 return;
         }
-        spin_unlock_irqrestore(&tmp->ingress.queues->lock, flags);
-        tasklet_schedule(&tmp->ingress.ingress_tasklet);
+        spin_unlock(&tmp->ingress.queues->lock);
+        tasklet_hi_schedule(&tmp->ingress.ingress_tasklet);
 
         return;
 }
@@ -1255,7 +1257,8 @@ int rmt_receive(struct rmt * instance,
         atomic_inc(&instance->ingress.queues->n_sdus);
         spin_unlock(&instance->ingress.queues->lock);
 
-        tasklet_schedule(&instance->ingress.ingress_tasklet);
+        tasklet_hi_schedule(&instance->ingress.ingress_tasklet);
+        LOG_DBG("RMT tasklet scheduled");
 
         return 0;
 }

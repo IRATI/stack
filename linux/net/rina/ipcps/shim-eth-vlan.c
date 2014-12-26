@@ -917,8 +917,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct rcv_work_data          * wdata;
         struct rwq_work_item          * item;
 
-        LOG_DBG("eth_vlan_recv_process_packet starts....");
-
         /* C-c-c-checks */
         mapping = inst_data_mapping_get(dev);
         if (!mapping) {
@@ -1004,8 +1002,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 gha_destroy(ghaddr);
                 return -1;
         }
-
-        LOG_DBG("eth_vlan_recv_process_packet checks and allocs done....");
 
         spin_lock(&data->lock);
         flow = find_flow_by_gha(data, ghaddr);
