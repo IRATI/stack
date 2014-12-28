@@ -1056,6 +1056,116 @@ static int forward_pdu(struct rmt * rmt,
         return 0;
 }
 
+static int receive_direct(struct rmt       * tmp,
+                          struct rmt_queue * entry,
+                          struct sdu * sdu)
+{
+        port_id_t           port_id;
+        pdu_type_t          pdu_type;
+        const struct pci *  pci;
+        struct pdu_ser *    pdu_ser;
+        struct pdu *        pdu;
+        address_t           dst_addr;
+        qos_id_t            qos_id;
+        struct serdes *     serdes;
+        struct buffer *     buf;
+
+        port_id = entry->port_id;
+
+        buf = sdu_buffer_rw(sdu);
+        if (!buf) {
+                LOG_DBG("No buffer present");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        if (sdu_buffer_disown(sdu)) {
+                LOG_DBG("Could not disown SDU");
+                sdu_destroy(sdu);
+                return -1;
+        }
+
+        sdu_destroy(sdu);
+
+        pdu_ser = pdu_ser_create_buffer_with_ni(buf);
+        if (!pdu_ser) {
+                LOG_DBG("No ser PDU to work with");
+                buffer_destroy(buf);
+                return -1;
+        }
+
+        serdes = tmp->serdes;
+        ASSERT(serdes);
+
+        pdu = pdu_deserialize_ni(serdes, pdu_ser);
+        if (!pdu) {
+                LOG_ERR("Failed to deserialize PDU!");
+                pdu_ser_destroy(pdu_ser);
+                return -1;
+        }
+
+        pci = pdu_pci_get_ro(pdu);
+        if (!pci) {
+                LOG_ERR("No PCI to work with, dropping SDU!");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        ASSERT(pdu_is_ok(pdu));
+
+        pdu_type = pci_type(pci);
+        dst_addr = pci_destination(pci);
+        qos_id   = pci_qos_id(pci);
+        if (!pdu_type_is_ok(pdu_type) ||
+            !is_address_ok(dst_addr)  ||
+            !is_qos_id_ok(qos_id)) {
+            LOG_ERR("Wrong PDU type, dst address or qos_id,"
+                    " dropping SDU! %u, %u, %u",
+                    pdu_type, dst_addr, qos_id);
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        /* pdu is not for me */
+        if (tmp->address != dst_addr) {
+                if (!dst_addr) {
+                        return process_mgmt_pdu_ni(tmp, port_id, pdu);
+                } else {
+                        return forward_pdu(tmp,
+                                           port_id,
+                                           dst_addr,
+                                           qos_id,
+                                           pdu);
+                }
+        } else {
+                /* pdu is for me */
+                switch (pdu_type) {
+                case PDU_TYPE_MGMT:
+                        return process_mgmt_pdu_ni(tmp, port_id, pdu);
+
+                case PDU_TYPE_CC:
+                case PDU_TYPE_SACK:
+                case PDU_TYPE_NACK:
+                case PDU_TYPE_FC:
+                case PDU_TYPE_ACK:
+                case PDU_TYPE_ACK_AND_FC:
+                case PDU_TYPE_DT:
+                /*
+                 * (FUTURE)
+                 *
+                 * enqueue PDU in pdus_dt[dest-addr, qos-id]
+                 * don't process it now ...
+                 */
+                        return process_dt_pdu(tmp, port_id, pdu);
+
+               default:
+                        LOG_ERR("Unknown PDU type %d", pdu_type);
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+       }
+}
+
 static void receive_worker(unsigned long o)
 {
         struct rmt *        tmp;
@@ -1220,6 +1330,7 @@ int rmt_receive(struct rmt * instance,
                 port_id_t    from)
 {
         struct rmt_queue *     r_queue;
+        int                    ret;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1247,6 +1358,12 @@ int rmt_receive(struct rmt * instance,
                 spin_unlock(&instance->ingress.queues->lock);
                 sdu_destroy(sdu);
                 return -1;
+        }
+
+        if (rfifo_is_empty(r_queue->queue)) {
+                ret = receive_direct(instance, r_queue, sdu);
+                spin_unlock(&instance->ingress.queues->lock);
+                return ret;
         }
 
         if (rfifo_push_ni(r_queue->queue, sdu)) {
