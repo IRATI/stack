@@ -5,10 +5,28 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+#
+# Script-local parameters
+#
+PREFIX=`echo "$1"|sed -e "s,\/$,,"`
+
+#
+# Do not touch under this line
+#
+
 ME=compile-user
 
-PREFIX=`echo "$1"|sed -e "s,\/$,,"`
-(cd librina && make) && (cd rinad && make) && (cd rina-tools && make) || {
+. ./.env || {
+    echo "$ME: Cannot load environment"
+    exit 1
+}
+
+#
+# Do not touch under this line
+#
+(cd $BUILDDIR/librina    && make) && \
+(cd $BUILDDIR/rinad      && make) && \
+(cd $BUILDDIR/rina-tools && make) || {
     echo "$ME: Cannot complete compilation phase"
     exit 1
 }
