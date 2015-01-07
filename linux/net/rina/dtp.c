@@ -1453,7 +1453,6 @@ int dtp_mgmt_write(struct rmt * rmt,
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
-        struct rcv_item *     ritem;
         struct dtp_policies * policies;
         struct pci *          pci;
         struct dtp_sv *       sv;
@@ -1622,7 +1621,7 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        to_post = rqueue_create();
+        to_post = rqueue_create_ni();
         if (!to_post) {
                 LOG_ERR("Could not create to_post list at reception");
                 pdu_destroy(pdu);

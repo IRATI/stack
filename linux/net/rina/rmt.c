@@ -420,6 +420,7 @@ int rmt_send_port_id(struct rmt * instance,
 {
         struct rwq_work_item * item;
         struct rmt_queue *     s_queue;
+        unsigned long          flags;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus PDU passed");
@@ -446,26 +447,26 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock(&instance->egress.queues->lock);
+        spin_lock_irqsave(&instance->egress.queues->lock, flags);
         s_queue = qmap_find(instance->egress.queues, id);
         if (!s_queue) {
-                spin_unlock(&instance->egress.queues->lock);
+                spin_unlock_irqrestore(&instance->egress.queues->lock, flags);
                 pdu_destroy(pdu);
                 return -1;
         }
 
         if (rfifo_push_ni(s_queue->queue, pdu)) {
-                spin_unlock(&instance->egress.queues->lock);
+                spin_unlock_irqrestore(&instance->egress.queues->lock, flags);
                 pdu_destroy(pdu);
                 return -1;
         }
-        spin_unlock(&instance->egress.queues->lock);
+        spin_unlock_irqrestore(&instance->egress.queues->lock, flags);
 
         ASSERT(instance->egress.wq);
         if (rwq_work_post(instance->egress.wq, item)) {
                 LOG_ERR("Cannot post work (PDU) to egress work-queue");
 
-                spin_lock(&instance->egress.queues->lock);
+                spin_lock_irqsave(&instance->egress.queues->lock, flags);
                 s_queue = qmap_find(instance->egress.queues, id);
                 if (s_queue) {
                         struct pdu * tmp;
@@ -474,7 +475,7 @@ int rmt_send_port_id(struct rmt * instance,
                         if (tmp)
                                 pdu_destroy(tmp);
                 }
-                spin_unlock(&instance->egress.queues->lock);
+                spin_unlock_irqrestore(&instance->egress.queues->lock, flags);
 
                 return -1;
         }

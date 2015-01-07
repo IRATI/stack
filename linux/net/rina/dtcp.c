@@ -272,14 +272,15 @@ static seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
 
 static seq_num_t snd_lft_win(struct dtcp * dtcp)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock(&dtcp->sv->lock);
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
         tmp = dtcp->sv->snd_lft_win;
-        spin_unlock(&dtcp->sv->lock);
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
         return tmp;
 }
@@ -1287,12 +1288,14 @@ seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 
 int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
 {
+        unsigned long flags;
+
         if (!instance)
                 return -1;
 
-        spin_lock(&instance->sv->lock);
+        spin_lock_irqsave(&instance->sv->lock, flags);
         instance->sv->snd_lft_win = seq_num;
-        spin_unlock(&instance->sv->lock);
+        spin_unlock_irqrestore(&instance->sv->lock, flags);
 
         return 0;
 }

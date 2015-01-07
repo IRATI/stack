@@ -193,14 +193,15 @@ int cwq_flush(struct cwq * queue)
 
 ssize_t cwq_size(struct cwq * queue)
 {
-        ssize_t tmp;
+        ssize_t       tmp;
+        unsigned long flags;
 
         if (!queue)
                 return -1;
 
-        spin_lock(&queue->lock);
+        spin_lock_irqsave(&queue->lock, flags);
         tmp = rqueue_length(queue->q);
-        spin_unlock(&queue->lock);
+        spin_unlock_irqrestore(&queue->lock, flags);
 
         return tmp;
 }
@@ -827,17 +828,18 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
 int rtxq_push_ni(struct rtxq * q,
                  struct pdu *  pdu)
 {
+        unsigned long flags;
 
         if (!q || !pdu_is_ok(pdu))
                 return -1;
 
-        spin_lock(&q->lock);
+        spin_lock_irqsave(&q->lock, flags);
         /* is the first transmitted PDU */
         if (!rtimer_is_pending(q->r_timer))
                 rtimer_start(q->r_timer, dt_sv_tr(q->parent));
 
         rtxqueue_push_ni(q->queue, pdu);
-        spin_unlock(&q->lock);
+        spin_unlock_irqrestore(&q->lock, flags);
         return 0;
 }
 

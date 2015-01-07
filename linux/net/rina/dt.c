@@ -555,14 +555,15 @@ int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 
 bool dt_sv_window_closed(struct dt * dt)
 {
-        bool tmp;
+        bool          tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return false;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->window_closed;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
