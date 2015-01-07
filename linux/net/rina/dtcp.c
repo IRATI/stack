@@ -155,17 +155,16 @@ struct dtcp_policies {
 };
 
 struct dtcp {
-        struct dt *               parent;
+        struct dt *            parent;
 
         /*
          * NOTE: The DTCP State Vector can be discarded during long periods of
          *       no traffic
          */
-        struct dtcp_sv *          sv; /* The state-vector */
-        struct dtcp_policies *    policies;
-        struct connection *       conn;
-        struct rmt *              rmt;
-        struct workqueue_struct * rcv_wq;
+        struct dtcp_sv *       sv; /* The state-vector */
+        struct dtcp_policies * policies;
+        struct connection *    conn;
+        struct rmt *           rmt;
 
         /* FIXME: Add QUEUE(flow_control_queue, pdu) */
         /* FIXME: Add QUEUE(closed_window_queue, pdu) */
@@ -682,21 +681,13 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         return 0;
 }
 
-struct dtcp_rcv_item {
-        struct dtcp * dtcp;
-        struct pdu *  pdu;
-};
-
-static int dtcp_common_rcv_control(void * o)
+int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 {
-        struct dtcp *          dtcp;
-        struct pdu *           pdu;
-        struct pci *           pci;
-        struct dtcp_rcv_item * ritem;
-        pdu_type_t             type;
-        seq_num_t              seq_num;
-        seq_num_t              seq;
-        seq_num_t              last_ctrl;
+        struct pci * pci;
+        pdu_type_t   type;
+        seq_num_t    seq_num;
+        seq_num_t    seq;
+        seq_num_t    last_ctrl;
 
         /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
         struct timeval te;
@@ -704,28 +695,17 @@ static int dtcp_common_rcv_control(void * o)
 
         LOG_DBG("dtcp_common_rcv_control called");
 
-        ritem = (struct dtcp_rcv_item *) o;
-        if (!ritem) {
-                LOG_ERR("Bogus dtcp rcv_item...");
-                return -1;
-        }
-
-        pdu = ritem->pdu;
         if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Receive_item contained bogus pdu");
-                rkfree(ritem);
-                return -1;
-        }
-
-        dtcp = ritem->dtcp;
-        if (!dtcp) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                rkfree(ritem);
+                LOG_ERR("PDU is not ok");
                 pdu_destroy(pdu);
                 return -1;
         }
 
-        rkfree(ritem);
+        if (!dtcp) {
+                LOG_ERR("DTCP instance bogus");
+                pdu_destroy(pdu);
+                return -1;
+        }
 
         pci = pdu_pci_get_rw(pdu);
         if (!pci_is_ok(pci)) {
@@ -804,53 +784,6 @@ static int dtcp_common_rcv_control(void * o)
         default:
                 return -1;
         }
-}
-
-int dtcp_receive(struct dtcp * instance,
-                 struct pdu * pdu)
-{
-        struct rwq_work_item * item;
-        struct dtcp_rcv_item * ritem;
-
-        LOG_DBG("dtcp_receive called");
-
-        if (!pdu_is_ok(pdu)) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        ritem = rkzalloc(sizeof(*ritem), GFP_ATOMIC);
-        if (!ritem) {
-                pdu_destroy(pdu);
-                LOG_ERR("Could not create dtcp receive item");
-                return -1;
-        }
-
-        ritem->dtcp = instance;
-        ritem->pdu = pdu;
-
-        item = rwq_work_create_ni(dtcp_common_rcv_control, ritem);
-        if (!item) {
-                LOG_ERR("Could not create wwq item");
-                pdu_destroy(pdu);
-                rkfree(ritem);
-                return -1;
-        }
-
-        if (rwq_work_post(instance->rcv_wq, item)) {
-                LOG_ERR("Could not add dtcp rcv wq item to the wq");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        LOG_DBG("dtcp_receive ends...");
-        return 0;
 }
 
 static int default_lost_control_pdu(struct dtcp * dtcp)
@@ -1235,30 +1168,11 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         return 0;
 }
 
-#define MAX_NAME_SIZE 128
-/* FIXME: This function is not re-entrant */
-static const char * rcvwq_name_format(const char *        prefix,
-                                      const struct dtcp * instance)
-{
-        static char name[MAX_NAME_SIZE];
-
-        ASSERT(prefix);
-        ASSERT(instance);
-
-        if (snprintf(name, sizeof(name), RINA_PREFIX "-%s-%pK",
-                     prefix, instance) >=
-            sizeof(name))
-                return NULL;
-
-        return name;
-}
-
 struct dtcp * dtcp_create(struct dt *         dt,
                           struct connection * conn,
                           struct rmt *        rmt)
 {
         struct dtcp * tmp;
-        const char *  rwq_name;
 
         if (!dt) {
                 LOG_ERR("No DT passed, bailing out");
@@ -1294,18 +1208,6 @@ struct dtcp * dtcp_create(struct dt *         dt,
                 return NULL;
         }
 
-	/* FIXME: This function must change */
-        rwq_name = rcvwq_name_format("dtcprcvwq", tmp);
-        if (!rwq_name) {
-                dtcp_destroy(tmp);
-                return NULL;
-        }
-        tmp->rcv_wq = rwq_create(rwq_name);
-        if (!tmp->rcv_wq) {
-                dtcp_destroy(tmp);
-                return NULL;
-        }
-
         tmp->conn = conn;
         tmp->rmt  = rmt;
 
@@ -1333,8 +1235,6 @@ int dtcp_destroy(struct dtcp * instance)
 
         if (instance->sv)       rkfree(instance->sv);
         if (instance->policies) rkfree(instance->policies);
-        if (instance->rcv_wq)   rwq_destroy(instance->rcv_wq);
-
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);

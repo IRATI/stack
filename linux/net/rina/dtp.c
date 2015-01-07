@@ -1450,15 +1450,9 @@ int dtp_mgmt_write(struct rmt * rmt,
 
 }
 
-struct rcv_item {
-        struct dtp * dtp;
-        struct pdu * pdu;
-};
-
-static int rcv_worker(void * o)
+int dtp_receive(struct dtp * instance,
+                struct pdu * pdu)
 {
-        struct dtp *          instance;
-        struct pdu *          pdu;
         struct rcv_item *     ritem;
         struct dtp_policies * policies;
         struct pci *          pci;
@@ -1472,37 +1466,20 @@ static int rcv_worker(void * o)
         seq_num_t             max_sdu_gap;
         struct rqueue *       to_post;
 
-        /* VARiABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
+        /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
         struct timeval te;
         long long milliseconds;
 
-        LOG_DBG("DTP receive worker called");
+        LOG_DBG("DTP receive started...");
 
-        ritem = (struct rcv_item *) o;
-        if (!ritem) {
-                LOG_ERR("Bogus rcv_item...");
-                return -1;
-        }
-
-        pdu = ritem->pdu;
         if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Receive_item contained bogus pdu");
-                rkfree(ritem);
-                return -1;
-        }
-
-        instance = ritem->dtp;
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                rkfree(ritem);
                 pdu_destroy(pdu);
                 return -1;
         }
 
-        rkfree(ritem);
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Bogus data, bailing out");
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -1705,52 +1682,5 @@ static int rcv_worker(void * o)
                 return -1;
         }
 #endif
-        return 0;
-}
-
-int dtp_receive(struct dtp * instance,
-                struct pdu * pdu)
-{
-        struct rwq_work_item * item;
-        struct rcv_item *      ritem;
-
-        LOG_DBG("DTP receive started...");
-
-        if (!pdu_is_ok(pdu)) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        ritem = rkzalloc(sizeof(*ritem), GFP_ATOMIC);
-        if (!ritem) {
-                pdu_destroy(pdu);
-                LOG_ERR("Could not create receive item");
-                return -1;
-        }
-
-        ritem->dtp = instance;
-        ritem->pdu = pdu;
-
-        item = rwq_work_create_ni(rcv_worker, ritem);
-        if (!item) {
-                LOG_ERR("Could not create wwq item");
-                pdu_destroy(pdu);
-                rkfree(ritem);
-                return -1;
-        }
-
-        if (rwq_work_post(instance->rcv_wq, item)) {
-                LOG_ERR("Could not add rcv wq item to the wq");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        LOG_DBG("DTP receive worker posted...");
         return 0;
 }

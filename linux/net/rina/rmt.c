@@ -1363,6 +1363,7 @@ int rmt_receive(struct rmt * instance,
         if (rfifo_is_empty(r_queue->queue)) {
                 ret = receive_direct(instance, r_queue, sdu);
                 spin_unlock(&instance->ingress.queues->lock);
+                LOG_DBG("RMT sent directly to DTP");
                 return ret;
         }
 

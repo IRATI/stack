@@ -315,7 +315,7 @@ static int efcp_receive(struct efcp * efcp,
                         return -1;
                 }
 
-                if (dtcp_receive(dtcp, pdu))
+                if (dtcp_common_rcv_control(dtcp, pdu))
                         return -1;
 
                 return 0;
