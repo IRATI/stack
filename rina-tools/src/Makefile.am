@@ -20,6 +20,20 @@ edit = $(SED)							\
         -e 's|@SHELL[@]|$(SHELL)|g'
 
 if HAVE_PYTHON
+rina-confgen-node: rina-confgen-node.in Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.py >$@.tmp
+	chmod a-w $@.tmp
+	chmod a+x $@.tmp
+	mv $@.tmp $@
+
+bin_SCRIPTS    += rina-confgen-node
+DISTCLEANFILES += rina-confgen-node
+EXTRA_DIST     += rina-confgen-node.in
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-confgen-node
+
 rina-mem-stats: rina-mem-stats.py Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
