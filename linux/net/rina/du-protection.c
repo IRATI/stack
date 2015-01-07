@@ -31,6 +31,10 @@
 #include "debug.h"
 #include "du-protection.h"
 
+#ifdef CONFIG_RINA_DUP
+
+#ifdef CONFIG_RINA_IPCPS_CRC
+
 static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
                                   unsigned char *  data,
                                   ssize_t *        len)
@@ -117,6 +121,10 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
 }
 EXPORT_SYMBOL(dup_chksum_is_ok);
 
+#endif
+
+#ifdef CONFIG_RINA_IPCPS_TTL
+
 bool dup_ttl_set(struct pdu_ser * pdu,
                  size_t           value)
 {
@@ -154,3 +162,7 @@ bool dup_ttl_is_expired(struct pdu_ser * pdu)
         return true;
 }
 EXPORT_SYMBOL(dup_ttl_is_expired);
+
+#endif
+
+#endif
