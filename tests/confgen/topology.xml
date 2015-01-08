@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<topology>
+
+  <node id="m">
+    <interface id="eth11" ip="10.1.1.3"/>
+  </node>
+
+  <node id="n">
+      <interface id="eth10" ip="10.1.1.2"/>
+  </node>
+
+  <link id="link0">
+    <from node="m" interface="eth11"/>
+    <to   node="n" interface="eth10"/>
+  </link>
+
+
+  <link id="link1">
+    <from node="m" interface="eth11"/>
+    <to   node="n" interface="eth10"/>
+  </link>
+
+</topology>

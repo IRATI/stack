@@ -59,6 +59,7 @@ struct pci {
         pdu_type_t  type;
         pdu_flags_t flags;
         seq_num_t   sequence_number;
+        size_t      ttl;
 
         struct {
                 seq_num_t last_ctrl_seq_num_rcvd;
@@ -209,6 +210,17 @@ int pci_flags_set(struct pci * pci, pdu_flags_t flags)
 }
 EXPORT_SYMBOL(pci_flags_set);
 
+int pci_ttl_set(struct pci * pci, ssize_t ttl)
+{
+        if (!pci)
+                return -1;
+
+        pci->ttl = ttl;
+
+        return 0;
+}
+EXPORT_SYMBOL(pci_ttl_set);
+
 int pci_format(struct pci * pci,
                cep_id_t     src_cep_id,
                cep_id_t     dst_cep_id,
@@ -354,13 +366,21 @@ EXPORT_SYMBOL(pci_qos_id);
 
 pdu_flags_t pci_flags_get(const struct pci * pci)
 {
-
         if (!pci)
                 return PDU_FLAGS_BAD;
 
         return pci->flags;
 }
 EXPORT_SYMBOL(pci_flags_get);
+
+ssize_t pci_ttl(const struct pci * pci)
+{
+        if (!pci)
+                return -1;
+
+        return pci->ttl;
+}
+EXPORT_SYMBOL(pci_ttl);
 
 int pci_control_ack_seq_num_set(struct pci * pci, seq_num_t seq)
 {

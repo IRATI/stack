@@ -25,12 +25,13 @@
 #include <linux/string.h>
 #include <linux/list.h>
 #include <linux/workqueue.h>
+#include <linux/mutex.h>
 #include <net/sock.h>
 
 #define SHIM_NAME   "shim-tcp-udp"
 
 #define RINA_PREFIX SHIM_NAME
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 1500
 
 #include "logs.h"
 #include "common.h"
@@ -45,7 +46,7 @@ static struct workqueue_struct * rcv_wq;
 static struct work_struct        rcv_work;
 static struct list_head          rcv_wq_data;
 static DEFINE_SPINLOCK(rcv_wq_lock);
-static DEFINE_SPINLOCK(rcv_stop_lock);
+static DEFINE_MUTEX(rcv_stop_mutex);
 
 /* Structure for the workqueue */
 struct rcv_data {
@@ -672,8 +673,8 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
         if (flow->fspec_id == 1 &&
             flow->port_id_state == PORT_STATE_ALLOCATED) {
 
-                /* FIXME: more efficient locking and better cleanup */
-                spin_lock(&rcv_stop_lock);
+                /* FIXME: better cleanup (= removing from list) */
+                mutex_lock(&rcv_stop_mutex);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_for_each_entry(recvd, &rcv_wq_data, list) {
                         if (recvd->sk->sk_socket == flow->sock) {
@@ -682,7 +683,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
                         }
                 }
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
-                spin_unlock(&rcv_stop_lock);
+                mutex_unlock(&rcv_stop_mutex);
 
                 LOG_DBG("closing socket");
                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
@@ -1048,15 +1049,14 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_from(flow->buf, flow->lbuf);
+                sdubuf = buffer_create_with(flow->buf, flow->lbuf);
                 if (!sdubuf) {
                         rkfree(flow->buf);
                         LOG_ERR("could not create buffer");
                         return -1;
                 }
-                rkfree(flow->buf);
 
-                du = sdu_create_buffer_with_ni(sdubuf);
+                du = sdu_create_buffer_with(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
@@ -1319,9 +1319,9 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
         LOG_HBEAT;
 
         /* FIXME: more efficient locking and better cleanup */
+        mutex_lock(&rcv_stop_mutex);
         spin_lock_irqsave(&rcv_wq_lock, flags);
         list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
-                spin_lock(&rcv_stop_lock);
                 list_del(&recvd->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
@@ -1332,10 +1332,10 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 
                 rkfree(recvd);
 
-                spin_unlock(&rcv_stop_lock);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
+        mutex_unlock(&rcv_stop_mutex);
 
         LOG_DBG("Worker finished for now");
 }
@@ -2007,12 +2007,13 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
 {
         __be16 length;
         int    size, total;
-        char   buf[len + sizeof(__be16)];
+        char * buf;
 
         ASSERT(flow);
         ASSERT(len);
         ASSERT(sbuf);
 
+        buf = rkmalloc(len + sizeof(__be16), GFP_KERNEL);
         length = htons((short)len);
 
         memcpy(&buf[0], &length, sizeof(__be16));
@@ -2028,6 +2029,8 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                 }
                 total += size;
         }
+
+        rkfree(buf);
 
         return 0;
 }
@@ -2193,6 +2196,28 @@ find_instance(struct ipcp_factory_data * data,
 
 }
 
+static void inst_cleanup(struct ipcp_instance * inst)
+{
+        ASSERT(inst);
+
+        if (inst->data) {
+                if (inst->data->qos) {
+                        if (inst->data->qos[0])
+                                rkfree(inst->data->qos[0]);
+                        if (inst->data->qos[1])
+                                rkfree(inst->data->qos[1]);
+
+                        rkfree(inst->data->qos);
+                }
+                if (inst->data->name)
+                        name_destroy(inst->data->name);
+
+                rkfree(inst->data);
+        }
+
+        rkfree(inst);
+}
+
 static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                                              const struct name *        name,
                                              ipc_process_id_t           id)
@@ -2221,7 +2246,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
                 LOG_ERR("could not allocate mem for inst data");
-                rkfree(inst);
+                inst_cleanup(inst);
                 return NULL;
         }
 
@@ -2229,39 +2254,29 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         inst->data->name = name_dup(name);
         if (!inst->data->name) {
-                LOG_ERR("Failed creation of qos cubes");
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of ipc name");
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->qos = rkzalloc(2*sizeof(struct flow_spec*), GFP_KERNEL);
         if (!inst->data->qos) {
-                LOG_ERR("Failed creation of qos cube 1");
-                name_destroy(inst->data->name);
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of qos cubes");
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->qos[0] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
         if (!inst->data->qos[0]) {
-                LOG_ERR("Failed creation of qos cube 2");
-                rkfree(inst->data->qos);
-                name_destroy(inst->data->name);
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of qos cube 1");
+                inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->qos[1] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
         if (!inst->data->qos[1]) {
-                LOG_ERR("Failed creation of ipc name");
-                rkfree(inst->data->qos[0]);
-                rkfree(inst->data->qos);
-                name_destroy(inst->data->name);
-                rkfree(inst->data);
-                rkfree(inst);
+                LOG_ERR("Failed creation of qos cube 2");
+                inst_cleanup(inst);
                 return NULL;
         }
 

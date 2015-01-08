@@ -5,7 +5,20 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+#
+# Script-local parameters
+#
+
+#
+# Do not touch under this line
+#
+
 ME=uninstall-user-and-clean
+
+. ./.env || {
+    echo "$ME: Cannot load environment"
+    exit 1
+}
 
 echo "$ME: Uninstalling and cleaning rina-tools"
 (cd rina-tools && make uninstall && make maintainer-clean) || {

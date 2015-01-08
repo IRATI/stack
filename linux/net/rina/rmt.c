@@ -537,7 +537,8 @@ int rmt_send(struct rmt * instance,
              qos_id_t     qos_id,
              struct pdu * pdu)
 {
-        int i;
+        int          i;
+        struct pci * pci;
 
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
@@ -547,6 +548,25 @@ int rmt_send(struct rmt * instance,
                 LOG_ERR("Bogus PDU passed");
                 return -1;
         }
+
+        pci = 0;
+
+#ifdef CONFIG_RINA_IPCPS_TTL
+
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                LOG_ERR("Cannot get PCI");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        if (pci_ttl_set(pci, CONFIG_RINA_IPCPS_TTL_DEFAULT)) {
+                LOG_ERR("Could not set TTL");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+#endif
 
         if (pft_nhop(instance->pft,
                      address,

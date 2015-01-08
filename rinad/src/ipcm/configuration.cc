@@ -858,6 +858,10 @@ void parse_local_conf(const Json::Value &         root,
                         .get("libraryPath",
                              local.libraryPath)
                         .asString();
+                local.logPath = local_conf
+                        .get("logPath",
+                             local.logPath)
+                        .asString();
         }
 }
 

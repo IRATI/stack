@@ -92,3 +92,11 @@ int pdu_ser_buffer_disown(struct pdu_ser * pdu)
         return 0;
 }
 EXPORT_SYMBOL(pdu_ser_buffer_disown);
+
+int pdu_ser_head_grow(struct pdu_ser * pdu, size_t bytes)
+{ return buffer_head_grow(pdu->buf, bytes); }
+EXPORT_SYMBOL(pdu_ser_head_grow);
+
+int pdu_ser_head_shrink(struct pdu_ser * pdu, size_t bytes)
+{ return buffer_head_shrink(pdu->buf, bytes); }
+EXPORT_SYMBOL(pdu_ser_head_shrink);

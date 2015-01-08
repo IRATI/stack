@@ -29,10 +29,12 @@
 
 int wrapped_main(int argc, char * argv[])
 {
-        if (argc != 5) {
-                LOG_ERR("Wrong number of arguments: expected 5, got %d", argc);
+        if (argc != 7) {
+                LOG_ERR("Wrong number of arguments: expected 7, got %d", argc);
                 return EXIT_FAILURE;
         }
+        std::string log_level = argv[5];
+        std::string log_file = argv[6];
 
         rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
 
@@ -51,7 +53,7 @@ int wrapped_main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port);
+        rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port, log_level, log_file);
 
         LOG_INFO("IPC Process name:     %s", argv[1]);
         LOG_INFO("IPC Process instance: %s", argv[2]);

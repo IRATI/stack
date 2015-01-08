@@ -25,20 +25,11 @@
 
 #include "pdu-ser.h"
 
-/* Adds the checksum field, computes its value and sets it */
-bool dup_chksum_add(struct pdu_ser * pdu);
+bool    dup_chksum_set(struct pdu_ser * pdu);
+bool    dup_chksum_is_ok(struct pdu_ser * pdu);
 
-bool dup_chksum_remove(struct pdu_ser * pdu);
-bool dup_chksum_is_present(struct pdu_ser * pdu);
-bool dup_chksum_is_ok(struct pdu_ser * pdu);
-
-/* Adds the TTL field and sets its initial value */
-bool dup_ttl_add(struct pdu_ser * pdu, size_t value);
-bool dup_ttl_remove(struct pdu_ser * pdu);
-bool dup_ttl_is_present(struct pdu_ser * pdu);
-
-/* Decrements the TTL until it expires (does anything otherwise) */
-bool dup_ttl_decrement(struct pdu_ser * pdu);
-bool dup_ttl_is_expired(struct pdu_ser * pdu);
+bool    dup_ttl_set(struct pdu_ser * pdu, size_t value);
+ssize_t dup_ttl_decrement(struct pdu_ser * pdu);
+bool    dup_ttl_is_expired(struct pdu_ser * pdu);
 
 #endif
