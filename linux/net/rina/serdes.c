@@ -719,7 +719,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
 
 #ifdef CONFIG_RINA_IPCPS_TTL
 
-        if (pdu_ser_head_grow(tmp, 1)) {
+        if (pdu_ser_head_grow(tmp, sizeof(u8))) {
                 LOG_ERR("Failed to grow ser PDU");
                 pdu_ser_destroy(tmp);
                 return NULL;
@@ -742,7 +742,7 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
 #ifdef CONFIG_RINA_IPCPS_CRC
 
         /* Assuming CRC32 */
-        if (pdu_ser_head_grow(tmp, 4)) {
+        if (pdu_ser_head_grow(tmp, sizeof(u32))) {
                 LOG_ERR("Failed to grow ser PDU");
                 pdu_ser_destroy(tmp);
                 return NULL;
@@ -797,7 +797,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         }
 
         /* Assuming CRC32 */
-        if (pdu_ser_head_shrink(pdu, 4)) {
+        if (pdu_ser_head_shrink(pdu, sizeof(u32))) {
                 LOG_ERR("Failed to shrink ser PDU");
                 return NULL;
         }
@@ -845,7 +845,7 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
                 return NULL;
         }
 
-        if (pdu_ser_head_shrink(pdu, 1)) {
+        if (pdu_ser_head_shrink(pdu, sizeof(u8))) {
                 LOG_ERR("Failed to shrink ser PDU");
                 pci_destroy(new_pci);
                 pdu_destroy(new_pdu);
