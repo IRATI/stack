@@ -529,14 +529,15 @@ timeout_t dt_sv_a(struct dt * dt)
 
 seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return 0;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->rcv_left_window_edge;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
