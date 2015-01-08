@@ -1037,7 +1037,7 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
 						ipc_process_->namespace_manager_->getAdressByname(
-								it->remoteAppName), 1);
+								event->neighbor_->get_name()), 1);
 				allocated_flows_.erase(it);
 				break;
 			} catch (Exception &e) {
