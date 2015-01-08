@@ -10,7 +10,6 @@
 #
 PREFIX=`echo "$1"|sed -e "s,\/$,,"`
 SRCDIR=`pwd`
-MAKEFLAGS="-j"
 
 #
 # Do not touch under this line
