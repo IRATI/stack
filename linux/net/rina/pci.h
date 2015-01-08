@@ -115,7 +115,7 @@ int                   pci_type_set(struct pci * pci,
 int                   pci_flags_set(struct pci * pci,
                                     pdu_flags_t  flags);
 int                   pci_ttl_set(struct pci * pci,
-                                  ssize_t      ttl);
+                                  size_t       ttl);
 int                   pci_format(struct pci * pci,
                                  cep_id_t     src_cep_id,
                                  cep_id_t     dst_cep_id,
