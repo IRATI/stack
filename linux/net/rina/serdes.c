@@ -718,7 +718,6 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         }
 
 #ifdef CONFIG_RINA_IPCPS_TTL
-
         if (pdu_ser_head_grow(tmp, sizeof(u8))) {
                 LOG_ERR("Failed to grow ser PDU");
                 pdu_ser_destroy(tmp);
@@ -736,11 +735,9 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 pdu_ser_destroy(tmp);
                 return NULL;
         }
-
 #endif
 
 #ifdef CONFIG_RINA_IPCPS_CRC
-
         /* Assuming CRC32 */
         if (pdu_ser_head_grow(tmp, sizeof(u32))) {
                 LOG_ERR("Failed to grow ser PDU");
@@ -755,7 +752,6 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
         }
 
         ASSERT(dup_chksum_is_ok(tmp));
-
 #endif
 
         pdu_destroy(pdu);
@@ -783,16 +779,15 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         seq_num_t             seq;
         ssize_t               ttl;
 
-        if (!pdu_ser_is_ok(pdu))
-                return NULL;
-
         if (!instance)
                 return NULL;
 
-#ifdef CONFIG_RINA_IPCPS_CRC
+        if (!pdu_ser_is_ok(pdu))
+                return NULL;
 
+#ifdef CONFIG_RINA_IPCPS_CRC
         if (!dup_chksum_is_ok(pdu)) {
-                LOG_ERR("Bad CRC. PDU has been corrupted.");
+                LOG_ERR("Bad CRC, PDU has been corrupted");
                 return NULL;
         }
 
@@ -801,7 +796,6 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
                 LOG_ERR("Failed to shrink ser PDU");
                 return NULL;
         }
-
 #endif
 
         dt_cons = instance->dt_cons;
@@ -829,7 +823,6 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         ttl = 0;
 
 #ifdef CONFIG_RINA_IPCPS_TTL
-
         ttl = dup_ttl_decrement(pdu);
         if (ttl < 0) {
                 LOG_ERR("Could not decrement TTL");
@@ -851,7 +844,6 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
                 pdu_destroy(new_pdu);
                 return NULL;
         }
-
 #endif
 
         ptr = (const uint8_t *) buffer_data_ro(tmp_buff);

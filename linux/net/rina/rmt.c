@@ -552,7 +552,6 @@ int rmt_send(struct rmt * instance,
         pci = 0;
 
 #ifdef CONFIG_RINA_IPCPS_TTL
-
         pci = pdu_pci_get_rw(pdu);
         if (!pci) {
                 LOG_ERR("Cannot get PCI");
@@ -565,7 +564,6 @@ int rmt_send(struct rmt * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
-
 #endif
 
         if (pft_nhop(instance->pft,
