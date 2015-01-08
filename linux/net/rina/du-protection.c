@@ -48,13 +48,13 @@ static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
         ASSERT(data);
         ASSERT(len);
 
-        *len  = buffer_length(buf);
         *data = (unsigned char *) buffer_data_rw(buf);
-
         if (!*data) {
                 LOG_ERR("Cannot get data from serialised PDU");
                 return false;
         }
+
+        *len = buffer_length(buf);
 
         return true;
 }
@@ -65,8 +65,8 @@ static bool pdu_ser_crc32(struct pdu_ser * pdu,
         ssize_t         len;
         unsigned char * data;
 
-        ASSERT(crc);
         ASSERT(pdu_ser_is_ok(pdu));
+        ASSERT(crc);
 
         data = 0;
         len  = 0;
@@ -86,9 +86,9 @@ bool dup_chksum_set(struct pdu_ser * pdu)
         unsigned char * data;
         ssize_t         len;
 
-        len  = 0;
         crc  = 0;
         data = 0;
+        len  = 0;
 
         if (!pdu_ser_is_ok(pdu))
                 return false;
