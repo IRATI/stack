@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<ipcps>
+  <node id="m">
+    <ipcp ap-name="test1.IRATI" ap-instance="1" dif="normal.DIF">
+      <register-dif name="shim.DIF" />
+    </ipcp>
+    <ipcp ap-name="test-eth" ap-instance="1" dif="shim.DIF">
+    </ipcp>
+  </node>
+  <node id="n">
+    <ipcp ap-name="test2.IRATI" ap-instance="1" dif="normal.DIF">
+      <register-dif name="shim.DIF" />
+    </ipcp>
+    <ipcp ap-name="test-eth" ap-instance="1" dif="shim.DIF">
+    </ipcp>
+  </node>
+</ipcps>
+  
