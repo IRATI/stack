@@ -299,7 +299,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *      flow)
 {
         if (!data || !flow) {
-                LOG_ERR("Couldn't destroy flow.");
+                LOG_ERR("Couldn't destroy flow");
                 return -1;
         }
 
