@@ -23,6 +23,7 @@
 import sys
 
 import xml.dom.minidom
+import argparse
 
 tag = "confgen"
 
@@ -32,8 +33,46 @@ def debug(message):
 def error(message):
     print(tag + ": " + message)
 
+#
+# Main
+#
+
+topology_filename = "topology.xml"
+ipcps_filename    = "ipcps.xml"
+
 try:
-    DOM_topology = xml.dom.minidom.parse("topology.xml")
+    parser = argparse.ArgumentParser(description='A configuration builder.',
+                                     epilog='Bugreport here')
+    parser.add_argument('--topology',
+                        type=str,
+                        metavar="FILE",
+                        default=[ topology_filename ],
+                        nargs=1,
+                        help='the topology XML filename ' + \
+                             '(default: %(default)s)')
+
+    parser.add_argument('--ipcps',
+                        type=str,
+                        metavar="FILE",
+                        default=[ ipcps_filename ],
+                        nargs=1,
+                        help='the IPC Process XML filename ' + \
+                             '(default: %(default)s)')
+
+    args = parser.parse_args()
+
+    topology_filename = args.topology[0]
+    ipcps_filename    = args.ipcps[0]
+except Exception as e:
+    error("Cannot parse options: " + str(e))
+    sys.exit(1)
+
+debug("Input files:")
+debug("  Topology = " + str(topology_filename))
+debug("  IPCPs    = " + str(ipcps_filename))
+
+try:
+    DOM_topology = xml.dom.minidom.parse(topology_filename)
 
     debug("Parsing topology")
 
@@ -64,6 +103,35 @@ try:
               " <-> " + \
               b.getAttribute("node") + ":" + b.getAttribute("interface"))
     debug("Topology parsed successfully")
+
+    DOM_ipcps = xml.dom.minidom.parse(ipcps_filename)
+
+    debug("Parsing ipcps")
+
+    ipcps = DOM_ipcps.documentElement
+    assert ipcps.tagName == "ipcps"
+
+    nodes = DOM_ipcps.getElementsByTagName("node")
+    for node in nodes:
+        debug("Node:" + node.getAttribute("id"))
+        ipcps = node.getElementsByTagName("ipcp")
+        for ipcp in ipcps:
+            debug("  IPCP = " + \
+                  ipcp.getAttribute("ap-name") + \
+                  " " + \
+                  ipcp.getAttribute("ap-instance"))
+
+            dif_assign    = ipcp.getAttribute("dif")
+
+            registrations = ipcp.getElementsByTagName("register-dif")
+            dif_register  = []
+            for dif in registrations:
+                dif_register.append(str(dif.getAttribute("name")))
+
+            debug("  IPCP assigned to DIF:   " + dif_assign)
+            debug("  IPCP registers to DIFs: " + str(dif_register))
+
+    debug("IPCPs parsed successfully")
 
 except Exception as e:
     error("Got a problem: " + str(e))
