@@ -20,5 +20,5 @@ nobase_pkginclude_HEADERS =			\
 	patterns.h				\
 	exceptions.h				\
 	concurrency.h				\
-	time.h
+	time.h					\
 	timer.h
