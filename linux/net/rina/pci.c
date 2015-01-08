@@ -210,7 +210,7 @@ int pci_flags_set(struct pci * pci, pdu_flags_t flags)
 }
 EXPORT_SYMBOL(pci_flags_set);
 
-int pci_ttl_set(struct pci * pci, ssize_t ttl)
+int pci_ttl_set(struct pci * pci, size_t ttl)
 {
         if (!pci)
                 return -1;
