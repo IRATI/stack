@@ -35,9 +35,9 @@
 
 #ifdef CONFIG_RINA_IPCPS_CRC
 
-static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
-                                  unsigned char ** data,
-                                  ssize_t *        len)
+static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
+                                    unsigned char ** data,
+                                    ssize_t *        len)
 {
         struct buffer * buf;
 
@@ -45,33 +45,37 @@ static bool data_len_from_pdu_ser(struct pdu_ser * pdu,
         if (!buffer_is_ok(buf))
                 return false;
 
-        *len = buffer_length(buf);
+        ASSERT(data);
+        ASSERT(len);
 
+        *len  = buffer_length(buf);
         *data = (unsigned char *) buffer_data_rw(buf);
+
         if (!*data) {
-                LOG_ERR("Cannot get data");
+                LOG_ERR("Cannot get data from serialised PDU");
                 return false;
         }
 
         return true;
 }
 
-static bool crc32_pdu_ser(struct pdu_ser * pdu,
+static bool pdu_ser_crc32(struct pdu_ser * pdu,
                           u32 *            crc)
 {
         ssize_t         len;
         unsigned char * data;
 
+        ASSERT(crc);
         ASSERT(pdu_ser_is_ok(pdu));
 
         data = 0;
-        len = 0;
+        len  = 0;
 
-        if (!data_len_from_pdu_ser(pdu, &data, &len))
+        if (!pdu_ser_data_and_length(pdu, &data, &len))
                 return false;
 
         *crc = crc32_le(0, data + sizeof(*crc), len - sizeof(*crc));
-        LOG_DBG("Calculated a crc of %X", *crc);
+        LOG_DBG("CRC32(%p, %zd) = %X", data, len, *crc);
 
         return true;
 }
@@ -82,17 +86,17 @@ bool dup_chksum_set(struct pdu_ser * pdu)
         unsigned char * data;
         ssize_t         len;
 
-        len = 0;
-        crc = 0;
+        len  = 0;
+        crc  = 0;
         data = 0;
 
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
-        if (!crc32_pdu_ser(pdu, &crc))
+        if (!pdu_ser_crc32(pdu, &crc))
                 return false;
 
-        if (!data_len_from_pdu_ser(pdu, &data, &len))
+        if (!pdu_ser_data_and_length(pdu, &data, &len))
                 return false;
 
         memcpy(data, &crc, sizeof(crc));
@@ -111,13 +115,13 @@ bool dup_chksum_is_ok(struct pdu_ser * pdu)
                 return false;
 
         data = 0;
-        crc = 0;
-        len = 0;
+        crc  = 0;
+        len  = 0;
 
-        if (!crc32_pdu_ser(pdu, &crc))
+        if (!pdu_ser_crc32(pdu, &crc))
                 return false;
 
-        if (!data_len_from_pdu_ser(pdu, &data, &len))
+        if (!pdu_ser_data_and_length(pdu, &data, &len))
                 return false;
 
         if (memcmp(&crc, data, sizeof(crc)))
