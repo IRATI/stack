@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<apps>
+  <app ap-name="rina.apps.echotime.server" ap-instance="1">
+    <deploy   on-node="m" />
+    <register dif-name="normal.DIF"/>
+  </app>
+</apps>
