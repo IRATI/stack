@@ -22,6 +22,8 @@
 
 #define RINA_PREFIX "dtcp"
 
+#include <linux/delay.h>
+
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
@@ -166,9 +168,7 @@ struct dtcp {
         struct connection *    conn;
         struct rmt *           rmt;
 
-        /* FIXME: Add QUEUE(flow_control_queue, pdu) */
-        /* FIXME: Add QUEUE(closed_window_queue, pdu) */
-        /* FIXME: Add QUEUE(rx_control_queue, ...) */
+        atomic_t               cpdus_in_transit;
 };
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
@@ -689,6 +689,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         seq_num_t    seq_num;
         seq_num_t    seq;
         seq_num_t    last_ctrl;
+        int          ret;
 
         /*  VARIABLES FOR SYSTEM TIME DBG MESSAGE BELOW */
         struct timeval te;
@@ -708,9 +709,12 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return -1;
         }
 
+        atomic_inc(&dtcp->cpdus_in_transit);
+
         pci = pdu_pci_get_rw(pdu);
         if (!pci_is_ok(pci)) {
                 LOG_ERR("PCI couldn't be retrieved");
+                atomic_dec(&dtcp->cpdus_in_transit);
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -719,6 +723,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         if (!pdu_type_is_control(type)) {
                 LOG_ERR("CommonRCVControl policy received a non-control PDU");
+                atomic_dec(&dtcp->cpdus_in_transit);
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -770,21 +775,25 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         switch (type) {
         case PDU_TYPE_ACK:
                 seq = pci_control_ack_seq_num(pci);
-
-                return dtcp->policies->sender_ack(dtcp,
-                                                  seq);
+                ret = dtcp->policies->sender_ack(dtcp, seq);
+                break;
         case PDU_TYPE_NACK:
                 seq = pci_control_ack_seq_num(pdu_pci_get_ro(pdu));
-
-                return rcv_nack_ctl(dtcp,
-                                    seq);
+                ret = rcv_nack_ctl(dtcp, seq);
+                break;
         case PDU_TYPE_FC:
-                return rcv_flow_ctl(dtcp, pci, pdu);
+                ret = rcv_flow_ctl(dtcp, pci, pdu);
+                break;
         case PDU_TYPE_ACK_AND_FC:
-                return rcv_ack_and_flow_ctl(dtcp, pci, pdu);
+                ret = rcv_ack_and_flow_ctl(dtcp, pci, pdu);
+                break;
         default:
-                return -1;
+                ret = -1;
+                break;
         }
+
+        atomic_dec(&dtcp->cpdus_in_transit);
+        return ret;
 }
 
 static int default_lost_control_pdu(struct dtcp * dtcp)
@@ -1211,6 +1220,7 @@ struct dtcp * dtcp_create(struct dt *         dt,
 
         tmp->conn = conn;
         tmp->rmt  = rmt;
+        atomic_set(&tmp->cpdus_in_transit, 0);
 
         if (dtcp_sv_init(tmp, default_sv)) {
                 LOG_ERR("Could not load DTCP config in the SV");
@@ -1229,6 +1239,10 @@ struct dtcp * dtcp_create(struct dt *         dt,
 
 int dtcp_destroy(struct dtcp * instance)
 {
+        /* FIXME: this is horrible*/
+        while(atomic_read(&instance->cpdus_in_transit))
+                msleep(20);
+
         if (!instance) {
                 LOG_ERR("Bad instance passed, bailing out");
                 return -1;

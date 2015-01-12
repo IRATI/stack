@@ -681,7 +681,7 @@ static int pdu_post(struct dtp * instance,
                 LOG_ERR("Could not enqueue SDU to EFCP");
                 return -1;
         }
-
+        LOG_DBG("DTP enqueued to upper IPCP");
         return 0;
 }
 
@@ -1555,6 +1555,7 @@ int dtp_receive(struct dtp * instance,
         }
         spin_lock(&instance->seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
+        LOG_DBG("DTP receive LWE: %u", LWE);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
 
