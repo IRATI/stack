@@ -57,7 +57,7 @@ ManagementAgent::ManagementAgent(const std::string& conf,
 	/*
 	* Load configuration
 	*/
-	ConfManager::get()->configure();
+	ConfManager::configure();
 
 	/*
 	* Run the bg task manager loop in the main thread

@@ -35,7 +35,13 @@ ConfManager::ConfManager(const std::string& conf,
 	setLogFile(cl_logfile);
 }
 
-void ConfManager::configure(){
+void ConfManager::_configure(){
+
+	//Configure the AP nameand instance ID
+	//XXX get it from the configuration source (e.g. config file)
+	rina::ApplicationProcessNamingInformation info("mad_node1", "1");
+	ManagementAgent::setAPInfo(info);
+
 	//TODO
 }
 

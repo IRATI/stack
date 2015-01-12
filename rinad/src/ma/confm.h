@@ -3,7 +3,10 @@
 #ifndef __MA_CONFIGURATION_H__
 #define __MA_CONFIGURATION_H__
 
+#include <assert.h>
 #include <string>
+#include <librina/application.h>
+#include <librina/common.h>
 
 /**
 * @file configuration.h
@@ -26,11 +29,15 @@ public:
 	static void init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel);
-	static inline ConfManager* get(){
-		return inst;
-	};
 
-	void configure(void);
+	/**
+	* Reads the configuration source (e.g. a config file) and configures
+	* the rest of the modules
+	*/
+	static void configure(void){
+		assert(inst != NULL);
+		inst->_configure();
+	}
 
 	static void destroy(void);
 
@@ -42,6 +49,10 @@ protected:
 					const std::string& cl_loglevel);
 	~ConfManager(void);
 
+	/*
+	* Configure routine
+	*/
+	void _configure(void);
 
 private:
 
