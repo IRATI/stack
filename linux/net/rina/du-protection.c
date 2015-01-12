@@ -33,8 +33,6 @@
 
 #ifdef CONFIG_RINA_DUP
 
-#ifdef CONFIG_RINA_IPCPS_CRC
-
 static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
                                     unsigned char ** data,
                                     ssize_t *        len)
@@ -58,6 +56,8 @@ static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
 
         return true;
 }
+
+#ifdef CONFIG_RINA_IPCPS_CRC
 
 static bool pdu_ser_crc32(struct pdu_ser * pdu,
                           u32 *            crc)
@@ -140,12 +140,27 @@ EXPORT_SYMBOL(dup_chksum_is_ok);
 bool dup_ttl_set(struct pdu_ser * pdu,
                  size_t           value)
 {
+        unsigned char * data;
+        size_t          len;
+        u8              ttl;
+
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
         BUILD_BUG_ON(CONFIG_RINA_IPCPS_TTL_DEFAULT <= 0);
 
-        LOG_MISSING;
+        if (!pdu_ser_is_ok(pdu))
+                return false;
+
+        if (!pdu_ser_data_and_length(pdu, &data, &len))
+                return false;
+
+        ttl = (u8) value;
+
+        LOG_DBG("Passed value was %zu", value);
+        LOG_DBG("TTL to be put in PCI is %d", ttl);
+
+        memcpy(data, &ttl, sizeof(u8));
 
         return true;
 }
@@ -153,12 +168,23 @@ EXPORT_SYMBOL(dup_ttl_set);
 
 ssize_t dup_ttl_decrement(struct pdu_ser * pdu)
 {
-        ssize_t val = -1;
+        ssize_t         val = -1;
+        unsigned char * data;
+        ssize_t         len;
+        u8              ttl;
 
         if (!pdu_ser_is_ok(pdu))
                 return val;
 
-        LOG_MISSING;
+        if (!pdu_ser_data_and_length(pdu, &data, &len))
+                return val;
+
+        ttl = 0;
+        memcpy(&ttl, data, sizeof(u8));
+        val = --ttl;
+
+        LOG_DBG("TTL value from PCI is %d", ttl);
+        LOG_DBG("Returned TTL is %zu", val);
 
         return val;
 }
@@ -166,12 +192,26 @@ EXPORT_SYMBOL(dup_ttl_decrement);
 
 bool dup_ttl_is_expired(struct pdu_ser * pdu)
 {
+        u8              ttl;
+        unsigned char * data;
+        ssize_t         len;
+
+        ttl = 0;
+
         if (!pdu_ser_is_ok(pdu))
                 return false;
 
-        LOG_MISSING;
+        if (!pdu_ser_data_and_length(pdu, &data, &len))
+                return false;
 
-        return true;
+        memcpy(&ttl, data, sizeof(u8));
+
+        LOG_DBG("TTL is now %d", ttl);
+
+        if (ttl == 0)
+                return true;
+
+        return false;
 }
 EXPORT_SYMBOL(dup_ttl_is_expired);
 
