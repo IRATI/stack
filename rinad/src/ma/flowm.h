@@ -12,6 +12,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/patterns.h>
 
 #include "event-loop.h"
 
@@ -70,29 +71,19 @@ protected:
 /**
 * @brief Flow manager
 */
-class FlowManager {
+class FlowManager_{
 
 public:
 	/**
-	* Initialize FlowManager singleton
+	* Initialize FlowManager running state
 	*/
-	static void init(void);
+	void init(void);
 
 	/**
-	* Get FlowManager instance
+	* Destroy the running state
 	*/
-	static inline FlowManager* get(){
-		return inst;
-	};
-
-	/**
-	* Destroy FlowManager instance
-	*/
-	static void destroy(void);
-
-protected:
-	static FlowManager* inst;
-
+	void destroy(void);
+private:
 	//hashmap port_id/pthread_t
 	std::map<int, FlowWorker*> workers;
 
@@ -110,12 +101,15 @@ protected:
 	void joinWorker(int port_id);
 
 	//Constructors
-	FlowManager(void);
-	~FlowManager(void);
+	FlowManager_(void);
+	~FlowManager_(void);
 
-private:
+	friend class Singleton<FlowManager_>;
 
 };
+
+//Singleton instance
+extern Singleton<FlowManager_> FlowManager;
 
 }; //namespace mad
 }; //namespace rinad

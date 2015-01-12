@@ -11,33 +11,17 @@
 namespace rinad {
 namespace mad {
 
-//Static initializations
-ManagementAgent* ManagementAgent::inst = NULL;
+//Singleton instance
+Singleton<ManagementAgent_> ManagementAgent;
 
-void ManagementAgent::init(const std::string& conf, const std::string& logfile,
-						const std::string& loglevel){
-	if(inst){
-		throw Exception(
-			"Invalid double call to ManagementAgent::init()");
-	}
-	inst = new ManagementAgent(conf, logfile, loglevel);
-}
-
-void ManagementAgent::destroy(void){
-	//TODO: be gentle with on going events
-	delete ManagementAgent::inst;
-}
-
-//Constructors destructors
-ManagementAgent::ManagementAgent(const std::string& conf,
+//Initialization and destruction routines
+void ManagementAgent_::init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
-
-
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
 	//or the config file
-	ConfManager::init(conf, cl_logfile, cl_loglevel);
+	ConfManager->init(conf, cl_logfile, cl_loglevel);
 
 	//Nice trace
 	LOG_INFO(" Initializing...");
@@ -46,27 +30,31 @@ ManagementAgent::ManagementAgent(const std::string& conf,
 	* Initialize subsystems
 	*/
 
+	//Create RIBs
+	//RIBFactory->createRIB(version1);
+
 	//TODO
 	//FlowManager
-	FlowManager::init();
+	FlowManager->init();
+
 
 	//Background task manager; MUST be the last one
 	//Will not return until SIGINT is sent
-	BGTaskManager::init();
+	BGTaskManager->init();
 
 	/*
 	* Load configuration
 	*/
-	ConfManager::configure();
+	ConfManager->configure();
 
 	/*
 	* Run the bg task manager loop in the main thread
 	*/
-	BGTaskManager::get()->run(NULL);
+	BGTaskManager->run(NULL);
+
 }
 
-ManagementAgent::~ManagementAgent(void){
-
+void ManagementAgent_::destroy(){
 	/*
 	* Destroy all subsystems
 	*/
@@ -74,12 +62,23 @@ ManagementAgent::~ManagementAgent(void){
 	//TODO
 
 	//FlowManager
-	FlowManager::destroy();
+	FlowManager->destroy();
 
 	//Bg
-	BGTaskManager::destroy();
+	BGTaskManager->destroy();
+
+	//Conf Manager
+	ConfManager->destroy();
 
 	LOG_INFO(" Goodbye!");
+}
+
+
+//Constructors destructors (singleton only)
+ManagementAgent_::ManagementAgent_(){
+}
+
+ManagementAgent_::~ManagementAgent_(void){
 }
 
 }; //namespace mad

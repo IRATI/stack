@@ -12,7 +12,7 @@
 * @file configuration.h
 * @author Marc Sune<marc.sune (at) bisdn.de>
 *
-* @brief Management agent ConfManager module
+* @brief Management agent Configuration Manager module
 *
 * TODO: this module might be dropped in the future.
 */
@@ -21,42 +21,38 @@ namespace rinad{
 namespace mad{
 
 /**
-* @brief MAD configuration
+* @brief MAD configuration manager component
 */
-class ConfManager{
+class ConfManager_{
 
 public:
-	static void init(const std::string& conf,
+	/**
+	* Initialize running state
+	*/
+	void init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel);
+	/**
+	* Destroy the running state
+	*/
+	void destroy(void);
 
 	/**
 	* Reads the configuration source (e.g. a config file) and configures
 	* the rest of the modules
 	*/
-	static void configure(void){
-		assert(inst != NULL);
-		inst->_configure();
-	}
-
-	static void destroy(void);
-
-protected:
-	static ConfManager* inst;
-
-	ConfManager(const std::string& conf,
-					const std::string& cl_logfile,
-					const std::string& cl_loglevel);
-	~ConfManager(void);
-
-	/*
-	* Configure routine
-	*/
-	void _configure(void);
+	void configure(void);
 
 private:
+	ConfManager_(void);
+	~ConfManager_(void);
+
+	friend class Singleton<ConfManager_>;
 
 };
+
+//Singleton instance
+extern Singleton<ConfManager_> ConfManager;
 
 
 }; //namespace mad

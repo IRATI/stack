@@ -13,6 +13,7 @@
 #include <librina/application.h>
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/patterns.h>
 
 #include "event-loop.h"
 
@@ -30,39 +31,42 @@ namespace mad{
 /**
 * @brief Management Agent singleton class
 */
-class ManagementAgent{
+class ManagementAgent_{
 
 public:
 
 	/**
 	* Initialize the management agent components
 	*/
-	static void init(const std::string& conf,
+	void init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel);
 
 	/**
-	* Destroy the entire Management Agent state
+	* Destroy management agent and components state
 	*/
-	static void destroy(void);
+	void destroy(void);
 
 	/**
 	* Set RINA AP information
 	*/
-	static void setAPInfo(rina::ApplicationProcessNamingInformation& _info){
-		assert(inst != NULL);
-		inst->info = _info;
+	void setAPInfo(rina::ApplicationProcessNamingInformation& _info){
+		//assert(inst != NULL);
+		//inst->info = _info;
+		(void)_info;
 	}
 
-protected:
-	static ManagementAgent* inst;
+private:
 	rina::ApplicationProcessNamingInformation info;
 
-	ManagementAgent(const std::string& conf,
-					const std::string& cl_logfile,
-					const std::string& cl_loglevel);
-	~ManagementAgent(void);
+	ManagementAgent_();
+	~ManagementAgent_(void);
+
+	friend class Singleton<ManagementAgent_>;
 };
+
+//Singleton instance
+extern Singleton<ManagementAgent_> ManagementAgent;
 
 }; //namespace mad
 }; //namespace rinad

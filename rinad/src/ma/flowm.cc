@@ -36,31 +36,26 @@ void* FlowWorker::run(void* param){
 * FlowManager
 */
 
-//Static initializations
-FlowManager* FlowManager::inst = NULL;
+//Singleton instance
+Singleton<FlowManager_> FlowManager;
 
-void FlowManager::init() {
-	if(inst){
-		throw Exception(
-			"Invalid double call to FlowManager::init()");
-	}
-	inst = new FlowManager();
-}
-
-void FlowManager::destroy(void){
-	//TODO: stop all flow workers
-	delete inst;
-}
-
-//Constructors destructors
-FlowManager::FlowManager(){
+//Constructors destructors(singleton)
+FlowManager_::FlowManager_(){
 
 	//TODO: register to flow events in librina and spawn workers
 	pthread_mutex_init(&mutex, NULL);
 }
 
-FlowManager::~FlowManager(){
+FlowManager_::~FlowManager_(){
 	pthread_mutex_destroy(&mutex);
+}
+
+//Initialization and destruction routines
+void FlowManager_::init(){
+	//TODO
+}
+void FlowManager_::destroy(){
+	//TODO
 }
 
 //
@@ -71,7 +66,7 @@ FlowManager::~FlowManager(){
 //
 
 //Workers
-void FlowManager::spawnWorker(int port_id){
+void FlowManager_::spawnWorker(int port_id){
 
 	FlowWorker* w = NULL;
 	std::stringstream msg;
@@ -125,7 +120,7 @@ SPAWN_ERROR:
 }
 
 //Join
-void FlowManager::joinWorker(int port_id){
+void FlowManager_::joinWorker(int port_id){
 
 	std::stringstream msg;
 	FlowWorker* w = NULL;
