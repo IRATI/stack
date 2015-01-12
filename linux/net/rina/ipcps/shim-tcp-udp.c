@@ -273,7 +273,7 @@ static bool compare_addr(const struct sockaddr_in * f,
         ASSERT(s);
 
         return f->sin_family == s->sin_family &&
-                f->sin_port == s->sin_port &&
+                f->sin_port == s->sin_port    &&
                 f->sin_addr.s_addr == s->sin_addr.s_addr;
 }
 
