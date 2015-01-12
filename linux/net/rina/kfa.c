@@ -61,7 +61,8 @@ struct ipcp_flow {
         enum flow_state        state;
         struct ipcp_instance * ipc_process;
         struct rfifo *         sdu_ready;
-        wait_queue_head_t      wait_queue;
+        wait_queue_head_t      read_wqueue;
+        wait_queue_head_t      write_wqueue;
         atomic_t               readers;
         atomic_t               writers;
         atomic_t               posters;
@@ -233,7 +234,8 @@ static int kfa_flow_deallocate(struct ipcp_instance_data * data,
         spin_unlock(&instance->lock);
 
         LOG_DBG("Waking up all!");
-        wake_up_interruptible_all(&flow->wait_queue);
+        wake_up_interruptible_all(&flow->read_wqueue);
+        wake_up_interruptible_all(&flow->write_wqueue);
 
         return 0;
 }
@@ -328,11 +330,11 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
         }
         if (flow->state == PORT_STATE_DISABLED) {
                 flow->state = PORT_STATE_ALLOCATED;
-                wq = &flow->wait_queue;
+                wq = &flow->write_wqueue;
                 spin_unlock(&instance->lock);
                 LOG_DBG("IPCP notified CWQ enabled but port deallocated");
                 LOG_DBG("Enabled port id");
-                wake_up_interruptible_all(wq);
+                wake_up_interruptible(wq);
                 return 0;
         }
         spin_unlock(&instance->lock);
@@ -400,9 +402,9 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
                 spin_unlock_irqrestore(&instance->lock, flags);
 
                 LOG_DBG("Going to sleep on wait queue %pK (writing)",
-                        &flow->wait_queue);
+                        &flow->write_wqueue);
                 LOG_DBG("OK_write check called: %d", flow->state);
-                retval = wait_event_interruptible(flow->wait_queue,
+                retval = wait_event_interruptible(flow->write_wqueue,
                                                   ok_write(flow));
                 LOG_DBG("Write woken up (%d)", retval);
 
@@ -547,9 +549,10 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                 spin_unlock_irqrestore(&instance->lock, flags);
 
                 LOG_DBG("Going to sleep on wait queue %pK (reading)",
-                        &flow->wait_queue);
-                retval = wait_event_interruptible(flow->wait_queue,
-                                                  queue_ready(flow));
+                        &flow->read_wqueue);
+                retval = wait_event_interruptible_timeout(flow->read_wqueue,
+                                                          queue_ready(flow),
+                                                          100*HZ/1000);
                 LOG_DBG("Read woken up (%d)", retval);
 
                 if (retval) {
@@ -576,7 +579,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                         return -1;
                 }
 
-                if (retval)
+                if (retval == -ERESTARTSYS)
                         goto finish;
 
                 if (flow->state == PORT_STATE_DEALLOCATED) {
@@ -685,7 +688,7 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
         spin_unlock(&instance->lock);
 
         if (flow && (retval == 0)) {
-                wq = &flow->wait_queue;
+                wq = &flow->read_wqueue;
                 ASSERT(wq);
 
                 LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
@@ -752,13 +755,13 @@ int kfa_flow_create(struct kfa *           instance,
         atomic_set(&flow->writers, 0);
         atomic_set(&flow->posters, 0);
 
-        init_waitqueue_head(&flow->wait_queue);
+        init_waitqueue_head(&flow->read_wqueue);
+        init_waitqueue_head(&flow->write_wqueue);
 
         flow->ipc_process = ipcp;
 
         flow->state     = PORT_STATE_PENDING;
-        LOG_DBG("Flow PRE bound to port-id %d with waitqueue %pK",
-                pid, &flow->wait_queue);
+        LOG_DBG("Flow pre-bound to port-id %d", pid);
 
         /*FIXME: should this be irqsave? */
         spin_lock(&instance->lock);
@@ -829,8 +832,7 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        LOG_DBG("Flow bound to port-id %d with waitqueue %pK",
-                pid, &flow->wait_queue);
+        LOG_DBG("Flow bound to port-id %d", pid);
 
         spin_unlock(&instance->lock);
 
