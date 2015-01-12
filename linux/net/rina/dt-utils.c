@@ -36,6 +36,8 @@
 #include "dtp.h"
 #include "rmt.h"
 
+#define RTIMER_ENABLED 0
+
 struct cwq {
         struct rqueue * q;
         spinlock_t      lock;
@@ -662,10 +664,11 @@ static int rtx_worker(void * o)
                 LOG_ERR("RTX failed");
         spin_unlock(&q->lock);
 
+#if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
                 rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
-
         LOG_DBG("RTX timer worker OK...");
+#endif
         return 0;
 }
 
@@ -699,10 +702,12 @@ int rtxq_destroy(struct rtxq * q)
         if (!q)
                 return -1;
 
+#if RTIMER_ENABLED
         spin_lock(&q->lock);
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
         spin_unlock(&q->lock);
+#endif
         if (q->twq)  rwq_destroy(q->twq);
         spin_lock(&q->lock);
         if (q->queue && rtxqueue_destroy(q->queue))
@@ -743,12 +748,14 @@ struct rtxq * rtxq_create(struct dt *  dt,
         if (!tmp)
                 return NULL;
 
+#if RTIMER_ENABLED
         tmp->r_timer = rtimer_create(Rtimer_handler, tmp);
         if (!tmp->r_timer) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);
                 return NULL;
         }
+#endif
 
         tmp->queue = rtxqueue_create();
         if (!tmp->queue) {
@@ -789,12 +796,14 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         if (!tmp)
                 return NULL;
 
+#if RTIMER_ENABLED
         tmp->r_timer = rtimer_create_ni(Rtimer_handler, tmp);
         if (!tmp->r_timer) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);
                 return NULL;
         }
+#endif
 
         tmp->queue = rtxqueue_create_ni();
         if (!tmp->queue) {
@@ -834,10 +843,11 @@ int rtxq_push_ni(struct rtxq * q,
                 return -1;
 
         spin_lock_irqsave(&q->lock, flags);
+#if RTIMER_ENABLED
         /* is the first transmitted PDU */
         if (!rtimer_is_pending(q->r_timer))
                 rtimer_start(q->r_timer, dt_sv_tr(q->parent));
-
+#endif
         rtxqueue_push_ni(q->queue, pdu);
         spin_unlock_irqrestore(&q->lock, flags);
         return 0;
@@ -848,8 +858,9 @@ int rtxq_flush(struct rtxq * q)
         if (!q || !q->queue)
                 return -1;
 
+#if RTIMER_ENABLED
         rtimer_stop(q->r_timer);
-
+#endif
         spin_lock(&q->lock);
         rtxqueue_flush(q->queue);
         spin_unlock(&q->lock);
@@ -866,10 +877,12 @@ int rtxq_ack(struct rtxq * q,
 
         spin_lock(&q->lock);
         rtxqueue_entries_ack(q->queue, seq_num);
+#if RTIMER_ENABLED
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
         }
+#endif
         spin_unlock(&q->lock);
 
         return 0;
@@ -893,10 +906,12 @@ int rtxq_nack(struct rtxq * q,
                               q->rmt,
                               seq_num,
                               dtcp_data_retransmit_max(dtcp_cfg));
+#if RTIMER_ENABLED
         if (rtimer_restart(q->r_timer, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
         }
+#endif
         spin_unlock(&q->lock);
 
         return 0;
