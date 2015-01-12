@@ -84,14 +84,14 @@ config RINA_DUP
           no help for the time being
 
 config RINA_IPCPS_CRC
-        bool "Enable CRC on IPCPs (system-wide)"
+        bool "Enable CRC on (all) IPCPs"
         default n
         depends on RINA_DUP
         help
           no help for the time being
 
 config RINA_IPCPS_TTL
-        bool "Enable TTL on IPCPs (system-wide)"
+        bool "Enable TTL on (all) IPCPs"
         depends on RINA_DUP
         default n
         help
