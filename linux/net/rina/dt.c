@@ -404,13 +404,14 @@ struct dtp * dt_dtp(struct dt * dt)
 struct dtcp * dt_dtcp(struct dt * dt)
 {
         struct dtcp * tmp;
+        unsigned long flags;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->dtcp;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -515,14 +516,15 @@ timeout_t dt_sv_r(struct dt * dt)
 
 timeout_t dt_sv_a(struct dt * dt)
 {
-        uint_t tmp;
+        uint_t        tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return 0;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->A;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
