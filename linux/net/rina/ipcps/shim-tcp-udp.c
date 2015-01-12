@@ -1699,7 +1699,7 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
 
         app_name = name_create();
         if (!name_init_with(app_name,
-                            ap, rkstrdup_ni(""),
+                            ap, rkstrdup_ni("1"),
                             ae, rkstrdup_ni(""))) {
                 LOG_ERR("Failed to init name");
                 rkfree(ae);
@@ -1776,7 +1776,7 @@ static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
         INIT_LIST_HEAD(&exp_reg->list);
         app_name = name_create();
         if (!name_init_with(app_name,
-                            ap, rkstrdup_ni(""),
+                            ap, rkstrdup_ni("1"),
                             ae, rkstrdup_ni(""))) {
                 LOG_ERR("Failed to init name");
                 rkfree(ae);
