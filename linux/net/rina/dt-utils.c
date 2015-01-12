@@ -116,6 +116,8 @@ void cwq_write_enable_set(struct cwq * queue, bool flag)
 int cwq_push(struct cwq * queue,
              struct pdu * pdu)
 {
+        unsigned long flags;
+
         if (!queue)
                 return -1;
 
@@ -126,14 +128,14 @@ int cwq_push(struct cwq * queue,
 
         LOG_DBG("Pushing in the Closed Window Queue");
 
-        spin_lock(&queue->lock);
+        spin_lock_irqsave(&queue->lock, flags);
         if (rqueue_tail_push_ni(queue->q, pdu)) {
                 pdu_destroy(pdu);
-                spin_unlock(&queue->lock);
+                spin_unlock_irqrestore(&queue->lock, flags);
                 LOG_ERR("Failed to add PDU");
                 return -1;
         }
-        spin_unlock(&queue->lock);
+        spin_unlock_irqrestore(&queue->lock, flags);
 
         return 0;
 }
