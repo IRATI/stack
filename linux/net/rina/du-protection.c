@@ -33,6 +33,8 @@
 
 #ifdef CONFIG_RINA_DUP
 
+#if defined(CONFIG_RINA_IPCPS_CRC) || defined(CONFIG_RINA_IPCPS_TTL)
+
 static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
                                     unsigned char ** data,
                                     ssize_t *        len)
@@ -56,6 +58,8 @@ static bool pdu_ser_data_and_length(struct pdu_ser * pdu,
 
         return true;
 }
+
+#endif
 
 #ifdef CONFIG_RINA_IPCPS_CRC
 
