@@ -539,6 +539,7 @@ int rmt_send(struct rmt * instance,
 {
         int          i;
         struct pci * pci;
+        size_t       ttl;
 
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");
@@ -550,6 +551,7 @@ int rmt_send(struct rmt * instance,
         }
 
         pci = 0;
+        ttl = 0;
 
 #ifdef CONFIG_RINA_IPCPS_TTL
         pci = pdu_pci_get_rw(pdu);
@@ -558,6 +560,8 @@ int rmt_send(struct rmt * instance,
                 pdu_destroy(pdu);
                 return -1;
         }
+
+        LOG_DBG("TTL to start with is %d", CONFIG_RINA_IPCPS_TTL_DEFAULT);
 
         if (pci_ttl_set(pci, CONFIG_RINA_IPCPS_TTL_DEFAULT)) {
                 LOG_ERR("Could not set TTL");
