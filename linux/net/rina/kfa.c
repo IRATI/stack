@@ -552,7 +552,7 @@ int kfa_flow_sdu_read(struct kfa *  instance,
                         &flow->read_wqueue);
                 retval = wait_event_interruptible_timeout(flow->read_wqueue,
                                                           queue_ready(flow),
-                                                          100*HZ/1000);
+                                                          500*HZ/1000);
                 LOG_DBG("Read woken up (%d)", retval);
 
                 if (retval) {
@@ -581,10 +581,10 @@ int kfa_flow_sdu_read(struct kfa *  instance,
 
                 if (retval == -ERESTARTSYS)
                         goto finish;
+                retval = 0;
 
                 if (flow->state == PORT_STATE_DEALLOCATED) {
                         if (rfifo_is_empty(flow->sdu_ready)) {
-                                retval = 0;
                                 goto finish;
                         }
                         break;
@@ -694,7 +694,7 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
                 LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
                         wq, wq->task_list.next, wq->task_list.prev);
 
-                wake_up_interruptible(wq);
+                wake_up(wq);
                 LOG_DBG("SDU posted");
                 LOG_DBG("Sleeping read syscall should be working now");
         }
