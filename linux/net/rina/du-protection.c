@@ -164,7 +164,7 @@ bool dup_ttl_set(struct pdu_ser * pdu,
         LOG_DBG("Passed value was %zu", value);
         LOG_DBG("TTL to be put in PCI is %d", ttl);
 
-        memcpy(data, &ttl, sizeof(u8));
+        memcpy(data, &ttl, sizeof(ttl));
 
         return true;
 }
@@ -184,7 +184,7 @@ ssize_t dup_ttl_decrement(struct pdu_ser * pdu)
                 return val;
 
         ttl = 0;
-        memcpy(&ttl, data, sizeof(u8));
+        memcpy(&ttl, data, sizeof(ttl));
         val = --ttl;
 
         LOG_DBG("TTL value from PCI is %d", ttl);
@@ -208,8 +208,7 @@ bool dup_ttl_is_expired(struct pdu_ser * pdu)
         if (!pdu_ser_data_and_length(pdu, &data, &len))
                 return false;
 
-        memcpy(&ttl, data, sizeof(u8));
-
+        memcpy(&ttl, data, sizeof(ttl));
         LOG_DBG("TTL is now %d", ttl);
 
         if (ttl == 0)
