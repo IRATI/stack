@@ -2417,7 +2417,7 @@ static struct ipcp_factory *shim = NULL;
 
 static int __init mod_init(void)
 {
-        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE > 0);
+        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE <= 0);
 
         rcv_wq = alloc_workqueue(SHIM_NAME,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
