@@ -187,7 +187,7 @@ find_dir_entry(struct ipcp_instance_data * data,
         spin_lock(&data->dir_lock);
 
         list_for_each_entry(entry, &data->directory, list) {
-                if (name_cmp(NAMECMP_APN | NAME_CMP_AEN,
+                if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
                              entry->app_name, app_name)) {
                         spin_unlock(&data->dir_lock);
                         return entry;
@@ -211,7 +211,7 @@ find_exp_reg(struct ipcp_instance_data * data,
         spin_lock(&data->exp_lock);
 
         list_for_each_entry(exp, &data->exp_regs, list) {
-                if (name_cmp(NAMECMP_APN | NAME_CMP_AEN,
+                if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
                              exp->app_name, app_name)) {
                         spin_unlock(&data->exp_lock);
                         return exp;
@@ -345,7 +345,7 @@ static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
         spin_lock(&data->app_lock);
 
         list_for_each_entry(app, &data->reg_apps, list) {
-                if (name_cmp(NAMECMP_APN | NAME_CMP_AEN,
+                if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
                              app->app_name, name)) {
                         spin_unlock(&data->app_lock);
                         return app;
