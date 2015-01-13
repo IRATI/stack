@@ -31,7 +31,6 @@
 #define SHIM_NAME   "shim-tcp-udp"
 
 #define RINA_PREFIX SHIM_NAME
-#define BUFFER_SIZE 1500
 
 #include "logs.h"
 #include "common.h"
@@ -766,11 +765,13 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
         LOG_HBEAT;
 
-        buf = rkmalloc(BUFFER_SIZE, GFP_KERNEL);
+        buf = rkmalloc(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE, GFP_KERNEL);
+        if(!buf)
+                return -1;
 
         memset(&addr, 0, sizeof(struct sockaddr_in));
         if ((size = recv_msg(sock, &addr, sizeof(addr),
-                             buf, BUFFER_SIZE)) < 0) {
+                             buf, CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE)) < 0) {
                 if (size != -EAGAIN)
                         LOG_ERR("error during udp recv: %d", size);
                 rkfree(buf);
@@ -950,7 +951,8 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         if (size != 2) {
                 LOG_DBG("didn't read both bytes for size: %d", size);
 
-                /* Shim can't function correct when only one size byte is read,
+                /*
+                 * Shim can't function correct when only one size byte is read,
                  * loop till the second byte is received
                  */
                 size = -EAGAIN;
@@ -968,6 +970,8 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         LOG_DBG("Incoming message is %d bytes long", flow->bytes_left);
 
         buf = rkmalloc(flow->bytes_left, GFP_KERNEL);
+        if(!buf)
+                return -1; /* FIXME: Check this return value */
 
         size = recv_msg(sock, NULL, 0, buf, flow->bytes_left);
         if (size <= 0) {
@@ -1638,8 +1642,9 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
 
         ASSERT(*blob);
 
-        dir_entry = rkmalloc(sizeof(struct dir_entry),
-                             GFP_KERNEL);
+        dir_entry = rkmalloc(sizeof(struct dir_entry), GFP_KERNEL);
+        if (!dir_entry)
+                return -1;
 
         /* len:aplen:aelen:iplen:port */
         /* Get AP name */
@@ -1734,8 +1739,9 @@ static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
 
         ASSERT(*blob);
 
-        exp_reg = rkmalloc(sizeof(struct exp_reg),
-                           GFP_KERNEL);
+        exp_reg = rkmalloc(sizeof(struct exp_reg), GFP_KERNEL);
+        if (!exp_reg)
+                return -1;
 
         /* len:aplen:aelen:port */
         /* Get AP name */
@@ -2017,6 +2023,9 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
         ASSERT(sbuf);
 
         buf = rkmalloc(len + sizeof(__be16), GFP_KERNEL);
+        if (!buf)
+                return -1; /* FIXME: Check this return value */
+
         length = htons((short)len);
 
         memcpy(&buf[0], &length, sizeof(__be16));
@@ -2290,7 +2299,8 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[0]->delay                       = 0;
         inst->data->qos[0]->jitter                      = 0;
         inst->data->qos[0]->max_allowable_gap           = -1;
-        inst->data->qos[0]->max_sdu_size                = BUFFER_SIZE;
+        inst->data->qos[0]->max_sdu_size                =
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
         inst->data->qos[0]->ordered_delivery            = 0;
         inst->data->qos[0]->partial_delivery            = 1;
         inst->data->qos[0]->peak_bandwidth_duration     = 0;
@@ -2302,7 +2312,8 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[1]->delay                       = 0;
         inst->data->qos[1]->jitter                      = 0;
         inst->data->qos[1]->max_allowable_gap           = 0;
-        inst->data->qos[1]->max_sdu_size                = BUFFER_SIZE;
+        inst->data->qos[1]->max_sdu_size                =
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
         inst->data->qos[1]->ordered_delivery            = 1;
         inst->data->qos[1]->partial_delivery            = 0;
         inst->data->qos[1]->peak_bandwidth_duration     = 0;
@@ -2406,6 +2417,8 @@ static struct ipcp_factory *shim = NULL;
 
 static int __init mod_init(void)
 {
+        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE > 0);
+
         rcv_wq = alloc_workqueue(SHIM_NAME,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
         if (!rcv_wq) {
