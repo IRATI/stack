@@ -456,6 +456,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data * data,
 
         spin_unlock_irqrestore(&instance->lock, flags);
         if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+                spin_lock_irqsave(&instance->lock, flags);
                 LOG_ERR("Couldn't write SDU on port-id %d", id);
                 retval = -1;
                 goto finish;
