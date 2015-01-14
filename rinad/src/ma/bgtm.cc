@@ -5,6 +5,7 @@
 
 #define RINA_PREFIX "mad.bg"
 #include <librina/logs.h>
+#include <flowm.h>
 
 namespace rinad {
 namespace mad {
@@ -21,7 +22,7 @@ Singleton<BGTaskManager_> BGTaskManager;
 void interrupt_handler(int sig) {
 	(void) sig;
 	//Signal background task manager to stop
-	BGTaskManager->keep_running = false;
+	FlowManager->stopIOLoop();
 }
 
 //Main I/O loop

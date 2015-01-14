@@ -35,6 +35,66 @@ void* FlowWorker::run(void* param){
 /*
 * FlowManager
 */
+void FlowManager_::runIOLoop(){
+
+	rina::IPCEvent *event;
+	rina::Flow *flow;
+	unsigned int port_id;
+	rina::DeallocateFlowResponseEvent *resp;
+
+	keep_running = true;
+
+	//wait for events
+	while(keep_running){
+		event = rina::ipcEventProducer->eventWait();
+		flow = NULL;
+		resp = NULL;
+
+		if(!event){
+			return;
+		}
+
+		switch(event->eventType) {
+			case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
+				rina::ipcManager->commitPendingRegistration(event->sequenceNumber,
+					     dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)->DIFName);
+				break;
+
+			case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
+				rina::ipcManager->appUnregistrationResult(event->sequenceNumber,
+					    dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)->result == 0);
+				break;
+
+			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
+				flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
+				LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
+				spawnWorker(*flow);
+				break;
+
+			case rina::FLOW_DEALLOCATED_EVENT:
+				port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
+				rina::ipcManager->flowDeallocated(port_id);
+				LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
+
+				//TODO: join thread
+				break;
+
+			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
+				LOG_INFO("Destroying the flow after time-out");
+				resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+				port_id = resp->portId;
+				rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+				//TODO: join thread
+				break;
+
+			default:
+				assert(0);
+				LOG_ERR("Got unknown event %d",
+							event->eventType);
+			break;
+		}
+	}
+}
 
 //Singleton instance
 Singleton<FlowManager_> FlowManager;
@@ -67,11 +127,11 @@ void FlowManager_::destroy(){
 //
 
 //Workers
-void FlowManager_::spawnWorker(int port_id){
+void FlowManager_::spawnWorker(rina::Flow& flow){
 
 	FlowWorker* w = NULL;
 	std::stringstream msg;
-
+	int port_id = flow.getPortId();
 	//Create worker object
 	try{
 		w = new FlowWorker();

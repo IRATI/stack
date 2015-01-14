@@ -99,8 +99,7 @@ void ManagementAgent_::init(const std::string& conf,
 	/*
 	* Run the bg task manager loop in the main thread
 	*/
-	BGTaskManager->run(NULL);
-
+	FlowManager->runIOLoop();
 }
 
 void ManagementAgent_::destroy(){

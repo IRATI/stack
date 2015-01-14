@@ -10,6 +10,7 @@
 #include <vector>
 #include <utility>
 
+#include <librina/application.h>
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
@@ -80,6 +81,19 @@ public:
 	void init(void);
 
 	/**
+	* Run the main I/O loop
+	*/
+	void runIOLoop(void);
+
+	/**
+	* Run the main I/O loop
+	*/
+	inline void stopIOLoop(void){
+		keep_running = false;
+	}
+
+
+	/**
 	* Destroy the running state
 	*/
 	void destroy(void);
@@ -90,10 +104,13 @@ private:
 	//Mutex
 	pthread_mutex_t mutex;
 
+	//Run flag
+	volatile bool keep_running;
+
 	/*
 	* Create a worker
 	*/
-	void spawnWorker(int port_id);
+	void spawnWorker(rina::Flow& flow);
 
 	/*
 	* Join worker
