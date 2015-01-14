@@ -905,32 +905,42 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
                 return -1;
         }
 
+        atomic_inc(&dtcp->cpdus_in_transit);
+
         type = pdu_ctrl_type_get(dtcp, seq);
-        if (!type)
+        if (!type) {
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return 0;
+        }
 
         pdu  = pdu_ctrl_create_ni(dtcp, type);
-        if (!pdu)
+        if (!pdu) {
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
+        }
 
 
         pci = pdu_pci_get_rw(pdu);
         LWE = dt_sv_rcv_lft_win(dtcp->parent);
         if (populate_ctrl_pci(pci, dtcp, LWE)) {
                 pdu_destroy(pdu);
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
         }
 
         LOG_DBG("default_rcvr_ack");
         dump_we(dtcp, pci);
-        if (pdu_send(dtcp, pdu))
+        if (pdu_send(dtcp, pdu)){
+                atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
+        }
 
         /* SYSTEM TIMESTAMP DBG MESSAGE */
         do_gettimeofday(&te);
         milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
         LOG_DBG("DTCP Sending ACK %d at %lld", pci_sequence_number_get(pci), milliseconds);
 
+        atomic_dec(&dtcp->cpdus_in_transit);
         return 0;
 }
 
@@ -1128,6 +1138,7 @@ static struct dtcp_policies default_policies = {
         .flow_control_overrun        = default_flow_control_overrun,
         .reconcile_flow_conflict     = NULL,
         .rcvr_ack                    = default_rcvr_ack,
+        /*.rcvr_ack                    = default_rcvr_ack_atimer,*/
         .rcvr_flow_control           = default_rcvr_flow_control,
         .rate_reduction              = default_rate_reduction,
         .rcvr_control_ack            = NULL,
