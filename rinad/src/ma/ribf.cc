@@ -25,6 +25,19 @@ namespace mad{
 //Singleton instance
 Singleton<RIBFactory_> RIBFactory;
 
+
+//Initialization and destruction routines
+void RIBFactory_::init(void){
+
+	LOG_DBG("Initialized");
+}
+
+void RIBFactory_::destroy(void){
+
+}
+
+
+
 //Constructors destructors
 RIBFactory_::RIBFactory_(){
 	//TODO: register to flow events in librina and spawn workers

@@ -20,6 +20,8 @@ void ConfManager_::init(const std::string& conf,
 
 	setLogLevel(cl_loglevel);
 	setLogFile(cl_logfile);
+
+	LOG_DBG("Initialized");
 }
 
 void ConfManager_::destroy(){

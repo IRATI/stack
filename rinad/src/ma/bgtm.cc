@@ -44,6 +44,7 @@ void* BGTaskManager_::run(void* unused){
 void BGTaskManager_::init(){
 	//Program signal handlee (capture control+C)
 	signal(SIGINT, interrupt_handler);
+	LOG_DBG("Initialized");
 }
 
 void BGTaskManager_::destroy(){
@@ -52,8 +53,6 @@ void BGTaskManager_::destroy(){
 //Constructors destructors(singleton)
 BGTaskManager_::BGTaskManager_():keep_running(true){
 
-	//Program signal handlee (capture control+C)
-	signal(SIGINT, interrupt_handler);
 }
 
 

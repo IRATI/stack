@@ -58,13 +58,14 @@ void ManagementAgent_::reg(){
 void ManagementAgent_::init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
+
+	//Nice trace
+	LOG_INFO("Initializing components...");
+
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
 	//or the config file
 	ConfManager->init(conf, cl_logfile, cl_loglevel);
-
-	//Nice trace
-	LOG_INFO("Initializing...");
 
 	/*
 	* Initialize subsystems
@@ -92,6 +93,8 @@ void ManagementAgent_::init(const std::string& conf,
 
 	//Register agent AP into the IPCManager
 	reg();
+
+	LOG_INFO("Components initialized");
 
 	/*
 	* Run the bg task manager loop in the main thread

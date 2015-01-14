@@ -53,6 +53,7 @@ FlowManager_::~FlowManager_(){
 //Initialization and destruction routines
 void FlowManager_::init(){
 	//TODO
+	LOG_DBG("Initialized");
 }
 void FlowManager_::destroy(){
 	//TODO
