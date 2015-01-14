@@ -889,7 +889,7 @@ static int default_sending_ack(struct dtcp * dtcp)
         return 0;
 }
 
-static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
+int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu;
         struct pci * pci;
@@ -933,6 +933,9 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 
         return 0;
 }
+
+static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
+{ return dtcp_ack_flow_control_pdu_send(dtcp, seq); }
 
 static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
@@ -1270,16 +1273,6 @@ int dtcp_sv_update(struct dtcp * instance,
 
         if (instance->policies->sv_update(instance, seq))
                 return -1;
-
-        return 0;
-}
-
-int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp)
-{
-        if (!dtcp)
-                return -1;
-
-        LOG_MISSING;
 
         return 0;
 }

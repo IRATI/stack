@@ -1486,7 +1486,7 @@ int dtp_receive(struct dtp * instance,
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
-                        if (dtcp_ack_flow_control_pdu_send(dtcp)) {
+                        if (dtcp_ack_flow_control_pdu_send(dtcp, LWE)) {
                                 LOG_ERR("Failed to send ack / flow "
                                         "control pdu");
                                 return -1;
