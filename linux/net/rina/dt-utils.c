@@ -36,7 +36,7 @@
 #include "dtp.h"
 #include "rmt.h"
 
-#define RTIMER_ENABLED 0
+#define RTIMER_ENABLED 1
 
 struct cwq {
         struct rqueue * q;
@@ -589,13 +589,16 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         struct rtxq_entry * cur, * n;
         struct pdu *        tmp;
         seq_num_t           seq = 0;
+        unsigned long       tr_jiffies;
+
+        tr_jiffies = msecs_to_jiffies(tr);
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
                 LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %lu (%u ms)",
-                        seq, jiffies, cur->time_stamp, msecs_to_jiffies(tr),
+                        seq, jiffies, cur->time_stamp, tr_jiffies,
                         tr);
-                if (time_before_eq(cur->time_stamp + msecs_to_jiffies(tr),
+                if (time_before_eq(cur->time_stamp + tr_jiffies,
                                    jiffies)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
@@ -613,6 +616,10 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                 LOG_ERR("Could not send rtxed PDU to RMT");
                                 continue;
                         }
+                } else {
+                        LOG_DBG("RTX timer: from here PDUs still have time,"
+                                "finishing...");
+                        break;
                 }
         }
 
@@ -638,26 +645,28 @@ struct rtxq {
         struct workqueue_struct * twq;
 };
 
-static int rtx_worker(void * o)
+static void Rtimer_handler(void * data)
 {
-
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
         unsigned int         tr;
 
-        q = (struct rtxq *) o;
+        LOG_DBG("RTX timer triggered...");
+
+        q = (struct rtxq *) data;
         if (!q) {
                 LOG_ERR("No RTXQ to work with");
-                return -1;
+                return;
         }
 
         dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
         if (!dtcp_cfg) {
                 LOG_ERR("RTX failed");
-                return -1;
+                return;
         }
 
         tr = dt_sv_tr(q->parent);
+
         spin_lock(&q->lock);
         if (rtxqueue_rtx(q->queue,
                          tr,
@@ -669,32 +678,8 @@ static int rtx_worker(void * o)
 #if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
                 rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
-        LOG_DBG("RTX timer worker OK...");
+        LOG_DBG("RTX timer ending...");
 #endif
-        return 0;
-}
-
-static void Rtimer_handler(void * data)
-{
-        struct rtxq *          q;
-        struct rwq_work_item * item;
-
-        q = (struct rtxq *) data;
-        if (!q) {
-                LOG_ERR("No RTXQ to work with");
-                return;
-        }
-
-        item = rwq_work_create_ni(rtx_worker, q);
-        if (!item) {
-                LOG_ERR("Could not create twq item");
-                return;
-        }
-
-        if (rwq_work_post(q->twq, item)) {
-                LOG_ERR("Could not add twq item to the wq");
-                return;
-        }
 
         return;
 }

@@ -309,6 +309,7 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
                 pci_sequence_number_get(pdu_pci_get_ro(pdu)),
                 pci_type(pdu_pci_get_ro(pdu)),
                 milliseconds);
+       LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
         return rmt_send(dtp->rmt,
                         pci_destination(pdu_pci_get_ro(pdu)),
@@ -1453,6 +1454,7 @@ int dtp_receive(struct dtp * instance,
         do_gettimeofday(&te); // get current time
         milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
         LOG_DBG("DTP Received PDU %d at %lld", seq_num, milliseconds);
+        LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
         if (!(pci_flags_get(pci) ^ PDU_FLAGS_DATA_RUN)) {
                 LOG_DBG("Data run flag DRF");
