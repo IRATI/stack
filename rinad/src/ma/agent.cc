@@ -14,6 +14,46 @@ namespace mad {
 //Singleton instance
 Singleton<ManagementAgent_> ManagementAgent;
 
+//Add NMS DIF
+void ManagementAgent_::addNMSDIF(std::string& difName){
+	nmsDIFs.push_back(difName);
+}
+
+//Creates the NMS DIFs required by the MA
+void ManagementAgent_::bootstrapNMSDIFs(){
+	//TODO FIXME XXX
+	std::list<std::string>::const_iterator it;
+
+	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
+		//Nice trace
+		LOG_INFO("Bootstraping DIF '%s'", it->c_str());
+
+		//TODO FIXME XXX: call ipcmanager bootstrapping of the DIFs
+	}
+
+}
+//Registers the application in the IPCManager
+void ManagementAgent_::reg(){
+
+	rina::ApplicationRegistrationInformation ari;
+	std::list<std::string>::const_iterator it;
+
+	//Check if there are available DIFs
+	if(nmsDIFs.empty()){
+		LOG_ERR("No DIFs to register to. Aborting...");
+		throw eNoNMDIF("No DIFs to register to");
+	}
+
+	//Register
+
+	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
+		//Nice trace
+		LOG_INFO("Registering agent at DIF '%s'", it->c_str());
+
+		//TODO FIXME XXX: call ipcmanager to register MA to this DIF
+	}
+}
+
 //Initialization and destruction routines
 void ManagementAgent_::init(const std::string& conf,
 					const std::string& cl_logfile,
@@ -24,7 +64,7 @@ void ManagementAgent_::init(const std::string& conf,
 	ConfManager->init(conf, cl_logfile, cl_loglevel);
 
 	//Nice trace
-	LOG_INFO(" Initializing...");
+	LOG_INFO("Initializing...");
 
 	/*
 	* Initialize subsystems
@@ -46,6 +86,12 @@ void ManagementAgent_::init(const std::string& conf,
 	* Load configuration
 	*/
 	ConfManager->configure();
+
+	//Bootstrap necessary NMS DIFs and shim-DIFs
+	bootstrapNMSDIFs();
+
+	//Register agent AP into the IPCManager
+	reg();
 
 	/*
 	* Run the bg task manager loop in the main thread
@@ -70,7 +116,7 @@ void ManagementAgent_::destroy(){
 	//Conf Manager
 	ConfManager->destroy();
 
-	LOG_INFO(" Goodbye!");
+	LOG_INFO("Goodbye!");
 }
 
 

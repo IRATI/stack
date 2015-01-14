@@ -29,10 +29,15 @@ void ConfManager_::destroy(){
 //Module configuration routine
 void ConfManager_::configure(){
 
+
 	//Configure the AP nameand instance ID
 	//XXX get it from the configuration source (e.g. config file)
+	std::string difName = "NMS-DIF";
 	rina::ApplicationProcessNamingInformation info("mad_node1", "1");
+
+	//Configure the MA
 	ManagementAgent->setAPInfo(info);
+	ManagementAgent->addNMSDIF(difName); //TODO read and do for all DIFs
 
 	//TODO
 }

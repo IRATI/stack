@@ -7,11 +7,13 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <list>
 #include <vector>
 #include <utility>
 
 #include <librina/application.h>
 #include <librina/common.h>
+#include <librina/exceptions.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
@@ -26,6 +28,11 @@ namespace mad{
 *
 * @brief Management Agent daemon class
 */
+
+/**
+* There are no available NMS DIFs (invalid configuration)
+*/
+DECLARE_EXCEPTION_SUBCLASS(eNoNMDIF);
 
 
 /**
@@ -51,16 +58,42 @@ public:
 	* Set RINA AP information
 	*/
 	void setAPInfo(rina::ApplicationProcessNamingInformation& _info){
-		//assert(inst != NULL);
-		//inst->info = _info;
-		(void)_info;
+		info = _info;
 	}
 
+	/**
+	* Set RINA AP information
+	*/
+	void addNMSDIF(std::string& difName);
+
 private:
+
+	/**
+	* RINA AP information
+	*/
 	rina::ApplicationProcessNamingInformation info;
+
+	/**
+	* List of NMSDIFs
+	*/
+	std::list<std::string> nmsDIFs;
 
 	ManagementAgent_();
 	~ManagementAgent_(void);
+
+	//
+	// Internal methods
+	//
+
+	/**
+	* Bootstrap necessary NMS DIFs and shim-DIFs
+	*/
+	void bootstrapNMSDIFs(void);
+
+	/**
+	* Register agent AP into the IPCManager
+	*/
+	void reg(void);
 
 	friend class Singleton<ManagementAgent_>;
 };
