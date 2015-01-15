@@ -963,7 +963,6 @@ static void tf_a(void * o)
                         a, a/AF);
                 rtimer_start(dtp->timers.a, a/AF);
         }
-        LOG_DBG("Finished post worker for dtp: %pK", dtp);
 
         return;
 }

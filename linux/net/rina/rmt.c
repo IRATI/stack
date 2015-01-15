@@ -419,6 +419,7 @@ static void send_worker(unsigned long o)
         spin_unlock(&tmp->egress.n1_ports->lock);
 
         if (pending) {
+                LOG_DBG("RMT worker scheduling tasklet...");
                 tasklet_hi_schedule(&tmp->egress.egress_tasklet);
         }
 
@@ -460,7 +461,8 @@ int rmt_send_port_id(struct rmt * instance,
 
         spin_lock_irqsave(&n1_port->lock, flags);
         atomic_inc(&n1_port->n_sdus);
-        if (n1_port->state == PORT_STATE_ENABLED && atomic_read(&n1_port->n_sdus) == 1) {
+        if (n1_port->state == PORT_STATE_ENABLED &&
+            atomic_read(&n1_port->n_sdus) == 1) {
                 int ret = 0;
                 n1_port->state = PORT_STATE_BUSSY;
                 spin_unlock_irqrestore(&n1_port->lock, flags);
@@ -470,20 +472,30 @@ int rmt_send_port_id(struct rmt * instance,
                 spin_lock_irqsave(&n1_port->lock, flags);
                 if (atomic_read(&n1_port->n_sdus) <= 0) {
                         atomic_set(&n1_port->n_sdus, 0);
-                        if (n1_port->state != PORT_STATE_DISABLED)
+                        if (n1_port->state != PORT_STATE_DISABLED) {
+                                LOG_DBG("RMT: sent and enabling port");
                                 n1_port->state = PORT_STATE_ENABLED;
+                        }
                 } else {
+                        LOG_DBG("RMT: sent and scheduling cause there are more"
+                                " pdus in the port");
                         tasklet_hi_schedule(&instance->egress.egress_tasklet);
                 }
                 spin_unlock_irqrestore(&n1_port->lock, flags);
                 return ret;
-        }
-
-        if (rfifo_push_ni(n1_port->queue, pdu)) {
-                spin_unlock_irqrestore(&n1_port->lock, flags);
+        } else if (n1_port->state == PORT_STATE_BUSSY) {
+                if (rfifo_push_ni(n1_port->queue, pdu)) {
+                        spin_unlock_irqrestore(&n1_port->lock, flags);
+                        pdu_destroy(pdu);
+                        return -1;
+                }
+                LOG_ERR("RMT: port was bussy, enqueuing PDU..");
+        } else {
+                LOG_ERR("Port state deallocated, discarding PDU");
                 pdu_destroy(pdu);
                 return -1;
         }
+
         spin_unlock_irqrestore(&n1_port->lock, flags);
 
         return 0;
