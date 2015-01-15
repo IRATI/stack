@@ -243,7 +243,7 @@ static int default_closed_window(struct dtp * dtp, struct pdu * pdu)
                                               connection->
                                               policies_params->
                                               dtcp_cfg);
-        if (cwq_size(cwq) < max_len) {
+        if (cwq_size(cwq) < (max_len - 1)) {
                 if (cwq_push(cwq, pdu)) {
                         LOG_ERR("Failed to push into cwq");
                         return -1;
@@ -919,7 +919,7 @@ static void tf_a(void * o)
         seq_num_t     seq_num_sv_update;
         timeout_t     a;
 
-        LOG_DBG("TWQ Post worker called");
+        LOG_DBG("A-timer handler started...");
 
         dtp = (struct dtp *) o;
         if (!dtp) {

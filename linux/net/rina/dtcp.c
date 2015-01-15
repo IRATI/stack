@@ -419,12 +419,12 @@ static struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
 }
 
 static int populate_ctrl_pci(struct pci *  pci,
-                             struct dtcp * dtcp,
-                             seq_num_t     LWE)
+                             struct dtcp * dtcp)
 {
         struct dtcp_config * dtcp_cfg;
         seq_num_t snd_lft;
         seq_num_t snd_rt;
+        seq_num_t LWE;
 
         dtcp_cfg = dtcp_config_get(dtcp);
         if (!dtcp_cfg) {
@@ -436,6 +436,7 @@ static int populate_ctrl_pci(struct pci *  pci,
          * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
          * PDU_TYPE_NACK_AND_FC ?
          */
+        LWE = dt_sv_rcv_lft_win(dtcp->parent);
         if (dtcp_flow_ctrl(dtcp_cfg)) {
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
                         snd_lft = snd_lft_win(dtcp);
@@ -531,6 +532,31 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         }
         LOG_DBG("LWE already acked");
         return 0;
+}
+
+static struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
+{
+        struct pdu * pdu;
+        struct pci * pci;
+
+        if (!dtcp || !type) {
+                LOG_ERR("wrong parameters, can't generate ctrl PDU...");
+                return NULL;
+        }
+        pdu  = pdu_ctrl_create_ni(dtcp, type);
+        if (!pdu) {
+                LOG_ERR("No Ctrl PDU created...");
+                return NULL;
+        }
+
+        pci = pdu_pci_get_rw(pdu);
+        if (populate_ctrl_pci(pci, dtcp)) {
+                LOG_ERR("Could not populate ctrl PCI");
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        return pdu;
 }
 
 static int default_rcvr_ack_atimer(struct dtcp * dtcp, seq_num_t seq)
@@ -827,11 +853,10 @@ int dtcp_sending_ack_policy(struct dtcp * dtcp)
 static int default_sending_ack(struct dtcp * dtcp)
 {
         struct dtp *         dtp;
-        seq_num_t            LWE;
         pdu_type_t           type;
-        struct pdu *         pdu;
-        struct pci *         pci;
         struct dtcp_config * dtcp_cfg;
+        seq_num_t            seq_num;
+        struct pdu *         pdu;
 
         dtp = dt_dtp(dtcp->parent);
         if (!dtp) {
@@ -845,60 +870,39 @@ static int default_sending_ack(struct dtcp * dtcp)
 
         /* Invoke delimiting and update left window edge */
 
-        LWE = process_A_expiration(dtp, dtcp);
-        LOG_DBG("Seq_num_to_ack: %d", LWE);
-
-        if ((int) LWE < 0) {
-                LOG_ERR("LWE is negative");
+        seq_num = process_A_expiration(dtp, dtcp);
+        if ((int) seq_num < 0) {
+                LOG_ERR("Seq num returned by A-timer is negative, bailing out...");
                 return -1;
         }
 
-        /* FIXME: this should use something like pdu_ctrl_type_get, but the
-         * last_snd_data_ack check would not work */
-        if (last_snd_data_ack(dtcp) < LWE) {
-                last_snd_data_ack_set(dtcp, LWE);
-
-                type = PDU_TYPE_FC;
-                if (dtcp_rtx_ctrl(dtcp_cfg) && dtcp_flow_ctrl(dtcp_cfg)) {
-                        type =  PDU_TYPE_ACK_AND_FC;
-                }
-                if (dtcp_rtx_ctrl(dtcp_cfg) && !dtcp_flow_ctrl(dtcp_cfg)) {
-                        type =  PDU_TYPE_ACK;
-                }
-                LOG_DBG("Ctrl PDU type: %x", type);
-
-                pdu  = pdu_ctrl_create_ni(dtcp, type);
-                if (!pdu) {
-                        LOG_ERR("No Ctrl PDU created...");
-                        return -1;
-                }
-
-                pci = pdu_pci_get_rw(pdu);
-                if (populate_ctrl_pci(pci, dtcp, LWE)) {
-                        LOG_ERR("Could not populate ctrl PCI");
-                        pdu_destroy(pdu);
-                        return -1;
-                }
-
-                dump_we(dtcp, pci);
-                if (pdu_send(dtcp, pdu)) {
-                        LOG_ERR("Could not send ctrl PDU");
-                        return -1;
-                }
+        type = pdu_ctrl_type_get(dtcp, seq_num);
+        if (!type) {
+                return -1;
         }
+
+        pdu = pdu_ctrl_generate(dtcp, type);;
+        if (!pdu)
+                return -1;
+
+        dump_we(dtcp, pdu_pci_get_rw(pdu));
+        if (pdu_send(dtcp, pdu)) {
+                LOG_ERR("Could not send ctrl PDU");
+                return -1;
+        }
+
         return 0;
 }
 
 int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu;
-        struct pci * pci;
-        seq_num_t    LWE;
         pdu_type_t   type;
 
         /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
         struct timeval te;
         long long milliseconds;
+        seq_num_t dbg_seq_num;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -913,23 +917,16 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
                 return 0;
         }
 
-        pdu  = pdu_ctrl_create_ni(dtcp, type);
+        pdu  = pdu_ctrl_generate(dtcp, type);
         if (!pdu) {
                 atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
         }
 
-
-        pci = pdu_pci_get_rw(pdu);
-        LWE = dt_sv_rcv_lft_win(dtcp->parent);
-        if (populate_ctrl_pci(pci, dtcp, LWE)) {
-                pdu_destroy(pdu);
-                atomic_dec(&dtcp->cpdus_in_transit);
-                return -1;
-        }
+        dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
         LOG_DBG("default_rcvr_ack");
-        dump_we(dtcp, pci);
+        dump_we(dtcp, pdu_pci_get_rw(pdu));
         if (pdu_send(dtcp, pdu)){
                 atomic_dec(&dtcp->cpdus_in_transit);
                 return -1;
@@ -938,7 +935,8 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
         /* SYSTEM TIMESTAMP DBG MESSAGE */
         do_gettimeofday(&te);
         milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTCP Sending ACK %d at %lld", pci_sequence_number_get(pci), milliseconds);
+        LOG_DBG("DTCP Sending ACK %d at %lld",
+                dbg_seq_num, milliseconds);
 
         atomic_dec(&dtcp->cpdus_in_transit);
         return 0;
@@ -950,41 +948,30 @@ static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
         struct pdu * pdu;
-        struct pci * pci;
-        seq_num_t    LWE;
 
         /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
         struct timeval te;
         long long milliseconds;
+        seq_num_t dbg_seq_num;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
                 return -1;
         }
-        pdu = pdu_ctrl_create_ni(dtcp, PDU_TYPE_FC);
+        pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
         if (!pdu)
                 return -1;
 
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        LWE     = dt_sv_rcv_lft_win(dtcp->parent);
-        if (populate_ctrl_pci(pci, dtcp, LWE)) {
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        dump_we(dtcp, pci);
+        dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+        dump_we(dtcp, pdu_pci_get_rw(pdu));
         if (pdu_send(dtcp, pdu))
                 return -1;
 
         /* SYSTEM TIMESTAMP DBG MESSAGE */
         do_gettimeofday(&te);
         milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
-        LOG_DBG("DTCP Sending FC %d at %lld", pci_sequence_number_get(pci), milliseconds);
+        LOG_DBG("DTCP Sending FC %d at %lld",
+                dbg_seq_num, milliseconds);
 
         return 0;
 }
