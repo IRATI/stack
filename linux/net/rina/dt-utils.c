@@ -642,10 +642,9 @@ struct rtxq {
         struct dt *               parent;
         struct rmt *              rmt;
         struct rtxqueue *         queue;
-        struct workqueue_struct * twq;
 };
 
-static void Rtimer_handler(void * data)
+static void rtx_timer_func(void * data)
 {
         struct rtxq *        q;
         struct dtcp_config * dtcp_cfg;
@@ -689,14 +688,11 @@ int rtxq_destroy(struct rtxq * q)
         if (!q)
                 return -1;
 
-#if RTIMER_ENABLED
         spin_lock(&q->lock);
+#if RTIMER_ENABLED
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
-        spin_unlock(&q->lock);
 #endif
-        if (q->twq)  rwq_destroy(q->twq);
-        spin_lock(&q->lock);
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
         spin_unlock(&q->lock);
@@ -706,37 +702,17 @@ int rtxq_destroy(struct rtxq * q)
         return 0;
 }
 
-#define MAX_NAME_SIZE 128
-
-/* FIXME: This function is not re-entrant */
-static const char * twq_name_format(const char *        prefix,
-                                    const struct rtxq * instance)
-{
-        static char name[MAX_NAME_SIZE];
-
-        ASSERT(prefix);
-        ASSERT(instance);
-
-        if (snprintf(name, sizeof(name), RINA_PREFIX "-%s-%pK",
-                     prefix, instance) >=
-            sizeof(name))
-                return NULL;
-
-        return name;
-}
-
 struct rtxq * rtxq_create(struct dt *  dt,
                           struct rmt * rmt)
 {
         struct rtxq * tmp;
-        const char *  twq_name;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
 #if RTIMER_ENABLED
-        tmp->r_timer = rtimer_create(Rtimer_handler, tmp);
+        tmp->r_timer = rtimer_create(rtx_timer_func, tmp);
         if (!tmp->r_timer) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);
@@ -747,17 +723,6 @@ struct rtxq * rtxq_create(struct dt *  dt,
         tmp->queue = rtxqueue_create();
         if (!tmp->queue) {
                 LOG_ERR("Failed to create retransmission queue");
-                rtxq_destroy(tmp);
-                return NULL;
-        }
-
-        twq_name = twq_name_format("twq", tmp);
-        if (!twq_name) {
-                rtxq_destroy(tmp);
-                return NULL;
-        }
-        tmp->twq = rwq_create(twq_name);
-        if (!tmp->twq) {
                 rtxq_destroy(tmp);
                 return NULL;
         }
@@ -777,14 +742,13 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
                              struct rmt * rmt)
 {
         struct rtxq * tmp;
-        const char *  twq_name;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
         if (!tmp)
                 return NULL;
 
 #if RTIMER_ENABLED
-        tmp->r_timer = rtimer_create_ni(Rtimer_handler, tmp);
+        tmp->r_timer = rtimer_create_ni(rtx_timer_func, tmp);
         if (!tmp->r_timer) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);
@@ -795,17 +759,6 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
         tmp->queue = rtxqueue_create_ni();
         if (!tmp->queue) {
                 LOG_ERR("Failed to create retransmission queue");
-                rtxq_destroy(tmp);
-                return NULL;
-        }
-
-        twq_name = twq_name_format("twq", tmp);
-        if (!twq_name) {
-                rtxq_destroy(tmp);
-                return NULL;
-        }
-        tmp->twq = rwq_create(twq_name);
-        if (!tmp->twq) {
                 rtxq_destroy(tmp);
                 return NULL;
         }
