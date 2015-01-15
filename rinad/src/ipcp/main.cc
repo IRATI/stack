@@ -18,6 +18,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <signal.h>
+
 #include <cstdlib>
 #include <sstream>
 
@@ -26,6 +28,7 @@
 #include <librina/common.h>
 #include <librina/logs.h>
 #include "ipcp/ipc-process.h"
+#include "common/debug.h"
 
 int wrapped_main(int argc, char * argv[])
 {
@@ -79,9 +82,23 @@ int wrapped_main(int argc, char * argv[])
         return EXIT_SUCCESS;
 }
 
+void handler(int signum)
+{
+        LOG_CRIT("Got signal %d", signum);
+
+        if (signum == SIGSEGV) {
+                dump_backtrace();
+                exit(EXIT_FAILURE);
+        }
+}
+
 int main(int argc, char * argv[])
 {
         int retval;
+
+        if (signal(SIGSEGV, handler) == SIG_ERR) {
+                LOG_WARN("Cannot install SIGSEGV handler!");
+        }
 
         try {
                 retval = wrapped_main(argc, argv);
