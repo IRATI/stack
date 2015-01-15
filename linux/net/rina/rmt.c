@@ -1367,23 +1367,26 @@ int rmt_receive(struct rmt * instance,
                 sdu_destroy(sdu);
                 return -1;
         }
-
+        spin_unlock(&instance->ingress.n1_ports->lock);
+        spin_lock(&n1_port->lock);
         if (rfifo_is_empty(n1_port->queue)) {
                 ret = receive_direct(instance, n1_port, sdu);
-                spin_unlock(&instance->ingress.n1_ports->lock);
+                spin_unlock(&n1_port->lock);
                 LOG_DBG("RMT sent directly to DTP");
                 return ret;
         }
 
         if (rfifo_push_ni(n1_port->queue, sdu)) {
-                spin_unlock(&instance->ingress.n1_ports->lock);
+                spin_unlock(&n1_port->lock);
                 sdu_destroy(sdu);
                 return -1;
         }
         atomic_inc(&n1_port->n_sdus);
-        spin_unlock(&instance->ingress.n1_ports->lock);
+        spin_unlock(&n1_port->lock);
 
+        spin_lock(&instance->ingress.n1_ports->lock);
         tasklet_hi_schedule(&instance->ingress.ingress_tasklet);
+        spin_unlock(&instance->ingress.n1_ports->lock);
         LOG_DBG("RMT tasklet scheduled");
 
         return 0;
