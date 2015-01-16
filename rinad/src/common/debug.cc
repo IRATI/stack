@@ -48,11 +48,13 @@ void dump_backtrace(void)
         
         int j;
 
-        LOG_CRIT("Backtrace:");
+        LOG_CRIT("Dumping backtrace");
+        LOG_CRIT("======== CUT HERE ========");
         for (j = 0; j < nptrs; j++) {
                 // NOTE: DO NOT CHANGE THE FOLLOWING LINE !!!
                 std::cout << "  " << strings[j] << std::endl;
         }
+        LOG_CRIT("======== CUT HERE ========");
 
         free(strings);
 }
