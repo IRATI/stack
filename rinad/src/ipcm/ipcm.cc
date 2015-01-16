@@ -73,9 +73,11 @@ void IPCManager::init(const std::string& loglevel)
 {
         // Initialize the IPC manager infrastructure in librina.
         try {
-                rina::initializeIPCManager(1, config.local.installationPath,
-                                config.local.libraryPath,
-                                loglevel, config.local.logPath);
+                rina::initializeIPCManager(1,
+                                           config.local.installationPath,
+                                           config.local.libraryPath,
+                                           loglevel,
+                                           config.local.logPath);
                 LOG_DBG("IPC Manager daemon initialized");
                 LOG_DBG("       installation path: %s",
                         config.local.installationPath.c_str());
