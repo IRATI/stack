@@ -878,7 +878,7 @@ static int default_sending_ack(struct dtcp * dtcp)
 
         type = pdu_ctrl_type_get(dtcp, seq_num);
         if (!type) {
-                return -1;
+                return 0;
         }
 
         pdu = pdu_ctrl_generate(dtcp, type);;
