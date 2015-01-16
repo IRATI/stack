@@ -32,10 +32,10 @@ libjsoncpp_la_LDFLAGS  =
 libjsoncpp_la_LIBADD   =
 libjsoncpp_la_CPPFLAGS = -I$(srcdir)/jsoncpp
 
-CPPFLAGS_EXTRA =				\
-	-DDEFAULT_BINDIR=$(bindir)		\
-	-DDEFAULT_LIBDIR=$(libdir)		\
-	-DDEFAULT_LOGDIR=$(localstatedir)/log
+CPPFLAGS_EXTRA =					\
+	-DDEFAULT_BINDIR="$(bindir)"			\
+	-DDEFAULT_LIBDIR="$(libdir)"			\
+	-DDEFAULT_LOGDIR="$(localstatedir)/log"
 
 ipcm_CFLAGS   =
 ipcm_CPPFLAGS =					\
