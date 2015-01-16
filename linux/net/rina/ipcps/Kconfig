@@ -68,6 +68,13 @@ config RINA_SHIM_TCP_UDP
 	help
 	  No help for the time being
 
+config RINA_SHIM_TCP_UDP_BUFFER_SIZE
+        int "Buffer size"
+	default 1500
+        depends on RINA_SHIM_TCP_UDP
+	help
+	  No help for the time being
+
 config RINA_SHIM_HV
 	tristate "Shim IPC for Hypervisors"
 	default m

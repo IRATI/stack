@@ -302,6 +302,8 @@ static int n1_port_write(struct serdes * serdes,
         port_id_t              port_id;
         struct buffer *        buffer;
         struct ipcp_instance * n1_ipcp;
+        struct pci *           pci;
+        size_t                 ttl;
 
         ASSERT(n1_port);
         ASSERT(serdes);
@@ -313,6 +315,26 @@ static int n1_port_write(struct serdes * serdes,
 
         port_id = n1_port->port_id;
         n1_ipcp = n1_port->n1_ipcp;
+
+        pci = 0;
+        ttl = 0;
+
+#ifdef CONFIG_RINA_IPCPS_TTL
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+                LOG_ERR("Cannot get PCI");
+                pdu_destroy(pdu);
+                return -1;
+        }
+
+        LOG_DBG("TTL to start with is %d", CONFIG_RINA_IPCPS_TTL_DEFAULT);
+
+        if (pci_ttl_set(pci, CONFIG_RINA_IPCPS_TTL_DEFAULT)) {
+                LOG_ERR("Could not set TTL");
+                pdu_destroy(pdu);
+                return -1;
+        }
+#endif
 
         pdu_ser = pdu_serialize_ni(serdes, pdu);
         if (!pdu_ser) {
@@ -507,7 +529,7 @@ int rmt_send(struct rmt * instance,
              qos_id_t     qos_id,
              struct pdu * pdu)
 {
-        int i;
+        int          i;
 
         if (!instance) {
                 LOG_ERR("Bogus RMT passed");

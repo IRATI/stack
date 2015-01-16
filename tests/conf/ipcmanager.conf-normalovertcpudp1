@@ -15,38 +15,48 @@
     "applicationToDIFMappings": [
         {
             "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "test-normal.DIF"
+            "difName": "test1.IRATI"
         },
         {
             "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "test-normal.DIF"
+            "difName": "test2.IRATI"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime-2--",
+            "difName": "fantastic.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-2--",
+            "difName": "fantastic.DIF"
         }
     ],
     "ipcProcessesToCreate": [
         {
-            "apName": "test-shim-hv.IPCP",
+            "apName": "test-eth",
             "apInstance": "1",
-            "difName": "test-shim-hv.DIF"
+            "difName": "shim.DIF"
         },
         {
-            "apName": "test-normal-1.IPCP",
+            "apName": "test1.IRATI",
             "apInstance": "1",
-            "difName": "test-normal.DIF",
+            "difName": "normal.DIF",
             "difsToRegisterAt": [
-                "test-shim-hv.DIF"
+                "shim.DIF"
             ]
         }
     ],
     "difConfigurations": [
         {
-            "difName": "test-shim-hv.DIF",
-            "difType": "shim-hv",
-            "configParameters": {
-                "vmpi-id": "0"
-            }
+             "difName" : "shim.DIF",
+             "difType" : "shim-tcp-udp",
+             "configParameters" : {
+               "hostname" : "10.1.1.2",
+               "dirEntry" : "2:11:test2.IRATI0:8:10.1.1.34:242711:test1.IRATI0:8:10.1.1.24:2426",
+               "expReg"   : "1:11:test1.IRATI0:4:2426"
+             }
         },
         {
-            "difName": "test-normal.DIF",
+            "difName": "normal.DIF",
             "difType": "normal-ipc",
             "dataTransferConstants": {
                 "addressLength": 2,
@@ -63,62 +73,38 @@
             },
             "qosCubes": [
                 {
-                    "name": "unreliablewithflowcontrol",
+                    "name": "reliable",
                     "id": 1,
                     "partialDelivery": false,
-                    "orderedDelivery": false,
-                    "efcpPolicies": {
-                        "dtcpPresent": true,
-                        "dtcpConfiguration": {
-                            "rtxcontrol": false,
-                            "flowcontrol": true,
-                            "flowcontrolconfig": {
-                                "ratebased": false,
-                                "windowbased": true,
-                                "windowbasedconfig": {
-                                    "maxclosedwindowqueuelength": 200,
-                                    "initialcredit": 50
-                                }
-                            }
-                        }
-                    }
+                    "orderedDelivery": true
                 },
                 {
-                    "name": "reliablewithflowcontrol",
+                    "name": "unreliable",
                     "id": 2,
-                    "partialDelivery": false,
-                    "orderedDelivery": false,
-                    "efcpPolicies": {
-                        "dtcpPresent": true,
-                        "dtcpConfiguration": {
-                            "rtxcontrol": true,
-                            "rtxcontrolconfig": {
-                                "datarxmsnmax": 5,
-                                "initialRtxTime": 20
-                            },
-                            "flowcontrol": true,
-                            "flowcontrolconfig": {
-                                "ratebased": false,
-                                "windowbased": true,
-                                "windowbasedconfig": {
-                                    "maxclosedwindowqueuelength": 200,
-                                    "initialcredit": 50
-                                }
-                            }
-                        }
-                    }
+                    "partialDelivery": true,
+                    "orderedDelivery": false
                 }
             ],
             "knownIPCProcessAddresses": [
                 {
-                    "apName": "test-normal-1.IPCP",
+                    "apName": "test1.IRATI",
                     "apInstance": "1",
                     "address": 16
                 },
                 {
-                    "apName": "test-normal-2.IPCP",
+                    "apName": "test2.IRATI",
                     "apInstance": "1",
                     "address": 17
+                }
+            ],
+            "addressPrefixes": [
+                {
+                    "addressPrefix": 0,
+                    "organization": "N.Bourbaki"
+                },
+                {
+                    "addressPrefix": 16,
+                    "organization": "IRATI"
                 }
             ],
             "pdufTableGeneratorConfiguration": {
@@ -139,3 +125,4 @@
         }
     ]
 }
+

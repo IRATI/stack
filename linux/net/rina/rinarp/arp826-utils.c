@@ -42,6 +42,10 @@
  */
 
 struct gpa {
+        /*
+         * FIXME: To be revised in order to use struct buffer (and related
+         *        methods
+         */
         uint8_t * address;
         size_t    length;
 };

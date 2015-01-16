@@ -297,7 +297,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_eth_flow *      flow)
 {
         if (!data || !flow) {
-                LOG_ERR("Couldn't destroy flow.");
+                LOG_ERR("Couldn't destroy flow");
                 return -1;
         }
 
@@ -1420,14 +1420,18 @@ static void inst_cleanup(struct ipcp_instance * inst)
 {
         ASSERT(inst);
 
-        if (inst->data->info)
-                rkfree(inst->data->info);
-        if (inst->data->name)
-                name_destroy(inst->data->name);
-        if (inst->data->eth_vlan_packet_type)
-                rkfree(inst->data->eth_vlan_packet_type);
-        if (inst->data)
+        if (inst->data) {
+                if (inst->data->fspec)
+                        rkfree(inst->data->fspec);
+                if (inst->data->info)
+                        rkfree(inst->data->info);
+                if (inst->data->name)
+                        name_destroy(inst->data->name);
+                if (inst->data->eth_vlan_packet_type)
+                        rkfree(inst->data->eth_vlan_packet_type);
+
                 rkfree(inst->data);
+        }
 
         rkfree(inst);
 }

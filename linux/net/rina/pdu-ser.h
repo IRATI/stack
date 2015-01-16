@@ -38,4 +38,7 @@ bool             pdu_ser_is_ok(const struct pdu_ser * s);
 struct buffer *  pdu_ser_buffer(struct pdu_ser * pdu);
 int              pdu_ser_buffer_disown(struct pdu_ser * pdu);
 
+int              pdu_ser_head_grow(struct pdu_ser * pdu, size_t bytes);
+int              pdu_ser_head_shrink(struct pdu_ser * pdu, size_t bytes);
+
 #endif

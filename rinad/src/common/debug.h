@@ -1,8 +1,6 @@
 /*
- * Data Unit Protection
+ * Debugging utils
  *
- *    Dimitri Staessens     <dimitri.staessens@intec.ugent.be>
- *    Sander Vrijders       <sander.vrijders@intec.ugent.be>
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,16 +18,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_DU_PROTECTION_H
-#define RINA_DU_PROTECTION_H
+#ifndef RINAD_DEBUG_H
+#define RINAD_DEBUG_H
 
-#include "pdu-ser.h"
-
-bool    dup_chksum_set(struct pdu_ser * pdu);
-bool    dup_chksum_is_ok(struct pdu_ser * pdu);
-
-bool    dup_ttl_set(struct pdu_ser * pdu, size_t value);
-ssize_t dup_ttl_decrement(struct pdu_ser * pdu);
-bool    dup_ttl_is_expired(struct pdu_ser * pdu);
+void dump_backtrace(void);
 
 #endif

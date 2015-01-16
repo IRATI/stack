@@ -18,6 +18,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <signal.h>
+
 #include <cstdlib>
 #include <sstream>
 
@@ -26,13 +28,16 @@
 #include <librina/common.h>
 #include <librina/logs.h>
 #include "ipcp/ipc-process.h"
+#include "common/debug.h"
 
 int wrapped_main(int argc, char * argv[])
 {
-        if (argc != 5) {
-                LOG_ERR("Wrong number of arguments: expected 5, got %d", argc);
+        if (argc != 7) {
+                LOG_ERR("Wrong number of arguments: expected 7, got %d", argc);
                 return EXIT_FAILURE;
         }
+        std::string log_level = argv[5];
+        std::string log_file = argv[6];
 
         rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
 
@@ -51,7 +56,7 @@ int wrapped_main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port);
+        rinad::IPCProcessImpl ipcp(name, ipcp_id, ipcm_port, log_level, log_file);
 
         LOG_INFO("IPC Process name:     %s", argv[1]);
         LOG_INFO("IPC Process instance: %s", argv[2]);
@@ -77,9 +82,23 @@ int wrapped_main(int argc, char * argv[])
         return EXIT_SUCCESS;
 }
 
+void handler(int signum)
+{
+        LOG_CRIT("Got signal %d", signum);
+
+        if (signum == SIGSEGV) {
+                dump_backtrace();
+                exit(EXIT_FAILURE);
+        }
+}
+
 int main(int argc, char * argv[])
 {
         int retval;
+
+        if (signal(SIGSEGV, handler) == SIG_ERR) {
+                LOG_WARN("Cannot install SIGSEGV handler!");
+        }
 
         try {
                 retval = wrapped_main(argc, argv);

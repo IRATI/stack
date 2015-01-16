@@ -33,6 +33,7 @@
 #include "ipcp-instances.h"
 #include "buffer.h"
 #include "pci.h"
+#include "du-protection.h"
 
 /* FIXME: This is wrong, use a version value and use sifeof later */
 #define VERSION_SIZE  1
@@ -716,6 +717,43 @@ static struct pdu_ser * pdu_serialize_gfp(gfp_t                       flags,
                 return NULL;
         }
 
+#ifdef CONFIG_RINA_IPCPS_TTL
+        if (pdu_ser_head_grow(tmp, sizeof(u8))) {
+                LOG_ERR("Failed to grow ser PDU");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+
+        if (!dup_ttl_set(tmp, pci_ttl(pci))) {
+                LOG_ERR("Could not set TTL");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+
+        if (dup_ttl_is_expired(tmp)) {
+                LOG_DBG("TTL is expired, dropping PDU");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+#endif
+
+#ifdef CONFIG_RINA_IPCPS_CRC
+        /* Assuming CRC32 */
+        if (pdu_ser_head_grow(tmp, sizeof(u32))) {
+                LOG_ERR("Failed to grow ser PDU");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+
+        if (!dup_chksum_set(tmp)) {
+                LOG_ERR("Failed to add CRC");
+                pdu_ser_destroy(tmp);
+                return NULL;
+        }
+
+        ASSERT(dup_chksum_is_ok(tmp));
+#endif
+
         pdu_destroy(pdu);
 
         return tmp;
@@ -744,12 +782,26 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
         int                   offset;
         ssize_t               pdu_len;
         seq_num_t             seq;
+        ssize_t               ttl;
+
+        if (!instance)
+                return NULL;
 
         if (!pdu_ser_is_ok(pdu))
                 return NULL;
 
-        if (!instance)
+#ifdef CONFIG_RINA_IPCPS_CRC
+        if (!dup_chksum_is_ok(pdu)) {
+                LOG_ERR("Bad CRC, PDU has been corrupted");
                 return NULL;
+        }
+
+        /* Assuming CRC32 */
+        if (pdu_ser_head_shrink(pdu, sizeof(u32))) {
+                LOG_ERR("Failed to shrink ser PDU");
+                return NULL;
+        }
+#endif
 
         dt_cons = instance->dt_cons;
         ASSERT(dt_cons);
@@ -759,9 +811,6 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
 
         if (buffer_length(tmp_buff) < base_pci_size(dt_cons))
                 return NULL;
-
-        ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
-        ASSERT(ptr);
 
         new_pdu = pdu_create_gfp(flags);
         if (!new_pdu) {
@@ -775,6 +824,35 @@ static struct pdu * pdu_deserialize_gfp(gfp_t                 flags,
                 pdu_destroy(new_pdu);
                 return NULL;
         }
+
+        ttl = 0;
+
+#ifdef CONFIG_RINA_IPCPS_TTL
+        ttl = dup_ttl_decrement(pdu);
+        if (ttl < 0) {
+                LOG_ERR("Could not decrement TTL");
+                pci_destroy(new_pci);
+                pdu_destroy(new_pdu);
+                return NULL;
+        }
+
+        if (pci_ttl_set(new_pci, ttl)) {
+                LOG_ERR("Could not set TTL");
+                pci_destroy(new_pci);
+                pdu_destroy(new_pdu);
+                return NULL;
+        }
+
+        if (pdu_ser_head_shrink(pdu, sizeof(u8))) {
+                LOG_ERR("Failed to shrink ser PDU");
+                pci_destroy(new_pci);
+                pdu_destroy(new_pdu);
+                return NULL;
+        }
+#endif
+
+        ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
+        ASSERT(ptr);
 
         pdu_len = 0;
         if (deserialize_base_pci(instance, new_pci, &offset, ptr, &pdu_len)) {
