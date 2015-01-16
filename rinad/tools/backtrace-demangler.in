@@ -1,0 +1,41 @@
+#!@PERL@
+
+#
+# backtrace-demangler
+#
+# (C) 2006 NeXtworks
+#
+# Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
+
+my $me = "backtrace-demangler";
+
+print "---------------------------------\n";
+print "Copy && paste your backtrace then press CTRL+D:\n";
+print "\n";
+my @lines;
+while (<STDIN>) {
+    push(@lines, $_);
+}
+
+print "---------------------------------\n";
+print "Demangled backtrace:\n";
+print "\n";
+foreach (@lines) {
+    chomp();
+    if (m/^[ \t]*(.*)[ \t]+\[(0x[0-9a-fA-F]+)\][ \t]*$/) {
+                my $executable = $1;
+                my $address    = $2;
+
+                $executable =~ s,\(.*\),,;
+                #print "Demangling $executable $address\n";
+
+                system("addr2line -e $executable $address");
+    } elsif (m/^[ \t]*$/) {
+    } else {
+                print "$me: Unhandled line '$_'\n";
+    }
+}
+print "---------------------------------\n";
+
+exit 0;

@@ -91,6 +91,9 @@ PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
     AC_MSG_ERROR([Your system lacks of libprotobuf support (>= $LIBPROTOBUF_MIN_VERSION)])
 ])
 
+AC_PATH_PROG([PERL], [perl], [no])
+AM_CONDITIONAL([HAVE_PERL], [ test "$PERL" != "no" ])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -102,6 +105,7 @@ AC_CONFIG_FILES([
     src/ipcm/Makefile
 
     doc/Makefile
+    tools/Makefile
     etc/Makefile
 ])
 
