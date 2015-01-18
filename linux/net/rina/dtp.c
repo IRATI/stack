@@ -761,8 +761,8 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seq_num_t                max_sdu_gap;
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
-        struct rqueue *          to_post;
         seq_num_t                ret;
+        /*struct rqueue *          to_pos*/
 
         ASSERT(dtp);
 
@@ -775,9 +775,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         seqq = dtp->seqq;
         ASSERT(seqq);
 
-        /* dtcp = dt_dtcp(dtp->parent); */
-
-        a              = dt_sv_a(dt);
+        a = dt_sv_a(dt);
 
         ASSERT(sv->connection);
         ASSERT(sv->connection->policies_params);
@@ -791,11 +789,11 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LOG_DBG("Processing A timer expiration");
 
-        to_post = rqueue_create_ni();
+        /*to_post = rqueue_create_ni();
         if (!to_post) {
                 LOG_ERR("Could not create to_post list in A timer");
                 return -1;
-        }
+        }*/
 
         spin_lock(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
@@ -824,8 +822,8 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
-                        /*
-                        spin_unlock(&seqq->lock);
+
+                        /*spin_unlock(&seqq->lock);*/
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(in-order)", seq_num);
@@ -834,10 +832,8 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
 
-                        spin_lock(&seqq->lock);
-                        */
-
-                        rqueue_tail_push_ni(to_post, pdu);
+                        /*spin_lock(&seqq->lock);
+                        rqueue_tail_push_ni(to_post, pdu);*/
 
                         LWE = dt_sv_rcv_lft_win(dt);
                         ret = LWE;
@@ -863,17 +859,16 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         pos->pdu = NULL;
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
-                        /*
-                        spin_unlock(&seqq->lock);
+
+                        /*spin_unlock(&seqq->lock);*/
                         if (pdu_post(dtp, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(expiration)", seq_num);
                                 return -1;
                         }
 
-                        spin_lock(&seqq->lock);
-                        */
-                        rqueue_tail_push_ni(to_post, pdu);
+                        /*spin_lock(&seqq->lock);
+                        rqueue_tail_push_ni(to_post, pdu);*/
 
                         LWE = dt_sv_rcv_lft_win(dt);
                         ret = LWE;
@@ -887,12 +882,12 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 finish:
         spin_unlock(&seqq->lock);
 
-        while (!rqueue_is_empty(to_post)) {
+        /*while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
                 if (pdu)
                         pdu_post(dtp, pdu);
         }
-        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
+        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);*/
         LOG_DBG("Finish process_Atimer_expiration");
         return ret;
 }
@@ -1389,7 +1384,7 @@ int dtp_receive(struct dtp * instance,
         timeout_t             LWE;
         bool                  in_order;
         seq_num_t             max_sdu_gap;
-        struct rqueue *       to_post;
+        /*struct rqueue *       to_post;*/
 
         /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
         struct timeval te;
@@ -1548,24 +1543,23 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        to_post = rqueue_create_ni();
+        /*to_post = rqueue_create_ni();
         if (!to_post) {
                 LOG_ERR("Could not create to_post list at reception");
                 pdu_destroy(pdu);
                 return -1;
-        }
+        }*/
         spin_lock(&instance->seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
         while (pdu && (seq_num == LWE + 1)) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
 
-               /*
-                spin_unlock(&instance->seqq->lock);
-                pdu_post(instance, pdu);
-                spin_lock(&instance->seqq->lock); */
 
-                rqueue_tail_push_ni(to_post, pdu);
+                /*spin_unlock(&instance->seqq->lock);*/
+                pdu_post(instance, pdu);
+                /*spin_lock(&instance->seqq->lock);
+                rqueue_tail_push_ni(to_post, pdu);*/
 
                 pdu     = seq_queue_pop(instance->seqq->queue);
                 LWE     = dt_sv_rcv_lft_win(dt);
@@ -1577,11 +1571,11 @@ int dtp_receive(struct dtp * instance,
                 seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock(&instance->seqq->lock);
 
-        while (!rqueue_is_empty(to_post)) {
+        /*while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
                 if (pdu)
                         pdu_post(instance, pdu);
-        }
+        }*/
 
         if (a) {
                 LOG_DBG("Going to start A timer with t = %d", a/AF);
@@ -1594,9 +1588,8 @@ int dtp_receive(struct dtp * instance,
                 }
         }
 
-        LOG_DBG("Going to destroy local to_post...");
-        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
-        LOG_DBG("Local to_post destroyed, quiting...");
+        /*rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);*/
+        LOG_DBG("DTP reveive ended...");
 
  exit:
 #if DTP_INACTIVITY_TIMERS_ENABLE

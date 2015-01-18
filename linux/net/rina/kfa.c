@@ -690,11 +690,8 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
                 wq = &flow->read_wqueue;
                 ASSERT(wq);
 
-                LOG_DBG("Wait queue %pK, next: %pK, prev: %pK",
-                        wq, wq->task_list.next, wq->task_list.prev);
-
-                set_tsk_need_resched(current);
-                wake_up(wq);
+                //set_tsk_need_resched(current);
+                wake_up_interruptible(wq);
                 LOG_DBG("SDU posted");
                 LOG_DBG("Sleeping read syscall should be working now");
         }

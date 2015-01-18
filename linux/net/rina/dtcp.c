@@ -637,10 +637,10 @@ static void dump_we(struct dtcp * dtcp,
         pci_seqn  = pci_sequence_number_get(pci);
         ack       = pci_control_ack_seq_num(pci);
 
-        LOG_INFO("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u RcvRWE: %u RcvLWE: %u"
-                 " newRWE: %u newLWE: %u myRWE: %u myLWE: %u cwqLWE: %u",
-                 pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
-                 new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
+        LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u RcvRWE: %u RcvLWE: %u"
+                " newRWE: %u newLWE: %u myRWE: %u myLWE: %u cwqLWE: %u",
+                pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
+                new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
 
 }
 
