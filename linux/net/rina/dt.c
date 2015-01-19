@@ -573,12 +573,14 @@ bool dt_sv_window_closed(struct dt * dt)
 
 int dt_sv_window_closed_set(struct dt * dt, bool closed)
 {
+        unsigned long flags;
+
         if (!dt || !dt->sv)
                 return -1;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         dt->sv->window_closed = closed;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return 0;
 }

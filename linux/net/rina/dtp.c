@@ -538,7 +538,7 @@ static struct pdu * seq_queue_pop(struct seq_queue * q)
         struct pdu *             pdu;
 
         if (list_empty(&q->head)) {
-                LOG_WARN("Seq Queue is empty!");
+                LOG_DBG("Seq Queue is empty!");
                 return NULL;
         }
 
@@ -1475,7 +1475,7 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
-                LOG_ERR("PDU SeqN %u, LWE: %u. Dropped PDUs: %d",
+                LOG_INFO("PDU SeqN %u, LWE: %u. Dropped PDUs: %d",
                         seq_num, LWE, dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
