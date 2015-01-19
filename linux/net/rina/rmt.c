@@ -511,7 +511,7 @@ int rmt_send_port_id(struct rmt * instance,
                         pdu_destroy(pdu);
                         return -1;
                 }
-                LOG_ERR("RMT: port was bussy, enqueuing PDU..");
+                LOG_DBG("RMT: port was bussy, enqueuing PDU..");
         } else {
                 LOG_ERR("Port state deallocated, discarding PDU");
                 pdu_destroy(pdu);
