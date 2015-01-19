@@ -236,8 +236,9 @@ bool name_is_ok(const struct name * n)
 { return (n && n->process_name && strlen(n->process_name)); }
 EXPORT_SYMBOL(name_is_ok);
 
-bool name_is_equal(const struct name * a,
-                   const struct name * b)
+bool name_cmp(uint8_t             flags,
+              const struct name * a,
+              const struct name * b)
 {
         if (a == b)
                 return true;
@@ -248,18 +249,32 @@ bool name_is_equal(const struct name * a,
         ASSERT(a != NULL);
         ASSERT(b != NULL);
 
-        /* Now compare field by field */
-        if (NAME_CMP_FIELD(a, b, process_name))
-                return false;
-        if (NAME_CMP_FIELD(a, b, process_instance))
-                return false;
-        if (NAME_CMP_FIELD(a, b, entity_name))
-                return false;
-        if (NAME_CMP_FIELD(a, b, entity_instance))
-                return false;
+        if (flags & NAME_CMP_ALL)
+                LOG_DBG("No flags, name comparison will be meaningless ...");
+
+        if (flags & NAME_CMP_APN)
+                if (NAME_CMP_FIELD(a, b, process_name))
+                        return false;
+
+        if (flags & NAME_CMP_API)
+                if (NAME_CMP_FIELD(a, b, process_instance))
+                        return false;
+
+        if (flags & NAME_CMP_AEN)
+                if (NAME_CMP_FIELD(a, b, entity_name))
+                        return false;
+
+        if (flags & NAME_CMP_AEI)
+                if (NAME_CMP_FIELD(a, b, entity_instance))
+                        return false;
 
         return true;
 }
+EXPORT_SYMBOL(name_cmp);
+
+bool name_is_equal(const struct name * a,
+                   const struct name * b)
+{ return name_cmp(NAME_CMP_ALL, a, b); }
 EXPORT_SYMBOL(name_is_equal);
 
 #define DELIMITER "/"

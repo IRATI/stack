@@ -34,6 +34,9 @@ AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
 
+AC_CHECK_HEADERS([execinfo.h])
+AC_CHECK_FUNCS([backtrace backtrace_symbols])
+
 AC_CXX_HAVE_SSTREAM
 AC_CXX_HAVE_STRSTREAM
 AC_CXX_HAVE_LONG_LONG
@@ -88,6 +91,9 @@ PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
     AC_MSG_ERROR([Your system lacks of libprotobuf support (>= $LIBPROTOBUF_MIN_VERSION)])
 ])
 
+AC_PATH_PROG([PERL], [perl], [no])
+AM_CONDITIONAL([HAVE_PERL], [ test "$PERL" != "no" ])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -104,6 +110,7 @@ AC_CONFIG_FILES([
     src/ipcm/include/ipcm/Makefile
 
     doc/Makefile
+    tools/Makefile
     etc/Makefile
 ])
 

@@ -13,6 +13,7 @@ DISTCHECK_CONFIGURE_FLAGS =
 SUBDIRS =					\
 	src					\
 	doc					\
+	tools					\
 	etc
 
 EXTRA_DIST =					\

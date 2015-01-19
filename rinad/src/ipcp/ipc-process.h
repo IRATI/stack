@@ -33,7 +33,8 @@ namespace rinad {
 class IPCProcessImpl: public IPCProcess, public EventLoopData {
 public:
 	IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
-			unsigned short id, unsigned int ipc_manager_port);
+			unsigned short id, unsigned int ipc_manager_port,
+			std::string log_level, std::string log_file);
 	~IPCProcessImpl();
 	unsigned short get_id();
 	const std::list<rina::Neighbor*> get_neighbors() const;
