@@ -420,14 +420,15 @@ struct dtcp * dt_dtcp(struct dt * dt)
 
 struct cwq * dt_cwq(struct dt * dt)
 {
-        struct cwq * tmp;
+        struct cwq *  tmp;
+        unsigned long flags;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->cwq;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
