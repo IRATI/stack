@@ -1049,6 +1049,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);
+        spin_lock_init(&instance->data->lock);
         list_add(&(instance->data->list), &(data->instances));
         LOG_DBG("Normal IPC process instance created and added to the list");
 
