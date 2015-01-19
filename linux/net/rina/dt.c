@@ -389,14 +389,16 @@ int dt_efcp_bind(struct dt * dt, struct efcp * efcp)
 
 struct dtp * dt_dtp(struct dt * dt)
 {
+        unsigned long flags;
+
         struct dtp * tmp;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->dtp;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
