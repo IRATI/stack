@@ -623,6 +623,7 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
         struct ipcp_flow *  flow;
         wait_queue_head_t * wq;
         struct kfa *        instance;
+        unsigned long       flags;
         int                 retval = 0;
 
         if (!data) {
@@ -650,18 +651,18 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
 
         LOG_DBG("Posting SDU to port-id %d ", id);
 
-        spin_lock(&instance->lock);
+        spin_lock_irqsave(&instance->lock, flags);
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
                 LOG_ERR("There is no flow bound to port-id %d", id);
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 sdu_destroy(sdu);
                 return -1;
         }
 
         if (flow->state == PORT_STATE_DEALLOCATED) {
                 LOG_ERR("Flow with port-id %d is already deallocated", id);
-                spin_unlock(&instance->lock);
+                spin_unlock_irqrestore(&instance->lock, flags);
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -684,7 +685,7 @@ static int kfa_sdu_post(struct ipcp_instance_data * data,
                 flow = NULL;
         }
 
-        spin_unlock(&instance->lock);
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         if (flow && (retval == 0)) {
                 wq = &flow->read_wqueue;

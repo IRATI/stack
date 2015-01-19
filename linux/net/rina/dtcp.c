@@ -609,7 +609,7 @@ static void dump_we(struct dtcp * dtcp,
         struct dtp * dtp;
         seq_num_t    snd_rt_we;
         seq_num_t    snd_lf_we;
-        /*seq_num_t    cwq_lf_we = 0;*/
+        seq_num_t    cwq_lf_we = 0;
         seq_num_t    rcv_rt_we;
         seq_num_t    rcv_lf_we;
         seq_num_t    new_rt_we;
