@@ -293,16 +293,15 @@ struct cwq * dt_cwq_unbind(struct dt * dt)
 struct rtxq * dt_rtxq_unbind(struct dt * dt)
 {
         struct rtxq * tmp;
-        unsigned long flags;
 
         if (!dt) {
                 LOG_ERR("Bogus instance passed, cannot unbind RTXQ");
                 return NULL;
         }
 
-        spin_lock_irqsave(&dt->lock, flags);
+        spin_lock(&dt->lock);
         if (!dt->rtxq) {
-                spin_unlock_irqrestore(&dt->lock, flags);
+                spin_unlock(&dt->lock);
 
                 LOG_DBG("No RTXQ bound to instance %pK", dt);
                 return NULL;
@@ -310,7 +309,7 @@ struct rtxq * dt_rtxq_unbind(struct dt * dt)
 
         tmp      = dt->rtxq;
         dt->rtxq = NULL;
-        spin_unlock_irqrestore(&dt->lock, flags);
+        spin_unlock(&dt->lock);
 
         return tmp;
 }
@@ -436,13 +435,14 @@ struct cwq * dt_cwq(struct dt * dt)
 struct rtxq * dt_rtxq(struct dt * dt)
 {
         struct rtxq * tmp;
+        unsigned long flags;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->rtxq;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
