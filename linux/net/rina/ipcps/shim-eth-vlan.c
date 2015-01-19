@@ -153,18 +153,19 @@ inst_data_mapping_get(struct net_device * dev)
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
                                         port_id_t                   id)
 {
+        unsigned long          flags;
         struct shim_eth_flow * flow;
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
 }
@@ -686,6 +687,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
         int                      retval;
+        unsigned long            flags;
 
         ASSERT(data);
         ASSERT(sdu);
@@ -704,14 +706,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
                 sdu_destroy(sdu);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 return -1;
         }
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
