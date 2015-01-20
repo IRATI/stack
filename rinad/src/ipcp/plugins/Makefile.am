@@ -10,8 +10,8 @@ CLEANFILES   =
 COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/..				\
-	-I$(srcdir)/../common
+	-I$(top_srcdir)/src			\
+	-I$(top_srcdir)/src/common
 
 libps_sm_passwd_la_CFLAGS =
 libps_sm_passwd_la_CPPFLAGS =			\
