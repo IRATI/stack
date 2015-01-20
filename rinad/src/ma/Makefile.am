@@ -16,6 +16,7 @@ mad_SOURCES  = 					\
 	bgtm.cc					\
 	confm.cc				\
 	flowm.cc				\
+	rib-daemon.cc			\
 	main.cc
 
 mad_CPPFLAGS =					\

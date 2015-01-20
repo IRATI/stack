@@ -93,6 +93,10 @@ test_cdap_SOURCES  = test-cdap.cc
 test_cdap_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_cdap_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
+test_rib_SOURCES  = test-rib.cc
+test_rib_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src -w
+test_rib_LDFLAGS  = $(FUNCTIONALLDFLAGS)
+
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
@@ -102,7 +106,8 @@ check_PROGRAMS =				\
 	test-concurrency			\
 	test-syscalls				\
 	test-timer				\
-	test-cdap
+	test-cdap				\
+	test-rib
 
 XFAIL_TESTS =					\
 	test-03
@@ -111,15 +116,10 @@ PASS_TESTS =					\
 	test-01					\
 	test-02
 
-TESTS = $(PASS_TESTS) $(XFAIL_TESTS)
-
-FUNCTIONAL_PASS_TESTS =				\
-	test-netlink-manager			\
-	test-netlink-parsers			\
-	test-concurrency			\
-	test-syscalls				\
-	test-timer				\
-	test-cdap
+TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
+	
+FUNCTIONAL_PASS_TESTS = \
+	test-rib
 
 FUNCTIONAL_XFAIL_TESTS =
 
@@ -137,3 +137,11 @@ check-kernel-debug: check-kernel-debug-am
 check-functional: check-functional-am
 
 check-all: check check-functional
+
+# ADD to functional tests plus backslash
+#test-netlink-manager			
+#test-netlink-parsers			
+#test-concurrency			
+#test-syscalls				
+#test-timer				
+#test-cdap	
