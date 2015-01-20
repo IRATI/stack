@@ -29,7 +29,9 @@
 #include <linux/mutex.h>
 #include <net/sock.h>
 
-#define SHIM_NAME   "shim-tcp-udp"
+#define SHIM_NAME     "shim-tcp-udp"
+#define SHIM_NAME_RWQ "shim-tcp-udp-rwq"
+#define SHIM_NAME_WWQ "shim-tcp-udp-wwq"
 
 #define RINA_PREFIX SHIM_NAME
 
@@ -1326,7 +1328,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 }
                 LOG_DBG("Added flow to the list");
 
-                flow->sdu_queue = rfifo_create();
+                flow->sdu_queue = rfifo_create_ni();
                 if (!flow->sdu_queue) {
                         spin_unlock(&data->lock);
 
@@ -2131,6 +2133,7 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                              struct sdu *                sdu)
 {
         struct snd_data * snd_data;
+        unsigned long     flags;
 
         LOG_DBG("callback on tcp_udp_sdu_write");
 
@@ -2145,9 +2148,9 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
         snd_data->sdu  = sdu;
         INIT_LIST_HEAD(&snd_data->list);
 
-        spin_lock(&snd_wq_lock);
+        spin_lock_irqsave(&snd_wq_lock, flags);
         list_add_tail(&snd_data->list, &snd_wq_data);
-        spin_unlock(&snd_wq_lock);
+        spin_unlock_irqrestore(&snd_wq_lock, flags);
 
         queue_work(snd_wq, &snd_work);
         return 0;
@@ -2548,9 +2551,11 @@ static int __init mod_init(void)
 {
         BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE <= 0);
 
-        rcv_wq = alloc_workqueue(SHIM_NAME,
+        rcv_wq = alloc_workqueue(SHIM_NAME_RWQ,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
-        if (!rcv_wq) {
+        snd_wq = alloc_workqueue(SHIM_NAME_WWQ,
+                                 WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
+        if (!rcv_wq || !snd_wq) {
                 LOG_CRIT("Cannot create a workqueue for shim %s", SHIM_NAME);
                 return -1;
         }
