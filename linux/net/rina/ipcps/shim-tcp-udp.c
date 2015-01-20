@@ -43,14 +43,25 @@
 #include "ipcp-factories.h"
 
 static struct workqueue_struct * rcv_wq;
+static struct workqueue_struct * snd_wq;
 static struct work_struct        rcv_work;
+static struct work_struct        snd_work;
 static struct list_head          rcv_wq_data;
+static struct list_head          snd_wq_data;
 static DEFINE_SPINLOCK(rcv_wq_lock);
+static DEFINE_SPINLOCK(snd_wq_lock);
 
 /* Structure for the workqueue */
 struct rcv_data {
         struct list_head list;
         struct sock *    sk;
+};
+
+struct snd_data {
+        struct list_head            list;
+        struct ipcp_instance_data * data;
+        port_id_t                   id;
+        struct sdu *                sdu;
 };
 
 extern struct kipcm * default_kipcm;
@@ -2119,6 +2130,33 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                              port_id_t                   id,
                              struct sdu *                sdu)
 {
+        struct snd_data * snd_data;
+
+        LOG_DBG("callback on tcp_udp_sdu_write");
+
+        snd_data = rkmalloc(sizeof(struct snd_data *), GFP_ATOMIC);
+        if (!snd_data) {
+                LOG_ERR("could not allocata snd_data");
+                return -1;
+        }
+
+        snd_data->data = data;
+        snd_data->id   = id;
+        snd_data->sdu  = sdu;
+        INIT_LIST_HEAD(&snd_data->list);
+
+        spin_lock(&snd_wq_lock);
+        list_add_tail(&snd_data->list, &snd_wq_data);
+        spin_unlock(&snd_wq_lock);
+
+        queue_work(snd_wq, &snd_work);
+        return 0;
+}
+
+static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
+                               port_id_t                   id,
+                               struct sdu *                sdu)
+{
         struct shim_tcp_udp_flow * flow;
         int                        size;
 
@@ -2130,6 +2168,8 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         flow = find_flow(data, id);
         if (!flow) {
+
+        spin_lock_init(&data->lock);
                 LOG_ERR("could not find flow with specified port-id");
                 sdu_destroy(sdu);
                 return -1;
@@ -2174,6 +2214,29 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
         sdu_destroy(sdu);
 
         return 0;
+}
+
+static void tcp_udp_write_worker(struct work_struct * w)
+{
+        struct snd_data * snd_data, * next;
+
+        /* FIXME: more efficient locking and better cleanup */
+        spin_lock(&snd_wq_lock);
+        list_for_each_entry_safe(snd_data, next, &snd_wq_data, list) {
+                list_del(&snd_data->list);
+                spin_unlock(&snd_wq_lock);
+
+                __tcp_udp_sdu_write(snd_data->data,
+                                    snd_data->id,
+                                    snd_data->sdu);
+
+                rkfree(snd_data);
+
+                spin_lock(&snd_wq_lock);
+        }
+        spin_unlock(&snd_wq_lock);
+
+        LOG_DBG("writer worker finished for now");
 }
 
 static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data * data)
@@ -2231,12 +2294,14 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&(data->instances));
 
         INIT_LIST_HEAD(&rcv_wq_data);
+        INIT_LIST_HEAD(&snd_wq_data);
 
         INIT_LIST_HEAD(&data_instances_list);
 
         spin_lock_init(&data->lock);
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
+        INIT_WORK(&snd_work, tcp_udp_write_worker);
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
