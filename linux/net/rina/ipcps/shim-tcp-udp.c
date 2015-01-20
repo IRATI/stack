@@ -2137,7 +2137,7 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("callback on tcp_udp_sdu_write");
 
-        snd_data = rkmalloc(sizeof(struct snd_data *), GFP_ATOMIC);
+        snd_data = rkmalloc(sizeof(*snd_data), GFP_ATOMIC);
         if (!snd_data) {
                 LOG_ERR("could not allocata snd_data");
                 return -1;
