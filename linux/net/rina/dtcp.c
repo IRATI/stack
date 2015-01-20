@@ -491,9 +491,12 @@ static pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 
         a = dt_sv_a(dtcp->parent);
 
-        /*FIXME: pdu_ctrl_type_get should not be controlling if the seq_num was
-         * already acked, I would move this out of here, probably to
-         * default_rcvr_ack and default_sending_ack policies */
+        /*
+         * FIXME:
+         *   pdu_ctrl_type_get should not be controlling if the seq_num was
+         *   already acked, I would move this out of here, probably to
+         *   default_rcvr_ack and default_sending_ack policies
+         */
         LWE = dt_sv_rcv_lft_win(dtcp->parent);
         if (last_snd_data_ack(dtcp) < LWE) {
                 last_snd_data_ack_set(dtcp, LWE);
@@ -560,11 +563,10 @@ static struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
         return pdu;
 }
 
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
 static int default_rcvr_ack_atimer(struct dtcp * dtcp, seq_num_t seq)
-{
-        LOG_MISSING;
-        return 0;
-}
+{ return 0; }
+#endif
 
 static int default_sender_ack(struct dtcp * dtcp, seq_num_t seq_num)
 {
@@ -926,7 +928,6 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 
         dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-        LOG_DBG("default_rcvr_ack");
         dump_we(dtcp, pdu_pci_get_rw(pdu));
         if (pdu_send(dtcp, pdu)){
                 atomic_dec(&dtcp->cpdus_in_transit);
@@ -943,8 +944,10 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
         return 0;
 }
 
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
 static int default_rcvr_ack(struct dtcp * dtcp, seq_num_t seq)
 { return dtcp_ack_flow_control_pdu_send(dtcp, seq); }
+#endif
 
 static int default_receiving_flow_control(struct dtcp * dtcp, seq_num_t seq)
 {
@@ -1125,8 +1128,12 @@ static struct dtcp_policies default_policies = {
         .update_credit               = NULL,
         .flow_control_overrun        = default_flow_control_overrun,
         .reconcile_flow_conflict     = NULL,
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK
         .rcvr_ack                    = default_rcvr_ack,
-        /*.rcvr_ack                    = default_rcvr_ack_atimer,*/
+#endif
+#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+        .rcvr_ack                    = default_rcvr_ack_atimer,
+#endif
         .rcvr_flow_control           = default_rcvr_flow_control,
         .rate_reduction              = default_rate_reduction,
         .rcvr_control_ack            = NULL,
