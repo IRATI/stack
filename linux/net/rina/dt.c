@@ -42,6 +42,7 @@ struct dt {
         struct dt_sv *      sv;
         struct dtp *        dtp;
         struct dtcp *       dtcp;
+        struct efcp *       efcp;
 
         struct cwq *        cwq;
         struct rtxq *       rtxq;
@@ -329,7 +330,7 @@ int dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq)
         if (dt->rtxq) {
                 spin_unlock(&dt->lock);
 
-                LOG_ERR("A CWQ already bound to instance %pK", dt);
+                LOG_ERR("A RTXQ already bound to instance %pK", dt);
                 return -1;
         }
         dt->rtxq = rtxq;
@@ -338,16 +339,66 @@ int dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq)
         return 0;
 }
 
+struct efcp * dt_efcp_unbind(struct dt * dt)
+{
+        struct efcp * tmp;
+
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot unbind EFCP");
+                return NULL;
+        }
+
+        spin_lock(&dt->lock);
+        if (!dt->efcp) {
+                spin_unlock(&dt->lock);
+
+                LOG_ERR("No EFCP bound to instance %pK", dt);
+                return NULL;
+        }
+        tmp = dt->efcp;
+        dt->efcp = NULL;
+        spin_unlock(&dt->lock);
+
+        return tmp;
+}
+
+int dt_efcp_bind(struct dt * dt, struct efcp * efcp)
+{
+        if (!dt) {
+                LOG_ERR("Bogus instance passed, cannot bind EFCP");
+                return -1;
+        }
+
+        if (!efcp) {
+                LOG_ERR("Cannot bind NULL EFCP to instance %pK", dt);
+                return -1;
+        }
+
+        spin_lock(&dt->lock);
+        if (dt->efcp) {
+                spin_unlock(&dt->lock);
+
+                LOG_ERR("A EFCP already bound to instance %pK", dt);
+                return -1;
+        }
+        dt->efcp = efcp;
+        spin_unlock(&dt->lock);
+
+        return 0;
+}
+
 struct dtp * dt_dtp(struct dt * dt)
 {
+        unsigned long flags;
+
         struct dtp * tmp;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->dtp;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -355,27 +406,29 @@ struct dtp * dt_dtp(struct dt * dt)
 struct dtcp * dt_dtcp(struct dt * dt)
 {
         struct dtcp * tmp;
+        unsigned long flags;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->dtcp;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
 
 struct cwq * dt_cwq(struct dt * dt)
 {
-        struct cwq * tmp;
+        struct cwq *  tmp;
+        unsigned long flags;
 
         if (!dt)
                 return NULL;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->cwq;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -383,12 +436,27 @@ struct cwq * dt_cwq(struct dt * dt)
 struct rtxq * dt_rtxq(struct dt * dt)
 {
         struct rtxq * tmp;
+        unsigned long flags;
+
+        if (!dt)
+                return NULL;
+
+        spin_lock_irqsave(&dt->lock, flags);
+        tmp = dt->rtxq;
+        spin_unlock_irqrestore(&dt->lock, flags);
+
+        return tmp;
+}
+
+struct efcp * dt_efcp(struct dt * dt)
+{
+        struct efcp * tmp;
 
         if (!dt)
                 return NULL;
 
         spin_lock(&dt->lock);
-        tmp = dt->rtxq;
+        tmp = dt->efcp;
         spin_unlock(&dt->lock);
 
         return tmp;
@@ -452,28 +520,30 @@ timeout_t dt_sv_r(struct dt * dt)
 
 timeout_t dt_sv_a(struct dt * dt)
 {
-        uint_t tmp;
+        uint_t        tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return 0;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->A;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
 
 seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return 0;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->rcv_left_window_edge;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -492,26 +562,29 @@ int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 
 bool dt_sv_window_closed(struct dt * dt)
 {
-        bool tmp;
+        bool          tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return false;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->window_closed;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
 
 int dt_sv_window_closed_set(struct dt * dt, bool closed)
 {
+        unsigned long flags;
+
         if (!dt || !dt->sv)
                 return -1;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         dt->sv->window_closed = closed;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return 0;
 }
