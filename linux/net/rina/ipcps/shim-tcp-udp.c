@@ -2098,7 +2098,7 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
         ASSERT(len);
         ASSERT(sbuf);
 
-        buf = rkmalloc(len + sizeof(__be16), GFP_KERNEL);
+        buf = rkmalloc(len + sizeof(__be16), GFP_ATOMIC);
         if (!buf)
                 return -1; /* FIXME: Check this return value */
 
