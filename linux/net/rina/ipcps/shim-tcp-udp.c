@@ -46,7 +46,6 @@ static struct workqueue_struct * rcv_wq;
 static struct work_struct        rcv_work;
 static struct list_head          rcv_wq_data;
 static DEFINE_SPINLOCK(rcv_wq_lock);
-static DEFINE_MUTEX(rcv_stop_mutex);
 
 /* Structure for the workqueue */
 struct rcv_data {
@@ -122,18 +121,15 @@ struct ipcp_instance_data {
         struct flow_spec ** qos;
 
         /* Stores the state of flows indexed by port_id */
-        spinlock_t          flow_lock;
         struct list_head    flows;
 
-        spinlock_t          app_lock;
         /* Holds reg_app_data, e.g. the registrated applications */
         struct list_head    reg_apps;
 
-        spinlock_t          dir_lock;
         struct list_head    directory;
-        spinlock_t          exp_lock;
         struct list_head    exp_regs;
 
+        spinlock_t          lock;
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
         struct kfa *        kfa;
 };
@@ -186,17 +182,17 @@ find_dir_entry(struct ipcp_instance_data * data,
         ASSERT(app_name);
         ASSERT(data);
 
-        spin_lock(&data->dir_lock);
+        spin_lock(&data->lock);
 
         list_for_each_entry(entry, &data->directory, list) {
                 if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
                              entry->app_name, app_name)) {
-                        spin_unlock(&data->dir_lock);
+                        spin_unlock(&data->lock);
                         return entry;
                 }
         }
 
-        spin_unlock(&data->dir_lock);
+        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -210,17 +206,17 @@ find_exp_reg(struct ipcp_instance_data * data,
         ASSERT(app_name);
         ASSERT(data);
 
-        spin_lock(&data->exp_lock);
+        spin_lock(&data->lock);
 
         list_for_each_entry(exp, &data->exp_regs, list) {
                 if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
                              exp->app_name, app_name)) {
-                        spin_unlock(&data->exp_lock);
+                        spin_unlock(&data->lock);
                         return exp;
                 }
         }
 
-        spin_unlock(&data->exp_lock);
+        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -234,16 +230,16 @@ static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(is_port_id_ok(id));
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->flow_lock);
+        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -256,16 +252,16 @@ find_tcp_flow_by_socket(struct ipcp_instance_data * data,
 
         ASSERT(data);
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->flow_lock);
+        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -312,26 +308,26 @@ find_app_by_socket(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(sock);
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
 
         /* FIXME: Shrink this code */
         if (sock->type == SOCK_DGRAM) {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->udpsock == sock) {
-                                spin_unlock(&data->flow_lock);
+                                spin_unlock(&data->lock);
                                 return app;
                         }
                 }
         } else {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->tcpsock == sock) {
-                                spin_unlock(&data->flow_lock);
+                                spin_unlock(&data->lock);
                                 return app;
                         }
                 }
         }
 
-        spin_unlock(&data->flow_lock);
+        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -344,17 +340,17 @@ static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(name);
 
-        spin_lock(&data->app_lock);
+        spin_lock(&data->lock);
 
         list_for_each_entry(app, &data->reg_apps, list) {
                 if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
                              app->app_name, name)) {
-                        spin_unlock(&data->app_lock);
+                        spin_unlock(&data->lock);
                         return app;
                 }
         }
 
-        spin_unlock(&data->app_lock);
+        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -365,10 +361,10 @@ static int flow_destroy(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(flow);
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
         if (!list_empty(&flow->list))
                 list_del(&flow->list);
-        spin_unlock(&data->flow_lock);
+        spin_unlock(&data->lock);
 
         rkfree(flow);
 
@@ -456,9 +452,9 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->user_ipcp     = user_ipcp;
 
                 INIT_LIST_HEAD(&flow->list);
-                spin_lock(&data->flow_lock);
+                spin_lock(&data->lock);
                 list_add(&flow->list, &data->flows);
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
                 LOG_DBG("allocate request flow added");
 
                 /* this should be done with DNS or DHT */
@@ -610,20 +606,20 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_PENDING) {
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
                 LOG_ERR("Flow is not pending");
                 return -1;
         }
-        spin_unlock(&data->flow_lock);
+        spin_unlock(&data->lock);
 
         /* On positive response, flow should transition to allocated state */
         if (!result) {
-                spin_lock(&data->flow_lock);
+                spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 flow->user_ipcp = user_ipcp;
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
 
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
                 if (!ipcp) {
@@ -666,9 +662,9 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 flow->sdu_queue = NULL;
 
         } else {
-                spin_lock(&data->flow_lock);
+                spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
 
                 app = find_app_by_socket(data, flow->sock);
 
@@ -723,7 +719,6 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
             flow->port_id_state == PORT_STATE_ALLOCATED) {
 
                 /* FIXME: better cleanup (= removing from list) */
-                mutex_lock(&rcv_stop_mutex);
                 spin_lock_irqsave(&rcv_wq_lock, flags);
                 list_for_each_entry(recvd, &rcv_wq_data, list) {
                         if (recvd->sk->sk_socket == flow->sock) {
@@ -732,7 +727,6 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
                         }
                 }
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
-                mutex_unlock(&rcv_stop_mutex);
 
                 LOG_DBG("closing socket");
                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
@@ -861,14 +855,14 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
                 LOG_DBG("udp_process_msg: no flow found, creating it");
 
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                         LOG_ERR("Could not allocate flow");
                         sdu_destroy(du);
                         return -1;
@@ -885,7 +879,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 flow->addr.sin_addr.s_addr = addr.sin_addr.s_addr;
 
                 if (!is_port_id_ok(flow->port_id)) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         LOG_ERR("Port id is not ok");
                         sdu_destroy(du);
@@ -902,7 +896,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
                         if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
-                                spin_unlock(&data->flow_lock);
+                                spin_unlock(&data->lock);
                                 LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -916,7 +910,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
                         flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
@@ -932,7 +926,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 /* Store SDU in queue */
                 if (rfifo_push(flow->sdu_queue, du)) {
                         flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         LOG_ERR("Could not write %zd bytes into the fifo",
                                 sizeof(struct sdu *));
@@ -943,7 +937,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
 
                 /* FIXME: This sets the name to the server? */
                 sname = name_create_ni();
@@ -972,7 +966,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         } else {
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
@@ -987,7 +981,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         LOG_DBG("Queueing frame");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
-                                spin_unlock(&data->flow_lock);
+                                spin_unlock(&data->lock);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -997,9 +991,9 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                 }
         }
@@ -1074,9 +1068,9 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_lock(&data->flow_lock);
+                spin_lock(&data->lock);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
@@ -1091,7 +1085,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                         LOG_DBG("Queueing frame");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
-                                spin_unlock(&data->flow_lock);
+                                spin_unlock(&data->lock);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1101,9 +1095,9 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                 }
 
@@ -1152,9 +1146,9 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_lock(&data->flow_lock);
+                spin_lock(&data->lock);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
@@ -1169,7 +1163,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                         LOG_DBG("Queueing frame");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
-                                spin_unlock(&data->flow_lock);
+                                spin_unlock(&data->lock);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1179,9 +1173,9 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
                         sdu_destroy(du);
                 }
 
@@ -1293,7 +1287,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                         return -1;
                 }
 
-                spin_lock(&data->flow_lock);
+                spin_lock(&data->lock);
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->fspec_id = 1;
@@ -1309,7 +1303,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 if (!is_port_id_ok(flow->port_id)) {
                         flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         LOG_ERR("Port id is not ok");
 
@@ -1323,7 +1317,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
-                        spin_unlock(&data->flow_lock);
+                        spin_unlock(&data->lock);
 
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
@@ -1332,7 +1326,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                         return -1;
                 }
 
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
 
                 LOG_DBG("Queue has been created");
 
@@ -1402,7 +1396,6 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
         LOG_HBEAT;
 
         /* FIXME: more efficient locking and better cleanup */
-        mutex_lock(&rcv_stop_mutex);
         spin_lock_irqsave(&rcv_wq_lock, flags);
         list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
                 list_del(&recvd->list);
@@ -1418,7 +1411,6 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
                 spin_lock_irqsave(&rcv_wq_lock, flags);
         }
         spin_unlock_irqrestore(&rcv_wq_lock, flags);
-        mutex_unlock(&rcv_stop_mutex);
 
         LOG_DBG("Worker finished for now");
 }
@@ -1532,9 +1524,9 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         INIT_LIST_HEAD(&(app->list));
 
-        spin_lock(&data->app_lock);
+        spin_lock(&data->lock);
         list_add(&(app->list), &(data->reg_apps));
-        spin_unlock(&data->app_lock);
+        spin_unlock(&data->lock);
 
         return 0;
 }
@@ -1580,9 +1572,9 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
 
         name_destroy(app->app_name);
 
-        spin_lock(&data->app_lock);
+        spin_lock(&data->lock);
         list_del(&app->list);
-        spin_unlock(&data->app_lock);
+        spin_unlock(&data->lock);
 
         rkfree(app);
 
@@ -1797,9 +1789,9 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
         dir_entry->ip_address = ip_addr;
         dir_entry->port       = port_nr;
 
-        spin_lock(&data->dir_lock);
+        spin_lock(&data->lock);
         list_add(&dir_entry->list, &data->directory);
-        spin_unlock(&data->dir_lock);
+        spin_unlock(&data->lock);
 
         LOG_DBG("Added a new dir entry");
 
@@ -1872,9 +1864,9 @@ static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
         exp_reg->app_name = app_name;
         exp_reg->port     = port_nr;
 
-        spin_lock(&data->exp_lock);
+        spin_lock(&data->lock);
         list_add(&exp_reg->list, &data->exp_regs);
-        spin_unlock(&data->exp_lock);
+        spin_unlock(&data->lock);
 
         LOG_DBG("Added a new exp reg entry");
 
@@ -2143,16 +2135,16 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&data->flow_lock);
+        spin_lock(&data->lock);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 sdu_destroy(sdu);
-                spin_unlock(&data->flow_lock);
+                spin_unlock(&data->lock);
 
                 LOG_ERR("Flow is not in the right state to call this");
 
                 return -1;
         }
-        spin_unlock(&data->flow_lock);
+        spin_unlock(&data->lock);
 
         if (flow->fspec_id == 0) {
                 /* We are sending an UDP message */
@@ -2402,10 +2394,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         LOG_DBG("KFA instance %pK bound to the shim tcp-udp", inst->data->kfa);
 
-        spin_lock_init(&inst->data->flow_lock);
-        spin_lock_init(&inst->data->app_lock);
-        spin_lock_init(&inst->data->dir_lock);
-        spin_lock_init(&inst->data->exp_lock);
+        spin_lock_init(&inst->data->lock);
 
         INIT_LIST_HEAD(&(inst->data->flows));
         INIT_LIST_HEAD(&(inst->data->reg_apps));
