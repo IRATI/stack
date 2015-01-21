@@ -1361,6 +1361,7 @@ int rmt_receive(struct rmt * instance,
 {
         struct rmt_n1_port * n1_port;
         int                  ret;
+        unsigned long        flags;
 
         if (!sdu_is_ok(sdu)) {
                 LOG_ERR("Bogus SDU passed");
@@ -1382,33 +1383,33 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock(&instance->ingress.n1_ports->lock);
+        spin_lock_irqsave(&instance->ingress.n1_ports->lock, flags);
         n1_port = n1pmap_find(instance->ingress.n1_ports, from);
         if (!n1_port) {
-                spin_unlock(&instance->ingress.n1_ports->lock);
+                spin_unlock_irqrestore(&instance->ingress.n1_ports->lock, flags);
                 sdu_destroy(sdu);
                 return -1;
         }
-        spin_unlock(&instance->ingress.n1_ports->lock);
-        spin_lock(&n1_port->lock);
+        spin_unlock_irqrestore(&instance->ingress.n1_ports->lock, flags);
+        spin_lock_irqsave(&n1_port->lock, flags);
         if (rfifo_is_empty(n1_port->queue)) {
                 ret = receive_direct(instance, n1_port, sdu);
-                spin_unlock(&n1_port->lock);
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 LOG_DBG("RMT sent directly to DTP");
                 return ret;
         }
 
         if (rfifo_push_ni(n1_port->queue, sdu)) {
-                spin_unlock(&n1_port->lock);
+                spin_unlock_irqrestore(&n1_port->lock, flags);
                 sdu_destroy(sdu);
                 return -1;
         }
         atomic_inc(&n1_port->n_sdus);
-        spin_unlock(&n1_port->lock);
+        spin_unlock_irqrestore(&n1_port->lock, flags);
 
-        spin_lock(&instance->ingress.n1_ports->lock);
+        spin_lock_irqsave(&instance->ingress.n1_ports->lock, flags);
         tasklet_hi_schedule(&instance->ingress.ingress_tasklet);
-        spin_unlock(&instance->ingress.n1_ports->lock);
+        spin_unlock_irqrestore(&instance->ingress.n1_ports->lock, flags);
         LOG_DBG("RMT tasklet scheduled");
 
         return 0;
