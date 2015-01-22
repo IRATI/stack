@@ -11,6 +11,8 @@ config RINA_NORMAL_IPCP
 	help
 	  No help for the time being
 
+if RINA_NORMAL_IPCP
+
 menu "DTCP"
 choice RINA_DTCP_RCVR_ACK
        prompt "Received ACK policy"
@@ -27,7 +29,6 @@ endmenu
 config RINA_DUP
         bool "Enable system-wide DU protection"
         default n
-        depends on RINA_NORMAL_IPCP
         help
           no help for the time being
 
@@ -55,16 +56,18 @@ config RINA_IPCPS_TTL_DEFAULT
 config RINA_RMT_REGRESSION_TESTS
 	bool "RMT regression tests"
 	default n
-        depends on RINA_REGRESSION_TESTS && RINA_NORMAL_IPCP
+        depends on RINA_REGRESSION_TESTS
 	help
 	  No help for the time being
 
 config RINA_PFT_REGRESSION_TESTS
 	bool "PFT regression tests"
 	default n
-        depends on RINA_REGRESSION_TESTS && RINA_NORMAL_IPCP
+        depends on RINA_REGRESSION_TESTS
 	help
 	  No help for the time being
+
+endif
 
 config RINA_SHIM_DUMMY
 	tristate "Shim IPC Dummy (loopback)"
