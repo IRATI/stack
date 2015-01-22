@@ -2171,8 +2171,6 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         flow = find_flow(data, id);
         if (!flow) {
-
-        spin_lock_init(&data->lock);
                 LOG_ERR("could not find flow with specified port-id");
                 sdu_destroy(sdu);
                 return -1;
