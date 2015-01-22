@@ -77,12 +77,6 @@ menuconfig IPC_PROCESSES
 
 if IPC_PROCESSES
 
-config RINA_DUP
-        bool "Enable system-wide DU protection"
-        default n
-        help
-          no help for the time being
-
 menu "DTCP"
 choice RINA_DTCP_RCVR_ACK
        prompt "Received ACK policy"
@@ -95,6 +89,12 @@ config RINA_DTCP_RCVR_ACK_ATIMER
        bool "Use to rcvr-ack ATIMER"
 endchoice
 endmenu
+
+config RINA_DUP
+        bool "Enable system-wide DU protection"
+        default n
+        help
+          no help for the time being
 
 config RINA_IPCPS_CRC
         bool "Enable CRC on (all) IPCPs"
