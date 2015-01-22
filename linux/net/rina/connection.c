@@ -116,6 +116,14 @@ int conn_policies_destroy(struct conn_policies * cp_params)
                 if (policy_destroy(cp_params->initial_sequence_number))
                         retval = -1;
 
+        if (cp_params->receiver_inactivity_timer)
+                if (policy_destroy(cp_params->receiver_inactivity_timer))
+                        retval = -1;
+
+        if (cp_params->sender_inactivity_timer)
+                if (policy_destroy(cp_params->sender_inactivity_timer))
+                        retval = -1;
+
         rkfree(cp_params);
         return retval;
 }
