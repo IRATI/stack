@@ -169,16 +169,17 @@ int dt_dtp_bind(struct dt * dt, struct dtp * dtp)
 
 struct dtp * dt_dtp_unbind(struct dt * dt)
 {
-        struct dtp * tmp;
+        struct dtp *  tmp;
+        unsigned long flags;
 
         if (!dt) {
                 LOG_ERR("Bogus instance passed, cannot unbind DTP");
                 return NULL;
         }
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         if (!dt->dtp) {
-                spin_unlock(&dt->lock);
+                spin_unlock_irqrestore(&dt->lock, flags);
 
                 LOG_DBG("No DTP bound to instance %pK", dt);
                 return NULL;
@@ -186,7 +187,7 @@ struct dtp * dt_dtp_unbind(struct dt * dt)
 
         tmp     = dt->dtp;
         dt->dtp = NULL;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -220,15 +221,16 @@ int dt_dtcp_bind(struct dt * dt, struct dtcp * dtcp)
 struct dtcp * dt_dtcp_unbind(struct dt * dt)
 {
         struct dtcp * tmp;
+        unsigned long flags;
 
         if (!dt) {
                 LOG_ERR("Bogus instance passed, cannot unbind DTCP");
                 return NULL;
         }
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         if (!dt->dtcp) {
-                spin_unlock(&dt->lock);
+                spin_unlock_irqrestore(&dt->lock, flags);
 
                 LOG_DBG("No DTCP bound to instance %pK", dt);
                 return NULL;
@@ -236,7 +238,7 @@ struct dtcp * dt_dtcp_unbind(struct dt * dt)
 
         tmp      = dt->dtcp;
         dt->dtcp = NULL;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -268,16 +270,17 @@ int dt_cwq_bind(struct dt * dt, struct cwq * cwq)
 
 struct cwq * dt_cwq_unbind(struct dt * dt)
 {
-        struct cwq * tmp;
+        struct cwq *  tmp;
+        unsigned long flags;
 
         if (!dt) {
                 LOG_ERR("Bogus instance passed, cannot unbind CWQ");
                 return NULL;
         }
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         if (!dt->cwq) {
-                spin_unlock(&dt->lock);
+                spin_unlock_irqrestore(&dt->lock, flags);
 
                 LOG_DBG("No CWQ bound to instance %pK", dt);
                 return NULL;
@@ -285,7 +288,7 @@ struct cwq * dt_cwq_unbind(struct dt * dt)
 
         tmp     = dt->cwq;
         dt->cwq = NULL;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -293,15 +296,16 @@ struct cwq * dt_cwq_unbind(struct dt * dt)
 struct rtxq * dt_rtxq_unbind(struct dt * dt)
 {
         struct rtxq * tmp;
+        unsigned long flags;
 
         if (!dt) {
                 LOG_ERR("Bogus instance passed, cannot unbind RTXQ");
                 return NULL;
         }
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         if (!dt->rtxq) {
-                spin_unlock(&dt->lock);
+                spin_unlock_irqrestore(&dt->lock, flags);
 
                 LOG_DBG("No RTXQ bound to instance %pK", dt);
                 return NULL;
@@ -309,7 +313,7 @@ struct rtxq * dt_rtxq_unbind(struct dt * dt)
 
         tmp      = dt->rtxq;
         dt->rtxq = NULL;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -342,22 +346,23 @@ int dt_rtxq_bind(struct dt * dt, struct rtxq * rtxq)
 struct efcp * dt_efcp_unbind(struct dt * dt)
 {
         struct efcp * tmp;
+        unsigned long flags;
 
         if (!dt) {
                 LOG_ERR("Bogus instance passed, cannot unbind EFCP");
                 return NULL;
         }
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         if (!dt->efcp) {
-                spin_unlock(&dt->lock);
+                spin_unlock_irqrestore(&dt->lock, flags);
 
                 LOG_ERR("No EFCP bound to instance %pK", dt);
                 return NULL;
         }
         tmp = dt->efcp;
         dt->efcp = NULL;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -492,28 +497,30 @@ uint_t dt_sv_max_sdu_size(struct dt * dt)
 
 timeout_t dt_sv_mpl(struct dt * dt)
 {
-        uint_t tmp;
+        uint_t        tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return 0;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->MPL;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
 
 timeout_t dt_sv_r(struct dt * dt)
 {
-        uint_t tmp;
+        uint_t        tmp;
+        unsigned long flags;
 
         if (!dt || !dt->sv)
                 return 0;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->R;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
@@ -550,12 +557,14 @@ seq_num_t dt_sv_rcv_lft_win(struct dt * dt)
 
 int dt_sv_rcv_lft_win_set(struct dt * dt, seq_num_t rcv_lft_win)
 {
+        unsigned long flags;
+
         if (!dt || !dt->sv)
                 return -1;
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         dt->sv->rcv_left_window_edge = rcv_lft_win;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return 0;
 }
@@ -591,14 +600,15 @@ int dt_sv_window_closed_set(struct dt * dt, bool closed)
 
 timeout_t dt_sv_tr(struct dt * dt)
 {
-        timeout_t tmp;
+        unsigned long flags;
+        timeout_t     tmp;
 
         ASSERT(dt);
         ASSERT(dt->sv);
 
-        spin_lock(&dt->lock);
+        spin_lock_irqsave(&dt->lock, flags);
         tmp = dt->sv->tr;
-        spin_unlock(&dt->lock);
+        spin_unlock_irqrestore(&dt->lock, flags);
 
         return tmp;
 }
