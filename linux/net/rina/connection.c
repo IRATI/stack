@@ -134,9 +134,11 @@ int connection_destroy(struct connection * conn)
         if (!conn)
                 return -1;
 
-        if (conn->policies_params)
+        if (conn->policies_params) {
                 if (conn_policies_destroy(conn->policies_params))
                         return -1;
+                conn->policies_params = NULL;
+        }
 
         rkfree(conn);
 
