@@ -119,6 +119,12 @@ PASS_TESTS =					\
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
 	
 FUNCTIONAL_PASS_TESTS = \
+	test-netlink-manager \
+	test-netlink-parsers \
+	test-concurrency \
+	test-syscalls \
+	test-timer \
+	test-cdap \
 	test-rib
 
 FUNCTIONAL_XFAIL_TESTS =
@@ -126,7 +132,7 @@ FUNCTIONAL_XFAIL_TESTS =
 FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
 
 KERNEL_DEBUG_PASS_TESTS =			\
-	test-syscalls
+	test-syscalls 
 
 KERNEL_DEBUG_XFAIL_TESTS =
 
