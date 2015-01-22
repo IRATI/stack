@@ -452,8 +452,9 @@ int rmt_send_port_id(struct rmt * instance,
                      port_id_t    id,
                      struct pdu * pdu)
 {
-        struct rmt_n1_port *   n1_port;
-        unsigned long          flags;
+        struct n1pmap *      out_n1_ports;
+        struct rmt_n1_port * out_n1_port;
+        unsigned long        flags;
 
         if (!pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus PDU passed");
@@ -472,42 +473,44 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock_irqsave(&instance->egress.n1_ports->lock, flags);
-        n1_port = n1pmap_find(instance->egress.n1_ports, id);
-        if (!n1_port) {
-                spin_unlock_irqrestore(&instance->egress.n1_ports->lock, flags);
+        out_n1_ports = instance->egress.n1_ports;
+
+        spin_lock_irqsave(&out_n1_ports->lock, flags);
+        out_n1_port = n1pmap_find(out_n1_ports, id);
+        if (!out_n1_port) {
+                spin_unlock_irqrestore(&out_n1_ports->lock, flags);
                 pdu_destroy(pdu);
                 return -1;
         }
-        spin_unlock_irqrestore(&instance->egress.n1_ports->lock, flags);
+        spin_unlock_irqrestore(&out_n1_ports->lock, flags);
 
-        spin_lock_irqsave(&n1_port->lock, flags);
-        atomic_inc(&n1_port->n_sdus);
-        if (n1_port->state == PORT_STATE_ENABLED &&
-            atomic_read(&n1_port->n_sdus) == 1) {
+        spin_lock_irqsave(&out_n1_port->lock, flags);
+        atomic_inc(&out_n1_port->n_sdus);
+        if (out_n1_port->state == PORT_STATE_ENABLED &&
+            atomic_read(&out_n1_port->n_sdus) == 1) {
                 int ret = 0;
-                n1_port->state = PORT_STATE_BUSSY;
-                spin_unlock_irqrestore(&n1_port->lock, flags);
-                if (n1_port_write(instance->serdes, n1_port, pdu))
+                out_n1_port->state = PORT_STATE_BUSSY;
+                spin_unlock_irqrestore(&out_n1_port->lock, flags);
+                if (n1_port_write(instance->serdes, out_n1_port, pdu))
                         ret = -1;
 
-                spin_lock_irqsave(&n1_port->lock, flags);
-                if (atomic_read(&n1_port->n_sdus) <= 0) {
-                        atomic_set(&n1_port->n_sdus, 0);
-                        if (n1_port->state != PORT_STATE_DISABLED) {
+                spin_lock_irqsave(&out_n1_port->lock, flags);
+                if (atomic_read(&out_n1_port->n_sdus) <= 0) {
+                        atomic_set(&out_n1_port->n_sdus, 0);
+                        if (out_n1_port->state != PORT_STATE_DISABLED) {
                                 LOG_DBG("RMT: sent and enabling port");
-                                n1_port->state = PORT_STATE_ENABLED;
+                                out_n1_port->state = PORT_STATE_ENABLED;
                         }
                 } else {
                         LOG_DBG("RMT: sent and scheduling cause there are more"
                                 " pdus in the port");
                         tasklet_hi_schedule(&instance->egress.egress_tasklet);
                 }
-                spin_unlock_irqrestore(&n1_port->lock, flags);
+                spin_unlock_irqrestore(&out_n1_port->lock, flags);
                 return ret;
-        } else if (n1_port->state == PORT_STATE_BUSSY) {
-                if (rfifo_push_ni(n1_port->queue, pdu)) {
-                        spin_unlock_irqrestore(&n1_port->lock, flags);
+        } else if (out_n1_port->state == PORT_STATE_BUSSY) {
+                if (rfifo_push_ni(out_n1_port->queue, pdu)) {
+                        spin_unlock_irqrestore(&out_n1_port->lock, flags);
                         pdu_destroy(pdu);
                         return -1;
                 }
@@ -518,7 +521,7 @@ int rmt_send_port_id(struct rmt * instance,
                 return -1;
         }
 
-        spin_unlock_irqrestore(&n1_port->lock, flags);
+        spin_unlock_irqrestore(&out_n1_port->lock, flags);
 
         return 0;
 }
@@ -1359,8 +1362,8 @@ int rmt_receive(struct rmt * instance,
                 struct sdu * sdu,
                 port_id_t    from)
 {
-        struct rmt_n1_port * n1_port;
-        int                  ret;
+        struct n1pmap *      in_n1_ports;
+        struct rmt_n1_port * in_n1_port;
         unsigned long        flags;
 
         if (!sdu_is_ok(sdu)) {
@@ -1383,33 +1386,34 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
 
-        spin_lock_irqsave(&instance->ingress.n1_ports->lock, flags);
-        n1_port = n1pmap_find(instance->ingress.n1_ports, from);
-        if (!n1_port) {
-                spin_unlock_irqrestore(&instance->ingress.n1_ports->lock, flags);
+        in_n1_ports = instance->ingress.n1_ports;
+
+        spin_lock_irqsave(&in_n1_ports->lock, flags);
+        in_n1_port = n1pmap_find(in_n1_ports, from);
+        if (!in_n1_port) {
+                spin_unlock_irqrestore(&in_n1_ports->lock, flags);
                 sdu_destroy(sdu);
                 return -1;
         }
-        spin_unlock_irqrestore(&instance->ingress.n1_ports->lock, flags);
-        spin_lock_irqsave(&n1_port->lock, flags);
-        if (rfifo_is_empty(n1_port->queue)) {
-                ret = receive_direct(instance, n1_port, sdu);
-                spin_unlock_irqrestore(&n1_port->lock, flags);
+        spin_unlock_irqrestore(&in_n1_ports->lock, flags);
+        spin_lock_irqsave(&in_n1_port->lock, flags);
+        if (rfifo_is_empty(in_n1_port->queue)) {
+                spin_unlock_irqrestore(&in_n1_port->lock, flags);
                 LOG_DBG("RMT sent directly to DTP");
-                return ret;
+                return receive_direct(instance, in_n1_port, sdu);
         }
 
-        if (rfifo_push_ni(n1_port->queue, sdu)) {
-                spin_unlock_irqrestore(&n1_port->lock, flags);
+        if (rfifo_push_ni(in_n1_port->queue, sdu)) {
+                spin_unlock_irqrestore(&in_n1_port->lock, flags);
                 sdu_destroy(sdu);
                 return -1;
         }
-        atomic_inc(&n1_port->n_sdus);
-        spin_unlock_irqrestore(&n1_port->lock, flags);
+        atomic_inc(&in_n1_port->n_sdus);
+        spin_unlock_irqrestore(&in_n1_port->lock, flags);
 
-        spin_lock_irqsave(&instance->ingress.n1_ports->lock, flags);
+        spin_lock_irqsave(&in_n1_ports->lock, flags);
         tasklet_hi_schedule(&instance->ingress.ingress_tasklet);
-        spin_unlock_irqrestore(&instance->ingress.n1_ports->lock, flags);
+        spin_unlock_irqrestore(&in_n1_ports->lock, flags);
         LOG_DBG("RMT tasklet scheduled");
 
         return 0;
