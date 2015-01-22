@@ -676,7 +676,7 @@ static void rtx_timer_func(void * data)
 
 #if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
-                rtimer_restart(q->r_timer, dt_sv_tr(q->parent));
+                rtimer_restart(q->r_timer, tr);
         LOG_DBG("RTX timer ending...");
 #endif
 
@@ -812,18 +812,17 @@ int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
              unsigned int  tr)
 {
+        unsigned long flags;
+
         if (!q)
                 return -1;
 
-        spin_lock(&q->lock);
+        spin_lock_irqsave(&q->lock, flags);
         rtxqueue_entries_ack(q->queue, seq_num);
 #if RTIMER_ENABLED
-        if (rtimer_restart(q->r_timer, tr)) {
-                spin_unlock(&q->lock);
-                return -1;
-        }
+        rtimer_restart(q->r_timer, tr);
 #endif
-        spin_unlock(&q->lock);
+        spin_unlock_irqrestore(&q->lock, flags);
 
         return 0;
 }

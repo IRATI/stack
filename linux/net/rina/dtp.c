@@ -762,6 +762,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         timeout_t                a;
         struct seq_queue_entry * pos, * n;
         seq_num_t                ret;
+        unsigned long            flags;
         /*struct rqueue *          to_pos*/
 
         ASSERT(dtp);
@@ -795,7 +796,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 return -1;
         }*/
 
-        spin_lock(&seqq->lock);
+        spin_lock_irqsave(&seqq->lock, flags);
         LWE = dt_sv_rcv_lft_win(dt);
         ret = LWE;
         LOG_DBG("LWEU: Original LWE = %u", LWE);
@@ -804,7 +805,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
                 pdu = pos->pdu;
                 if (!pdu_is_ok(pdu)) {
-                        spin_unlock(&seqq->lock);
+                        spin_unlock_irqrestore(&seqq->lock, flags);
 
                         LOG_ERR("Bogus data, bailing out");
                         return LWE;
@@ -880,7 +881,7 @@ seq_num_t process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         }
 finish:
-        spin_unlock(&seqq->lock);
+        spin_unlock_irqrestore(&seqq->lock, flags);
 
         /*while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
@@ -922,11 +923,9 @@ static void tf_a(void * o)
                 return;
         }
 
-        dtcp = dt_dtcp(dtp->parent);
         dt   = dtp->parent;
-        /* Invoke delimiting and update left window edge */
-
-        a = dt_sv_a(dtp->parent);
+        dtcp = dt_dtcp(dt);
+        a    = dt_sv_a(dt);
 
         if (dtcp) {
                 if (dtcp_sending_ack_policy(dtcp)){
@@ -1384,6 +1383,7 @@ int dtp_receive(struct dtp * instance,
         timeout_t             LWE;
         bool                  in_order;
         seq_num_t             max_sdu_gap;
+        unsigned long         flags;
         /*struct rqueue *       to_post;*/
 
         /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
@@ -1549,7 +1549,7 @@ int dtp_receive(struct dtp * instance,
                 pdu_destroy(pdu);
                 return -1;
         }*/
-        spin_lock(&instance->seqq->lock);
+        spin_lock_irqsave(&instance->seqq->lock, flags);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
         while (pdu && (seq_num == LWE + 1)) {
@@ -1569,18 +1569,20 @@ int dtp_receive(struct dtp * instance,
         }
         if (pdu)
                 seq_queue_push_ni(instance->seqq->queue, pdu);
-        spin_unlock(&instance->seqq->lock);
+        spin_unlock_irqrestore(&instance->seqq->lock, flags);
+
+        if (!pdu && a)
+                rtimer_stop(instance->timers.a);
+        else if (pdu && a) {
+                LOG_DBG("Going to restart A timer with t = %d", a/AF);
+                rtimer_restart(instance->timers.a, a/AF);
+        }
 
         /*while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
                 if (pdu)
                         pdu_post(instance, pdu);
         }*/
-
-        if (a) {
-                LOG_DBG("Going to start A timer with t = %d", a/AF);
-                rtimer_start(instance->timers.a, a/AF);
-        }
 
         if (dtcp) {
                 if (dtcp_sv_update(dtcp, seq_num)) {
