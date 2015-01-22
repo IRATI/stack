@@ -111,13 +111,14 @@ static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
-        seq_num_t tmp;
+        seq_num_t     tmp;
+        unsigned long flags;
 
         ASSERT(sv);
 
-        spin_lock(&sv->lock);
+        spin_lock_irqsave(&sv->lock, flags);
         tmp = ++sv->last_seq_nr_sent;
-        spin_unlock(&sv->lock);
+        spin_unlock_irqrestore(&sv->lock, flags);
 
         return tmp;
 }
