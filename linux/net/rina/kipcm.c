@@ -768,6 +768,9 @@ static int notify_ipcp_conn_create_req(void *             data,
                                                attrs->qos_id,
                                                attrs->cp_params);
 
+        /* The ownership has been passed to connection_create. */
+        attrs->cp_params = NULL;
+
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");
                 goto fail;
@@ -880,6 +883,9 @@ static int notify_ipcp_conn_create_arrived(void *             data,
                                                        attrs->qos_id,
                                                        attrs->dst_cep,
                                                        attrs->cp_params);
+
+        /* The ownership has been passed to connection_create_arrived. */
+        attrs->cp_params = NULL;
 
         if (!is_cep_id_ok(src_cep)) {
                 LOG_ERR("IPC process could not create connection");

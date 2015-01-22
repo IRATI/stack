@@ -134,9 +134,19 @@ int connection_destroy(struct connection * conn)
         if (!conn)
                 return -1;
 
-        if (conn->policies_params)
+        /* FIXME Here we should make sure that all the asynchronous users
+         * of this connection (e.g. workqueues in the normal ipcp
+         * implementation) are stopped before proceeding to destroy the
+         * connection object. Setting the pointer to NULL is a workaround
+         * to minimize the likelyhood of accessing dellocated memory.
+         * This should be done with reference counting or locking.
+         */
+
+        if (conn->policies_params) {
                 if (conn_policies_destroy(conn->policies_params))
                         return -1;
+                conn->policies_params = NULL;
+        }
 
         rkfree(conn);
 
