@@ -468,6 +468,9 @@ rnl_ipcp_conn_create_req_msg_attrs_destroy(struct rnl_ipcp_conn_create_req_msg_a
         if (!attrs)
                 return -1;
 
+        if (attrs->cp_params)
+                conn_policies_destroy(attrs->cp_params);
+
         rkfree(attrs);
         return 0;
 }
@@ -477,6 +480,9 @@ rnl_ipcp_conn_create_arrived_msg_attrs_destroy(struct rnl_ipcp_conn_create_arriv
 {
         if (!attrs)
                 return -1;
+
+        if (attrs->cp_params)
+                conn_policies_destroy(attrs->cp_params);
 
         rkfree(attrs);
         return 0;
