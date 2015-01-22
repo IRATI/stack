@@ -1097,7 +1097,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
 
-                        if (rfifo_push(flow->sdu_queue, du)) {
+                        if (rfifo_push_ni(flow->sdu_queue, du)) {
                                 spin_unlock(&data->lock);
 
                                 LOG_ERR("Failed to write %zd bytes"
@@ -1175,7 +1175,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
 
-                        if (rfifo_push(flow->sdu_queue, du)) {
+                        if (rfifo_push_ni(flow->sdu_queue, du)) {
                                 spin_unlock(&data->lock);
 
                                 LOG_ERR("Failed to write %zd bytes"
