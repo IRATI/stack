@@ -25,6 +25,8 @@
 
 
 class RIBDaemonSpecific : public rina::RIBDaemon {
+public:
+	RIBDaemonSpecific(const rina::RIBSchema *rib_schema): rina::RIBDaemon(rib_schema){}
     void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
                     unsigned int address, rina::ICDAPResponseMessageHandler* cdapMessageHandler) {
     }
@@ -48,14 +50,11 @@ public:
 	NewObject(RIBDaemonSpecific *rib_daemon,
 			std::string object_class, std::string object_name,
 			unsigned int id) :
-		rina::BaseRIBObject(rib_daemon, object_class, 1, object_name) {
-		id_ = id;
-	}
+		rina::BaseRIBObject(rib_daemon, object_class, id, object_name)
+	{}
     const void* get_value() const {
     	return 0;
     }
-private:
-	unsigned int id_;
 };
 
 NewObject* createNewObject(RIBDaemonSpecific *rib_daemon,
@@ -65,56 +64,103 @@ NewObject* createNewObject(RIBDaemonSpecific *rib_daemon,
 	return obj;
 }
 
-class ChecksSchema{
+class CheckSchema{
 public:
-	ChecksSchema(){
-		rina::rib_ver_t version;
-		rina::RIBSchema rib(version);
+	static const int RIB_MODEL = 11;
+	static const int RIB_MAJ_VERSION = 1;
+	static const int RIB_MIN_VERSION = 0;
+	static const int RIB_ENCODING = 16;
+	CheckSchema(rina::RIBSchema *rib_schema){
+		rib_schema_ = rib_schema;
 	}
+	bool RIBSchema_populateSchema_true() {
+		if (rib_schema_->ribSchemaDefContRelation("", "ROOT", "root", true, 1) != rina::RIB_SUCCESS){
+			return false;
+		}
+		if (rib_schema_->ribSchemaDefContRelation("ROOT", "A", "A", false, 2) != rina::RIB_SUCCESS){
+			return false;
+		}
+		if (rib_schema_->ribSchemaDefContRelation("A", "Barcelona", "A, Barcelona", false, 10) != rina::RIB_SUCCESS){
+			return false;
+		}
+		if (rib_schema_->ribSchemaDefContRelation("Barcelona", "1", "A, Barcelona, 1", false, 10) != rina::RIB_SUCCESS){
+			return false;
+		}
+		if (rib_schema_->ribSchemaDefContRelation("1", "test1", "A, Barcelona, 1, test1", false, 10) != rina::RIB_SUCCESS){
+			return false;
+		}
+		if (rib_schema_->ribSchemaDefContRelation("1", "test2", "A, Barcelona, 1, test2", false, 10) != rina::RIB_SUCCESS){
+			return false;
+		}
+		if (rib_schema_->ribSchemaDefContRelation("test2", "test3", "A,Barcelona, 1, test2, test3", false, 10) != rina::RIB_SUCCESS){
+			return false;
+		}
+		return true;
+	}
+private:
+	rina::RIBSchema *rib_schema_;
 };
 
-class ChecksRIB {
+class CheckRIB {
 public:
-	ChecksRIB(){
-		rib_daemon_ = new RIBDaemonSpecific();
+	CheckRIB(const rina::RIBSchema *rib_schema){
+		rib_daemon_ = new RIBDaemonSpecific(rib_schema);
 		object1_ = createNewObject(rib_daemon_,  "A", "A", idFactory_);
-	 	object2_ = createNewObject(rib_daemon_, "Barcelona", "A = 1, Barcelona", idFactory_);
+	 	object2_ = createNewObject(rib_daemon_, "Barcelona", "A= 1, Barcelona", idFactory_);
 		object3_ = createNewObject(rib_daemon_, "1", "A = 1, Barcelona = 1, 1", idFactory_);
-		object4_ = createNewObject(rib_daemon_, "test1", "A = 1, Barcelona = 1, 1 = 1, test1", idFactory_);
+		object4_ = createNewObject(rib_daemon_, "test1", "A=1, Barcelona = 1, 1 = 1, test1", idFactory_);
 		object5_ = createNewObject(rib_daemon_, "test2", "A = 1, Barcelona = 1, 1 = 2, test2", idFactory_);
 		object6_ = createNewObject(rib_daemon_, "test3", "A = 1, Barcelona = 1, 1 = 2, test2=1, test3", idFactory_);
 	}
-	~ChecksRIB(){
-		delete object1_;
+	~CheckRIB(){
+		delete rib_daemon_;
 	}
-	bool constructRIB(){
+	bool RIBDaemon_addRIBObject_create_true(){
 		try
 		{
 			rib_daemon_->addRIBObject(object1_);
 			rib_daemon_->addRIBObject(object2_);
+			rib_daemon_->addRIBObject(object3_);
+			rib_daemon_->addRIBObject(object4_);
+			rib_daemon_->addRIBObject(object5_);
+			rib_daemon_->addRIBObject(object6_);
 		}catch(Exception &e1)
+		{
+			std::cout<<"Failed with error: "<<e1.what()<<std::endl;
+			return false;
+		}
+		return true;
+	}
+	bool RIBDaemon_addRIBObject_checkCreatedRelations_true(){
+		if (object2_->get_parent_name() != object1_->get_name())
+			return false;
+		if (object3_->get_parent_name() != object2_->get_name())
+			return false;
+		if (object4_->get_parent_name() != object3_->get_name())
+			return false;
+		if (object5_->get_parent_name() != object3_->get_name())
+			return false;
+		if (object6_->get_parent_name() != object5_->get_name())
+			return false;
+		try {
+			rib_daemon_->addRIBObject(object2_);
+			return false;
+		} catch (Exception &e1){}
+		return true;
+	}
+	bool RIBDaemon_readObject_true(){
+		try{
+		NewObject *object_recovered = (NewObject*)rib_daemon_->readObject(object2_->get_class(), object2_->get_name());
+		if (object2_ != object_recovered)
+			return false;
+		object_recovered = (NewObject*) rib_daemon_->readObject(object5_->get_class(), object5_->get_instance());
+		if (object5_ != object_recovered)
+			return false;
+		}
+		catch(Exception &e1)
 		{
 			return false;
 		}
-		return true;
-	}
-	bool checkRelations(){
-		if (object2_->get_parent_name() != object1_->get_name())
-			return false;
-		/*
-		if (object5_->get_parent() != object3_)
-			return false;
-		try {
-			object3_->add_child(object5_);
-			return false;
-		} catch (Exception &e1){
-			std::cout<<"We try to add a child which is already a child: " <<e1.what()<<std::endl;
-		}
-		*/
-		return true;
-	}
-	bool checkRemoval(){
-
 		return true;
 	}
 private:
@@ -131,31 +177,50 @@ private:
 
 
 int main() {
+	CheckRIB checks_rib(0);
+/*	rina::rib_ver_t version;
+	version.model = CheckSchema::RIB_MODEL;
+	version.major_version = CheckSchema::RIB_MAJ_VERSION;
+	version.minor_version = CheckSchema::RIB_MIN_VERSION;
+	version.encoding = CheckSchema::RIB_ENCODING;
 
-ChecksRIB checks;
+	rina::RIBSchema rib_schema(version);
 
-bool test_result = true;
+	CheckSchema checks_schema(0);
 
-std::cout<<std::endl <<	"///////////////////////////////////////" << std::endl <<
-						"/// test-rib TEST 2 : construct RIB ///" << std::endl <<
-						"///////////////////////////////////////" << std::endl;
+	std::cout<<std::endl <<	"///////////////////////////////////////" << std::endl <<
+							"// test-rib TEST RIBSchema: creation //" << std::endl <<
+							"///////////////////////////////////////" << std::endl;
 
-if (!checks.constructRIB()){
-	std::cout<<"TEST FAILED"<<std::endl;
-	test_result = false;
-}
+	if (!checks_schema.RIBSchema_populateSchema_true()){
+		std::cout<<"TEST FAILED"<<std::endl;
+		return -1;
+	}
+*/
+	std::cout<<std::endl <<	"///////////////////////////////////////" << std::endl <<
+							"/// test-rib TEST 2 : construct RIB ///" << std::endl <<
+							"///////////////////////////////////////" << std::endl;
 
-std::cout<<std::endl <<	"///////////////////////////////////////" << std::endl <<
-						"// test-rib TEST 3 : check relations //" << std::endl <<
-						"///////////////////////////////////////" << std::endl;
-if (!checks.checkRelations()){
-	std::cout<<"TEST FAILED"<<std::endl;
-	test_result = false;
-}
+	if (!checks_rib.RIBDaemon_addRIBObject_create_true()){
+		std::cout<<"TEST FAILED"<<std::endl;
+		return -1;
+	}
 
+	std::cout<<std::endl <<	"///////////////////////////////////////" << std::endl <<
+							"// test-rib TEST 3 : check relations //" << std::endl <<
+							"///////////////////////////////////////" << std::endl;
+	if (!checks_rib.RIBDaemon_addRIBObject_checkCreatedRelations_true()){
+		std::cout<<"TEST FAILED"<<std::endl;
+		return -1;
+	}
 
-if (test_result)
+	std::cout<<std::endl <<	"///////////////////////////////////////" << std::endl <<
+							"//// test-rib TEST 3 : readObjects ////" << std::endl <<
+							"///////////////////////////////////////" << std::endl;
+	if (!checks_rib.RIBDaemon_readObject_true()){
+		std::cout<<"TEST FAILED"<<std::endl;
+		return -1;
+	}
+
 	return 0;
-else
-	return -1;
 }

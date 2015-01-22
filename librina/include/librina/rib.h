@@ -93,69 +93,7 @@ public:
 class IRIBDaemon;
 class IEncoder;
 
-/// Base RIB Object. API for the create/delete/read/write/start/stop RIB
-/// functionality for certain objects (identified by objectNames)
-class BaseRIBObject {
-public:
-        virtual ~BaseRIBObject(){};
-        BaseRIBObject(IRIBDaemon * rib_daemon, const std::string& object_class,
-        		long object_instance, std::string& object_name);
-        RIBObjectData get_data();
-        virtual std::string get_displayable_value();
-        virtual const void* get_value() const = 0;
 
-        /// Parent-child management operations
-        const std::list<BaseRIBObject*>& get_children() const;
-        void add_child(BaseRIBObject * child);
-        void remove_child(const std::string& object_name);
-
-        /// Local invocations
-        virtual void createObject(const std::string& objectClass,
-                                  const std::string& objectName,
-                                  const void* objectValue);
-        virtual void deleteObject(const void* objectValue);
-        virtual BaseRIBObject * readObject();
-        virtual void writeObject(const void* object_value);
-        virtual void startObject(const void* object);
-        virtual void stopObject(const void* object);
-
-        /// Remote invocations, resulting from CDAP messages
-        virtual void remoteCreateObject(void * object_value, const std::string& object_name,
-                        int invoke_id, CDAPSessionDescriptor * session_descriptor);
-        virtual void remoteDeleteObject(int invoke_id,
-                        CDAPSessionDescriptor * session_descriptor);
-        virtual void remoteReadObject(int invoke_id,
-                        CDAPSessionDescriptor * session_descriptor);
-        virtual void remoteCancelReadObject(int invoke_id,
-                        CDAPSessionDescriptor * cdapSessionDescriptor);
-        virtual void remoteWriteObject(void * object_value, int invoke_id,
-                        CDAPSessionDescriptor * cdapSessionDescriptor);
-        virtual void remoteStartObject(void * object_value, int invoke_id,
-                        CDAPSessionDescriptor * cdapSessionDescriptor);
-        virtual void remoteStopObject(void * object_value, int invoke_id,
-                        CDAPSessionDescriptor * cdapSessionDescriptor);
-        const std::string& get_class() const;
-        const std::string& get_name() const;
-        const std::string& get_parent_name() const;
-        long get_instance() const;
-        void set_parent(BaseRIBObject* parent);
-private:
-        std::string class_;
-        std::string name_;
-        long instance_;
-        BaseRIBObject *parent_;
-        IEncoder *encoder_;
-        IRIBDaemon *base_rib_daemon_;
-
-        std::list<BaseRIBObject*> children_;
-        void operation_not_supported();
-        void operation_not_supported(const void* object);
-        void operation_not_supported(const CDAPMessage * cdapMessage,
-                        CDAPSessionDescriptor * cdapSessionDescriptor);
-        void operartion_not_supported(const std::string& objectClass,
-                                      const std::string& objectName,
-                        const void* objectValue);
-};
 
 /// Common interface for update strategies implementations. Can be on demand, scheduled, periodic
 class IUpdateStrategy {
@@ -279,11 +217,11 @@ public:
         void * complex_value_;
 };
 
+class BaseRIBObject;
 /// Interface that provides the RIB Daemon API
 class IRIBDaemon {
 public:
         virtual ~IRIBDaemon(){};
-
         /// Add an object to the RIB
         /// @param ribHandler
         /// @param objectName
@@ -369,13 +307,20 @@ public:
                                   const NotificationPolicy * notificationPolicy) = 0;
 
         /// Read an object from the RIB
-        /// @param objectClass the class of the object
-        /// @param objectName the name of the object
-        /// @param objectInstance the instance of the object
+        /// @param object_class the class of the object
+        /// @param object_name the name of the object
         /// @return a RIB object
         /// @throws Exception
-        virtual BaseRIBObject * readObject(const std::string& objectClass,
-                        const std::string& objectName) = 0;
+        virtual BaseRIBObject * readObject(const std::string& object_class,
+                        const std::string& object_name) = 0;
+
+        /// Read an object from the RIB
+        /// @param object_class the class of the object
+        /// @param object_instance the instance of the object
+        /// @return a RIB object
+        /// @throws Exception
+        virtual BaseRIBObject * readObject(const std::string& object_class,
+                        long object_instance) = 0;
 
         /// Update the value of an object in the RIB
     /// @param objectClass the class of the object
@@ -407,9 +352,13 @@ public:
         virtual void stopObject(const std::string& objectClass,
                                 const std::string& objectName,
                                 const void* objectValue) = 0;
-
+/* TODO: REMOVE or REUSE depending on the mess caused in ipcp
+    	virtual BaseRIBObject* getRIBObject(const std::string& objectClass,
+    					const std::string& objectName, bool check) = 0;
+    	virtual BaseRIBObject* getRIBObject(const std::string& objectClass,
+    					long instance, bool check) = 0;
         virtual std::list<BaseRIBObject *> getRIBObjects() = 0;
-
+*/
         /// Request the establishment of an application connection with another IPC Process
         /// @param auth_mech
         /// @param auth_value
@@ -632,12 +581,86 @@ typedef struct rib_ver{
 	int encoding;
 }rib_ver_t;
 
+// TODO: Convert into exception
+/**
+* RIB library result codes
+*/
+enum rib_res{
+	/* General code for success */
+	RIB_SUCCESS = 0,
+	/* Operation in progress (async) */
+	RIB_IN_PROGRESS = 1,
+	/* General error */
+	RIB_UNKOWN_ERROR = -1,
+	//
+	// Negocation
+	//
+	/* There is no supported RIB version that can be understood */
+	RIB_VER_MISMATCH_ERR = -2,
+	//
+	// Schema
+	//
+	/* The RIB schema file extension is unknown */
+	RIB_SCHEMA_EXT_ERR = -3,
+	/* Error during RIB scheema file parsing */
+	RIB_SCHEMA_FORMAT_ERR = -4,
+	/* General validation error (unknown) */
+	RIB_SCHEMA_VALIDATION_ERR = -5,
+	/* Validation error, missing mandatory object */
+	RIB_SCHEMA_VAL_MAN_ERR = -6,
+	//
+	// Invoke IDs
+	//
+	/* Unkown Invoke ID */
+	RIB_INVALID_INVOKE_ID_ERR = -7,
+	/* Operation associated with the invoke ID has concluded */
+	RIB_EXPIRED_INVOKE_ID_ERR = -8,
+	//
+	// Misc
+	//
+	//TODO: Other error codes
+};
 
+class RIBSchemaObject{
+public:
+	RIBSchemaObject(const std::string& class_name, const std::string& name,
+			const bool mandatory, const unsigned max_objs);
+	void addChild(RIBSchemaObject *object);
+	const std::string& get_class_name() const;
+	unsigned get_max_objs() const;
+private:
+	std::string name_;
+	std::string class_name_;
+	RIBSchemaObject *parent_;
+	std::list<RIBSchemaObject*> children_;
+	bool mandatory_;
+	unsigned max_objs_;
+};
+
+class RIB;
+
+class RIBSchema {
+public:
+	friend class RIB;
+	static const char FIELD_SEPARATOR = ',';
+	static const char ID_SEPARATOR = '=';
+	RIBSchema(const rib_ver_t& version);
+	rib_res ribSchemaDefContRelation(const std::string& container_cn, const std::string& class_name,
+			const std::string name, const bool mandatory,
+			const unsigned max_objs);
+private:
+	bool validateAddObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
+	bool validateRemoveObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
+	std::string parseName(const std::string& name);
+	std::string getParentName(const std::string& name);
+    rib_ver_t version_;
+    std::map<std::string, RIBSchemaObject*> rib_schema_;
+};
 /// A simple RIB implementation, based on a hashtable of RIB objects
 /// indexed by object name
 class RIB : public rina::Lockable {
 public:
-	RIB();
+	RIB(const RIBSchema *schema);
 	~RIB() throw();
 
 	/// Given an objectname of the form "substring\0substring\0...substring" locate
@@ -646,14 +669,87 @@ public:
 	/// @return
 	BaseRIBObject* getRIBObject(const std::string& objectClass,
 					const std::string& objectName, bool check);
+	BaseRIBObject* getRIBObject(const std::string& objectClass,
+					long instance, bool check);
 	void addRIBObject(BaseRIBObject* ribObject);
-	BaseRIBObject * removeRIBObject(const std::string& objectName);
+	BaseRIBObject* removeRIBObject(const std::string& objectName);
+	BaseRIBObject* removeRIBObject(long instance);
 	std::list<BaseRIBObject*> getRIBObjects();
 
 private:
 	std::string get_parent_name(const std::string child_name)const;
 	rib_ver_t version_;
-	std::map<std::string, BaseRIBObject*> rib_;
+	std::map<std::string, BaseRIBObject*> rib_by_name_;
+	std::map<long, BaseRIBObject*> rib_by_instance_;
+	const RIBSchema *rib_schema_;
+};
+
+/// Base RIB Object. API for the create/delete/read/write/start/stop RIB
+/// functionality for certain objects (identified by objectNames)
+class BaseRIBObject {
+public:
+	friend class RIBSchema;
+	friend void RIB::addRIBObject(BaseRIBObject *obj);
+	virtual ~BaseRIBObject(){};
+	BaseRIBObject(IRIBDaemon *rib_daemon, const std::string& object_class,
+			long object_instance, std::string& object_name);
+	RIBObjectData get_data();
+	virtual std::string get_displayable_value();
+	virtual const void* get_value() const = 0;
+
+	/// Local invocations
+	virtual void createObject(const std::string& objectClass,
+							  const std::string& objectName,
+							  const void* objectValue);
+	virtual void deleteObject(const void* objectValue);
+	virtual BaseRIBObject * readObject();
+	virtual void writeObject(const void* object_value);
+	virtual void startObject(const void* object);
+	virtual void stopObject(const void* object);
+
+	/// Remote invocations, resulting from CDAP messages
+	virtual void remoteCreateObject(void * object_value, const std::string& object_name,
+					int invoke_id, CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteDeleteObject(int invoke_id,
+					CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteReadObject(int invoke_id,
+					CDAPSessionDescriptor * session_descriptor);
+	virtual void remoteCancelReadObject(int invoke_id,
+					CDAPSessionDescriptor * cdapSessionDescriptor);
+	virtual void remoteWriteObject(void * object_value, int invoke_id,
+					CDAPSessionDescriptor * cdapSessionDescriptor);
+	virtual void remoteStartObject(void * object_value, int invoke_id,
+					CDAPSessionDescriptor * cdapSessionDescriptor);
+	virtual void remoteStopObject(void * object_value, int invoke_id,
+					CDAPSessionDescriptor * cdapSessionDescriptor);
+	const std::string& get_class() const;
+	const std::string& get_name() const;
+	const std::string& get_parent_name() const;
+	const std::string& get_parent_class() const;
+	long get_instance() const;
+	void set_parent(BaseRIBObject* parent);
+private:
+	/// Parent-child management operations
+	const std::list<BaseRIBObject*>& get_children() const;
+	void add_child(BaseRIBObject *child);
+	void remove_child(const std::string& object_name);
+
+	/// Auxiliar functions
+	void operation_not_supported();
+	void operation_not_supported(const void* object);
+	void operation_not_supported(const CDAPMessage * cdapMessage,
+					CDAPSessionDescriptor * cdapSessionDescriptor);
+	void operartion_not_supported(const std::string& objectClass,
+								  const std::string& objectName,
+					const void* objectValue);
+
+	std::string class_;
+	std::string name_;
+	long instance_;
+	BaseRIBObject *parent_;
+	IEncoder *encoder_;
+	IRIBDaemon *base_rib_daemon_;
+	std::list<BaseRIBObject*> children_;
 };
 
 class IEncoder {
@@ -710,20 +806,24 @@ public:
 /// to extend this class to adapt it to the environment they are operating
 class RIBDaemon : public IRIBDaemon {
 public:
-        RIBDaemon();
+        RIBDaemon(const RIBSchema *rib_schema);
+        ~RIBDaemon();
         void initialize(const std::string& separator, IEncoder * encoder,
                         CDAPSessionManagerInterface * cdap_session_manager_,
                         IApplicationConnectionHandler * app_conn_handler_);
-        void addRIBObject(BaseRIBObject * ribObject);
-        void removeRIBObject(BaseRIBObject * ribObject);
+        // TODO check object creation and interfaces
+        void addRIBObject(BaseRIBObject *ribObject);
+        void removeRIBObject(BaseRIBObject *ribObject);
         void removeRIBObject(const std::string& objectName);
-        std::list<BaseRIBObject *> getRIBObjects();
+
         void createObject(const std::string& objectClass, const std::string& objectName,
                         const void* objectValue, const NotificationPolicy * notificationPolicy);
         void deleteObject(const std::string& objectClass, const std::string& objectName,
                         const void* objectValue, const NotificationPolicy * notificationPolicy);
-        BaseRIBObject * readObject(const std::string& objectClass,
-                                const std::string& objectName);
+        BaseRIBObject * readObject(const std::string& object_class,
+                                const std::string& object_ame);
+        BaseRIBObject * readObject(const std::string& object_class,
+                                long object_instance);
         void writeObject(const std::string& objectClass, const std::string& objectName,
                                 const void* objectValue);
         void startObject(const std::string& objectClass, const std::string& objectName,
@@ -809,11 +909,7 @@ public:
         ThreadSafeMapOfPointers<int, ICDAPResponseMessageHandler> handlers_waiting_for_reply_;
 
 private:
-        RIB rib_;
-        CDAPSessionManagerInterface * cdap_session_manager_;
-        IEncoder * encoder_;
-        IApplicationConnectionHandler * app_conn_handler_;
-        std::string separator_;
+        std::list<BaseRIBObject *> getRIBObjects();
 
         //Get a CDAP Message Handler waiting for a response message
         ICDAPResponseMessageHandler * getCDAPMessageHandler(const rina::CDAPMessage * cdapMessage);
@@ -836,78 +932,12 @@ private:
 
         void sendMessageToProcess(const rina::CDAPMessage & cdapMessage, const RemoteProcessId& remote_id,
                         ICDAPResponseMessageHandler * response_handler);
+        RIB *rib_;
+        CDAPSessionManagerInterface * cdap_session_manager_;
+        IEncoder * encoder_;
+        IApplicationConnectionHandler * app_conn_handler_;
+        std::string separator_;
 };
-
-/**
-* RIB library result codes
-*/
-typedef enum rib_res{
-	/* General code for success */
-	RIB_SUCCESS = 0,
-	/* Operation in progress (async) */
-	RIB_IN_PROGRESS = 1,
-	/* General error */
-	RIB_UNKOWN_ERROR = -1,
-	//
-	// Negocation
-	//
-	/* There is no supported RIB version that can be understood */
-	RIB_VER_MISMATCH_ERR = -2,
-	//
-	// Schema
-	//
-	/* The RIB schema file extension is unknown */
-	RIB_SCHEMA_EXT_ERR = -3,
-	/* Error during RIB scheema file parsing */
-	RIB_SCHEMA_FORMAT_ERR = -4,
-	/* General validation error (unknown) */
-	RIB_SCHEMA_VALIDATION_ERR = -5,
-	/* Validation error, missing mandatory object */
-	RIB_SCHEMA_VAL_MAN_ERR = -6,
-	//
-	// Invoke IDs
-	//
-	/* Unkown Invoke ID */
-	RIB_INVALID_INVOKE_ID_ERR = -7,
-	/* Operation associated with the invoke ID has concluded */
-	RIB_EXPIRED_INVOKE_ID_ERR = -8,
-	//
-	// Misc
-	//
-	//TODO: Other error codes
-}rib_res_t;
-
-class RIBSchemaObject{
-public:
-	RIBSchemaObject(const std::string& class_name, const std::string& name,
-			const bool mandatory, const unsigned max_objs);
-	void addChild(RIBSchemaObject *object);
-	const std::string& get_class_name();
-private:
-	std::string name_;
-	std::string class_name_;
-	RIBSchemaObject *parent_;
-	std::list<RIBSchemaObject*> children_;
-	bool mandatory_;
-	unsigned max_objs_;
-};
-
-class RIBSchema {
-public:
-	static const char FIELD_SEPARATOR = ',';
-	static const char ID_SEPARATOR = '=';
-	RIBSchema(rib_ver_t version);
-	rib_res_t ribSchemaDefContRelation(const std::string& container_cn,
-			const std::string& container_name,	const std::string& class_name,
-			const std::string name, const bool mandatory,
-			const unsigned max_objs);
-	bool validateAddObject(BaseRIBObject* obj);
-private:
-	std::string parseName(const std::string& name);
-    rib_ver_t version_;
-    std::map<std::string, RIBSchemaObject*> rib_schema_;
-};
-
 
 }
 

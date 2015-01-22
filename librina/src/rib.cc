@@ -120,7 +120,7 @@ const std::list<BaseRIBObject*>& BaseRIBObject::get_children() const {
         return children_;
 }
 
-void BaseRIBObject::add_child(BaseRIBObject * child) {
+void BaseRIBObject::add_child(BaseRIBObject *child) {
         for (std::list<BaseRIBObject*>::iterator it = children_.begin();
                         it != children_.end(); it++) {
                 if ((*it)->name_.compare(child->name_) == 0) {
@@ -267,6 +267,10 @@ const std::string& BaseRIBObject::get_parent_name() const {
 	return parent_->get_name();
 }
 
+const std::string& BaseRIBObject::get_parent_class() const {
+	return parent_->get_class();
+}
+
 long BaseRIBObject::get_instance() const {
 	return instance_;
 }
@@ -317,84 +321,157 @@ long ObjectInstanceGenerator::getObjectInstance() {
 Singleton<ObjectInstanceGenerator> objectInstanceGenerator;
 
 //Class RIB
-RIB::RIB()
-{ }
+RIB::RIB(const RIBSchema *schema)
+{
+	rib_schema_ = schema;
+}
 
 RIB::~RIB() throw()
-{ }
+{
+	delete rib_schema_;
+	for (std::map<std::string, BaseRIBObject*>::iterator it = rib_by_name_.begin();
+			it != rib_by_name_.end(); ++it){
+		LOG_DBG("Object %s destroyed",it->second->get_name().c_str());
+		delete it->second;
+	}
+	rib_by_name_.clear();
+	rib_by_instance_.clear();
+}
 
 BaseRIBObject* RIB::getRIBObject(const std::string& object_class,
                                  const std::string& object_name, bool check)
 {
-        BaseRIBObject* ribObject;
+	BaseRIBObject* ribObject;
+	std::map<std::string, BaseRIBObject*>::iterator it;
+
+	lock();
+	it = rib_by_name_.find(object_name);
+	unlock();
+	if (it == rib_by_name_.end()) {
+			throw Exception("Could not find object in the RIB");
+	}
+
+	ribObject = it->second;
+	if (check && ribObject->get_class().compare(object_class) != 0) {
+			throw Exception("Object class does not match the user specified one");
+	}
+
+	return ribObject;
+}
+
+BaseRIBObject* RIB::getRIBObject(const std::string& object_class,
+                                 long instance, bool check)
+{
+	BaseRIBObject* ribObject;
+	std::map<long, BaseRIBObject*>::iterator it;
+
+	lock();
+	it = rib_by_instance_.find(instance);
+	unlock();
+
+	if (it == rib_by_instance_.end()) {
+			throw Exception("Could not find object in the RIB");
+	}
+
+	ribObject = it->second;
+	if (check && ribObject->get_class().compare(object_class) != 0) {
+			throw Exception("Object class does not match the user "
+					"specified one");
+	}
+
+	return ribObject;
+}
+
+void RIB::addRIBObject(BaseRIBObject* rib_object)
+{
+	BaseRIBObject *parent = 0;
+	std::string parent_name = get_parent_name(rib_object->get_name());
+	if (parent_name != "")
+	{
+		lock();
+		if (rib_by_name_.find(parent_name) == rib_by_name_.end()) {
+			throw Exception("Parent name is not in the RIB");
+		}
+
+		parent = rib_by_name_[parent_name];
+		unlock();
+	}
+
+	// TODO: add schema validation
+//	if (rib_schema_->validateAddObject(rib_object, parent))
+//	{
+		lock();
+		if (rib_by_name_.find(rib_object->get_name()) != rib_by_name_.end()) {
+			unlock();
+			throw Exception("Object with the same name already exists in the"
+					" RIB");
+		}
+		if (rib_by_instance_.find(rib_object->get_instance()) !=
+				rib_by_instance_.end()) {
+			unlock();
+			throw Exception("Object with the same instance already exists "
+						"in the RIB");
+		}
+		if (parent != 0)
+		{
+			parent->add_child(rib_object);
+			rib_object->set_parent(parent);
+		}
+		rib_by_name_[rib_object->get_name()] = rib_object;
+		rib_by_instance_[rib_object->get_instance()] = rib_object;
+		unlock();
+/*	}
+	else
+		throw Exception("Can not validate this object in the RIB version");
+*/
+}
+
+BaseRIBObject* RIB::removeRIBObject(const std::string& objectName)
+{
         std::map<std::string, BaseRIBObject*>::iterator it;
+    	BaseRIBObject* ribObject;
 
         lock();
-        it = rib_.find(object_name);
-        unlock();
-
-        if (it == rib_.end()) {
+        it = rib_by_name_.find(objectName);
+        if (it == rib_by_name_.end()) {
                 throw Exception("Could not find object in the RIB");
         }
 
         ribObject = it->second;
-        if (check && ribObject->get_class().compare(object_class) != 0) {
-                throw Exception("Object class does not match the user specified one");
-        }
-
+        rib_by_name_.erase(it);
+        unlock();
         return ribObject;
 }
 
-void RIB::addRIBObject(BaseRIBObject* ribObject)
+BaseRIBObject * RIB::removeRIBObject(long instance)
 {
-        lock();
-        if (rib_.find(ribObject->get_name()) != rib_.end()) {
-                throw Exception("Object already exists in the RIB");
-        }
-        std::string parent_name = get_parent_name(ribObject->get_name());
-        std::cout<<"Parent name: "<<parent_name<<std::endl;
-        if (parent_name != "")
-        {
-        	if (rib_.find(parent_name) == rib_.end()) {
-        		throw Exception("Parent is not in the RIB");
-        	}
-        	BaseRIBObject *parent = rib_[parent_name];
-        	parent->add_child(ribObject);
-        	ribObject->set_parent(parent);
-        }
-        rib_[ribObject->get_name()] = ribObject;
-        unlock();
-}
+	std::map<long, BaseRIBObject*>::iterator it;
+	BaseRIBObject* ribObject;
 
-BaseRIBObject * RIB::removeRIBObject(const std::string& objectName)
-{
-        std::map<std::string, BaseRIBObject*>::iterator it;
-        BaseRIBObject* ribObject;
+	lock();
+	it = rib_by_instance_.find(instance);
+	if (it == rib_by_instance_.end()) {
+			throw Exception("Could not find object in the RIB");
+	}
 
-        lock();
-        it = rib_.find(objectName);
-        if (it == rib_.end()) {
-                throw Exception("Could not find object in the RIB");
-        }
+	ribObject = it->second;
+	rib_by_instance_.erase(it);
+	unlock();
 
-        ribObject = it->second;
-        rib_.erase(it);
-        unlock();
-
-        return ribObject;
+	return ribObject;
 }
 
 std::list<BaseRIBObject*> RIB::getRIBObjects()
 {
-        std::list<BaseRIBObject*> result;
+	std::list<BaseRIBObject*> result;
 
-        for (std::map<std::string, BaseRIBObject*>::iterator it = rib_.begin();
-                        it != rib_.end(); ++it) {
-                result.push_back(it->second);
-        }
-
-        return result;
+	for (std::map<std::string, BaseRIBObject*>::iterator it =
+			rib_by_name_.begin(); it != rib_by_name_.end(); ++it) {
+			result.push_back(it->second);
+	}
+	return result;
 }
+
 std::string RIB::get_parent_name(const std::string child_name)const {
 	unsigned int last_field_separator = child_name.find_last_of(RIBSchema::FIELD_SEPARATOR,
 			std::string::npos);
@@ -410,172 +487,182 @@ std::string RIB::get_parent_name(const std::string child_name)const {
 }
 
 ///Class RIBDaemon
-RIBDaemon::RIBDaemon(){
-        cdap_session_manager_ = 0;
-        encoder_ = 0;
-        app_conn_handler_ = 0;
+RIBDaemon::RIBDaemon(const RIBSchema *rib_schema){
+	cdap_session_manager_ = 0;
+	encoder_ = 0;
+	app_conn_handler_ = 0;
+	rib_ = new RIB(rib_schema);
+}
+
+RIBDaemon::~RIBDaemon()
+{
+	delete rib_;
 }
 
 void RIBDaemon::initialize(const std::string& separator, IEncoder * encoder,
                 CDAPSessionManagerInterface * cdap_session_manager,
                 IApplicationConnectionHandler * app_conn_handler) {
-        cdap_session_manager_ = cdap_session_manager;
-        encoder_ = encoder;
-        separator_ = separator;
-        app_conn_handler_ = app_conn_handler;
+	cdap_session_manager_ = cdap_session_manager;
+	encoder_ = encoder;
+	separator_ = separator;
+	app_conn_handler_ = app_conn_handler;
 }
 
 void RIBDaemon::addRIBObject(BaseRIBObject * ribObject)
 {
-        if (!ribObject)
-                throw Exception("Object is null");
+	if (!ribObject)
+			throw Exception("Object is null");
 
-        rib_.addRIBObject(ribObject);
-        LOG_INFO("Object with name %s, class %s, instance %ld added to the RIB",
-                        ribObject->get_name().c_str(), ribObject->get_class().c_str(),
-                        ribObject->get_instance());
+	rib_->addRIBObject(ribObject);
+	LOG_INFO("Object with name %s, class %s, instance %ld added to the RIB",
+					ribObject->get_name().c_str(), ribObject->get_class().c_str(),
+					ribObject->get_instance());
 }
 
 void RIBDaemon::removeRIBObject(BaseRIBObject * ribObject)
 {
-        if (!ribObject)
-                throw Exception("Object is null");
+	if (!ribObject)
+			throw Exception("Object is null");
 
-        removeRIBObject(ribObject->get_name());
+	removeRIBObject(ribObject->get_name());
 }
 
 void RIBDaemon::removeRIBObject(const std::string& objectName)
 {
-        BaseRIBObject * object = rib_.removeRIBObject(objectName);
-        LOG_INFO("Object with name %s, class %s, instance %ld removed from the RIB",
-                 object->get_name().c_str(), object->get_class().c_str(),
-                 object->get_instance());
+	BaseRIBObject * object = rib_->removeRIBObject(objectName);
+	LOG_INFO("Object with name %s, class %s, instance %ld removed from the RIB",
+			 object->get_name().c_str(), object->get_class().c_str(),
+			 object->get_instance());
 
-        delete object;
+	delete object;
 }
 
 std::list<BaseRIBObject *> RIBDaemon::getRIBObjects()
 {
-        return rib_.getRIBObjects();
+	return rib_->getRIBObjects();
 }
 
 bool RIBDaemon::isOnList(int candidate, std::list<int> list)
 {
-        for (std::list<int>::iterator it = list.begin(); it != list.end(); ++it) {
-                if ((*it) == candidate)
-                        return true;
-        }
+	for (std::list<int>::iterator it = list.begin(); it != list.end(); ++it) {
+			if ((*it) == candidate)
+					return true;
+	}
 
-        return false;
+	return false;
 }
 
 void RIBDaemon::createObject(const std::string& objectClass,
                              const std::string& objectName,
                              const void* objectValue,
                              const NotificationPolicy * notificationPolicy) {
-        BaseRIBObject * ribObject;
+	BaseRIBObject * ribObject;
 
-        try {
-                ribObject = rib_.getRIBObject(objectClass, objectName, true);
-        } catch (Exception &e) {
-                //Delegate creation to the parent if the object is not there
-                std::string::size_type position =
-                        objectName.rfind(separator_);
-                if (position == std::string::npos)
-                        throw e;
-                std::string parentObjectName = objectName.substr(0, position);
-                ribObject = rib_.getRIBObject(objectClass, parentObjectName, false);
-        }
+	try {
+			ribObject = rib_->getRIBObject(objectClass, objectName, true);
+	} catch (Exception &e) {
+			//Delegate creation to the parent if the object is not there
+			std::string::size_type position =
+					objectName.rfind(separator_);
+			if (position == std::string::npos)
+					throw e;
+			std::string parentObjectName = objectName.substr(0, position);
+			ribObject = rib_->getRIBObject(objectClass, parentObjectName, false);
+	}
 
-        //Create the object
-        ribObject->createObject(objectClass, objectName, objectValue);
+	//Create the object
+	ribObject->createObject(objectClass, objectName, objectValue);
 
-        //Notify neighbors if needed
-        if (!notificationPolicy) {
-                return;
-        }
+	//Notify neighbors if needed
+	if (!notificationPolicy) {
+			return;
+	}
 
-        //We need to notify, find out to whom the notifications must be sent to, and do it
-        std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
-        std::vector<int> peers;
-        cdap_session_manager_->getAllCDAPSessionIds(peers);
+	//We need to notify, find out to whom the notifications must be sent to, and do it
+	std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
+	std::vector<int> peers;
+	cdap_session_manager_->getAllCDAPSessionIds(peers);
 
-        rina::CDAPMessage * cdapMessage = 0;
+	rina::CDAPMessage * cdapMessage = 0;
 
-        for (std::vector<int>::size_type i = 0; i < peers.size(); i++) {
-                if (!isOnList(peers[i], peersToIgnore)) {
-                        try {
-                                cdapMessage = cdap_session_manager_->
-                                        getCreateObjectRequestMessage(peers[i], 0,
-                                                                      rina::CDAPMessage::NONE_FLAGS,
-                                                                      objectClass,
-                                                                      0,
-                                                                      objectName,
-                                                                      0,
-                                                                      false);
-                                encoder_->encode(objectValue, cdapMessage);
-                                sendMessage(*cdapMessage, peers[i], 0);
-                        } catch(Exception & e) {
-                                LOG_ERR("Problems notifying neighbors: %s", e.what());
-                        }
+	for (std::vector<int>::size_type i = 0; i < peers.size(); i++) {
+			if (!isOnList(peers[i], peersToIgnore)) {
+					try {
+							cdapMessage = cdap_session_manager_->
+									getCreateObjectRequestMessage(peers[i], 0,
+																  rina::CDAPMessage::NONE_FLAGS,
+																  objectClass,
+																  0,
+																  objectName,
+																  0,
+																  false);
+							encoder_->encode(objectValue, cdapMessage);
+							sendMessage(*cdapMessage, peers[i], 0);
+					} catch(Exception & e) {
+							LOG_ERR("Problems notifying neighbors: %s", e.what());
+					}
 
-                        delete cdapMessage;
-                }
-        }
+					delete cdapMessage;
+			}
+	}
 }
 
 void RIBDaemon::deleteObject(const std::string& objectClass,
-                             const std::string& objectName,
-                             const void* objectValue,
-                             const NotificationPolicy * notificationPolicy)
+						 const std::string& objectName,
+						 const void* objectValue,
+						 const NotificationPolicy * notificationPolicy)
 {
-        BaseRIBObject * ribObject;
+	BaseRIBObject * ribObject;
 
-        ribObject = rib_.getRIBObject(objectClass, objectName, true);
-        ribObject->deleteObject(objectValue);
+	ribObject = rib_->getRIBObject(objectClass, objectName, true);
+	ribObject->deleteObject(objectValue);
 
-        //Notify neighbors if needed
-        if (!notificationPolicy)
-                return;
+	//Notify neighbors if needed
+	if (!notificationPolicy)
+			return;
 
-        //We need to notify, find out to whom the notifications must be sent to, and do it
-        std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
-        std::vector<int> peers;
-        cdap_session_manager_->getAllCDAPSessionIds(peers);
+	//We need to notify, find out to whom the notifications must be sent to, and do it
+	std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
+	std::vector<int> peers;
+	cdap_session_manager_->getAllCDAPSessionIds(peers);
 
-        const rina::CDAPMessage * cdapMessage = 0;
-        for (std::vector<int>::size_type i = 0; i<peers.size(); i++) {
-                if (!isOnList(peers[i], peersToIgnore)) {
-                        try {
-                                cdapMessage =
-                                        cdap_session_manager_->
-                                        getDeleteObjectRequestMessage(peers[i], 0,
-                                                                      rina::CDAPMessage::NONE_FLAGS,
-                                                                      objectClass,
-                                                                      0,
-                                                                      objectName,
-                                                                      0, false);
-                                sendMessage(*cdapMessage, peers[i], 0);
-                                delete cdapMessage;
-                        } catch(Exception & e) {
-                                LOG_ERR("Problems notifying neighbors: %s", e.what());
-                                if (cdapMessage) {
-                                        delete cdapMessage;
-                                }
-                        }
-                }
-        }
+	const rina::CDAPMessage * cdapMessage = 0;
+	for (std::vector<int>::size_type i = 0; i<peers.size(); i++) {
+			if (!isOnList(peers[i], peersToIgnore)) {
+					try {
+							cdapMessage =
+									cdap_session_manager_->
+									getDeleteObjectRequestMessage(peers[i], 0,
+																  rina::CDAPMessage::NONE_FLAGS,
+																  objectClass,
+																  0,
+																  objectName,
+																  0, false);
+							sendMessage(*cdapMessage, peers[i], 0);
+							delete cdapMessage;
+					} catch(Exception & e) {
+							LOG_ERR("Problems notifying neighbors: %s", e.what());
+							if (cdapMessage) {
+									delete cdapMessage;
+							}
+					}
+			}
+	}
 }
 
 BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
                                       const std::string& objectName)
-{ return rib_.getRIBObject(objectClass, objectName, true); }
+{ return rib_->getRIBObject(objectClass, objectName, true); }
+
+BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
+                                      long object_instance)
+{ return rib_->getRIBObject(objectClass, object_instance, true); }
 
 void RIBDaemon::writeObject(const std::string& objectClass,
                             const std::string& objectName,
                             const void* objectValue)
 {
-        BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName, true);
+        BaseRIBObject * object = rib_->getRIBObject(objectClass, objectName, true);
         object->writeObject(objectValue);
 }
 
@@ -583,7 +670,7 @@ void RIBDaemon::startObject(const std::string& objectClass,
                             const std::string& objectName,
                             const void* objectValue)
 {
-        BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName, true);
+        BaseRIBObject * object = rib_->getRIBObject(objectClass, objectName, true);
         object->startObject(objectValue);
 }
 
@@ -591,7 +678,7 @@ void RIBDaemon::stopObject(const std::string& objectClass,
                            const std::string& objectName,
                            const void* objectValue)
 {
-        BaseRIBObject * object = rib_.getRIBObject(objectClass, objectName, true);
+        BaseRIBObject * object = rib_->getRIBObject(objectClass, objectName, true);
         object->stopObject(objectValue);
 }
 
@@ -630,7 +717,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
                         // update, therefore the message is handled to the object. If the object
                         // doesn't exist it is a CREATE, therefore it is handled to the parent object
                         try {
-                                ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                                ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                                                         cdapMessage->get_obj_name(), true);
                                 ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
                                                 cdapMessage->invoke_id_, cdapSessionDescriptor);
@@ -643,14 +730,14 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
                                 }
                                 std::string parentObjectName = cdapMessage->get_obj_name().substr(0, position);
                                 LOG_DBG("Looking for parent object, with name %s", parentObjectName.c_str());
-                                ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(), parentObjectName, false);
+                                ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(), parentObjectName, false);
                                 ribObject->remoteCreateObject(decodedObject, cdapMessage->obj_name_,
                                                 cdapMessage->invoke_id_, cdapSessionDescriptor);
                         }
 
                         break;
                 case rina::CDAPMessage::M_DELETE:
-                        ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                        ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                         cdapMessage->get_obj_name(), true);
                         ribObject->remoteDeleteObject(cdapMessage->invoke_id_,
                                         cdapSessionDescriptor);
@@ -659,7 +746,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
                         if (cdapMessage->obj_value_) {
                                 decodedObject = encoder_->decode(cdapMessage);
                         }
-                        ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                        ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                         cdapMessage->get_obj_name(), true);
                         ribObject->remoteStartObject(decodedObject, cdapMessage->invoke_id_,
                                         cdapSessionDescriptor);
@@ -668,26 +755,26 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
                         if (cdapMessage->obj_value_) {
                                 decodedObject = encoder_->decode(cdapMessage);
                         }
-                        ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                        ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                         cdapMessage->get_obj_name(), true);
                         ribObject->remoteStopObject(decodedObject, cdapMessage->invoke_id_,
                                         cdapSessionDescriptor);
                         break;
                 case rina::CDAPMessage::M_READ:
-                        ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                        ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                         cdapMessage->get_obj_name(), true);
                         ribObject->remoteReadObject(cdapMessage->invoke_id_,
                                         cdapSessionDescriptor);
                         break;
                 case rina::CDAPMessage::M_CANCELREAD:
-                        ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                        ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                         cdapMessage->get_obj_name(), true);
                         ribObject->remoteCancelReadObject(cdapMessage->invoke_id_,
                                         cdapSessionDescriptor);
                         break;
                 case rina::CDAPMessage::M_WRITE:
                         decodedObject = encoder_->decode(cdapMessage);
-                        ribObject = rib_.getRIBObject(cdapMessage->get_obj_class(),
+                        ribObject = rib_->getRIBObject(cdapMessage->get_obj_class(),
                                                         cdapMessage->get_obj_name(), true);
                         ribObject->remoteWriteObject(decodedObject, cdapMessage->invoke_id_,
                                         cdapSessionDescriptor);
@@ -1345,21 +1432,23 @@ void RIBSchemaObject::addChild(RIBSchemaObject *object) {
 	children_.push_back(object);
 }
 
-const std::string& RIBSchemaObject::get_class_name() {
+const std::string& RIBSchemaObject::get_class_name() const {
 	return class_name_;
 }
 
+unsigned RIBSchemaObject::get_max_objs() const {
+	return max_objs_;
+}
+
 // CLASS RIBSchema
-RIBSchema::RIBSchema(rib_ver_t version){
+RIBSchema::RIBSchema(const rib_ver_t& version){
 	version_ = version;
 }
 
-rib_res_t RIBSchema::ribSchemaDefContRelation(const std::string& container_cn,
-		const std::string& container_name,	const std::string& class_name,
-		const std::string name, const bool mandatory,
-		const unsigned max_objs){
+rib_res RIBSchema::ribSchemaDefContRelation(const std::string& container_cn,	const std::string& class_name,
+		const std::string name, const bool mandatory,	const unsigned max_objs){
 	RIBSchemaObject *object = new RIBSchemaObject(class_name, name, mandatory, max_objs);
-	RIBSchemaObject *parent = rib_schema_[container_name];
+	RIBSchemaObject *parent = rib_schema_[getParentName(name)];
 
 	if(parent->get_class_name().compare(container_cn) != 0)
 		return RIB_SCHEMA_FORMAT_ERR;
@@ -1378,18 +1467,24 @@ rib_res_t RIBSchema::ribSchemaDefContRelation(const std::string& container_cn,
 	}
 }
 
-bool RIBSchema::validateAddObject(BaseRIBObject* obj){
+bool RIBSchema::validateAddObject(const BaseRIBObject* obj, const BaseRIBObject *parent){
 	std::string name_schema = parseName(obj->get_name());
 	RIBSchemaObject *schema_object = rib_schema_[name_schema];
 	// CHECKS REGION //
 	// Existance
 	if (schema_object == 0)
+		LOG_INFO();
 		return false;
 	// parent existance
 	std::string parent_name_schema = parseName(obj->get_parent_name());
 	RIBSchemaObject *parent_schema_object = rib_schema_[parent_name_schema];
 	if (parent_schema_object == 0)
 		return false;
+	// maximum number of objects
+	if (parent->get_children().size()+1 > schema_object->get_max_objs())
+	{
+		return false;
+	}
 
 	return true;
 }
@@ -1413,6 +1508,16 @@ std::string RIBSchema::parseName(const std::string& name){
 	}
 	return name_schema;
 }
+
+std::string RIBSchema::getParentName(const std::string& name){
+	int field_separator_position = name.find_last_of(FIELD_SEPARATOR, 0);
+	if (field_separator_position != -1)
+	{
+		return name.substr(0, field_separator_position);
+	}
+	return "";
+}
+
 
 }
 
