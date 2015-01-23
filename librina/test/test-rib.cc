@@ -172,7 +172,7 @@ private:
 	NewObject *object4_;
 	NewObject *object5_;
 	NewObject *object6_;
-
+	NewObject *object7_;
 };
 
 

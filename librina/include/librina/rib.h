@@ -692,7 +692,7 @@ public:
 	friend void RIB::addRIBObject(BaseRIBObject *obj);
 	virtual ~BaseRIBObject(){};
 	BaseRIBObject(IRIBDaemon *rib_daemon, const std::string& object_class,
-			long object_instance, std::string& object_name);
+			long object_instance, std::string object_name);
 	RIBObjectData get_data();
 	virtual std::string get_displayable_value();
 	virtual const void* get_value() const = 0;

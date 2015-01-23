@@ -13,6 +13,7 @@
 #include <librina/ipc-manager.h>
 
 #include "event-loop.h"
+#include "rib-daemon.h"
 
 namespace rinad{
 namespace mad{
@@ -48,7 +49,8 @@ protected:
 	~ManagementAgent(void);
 
 private:
-
+	void populateBasicRIB();
+	MARIBDaemon *rib_daemon_;
 };
 
 }; //namespace mad 

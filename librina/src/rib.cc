@@ -91,15 +91,15 @@ void RIBObjectData::set_displayable_value(const std::string& displayable_value) 
 
 //Class BaseRIBObject
 BaseRIBObject::BaseRIBObject(IRIBDaemon * rib_daemon, const std::string& object_class,
-		long object_instance, std::string& object_name) {
-        object_name.erase( std::remove_if( object_name.begin(),
-        		object_name.end(), ::isspace ), object_name.end() );
-        name_ = object_name;
-        class_ = object_class;
-        instance_ = object_instance;
-        base_rib_daemon_ = rib_daemon;
-        encoder_ = 0;
-        parent_ = 0;
+	long object_instance, std::string object_name) {
+	object_name.erase( std::remove_if( object_name.begin(),
+			object_name.end(), ::isspace ), object_name.end() );
+	name_ = object_name;
+	class_ = object_class;
+	instance_ = object_instance;
+	base_rib_daemon_ = rib_daemon;
+	encoder_ = 0;
+	parent_ = 0;
 }
 
 rina::RIBObjectData BaseRIBObject::get_data() {
@@ -390,7 +390,9 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
 	{
 		lock();
 		if (rib_by_name_.find(parent_name) == rib_by_name_.end()) {
-			throw Exception("Parent name is not in the RIB");
+			std::stringstream ss;
+			ss << "Parent name (" << parent_name << ") is not in the RIB"<<std::endl;
+			throw Exception(ss.str().c_str());
 		}
 
 		parent = rib_by_name_[parent_name];
@@ -403,14 +405,18 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
 		lock();
 		if (rib_by_name_.find(rib_object->get_name()) != rib_by_name_.end()) {
 			unlock();
-			throw Exception("Object with the same name already exists in the"
-					" RIB");
+			std::stringstream ss;
+			ss <<"Object with the same name ("<<rib_object->get_name() << "already exists in the"
+					" RIB"<<std::endl;
+			throw Exception(ss.str().c_str());
 		}
 		if (rib_by_instance_.find(rib_object->get_instance()) !=
 				rib_by_instance_.end()) {
 			unlock();
-			throw Exception("Object with the same instance already exists "
-						"in the RIB");
+			std::stringstream ss;
+			ss <<"Object with the same instance ("<<rib_object->get_instance()<< "already exists "
+					"in the RIB"<<std::endl;
+			throw Exception(ss.str().c_str());
 		}
 		if (parent != 0)
 		{

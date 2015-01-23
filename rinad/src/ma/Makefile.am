@@ -17,13 +17,15 @@ mad_SOURCES  = 					\
 	confm.cc				\
 	flowm.cc				\
 	rib-daemon.cc			\
+	rib-objects.cc			\
 	main.cc
 
 mad_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../			\
-	-I$(srcdir)/../common
+	-I$(srcdir)/../common	\
+	-w
 
 mad_LDADD = 					\
 	$(builddir)/../common/librinad.la	\
