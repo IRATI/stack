@@ -685,17 +685,19 @@ static void rtx_timer_func(void * data)
 
 int rtxq_destroy(struct rtxq * q)
 {
+        unsigned long flags;
+
         if (!q)
                 return -1;
 
-        spin_lock(&q->lock);
+        spin_lock_irqsave(&q->lock, flags);
 #if RTIMER_ENABLED
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
 #endif
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
-        spin_unlock(&q->lock);
+        spin_unlock_irqrestore(&q->lock, flags);
 
         rkfree(q);
 
