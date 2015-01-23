@@ -337,13 +337,13 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
                 flow->state = PORT_STATE_ALLOCATED;
                 wq = &flow->write_wqueue;
                 spin_unlock(&instance->lock);
-                LOG_DBG("IPCP notified CWQ enabled");
+                LOG_DBG("IPCP notified CWQ is now enabled");
                 LOG_DBG("Enabled port id");
                 wake_up_interruptible(wq);
                 return 0;
         }
         spin_unlock(&instance->lock);
-        LOG_DBG("IPCP notified CWQ enabled");
+        LOG_DBG("IPCP notified CWQ already enabled");
 
         return 0;
 }
