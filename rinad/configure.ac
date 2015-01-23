@@ -103,6 +103,7 @@ AC_CONFIG_FILES([
     src/ipcm/include/Makefile
     src/ipcm/include/ipcm/Makefile
     src/ma/Makefile
+    src/ma/ribs/Makefile
 
     doc/Makefile
     etc/Makefile

@@ -10,8 +10,10 @@
 #include <vector>
 #include <utility>
 
+#include <librina/application.h>
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/patterns.h>
 
 #include "event-loop.h"
 
@@ -70,39 +72,45 @@ protected:
 /**
 * @brief Flow manager
 */
-class FlowManager {
+class FlowManager_{
 
 public:
 	/**
-	* Initialize FlowManager singleton
+	* Initialize FlowManager running state
 	*/
-	static void init(void);
+	void init(void);
 
 	/**
-	* Get FlowManager instance
+	* Run the main I/O loop
 	*/
-	static inline FlowManager* get(){
-		return inst;
-	};
+	void runIOLoop(void);
 
 	/**
-	* Destroy FlowManager instance
+	* Run the main I/O loop
 	*/
-	static void destroy(void);
+	inline void stopIOLoop(void){
+		keep_running = false;
+	}
 
-protected:
-	static FlowManager* inst;
 
+	/**
+	* Destroy the running state
+	*/
+	void destroy(void);
+private:
 	//hashmap port_id/pthread_t
 	std::map<int, FlowWorker*> workers;
 
 	//Mutex
 	pthread_mutex_t mutex;
 
+	//Run flag
+	volatile bool keep_running;
+
 	/*
 	* Create a worker
 	*/
-	void spawnWorker(int port_id);
+	void spawnWorker(rina::Flow& flow);
 
 	/*
 	* Join worker
@@ -110,12 +118,15 @@ protected:
 	void joinWorker(int port_id);
 
 	//Constructors
-	FlowManager(void);
-	~FlowManager(void);
+	FlowManager_(void);
+	~FlowManager_(void);
 
-private:
+	friend class Singleton<FlowManager_>;
 
 };
+
+//Singleton instance
+extern Singleton<FlowManager_> FlowManager;
 
 }; //namespace mad
 }; //namespace rinad

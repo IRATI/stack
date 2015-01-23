@@ -97,16 +97,16 @@ int main(int argc, char * argv[])
 {
 	//Recover initial basic parameters
 	std::string logfile, loglevel, conf;
-	
+
 	//Parse arguments
 	parse_args(argc, argv, conf, logfile, loglevel);
 
 	try {
 		//Initialize Agent class
-		rinad::mad::ManagementAgent::init(conf, logfile, loglevel);
+		rinad::mad::ManagementAgent->init(conf, logfile, loglevel);
 
-		//Destroy agent and the rest of subsystems
-		rinad::mad::ManagementAgent::destroy();
+		//Clean up
+		rinad::mad::ManagementAgent->destroy();
 	} catch (std::exception & e) {
 		LOG_ERR("Got unhandled exception (%s)", e.what());
 		throw e;

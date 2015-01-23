@@ -35,32 +35,88 @@ void* FlowWorker::run(void* param){
 /*
 * FlowManager
 */
+void FlowManager_::runIOLoop(){
 
-//Static initializations
-FlowManager* FlowManager::inst = NULL;
+	rina::IPCEvent *event;
+	rina::Flow *flow;
+	unsigned int port_id;
+	rina::DeallocateFlowResponseEvent *resp;
 
-void FlowManager::init() {
-	if(inst){
-		throw Exception(
-			"Invalid double call to FlowManager::init()");
+	keep_running = true;
+
+	//wait for events
+	while(keep_running){
+		event = rina::ipcEventProducer->eventWait();
+		flow = NULL;
+		resp = NULL;
+
+		if(!event){
+			return;
+		}
+
+		switch(event->eventType) {
+			case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
+				rina::ipcManager->commitPendingRegistration(event->sequenceNumber,
+					     dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)->DIFName);
+				break;
+
+			case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
+				rina::ipcManager->appUnregistrationResult(event->sequenceNumber,
+					    dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)->result == 0);
+				break;
+
+			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
+				flow = rina::ipcManager->allocateFlowResponse(*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
+				LOG_INFO("New flow allocated [port-id = %d]", flow->getPortId());
+				spawnWorker(*flow);
+				break;
+
+			case rina::FLOW_DEALLOCATED_EVENT:
+				port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
+				rina::ipcManager->flowDeallocated(port_id);
+				LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
+
+				//TODO: join thread
+				break;
+
+			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
+				LOG_INFO("Destroying the flow after time-out");
+				resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+				port_id = resp->portId;
+				rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+				//TODO: join thread
+				break;
+
+			default:
+				assert(0);
+				LOG_ERR("Got unknown event %d",
+							event->eventType);
+			break;
+		}
 	}
-	inst = new FlowManager();
 }
 
-void FlowManager::destroy(void){
-	//TODO: stop all flow workers
-	delete inst;
-}
+//Singleton instance
+Singleton<FlowManager_> FlowManager;
 
-//Constructors destructors
-FlowManager::FlowManager(){
+//Constructors destructors(singleton)
+FlowManager_::FlowManager_(){
 
 	//TODO: register to flow events in librina and spawn workers
 	pthread_mutex_init(&mutex, NULL);
 }
 
-FlowManager::~FlowManager(){
+FlowManager_::~FlowManager_(){
 	pthread_mutex_destroy(&mutex);
+}
+
+//Initialization and destruction routines
+void FlowManager_::init(){
+	//TODO
+	LOG_DBG("Initialized");
+}
+void FlowManager_::destroy(){
+	//TODO
 }
 
 //
@@ -71,11 +127,11 @@ FlowManager::~FlowManager(){
 //
 
 //Workers
-void FlowManager::spawnWorker(int port_id){
+void FlowManager_::spawnWorker(rina::Flow& flow){
 
 	FlowWorker* w = NULL;
 	std::stringstream msg;
-
+	int port_id = flow.getPortId();
 	//Create worker object
 	try{
 		w = new FlowWorker();
@@ -125,7 +181,7 @@ SPAWN_ERROR:
 }
 
 //Join
-void FlowManager::joinWorker(int port_id){
+void FlowManager_::joinWorker(int port_id){
 
 	std::stringstream msg;
 	FlowWorker* w = NULL;

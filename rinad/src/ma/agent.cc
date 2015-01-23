@@ -4,7 +4,6 @@
 #include "bgtm.h"
 #include "confm.h"
 #include "flowm.h"
-#include "rib-objects.h"
 
 #define RINA_PREFIX "mad"
 #include <librina/logs.h>
@@ -12,57 +11,91 @@
 namespace rinad {
 namespace mad {
 
-//Static initializations
-ManagementAgent* ManagementAgent::inst = NULL;
+//Singleton instance
+Singleton<ManagementAgent_> ManagementAgent;
 
-void ManagementAgent::init(const std::string& conf, const std::string& logfile,
-						const std::string& loglevel){
-	if(inst){
-		throw Exception(
-			"Invalid double call to ManagementAgent::init()");
+//Add NMS DIF
+void ManagementAgent_::addNMSDIF(std::string& difName){
+	nmsDIFs.push_back(difName);
+}
+
+//Creates the NMS DIFs required by the MA
+void ManagementAgent_::bootstrapNMSDIFs(){
+	//TODO FIXME XXX
+	std::list<std::string>::const_iterator it;
+
+	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
+		//Nice trace
+		LOG_INFO("Bootstraping DIF '%s'", it->c_str());
+
+		//TODO FIXME XXX: call ipcmanager bootstrapping of the DIFs
 	}
-	inst = new ManagementAgent(conf, logfile, loglevel);
+
+}
+//Registers the application in the IPCManager
+void ManagementAgent_::reg(){
+
+	rina::ApplicationRegistrationInformation ari;
+	std::list<std::string>::const_iterator it;
+
+	//Check if there are available DIFs
+	if(nmsDIFs.empty()){
+		LOG_ERR("No DIFs to register to. Aborting...");
+		throw eNoNMDIF("No DIFs to register to");
+	}
+
+	//Register
+
+	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
+		//Nice trace
+		LOG_INFO("Registering agent at DIF '%s'", it->c_str());
+
+		//TODO FIXME XXX: call ipcmanager to register MA to this DIF
+	}
 }
 
-void ManagementAgent::destroy(void){
-	//TODO: be gentle with on going events
-	delete ManagementAgent::inst;
-}
-
-//Constructors destructors
-ManagementAgent::ManagementAgent(const std::string& conf,
+//Initialization and destruction routines
+void ManagementAgent_::init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
 
 	try
 	{
+	//Nice trace
+	LOG_INFO("Initializing components...");
+
 	//ConfManager must be initialized first, to
 	//proper configure the logging according to the cli level
 	//or the config file
-	ConfManager::init(conf, cl_logfile, cl_loglevel);
-
-	//Nice trace
-	LOG_INFO(" Initializing...");
+	ConfManager->init(conf, cl_logfile, cl_loglevel);
 
 	/*
 	* Initialize subsystems
 	*/
-	//RIB & RIBDaemon
-	rib_daemon_ = new MARIBDaemon(0);
-	populateBasicRIB();
+	//Create RIBs
+	//RIBFactory->createRIB(version1);
 
 	//TODO
 	//FlowManager
-	FlowManager::init();
+	FlowManager->init();
+
 
 	//Background task manager; MUST be the last one
 	//Will not return until SIGINT is sent
-	BGTaskManager::init();
+	BGTaskManager->init();
 
 	/*
 	* Load configuration
 	*/
-	ConfManager::get()->configure();
+	ConfManager->configure();
+
+	//Bootstrap necessary NMS DIFs and shim-DIFs
+	bootstrapNMSDIFs();
+
+	//Register agent AP into the IPCManager
+	reg();
+
+	LOG_INFO("Components initialized");
 
 	/*
 	* Run the bg task manager loop in the main thread
@@ -73,10 +106,10 @@ ManagementAgent::ManagementAgent(const std::string& conf,
 	{
 		LOG_ERR("Program finished due to a bad operation");
 	}
+	FlowManager->runIOLoop();
 }
 
-ManagementAgent::~ManagementAgent(void){
-
+void ManagementAgent_::destroy(){
 	/*
 	* Destroy all subsystems
 	*/
@@ -84,68 +117,26 @@ ManagementAgent::~ManagementAgent(void){
 	//TODO
 
 	//FlowManager
-	FlowManager::destroy();
+	FlowManager->destroy();
 
 	//Bg
-	BGTaskManager::destroy();
+	BGTaskManager->destroy();
 
-	//
-	delete rib_daemon_;
+	//Conf Manager
+	ConfManager->destroy();
 
+	LOG_INFO("Goodbye!");
+}
+
+
+//Constructors destructors (singleton only)
+ManagementAgent_::ManagementAgent_(){
+}
+
+
+ManagementAgent_::~ManagementAgent_(void){
 	LOG_INFO(" Goodbye!");
 }
 
-void ManagementAgent::populateBasicRIB(){
-	try
-	{
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "ROOT", "root"));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "DAF", "root, dafID", 1));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "ComputingSystem", "root, computingSystemID", 1));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "ProcessingSystem", "root, computingSystemID = 1, processingSystemID", 1));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "Software", "root, computingSystemID = 1, processingSystemID=1, software"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "Hardware", "root, computingSystemID = 1, processingSystemID=1, hardware"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "KernelApplicationProcess", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "OSApplicationProcess", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess"));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "ManagementAgent", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID", 1));
-		// IPCManagement branch
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "IPCManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "IPCResourceManager", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "UnderlayingFlows", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingFlows"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "UnderlayingDIFs", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingDIFs"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "QueryDIFAllocator", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, queryDIFAllocator"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "UnderlayingRegistrations", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingRegistrations"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "SDUPRotection", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"sduProtection"));
-		// RIBDaemon branch
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "RIBDaemon", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "Discriminators", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"
-				", discriminators"));
-		// DIFManagement
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "DIFManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement"));
-	}
-	catch(Exception &e1)
-	{
-		LOG_ERR("RIB basic objects were not created because %s", e1.what());
-		throw Exception("Finish application");
-	}
-}
 }; //namespace mad
 }; //namespace rinad

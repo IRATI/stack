@@ -26,34 +26,39 @@ namespace mad{
 
 
 /**
-* @brief A background task manager. This runs on the main loop 
+* @brief A background task manager. This runs on the main loop
 */
-class BGTaskManager {
+class BGTaskManager_ {
 
 public:
-	static void init(void);
-	static inline BGTaskManager* get(){
-		return inst;
-	};
-	static void destroy(void);
-	
-	//Methods	
+	/**
+	* Initialize running state
+	*/
+	void init(void);
+
+	/**
+	* Destroy the running state
+	*/
+	void destroy(void);
+
+	//Methods
 	void* run(void* unused);
 
 	//Run flag
 	volatile bool keep_running;
-protected:
-	static BGTaskManager* inst;
-
-	//Constructors
-	BGTaskManager(void);
-	~BGTaskManager(void);
-
 private:
+	//Constructors
+	BGTaskManager_(void);
+	~BGTaskManager_(void);
 
+	friend class Singleton<BGTaskManager_>;
 };
 
-}; //namespace mad 
-}; //namespace rinad 
+//Singleton instance
+extern Singleton<BGTaskManager_> BGTaskManager;
+
+
+}; //namespace mad
+}; //namespace rinad
 
 #endif  /* __RINAD_BG_H__ */
