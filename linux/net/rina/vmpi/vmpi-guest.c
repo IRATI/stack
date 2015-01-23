@@ -94,7 +94,9 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
 {
         vmpi_impl_info_t *vi = mpi->vi;
         size_t len = iov_length(iv, iovcnt);
+#ifdef VMPI_TX_MUTEX
         DECLARE_WAITQUEUE(wait, current);
+#endif
         size_t buf_data_size = mpi->write.buf_size - sizeof(struct vmpi_hdr);
         ssize_t ret = 0;
 
@@ -104,17 +106,23 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
         IFV(printk("vmpi_info_aio_write user-buf (%lu,%d)\n",
                    iovcnt, (int)len));
 
+#ifdef VMPI_TX_MUTEX
         add_wait_queue(&mpi->write.wqh, &wait);
+#endif  /* VMPI_TX_MUTEX */
         while (len) {
                 size_t copylen;
                 struct vmpi_buffer *buf;
 
+#ifdef VMPI_TX_MUTEX
                 current->state = TASK_INTERRUPTIBLE;
-
                 mutex_lock(&mpi->write.lock);
+#else
+                spin_lock(&mpi->write.lock);
+#endif  /* VMPI_TX_MUTEX */
                 vmpi_clean_tx(mpi);
                 if (vmpi_ring_unused(&mpi->write) == 0) {
                         if (vmpi_impl_send_cb(vi, 1)) {
+#ifdef VMPI_TX_MUTEX
                                 mutex_unlock(&mpi->write.lock);
                                 if (signal_pending(current)) {
                                         ret = -ERESTARTSYS;
@@ -124,6 +132,10 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                                 /* Nothing to read, let's sleep */
                                 schedule();
                                 continue;
+#else
+                                spin_unlock(&mpi->write.lock);
+                                return -EBUSY;
+#endif
                         }
                         vmpi_clean_tx(mpi);
                 }
@@ -154,12 +166,18 @@ vmpi_write_common(struct vmpi_info *mpi, unsigned int channel,
                 }
                 mpi->stats.txreq++;
                 vmpi_impl_txkick(vi);
+#ifdef VMPI_TX_MUTEX
                 mutex_unlock(&mpi->write.lock);
+#else
+                spin_unlock(&mpi->write.lock);
+#endif
                 break;
         }
 
+#ifdef VMPI_TX_MUTEX
         current->state = TASK_RUNNING;
         remove_wait_queue(&mpi->write.wqh, &wait);
+#endif  /* VMPI_TX_MUTEX */
 
         IFV(printk("vmpi_info_aio_write completed --> %d\n", (int)ret));
 
@@ -233,12 +251,14 @@ vmpi_read(struct vmpi_info *mpi, unsigned int channel,
 static void
 xmit_callback(vmpi_impl_info_t *vi)
 {
+#ifdef VMPI_TX_MUTEX
         struct vmpi_info *mpi = vmpi_info_from_vmpi_impl_info(vi);
 
         /* XXX can we disable xmit callbacks here, to avoid an
                useless burst of TX interrupts? */
         wake_up_interruptible_poll(&mpi->write.wqh, POLLOUT |
                                    POLLWRNORM | POLLWRBAND);
+#endif
 }
 
 static void
