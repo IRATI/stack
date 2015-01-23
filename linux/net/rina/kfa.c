@@ -255,7 +255,8 @@ static bool ok_write(struct ipcp_flow * flow)
 static int disable_write(struct ipcp_instance_data * data, port_id_t id)
 {
         struct ipcp_flow * flow;
-        struct kfa *        instance;
+        struct kfa *       instance;
+        unsigned long      flags;
 
         if (!data) {
                 LOG_ERR("Bogus ipcp data instance passed, can't enable pid");
@@ -273,18 +274,22 @@ static int disable_write(struct ipcp_instance_data * data, port_id_t id)
         }
         LOG_DBG("DISABLED write op");
 
+        spin_lock_irqsave(&instance->lock, flags);
         flow = kfa_pmap_find(instance->flows, id);
         if (!flow) {
+                spin_unlock_irqrestore(&instance->lock, flags);
                 LOG_ERR("There is no flow bound to port-id %d", id);
                 return -1;
         }
 
         if (flow->state == PORT_STATE_DEALLOCATED) {
+                spin_unlock_irqrestore(&instance->lock, flags);
                 LOG_DBG("Flow with port-id %d is already deallocated", id);
                 return 0;
         }
 
         flow->state = PORT_STATE_DISABLED;
+        spin_unlock_irqrestore(&instance->lock, flags);
 
         LOG_DBG("IPCP notified CWQ exhausted");
 
@@ -332,7 +337,7 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
                 flow->state = PORT_STATE_ALLOCATED;
                 wq = &flow->write_wqueue;
                 spin_unlock(&instance->lock);
-                LOG_DBG("IPCP notified CWQ enabled but port deallocated");
+                LOG_DBG("IPCP notified CWQ enabled");
                 LOG_DBG("Enabled port id");
                 wake_up_interruptible(wq);
                 return 0;

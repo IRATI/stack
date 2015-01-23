@@ -745,9 +745,6 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
         }
 
-        if (!app)
-                sock_release(flow->sock);
-
         unbind_and_destroy_flow(data, flow);
 
         return 0;
