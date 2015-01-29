@@ -639,15 +639,16 @@ private:
 
 class RIB;
 
-class RIBSchema {
+
+class RIBSchema{
 public:
 	friend class RIB;
-	static const char FIELD_SEPARATOR = ',';
-	static const char ID_SEPARATOR = '=';
-	RIBSchema(const rib_ver_t& version);
+	RIBSchema(const rib_ver_t& version, char field_separator, char id_separator);
 	rib_res ribSchemaDefContRelation(const std::string& container_cn, const std::string& class_name,
 			const std::string name, const bool mandatory,
 			const unsigned max_objs);
+	char get_field_separator() const;
+	char get_id_separator() const;
 private:
 	bool validateAddObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
 	bool validateRemoveObject(const BaseRIBObject* obj, const BaseRIBObject* parent);
@@ -655,6 +656,8 @@ private:
 	std::string getParentName(const std::string& name);
     rib_ver_t version_;
     std::map<std::string, RIBSchemaObject*> rib_schema_;
+	char field_separator_;
+	char id_separator_;
 };
 /// A simple RIB implementation, based on a hashtable of RIB objects
 /// indexed by object name
@@ -808,7 +811,7 @@ class RIBDaemon : public IRIBDaemon {
 public:
         RIBDaemon(const RIBSchema *rib_schema);
         ~RIBDaemon();
-        void initialize(const std::string& separator, IEncoder * encoder,
+        void initialize(const RIBSchema* schema, IEncoder * encoder,
                         CDAPSessionManagerInterface * cdap_session_manager_,
                         IApplicationConnectionHandler * app_conn_handler_);
         // TODO check object creation and interfaces
@@ -936,7 +939,7 @@ private:
         CDAPSessionManagerInterface * cdap_session_manager_;
         IEncoder * encoder_;
         IApplicationConnectionHandler * app_conn_handler_;
-        std::string separator_;
+        const RIBSchema *schema_;
 };
 
 }

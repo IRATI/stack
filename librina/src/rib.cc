@@ -479,9 +479,9 @@ std::list<BaseRIBObject*> RIB::getRIBObjects()
 }
 
 std::string RIB::get_parent_name(const std::string child_name)const {
-	unsigned int last_field_separator = child_name.find_last_of(RIBSchema::FIELD_SEPARATOR,
+	unsigned int last_field_separator = child_name.find_last_of(rib_schema_->field_separator_,
 			std::string::npos);
-	unsigned int last_id_separator = child_name.find_last_of(RIBSchema::ID_SEPARATOR,
+	unsigned int last_id_separator = child_name.find_last_of(rib_schema_->id_separator_,
 			std::string::npos);
 	if (last_field_separator == std::string::npos)
 		return "";
@@ -505,12 +505,12 @@ RIBDaemon::~RIBDaemon()
 	delete rib_;
 }
 
-void RIBDaemon::initialize(const std::string& separator, IEncoder * encoder,
+void RIBDaemon::initialize(const RIBSchema* schema, IEncoder * encoder,
                 CDAPSessionManagerInterface * cdap_session_manager,
                 IApplicationConnectionHandler * app_conn_handler) {
 	cdap_session_manager_ = cdap_session_manager;
 	encoder_ = encoder;
-	separator_ = separator;
+	schema_ = schema;
 	app_conn_handler_ = app_conn_handler;
 }
 
@@ -569,7 +569,7 @@ void RIBDaemon::createObject(const std::string& objectClass,
 	} catch (Exception &e) {
 			//Delegate creation to the parent if the object is not there
 			std::string::size_type position =
-					objectName.rfind(separator_);
+					objectName.rfind(schema_->get_field_separator());
 			if (position == std::string::npos)
 					throw e;
 			std::string parentObjectName = objectName.substr(0, position);
@@ -730,7 +730,7 @@ void RIBDaemon::processIncomingRequestMessage(const rina::CDAPMessage * cdapMess
                         } catch (Exception &e) {
                                 //Look for parent object, delegate creation there
                                 std::string::size_type position =
-                                                cdapMessage->get_obj_name().rfind(separator_);
+                                                cdapMessage->get_obj_name().rfind(schema_->get_field_separator());
                                 if (position == std::string::npos) {
                                         throw e;
                                 }
@@ -1447,8 +1447,10 @@ unsigned RIBSchemaObject::get_max_objs() const {
 }
 
 // CLASS RIBSchema
-RIBSchema::RIBSchema(const rib_ver_t& version){
+RIBSchema::RIBSchema(const rib_ver_t& version, char field_separator, char id_separator){
 	version_ = version;
+	field_separator_ = field_separator;
+	id_separator_ = id_separator;
 }
 
 rib_res RIBSchema::ribSchemaDefContRelation(const std::string& container_cn,	const std::string& class_name,
@@ -1499,10 +1501,10 @@ bool RIBSchema::validateAddObject(const BaseRIBObject* obj, const BaseRIBObject 
 std::string RIBSchema::parseName(const std::string& name){
 	std::string name_schema = "";
 	int position = 0;
-	int field_separator_position = name.find(FIELD_SEPARATOR, position);
+	int field_separator_position = name.find(field_separator_, position);
 	while (field_separator_position != -1)
 	{
-		int id_separator_position = name.find(ID_SEPARATOR, position);
+		int id_separator_position = name.find(id_separator_, position);
 		if (id_separator_position < field_separator_position )
 			// field with value
 			name_schema.append(name, position, id_separator_position);
@@ -1510,18 +1512,25 @@ std::string RIBSchema::parseName(const std::string& name){
 			// field without value
 			name_schema.append(name, position, field_separator_position);
 
-		field_separator_position = name.find(FIELD_SEPARATOR, position);
+		field_separator_position = name.find(field_separator_, position);
 	}
 	return name_schema;
 }
 
 std::string RIBSchema::getParentName(const std::string& name){
-	int field_separator_position = name.find_last_of(FIELD_SEPARATOR, 0);
+	int field_separator_position = name.find_last_of(field_separator_, 0);
 	if (field_separator_position != -1)
 	{
 		return name.substr(0, field_separator_position);
 	}
 	return "";
+}
+
+char RIBSchema::get_field_separator() const {
+	return field_separator_;
+}
+char RIBSchema::get_id_separator() const{
+	return id_separator_;
 }
 
 

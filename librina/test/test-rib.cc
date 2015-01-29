@@ -177,13 +177,15 @@ private:
 
 
 int main() {
-	CheckRIB checks_rib(0);
-/*	rina::rib_ver_t version;
+
+	rina::rib_ver_t version;
 	version.model = CheckSchema::RIB_MODEL;
 	version.major_version = CheckSchema::RIB_MAJ_VERSION;
 	version.minor_version = CheckSchema::RIB_MIN_VERSION;
 	version.encoding = CheckSchema::RIB_ENCODING;
-
+	rina::RIBSchema *schema = new rina::RIBSchema(version, ',', '=');
+	CheckRIB checks_rib(schema);
+/*
 	rina::RIBSchema rib_schema(version);
 
 	CheckSchema checks_schema(0);

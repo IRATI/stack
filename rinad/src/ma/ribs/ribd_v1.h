@@ -38,8 +38,21 @@ public:
 			int sessionId,
 			unsigned int address,
 			rina::ICDAPResponseMessageHandler* cdapMessageHandler);
+};
 
+class SimplestRIBObj: public rina::BaseRIBObject{
+public:
+	SimplestRIBObj(rina::IRIBDaemon *rib_daemon, const std::string &object_class, const std::string &object_name);
+    const void* get_value() const;
+};
 
+class SimpleRIBObj: public rina::BaseRIBObject{
+public:
+	SimpleRIBObj(rina::IRIBDaemon *rib_daemon, const std::string &object_class, const std::string &object_name, unsigned int id);
+    const void* get_value() const;
+    unsigned int get_id() const;
+private:
+    unsigned int id_;
 };
 
 }; //namespace mad

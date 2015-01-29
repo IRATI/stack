@@ -27,57 +27,13 @@ Singleton<RIBFactory_> RIBFactory;
 
 
 //Initialization and destruction routines
-void RIBFactory_::init(void){
-	try
+void RIBFactory_::init(std::list<uint64_t> supported_versions){
+	for (std::list<uint64_t>::iterator it = supported_versions.begin();
+			it != supported_versions.end(); it++)
 	{
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "ROOT", "root"));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "DAF", "root, dafID", 1));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "ComputingSystem", "root, computingSystemID", 1));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "ProcessingSystem", "root, computingSystemID = 1, processingSystemID", 1));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "Software", "root, computingSystemID = 1, processingSystemID=1, software"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "Hardware", "root, computingSystemID = 1, processingSystemID=1, hardware"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "KernelApplicationProcess", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "OSApplicationProcess", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess"));
-		rib_daemon_->addRIBObject(new SimpleRIBObj(rib_daemon_, "ManagementAgent", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID", 1));
-		// IPCManagement branch
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "IPCManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "IPCResourceManager", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "UnderlayingFlows", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingFlows"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "UnderlayingDIFs", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingDIFs"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "QueryDIFAllocator", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, queryDIFAllocator"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "UnderlayingRegistrations", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"ipcResourceManager, underlayingRegistrations"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "SDUPRotection", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ipcManagement, "
-				"sduProtection"));
-		// RIBDaemon branch
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "RIBDaemon", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"));
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "Discriminators", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, ribDaemon"
-				", discriminators"));
-		// DIFManagement
-		rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "DIFManagement", "root, computingSystemID = 1, "
-				"processingSystemID=1, kernelApplicationProcess, osApplicationProcess, magementAgentID = 1, difManagement"));
+		createRIB(*it);
 	}
-	catch(Exception &e1)
-	{
-		LOG_ERR("RIB basic objects were not created because %s", e1.what());
-		throw Exception("Finish application");
-	}
+
 	LOG_DBG("Initialized");
 }
 
@@ -90,39 +46,35 @@ void RIBFactory_::destroy(void){
 //Constructors destructors
 RIBFactory_::RIBFactory_(){
 	//TODO: register to flow events in librina and spawn workers
-	pthread_rwlock_init(&rwlock, NULL);
 }
 
-RIBFactory_::~RIBFactory_(){
-	pthread_rwlock_destroy(&rwlock);
-}
+RIBFactory_::~RIBFactory_() throw (){}
 
 /*
 * Inner API
 */
-rina::IRIBDaemon& RIBFactory_::createRIB(uint64_t version){
-
-	rina::IRIBDaemon* rib;
-
+void RIBFactory_::createRIB(uint64_t version){
 	//Serialize
-	pthread_rwlock_wrlock(&rwlock);
+	lock();
 
 	//Check if it exists
 	if( rib_inst.find(version) != rib_inst.end() ){
-		pthread_rwlock_unlock(&rwlock);
+		unlock();
 		throw eDuplicatedRIB("An instance of the RIB with this version already exists");
 	}
 
 	//Create object
-	rib = new RIBDaemonv1();
-
-	//TODO: initialize further?
-	rib_inst[version] = rib;
+	switch(version)
+	{
+	case 1:
+		rib_inst[version] = new RIBDaemonv1(0);
+		break;
+	default:
+		break;
+	}
 
 	//Unlock
-	pthread_rwlock_unlock(&rwlock);
-
-	return *rib;
+	unlock();
 }
 
 rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
@@ -130,7 +82,7 @@ rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
 	rina::IRIBDaemon* rib;
 
 	//Serialize
-	pthread_rwlock_rdlock(&rwlock);
+	lock();
 
 	//Note: it is safe to recover the RIB reference without a RD lock
 	//because removal of RIBs is NOT implemented. However this
@@ -145,7 +97,7 @@ rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
 	rib = rib_inst[version];
 
 	//Unlock
-	pthread_rwlock_unlock(&rwlock);
+	unlock();
 
 	return *rib;
 }
