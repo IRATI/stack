@@ -235,6 +235,7 @@ void cwq_deliver(struct cwq * queue,
 {
         struct rtxq * rtxq;
         struct dtcp * dtcp;
+        struct dtp *  dtp;
         struct pdu  * tmp;
 
         if (!queue)
@@ -248,6 +249,10 @@ void cwq_deliver(struct cwq * queue,
 
         dtcp = dt_dtcp(dt);
         if (!dtcp)
+                return;
+
+        dtp = dt_dtp(dt);
+        if (!dtp)
                 return;
 
         spin_lock(&queue->lock);
@@ -277,8 +282,8 @@ void cwq_deliver(struct cwq * queue,
                         rtxq_push_ni(rtxq, tmp);
                 }
                 pci = pdu_pci_get_ro(pdu);
-                if (dtcp_snd_lf_win_set(dtcp,
-                                        pci_sequence_number_get(pci)))
+                if (dtp_sv_max_seq_nr_set(dtp,
+                                          pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");
 
                 if (rmt_send(rmt,
@@ -289,9 +294,9 @@ void cwq_deliver(struct cwq * queue,
         }
         spin_unlock(&queue->lock);
 
-        LOG_DBG("CWQ has delivered until %u", dtcp_snd_lf_win(dtcp));
+        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
 
-        if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
+        if ((dtp_sv_max_seq_nr_sent(dtp) >= dtcp_snd_rt_win(dtcp))) {
                 dt_sv_window_closed_set(dt, true);
                 enable_write(queue, dt);
                 return;

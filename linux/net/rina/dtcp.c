@@ -673,7 +673,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                 return -1;
         }
         if (cwq_is_empty(q) &&
-            (dtp_sv_last_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
+            (dtp_sv_max_seq_nr_sent(dtp) < snd_rt_wind_edge(dtcp))) {
                 dt_sv_window_closed_set(dtcp->parent, false);
         }
 
