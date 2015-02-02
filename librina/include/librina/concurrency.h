@@ -279,6 +279,8 @@ BlockingFIFOQueue():ConditionVariable() { };
                         queue.pop_front();
                 }
 
+                unlock();
+
                 return result;
         }
 
