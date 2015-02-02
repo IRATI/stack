@@ -289,6 +289,7 @@ static int disable_write(struct ipcp_instance_data * data, port_id_t id)
         }
 
         flow->state = PORT_STATE_DISABLED;
+        LOG_INFO("Disabled write in port id %d", id);
         spin_unlock_irqrestore(&instance->lock, flags);
 
         LOG_DBG("IPCP notified CWQ exhausted");
@@ -338,7 +339,7 @@ static int enable_write(struct ipcp_instance_data * data, port_id_t id)
                 wq = &flow->write_wqueue;
                 spin_unlock(&instance->lock);
                 LOG_DBG("IPCP notified CWQ is now enabled");
-                LOG_DBG("Enabled port id");
+                LOG_INFO("Enabled write in port id %d", id);
                 wake_up_interruptible(wq);
                 return 0;
         }

@@ -1084,7 +1084,7 @@ static bool window_is_closed(struct dtp_sv * sv,
         if (dt_sv_window_closed(dt))
                 return true;
 
-        if (sv->window_based && seq_num >= dtcp_snd_rt_win(dtcp)) {
+        if (sv->window_based && seq_num > dtcp_snd_rt_win(dtcp)) {
                 dt_sv_window_closed_set(dt, true);
                 retval = true;
         }
