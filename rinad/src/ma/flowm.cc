@@ -12,8 +12,12 @@
 #define RINA_PREFIX "mad.flowm"
 #include <librina/logs.h>
 
+
 namespace rinad{
 namespace mad{
+
+#define FLOWMANAGER_TIMEOUT_S 0
+#define FLOWMANAGER_TIMEOUT_NS 400
 
 /*
 * Flow worker
@@ -22,9 +26,9 @@ void* FlowWorker::run(void* param){
 
 	(void)param;
 	//Recover the port_id of the flow
-	keep_on = true;
+	keep_running = true;
 
-	while(keep_on == true){
+	while(keep_running == true){
 		//TODO: block for incoming messages
 		sleep(1);
 	}
@@ -46,12 +50,14 @@ void FlowManager_::runIOLoop(){
 
 	//wait for events
 	while(keep_running){
-		event = rina::ipcEventProducer->eventWait();
+		event = rina::ipcEventProducer->eventTimedWait(
+						FLOWMANAGER_TIMEOUT_S,
+						FLOWMANAGER_TIMEOUT_NS);
 		flow = NULL;
 		resp = NULL;
 
 		if(!event){
-			return;
+			continue;
 		}
 
 		switch(event->eventType) {

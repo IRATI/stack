@@ -38,7 +38,7 @@ class FlowWorker{
 
 public:
 	/**
-	* Run the main loop until keep_on == false
+	* Run the main loop until keep_running == false
 	*/
 	void* run(void* param);
 
@@ -53,7 +53,7 @@ public:
 	* Instruct the thread to stop.
 	*/
 	inline void stop(void){
-		keep_on = false;
+		keep_running = false;
 	}
 
 	inline pthread_t* getPthreadContext(){
@@ -66,7 +66,7 @@ protected:
 	pthread_t ctx;
 
 	//Wether to stop the main I/O loop
-	volatile bool keep_on;
+	volatile bool keep_running;
 };
 
 /**

@@ -35,8 +35,11 @@ void ManagementAgent_::bootstrapNMSDIFs(){
 //Registers the application in the IPCManager
 void ManagementAgent_::reg(){
 
+        unsigned int seqnum;
 	rina::ApplicationRegistrationInformation ari;
 	std::list<std::string>::const_iterator it;
+        rina::RegisterApplicationResponseEvent *resp;
+	rina::IPCEvent *event;
 
 	//Check if there are available DIFs
 	if(nmsDIFs.empty()){
@@ -44,14 +47,52 @@ void ManagementAgent_::reg(){
 		throw eNoNMDIF("No DIFs to register to");
 	}
 
-	//Register
+	LOG_DBG("Will register as %s, to DIF: %s", info.processName.c_str(),
+						(*nmsDIFs.begin()).c_str());
+	//Register to DIF0 (FIXME)
+	ari.ipcProcessId = 0;  //TODO: remove!
+	ari.appName = info;
+	ari.applicationRegistrationType =
+	rina::APPLICATION_REGISTRATION_SINGLE_DIF;
+	ari.difName = rina::ApplicationProcessNamingInformation(
+							*nmsDIFs.begin(),
+							std::string());
 
+	// Request the registration
+	seqnum = rina::ipcManager->requestApplicationRegistration(ari);
+
+	// Wait for the response to come
+	while(1){
+		event = rina::ipcEventProducer->eventWait();
+		if (event && event->eventType ==
+			rina::REGISTER_APPLICATION_RESPONSE_EVENT &&
+			event->sequenceNumber == seqnum)
+			break;
+	}
+
+	resp = dynamic_cast<rina::RegisterApplicationResponseEvent*>(event);
+
+	// Update librina state
+	if (resp->result == 0){
+		rina::ipcManager->commitPendingRegistration(seqnum,
+								resp->DIFName);
+	}else{
+		rina::ipcManager->withdrawPendingRegistration(seqnum);
+		LOG_ERR("FATAL ERROR: unable to register to DIF '%s'",
+					ari.difName.processName.c_str());
+		throw rina::ApplicationRegistrationException("Failed to register application");
+	}
+
+	/*
+	//TODO: this is for when librina supports multiple SINGLE DIF regs
+	//and the config is properly read
 	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
 		//Nice trace
 		LOG_INFO("Registering agent at DIF '%s'", it->c_str());
 
 		//TODO FIXME XXX: call ipcmanager to register MA to this DIF
 	}
+	*/
 }
 
 //Initialization and destruction routines
