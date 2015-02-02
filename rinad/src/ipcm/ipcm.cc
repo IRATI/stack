@@ -39,8 +39,6 @@ using namespace std;
 
 namespace rinad {
 
-#define IPCM_LOG_FILE "/tmp/ipcm-log-file"
-
 void *
 script_function(void *opaque)
 {
@@ -71,19 +69,21 @@ IPCManager::~IPCManager()
         }
 }
 
-void IPCManager::init(const std::string& logfile, const std::string& loglevel)
+void IPCManager::init(const std::string& loglevel)
 {
         // Initialize the IPC manager infrastructure in librina.
         try {
-                rina::initializeIPCManager(1, config.local.installationPath,
-                                config.local.libraryPath,
-                                loglevel, logfile);
+                rina::initializeIPCManager(1,
+                                           config.local.installationPath,
+                                           config.local.libraryPath,
+                                           loglevel,
+                                           config.local.logPath);
                 LOG_DBG("IPC Manager daemon initialized");
                 LOG_DBG("       installation path: %s",
                         config.local.installationPath.c_str());
                 LOG_DBG("       library path: %s",
                         config.local.libraryPath.c_str());
-                LOG_DBG("       log file: %s", IPCM_LOG_FILE);
+                LOG_DBG("       log folder: %s", config.local.logPath.c_str());
         } catch (rina::InitializationException) {
                 LOG_ERR("Error while initializing librina-ipc-manager");
                 exit(EXIT_FAILURE);
@@ -901,6 +901,11 @@ IPCManager::query_rib(rina::IPCProcess *ipcp)
         }
 
         return retstr;
+}
+
+std::string IPCManager::get_log_level() const
+{
+	return log_level_;
 }
 
 static void

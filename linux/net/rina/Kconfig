@@ -76,9 +76,11 @@ menuconfig IPC_PROCESSES
         default y
 
 if IPC_PROCESSES
+
 source "net/rina/ipcps/Kconfig"
 source "net/rina/rinarp/Kconfig"
 source "net/rina/vmpi/Kconfig"
+
 endif
 
 endif

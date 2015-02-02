@@ -16,6 +16,7 @@ allsources =							\
         logs.cc							\
         utils.cc             utils.h				\
         concurrency.cc						\
+        time.cc							\
         timer.cc						\
         core.cc              core.h				\
         exceptions.cc						\
@@ -34,7 +35,7 @@ allsources =							\
         netlink-parsers.cc   netlink-parsers.h			\
         netlink-manager.cc   netlink-manager.h			\
         syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
-	$(protoSOURCES)						\
+        $(protoSOURCES)						\
         cdap-impl.cc         cdap-impl.h
 
 librina_la_SOURCES  = $(allsources)

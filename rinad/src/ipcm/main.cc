@@ -20,6 +20,8 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <signal.h>
+
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -31,6 +33,7 @@
 
 #include "common/event-loop.h"
 #include "common/rina-configuration.h"
+#include "common/debug.h"
 #include "tclap/CmdLine.h"
 #include "ipcm.h"
 #include "configuration.h"
@@ -60,13 +63,6 @@ int wrapped_main(int argc, char * argv[])
                                  "ipcmanager.conf",
                                  "string");
                 TCLAP::ValueArg<std::string>
-                        logfile_arg("f",
-                                    "logfile",
-                                    "File to use for logging",
-                                    false,
-                                    "",
-                                    "string");
-                TCLAP::ValueArg<std::string>
                         loglevel_arg("l",
                                      "loglevel",
                                      "Log level",
@@ -82,7 +78,6 @@ int wrapped_main(int argc, char * argv[])
                                      "unsigned int");
 
                 cmd.add(conf_arg);
-                cmd.add(logfile_arg);
                 cmd.add(loglevel_arg);
                 cmd.add(wait_time_arg);
 
@@ -91,7 +86,6 @@ int wrapped_main(int argc, char * argv[])
 
                 // Get the value parsed by each arg.
                 conf     = conf_arg.getValue();
-                logfile  = logfile_arg.getValue();
                 loglevel = loglevel_arg.getValue();
                 wait_time = wait_time_arg.getValue();
 
@@ -112,8 +106,7 @@ int wrapped_main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
 
-        ipcm.init(logfile, loglevel);
-
+        ipcm.init(loglevel);
         cout << ipcm.config.toString() << endl;
 
         rinad::register_handlers_all(loop);
@@ -126,9 +119,23 @@ int wrapped_main(int argc, char * argv[])
         return EXIT_SUCCESS;
 }
 
+void handler(int signum)
+{
+        LOG_CRIT("Got signal %d", signum);
+
+        if (signum == SIGSEGV) {
+                dump_backtrace();
+                exit(EXIT_FAILURE);
+        }
+}
+
 int main(int argc, char * argv[])
 {
         int retval;
+
+        if (signal(SIGSEGV, handler) == SIG_ERR) {
+                LOG_WARN("Cannot install SIGSEGV handler!");
+        }
 
         try {
                 retval = wrapped_main(argc, argv);

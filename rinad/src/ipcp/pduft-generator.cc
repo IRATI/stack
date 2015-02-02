@@ -1029,14 +1029,15 @@ void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
 	std::list<rina::FlowInformation>::iterator it;
 
 	for (it = allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
-		if (it->remoteAppName.processName.compare(
-				event->neighbor_->get_name().processName) == 0) {
+		if (it->portId == event->neighbor_->underlying_port_id_)
+				/*it->remoteAppName.processName.compare(
+				event->neighbor_->get_name().processName) == 0) */{
 			LOG_INFO(
 					"There was an allocation flow event waiting for enrollment, launching it");
 			try {
 				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
 						ipc_process_->namespace_manager_->getAdressByname(
-								it->remoteAppName), 1);
+								event->neighbor_->get_name()), 1);
 				allocated_flows_.erase(it);
 				break;
 			} catch (Exception &e) {

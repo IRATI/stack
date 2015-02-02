@@ -95,6 +95,16 @@ int           name_cpy_from_user(const struct name __user * src,
 bool          name_is_equal(const struct name * a, const struct name * b);
 bool          name_is_ok(const struct name * n);
 
+#define NAME_CMP_APN 0x01
+#define NAME_CMP_API 0x02
+#define NAME_CMP_AEN 0x04
+#define NAME_CMP_AEI 0x08
+#define NAME_CMP_ALL (NAME_CMP_APN | NAME_CMP_API | NAME_CMP_AEN | NAME_CMP_AEI)
+
+bool          name_cmp(uint8_t             flags,
+                       const struct name * a,
+                       const struct name * b);
+
 /* Returns a name as a (newly allocated) string */
 char *        name_tostring(const struct name * n);
 char *        name_tostring_ni(const struct name * n);

@@ -5,20 +5,20 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+#
+# Script-local parameters
+#
+
+#
+# Do not change under this line
+#
+
 ME=install-kernel
 
-#PREFIX=`echo "$1"|sed -e "s,\/$,,"`
-#
-#echo "$ME: Prefix is \`$PREFIX'"
-#if test -n "$PREFIX" ; then
-#    mkdir -p $PREFIX || {
-#        echo "$ME: Cannot create directory \`$PREFIX'"
-#    }
-#fi
-
-#
-# FIXME: we should definitely do a VPATH build ...
-#
+. ./.env || {
+    echo "$ME: Cannot load environment"
+    exit 1
+}
 
 echo "$ME: Installing kernel headers (sandboxed)"
 #(cd linux && make INSTALL_HDR_PATH=/usr headers_install) || {
