@@ -1421,7 +1421,7 @@ int dtp_receive(struct dtp * instance,
         struct dt *           dt;
         seq_num_t             seq_num;
         timeout_t             a;
-        timeout_t             LWE;
+        seq_num_t             LWE;
         bool                  in_order;
         seq_num_t             max_sdu_gap;
         unsigned long         flags;
