@@ -81,8 +81,7 @@ void FlowManager_::runIOLoop(){
 				port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)->portId;
 				rina::ipcManager->flowDeallocated(port_id);
 				LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-
-				//TODO: join thread
+				joinWorker(port_id);
 				break;
 
 			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
@@ -90,7 +89,7 @@ void FlowManager_::runIOLoop(){
 				resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
 				port_id = resp->portId;
 				rina::ipcManager->flowDeallocationResult(port_id, resp->result == 0);
-				//TODO: join thread
+				joinWorker(port_id);
 				break;
 
 			default:
