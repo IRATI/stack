@@ -257,7 +257,7 @@ void cwq_deliver(struct cwq * queue,
 
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q) &&
-               (dtp_sv_max_seq_nr_sent(dtp) <= dtcp_snd_rt_win(dtcp))) {
+               (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp))) {
                 struct pdu *       pdu;
                 const struct pci * pci;
 
