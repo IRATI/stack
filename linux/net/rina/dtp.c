@@ -1513,13 +1513,13 @@ int dtp_receive(struct dtp * instance,
          *   they are not, LWE is not updated and always 0
          */
         if (seq_num <= LWE) {
+            LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, LWE: %u. Dropped PDUs: %d",
+            		pci_cep_source(pci), pci_cep_destination(pci),
+                    seq_num, LWE, dropped_pdus(sv));
+
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
-                LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, LWE: %u. Dropped PDUs: %d",
-                        instance->parent->efcp->connection->source_cep_id,
-                        instance->parent->efcp->connection->destination_cep_id,
-                        seq_num, LWE, dropped_pdus(sv));
 
                 /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
@@ -1541,11 +1541,10 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-        if (dtcp && seq_num > dtcp->sv->rcvr_rt_wind_edge) {
+        if (dtcp && seq_num > dtcp_rcv_rt_win(dtcp)) {
         	LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u.",
-        			instance->parent->efcp->connection->source_cep_id,
-        			instance->parent->efcp->connection->destination_cep_id,
-        			seq_num, dtcp->sv->rcvr_rt_wind_edge);
+            		pci_cep_source(pci), pci_cep_destination(pci),
+        			seq_num, dtcp_rcv_rt_win(dtcp));
         }
 
         if (!a) {
