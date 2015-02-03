@@ -1512,7 +1512,7 @@ int dtp_receive(struct dtp * instance,
          *   no need to check presence of in_order or dtcp because in case
          *   they are not, LWE is not updated and always 0
          */
-        if (seq_num <= LWE) {
+        if ((seq_num <= LWE) || (dtcp && (seq_num > dtcp_rcv_rt_win(dtcp)))) {
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
