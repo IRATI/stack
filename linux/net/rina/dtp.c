@@ -1513,7 +1513,7 @@ int dtp_receive(struct dtp * instance,
          *   they are not, LWE is not updated and always 0
          */
         if (seq_num <= LWE) {
-            LOG_INFO("WTF! PDU Scep-id %u Dcep-id %u SeqN %u, LWE: %u. Dropped PDUs: %d",
+            LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, LWE: %u. Dropped PDUs: %d",
             		pci_cep_source(pci), pci_cep_destination(pci),
                     seq_num, LWE, dropped_pdus(sv));
 

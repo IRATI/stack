@@ -1283,6 +1283,14 @@ int dtcp_sv_update(struct dtcp * instance,
         return 0;
 }
 
+seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
+{
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        return rcvr_rt_wind_edge(dtcp);
+}
+
 seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 {
         if (!dtcp || !dtcp->sv)
