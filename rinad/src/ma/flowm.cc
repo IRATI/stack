@@ -17,7 +17,7 @@ namespace rinad{
 namespace mad{
 
 #define FLOWMANAGER_TIMEOUT_S 0
-#define FLOWMANAGER_TIMEOUT_NS 400
+#define FLOWMANAGER_TIMEOUT_NS 100000000
 
 /*
 * Flow worker
