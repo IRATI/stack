@@ -30,6 +30,9 @@
 
 namespace rina {
 
+/* Timed wait constants */
+#define CONCURRENCY_1S_TO_NS 1000000000
+
 /* CLASS CONCURRENT EXCEPTION */
 const std::string ConcurrentException::error_initialize_thread_attributes =
 		"Cannot initialize thread attribues";
@@ -581,8 +584,18 @@ void ConditionVariable::doWait(){
 
 void ConditionVariable::timedwait(long seconds, long nanoseconds){
 	timespec waitTime;
-	waitTime.tv_sec = time(0) + seconds;
-	waitTime.tv_nsec = nanoseconds;
+
+	//Prepare timespec struct
+	clock_gettime(CLOCK_REALTIME, &waitTime);
+	waitTime.tv_nsec += nanoseconds;
+
+	//Make sure it does not overflow
+	while(waitTime.tv_nsec >= CONCURRENCY_1S_TO_NS){
+		waitTime.tv_sec++;
+		waitTime.tv_nsec -= CONCURRENCY_1S_TO_NS;
+	}
+	waitTime.tv_sec += seconds;
+
 	int response = pthread_cond_timedwait(&cond_, getMutex(), &waitTime);
 	if (response == 0){
 		return;
