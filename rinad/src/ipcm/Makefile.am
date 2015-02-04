@@ -102,17 +102,3 @@ CLEANFILES += rinad-ipcm.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = rinad-ipcm.pc
-
-bin_SCRIPTS = ipcm-plugins
-
-ipcm-plugins: Makefile ipcm-plugins.in
-	rm -f $@ $@.tmp
-	srcdir=''; \
-	  test -f ./$@.in || srcdir=$(srcdir)/; \
-	  $(edit) $${srcdir}$@.in >$@.tmp
-	chmod a-w $@.tmp
-	chmod u+x $@.tmp
-	mv $@.tmp $@
-
-EXTRA_DIST += ipcm-plugins.in
-CLEANFILES += ipcm-plugins
