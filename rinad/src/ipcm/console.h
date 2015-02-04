@@ -72,7 +72,7 @@ class IPCMConsole {
                 std::map<std::string, ConsoleCmdInfo> commands_map;
                 std::ostringstream outstream;
 
-                int init();
+                int init(void);
                 int process_command(int cfd, char *cmdbuf, int size);
                 int flush_output(int cfd);
 
@@ -91,9 +91,13 @@ class IPCMConsole {
                 int enroll_to_dif(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta);
+                IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta,
+					const unsigned int port);
                 void body();
                 virtual ~IPCMConsole() throw();
+	private:
+		//Local console port
+		const unsigned int port;
 };
 
 }

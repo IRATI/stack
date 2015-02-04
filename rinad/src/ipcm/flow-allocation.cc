@@ -103,7 +103,7 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event,
         ostringstream ss;
 
         // Find the name of the DIF that will provide the flow
-        dif_specified = ipcm->config.lookup_dif_by_application(event->
+        dif_specified = ipcm->lookup_dif_by_application(event->
                                         localApplicationName, dif_name);
         if (!dif_specified) {
                 if (event->DIFName !=

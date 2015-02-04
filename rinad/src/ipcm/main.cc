@@ -107,7 +107,7 @@ int wrapped_main(int argc, char * argv[])
         }
 
         ipcm.init(loglevel);
-        cout << ipcm.config.toString() << endl;
+        ipcm.dumpConfig();
 
         rinad::register_handlers_all(loop);
 

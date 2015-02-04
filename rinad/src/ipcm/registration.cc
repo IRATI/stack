@@ -152,8 +152,8 @@ application_registration_request_event_handler(rina::IPCEvent *e,
 
                 // See if the configuration specifies a mapping between
                 // the registering application and a DIF.
-                found = ipcm->config.lookup_dif_by_application(app_name,
-                                                               dif_name);
+                found = ipcm->lookup_dif_by_application(app_name,
+                                                              dif_name);
                 if (found) {
                         // If a mapping exists, select an IPC process
                         // from the specified DIF.

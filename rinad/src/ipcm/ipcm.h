@@ -27,24 +27,35 @@
 #include <vector>
 #include <utility>
 
-#define RINA_PREFIX     "ipcm"
-
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
-#include <librina/logs.h>
 
 #include "event-loop.h"
 #include "rina-configuration.h"
 #include "console.h"
 
 
-#define FLUSH_LOG(_lev_, _ss_)                                          \
-                do {                                                    \
-                        LOGF_##_lev_ ("%s", (_ss_).str().c_str());       \
-                        ss.str(string());                               \
-                } while (0)
+#ifndef DOWNCAST_DECL
+	// Useful MACRO to perform downcasts in declarations.
+	#define DOWNCAST_DECL(_var,_class,_name)\
+		_class *_name = dynamic_cast<_class*>(_var);
+#endif //DOWNCAST_DECL
+
+#ifndef FLUSH_LOG
+	//Force log flushing
+	#define FLUSH_LOG(_lev_, _ss_)\
+			do{\
+				LOGF_##_lev_ ("%s", (_ss_).str().c_str());\
+				ss.str(string());\
+			}while (0)
+#endif //FLUSH_LOG
+
 namespace rinad {
 
+//
+//
+// TODO: revise
+//
 class IPCMConcurrency : public rina::ConditionVariable {
  public:
         bool wait_for_event(rina::IPCEventType ty, unsigned int seqnum,
@@ -63,6 +74,11 @@ class IPCMConcurrency : public rina::ConditionVariable {
         int event_result;
 };
 
+//
+// @brief Pending Flow allocation object
+//
+// TODO: revise
+//
 struct PendingFlowAllocation {
         rina::IPCProcess *slave_ipcp;
         rina::FlowRequestEvent req_event;
@@ -76,53 +92,151 @@ struct PendingFlowAllocation {
                                         try_only_a_dif(once) { }
 };
 
+//
+// @brief Validates the DIF configurations
+//
+// FIXME: Convert this into an abstract class and make all the subtypes
+// derive from the DIF abstract class (e.g. shimEth, ShimHV..)
+//
+class DIFConfigValidator {
+public:
+        enum Types{
+                NORMAL,
+                SHIM_ETH,
+                SHIM_DUMMY,
+                SHIM_TCP_UDP,
+                SHIM_HV,
+                SHIM_NOT_DEFINED
+        };
+        DIFConfigValidator(const rina::DIFConfiguration &dif_config,
+                        const rina::DIFInformation &dif_info, std::string type);
+        bool validateConfigs();
+private:
+        Types type_;
+        const rina::DIFConfiguration &dif_config_;
+        const rina::DIFInformation &dif_info_;
+
+	bool validateShimEth();
+	bool validateShimHv();
+	bool validateShimDummy();
+        bool validateShimTcpUdp();
+        bool validateNormal();
+	bool validateBasicDIFConfigs();
+	bool validateConfigParameters(const std::vector< std::string >&
+                                      expected_params);
+	bool dataTransferConstants();
+	bool qosCubes();
+	bool knownIPCProcessAddresses();
+	bool pdufTableGeneratorConfiguration();
+};
+
+
+//
+// @brief The IPCManager class is in charge of managing the IPC processes
+// life-cycle.
+//
 class IPCManager : public EventLoopData {
- public:
+
+public:
+
         IPCManager(unsigned int wait_time);
         ~IPCManager();
 
+	//
+	// Initialize the IPCManager
+	//
         void init(const std::string& loglevel);
 
+	//
+	// Start the script worker thread
+	//
         int start_script_worker();
+
+	//
+	// Start the console worker thread
+	//
         int start_console_worker();
 
+	//
+	// TODO: XXX?????
+	//
         int apply_configuration();
 
+	//
+	// Creates an IPCP process
+	//
         rina::IPCProcess *create_ipcp(
                         const rina::ApplicationProcessNamingInformation& name,
                         const std::string& type);
 
+	//
+	// Destroys an IPCP process
+	//
         int destroy_ipcp(unsigned int ipcp_id);
 
+	//
+	// List the existing IPCPs in the system
+	//
         int list_ipcps(std::ostream& os);
 
+	//
+	// List the available IPCP types
+	//
         int list_ipcp_types(std::ostream& os);
 
+	//
+	// Assing an ipcp to a DIF
+	//
         int assign_to_dif(rina::IPCProcess *ipcp,
                           const rina::ApplicationProcessNamingInformation&
                           difName);
 
+	//
+	// Register an IPCP to a single DIF
+	//
         int register_at_dif(rina::IPCProcess *ipcp,
                             const rina::ApplicationProcessNamingInformation&
                             difName);
 
+	//
+	// Register an existing IPCP to multiple DIFs
+	//
         int register_at_difs(rina::IPCProcess *ipcp, const
                         std::list<rina::ApplicationProcessNamingInformation>&
                              difs);
 
+	//
+	// Enroll IPCP to a single DIF
+	//
         int enroll_to_dif(rina::IPCProcess *ipcp,
                           const rinad::NeighborData& neighbor, bool sync);
-
+	//
+	// Enroll IPCP to multiple DIFs
+	//
         int enroll_to_difs(rina::IPCProcess *ipcp,
                            const std::list<rinad::NeighborData>& neighbors);
 
+	//TODO
         int unregister_app_from_ipcp(
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
                 rina::IPCProcess *slave_ipcp);
 
+	//TODO
         int unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
                                       rina::IPCProcess *slave_ipcp);
 
+	//
+	// Get the IPCP identifier where the application is registered
+	// FIXME: return id instead?
+	//
+        bool lookup_dif_by_application(
+		const rina::ApplicationProcessNamingInformation& apName,
+		rina::ApplicationProcessNamingInformation& difName);
+
+	//
+	// Update the DIF configuration
+	//TODO: What is really this for?
+	//
         int update_dif_configuration(
                 rina::IPCProcess *ipcp,
                 const rina::DIFConfiguration& dif_config);
@@ -130,11 +244,35 @@ class IPCManager : public EventLoopData {
         int deallocate_flow(rina::IPCProcess *ipcp,
                             const rina::FlowDeallocateRequestEvent& event);
 
+	//
+	// Retrieve the IPCP RIB in the form of a string
+	//
         std::string query_rib(rina::IPCProcess *ipcp);
 
+	//
+	// Get the current logging debug level
+	//
         std::string get_log_level() const;
 
-        rinad::RINAConfiguration config;
+	//
+	// Set the config
+	//
+	void loadConfig(rinad::RINAConfiguration& newConf){
+		config = newConf;
+	}
+
+	//
+	// Dump the current configuration
+	// TODO return ostream or overload << operator instead
+	//
+	void dumpConfig(void){
+		std::cout << config.toString() << std::endl;
+	}
+
+
+//------------FIXME: all this section MUST be protected/private---------------
+	//and handlers (C linkage) should call methods of IPCM and lock there.
+	IPCMConcurrency concurrency;
 
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
 
@@ -176,52 +314,18 @@ class IPCManager : public EventLoopData {
                           >
                 > pending_flow_deallocations;
 
-        IPCMConcurrency concurrency;
+//-------------------------END OF FIXME---------------------------------------
+private:
+        rinad::RINAConfiguration config;
 
- private:
         rina::Thread *script;
         IPCMConsole *console;
         std::string log_level_;
 };
 
-class DIFConfigValidator {
-public:
-        enum Types{
-                NORMAL,
-                SHIM_ETH,
-                SHIM_DUMMY,
-                SHIM_TCP_UDP,
-                SHIM_HV,
-                SHIM_NOT_DEFINED
-        };
-        DIFConfigValidator(const rina::DIFConfiguration &dif_config,
-                        const rina::DIFInformation &dif_info, std::string type);
-        bool validateConfigs();
-private:
-        Types type_;
-        const rina::DIFConfiguration &dif_config_;
-        const rina::DIFInformation &dif_info_;
+//TODO: is this really needed?
+extern void register_handlers_all(EventLoop& loop);
 
-	bool validateShimEth();
-	bool validateShimHv();
-	bool validateShimDummy();
-        bool validateShimTcpUdp();
-        bool validateNormal();
-	bool validateBasicDIFConfigs();
-	bool validateConfigParameters(const std::vector< std::string >&
-                                      expected_params);
-	bool dataTransferConstants();
-	bool qosCubes();
-	bool knownIPCProcessAddresses();
-	bool pdufTableGeneratorConfiguration();
-};
-
-void register_handlers_all(EventLoop& loop);
-
-}
-
-/* Macro useful to perform downcasts in declarations. */
-#define DOWNCAST_DECL(_var,_class,_name)        \
-        _class *_name = dynamic_cast<_class*>(_var);
+}//rina namespace
 
 #endif  /* __IPCM_H__ */

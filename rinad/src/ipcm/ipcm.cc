@@ -27,6 +27,9 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 
+#define RINA_PREFIX     "ipcm"
+#include <librina/logs.h>
+
 #include "event-loop.h"
 #include "rina-configuration.h"
 #include "helpers.h"
@@ -110,7 +113,7 @@ IPCManager::start_console_worker()
         }
 
         rina::ThreadAttributes ta;
-        console = new IPCMConsole(*this, ta);
+        console = new IPCMConsole(*this, ta, config.local.consolePort);
 
         return 0;
 }
@@ -758,6 +761,14 @@ int IPCManager::enroll_to_difs(rina::IPCProcess *ipcp,
 
         return 0;
 }
+
+bool IPCManager::lookup_dif_by_application(
+	const rina::ApplicationProcessNamingInformation& apName,
+	rina::ApplicationProcessNamingInformation& difName){
+	return config.lookup_dif_by_application(apName, difName);
+}
+
+
 
 int
 IPCManager::apply_configuration()

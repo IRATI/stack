@@ -53,8 +53,9 @@ console_function(void *opaque)
         return NULL;
 }
 
-IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta) :
-                ipcm(r)
+IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta,
+					const unsigned int port_) :
+                ipcm(r), port(port_)
 {
         commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,
                                 "USAGE: help [<command>]");
@@ -107,6 +108,7 @@ IPCMConsole::~IPCMConsole() throw()
         delete worker;
 }
 
+//TODO use unix sockets!
 int
 IPCMConsole::init()
 {
@@ -119,7 +121,7 @@ IPCMConsole::init()
         memset(&server_address, 0, sizeof(server_address));
         server_address.sin_family = AF_INET;
         inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr);
-        server_address.sin_port = htons(ipcm.config.local.consolePort);
+        server_address.sin_port = htons(port);
 
         try {
                 sfd = socket(AF_INET, SOCK_STREAM, 0);

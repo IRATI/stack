@@ -907,7 +907,7 @@ bool parse_configuration(string       file_loc,
         parse_app_to_dif(root, config.applicationToDIFMappings);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
         parse_dif_configs(root, config.difConfigurations);
-        ipcm->config = config;
+        ipcm->loadConfig(config);
 
         return true;
 }
