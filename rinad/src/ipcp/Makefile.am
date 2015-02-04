@@ -24,7 +24,7 @@ COMMONLIBS =					\
 ipcp_CFLAGS   =
 ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
-	-DPLUGINSDIR=$(pkglibdir)/ipcp
+	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 ipcp_LDADD    = $(COMMONLIBS) -ldl
 ipcp_SOURCES  =						\
 	main.cc						\

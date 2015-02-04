@@ -46,7 +46,7 @@ ipcm_CPPFLAGS =					\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
 	-I$(srcdir)/jsoncpp			\
-	-DPLUGINSDIR=$(pkglibdir)/ipcm
+	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\

@@ -588,11 +588,7 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 
 int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 {
-#define STRINGIFY(s) STRINGIFY1(s)
-#define STRINGIFY1(s) #s
-        std::string plugin_path = STRINGIFY(PLUGINSDIR);
-#undef STRINGIFY1
-#undef STRINGIFY
+        std::string plugin_path = PLUGINSDIR;
         void *handle = NULL;
         plugin_init_function_t init_func;
         char *errstr;
