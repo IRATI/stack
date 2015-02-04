@@ -53,9 +53,9 @@ console_function(void *opaque)
         return NULL;
 }
 
-IPCMConsole::IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta,
+IPCMConsole::IPCMConsole(rina::ThreadAttributes &ta,
 					const unsigned int port_) :
-                ipcm(r), port(port_)
+                port(port_)
 {
         commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,
                                 "USAGE: help [<command>]");
@@ -317,7 +317,7 @@ IPCMConsole::create_ipcp(vector<string>& args)
         rina::ApplicationProcessNamingInformation ipcp_name(args[1], args[2]);
         rina::IPCProcess *ipcp = NULL;
 
-        ipcp = ipcm.create_ipcp(ipcp_name, args[3]);
+        ipcp = IPCManager->create_ipcp(ipcp_name, args[3]);
         if (!ipcp) {
                 outstream << "Error while creating IPC process" << endl;
         } else {
@@ -345,7 +345,7 @@ IPCMConsole::destroy_ipcp(vector<string>& args)
                 return CMDRETCONT;
         }
 
-        ret = ipcm.destroy_ipcp(ipcp_id);
+        ret = IPCManager->destroy_ipcp(ipcp_id);
         if (ret) {
                 outstream << "Destroy operation failed" << endl;
         } else {
@@ -360,7 +360,7 @@ IPCMConsole::list_ipcps(vector<string>&args)
 {
         (void) args;
 
-        ipcm.list_ipcps(outstream);
+        IPCManager->list_ipcps(outstream);
 
         return CMDRETCONT;
 }
@@ -370,7 +370,7 @@ IPCMConsole::list_ipcp_types(std::vector<std::string>& args)
 {
         (void) args;
 
-        ipcm.list_ipcp_types(outstream);
+        IPCManager->list_ipcp_types(outstream);
 
         return CMDRETCONT;
 }
@@ -399,7 +399,7 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = ipcm.assign_to_dif(ipcp, dif_name);
+                ret = IPCManager->assign_to_dif(ipcp, dif_name);
                 if (ret) {
                         outstream << "DIF assignment failed" << endl;
                 } else {
@@ -434,7 +434,7 @@ IPCMConsole::query_rib(std::vector<string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-        		outstream << ipcm.query_rib(ipcp) << endl;
+        		outstream << IPCManager->query_rib(ipcp) << endl;
         }
 
         return CMDRETCONT;
@@ -464,7 +464,7 @@ IPCMConsole::register_at_dif(vector<string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = ipcm.register_at_dif(ipcp, dif_name);
+                ret = IPCManager->register_at_dif(ipcp, dif_name);
                 if (ret) {
                         outstream << "Registration failed" << endl;
                 } else {
@@ -508,7 +508,7 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
                         outstream << "No IPC process in that DIF" << endl;
                 }
         } else {
-                ret = ipcm.unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
+                ret = IPCManager->unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
                 if (ret) {
                         outstream << "Unregistration failed" << endl;
                 } else {
@@ -543,7 +543,7 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = ipcm.update_dif_configuration(ipcp, dif_config);
+                ret = IPCManager->update_dif_configuration(ipcp, dif_config);
                 if (ret) {
                         outstream << "Configuration update failed" << endl;
                 } else {
@@ -585,7 +585,7 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
         if (!ipcp) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = ipcm.enroll_to_dif(ipcp, neighbor_data, true);
+                ret = IPCManager->enroll_to_dif(ipcp, neighbor_data, true);
                 if (ret) {
                         outstream << "Enrollment operation failed" << endl;
                 } else {

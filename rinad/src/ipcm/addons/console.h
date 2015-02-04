@@ -47,8 +47,6 @@
 
 namespace rinad {
 
-class IPCManager;
-
 class IPCMConsole {
                 static const unsigned int CMDBUFSIZE = 120;
                 static const int CMDRETCONT = 0;
@@ -66,7 +64,6 @@ class IPCMConsole {
                                                         : fun(f), usage(u) { }
                 };
 
-                IPCManager& ipcm;
                 rina::Thread *worker;
 
                 std::map<std::string, ConsoleCmdInfo> commands_map;
@@ -91,7 +88,7 @@ class IPCMConsole {
                 int enroll_to_dif(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(IPCManager& r, rina::ThreadAttributes &ta,
+                IPCMConsole(rina::ThreadAttributes &ta,
 					const unsigned int port);
                 void body();
                 virtual ~IPCMConsole() throw();

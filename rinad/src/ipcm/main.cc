@@ -43,106 +43,107 @@ using namespace TCLAP;
 
 int wrapped_main(int argc, char * argv[])
 {
-        std::string conf;
-        std::string logfile;
-        std::string loglevel;
-        unsigned int wait_time;
+	std::string conf;
+	std::string logfile;
+	std::string loglevel;
+	unsigned int wait_time;
 
-        // Wrap everything in a try block.  Do this every time,
-        // because exceptions will be thrown for problems.
+	// Wrap everything in a try block.  Do this every time,
+	// because exceptions will be thrown for problems.
 
-        try {
-                // Define the command line object.
-                TCLAP::CmdLine cmd("IPC Manager", ' ', PACKAGE_VERSION);
+	try {
+		// Define the command line object.
+		TCLAP::CmdLine cmd("IPC Manager", ' ', PACKAGE_VERSION);
 
-                TCLAP::ValueArg<std::string>
-                        conf_arg("c",
-                                 "config",
-                                 "Configuration file to load",
-                                 true,
-                                 "ipcmanager.conf",
-                                 "string");
-                TCLAP::ValueArg<std::string>
-                        loglevel_arg("l",
-                                     "loglevel",
-                                     "Log level",
-                                     false,
-                                     "INFO",
-                                     "string");
-                TCLAP::ValueArg<unsigned int>
-                        wait_time_arg("w",
-                                     "wait-time",
-                                     "Maximum time (in seconds) to wait for an event response",
-                                     false,
-                                     10,
-                                     "unsigned int");
+		TCLAP::ValueArg<std::string>
+			conf_arg("c",
+				 "config",
+				 "Configuration file to load",
+				 true,
+				 "ipcmanager.conf",
+				 "string");
+		TCLAP::ValueArg<std::string>
+			loglevel_arg("l",
+				     "loglevel",
+				     "Log level",
+				     false,
+				     "INFO",
+				     "string");
+		TCLAP::ValueArg<unsigned int>
+			wait_time_arg("w",
+				     "wait-time",
+				     "Maximum time (in seconds) to wait for an event response",
+				     false,
+				     10,
+				     "unsigned int");
 
-                cmd.add(conf_arg);
-                cmd.add(loglevel_arg);
-                cmd.add(wait_time_arg);
+		cmd.add(conf_arg);
+		cmd.add(loglevel_arg);
+		cmd.add(wait_time_arg);
 
-                // Parse the args.
-                cmd.parse(argc, argv);
+		// Parse the args.
+		cmd.parse(argc, argv);
 
-                // Get the value parsed by each arg.
-                conf     = conf_arg.getValue();
-                loglevel = loglevel_arg.getValue();
-                wait_time = wait_time_arg.getValue();
+		// Get the value parsed by each arg.
+		conf     = conf_arg.getValue();
+		loglevel = loglevel_arg.getValue();
+		wait_time = wait_time_arg.getValue();
 
-                LOG_DBG("Config file is: %s", conf.c_str());
+		LOG_DBG("Config file is: %s", conf.c_str());
 
-        } catch (ArgException &e) {
-                LOG_ERR("Error: %s for arg %d",
-                        e.error().c_str(),
-                        e.argId().c_str());
-                return EXIT_FAILURE;
-        }
+	} catch (ArgException &e) {
+		LOG_ERR("Error: %s for arg %d",
+			e.error().c_str(),
+			e.argId().c_str());
+		return EXIT_FAILURE;
+	}
 
-        rinad::IPCManager ipcm(wait_time);
-        rinad::EventLoop  loop(&ipcm);
+	//Parse configuration file
+	if (!rinad::parse_configuration(conf)) {
+		LOG_ERR("Failed to load configuration");
+		return EXIT_FAILURE;
+	}
 
-        if (!parse_configuration(conf, &ipcm)) {
-                LOG_ERR("Failed to load configuration");
-                return EXIT_FAILURE;
-        }
+	//Initialize IPCM
+	rinad::IPCManager->init(wait_time, loglevel);
 
-        ipcm.init(loglevel);
-        ipcm.dumpConfig();
+	//Dump the config
+	rinad::IPCManager->dumpConfig();
 
-        rinad::register_handlers_all(loop);
+	//TODO make this configurable
+	rinad::IPCManager->start_console_worker();
+	rinad::IPCManager->start_script_worker();
 
-        ipcm.start_console_worker();
-        ipcm.start_script_worker();
+	//Run the loop
+	rinad::IPCManager->run();
 
-        loop.run();
-
-        return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }
 
 void handler(int signum)
 {
-        LOG_CRIT("Got signal %d", signum);
+	LOG_CRIT("Got signal %d", signum);
 
-        if (signum == SIGSEGV) {
-                dump_backtrace();
-                exit(EXIT_FAILURE);
-        }
+	if (signum == SIGSEGV) {
+		dump_backtrace();
+		exit(EXIT_FAILURE);
+	}
 }
 
 int main(int argc, char * argv[])
 {
-        int retval;
+	int retval;
 
-        if (signal(SIGSEGV, handler) == SIG_ERR) {
-                LOG_WARN("Cannot install SIGSEGV handler!");
-        }
+	if (signal(SIGSEGV, handler) == SIG_ERR) {
+		LOG_WARN("Cannot install SIGSEGV handler!");
+	}
 
-        try {
-                retval = wrapped_main(argc, argv);
-        } catch (std::exception & e) {
-                LOG_ERR("Got unhandled exception (%s)", e.what());
-                retval = EXIT_FAILURE;
-        }
+	try {
+		retval = wrapped_main(argc, argv);
+	} catch (std::exception & e) {
+		LOG_ERR("Got unhandled exception (%s)", e.what());
+		retval = EXIT_FAILURE;
+	}
 
-        return retval;
+	return retval;
 }

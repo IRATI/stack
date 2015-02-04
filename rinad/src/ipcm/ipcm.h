@@ -29,6 +29,7 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/patterns.h>
 
 #include "event-loop.h"
 #include "rina-configuration.h"
@@ -68,6 +69,7 @@ class IPCMConcurrency : public rina::ConditionVariable {
         IPCMConcurrency(unsigned int wt) :
                                 wait_time(wt), event_waiting(false) { }
 
+	void setWaitTime(unsigned int wt){wait_time = wt;}
  private:
         unsigned int wait_time;
         bool event_waiting;
@@ -137,17 +139,17 @@ private:
 // @brief The IPCManager class is in charge of managing the IPC processes
 // life-cycle.
 //
-class IPCManager : public EventLoopData {
+class IPCManager_ : public EventLoopData {
 
 public:
 
-        IPCManager(unsigned int wait_time);
-        ~IPCManager();
+	IPCManager_();
+	virtual ~IPCManager_();
 
 	//
 	// Initialize the IPCManager
 	//
-        void init(const std::string& loglevel);
+        void init(unsigned int wait_time, const std::string& loglevel);
 
 	//
 	// Start the script worker thread
@@ -271,6 +273,10 @@ public:
 		std::cout << config.toString() << std::endl;
 	}
 
+	//
+	// Run the main I/O loop
+	//
+	void run(void);
 
 //------------FIXME: all this section MUST be protected/private---------------
 	//and handlers (C linkage) should call methods of IPCM and lock there.
@@ -334,6 +340,10 @@ private:
 	//Current logging level
         std::string log_level_;
 };
+
+
+//Singleton instance
+extern Singleton<rinad::IPCManager_> IPCManager;
 
 //TODO: is this really needed?
 extern void register_handlers_all(EventLoop& loop);
