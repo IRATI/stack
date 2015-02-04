@@ -52,6 +52,8 @@ librina_la_CPPFLAGS =				\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
+librina_la_CXXFLAGS =				\
+	$(CXXFLAGS_EXTRA)
 
 librina_stubbed_la_SOURCES  = $(allsources)
 librina_stubbed_la_LDFLAGS  =
@@ -67,6 +69,8 @@ librina_stubbed_la_CPPFLAGS =			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
+librina_stubbed_la_CXXFLAGS =			\
+	$(CXXFLAGS_EXTRA)
 
 lib_LTLIBRARIES    = librina.la
 noinst_LTLIBRARIES = librina-stubbed.la
@@ -82,6 +86,8 @@ test_linking_CPPFLAGS =				\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
+test_linking_CXXFLAGS =				\
+	$(CXXFLAGS_EXTRA)
 test_linking_LDADD    =				\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)			\
