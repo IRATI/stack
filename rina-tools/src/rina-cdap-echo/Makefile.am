@@ -15,5 +15,8 @@ rina_cdap_echo_CPPFLAGS =			\
 	$(CPPFLAGS_EXTRA)			\
 	-std=c++11				\
 	-I$(srcdir)/../common
+rina_cdap_echo_CXXFLAGS =			\
+	$(CPPFLAGS_EXTRA)
+
 bin_PROGRAMS            += rina-cdap-echo
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-cdap-echo
