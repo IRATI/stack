@@ -13,15 +13,16 @@ COMMONCPPFLAGS =				\
 	-I$(top_srcdir)/src			\
 	-I$(top_srcdir)/src/common
 
-pluginsdir = $(pkglibdir)/ipcp
+pluginsdir          = $(pkglibdir)/ipcp
+plugins_LTLIBRARIES =
 
-plugins_LTLIBRARIES = ps_sm_passwd.la
-
-ps_sm_passwd_la_CFLAGS   =
-ps_sm_passwd_la_CPPFLAGS =			\
+sm_passwd_la_CFLAGS   =
+sm_passwd_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
-ps_sm_passwd_la_LIBADD   =
-ps_sm_passwd_la_LDFLAGS  = -module
-ps_sm_passwd_la_SOURCES  =			\
+sm_passwd_la_LIBADD   =
+sm_passwd_la_LDFLAGS  = -module
+sm_passwd_la_SOURCES  =				\
 	security-manager-passwd.cc		\
 	component.h
+
+plugins_LTLIBRARIES += sm-passwd.la
