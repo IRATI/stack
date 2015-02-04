@@ -47,11 +47,9 @@ Singleton<IPCManager_> IPCManager;
 void *
 script_function(void *opaque)
 {
-        IPCManager_ *ipcm = static_cast<IPCManager_ *>(opaque);
-
         LOG_DBG("script starts");
 
-        ipcm->apply_configuration();
+        IPCManager->apply_configuration();
 
         LOG_DBG("script stops");
 
@@ -162,19 +160,15 @@ IPCMConcurrency::notify_event(rina::IPCEvent *event)
 static void
 ipcm_pre_function(rina::IPCEvent *event, EventLoopData *opaque)
 {
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
-
         (void) event;
-        ipcm->concurrency.lock();
+        IPCManager->concurrency.lock();
 }
 
 static void
 ipcm_post_function(rina::IPCEvent *event, EventLoopData *opaque)
 {
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
-
-        ipcm->concurrency.notify_event(event);
-        ipcm->concurrency.unlock();
+        IPCManager->concurrency.notify_event(event);
+        IPCManager->concurrency.unlock();
 }
 
 rina::IPCProcess *
@@ -959,15 +953,14 @@ assign_to_dif_response_event_handler(rina::IPCEvent *       e,
                                             EventLoopData * opaque)
 {
         DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
         map<unsigned int, rina::IPCProcess*>::iterator mit;
         ostringstream ss;
         bool success = (event->result == 0);
         int ret = -1;
 
-        mit = ipcm->pending_ipcp_dif_assignments.find(
+        mit = IPCManager->pending_ipcp_dif_assignments.find(
                                         event->sequenceNumber);
-        if (mit != ipcm->pending_ipcp_dif_assignments.end()) {
+        if (mit != IPCManager->pending_ipcp_dif_assignments.end()) {
                 rina::IPCProcess *ipcp = mit->second;
 
                 // Inform the IPC process about the result of the
@@ -985,14 +978,14 @@ assign_to_dif_response_event_handler(rina::IPCEvent *       e,
                                 << ipcp->name.toString() << endl;
                         FLUSH_LOG(ERR, ss);
                 }
-                ipcm->pending_ipcp_dif_assignments.erase(mit);
+                IPCManager->pending_ipcp_dif_assignments.erase(mit);
         } else {
                 ss << ": Warning: DIF assignment response "
                         "received, but no pending DIF assignment" << endl;
                 FLUSH_LOG(WARN, ss);
         }
 
-        ipcm->concurrency.set_event_result(ret);
+        IPCManager->concurrency.set_event_result(ret);
 }
 
 static void
@@ -1008,14 +1001,13 @@ update_dif_config_response_event_handler(rina::IPCEvent *e,
                                          EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::UpdateDIFConfigurationResponseEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
         map<unsigned int, rina::IPCProcess*>::iterator mit;
         bool success = (event->result == 0);
         rina::IPCProcess *ipcp = NULL;
         ostringstream ss;
 
-        mit = ipcm->pending_dif_config_updates.find(event->sequenceNumber);
-        if (mit == ipcm->pending_dif_config_updates.end()) {
+        mit = IPCManager->pending_dif_config_updates.find(event->sequenceNumber);
+        if (mit == IPCManager->pending_dif_config_updates.end()) {
                 ss  << ": Warning: DIF configuration update "
                         "response received, but no corresponding pending "
                         "request" << endl;
@@ -1040,9 +1032,9 @@ update_dif_config_response_event_handler(rina::IPCEvent *e,
                 FLUSH_LOG(ERR, ss);
         }
 
-        ipcm->pending_dif_config_updates.erase(mit);
+        IPCManager->pending_dif_config_updates.erase(mit);
 
-        ipcm->concurrency.set_event_result(event->result);
+        IPCManager->concurrency.set_event_result(event->result);
 }
 
 static void
@@ -1057,15 +1049,14 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                                                  EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::EnrollToDIFResponseEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
         map<unsigned int, rina::IPCProcess *>::iterator mit;
         rina::IPCProcess *ipcp = NULL;
         bool success = (event->result == 0);
         ostringstream ss;
         int ret = -1;
 
-        mit = ipcm->pending_ipcp_enrollments.find(event->sequenceNumber);
-        if (mit == ipcm->pending_ipcp_enrollments.end()) {
+        mit = IPCManager->pending_ipcp_enrollments.find(event->sequenceNumber);
+        if (mit == IPCManager->pending_ipcp_enrollments.end()) {
                 ss  << ": Warning: IPC process enrollment "
                         "response received, but no corresponding pending "
                         "request" << endl;
@@ -1086,10 +1077,10 @@ enroll_to_dif_response_event_handler(rina::IPCEvent *e,
                         FLUSH_LOG(ERR, ss);
                 }
 
-                ipcm->pending_ipcp_enrollments.erase(mit);
+                IPCManager->pending_ipcp_enrollments.erase(mit);
         }
 
-        ipcm->concurrency.set_event_result(ret);
+        IPCManager->concurrency.set_event_result(ret);
 }
 
 static void
@@ -1097,7 +1088,6 @@ neighbors_modified_notification_event_handler(rina::IPCEvent * e,
                                               EventLoopData *  opaque)
 {
         DOWNCAST_DECL(e, rina::NeighborsModifiedNotificationEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
 
         rina::IPCProcess *ipcp =
                 rina::ipcProcessFactory->
@@ -1130,7 +1120,6 @@ neighbors_modified_notification_event_handler(rina::IPCEvent * e,
                 ipcp->name.toString() <<  endl;
         FLUSH_LOG(INFO, ss);
 
-        (void) ipcm;
 }
 
 static void
@@ -1166,7 +1155,6 @@ os_process_finalized_handler(rina::IPCEvent *e,
                                          EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::OSProcessFinalizedEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
         const vector<rina::IPCProcess *>& ipcps =
                 rina::ipcProcessFactory->listIPCProcesses();
         const rina::ApplicationProcessNamingInformation& app_name =
@@ -1194,7 +1182,7 @@ os_process_finalized_handler(rina::IPCEvent *e,
                         continue;
                 }
 
-                ipcm->deallocate_flow(ipcp, req_event);
+                IPCManager->deallocate_flow(ipcp, req_event);
         }
 
         // Look if the terminating application has pending registrations
@@ -1212,7 +1200,7 @@ os_process_finalized_handler(rina::IPCEvent *e,
                                 req_event(app_name, ipcps[i]->
                                         getDIFInformation().dif_name_, 0);
 
-                        ipcm->unregister_app_from_ipcp(req_event, ipcps[i]);
+                        IPCManager->unregister_app_from_ipcp(req_event, ipcps[i]);
                 }
         }
 
@@ -1228,7 +1216,6 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                                              EventLoopData *opaque)
 {
         DOWNCAST_DECL(e, rina::QueryRIBResponseEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
         ostringstream ss;
         map<unsigned int, rina::IPCProcess *>::iterator mit;
         rina::IPCProcess *ipcp = NULL;
@@ -1238,8 +1225,8 @@ query_rib_response_event_handler(rina::IPCEvent *e,
         ss << "Query RIB response event arrived" << endl;
         FLUSH_LOG(INFO, ss);
 
-        mit = ipcm->pending_ipcp_query_rib_responses.find(event->sequenceNumber);
-        if (mit == ipcm->pending_ipcp_query_rib_responses.end()) {
+        mit = IPCManager->pending_ipcp_query_rib_responses.find(event->sequenceNumber);
+        if (mit == IPCManager->pending_ipcp_query_rib_responses.end()) {
                 ss  << ": Warning: IPC process query RIB "
                         "response received, but no corresponding pending "
                         "request" << endl;
@@ -1261,7 +1248,7 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                                 ss << "Value: " << lit->displayable_value_ <<endl;
                                 ss << "" << endl;
                         }
-                        ipcm->query_rib_responses[event->sequenceNumber] = ss.str();
+                        IPCManager->query_rib_responses[event->sequenceNumber] = ss.str();
                         ret = 0;
                 } else {
                         ss  << ": Error: Query RIB operation of "
@@ -1270,10 +1257,10 @@ query_rib_response_event_handler(rina::IPCEvent *e,
                         FLUSH_LOG(ERR, ss);
                 }
 
-                ipcm->pending_ipcp_query_rib_responses.erase(mit);
+                IPCManager->pending_ipcp_query_rib_responses.erase(mit);
         }
 
-        ipcm->concurrency.set_event_result(ret);
+        IPCManager->concurrency.set_event_result(ret);
 }
 
 static void
@@ -1281,17 +1268,16 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent * e,
                                              EventLoopData *  opaque)
 {
         DOWNCAST_DECL(e, rina::IPCProcessDaemonInitializedEvent, event);
-        DOWNCAST_DECL(opaque, IPCManager_, ipcm);
         map<unsigned short, rina::IPCProcess *>::iterator mit;
         ostringstream ss;
         int ret = -1;
 
         // Perform deferred "setInitiatialized()" of a normal IPC process, if
         // needed.
-        mit = ipcm->pending_normal_ipcp_inits.find(event->ipcProcessId);
-        if (mit != ipcm->pending_normal_ipcp_inits.end()) {
+        mit = IPCManager->pending_normal_ipcp_inits.find(event->ipcProcessId);
+        if (mit != IPCManager->pending_normal_ipcp_inits.end()) {
                 mit->second->setInitialized();
-                ipcm->pending_normal_ipcp_inits.erase(mit);
+                IPCManager->pending_normal_ipcp_inits.erase(mit);
                 ss << "IPC process daemon initialized [id = " <<
                         event->ipcProcessId<< "]" << endl;
                 FLUSH_LOG(INFO, ss);
@@ -1303,7 +1289,7 @@ ipc_process_daemon_initialized_event_handler(rina::IPCEvent * e,
                 FLUSH_LOG(WARN, ss);
         }
 
-        ipcm->concurrency.set_event_result(ret);
+        IPCManager->concurrency.set_event_result(ret);
 }
 
 static void
