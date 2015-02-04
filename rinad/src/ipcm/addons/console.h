@@ -42,7 +42,7 @@
 
 #include "rina-configuration.h"
 #include "helpers.h"
-#include "ipcm.h"
+#include "../ipcm.h"
 
 
 namespace rinad {

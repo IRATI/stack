@@ -34,7 +34,6 @@
 #include "rina-configuration.h"
 #include "helpers.h"
 #include "ipcm.h"
-#include "console.h"
 #include "registration.h"
 #include "flow-allocation.h"
 

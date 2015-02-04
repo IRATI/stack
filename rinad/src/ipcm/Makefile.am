@@ -7,10 +7,12 @@
 EXTRA_DIST   =
 CLEANFILES   =
 
-bin_PROGRAMS = ipcm
+SUBDIRS=addons
 
+#
+#Libs
+#
 noinst_LTLIBRARIES = libjsoncpp.la
-
 libjsoncpp_la_SOURCES  =			\
 	jsoncpp/json/autolink.h			\
 	jsoncpp/json/config.h			\
@@ -37,6 +39,10 @@ CPPFLAGS_EXTRA =					\
 	-DDEFAULT_LIBDIR=\"$(libdir)\"			\
 	-DDEFAULT_LOGDIR=\"$(localstatedir)/log\"
 
+#
+#IPCM
+#
+bin_PROGRAMS = ipcm
 ipcm_CFLAGS   =
 ipcm_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
@@ -47,14 +53,14 @@ ipcm_CPPFLAGS =					\
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
+	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =							\
 	main.cc							\
 	ipcm.cc                     ipcm.h			\
 	configuration.cc            configuration.h		\
 	registration.cc 	    registration.h		\
-	flow-allocation.cc          flow-allocation.h		\
-	console.cc		    console.h
+	flow-allocation.cc          flow-allocation.h
 
 test_empty_SOURCES  =				\
 	test-empty.cc

@@ -103,6 +103,7 @@ AC_CONFIG_FILES([
     src/common/tclap/Makefile
     src/ipcp/Makefile
     src/ipcm/Makefile
+    src/ipcm/addons/Makefile
 
     doc/Makefile
     tools/Makefile

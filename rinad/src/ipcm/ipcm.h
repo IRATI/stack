@@ -32,7 +32,9 @@
 
 #include "event-loop.h"
 #include "rina-configuration.h"
-#include "console.h"
+
+//Addons
+#include "addons/console.h"
 
 
 #ifndef DOWNCAST_DECL
