@@ -17,7 +17,7 @@ AC_CONFIG_SRCDIR([src/ipcm/main.cc])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 
-AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign -Wall])
+AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign -Wall subdir-objects])
 #AM_INIT_AUTOMAKE([1.11.1 tar-pax foreign std-options -Wall])
 
 AC_PROG_SED
