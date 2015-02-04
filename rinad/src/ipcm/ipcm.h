@@ -318,10 +318,20 @@ public:
 
 //-------------------------END OF FIXME---------------------------------------
 private:
+
+
+	//
+	// RINA configuration internal state
+	//
         rinad::RINAConfiguration config;
 
+	//Script thread
         rina::Thread *script;
+
+	//IPCM Console instance
         IPCMConsole *console;
+
+	//Current logging level
         std::string log_level_;
 };
 
