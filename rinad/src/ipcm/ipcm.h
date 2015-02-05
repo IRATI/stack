@@ -171,8 +171,7 @@ public:
 	//
 	// Creates an IPCP process
 	//
-        rina::IPCProcess *create_ipcp(
-                        const rina::ApplicationProcessNamingInformation& name,
+        int create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                         const std::string& type);
 
 	//
@@ -185,6 +184,18 @@ public:
 	//
         int list_ipcps(std::ostream& os);
 
+
+	//
+	// Get the IPCP ID given a difName
+	// TODO: multiple IPCPs in the same DIF?
+	//
+	int get_ipcp_by_dif_name(std::string& difName);
+
+	//
+	// Checks if an IPCP exists by its ID
+	//
+	bool ipcp_exists(const int ipcp_id);
+
 	//
 	// List the available IPCP types
 	//
@@ -193,43 +204,43 @@ public:
 	//
 	// Assing an ipcp to a DIF
 	//
-        int assign_to_dif(rina::IPCProcess *ipcp,
+        int assign_to_dif(const int ipcp_id,
                           const rina::ApplicationProcessNamingInformation&
                           difName);
 
 	//
 	// Register an IPCP to a single DIF
 	//
-        int register_at_dif(rina::IPCProcess *ipcp,
+        int register_at_dif(const int ipcp_id,
                             const rina::ApplicationProcessNamingInformation&
                             difName);
 
 	//
 	// Register an existing IPCP to multiple DIFs
 	//
-        int register_at_difs(rina::IPCProcess *ipcp, const
+        int register_at_difs(const int ipcp_id, const
                         std::list<rina::ApplicationProcessNamingInformation>&
                              difs);
 
 	//
 	// Enroll IPCP to a single DIF
 	//
-        int enroll_to_dif(rina::IPCProcess *ipcp,
+        int enroll_to_dif(const int ipcp_id,
                           const rinad::NeighborData& neighbor, bool sync);
 	//
 	// Enroll IPCP to multiple DIFs
 	//
-        int enroll_to_difs(rina::IPCProcess *ipcp,
+        int enroll_to_difs(const int ipcp_id,
                            const std::list<rinad::NeighborData>& neighbors);
 
 	//TODO
         int unregister_app_from_ipcp(
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
-                rina::IPCProcess *slave_ipcp);
+                int slave_ipcp_id);
 
 	//TODO
-        int unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
-                                      rina::IPCProcess *slave_ipcp);
+        int unregister_ipcp_from_ipcp(const int ipcp_id,
+						const int slave_ipcp_id);
 
 	//
 	// Get the IPCP identifier where the application is registered
@@ -244,16 +255,16 @@ public:
 	//TODO: What is really this for?
 	//
         int update_dif_configuration(
-                rina::IPCProcess *ipcp,
+                const int ipcp_id,
                 const rina::DIFConfiguration& dif_config);
 
-        int deallocate_flow(rina::IPCProcess *ipcp,
+        int deallocate_flow(const int ipcp_id,
                             const rina::FlowDeallocateRequestEvent& event);
 
 	//
 	// Retrieve the IPCP RIB in the form of a string
 	//
-        std::string query_rib(rina::IPCProcess *ipcp);
+        std::string query_rib(const int ipcp_id);
 
 	//
 	// Get the current logging debug level

@@ -39,12 +39,21 @@ namespace rinad {
 int
 IPCManager_::unregister_app_from_ipcp(
                 const rina::ApplicationUnregistrationRequestEvent& req_event,
-                rina::IPCProcess *slave_ipcp)
+                int slave_ipcp_id)
 {
         ostringstream ss;
         unsigned int seqnum;
+        rina::IPCProcess *slave_ipcp;
 
         try {
+		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
+
+		if (!slave_ipcp) {
+			ss << "Cannot find any IPC process belonging "<<endl;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
                 // Forward the unregistration request to the IPC process
                 // that the application is registered to
                 seqnum = slave_ipcp->unregisterApplication(req_event.
@@ -68,15 +77,32 @@ IPCManager_::unregister_app_from_ipcp(
 }
 
 int
-IPCManager_::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
-                                      rina::IPCProcess *slave_ipcp)
+IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
+                                      int slave_ipcp_id)
 {
         unsigned int seqnum;
         bool arrived = true;
         ostringstream ss;
         int ret = -1;
+        rina::IPCProcess *ipcp, *slave_ipcp;
 
         try {
+
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+		slave_ipcp = lookup_ipcp_by_id(slave_ipcp_id);
+
+		if (!slave_ipcp) {
+			ss << "Invalid IPCP id "<< slave_ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
                 // Forward the unregistration request to the IPC process
                 // that the client IPC process is registered to
                 seqnum = slave_ipcp->unregisterApplication(ipcp->name);
@@ -391,7 +417,7 @@ void IPCManager_::application_unregistration_request_event_handler(rina::IPCEven
                 return;
         }
 
-        err = unregister_app_from_ipcp(*event, slave_ipcp);
+        err = unregister_app_from_ipcp(*event, slave_ipcp->id);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed

@@ -40,13 +40,22 @@ using namespace std;
 namespace rinad {
 
 int
-IPCManager_::deallocate_flow(rina::IPCProcess *ipcp,
+IPCManager_::deallocate_flow(const int ipcp_id,
                             const rina::FlowDeallocateRequestEvent& event)
 {
         ostringstream ss;
         unsigned int seqnum;
+	rina::IPCProcess* ipcp;
 
         try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+                        throw Exception();
+		}
+
+
                 // Ask the IPC process to deallocate the flow
                 // specified by the port-id
                 seqnum = ipcp->deallocateFlow(event.portId);
@@ -366,7 +375,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
                 return;
         }
 
-        ret = deallocate_flow(ipcp, *event);
+        ret = deallocate_flow(ipcp->id, *event);
         if (ret) {
                 try {
                         // Inform the application about the deallocation

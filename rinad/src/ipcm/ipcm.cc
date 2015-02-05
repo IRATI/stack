@@ -158,7 +158,7 @@ IPCManager_::start_console_worker()
         return 0;
 }
 
-rina::IPCProcess *
+int
 IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                         const string& type)
 {
@@ -246,7 +246,7 @@ IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 
         concurrency.unlock();
 
-        return ipcp;
+        return ipcp->id;
 }
 
 int
@@ -284,6 +284,17 @@ IPCManager_::list_ipcps(std::ostream& os)
         return 0;
 }
 
+bool
+IPCManager_::ipcp_exists(const int ipcp_id){
+	//TODO: PROTECT WITH READ_LOCK
+	 const vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+
+	rina::IPCProcess* ipcp = lookup_ipcp_by_id(ipcp_id);
+
+	return ipcp != NULL;
+}
+
 int
 IPCManager_::list_ipcp_types(std::ostream& os)
 {
@@ -299,15 +310,33 @@ IPCManager_::list_ipcp_types(std::ostream& os)
         return 0;
 }
 
+//TODO this assumes single IPCP per DIF
+int IPCManager_::get_ipcp_by_dif_name(std::string& difName){
+
+	rina::IPCProcess* ipcp;
+	int ret;
+        rina::ApplicationProcessNamingInformation dif(difName, string());
+
+        concurrency.lock();
+
+	ipcp = select_ipcp_by_dif(dif);
+	if(!ipcp)
+		ret = -1;
+	else
+		ret = ipcp->id;
+
+        concurrency.unlock();
+
+	return ret;
+}
+
+
 
 int
-IPCManager_::assign_to_dif(rina::IPCProcess * ipcp,
+IPCManager_::assign_to_dif(const int ipcp_id,
                           const rina::ApplicationProcessNamingInformation &
                           dif_name)
 {
-        if (!ipcp)
-                return -1;
-
         rinad::DIFProperties   dif_props;
         rina::DIFInformation   dif_info;
         rina::DIFConfiguration dif_config;
@@ -316,10 +345,18 @@ IPCManager_::assign_to_dif(rina::IPCProcess * ipcp,
         bool                   arrived = true;
         bool                   found;
         int                    ret = -1;
+	rina::IPCProcess* ipcp;
 
         concurrency.lock();
 
         try {
+
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+                        throw Exception();
+		}
 
                 // Try to extract the DIF properties from the
                 // configuration.
@@ -445,29 +482,40 @@ IPCManager_::assign_to_dif(rina::IPCProcess * ipcp,
 }
 
 int
-IPCManager_::register_at_dif(rina::IPCProcess *ipcp,
+IPCManager_::register_at_dif(const int ipcp_id,
                             const rina::ApplicationProcessNamingInformation&
                             dif_name)
 {
         // Select a slave (N-1) IPC process.
-        rina::IPCProcess *slave_ipcp = select_ipcp_by_dif(dif_name);
+        rina::IPCProcess *ipcp, *slave_ipcp;
         ostringstream ss;
         unsigned int seqnum;
         bool arrived = true;
         int ret = -1;
 
-        if (!slave_ipcp) {
-                ss << "Cannot find any IPC process belonging "
-                   << "to DIF " << dif_name.toString()
-                   << endl;
-                FLUSH_LOG(ERR, ss);
-                return -1;
-        }
-
-        concurrency.lock();
+	concurrency.lock();
 
         // Try to register @ipcp to the slave IPC process.
         try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
+		slave_ipcp = select_ipcp_by_dif(dif_name);
+
+		if (!slave_ipcp) {
+			ss << "Cannot find any IPC process belonging "
+			   << "to DIF " << dif_name.toString()
+			   << endl;
+			FLUSH_LOG(ERR, ss);
+			throw Exception();
+		}
+
+
                 seqnum = slave_ipcp->registerApplication(
                                 ipcp->name, ipcp->id);
 
@@ -500,30 +548,60 @@ IPCManager_::register_at_dif(rina::IPCProcess *ipcp,
         return ret;
 }
 
-int IPCManager_::register_at_difs(rina::IPCProcess *ipcp,
+int IPCManager_::register_at_difs(const int ipcp_id,
                 const list<rina::ApplicationProcessNamingInformation>& difs)
 {
-        for (list<rina::ApplicationProcessNamingInformation>::const_iterator
-                        nit = difs.begin(); nit != difs.end(); nit++) {
-                register_at_dif(ipcp, *nit);
+
+        rina::IPCProcess *ipcp;
+        ostringstream ss;
+	int ret = 0;
+
+        concurrency.unlock();
+
+	try{
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			throw Exception();
+		}
+
+		for (list<rina::ApplicationProcessNamingInformation>::const_iterator
+				nit = difs.begin(); nit != difs.end(); nit++) {
+			register_at_dif(ipcp_id, *nit);
+		}
+        } catch (Exception) {
+                ss  << ": Unknown error while requesting registration at dif"
+                    << endl;
+                FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
-        return 0;
+        concurrency.unlock();
+
+        return ret;
 }
 
 int
-IPCManager_::enroll_to_dif(rina::IPCProcess *ipcp,
+IPCManager_::enroll_to_dif(const int ipcp_id,
                           const rinad::NeighborData& neighbor,
                           bool sync)
 {
         ostringstream ss;
+        rina::IPCProcess *ipcp;
         bool arrived = true;
         int ret = -1;
+        unsigned int seqnum;
 
         concurrency.lock();
 
         try {
-                unsigned int seqnum;
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			throw Exception();
+		}
 
                 seqnum = ipcp->enroll(neighbor.difName,
                                 neighbor.supportingDifName,
@@ -562,16 +640,38 @@ IPCManager_::enroll_to_dif(rina::IPCProcess *ipcp,
         return ret;
 }
 
-int IPCManager_::enroll_to_difs(rina::IPCProcess *ipcp,
+int IPCManager_::enroll_to_difs(const int ipcp_id,
                                const list<rinad::NeighborData>& neighbors)
 {
-        for (list<rinad::NeighborData>::const_iterator
-                        nit = neighbors.begin();
-                                nit != neighbors.end(); nit++) {
-                enroll_to_dif(ipcp, *nit, false);
+        ostringstream ss;
+        rina::IPCProcess *ipcp;
+        int ret = -1;
+
+        concurrency.unlock();
+
+	try{
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			throw Exception();
+		}
+
+		for (list<rinad::NeighborData>::const_iterator
+				nit = neighbors.begin();
+					nit != neighbors.end(); nit++) {
+			enroll_to_dif(ipcp_id, *nit, false);
+		}
+        } catch (Exception) {
+                ss  << ": Unknown error while enrolling to difs"
+                    << endl;
+                FLUSH_LOG(ERR, ss);
+		ret = -1;
         }
 
-        return 0;
+        concurrency.unlock();
+
+        return ret;
 }
 
 bool IPCManager_::lookup_dif_by_application(
@@ -585,63 +685,87 @@ bool IPCManager_::lookup_dif_by_application(
 int
 IPCManager_::apply_configuration()
 {
-        list<rina::IPCProcess *> ipcps;
+        ostringstream ss;
+        list<int> ipcps;
         list<rinad::IPCProcessToCreate>::iterator cit;
-        list<rina::IPCProcess *>::iterator pit;
+        list<int>::iterator pit;
 
-        // Examine all the IPCProcesses that are going to be created
-        // according to the configuration file.
-        for (cit = config.ipcProcessesToCreate.begin();
-             cit != config.ipcProcessesToCreate.end(); cit++) {
-                rina::IPCProcess * ipcp = NULL;
-                std::string        type;
-                ostringstream      ss;
+        concurrency.unlock();
 
-                if (!config.lookup_type_by_dif(cit->difName, type)) {
-                        ss << "Failed to retrieve DIF type for "
-                           << cit->name.toString() << endl;
-                        FLUSH_LOG(ERR, ss);
+	try{
+		//FIXME TODO XXX this method needs to be heavily refactored
+		//It is not clear which exceptions can be thrown and what to do
+		//if this happens. Just protecting to prevent dead-locks.
 
-                        continue;
-                }
+		// Examine all the IPCProcesses that are going to be created
+		// according to the configuration file.
+		for (cit = config.ipcProcessesToCreate.begin();
+		     cit != config.ipcProcessesToCreate.end(); cit++) {
+			std::string        type;
+			ostringstream      ss;
+			int ipcp_id;
 
-                try {
-                        ipcp = create_ipcp(cit->name, type);
-                        if (!ipcp) {
-                                continue;
-                        }
-                        assign_to_dif(ipcp, cit->difName);
-                        register_at_difs(ipcp, cit->difsToRegisterAt);
-                } catch (Exception &e) {
-                        LOG_ERR("Exception while applying configuration: %s",
-                                e.what());
-                }
+			if (!config.lookup_type_by_dif(cit->difName, type)) {
+				ss << "Failed to retrieve DIF type for "
+				   << cit->name.toString() << endl;
+				FLUSH_LOG(ERR, ss);
+				continue;
+			}
 
-                ipcps.push_back(ipcp);
+			try {
+				ipcp_id = create_ipcp(cit->name, type);
+				if (ipcp_id < 0) {
+					continue;
+				}
+				assign_to_dif(ipcp_id, cit->difName);
+				register_at_difs(ipcp_id, cit->difsToRegisterAt);
+			} catch (Exception &e) {
+				LOG_ERR("Exception while applying configuration: %s",
+					e.what());
+        			concurrency.unlock();
+				return -1;
+			}
+
+			ipcps.push_back(ipcp_id);
+		}
+
+		// Perform all the enrollments specified by the configuration file.
+		for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
+		     pit != ipcps.end();
+		     pit++, cit++) {
+			enroll_to_difs(*pit, cit->neighbors);
+		}
+	} catch (Exception &e) {
+		LOG_ERR("Exception while applying configuration: %s",
+								e.what());
+        	concurrency.unlock();
+		return -1;
         }
-
-        // Perform all the enrollments specified by the configuration file.
-        for (pit = ipcps.begin(), cit = config.ipcProcessesToCreate.begin();
-             pit != ipcps.end();
-             pit++, cit++) {
-                enroll_to_difs(*pit, cit->neighbors);
-        }
+        concurrency.unlock();
 
         return 0;
 }
 
 int
-IPCManager_::update_dif_configuration(rina::IPCProcess *             ipcp,
+IPCManager_::update_dif_configuration(int ipcp_id,
                                      const rina::DIFConfiguration & dif_config)
 {
         ostringstream ss;
         bool arrived = true;
         int ret = -1;
+	unsigned int seqnum;
+        rina::IPCProcess *ipcp;
 
         concurrency.lock();
 
         try {
-                unsigned int seqnum;
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			throw Exception();
+		}
+
 
                 // Request a configuration update for the IPC process
                 /* FIXME The meaning of this operation is unclear: what
@@ -677,23 +801,28 @@ IPCManager_::update_dif_configuration(rina::IPCProcess *             ipcp,
 }
 
 std::string
-IPCManager_::query_rib(rina::IPCProcess *ipcp)
+IPCManager_::query_rib(const int ipcp_id)
 {
-        if (!ipcp) {
-                return "Bogus input parameters";
-        }
-
         std::string   retstr = "Query RIB operation was not successful";
         ostringstream ss;
         bool          arrived = true;
         int           ret = -1;
+        rina::IPCProcess *ipcp;
+
 
         concurrency.lock();
 
         // Invoke librina to assign the IPC process to the
         // DIF specified by dif_info.
-
         try {
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if(!ipcp){
+			ss << "Invalid IPCP id "<< ipcp_id;
+			throw Exception();
+		}
+
+
                 unsigned int seqnum = ipcp->queryRIB("", "", 0, 0, "");
 
                 pending_ipcp_query_rib_responses[seqnum] = ipcp;
@@ -1166,7 +1295,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
                         continue;
                 }
 
-                IPCManager->deallocate_flow(ipcp, req_event);
+                IPCManager->deallocate_flow(ipcp->id, req_event);
         }
 
         // Look if the terminating application has pending registrations
@@ -1184,7 +1313,7 @@ void IPCManager_::os_process_finalized_handler(rina::IPCEvent *e)
                                 req_event(app_name, ipcps[i]->
                                         getDIFInformation().dif_name_, 0);
 
-                        IPCManager->unregister_app_from_ipcp(req_event, ipcps[i]);
+                        IPCManager->unregister_app_from_ipcp(req_event, ipcps[i]->id);
                 }
         }
 

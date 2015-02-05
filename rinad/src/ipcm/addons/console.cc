@@ -317,14 +317,13 @@ IPCMConsole::create_ipcp(vector<string>& args)
         }
 
         rina::ApplicationProcessNamingInformation ipcp_name(args[1], args[2]);
-        rina::IPCProcess *ipcp = NULL;
 
-        ipcp = IPCManager->create_ipcp(ipcp_name, args[3]);
-        if (!ipcp) {
+        int ipcp_id = IPCManager->create_ipcp(ipcp_name, args[3]);
+        if (ipcp_id < 0) {
                 outstream << "Error while creating IPC process" << endl;
         } else {
                 outstream << "IPC process created successfully [id = "
-                                << ipcp->id << "]" << endl;
+                              << ipcp_id << ", name="<<args[1]<<"]" << endl;
         }
 
         return CMDRETCONT;
@@ -389,7 +388,6 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
         }
 
         rina::ApplicationProcessNamingInformation dif_name(args[2], string());
-        rina::IPCProcess *ipcp = NULL;
 
         ret = string2int(args[1], ipcp_id);
         if (ret) {
@@ -397,11 +395,10 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = IPCManager->assign_to_dif(ipcp, dif_name);
+                ret = IPCManager->assign_to_dif(ipcp_id, dif_name);
                 if (ret) {
                         outstream << "DIF assignment failed" << endl;
                 } else {
@@ -424,19 +421,16 @@ IPCMConsole::query_rib(std::vector<string>& args)
                 return CMDRETCONT;
         }
 
-        rina::IPCProcess *ipcp = NULL;
-
         ret = string2int(args[1], ipcp_id);
         if (ret) {
                 outstream << "Invalid IPC process id" << endl;
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-        		outstream << IPCManager->query_rib(ipcp) << endl;
+        		outstream << IPCManager->query_rib(ipcp_id) << endl;
         }
 
         return CMDRETCONT;
@@ -454,7 +448,6 @@ IPCMConsole::register_at_dif(vector<string>& args)
         }
 
         rina::ApplicationProcessNamingInformation dif_name(args[2], string());
-        rina::IPCProcess *ipcp = NULL;
 
         ret = string2int(args[1], ipcp_id);
         if (ret) {
@@ -462,11 +455,10 @@ IPCMConsole::register_at_dif(vector<string>& args)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = IPCManager->register_at_dif(ipcp, dif_name);
+                ret = IPCManager->register_at_dif(ipcp_id, dif_name);
                 if (ret) {
                         outstream << "Registration failed" << endl;
                 } else {
@@ -482,7 +474,7 @@ IPCMConsole::register_at_dif(vector<string>& args)
 int
 IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
 {
-        int ipcp_id;
+        int ipcp_id, slave_ipcp_id;
         int ret;
 
         if (args.size() < 3) {
@@ -490,34 +482,33 @@ IPCMConsole::unregister_from_dif(std::vector<std::string>& args)
                 return CMDRETCONT;
         }
 
-        rina::ApplicationProcessNamingInformation dif_name(args[2], string());
-        rina::IPCProcess *ipcp = NULL;
-        rina::IPCProcess *slave_ipcp = NULL;
+        std::string dif_name(args[2]);
 
         ret = string2int(args[1], ipcp_id);
         if (ret) {
                 outstream << "Invalid IPC process id" << endl;
                 return CMDRETCONT;
         }
+        if (!IPCManager->ipcp_exists(ipcp_id)){
+                outstream << "No such IPC process id" << endl;
+                return CMDRETCONT;
+	}
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-        slave_ipcp = select_ipcp_by_dif(dif_name);
-        if (!ipcp || !slave_ipcp) {
-                if (!ipcp) {
-                        outstream << "No such IPC process id" << endl;
-                }
-                if (!slave_ipcp) {
-                        outstream << "No IPC process in that DIF" << endl;
-                }
-        } else {
-                ret = IPCManager->unregister_ipcp_from_ipcp(ipcp, slave_ipcp);
-                if (ret) {
-                        outstream << "Unregistration failed" << endl;
-                } else {
-                        outstream << "IPC process unregistration completed "
-                                "successfully" << endl;
-                }
+        slave_ipcp_id = IPCManager->get_ipcp_by_dif_name(dif_name);
+	if (!IPCManager->ipcp_exists(slave_ipcp_id) ) {
+                outstream << "No IPC process in that DIF" << endl;
+                return CMDRETCONT;
         }
+
+	//Call IPCManager
+	ret = IPCManager->unregister_ipcp_from_ipcp(ipcp_id,
+							slave_ipcp_id);
+	if (ret) {
+		outstream << "Unregistration failed" << endl;
+	} else {
+		outstream << "IPC process unregistration completed "
+			"successfully" << endl;
+	}
 
         return CMDRETCONT;
 }
@@ -526,7 +517,6 @@ int
 IPCMConsole::update_dif_config(std::vector<std::string>& args)
 {
         rina::DIFConfiguration dif_config;
-        rina::IPCProcess *ipcp = NULL;
         int ipcp_id;
         int ret;
 
@@ -541,11 +531,10 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = IPCManager->update_dif_configuration(ipcp, dif_config);
+                ret = IPCManager->update_dif_configuration(ipcp_id, dif_config);
                 if (ret) {
                         outstream << "Configuration update failed" << endl;
                 } else {
@@ -561,7 +550,6 @@ int
 IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 {
         NeighborData neighbor_data;
-        rina::IPCProcess *ipcp = NULL;
         int ipcp_id;
         int ret;
 
@@ -576,7 +564,6 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
                 return CMDRETCONT;
         }
 
-        ipcp = lookup_ipcp_by_id(ipcp_id);
         neighbor_data.difName = rina::ApplicationProcessNamingInformation(
                                 args[2], string());
         neighbor_data.supportingDifName =
@@ -584,10 +571,10 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
         neighbor_data.apName =
                 rina::ApplicationProcessNamingInformation(args[4], args[5]);
 
-        if (!ipcp) {
+        if (!IPCManager->ipcp_exists(ipcp_id)) {
                 outstream << "No such IPC process id" << endl;
         } else {
-                ret = IPCManager->enroll_to_dif(ipcp, neighbor_data, true);
+                ret = IPCManager->enroll_to_dif(ipcp_id, neighbor_data, true);
                 if (ret) {
                         outstream << "Enrollment operation failed" << endl;
                 } else {
