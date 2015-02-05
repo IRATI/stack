@@ -55,12 +55,12 @@ ipcm_LDADD    =					\
 	$(builddir)/libjsoncpp.la		\
 	$(builddir)/addons/libaddons.la		\
 	$(LIBRINA_LIBS)
-ipcm_SOURCES  =							\
-	main.cc							\
-	ipcm.cc                     ipcm.h			\
-	configuration.cc            configuration.h		\
-	registration.cc 	    registration.h		\
-	flow-allocation.cc          flow-allocation.h
+ipcm_SOURCES  =					\
+	main.cc					\
+	ipcm.cc					\
+	configuration.cc			\
+	registration.cc				\
+	flow-allocation.cc
 
 test_empty_SOURCES  =				\
 	test-empty.cc

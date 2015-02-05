@@ -26,7 +26,6 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 
-#include "event-loop.h"
 #include "rina-configuration.h"
 #include "helpers.h"
 #include "ipcm.h"
@@ -107,7 +106,7 @@ IPCManager_::unregister_ipcp_from_ipcp(rina::IPCProcess *ipcp,
         return ret;
 }
 
-static void application_registration_notify(
+void IPCManager_::application_registration_notify(
         const rina::ApplicationRegistrationRequestEvent& req_event,
         const rina::ApplicationProcessNamingInformation& app_name,
         const rina::ApplicationProcessNamingInformation& slave_dif_name,
@@ -131,9 +130,7 @@ static void application_registration_notify(
         }
 }
 
-void
-application_registration_request_event_handler(rina::IPCEvent *e,
-                                               EventLoopData *opaque)
+void IPCManager_::application_registration_request_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
         const rina::ApplicationRegistrationInformation& info = event->
@@ -151,7 +148,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
 
                 // See if the configuration specifies a mapping between
                 // the registering application and a DIF.
-                found = IPCManager->lookup_dif_by_application(app_name,
+                found = lookup_dif_by_application(app_name,
                                                               dif_name);
                 if (found) {
                         // If a mapping exists, select an IPC process
@@ -190,7 +187,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
         try {
                 seqnum = slave_ipcp->registerApplication(app_name,
                                                 info.ipcProcessId);
-                IPCManager->pending_app_registrations[seqnum] =
+                pending_app_registrations[seqnum] =
                                         make_pair(slave_ipcp, *event);
 
                 ss << "Requested registration of application " <<
@@ -198,7 +195,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
                         slave_ipcp->name.toString() << endl;
                 FLUSH_LOG(INFO, ss);
         } catch (rina::IpcmRegisterApplicationException) {
-                IPCManager->pending_app_registrations.erase(seqnum);
+                pending_app_registrations.erase(seqnum);
                 ss  << ": Error while registering application "
                         << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
@@ -208,7 +205,7 @@ application_registration_request_event_handler(rina::IPCEvent *e,
         }
 }
 
-static bool ipcm_register_response_common(
+bool IPCManager_::ipcm_register_response_common(
         rina::IpcmRegisterApplicationResponseEvent *event,
         const rina::ApplicationProcessNamingInformation& app_name,
         rina::IPCProcess *slave_ipcp,
@@ -233,7 +230,7 @@ static bool ipcm_register_response_common(
         return success;
 }
 
-static int ipcm_register_response_ipcp(
+int IPCManager_::ipcm_register_response_ipcp(
         rina::IpcmRegisterApplicationResponseEvent *event,
         map<unsigned int,
             std::pair<rina::IPCProcess *, rina::IPCProcess *>
@@ -278,12 +275,12 @@ static int ipcm_register_response_ipcp(
                 FLUSH_LOG(ERR, ss);
         }
 
-        IPCManager->pending_ipcp_registrations.erase(mit);
+        pending_ipcp_registrations.erase(mit);
 
         return ret;
 }
 
-static int ipcm_register_response_app(
+int IPCManager_::ipcm_register_response_app(
         rina::IpcmRegisterApplicationResponseEvent *event,
         map<unsigned int,
             std::pair<rina::IPCProcess *,
@@ -310,14 +307,12 @@ static int ipcm_register_response_app(
         application_registration_notify(req_event, app_name,
                                         slave_dif_name, success);
 
-        IPCManager->pending_app_registrations.erase(mit);
+        pending_app_registrations.erase(mit);
 
         return success ? 0 : -1;
 }
 
-void
-ipcm_register_app_response_event_handler(rina::IPCEvent *e,
-                                         EventLoopData *opaque)
+void IPCManager_::ipcm_register_app_response_event_handler(rina::IPCEvent *e)
 {
 
         DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
@@ -332,12 +327,12 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
         ostringstream ss;
         int ret = -1;
 
-        it = IPCManager->pending_ipcp_registrations.find(event->sequenceNumber);
-        jt = IPCManager->pending_app_registrations.find(event->sequenceNumber);
+        it = pending_ipcp_registrations.find(event->sequenceNumber);
+        jt = pending_app_registrations.find(event->sequenceNumber);
 
-        if (it != IPCManager->pending_ipcp_registrations.end()) {
+        if (it != pending_ipcp_registrations.end()) {
                 ret = ipcm_register_response_ipcp(event, it);
-        } else if (jt != IPCManager->pending_app_registrations.end()) {
+        } else if (jt != pending_app_registrations.end()) {
                 ret = ipcm_register_response_app(event, jt);
         } else {
                 ss << ": Warning: DIF assignment response "
@@ -345,11 +340,10 @@ ipcm_register_app_response_event_handler(rina::IPCEvent *e,
                 FLUSH_LOG(WARN, ss);
         }
 
-        IPCManager->concurrency.set_event_result(ret);
+        concurrency.set_event_result(ret);
 }
 
-static void
-application_manager_app_unregistered(
+void IPCManager_::application_manager_app_unregistered(
                 rina::ApplicationUnregistrationRequestEvent event,
                 int result)
 {
@@ -374,9 +368,7 @@ application_manager_app_unregistered(
         }
 }
 
-void
-application_unregistration_request_event_handler(rina::IPCEvent *e,
-                                                 EventLoopData *opaque)
+void IPCManager_::application_unregistration_request_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
         // Select any IPC process in the DIF from which the application
@@ -397,7 +389,7 @@ application_unregistration_request_event_handler(rina::IPCEvent *e,
                 return;
         }
 
-        err = IPCManager->unregister_app_from_ipcp(*event, slave_ipcp);
+        err = unregister_app_from_ipcp(*event, slave_ipcp);
         if (err) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
@@ -405,7 +397,7 @@ application_unregistration_request_event_handler(rina::IPCEvent *e,
         }
 }
 
-static bool ipcm_unregister_response_common(
+bool IPCManager_::ipcm_unregister_response_common(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         rina::IPCProcess *slave_ipcp,
                         const rina::ApplicationProcessNamingInformation&
@@ -433,7 +425,7 @@ static bool ipcm_unregister_response_common(
         return success;
 }
 
-static int ipcm_unregister_response_ipcp(
+int IPCManager_::ipcm_unregister_response_ipcp(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         map<unsigned int,
                             pair<rina::IPCProcess *, rina::IPCProcess *>
@@ -476,12 +468,12 @@ static int ipcm_unregister_response_ipcp(
                 FLUSH_LOG(ERR, ss);
         }
 
-        IPCManager->pending_ipcp_unregistrations.erase(mit);
+        pending_ipcp_unregistrations.erase(mit);
 
         return ret;
 }
 
-static int ipcm_unregister_response_app(
+int IPCManager_::ipcm_unregister_response_app(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         map<unsigned int,
                             pair<rina::IPCProcess *,
@@ -500,14 +492,12 @@ static int ipcm_unregister_response_app(
         application_manager_app_unregistered(req_event,
                                              event->result);
 
-        IPCManager->pending_app_unregistrations.erase(mit);
+        pending_app_unregistrations.erase(mit);
 
         return 0;
 }
 
-void
-ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
-                                           EventLoopData *opaque)
+void IPCManager_::ipcm_unregister_app_response_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
         map<unsigned int,
@@ -520,11 +510,11 @@ ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
         ostringstream ss;
         int ret = -1;
 
-        it = IPCManager->pending_app_unregistrations.find(event->sequenceNumber);
-        jt = IPCManager->pending_ipcp_unregistrations.find(event->sequenceNumber);
-        if (it != IPCManager->pending_app_unregistrations.end()) {
+        it = pending_app_unregistrations.find(event->sequenceNumber);
+        jt = pending_ipcp_unregistrations.find(event->sequenceNumber);
+        if (it != pending_app_unregistrations.end()) {
                 ret = ipcm_unregister_response_app(event, it);
-        } else if (jt != IPCManager->pending_ipcp_unregistrations.end()) {
+        } else if (jt != pending_ipcp_unregistrations.end()) {
                 ret = ipcm_unregister_response_ipcp(event, jt);
         } else {
                 ss << ": Warning: Unregistration response "
@@ -532,28 +522,22 @@ ipcm_unregister_app_response_event_handler(rina::IPCEvent *e,
                 FLUSH_LOG(WARN, ss);
         }
 
-        IPCManager->concurrency.set_event_result(ret);
+        concurrency.set_event_result(ret);
 }
 
-void
-register_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+void IPCManager_::register_application_response_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
 }
 
-void
-unregister_application_response_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+void IPCManager_::unregister_application_response_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
 }
 
-void
-application_registration_canceled_event_handler(rina::IPCEvent *event, EventLoopData *opaque)
+void IPCManager_::application_registration_canceled_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
 }
 
 }

@@ -27,11 +27,9 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 
-#include "event-loop.h"
 #include "rina-configuration.h"
 #include "helpers.h"
 #include "ipcm.h"
-#include "flow-allocation.h"
 
 using namespace std;
 
@@ -69,8 +67,7 @@ IPCManager_::deallocate_flow(rina::IPCProcess *ipcp,
         return 0;
 }
 
-static void
-application_flow_allocation_failed_notify(rina::FlowRequestEvent *event)
+void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEvent *event)
 {
         ostringstream ss;
 
@@ -92,8 +89,7 @@ application_flow_allocation_failed_notify(rina::FlowRequestEvent *event)
         }
 }
 
-static void
-flow_allocation_requested_local(rina::FlowRequestEvent *event)
+void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 {
         rina::ApplicationProcessNamingInformation dif_name;
         rina::IPCProcess *ipcp = NULL;
@@ -102,7 +98,7 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event)
         ostringstream ss;
 
         // Find the name of the DIF that will provide the flow
-        dif_specified = IPCManager->lookup_dif_by_application(event->
+        dif_specified = lookup_dif_by_application(event->
                                         localApplicationName, dif_name);
         if (!dif_specified) {
                 if (event->DIFName !=
@@ -135,7 +131,7 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event)
         try {
                 // Ask the IPC process to allocate a flow
                 seqnum = ipcp->allocateFlow(*event);
-                IPCManager->pending_flow_allocations[seqnum] =
+                pending_flow_allocations[seqnum] =
                                         PendingFlowAllocation(ipcp, *event,
                                                               dif_specified);
 
@@ -157,8 +153,8 @@ flow_allocation_requested_local(rina::FlowRequestEvent *event)
         }
 }
 
-static void
-flow_allocation_requested_remote(rina::FlowRequestEvent *event)
+void
+IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 {
         // Retrieve the local IPC process involved in the flow allocation
         // request coming from a remote application
@@ -183,7 +179,7 @@ flow_allocation_requested_remote(rina::FlowRequestEvent *event)
                                         event->remoteApplicationName,
                                         event->flowSpecification,
                                         event->DIFName, event->portId);
-                IPCManager->pending_flow_allocations[seqnum] =
+                pending_flow_allocations[seqnum] =
                                 PendingFlowAllocation(ipcp, *event, true);
 
                 ss << "Arrived request for flow allocation between " <<
@@ -218,9 +214,7 @@ flow_allocation_requested_remote(rina::FlowRequestEvent *event)
         }
 }
 
-void
-flow_allocation_requested_event_handler(rina::IPCEvent *e,
-					EventLoopData *opaque)
+void IPCManager_::flow_allocation_requested_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
 
@@ -231,17 +225,15 @@ flow_allocation_requested_event_handler(rina::IPCEvent *e,
         }
 }
 
-void
-ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
-					EventLoopData *opaque)
+void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::IpcmAllocateFlowRequestResultEvent, event);
         map<unsigned int, PendingFlowAllocation>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
 
-        mit = IPCManager->pending_flow_allocations.find(event->sequenceNumber);
-        if (mit == IPCManager->pending_flow_allocations.end()) {
+        mit = pending_flow_allocations.find(event->sequenceNumber);
+        if (mit == pending_flow_allocations.end()) {
                 ss  << ": Warning: Flow allocation request result "
                         "received but no corresponding request" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -299,28 +291,23 @@ ipcm_allocate_flow_request_result_handler(rina::IPCEvent *e,
                 FLUSH_LOG(ERR, ss);
         }
 
-        IPCManager->pending_flow_allocations.erase(mit);
+        pending_flow_allocations.erase(mit);
 }
 
-void
-allocate_flow_request_result_event_handler(rina::IPCEvent *e,
-					   EventLoopData *opaque)
+void IPCManager_::allocate_flow_request_result_event_handler(rina::IPCEvent *e)
 {
         (void) e; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
 }
 
-void
-allocate_flow_response_event_handler(rina::IPCEvent *e,
-				     EventLoopData *opaque)
+void IPCManager_::allocate_flow_response_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
         map<unsigned int, PendingFlowAllocation>::iterator mit;
         bool success = (event->result == 0);
         ostringstream ss;
 
-        mit = IPCManager->pending_flow_allocations.find(event->sequenceNumber);
-        if (mit == IPCManager->pending_flow_allocations.end()) {
+        mit = pending_flow_allocations.find(event->sequenceNumber);
+        if (mit == pending_flow_allocations.end()) {
                 ss  << ": Warning: Flow allocation response "
                         "received but no corresponding request" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -358,12 +345,10 @@ allocate_flow_response_event_handler(rina::IPCEvent *e,
                 req_event.portId = -1;
         }
 
-        IPCManager->pending_flow_allocations.erase(mit);
+        pending_flow_allocations.erase(mit);
 }
 
-void
-flow_deallocation_requested_event_handler(rina::IPCEvent *e,
-					  EventLoopData *opaque)
+void IPCManager_::flow_deallocation_requested_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
         rina::IPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
@@ -378,7 +363,7 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
                 return;
         }
 
-        ret = IPCManager->deallocate_flow(ipcp, *event);
+        ret = deallocate_flow(ipcp, *event);
         if (ret) {
                 try {
                         // Inform the application about the deallocation
@@ -401,9 +386,7 @@ flow_deallocation_requested_event_handler(rina::IPCEvent *e,
         }
 }
 
-void
-ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e,
-					    EventLoopData *opaque)
+void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::IpcmDeallocateFlowResponseEvent, event);
         std::map<unsigned int,
@@ -413,8 +396,8 @@ ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e,
         int result = event->result;
         ostringstream ss;
 
-        mit = IPCManager->pending_flow_deallocations.find(event->sequenceNumber);
-        if (mit == IPCManager->pending_flow_deallocations.end()) {
+        mit = pending_flow_deallocations.find(event->sequenceNumber);
+        if (mit == pending_flow_deallocations.end()) {
                 ss  << ": Warning: Flow deallocation response "
                         "received but no corresponding request" << endl;
                 FLUSH_LOG(WARN, ss);
@@ -465,12 +448,10 @@ ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *e,
                 FLUSH_LOG(ERR, ss);
         }
 
-        IPCManager->pending_flow_deallocations.erase(mit);
+        pending_flow_deallocations.erase(mit);
 }
 
-void
-flow_deallocated_event_handler(rina::IPCEvent *e,
-					EventLoopData *opaque)
+void IPCManager_::flow_deallocated_event_handler(rina::IPCEvent *e)
 {
         DOWNCAST_DECL(e, rina::FlowDeallocatedEvent, event);
         rina::IPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
@@ -512,12 +493,9 @@ flow_deallocated_event_handler(rina::IPCEvent *e,
         }
 }
 
-void
-deallocate_flow_response_event_handler(rina::IPCEvent *event,
-					EventLoopData *opaque)
+void IPCManager_::deallocate_flow_response_event_handler(rina::IPCEvent *event)
 {
         (void) event; // Stop compiler barfs
-        (void) opaque;    // Stop compiler barfs
 }
 
 }

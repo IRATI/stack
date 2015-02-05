@@ -31,7 +31,6 @@
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
-#include "event-loop.h"
 #include "rina-configuration.h"
 
 //Addons
@@ -139,7 +138,7 @@ private:
 // @brief The IPCManager class is in charge of managing the IPC processes
 // life-cycle.
 //
-class IPCManager_ : public EventLoopData {
+class IPCManager_ {
 
 public:
 
@@ -278,53 +277,177 @@ public:
 	//
 	void run(void);
 
-//------------FIXME: all this section MUST be protected/private---------------
-	//and handlers (C linkage) should call methods of IPCM and lock there.
+
+protected:
+	//
+	// Internal event API
+	//
+
+	//Flow mgmt
+	void flow_allocation_requested_event_handler(rina::IPCEvent *event);
+	void allocate_flow_request_result_event_handler(rina::IPCEvent *event);
+	void allocate_flow_response_event_handler(rina::IPCEvent *event);
+	void flow_deallocation_requested_event_handler(rina::IPCEvent *event);
+	void deallocate_flow_response_event_handler(rina::IPCEvent *event);
+	void flow_deallocated_event_handler(rina::IPCEvent *event);
+	void ipcm_deallocate_flow_response_event_handler(rina::IPCEvent *event);
+	void ipcm_allocate_flow_request_result_handler(rina::IPCEvent *event);
+	void application_flow_allocation_failed_notify(
+						rina::FlowRequestEvent *event);
+	void flow_allocation_requested_local(rina::FlowRequestEvent *event);
+
+	void flow_allocation_requested_remote(rina::FlowRequestEvent *event);
+
+
+	//Application registration mgmt
+	void application_registration_request_event_handler(rina::IPCEvent *e);
+	void ipcm_register_app_response_event_handler(rina::IPCEvent *e);
+	void application_unregistration_request_event_handler(rina::IPCEvent *e);
+	void ipcm_unregister_app_response_event_handler(rina::IPCEvent *e);
+	void register_application_response_event_handler(rina::IPCEvent *event);
+	void unregister_application_response_event_handler(rina::IPCEvent *event);
+	void application_registration_canceled_event_handler(rina::IPCEvent *event);
+	void application_unregistered_event_handler(rina::IPCEvent * event);
+	void application_registration_notify(
+		const rina::ApplicationRegistrationRequestEvent& req_event,
+		const rina::ApplicationProcessNamingInformation& app_name,
+		const rina::ApplicationProcessNamingInformation& slave_dif_name,
+		bool success);
+	int ipcm_register_response_app(
+		rina::IpcmRegisterApplicationResponseEvent *event,
+		std::map<unsigned int,
+			std::pair<rina::IPCProcess *,
+				rina::ApplicationRegistrationRequestEvent>
+		>::iterator mit);
+	void application_manager_app_unregistered(
+                rina::ApplicationUnregistrationRequestEvent event,
+                int result);
+	int ipcm_unregister_response_app(
+			rina::IpcmUnregisterApplicationResponseEvent *event,
+			std::map<unsigned int,
+				std::pair<rina::IPCProcess *,
+				rina::ApplicationUnregistrationRequestEvent
+				>
+			>::iterator mit);
+
+
+
+	//IPCP mgmt
+	void ipc_process_create_connection_response_handler(rina::IPCEvent * event);
+	void ipc_process_update_connection_response_handler(rina::IPCEvent * event);
+	void ipc_process_create_connection_result_handler(rina::IPCEvent * event);
+	void ipc_process_destroy_connection_result_handler(rina::IPCEvent * event);
+	int ipcm_register_response_ipcp(
+		rina::IpcmRegisterApplicationResponseEvent *event,
+		std::map<unsigned int,
+			std::pair<rina::IPCProcess *, rina::IPCProcess *>
+		>::iterator mit);
+	int ipcm_unregister_response_ipcp(
+				rina::IpcmUnregisterApplicationResponseEvent *event,
+				std::map<unsigned int,
+				    std::pair<rina::IPCProcess *, rina::IPCProcess *>
+				>::iterator mit);
+
+	//DIF assignment mgmt
+	void assign_to_dif_request_event_handler(rina::IPCEvent * event);
+	void assign_to_dif_response_event_handler(rina::IPCEvent * e);
+
+	//DIF config mgmt
+	void update_dif_config_request_event_handler(rina::IPCEvent *event);
+	void update_dif_config_response_event_handler(rina::IPCEvent *e);
+
+	//Enrollment mgmt
+	void enroll_to_dif_request_event_handler(rina::IPCEvent *event);
+	void enroll_to_dif_response_event_handler(rina::IPCEvent *e);
+	void neighbors_modified_notification_event_handler(rina::IPCEvent * e);
+
+	//DIF misc TODO: revise
+	void ipc_process_dif_registration_notification_handler(rina::IPCEvent *event);
+	void ipc_process_query_rib_handler(rina::IPCEvent *event);
+	void get_dif_properties_handler(rina::IPCEvent *event);
+	void get_dif_properties_response_event_handler(rina::IPCEvent *event);
+
+	//RIB queries
+	void query_rib_response_event_handler(rina::IPCEvent *e);
+	void ipc_process_dump_ft_response_handler(rina::IPCEvent * event);
+
+	//Misc
+	void os_process_finalized_handler(rina::IPCEvent *e);
+	void ipc_process_daemon_initialized_event_handler(rina::IPCEvent * e);
+	void timer_expired_event_handler(rina::IPCEvent *event);
+	bool ipcm_register_response_common(
+		rina::IpcmRegisterApplicationResponseEvent *event,
+		const rina::ApplicationProcessNamingInformation& app_name,
+		rina::IPCProcess *slave_ipcp,
+		const rina::ApplicationProcessNamingInformation& slave_dif_name);
+
+	bool ipcm_register_response_common(
+		rina::IpcmRegisterApplicationResponseEvent *event,
+		const rina::ApplicationProcessNamingInformation& app_name,
+		rina::IPCProcess *slave_ipcp);
+
+
+	bool ipcm_unregister_response_common(
+				 rina::IpcmUnregisterApplicationResponseEvent *event,
+				 rina::IPCProcess *slave_ipcp,
+				 const rina::ApplicationProcessNamingInformation&);
+
+	//
+	// TODO: revise
+	//
 	IPCMConcurrency concurrency;
 
+	//Pending IPCP initializations
         std::map<unsigned short, rina::IPCProcess*> pending_normal_ipcp_inits;
 
+	//Pending IPCP DIF assignments
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_dif_assignments;
 
+	//Pending query RIB
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_query_rib_responses;
 
+	//Query RIB responses
         std::map<unsigned int, std::string > query_rib_responses;
 
+	//Pending IPCP registrations
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*, rina::IPCProcess*>
                 > pending_ipcp_registrations;
 
+	//Pending IPCP unregistration
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*, rina::IPCProcess*>
                 > pending_ipcp_unregistrations;
 
+	//Pending IPCP enrollments
         std::map<unsigned int, rina::IPCProcess*> pending_ipcp_enrollments;
 
+	//Pending AP registrations
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*,
                            rina::ApplicationRegistrationRequestEvent
                           >
                 > pending_app_registrations;
 
+	//Pending AP unregistrations
         std::map<unsigned int,
                  std::pair<rina::IPCProcess*,
                            rina::ApplicationUnregistrationRequestEvent
                           >
                 > pending_app_unregistrations;
 
+	//Pending DIF config updates
         std::map<unsigned int, rina::IPCProcess *> pending_dif_config_updates;
 
+	//Pending flow allocations
         std::map<unsigned int, PendingFlowAllocation> pending_flow_allocations;
 
+	//Pending flow deallocations
         std::map<unsigned int,
                  std::pair<rina::IPCProcess *,
                            rina::FlowDeallocateRequestEvent
                           >
                 > pending_flow_deallocations;
-
-//-------------------------END OF FIXME---------------------------------------
-private:
-
 
 	//
 	// RINA configuration internal state
@@ -339,14 +462,14 @@ private:
 
 	//Current logging level
         std::string log_level_;
+
+	//Keep running flag
+	bool keep_running;
 };
 
 
 //Singleton instance
 extern Singleton<rinad::IPCManager_> IPCManager;
-
-//TODO: is this really needed?
-extern void register_handlers_all(EventLoop& loop);
 
 }//rina namespace
 
