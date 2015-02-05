@@ -169,7 +169,7 @@ IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
         std::list<std::string>  supportedDIFS;
         bool                    difCorrect = false;
         std::string             s;
-
+	int ret = -1;
 
         concurrency.lock();
 
@@ -236,6 +236,7 @@ IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
                                 FLUSH_LOG(ERR, ss);
                         }
                 }
+		ret = ipcp->id;
 
         } catch (rina::CreateIPCProcessException) {
                 ss << "Failed to create IPC process '" <<
@@ -246,7 +247,7 @@ IPCManager_::create_ipcp(const rina::ApplicationProcessNamingInformation& name,
 
         concurrency.unlock();
 
-        return ipcp->id;
+        return ret;
 }
 
 int
