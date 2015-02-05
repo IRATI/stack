@@ -24,7 +24,7 @@ COMMONLIBS =					\
 ipcp_CFLAGS   =
 ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
-	-DPLUGINSDIR=$(pkglibdir)/ipcp
+	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 ipcp_LDADD    = $(COMMONLIBS) -ldl
 ipcp_SOURCES  =						\
 	main.cc						\
@@ -42,18 +42,21 @@ ipcp_SOURCES  =						\
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS     = $(COMMONLIBS)
 
-libps_default_la_CFLAGS =
-libps_default_la_CPPFLAGS =			\
+pluginsdir          = $(pkglibdir)/ipcp
+plugins_LTLIBRARIES = 
+
+default_la_CFLAGS =
+default_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
-libps_default_la_LIBADD =
-libps_default_la_LDFLAGS =
-libps_default_la_SOURCES =				\
-		default-plugin.cc			\
-		component.h				\
-		default-security-manager-ps.cc		\
+default_la_LIBADD =
+default_la_LDFLAGS = -module
+default_la_SOURCES =				\
+		default-plugin.cc		\
+		component.h			\
+		default-security-manager-ps.cc	\
 		default-flow-allocator-ps.cc
 
-lib_LTLIBRARIES = libps-default.la
+plugins_LTLIBRARIES += default.la
 
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
