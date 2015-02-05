@@ -14,8 +14,8 @@ SUBDIRS=
 #
 noinst_LTLIBRARIES = libaddons.la
 libaddons_la_SOURCES  =				\
-	console.h				\
-	console.cc
+	console.cc				\
+	scripting.cc
 
 libaddons_la_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\

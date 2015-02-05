@@ -35,6 +35,9 @@
 
 //Addons
 #include "addons/console.h"
+#include "addons/scripting.h"
+//[+] Add more here...
+
 
 
 #ifndef DOWNCAST_DECL

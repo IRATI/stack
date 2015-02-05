@@ -30,8 +30,10 @@
 #include <cerrno>
 #include <sstream>
 
+#define RINA_PREFIX "ipcm.console"
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/logs.h>
 
 #include "rina-configuration.h"
 #include "helpers.h"
@@ -596,4 +598,4 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
         return CMDRETCONT;
 }
 
-}
+}//namespace rinad
