@@ -280,6 +280,12 @@ public:
 	//
 	void run(void);
 
+	//
+	// Stop I/O loop
+	//
+	inline void stop(void){
+		keep_running = false;
+	}
 
 protected:
 	//
@@ -467,7 +473,7 @@ protected:
         std::string log_level_;
 
 	//Keep running flag
-	bool keep_running;
+	volatile bool keep_running;
 };
 
 

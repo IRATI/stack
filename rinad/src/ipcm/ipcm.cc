@@ -40,6 +40,10 @@
 //[+] Add more here...
 
 
+//Timeouts for timed wait
+#define IPCMANAGER_TIMEOUT_S 0
+#define IPCMANAGER_TIMEOUT_NS 100000000 //0.1 sec
+
 using namespace std;
 
 namespace rinad {
@@ -735,8 +739,14 @@ void IPCManager_::run(){
 
 	keep_running = true;
 
+	LOG_DBG("Starting main I/O loop...");
+
 	while(keep_running) {
-		event = rina::ipcEventProducer->eventWait();
+		event = rina::ipcEventProducer->eventTimedWait(
+						IPCMANAGER_TIMEOUT_S,
+						IPCMANAGER_TIMEOUT_NS);
+		if(!event)
+			continue;
 
 		LOG_DBG("Got event of type %s and sequence number %u",
 		rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
@@ -912,6 +922,20 @@ void IPCManager_::run(){
 		delete event;
 	}
 
+	//TODO: probably move this to a private method if it starts to grow
+	LOG_DBG("Stopping I/O loop and cleaning the house...");
+
+	//Destroy all IPCPs
+        const std::vector<rina::IPCProcess *>& ipcps =
+                rina::ipcProcessFactory->listIPCProcesses();
+	std::vector<rina::IPCProcess *>::const_iterator it;
+
+	for(it = ipcps.begin(); it != ipcps.end(); ++it){
+        	if(destroy_ipcp((*it)->id) < 0 ){
+			LOG_WARN("Warning could not destroy IPCP id: %d\n",
+								(*it)->id);
+		}
+	}
 }
 
 void

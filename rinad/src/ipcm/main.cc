@@ -20,6 +20,7 @@
 // Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
+#include <assert.h>
 #include <signal.h>
 
 #include <cstdlib>
@@ -42,6 +43,25 @@
 
 using namespace std;
 using namespace TCLAP;
+
+
+void handler(int signum)
+{
+
+	switch(signum){
+		case SIGSEGV:
+			LOG_CRIT("Got signal SIGSEGV");
+			dump_backtrace();
+			exit(EXIT_FAILURE);
+		case SIGINT:
+			rinad::IPCManager->stop();
+			break;
+		default:
+			LOG_CRIT("Got unknown signal %d", signum);
+			assert(0);
+			break;
+	}
+}
 
 int wrapped_main(int argc, char * argv[])
 {
@@ -122,24 +142,20 @@ int wrapped_main(int argc, char * argv[])
 	return EXIT_SUCCESS;
 }
 
-void handler(int signum)
-{
-	LOG_CRIT("Got signal %d", signum);
-
-	if (signum == SIGSEGV) {
-		dump_backtrace();
-		exit(EXIT_FAILURE);
-	}
-}
 
 int main(int argc, char * argv[])
 {
 	int retval;
 
+	//Configure signal  traps
 	if (signal(SIGSEGV, handler) == SIG_ERR) {
-		LOG_WARN("Cannot install SIGSEGV handler!");
+		LOG_WARN("Could not install SIGSEGV handler!");
+	}
+	if (signal(SIGINT, handler) == SIG_ERR) {
+		LOG_ERR("Could not install SIGINT handler!");
 	}
 
+	//Launch wrapped main
 	try {
 		retval = wrapped_main(argc, argv);
 	} catch (std::exception & e) {
