@@ -33,11 +33,9 @@ public:
 	RIBDaemonv1(const rina::RIBSchema *schema);
 
 	//XXX: fill-in
-	virtual void sendMessageSpecific(bool useAddress,
-			const rina::CDAPMessage& cdapMessage,
-			int sessionId,
-			unsigned int address,
-			rina::ICDAPResponseMessageHandler* cdapMessageHandler);
+	void sendMessageSpecific(const rina::RemoteProcessId &remote_proc,
+		        		const rina::CDAPMessage & cdapMessage,
+		        		rina::ICDAPResponseMessageHandler *cdapMessageHandler);
 };
 
 class SimplestRIBObj: public rina::BaseRIBObject{

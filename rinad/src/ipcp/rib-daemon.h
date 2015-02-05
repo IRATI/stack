@@ -33,51 +33,58 @@ namespace rinad {
 
 /// Reads sdus from the Kernel IPC Process, and
 /// passes them to the RIB Daemon
-class ManagementSDUReaderData {
-public:
-	ManagementSDUReaderData(IPCPRIBDaemon * rib_daemon, unsigned int max_sdu_size);
-	IPCPRIBDaemon * rib_daemon_;
-	unsigned int max_sdu_size_;
+class ManagementSDUReaderData
+{
+ public:
+  ManagementSDUReaderData(IPCPRIBDaemon * rib_daemon,
+                          unsigned int max_sdu_size);
+  IPCPRIBDaemon * rib_daemon_;
+  unsigned int max_sdu_size_;
 };
 
 /// The RIB Daemon will start a thread that continuously tries to retrieve management
 /// SDUs directed to this IPC Process
 void * doManagementSDUReaderWork(void* data);
 
-class BaseRIBDaemon: public IPCPRIBDaemon {
-public:
-        BaseRIBDaemon();
-        void subscribeToEvent(const IPCProcessEventType& eventId, EventListener * eventListener);
-        void unsubscribeFromEvent(const IPCProcessEventType& eventId, EventListener * eventListener);
-        void deliverEvent(Event * event);
+class BaseRIBDaemon : public IPCPRIBDaemon
+{
+ public:
+  BaseRIBDaemon(const rina::RIBSchema *rib_schema);
+  void subscribeToEvent(const IPCProcessEventType& eventId,
+                        EventListener * eventListener);
+  void unsubscribeFromEvent(const IPCProcessEventType& eventId,
+                            EventListener * eventListener);
+  void deliverEvent(Event * event);
 
-private:
-        std::map<IPCProcessEventType, std::list<EventListener *> > event_listeners_;
-        rina::Lockable events_lock_;
+ private:
+  std::map<IPCProcessEventType, std::list<EventListener *> > event_listeners_;
+  rina::Lockable events_lock_;
 };
 
 ///Full implementation of the RIB Daemon
-class IPCPRIBDaemonImpl : public BaseRIBDaemon, public EventListener {
-public:
-        IPCPRIBDaemonImpl();
-	void set_ipc_process(IPCProcess * ipc_process);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	void eventHappened(Event * event);
-	void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
-        void sendMessageSpecific(bool useAddress, const rina::CDAPMessage & cdapMessage, int sessionId,
-                        unsigned int address, rina::ICDAPResponseMessageHandler * cdapMessageHandler);
+class IPCPRIBDaemonImpl : public BaseRIBDaemon, public EventListener
+{
+ public:
+  IPCPRIBDaemonImpl(const rina::RIBSchema *rib_schema);
+  void set_ipc_process(IPCProcess *ipc_process);
+  void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+  void eventHappened(Event * event);
+  void processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event);
+  void sendMessageSpecific(
+      const rina::RemoteProcessId &remote_proc,
+      const rina::CDAPMessage & cdapMessage,
+      rina::ICDAPResponseMessageHandler *cdapMessageHandler);
+ private:
+  IPCProcess * ipc_process_;
+  INMinusOneFlowManager * n_minus_one_flow_manager_;
+  rina::Thread * management_sdu_reader_;
 
-private:
-	IPCProcess * ipc_process_;
-	INMinusOneFlowManager * n_minus_one_flow_manager_;
-	rina::Thread * management_sdu_reader_;
+  void subscribeToEvents();
 
-	void subscribeToEvents();
-
-	/// Invoked by the Resource allocator when it detects that a certain flow has been deallocated, and therefore a
-	/// any CDAP sessions over it should be terminated.
-	void nMinusOneFlowDeallocated(int portId);
-	void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event);
+  /// Invoked by the Resource allocator when it detects that a certain flow has been deallocated, and therefore a
+  /// any CDAP sessions over it should be terminated.
+  void nMinusOneFlowDeallocated(int portId);
+  void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event);
 };
 
 }

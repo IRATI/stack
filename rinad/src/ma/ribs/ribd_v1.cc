@@ -73,17 +73,15 @@ RIBDaemonv1::RIBDaemonv1 (const rina::RIBSchema *schema): rina::RIBDaemon(schema
 	}
 }
 
-void RIBDaemonv1::sendMessageSpecific(bool useAddress,
-			const rina::CDAPMessage& cdapMessage,
-			int sessionId,
-                        unsigned int address,
-			rina::ICDAPResponseMessageHandler* cdapMessageHandler){
+void RIBDaemonv1::sendMessageSpecific(const rina::RemoteProcessId &remote_proc,
+		const rina::CDAPMessage & cdapMessage,
+		rina::ICDAPResponseMessageHandler *cdapMessageHandler){
 
 	//XXX FIXME: fill-in
-	(void)useAddress;
+	(void)remote_proc.use_address_;
 	(void)cdapMessage;
-	(void)sessionId;
-	(void)address;
+	(void)remote_proc.port_id_;
+	(void)remote_proc.address_;
 	(void)cdapMessageHandler;
 }
 

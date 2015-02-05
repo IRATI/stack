@@ -119,7 +119,7 @@ public:
 /// tasks to different subencoders. A different encoder is registered
 /// by each type of object. The encoder also implements static helper functions
 /// to encode/decode sub-objects that are shared between two or more classes.
-class Encoder: public rina::IEncoder {
+class Encoder: public rina::ManagerEncoderInterface {
 public:
 	~Encoder();
 	/// Set the class that serializes/unserializes an object class
