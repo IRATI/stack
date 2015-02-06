@@ -83,8 +83,8 @@ IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
         unsigned int seqnum;
         bool arrived = true;
         ostringstream ss;
-        int ret = -1;
         rina::IPCProcess *ipcp, *slave_ipcp;
+	int ret;
 
         try {
 
@@ -131,7 +131,7 @@ IPCManager_::unregister_ipcp_from_ipcp(int ipcp_id,
                 return -1;
         }
 
-        return ret;
+        return 0;
 }
 
 void IPCManager_::application_registration_notify(
