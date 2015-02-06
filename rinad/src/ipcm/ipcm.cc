@@ -829,8 +829,6 @@ IPCManager_::query_rib(const int ipcp_id)
 
 	concurrency.lock();
 
-	// Invoke librina to assign the IPC process to the
-	// DIF specified by dif_info.
 	try {
 		ipcp = lookup_ipcp_by_id(ipcp_id);
 
