@@ -11,19 +11,50 @@ config RINA_NORMAL_IPCP
 	help
 	  No help for the time being
 
+if RINA_NORMAL_IPCP
+
+config RINA_DUP
+        bool "Enable system-wide DU protection"
+        default n
+        help
+          no help for the time being
+
+config RINA_IPCPS_CRC
+        bool "Enable CRC on (all) IPCPs"
+        default n
+        depends on RINA_DUP
+        help
+          no help for the time being
+
+config RINA_IPCPS_TTL
+        bool "Enable TTL on (all) IPCPs"
+        depends on RINA_DUP
+        default n
+        help
+          no help for the time being
+
+config RINA_IPCPS_TTL_DEFAULT
+        int "TTL default value"
+        depends on RINA_IPCPS_TTL
+        default 50
+        help
+          no help for the time being
+
 config RINA_RMT_REGRESSION_TESTS
 	bool "RMT regression tests"
 	default n
-        depends on RINA_REGRESSION_TESTS && RINA_NORMAL_IPCP
+        depends on RINA_REGRESSION_TESTS
 	help
 	  No help for the time being
 
 config RINA_PFT_REGRESSION_TESTS
 	bool "PFT regression tests"
 	default n
-        depends on RINA_REGRESSION_TESTS && RINA_NORMAL_IPCP
+        depends on RINA_REGRESSION_TESTS
 	help
 	  No help for the time being
+
+endif
 
 config RINA_SHIM_DUMMY
 	tristate "Shim IPC Dummy (loopback)"
@@ -65,6 +96,13 @@ config RINA_SHIM_TCP_UDP
 	tristate "Shim IPC over TCP/UDP support"
 	default m
         depends on RINA_PERSONALITY_DEFAULT
+	help
+	  No help for the time being
+
+config RINA_SHIM_TCP_UDP_BUFFER_SIZE
+        int "Buffer size"
+	default 1500
+        depends on RINA_SHIM_TCP_UDP
 	help
 	  No help for the time being
 

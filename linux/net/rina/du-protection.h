@@ -25,43 +25,11 @@
 
 #include "pdu-ser.h"
 
-struct dup_chksum;
+bool    dup_chksum_set(struct pdu_ser * pdu);
+bool    dup_chksum_is_ok(struct pdu_ser * pdu);
 
-struct dup_chksum * dup_chksum_create(size_t (* size)(void),
-                                      bool   (* compute)(void * buffer,
-                                                         size_t size,
-                                                         void * value),
-                                      bool   (* update)(void * buffer,
-                                                        size_t size,
-                                                        void * old,
-                                                        void * new));
-int                 dup_chksum_destroy(struct dup_chksum * inst);
-
-int                 dup_chksum_add(struct dup_chksum * inst,
-                                   struct pdu_ser *     pdu);
-int                 dup_chksum_remove(struct dup_chksum * inst,
-                                      struct pdu_ser *     pdu);
-int                 dup_chksum_is_ok(struct dup_chksum * inst,
-                                     struct pdu_ser *     pdu);
-int                 dup_chksum_set(struct dup_chksum * inst,
-                                   struct pdu_ser *     pdu);
-int                 dup_chksum_update(struct dup_chksum * inst,
-                                      struct pdu_ser *     pdu);
-
-#if 0
-struct dup_ttl;
-
-struct dup_ttl * dup_ttl_create();
-int              dup_ttl_destroy(struct dup_ttl * inst);
-
-int              dup_ttl_add(struct dup_ttl * inst,
-                             struct pdu_ser * pdu);
-int              dup_ttl_decrement(struct dup_ttl * inst,
-                                   struct pdu_ser * pdu);
-int              dup_ttl_is_zero(struct dup_ttl * inst,
-                                 struct pdu_ser * pdu);
-int              dup_ttl_remove(struct dup_ttl * inst,
-                                struct pdu_ser * pdu);
-#endif
+bool    dup_ttl_set(struct pdu_ser * pdu, size_t value);
+ssize_t dup_ttl_decrement(struct pdu_ser * pdu);
+bool    dup_ttl_is_expired(struct pdu_ser * pdu);
 
 #endif

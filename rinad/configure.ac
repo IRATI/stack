@@ -34,6 +34,9 @@ AC_PROG_CXXCPP
 AC_PROG_CXX
 AC_PROG_CXX_C_O
 
+AC_CHECK_HEADERS([execinfo.h])
+AC_CHECK_FUNCS([backtrace backtrace_symbols])
+
 AC_CXX_HAVE_SSTREAM
 AC_CXX_HAVE_STRSTREAM
 AC_CXX_HAVE_LONG_LONG
@@ -43,6 +46,8 @@ AM_PROG_AR
 LT_INIT
 
 CPPFLAGS_EXTRA=""
+CXXFLAGS_EXTRA=""
+
 AX_CHECK_COMPILE_FLAG([ -Wall ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wall"
 ])
@@ -64,7 +69,32 @@ AX_CHECK_COMPILE_FLAG([ -Werror ], [
 AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
     CPPFLAGS_EXTRA="$CPPFLAGS_EXTRA -Wfatal-errors"
 ])
+
+want_debug=no
+AX_SELECTOR_ENABLE([debug],[
+    want_debug=yes
+],[
+    want_debug=no
+])
+AS_IF([test "$want_debug" = "yes"],[
+    AX_CHECK_COMPILE_FLAG([ -g ], [
+        CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -g"
+    ])
+    AS_IF([`echo $CXXFLAGS|$GREP '\\\-O2'`],[
+        AC_MSG_NOTICE([Patching flags])
+        CXXFLAGS="`echo $CXXFLAGS | $SED -e 's|-O2||'`"
+        AC_MSG_NOTICE([Flags are now '$CXXFLAGS'])
+    ])
+    AX_CHECK_COMPILE_FLAG([ -O0 ], [
+        CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -O0"
+    ])
+    AX_CHECK_COMPILE_FLAG([ -fno-inline ], [
+        CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -fno-inline"
+    ])
+])
+
 AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
+AC_SUBST(CXXFLAGS_EXTRA, $CXXFLAGS_EXTRA)
 
 #AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
@@ -88,6 +118,9 @@ PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
     AC_MSG_ERROR([Your system lacks of libprotobuf support (>= $LIBPROTOBUF_MIN_VERSION)])
 ])
 
+AC_PATH_PROG([PERL], [perl], [no])
+AM_CONDITIONAL([HAVE_PERL], [ test "$PERL" != "no" ])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -106,6 +139,7 @@ AC_CONFIG_FILES([
     src/ma/ribs/Makefile
 
     doc/Makefile
+    tools/Makefile
     etc/Makefile
 ])
 

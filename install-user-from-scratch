@@ -5,36 +5,64 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
+#
+# Script-local parameters
+#
+PREFIX=`echo "$1"|sed -e "s,\/$,,"`
+SRCDIR=`pwd`
+FLAGS="--enable-debug"
+
+#
+# Do not touch under this line
+#
+
 ME=install-user-from-scratch
 
-#MAKEFLAGS="-j"
-PREFIX=`echo "$1"|sed -e "s,\/$,,"`
+. ./.env || {
+    echo "$ME: Cannot load environment"
+    exit 1
+}
 
-echo "$ME: Prefix is \`$PREFIX'"
+echo "$ME: Installation directory will be \`$PREFIX'"
 if test -n "$PREFIX" ; then
     mkdir -p $PREFIX || {
         echo "$ME: Cannot create directory \`$PREFIX'"
     }
 fi
 
-#
-# FIXME: we should definitely do a VPATH build ...
-#
+echo "$ME: Build directory will be \`$BUILDDIR'"
+if test -n "$BUILDDIR" ; then
+    mkdir -p $BUILDDIR || {
+        echo "$ME: Cannot create directory \`$BUILDDIR'"
+    }
+fi
 
 echo "$ME: Starting librina phase"
-(cd librina && ./bootstrap && ./configure --enable-java-bindings --with-sysheaders=`pwd`/../linux/usr/include --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
+(cd librina && ./bootstrap) || {
+    echo "$ME: Cannot bootstrap"
+    exit 1
+}
+(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --enable-java-bindings $FLAGS --with-sysheaders=$SRCDIR/linux/usr/include --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete librina phase"
     exit 1
 }
 
 echo "$ME: Starting rinad phase"
-(cd rinad && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH ./configure --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
+(cd rinad && ./bootstrap) || {
+    echo "$ME: Cannot bootstrap"
+    exit 1
+}
+(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$PREFIX $FLAGS && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete rinad phase"
     exit 1
 }
 
 echo "$ME: Starting rina-tools phase"
-(cd rina-tools && ./bootstrap && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH ./configure --prefix=$PREFIX && make $MAKEFLAGS clean all install installcheck) || {
+(cd rina-tools && ./bootstrap) || {
+    echo "$ME: Cannot bootstrap"
+    exit 1
+}
+(mkdir -p $BUILDDIR/rina-tools && cd $BUILDDIR/rina-tools && PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rina-tools/configure $FLAGS --prefix=$PREFIX && make $MAKEFLAGS clean all install installcheck) || {
     echo "$ME: Cannot complete rina-tools phase"
     exit 1
 }

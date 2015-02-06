@@ -21,6 +21,7 @@ librinad_la_LIBADD   =				\
 	-Lencoders -lencoders
 
 librinad_la_SOURCES  =					\
+	debug.cc              debug.h                   \
 	rina-configuration.cc rina-configuration.h	\
 	event-loop.cc	      event-loop.h		\
 	helpers.cc	      helpers.h			\

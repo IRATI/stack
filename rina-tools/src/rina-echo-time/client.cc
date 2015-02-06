@@ -228,8 +228,6 @@ void Client::perfFlow(Flow* flow)
         while (n < echo_times) {
                 flow->writeSDU(buffer, data_size);
                 n++;
-                if (wait)
-                        this_thread::sleep_for(std::chrono::milliseconds(wait));
         }
 
         delete [] buffer;

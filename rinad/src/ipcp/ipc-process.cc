@@ -39,78 +39,76 @@ namespace rinad {
 #define IPCP_LOG_FILE_PREFIX "/tmp/ipcp-log-file"
 
 //Class IPCProcessImpl
-IPCProcessImpl::IPCProcessImpl(
-    const rina::ApplicationProcessNamingInformation& nm, unsigned short id,
-    unsigned int ipc_manager_port)
-{
-  try {
-    std::stringstream ss;
-    ss << IPCP_LOG_FILE_PREFIX << "-" << id;
-    rina::initialize(LOG_LEVEL_DBG, "");
-    rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
-    rina::extendedIPCManager->ipcProcessId = id;
-    rina::kernelIPCProcess->ipcProcessId = id;
-    LOG_INFO("Librina initialized");
-  } catch (Exception &e) {
-    std::cerr << "Cannot initialize librina" << std::endl;
-    exit(EXIT_FAILURE);
-  }
 
-  name_ = nm;
-  state = NOT_INITIALIZED;
-  lock_ = new rina::Lockable();
+IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
+		unsigned short id, unsigned int ipc_manager_port,
+		std::string log_level, std::string log_file) {
+	try {
+		std::stringstream ss;
+		ss << IPCP_LOG_FILE_PREFIX << "-" << id;
+		rina::initialize(log_level, log_file);
+		rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
+		rina::extendedIPCManager->ipcProcessId = id;
+		rina::kernelIPCProcess->ipcProcessId = id;
+		LOG_INFO("Librina initialized");
+	} catch (Exception &e) {
+        std::cerr << "Cannot initialize librina" << std::endl;
+        exit(EXIT_FAILURE);
+	}
 
-  // Load the default pluggable components
-  if (plugin_load("default")) {
-    throw Exception("Failed to load default plugin");
-  }
+	name_ = nm;
+	state = NOT_INITIALIZED;
+	lock_ = new rina::Lockable();
 
-  // Initialize subcomponents
-  init_cdap_session_manager();
-  init_encoder();
+        // Load the default pluggable components
+        if (plugin_load("default")) {
+                throw Exception("Failed to load default plugin");
+        }
 
-  delimiter_ = 0;  //TODO initialize Delimiter once it is implemented
-  enrollment_task_ = new EnrollmentTask();
-  flow_allocator_ = new FlowAllocator();
-  namespace_manager_ = new NamespaceManager();
-  resource_allocator_ = new ResourceAllocator();
-  security_manager_ = new SecurityManager();
-  // RIB
-  // FIXME: get by configuration
+	// Initialize subcomponents
+	init_cdap_session_manager();
+	init_encoder();
+
+	delimiter_ = 0; //TODO initialize Delimiter once it is implemented
+	enrollment_task_ = new EnrollmentTask();
+	flow_allocator_ = new FlowAllocator();
+	namespace_manager_ = new NamespaceManager();
+	resource_allocator_ = new ResourceAllocator();
+	security_manager_ = new SecurityManager();
+	// RIB
   rina::rib_ver_t version;
   rina::RIBSchema *schema = new rina::RIBSchema(version, ',', '=');
   rib_daemon_ = new IPCPRIBDaemonImpl(schema);
 
-  rib_daemon_->set_ipc_process(this);
-  enrollment_task_->set_ipc_process(this);
-  resource_allocator_->set_ipc_process(this);
-  namespace_manager_->set_ipc_process(this);
-  flow_allocator_->set_ipc_process(this);
-  security_manager_->set_ipc_process(this);
+	rib_daemon_->set_ipc_process(this);
+	enrollment_task_->set_ipc_process(this);
+	resource_allocator_->set_ipc_process(this);
+	namespace_manager_->set_ipc_process(this);
+	flow_allocator_->set_ipc_process(this);
+	security_manager_->set_ipc_process(this);
 
-  // Select the default policy sets
-  security_manager_->select_policy_set(std::string(), "default");
-  if (!security_manager_->ps) {
-    throw Exception("Cannot create security manager policy-set");
-  }
+        // Select the default policy sets
+        security_manager_->select_policy_set(std::string(), "default");
+        if (!security_manager_->ps) {
+                throw Exception("Cannot create security manager policy-set");
+        }
 
-  flow_allocator_->select_policy_set(std::string(), "default");
-  if (!flow_allocator_->ps) {
-    throw Exception("Cannot create flow allocator policy-set");
-  }
+        flow_allocator_->select_policy_set(std::string(), "default");
+        if (!flow_allocator_->ps) {
+                throw Exception("Cannot create flow allocator policy-set");
+        }
 
-  try {
-    rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
-  } catch (Exception &e) {
-    LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ",
-            e.what());
-    exit(EXIT_FAILURE);
-  }
+	try {
+		rina::extendedIPCManager->notifyIPCProcessInitialized(name_);
+	} catch (Exception &e) {
+		LOG_ERR("Problems communicating with IPC Manager: %s. Exiting... ", e.what());
+		exit(EXIT_FAILURE);
+	}
 
-  state = INITIALIZED;
+	state = INITIALIZED;
 
-  LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
-           name_.processName.c_str(), name_.processInstance.c_str(), id);
+	LOG_INFO("Initialized IPC Process with name: %s, instance %s, id %hu ",
+			name_.processName.c_str(), name_.processInstance.c_str(), id);
 }
 
 IPCProcessImpl::~IPCProcessImpl()
@@ -616,6 +614,7 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 
 int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 {
+<<<<<<< HEAD
 #define STRINGIFY(s) STRINGIFY1(s)
 #define STRINGIFY1(s) #s
   std::string plugin_path = STRINGIFY(PLUGINSDIR);
@@ -669,6 +668,59 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
   LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
 
   return 0;
+=======
+        std::string plugin_path = PLUGINSDIR;
+        void *handle = NULL;
+        plugin_init_function_t init_func;
+        char *errstr;
+        int ret;
+
+        if (plugins_handles.count(plugin_name)) {
+                LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
+                return 0;
+        }
+
+        plugin_path += "/";
+        plugin_path += plugin_name + ".so";
+
+        handle = dlopen(plugin_path.c_str(), RTLD_NOW);
+        if (!handle) {
+                LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(),
+                        dlerror());
+                return -1;
+        }
+
+        /* Clear any pending error conditions. */
+        dlerror();
+
+        /* Try to load the init() function. */
+        init_func = (plugin_init_function_t)dlsym(handle, "init");
+
+        /* Check if an error occurred in dlsym(). */
+        errstr = dlerror();
+        if (errstr) {
+                dlclose(handle);
+                LOG_ERR("Failed to link the init() function for plugin %s: %s",
+                        plugin_name.c_str(), errstr);
+                return -1;
+        }
+
+        /* Invoke the plugin initialization function, that will publish
+         * pluggable components. */
+        ret = init_func(this, plugin_name);
+        if (ret) {
+                dlclose(handle);
+                LOG_ERR("Failed to initialize plugin %s",
+                        plugin_name.c_str());
+                return -1;
+        }
+
+        plugins_handles[plugin_name] = handle;
+
+        LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
+
+        return 0;
+>>>>>>> b27282a7648c20758744ef6e9d845c3d8c2ff94c
 }
 
 int IPCProcessImpl::plugin_unload(const std::string& plugin_name)

@@ -159,25 +159,37 @@ static bool shouldLog(LOG_LEVEL level)
 
 void log(LOG_LEVEL level, const char * fmt, ...)
 {
-	bool goon;
-	pthread_rwlock_rdlock(&logLevelLock);
-	goon = shouldLog(level);
-	pthread_rwlock_unlock(&logLevelLock);
+        bool goon;
+        pthread_rwlock_rdlock(&logLevelLock);
+        goon = shouldLog(level);
+        pthread_rwlock_unlock(&logLevelLock);
 
-	if (!goon)
-		return;
+        if (!goon)
+                return;
 
-	va_list args;
+        va_list args;
 
-	va_start(args, fmt);
+        pthread_rwlock_rdlock(&outputStreamLock);
 
-	pthread_rwlock_rdlock(&outputStreamLock);
-        if (logOutputStream) {
-                fprintf(logOutputStream, "%d(%ld)", getProcessId(), time(0));
+        time_t now= time(0);
+
+        if (logOutputStream != stdout) {
+                fprintf(logOutputStream, "%d(%ld)", getProcessId(), now);
+
+                va_start(args, fmt);
                 vfprintf(logOutputStream, fmt, args);
+                va_end(args);
+
                 fflush(logOutputStream);
         }
-	pthread_rwlock_unlock(&outputStreamLock);
 
-	va_end(args);
+        fprintf(stdout, "%d(%ld)", getProcessId(), now);
+
+        va_start(args, fmt);
+        vfprintf(stdout, fmt, args);
+        va_end(args);
+
+        fflush(stdout);
+
+        pthread_rwlock_unlock(&outputStreamLock);
 }

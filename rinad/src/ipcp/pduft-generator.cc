@@ -1028,52 +1028,49 @@ void LinkStatePDUFTGeneratorPolicy::processFlowAllocatedEvent(
 }
 
 void LinkStatePDUFTGeneratorPolicy::processNeighborAddedEvent(
-    NeighborAddedEvent * event)
+		NeighborAddedEvent * event)
 {
-  std::list<rina::FlowInformation>::iterator it;
+	std::list<rina::FlowInformation>::iterator it;
 
-  for (it = allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
-    if (it->remoteAppName.processName.compare(
-        event->neighbor_->get_name().processName) == 0) {
-      LOG_INFO(
-          "There was an allocation flow event waiting for enrollment, launching it");
-      try {
-        db_->addObjectToGroup(
-            ipc_process_->get_address(),
-            it->portId,
-            ipc_process_->namespace_manager_->getAdressByname(
-                it->remoteAppName),
-            1);
-        allocated_flows_.erase(it);
-        break;
-      } catch (Exception &e) {
-        LOG_ERR("Could not allocate the flow, no neighbor found");
-      }
-    }
-  }
+	for (it = allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
+		if (it->portId == event->neighbor_->underlying_port_id_)
+		{
+			LOG_INFO(
+					"There was an allocation flow event waiting for enrollment, launching it");
+			try {
+				db_->addObjectToGroup(ipc_process_->get_address(), it->portId,
+						ipc_process_->namespace_manager_->getAdressByname(
+								event->neighbor_->get_name()), 1);
+				allocated_flows_.erase(it);
+				break;
+			} catch (Exception &e) {
+				LOG_ERR("Could not allocate the flow, no neighbor found");
+			}
+		}
+	}
 
-  if (db_->isEmpty()) {
-    return;
-  }
+	if (db_->isEmpty()) {
+		return;
+	}
 
-  int portId = event->neighbor_->get_underlying_port_id();
+	int portId = event->neighbor_->get_underlying_port_id();
 
-  try {
-    rina::RIBObjectValue robject_value;
-    robject_value.type_ = rina::RIBObjectValue::complextype;
-    robject_value.complex_value_ = &(db_->flow_state_objects_);
+	try {
+		rina::RIBObjectValue robject_value;
+		robject_value.type_ = rina::RIBObjectValue::complextype;
+		robject_value.complex_value_ = &(db_->flow_state_objects_);
 
-    rina::RemoteProcessId remote_id;
-    remote_id.port_id_ = portId;
+		rina::RemoteProcessId remote_id;
+		remote_id.port_id_ = portId;
 
-    rib_daemon_->remoteWriteObject(
-        EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-        EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
-        robject_value, 0, remote_id, 0);
-    db_->setAvoidPort(portId);
-  } catch (Exception &e) {
-    LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
-  }
+		rib_daemon_->remoteWriteObject(
+				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+				EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
+				robject_value, 0, remote_id, 0);
+		db_->setAvoidPort(portId);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
+	}
 }
 
 void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const

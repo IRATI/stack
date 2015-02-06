@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS                            = common rina-echo-time
+SUBDIRS                            = common rina-echo-time rina-cdap-echo
 EXTRA_DIST                         =
 DISTCLEANFILES                     =
 bin_PROGRAMS                       =

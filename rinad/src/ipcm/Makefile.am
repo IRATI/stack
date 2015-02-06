@@ -34,6 +34,11 @@ libjsoncpp_la_LDFLAGS  =
 libjsoncpp_la_LIBADD   =
 libjsoncpp_la_CPPFLAGS = -I$(srcdir)/jsoncpp
 
+CPPFLAGS_EXTRA =					\
+	-DDEFAULT_BINDIR=\"$(bindir)\"			\
+	-DDEFAULT_LIBDIR=\"$(libdir)\"			\
+	-DDEFAULT_LOGDIR=\"$(localstatedir)/log\"
+
 ipcm_CFLAGS   =
 ipcm_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
@@ -41,8 +46,8 @@ ipcm_CPPFLAGS =					\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
 	-I$(srcdir)/jsoncpp			\
-	-DPLUGINSDIR=$(pkglibdir)/ipcm
-ipcm_LDADD = 					\
+	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"
+ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/libjsoncpp.la		\
 	$(LIBRINA_LIBS)
@@ -97,17 +102,3 @@ CLEANFILES += rinad-ipcm.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = rinad-ipcm.pc
-
-bin_SCRIPTS = ipcm-plugins
-
-ipcm-plugins: Makefile ipcm-plugins.in
-	rm -f $@ $@.tmp
-	srcdir=''; \
-	  test -f ./$@.in || srcdir=$(srcdir)/; \
-	  $(edit) $${srcdir}$@.in >$@.tmp
-	chmod a-w $@.tmp
-	chmod u+x $@.tmp
-	mv $@.tmp $@
-
-EXTRA_DIST += ipcm-plugins.in
-CLEANFILES += ipcm-plugins

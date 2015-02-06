@@ -267,7 +267,7 @@ void initializeIPCManager(unsigned int localPort,
                 const std::string& installationPath,
                 const std::string& libraryPath,
                 const std::string& logLevel,
-                const std::string& pathToLogFile);
+                const std::string& pathToLogFolder);
 
 /**
  * Event informing that an application has requested the

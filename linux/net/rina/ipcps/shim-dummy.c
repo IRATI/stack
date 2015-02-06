@@ -505,7 +505,7 @@ static int dummy_sdu_write(struct ipcp_instance_data * data,
         struct rwq_work_item * item;
         struct sdu *           copy_sdu;
 
-        LOG_DBG("Dummy SDU write invoked.");
+        LOG_DBG("Dummy SDU write invoked");
 
         if (!sdu)
                 return -1;
