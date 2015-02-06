@@ -1421,7 +1421,7 @@ int dtp_receive(struct dtp * instance,
         struct dt *           dt;
         seq_num_t             seq_num;
         timeout_t             a;
-        timeout_t             LWE;
+        seq_num_t             LWE;
         bool                  in_order;
         seq_num_t             max_sdu_gap;
         unsigned long         flags;
@@ -1512,7 +1512,7 @@ int dtp_receive(struct dtp * instance,
          *   no need to check presence of in_order or dtcp because in case
          *   they are not, LWE is not updated and always 0
          */
-        if (seq_num <= LWE) {
+        if ((seq_num <= LWE) || (dtcp && (seq_num > dtcp_rcv_rt_win(dtcp)))) {
                 pdu_destroy(pdu);
 
                 dropped_pdus_inc(sv);
