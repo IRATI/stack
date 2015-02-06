@@ -607,7 +607,7 @@ IPCManager_::enroll_to_dif(const int ipcp_id,
 	ostringstream ss;
 	rina::IPCProcess *ipcp;
 	bool arrived = true;
-	int ret = -1;
+	int ret = 0;
 	unsigned int seqnum;
 
 	concurrency.lock();
@@ -769,7 +769,7 @@ IPCManager_::update_dif_configuration(int ipcp_id,
 {
 	ostringstream ss;
 	bool arrived = true;
-	int ret = -1;
+	int ret = 0;
 	unsigned int seqnum;
 	rina::IPCProcess *ipcp;
 
