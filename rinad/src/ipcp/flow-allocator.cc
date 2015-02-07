@@ -211,6 +211,7 @@ void FlowAllocator::set_dif_configuration(
     ss << EncoderConstants::QOS_CUBE_SET_RIB_OBJECT_NAME
        << EncoderConstants::SEPARATOR;
     ss << (*it)->name_;
+    LOG_DBG("[DEBUG]Creating object %s", ss.str().c_str());
     rib_daemon_->createObject(EncoderConstants::QOS_CUBE_RIB_OBJECT_CLASS,
                               ss.str(), (*it), 0);
     ss.str(std::string());

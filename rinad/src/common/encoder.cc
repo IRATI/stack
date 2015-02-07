@@ -63,6 +63,9 @@ const std::string EncoderConstants::ROUTING = "routing";
 const std::string EncoderConstants::FLOWSTATEOBJECTGROUP = "flowstateobjectgroup";
 const std::string EncoderConstants::LINKSTATE = "linkstate";
 const std::string EncoderConstants::WATCHDOG = "watchdog";
+
+const std::string EncoderConstants::ROOT_OBJECT_NAME = "watchdog";
+
 const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_NAME = SEPARATOR + DAF +
 		SEPARATOR + MANAGEMENT + SEPARATOR + OPERATIONAL_STATUS;
 const std::string EncoderConstants::OPERATIONAL_STATUS_RIB_OBJECT_CLASS = "operationstatus";

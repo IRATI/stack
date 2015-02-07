@@ -77,7 +77,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 	security_manager_ = new SecurityManager();
 	// RIB
   rina::rib_ver_t version;
-  rina::RIBSchema *schema = new rina::RIBSchema(version, ',', '=');
+  rina::RIBSchema *schema = new rina::RIBSchema(version, '/', '=');
   rib_daemon_ = new IPCPRIBDaemonImpl(schema);
 
 	rib_daemon_->set_ipc_process(this);
@@ -338,6 +338,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(
   LOG_DBG("The kernel processed successfully the Assign to DIF request");
   try {
     rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
+    createBasicRIBObjects();
     resource_allocator_->set_dif_configuration(
         dif_information_.dif_configuration_);
     namespace_manager_->set_dif_configuration(
@@ -614,61 +615,6 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
 
 int IPCProcessImpl::plugin_load(const std::string& plugin_name)
 {
-<<<<<<< HEAD
-#define STRINGIFY(s) STRINGIFY1(s)
-#define STRINGIFY1(s) #s
-  std::string plugin_path = STRINGIFY(PLUGINSDIR);
-#undef STRINGIFY1
-#undef STRINGIFY
-  void *handle = NULL;
-  plugin_init_function_t init_func;
-  char *errstr;
-  int ret;
-
-  if (plugins_handles.count(plugin_name)) {
-    LOG_INFO("Plugin '%s' already loaded", plugin_name.c_str());
-    return 0;
-  }
-
-  plugin_path += "/";
-  plugin_path += plugin_name + ".so";
-
-  handle = dlopen(plugin_path.c_str(), RTLD_NOW);
-  if (!handle) {
-    LOG_ERR("Cannot load plugin %s: %s", plugin_name.c_str(), dlerror());
-    return -1;
-  }
-
-  /* Clear any pending error conditions. */
-  dlerror();
-
-  /* Try to load the init() function. */
-  init_func = (plugin_init_function_t) dlsym(handle, "init");
-
-  /* Check if an error occurred in dlsym(). */
-  errstr = dlerror();
-  if (errstr) {
-    dlclose(handle);
-    LOG_ERR("Failed to link the init() function for plugin %s: %s",
-            plugin_name.c_str(), errstr);
-    return -1;
-  }
-
-  /* Invoke the plugin initialization function, that will publish
-   * pluggable components. */
-  ret = init_func(this, plugin_name);
-  if (ret) {
-    dlclose(handle);
-    LOG_ERR("Failed to initialize plugin %s", plugin_name.c_str());
-    return -1;
-  }
-
-  plugins_handles[plugin_name] = handle;
-
-  LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
-
-  return 0;
-=======
         std::string plugin_path = PLUGINSDIR;
         void *handle = NULL;
         plugin_init_function_t init_func;
@@ -720,7 +666,6 @@ int IPCProcessImpl::plugin_load(const std::string& plugin_name)
         LOG_INFO("Plugin %s loaded successfully", plugin_name.c_str());
 
         return 0;
->>>>>>> b27282a7648c20758744ef6e9d845c3d8c2ff94c
 }
 
 int IPCProcessImpl::plugin_unload(const std::string& plugin_name)
@@ -859,6 +804,13 @@ int IPCProcessImpl::psDestroy(const std::string& component,
   it->refcnt--;
 
   return 0;
+}
+
+void IPCProcessImpl::createBasicRIBObjects() const
+{
+  rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "ROOT", "/"));
+  rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "DIF", "/DIF"));
+  rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "RA", "/"));
 }
 
 //Event loop handlers

@@ -87,6 +87,12 @@ class IPCPRIBDaemonImpl : public BaseRIBDaemon, public EventListener
   void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event);
 };
 
+class SimplestRIBObj: public rina::BaseRIBObject{
+public:
+  SimplestRIBObj(rina::IRIBDaemon *rib_daemon, const std::string &object_class, const std::string &object_name);
+    const void* get_value() const;
+};
+
 }
 
 #endif

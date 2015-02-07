@@ -322,4 +322,14 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(
   atomic_send_lock_.unlock();
 }
 
+//CLASS SimplestRIBObj
+SimplestRIBObj::SimplestRIBObj(rina::IRIBDaemon *rib_daemon,  const std::string& object_class, const std::string& object_name):
+    rina::BaseRIBObject(rib_daemon, object_class, rina::objectInstanceGenerator->getObjectInstance(), object_name)
+{}
+const void* SimplestRIBObj::get_value() const
+{
+  return 0;
+}
+
+
 }

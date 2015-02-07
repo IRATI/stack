@@ -431,7 +431,10 @@ BaseRIBObject* RIB::getRIBObject(const std::string& object_class,
   it = rib_by_name_.find(object_name);
   unlock();
   if (it == rib_by_name_.end()) {
-    throw Exception("Could not find object in the RIB");
+    std::stringstream ss;
+    ss<<"Could not find object "<< object_name<<" of class "<<
+        object_class<<" in the RIB"<<std::endl;
+    throw Exception(ss.str().c_str());
   }
 
   ribObject = it->second;
@@ -453,7 +456,10 @@ BaseRIBObject* RIB::getRIBObject(const std::string& object_class, long instance,
   unlock();
 
   if (it == rib_by_instance_.end()) {
-    throw Exception("Could not find object in the RIB");
+    std::stringstream ss;
+    ss<<"Could not find object instance "<< instance<<" of class "<<
+        object_class.c_str() <<" in the RIB"<<std::endl;
+    throw Exception(ss.str().c_str());
   }
 
   ribObject = it->second;
@@ -669,12 +675,18 @@ void RIBDaemon::createObject(const std::string& objectClass,
     ribObject = rib_->getRIBObject(objectClass, objectName, true);
   } catch (Exception &e) {
     //Delegate creation to the parent if the object is not there
-    std::string::size_type position = objectName.rfind(
+    /*std::string::size_type position = objectName.rfind(
         rib_->get_name_separator());
     if (position == std::string::npos)
-      throw e;
-    std::string parentObjectName = objectName.substr(0, position);
-    ribObject = rib_->getRIBObject(objectClass, parentObjectName, false);
+      throw e;*/
+    //std::string parentObjectName = objectName.substr(0, position);
+    std::string parentObjectName = rib_->get_parent_name(objectName);
+    try{
+      ribObject = rib_->getRIBObject(objectClass, parentObjectName, false);
+    }catch(Exception &e){
+      LOG_ERR("Can not create the object in the RIB: %s", e.what());
+      return;
+    }
   }
 
   //Create the object
