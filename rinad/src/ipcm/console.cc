@@ -193,7 +193,10 @@ void IPCMConsole::body()
 
                 for (;;) {
                         outstream << "IPCM >>> ";
-                        flush_output(cfd);
+                        if (flush_output(cfd) < 0) {
+                        	close(cfd);
+                        	break;
+                        }
 
                         n = read(cfd, cmdbuf, sizeof(cmdbuf));
                         if (n < 0) {
