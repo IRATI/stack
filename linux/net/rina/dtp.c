@@ -1538,9 +1538,9 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (dtcp && seq_num > dtcp_rcv_rt_win(dtcp)) {
-        	LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u.",
-            		pci_cep_source(pci), pci_cep_destination(pci),
-        			seq_num, dtcp_rcv_rt_win(dtcp));
+        	LOG_INFO("PDU Scep-id %u Dcep-id %u SeqN %u, RWE: %u",
+                         pci_cep_source(pci), pci_cep_destination(pci),
+                         seq_num, dtcp_rcv_rt_win(dtcp));
         }
 
         if (!a) {
