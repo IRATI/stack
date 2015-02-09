@@ -615,18 +615,37 @@ unsigned int FlowStateDatabase::get_maximum_age() const
 	return *maximum_age_;
 }
 
-std::vector<std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagation(
+std::map <int, std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagation(
 		const std::list<rina::FlowInformation>& flows)
 {
-	std::vector<std::list<FlowStateObject*> > result;
-	std::list<FlowStateObject*> modifiedFSOs = getModifiedFSOs();
+	std::map <int, std::list<FlowStateObject*> > result;
+	for (std::list<rina::FlowInformation>::const_iterator it = flows.begin();
+	    it != flows.end(); ++it ){
+	  std::list<FlowStateObject*> list;
+	  result[it->portId] = list;
+	}
 
+	std::list<FlowStateObject*> modifiedFSOs = getModifiedFSOs();
 	if (modifiedFSOs.size() == 0) {
 		return result;
 	}
 
-	std::list<FlowStateObject*>::iterator fsosIterator;
-	std::list<rina::FlowInformation>::const_iterator flowsIterator;
+  for (std::list<FlowStateObject*>::iterator it = modifiedFSOs.begin();
+      it != modifiedFSOs.end(); ++it) {
+
+    LOG_DBG("Propagation: Check modified object %s with age %d and status %d",
+    (*it)->object_name_.c_str(), (*it)->age_, (*it)->up_);
+
+    for(std::map<int, std::list<FlowStateObject*> >::iterator it2 =
+        result.begin(); it2 != result.end(); ++it2){
+      if(it2->first != (*it)->avoid_port_){
+        it2->second.push_back(*it);
+      }
+    }
+    (*it)->modified_ = false;
+    (*it)->avoid_port_ = NO_AVOID_PORT;
+  }
+/*
 	int portId = 0;
 	for (fsosIterator = modifiedFSOs.begin();
 			fsosIterator != modifiedFSOs.end(); ++fsosIterator) {
@@ -649,7 +668,7 @@ std::vector<std::list<FlowStateObject*> > FlowStateDatabase::prepareForPropagati
 		(*fsosIterator)->modified_ = false;
 		(*fsosIterator)->avoid_port_ = NO_AVOID_PORT;
 	}
-
+*/
 	return result;
 }
 
@@ -1077,10 +1096,10 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
 
-	std::vector<std::list<FlowStateObject *> > groupsToSend =
+  std::map <int, std::list<FlowStateObject*> > objectsToSend =
 			db_->prepareForPropagation(nMinusOneFlows);
 
-	if (groupsToSend.size() == 0) {
+	if (objectsToSend.size() == 0) {
 		return;
 	}
 
@@ -1088,26 +1107,20 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
 	robject_value.type_ = rina::RIBObjectValue::complextype;
 	robject_value.complex_value_ = &(db_->flow_state_objects_);
 
-	rina::RemoteProcessId remote_id;
-
-	std::list<FlowStateObject *> fsos;
-	std::list<rina::FlowInformation>::iterator it;
-	int i = 0;
-	for (it = nMinusOneFlows.begin(); it != nMinusOneFlows.end(); ++it) {
-		fsos = groupsToSend[i];
-		if (fsos.size() > 0) {
-			try {
-				remote_id.port_id_ = it->portId;
-				rib_daemon_->remoteWriteObject(
-						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
-						EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
-						robject_value, 0, remote_id, 0);
-			} catch (Exception &e) {
-				LOG_ERR("Errors sending message: %s", e.what());
-			}
-		}
-
-		i++;
+	for (std::map <int, std::list<FlowStateObject*> >::iterator it =
+	    objectsToSend.begin(); it != objectsToSend.end(); ++it){
+	  if (!it->second.empty()){
+	    rina::RemoteProcessId remote_id;
+      remote_id.port_id_ = it->first;
+      try {
+      rib_daemon_->remoteWriteObject(
+          EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_CLASS,
+          EncoderConstants::FLOW_STATE_OBJECT_GROUP_RIB_OBJECT_NAME,
+          robject_value, 0, remote_id, 0);
+      } catch (Exception &e) {
+        LOG_ERR("Errors sending message: %s", e.what());
+      }
+	  }
 	}
 }
 
