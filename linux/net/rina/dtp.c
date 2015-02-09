@@ -1556,8 +1556,7 @@ int dtp_receive(struct dtp * instance,
                         goto exit;
                 }
 
-                set_lft_win_edge = !(dtcp                                 &&
-                                     dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
+                set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
                                      ((seq_num -LWE) > max_sdu_gap));
 
                 if (set_lft_win_edge) {
