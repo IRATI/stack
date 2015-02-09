@@ -201,7 +201,7 @@ void IPCMConsole::body()
                                         "] calling read() " << endl;
                                 FLUSH_LOG(ERR, ss);
                                 close(cfd);
-                                continue;
+                                break;
                         }
 
                         cmdret = process_command(cfd, cmdbuf, n);
