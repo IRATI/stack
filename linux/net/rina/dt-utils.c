@@ -41,7 +41,6 @@
 struct cwq {
         struct rqueue * q;
         spinlock_t      lock;
-        bool            write_enable;
 };
 
 struct cwq * cwq_create(void)
@@ -58,8 +57,6 @@ struct cwq * cwq_create(void)
                 rkfree(tmp);
                 return NULL;
         }
-
-        tmp->write_enable = true;
 
         spin_lock_init(&tmp->lock);
 
@@ -101,16 +98,6 @@ int cwq_destroy(struct cwq * queue)
         rkfree(queue);
 
         return 0;
-}
-
-bool cwq_write_enable(struct cwq * queue)
-{ return queue ? queue->write_enable : false; }
-
-void cwq_write_enable_set(struct cwq * queue, bool flag)
-{
-        if (queue)
-                queue->write_enable = flag;
-        return;
 }
 
 int cwq_push(struct cwq * queue,
@@ -234,12 +221,8 @@ static void enable_write(struct cwq * cwq,
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
-        if (cwq_size(cwq) < max_len) {
-                if (!cwq_write_enable(cwq)) {
-                        cwq_write_enable_set(cwq, true);
-                        efcp_enable_write(dt_efcp(dt));
-                }
-        }
+        if (cwq_size(cwq) < max_len)
+                efcp_enable_write(dt_efcp(dt));
 
         return;
 }
@@ -252,6 +235,7 @@ void cwq_deliver(struct cwq * queue,
 {
         struct rtxq * rtxq;
         struct dtcp * dtcp;
+        struct dtp *  dtp;
         struct pdu  * tmp;
 
         if (!queue)
@@ -267,9 +251,13 @@ void cwq_deliver(struct cwq * queue,
         if (!dtcp)
                 return;
 
+        dtp = dt_dtp(dt);
+        if (!dtp)
+                return;
+
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q) &&
-               (dtcp_snd_lf_win(dtcp) < dtcp_snd_rt_win(dtcp))) {
+               (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp))) {
                 struct pdu *       pdu;
                 const struct pci * pci;
 
@@ -294,8 +282,8 @@ void cwq_deliver(struct cwq * queue,
                         rtxq_push_ni(rtxq, tmp);
                 }
                 pci = pdu_pci_get_ro(pdu);
-                if (dtcp_snd_lf_win_set(dtcp,
-                                        pci_sequence_number_get(pci)))
+                if (dtp_sv_max_seq_nr_set(dtp,
+                                          pci_sequence_number_get(pci)))
                         LOG_ERR("Problems setting sender left window edge");
 
                 if (rmt_send(rmt,
@@ -306,9 +294,9 @@ void cwq_deliver(struct cwq * queue,
         }
         spin_unlock(&queue->lock);
 
-        LOG_DBG("CWQ has delivered until %u", dtcp_snd_lf_win(dtcp));
+        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
 
-        if ((dtcp_snd_lf_win(dtcp) >= dtcp_snd_rt_win(dtcp))) {
+        if ((dtp_sv_max_seq_nr_sent(dtp) >= dtcp_snd_rt_win(dtcp))) {
                 dt_sv_window_closed_set(dt, true);
                 enable_write(queue, dt);
                 return;

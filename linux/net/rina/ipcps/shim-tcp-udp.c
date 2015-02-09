@@ -2220,12 +2220,13 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
 static void tcp_udp_write_worker(struct work_struct * w)
 {
         struct snd_data * snd_data, * next;
+        unsigned long     flags;
 
         /* FIXME: more efficient locking and better cleanup */
-        spin_lock(&snd_wq_lock);
+        spin_lock_irqsave(&snd_wq_lock, flags);
         list_for_each_entry_safe(snd_data, next, &snd_wq_data, list) {
                 list_del(&snd_data->list);
-                spin_unlock(&snd_wq_lock);
+                spin_unlock_irqrestore(&snd_wq_lock, flags);
 
                 __tcp_udp_sdu_write(snd_data->data,
                                     snd_data->id,
@@ -2233,9 +2234,9 @@ static void tcp_udp_write_worker(struct work_struct * w)
 
                 rkfree(snd_data);
 
-                spin_lock(&snd_wq_lock);
+                spin_lock_irqsave(&snd_wq_lock, flags);
         }
-        spin_unlock(&snd_wq_lock);
+        spin_unlock_irqrestore(&snd_wq_lock, flags);
 
         LOG_DBG("writer worker finished for now");
 }

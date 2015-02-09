@@ -46,7 +46,8 @@ struct dtp_sv {
         uint_t              seq_number_rollover_threshold;
         uint_t              dropped_pdus;
         seq_num_t           max_seq_nr_rcv;
-        seq_num_t           last_seq_nr_sent;
+        seq_num_t           seq_nr_to_send;
+        seq_num_t           max_seq_nr_sent;
 
         bool                window_based;
         bool                rexmsn_ctrl;
@@ -88,7 +89,8 @@ struct dtp {
 
 static struct dtp_sv default_sv = {
         .connection                    = NULL,
-        .last_seq_nr_sent              = 0,
+        .seq_nr_to_send                = 0,
+        .max_seq_nr_sent               = 0,
         .seq_number_rollover_threshold = 0,
         .dropped_pdus                  = 0,
         .max_seq_nr_rcv                = 0,
@@ -103,7 +105,7 @@ static void nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        sv->last_seq_nr_sent = sn;
+        sv->seq_nr_to_send = sn;
         spin_unlock(&sv->lock);
 
         return;
@@ -117,13 +119,13 @@ static seq_num_t nxt_seq_get(struct dtp_sv * sv)
         ASSERT(sv);
 
         spin_lock_irqsave(&sv->lock, flags);
-        tmp = ++sv->last_seq_nr_sent;
+        tmp = ++sv->seq_nr_to_send;
         spin_unlock_irqrestore(&sv->lock, flags);
 
         return tmp;
 }
 
-seq_num_t dtp_sv_last_seq_nr_sent(struct dtp * instance)
+seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 {
         seq_num_t       tmp;
         struct dtp_sv * sv;
@@ -136,10 +138,50 @@ seq_num_t dtp_sv_last_seq_nr_sent(struct dtp * instance)
         ASSERT(sv);
 
         spin_lock(&sv->lock);
-        tmp = sv->last_seq_nr_sent;
+        tmp = sv->seq_nr_to_send;
         spin_unlock(&sv->lock);
 
         return tmp;
+}
+
+seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
+{
+        seq_num_t       tmp;
+        unsigned long   flags;
+        struct dtp_sv * sv;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+        sv = instance->sv;
+        ASSERT(sv);
+
+        spin_lock_irqsave(&sv->lock, flags);
+        tmp = sv->max_seq_nr_sent;
+        spin_unlock_irqrestore(&sv->lock, flags);
+
+        return tmp;
+}
+
+int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
+{
+        unsigned long   flags;
+        struct dtp_sv * sv;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed");
+                return -1;
+        }
+        sv = instance->sv;
+        ASSERT(sv);
+
+        spin_lock_irqsave(&sv->lock, flags);
+        if (sv->max_seq_nr_sent < num)
+                sv->max_seq_nr_sent = num;
+        spin_unlock_irqrestore(&sv->lock, flags);
+
+        return 0;
 }
 
 static uint_t dropped_pdus(struct dtp_sv * sv)
@@ -197,11 +239,8 @@ static int default_flow_control_overrun(struct dtp * dtp, struct pdu * pdu)
                 return -1;
         }
 
-        if (cwq_write_enable(cwq)) {
-                cwq_write_enable_set(cwq, false);
-                if (efcp_disable_write(dtp->efcp))
-                        return -1;
-        }
+        if (efcp_disable_write(dtp->efcp))
+                return -1;
 
         return 0;
 }
@@ -298,8 +337,9 @@ static int default_transmission(struct dtp * dtp, struct pdu * pdu)
 #endif
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
-        if (dtcp_snd_lf_win_set(dtcp,
-                                pci_sequence_number_get(pdu_pci_get_ro(pdu))))
+        if (dtp_sv_max_seq_nr_set(dtp,
+                                  pci_sequence_number_get(pdu_pci_get_ro(
+                                                           pdu))))
                 LOG_ERR("Problems setting sender left window edge "
                         "in default_transmission");
 
@@ -1087,7 +1127,7 @@ static bool window_is_closed(struct dtp_sv * sv,
         if (dt_sv_window_closed(dt))
                 return true;
 
-        if (sv->window_based && seq_num >= dtcp_snd_rt_win(dtcp)) {
+        if (sv->window_based && seq_num > dtcp_snd_rt_win(dtcp)) {
                 dt_sv_window_closed_set(dt, true);
                 retval = true;
         }
