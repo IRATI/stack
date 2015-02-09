@@ -82,6 +82,9 @@ int wrapped_main(int argc, char * argv[])
         return EXIT_SUCCESS;
 }
 
+#define WANT_PARACHUTE 0
+
+#if WANT_PARACHUTE
 void handler(int signum)
 {
         LOG_CRIT("Got signal %d", signum);
@@ -92,13 +95,16 @@ void handler(int signum)
         }
 }
 
+#endif
 int main(int argc, char * argv[])
 {
         int retval;
 
+#if WANT_PARACHUTE
         if (signal(SIGSEGV, handler) == SIG_ERR) {
                 LOG_WARN("Cannot install SIGSEGV handler!");
         }
+#endif
 
         try {
                 retval = wrapped_main(argc, argv);
