@@ -117,10 +117,13 @@ BaseRIBObject::BaseRIBObject(IRIBDaemon * rib_daemon,
 
 BaseRIBObject::~BaseRIBObject()
 {
+  /*
   // FIXME: Remove this when objects have two parents
   while (children_.size() > 0) {
     base_rib_daemon_->removeRIBObject(children_.front()->get_name());
   }
+  */
+  LOG_DBG("Object %s destroyed", name_.c_str());
 }
 
 rina::RIBObjectData BaseRIBObject::get_data()
@@ -408,14 +411,12 @@ RIB::~RIB() throw ()
 {
   lock();
   delete rib_schema_;
-  unlock();
 
   for (std::map<std::string, BaseRIBObject*>::iterator it =
       rib_by_name_.begin(); it != rib_by_name_.end(); ++it) {
-    LOG_DBG("Object %s destroyed", it->second->get_name().c_str());
+    LOG_DBG("Object %s removed from the RIB", it->second->get_name().c_str());
     delete it->second;
   }
-  lock();
   rib_by_name_.clear();
   rib_by_instance_.clear();
   unlock();
@@ -424,15 +425,20 @@ RIB::~RIB() throw ()
 BaseRIBObject* RIB::getRIBObject(const std::string& object_class,
                                  const std::string& object_name, bool check)
 {
+  std::string norm_object_name = object_name;
+  norm_object_name.erase(
+      std::remove_if(norm_object_name.begin(), norm_object_name.end(), ::isspace),
+      norm_object_name.end());
+
   BaseRIBObject* ribObject;
   std::map<std::string, BaseRIBObject*>::iterator it;
 
   lock();
-  it = rib_by_name_.find(object_name);
+  it = rib_by_name_.find(norm_object_name);
   unlock();
   if (it == rib_by_name_.end()) {
     std::stringstream ss;
-    ss<<"Could not find object "<< object_name<<" of class "<<
+    ss<<"Could not find object "<< norm_object_name<<" of class "<<
         object_class<<" in the RIB"<<std::endl;
     throw Exception(ss.str().c_str());
   }
@@ -475,19 +481,17 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
 {
   BaseRIBObject *parent = 0;
   std::string parent_name = get_parent_name(rib_object->get_name());
-  if (parent_name != "") {
+  if (!parent_name.empty()) {
     lock();
     if (rib_by_name_.find(parent_name) == rib_by_name_.end()) {
       std::stringstream ss;
-      ss << "Parent name (" << parent_name << ") is not in the RIB"
-         << std::endl;
+      ss << "Exception in object "<<rib_object->get_name() <<". Parent name ("
+          << parent_name << ") is not in the RIB"<< std::endl;
       throw Exception(ss.str().c_str());
     }
-
     parent = rib_by_name_[parent_name];
     unlock();
   }
-
   // TODO: add schema validation
 //	if (rib_schema_->validateAddObject(rib_object, parent))
 //	{
@@ -496,9 +500,7 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
     unlock();
     std::stringstream ss;
     ss << "Object with the same name (" << rib_object->get_name()
-       << "already exists in the"
-       " RIB"
-       << std::endl;
+       << ") already exists in the RIB"<< std::endl;
     throw Exception(ss.str().c_str());
   }
   if (rib_by_instance_.find(rib_object->get_instance())
@@ -518,10 +520,6 @@ void RIB::addRIBObject(BaseRIBObject* rib_object)
   rib_by_name_[rib_object->get_name()] = rib_object;
   rib_by_instance_[rib_object->get_instance()] = rib_object;
   unlock();
-  /*	}
-   else
-   throw Exception("Can not validate this object in the RIB version");
-   */
 }
 
 BaseRIBObject* RIB::removeRIBObject(const std::string& objectName)
@@ -532,6 +530,7 @@ BaseRIBObject* RIB::removeRIBObject(const std::string& objectName)
   lock();
   it = rib_by_name_.find(objectName);
   if (it == rib_by_name_.end()) {
+    unlock();
     throw Exception("Could not find object in the RIB");
   }
 
@@ -553,6 +552,7 @@ BaseRIBObject * RIB::removeRIBObject(long instance)
   lock();
   it = rib_by_instance_.find(instance);
   if (it == rib_by_instance_.end()) {
+    unlock();
     throw Exception("Could not find object in the RIB");
   }
 
@@ -594,6 +594,7 @@ std::string RIB::get_parent_name(const std::string child_name) const
     return child_name.substr(0, last_id_separator);
   else
     return child_name.substr(0, last_field_separator);
+
 }
 
 ///Class RIBDaemon
@@ -624,7 +625,12 @@ void RIBDaemon::addRIBObject(BaseRIBObject * ribObject)
   if (!ribObject)
     throw Exception("Object is null");
 
+  try{
   rib_->addRIBObject(ribObject);
+  }catch(Exception &e){
+    LOG_ERR("Error while adding initial rib objects for rib v1. Error: %s", e.what());
+    throw e;
+  }
   LOG_INFO(
       "Object with name %s, class %s, instance %ld added to the RIB",
       ribObject->get_name().c_str(), ribObject->get_class().c_str(),

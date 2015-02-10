@@ -135,26 +135,39 @@ class CheckSchema
   rina::RIBSchema *rib_schema_;
 };
 
+static const std::string OBJECT1_RIB_OBJECT_NAME = "A";
+static const std::string OBJECT1_RIB_OBJECT_CLASS = "A";
+static const std::string OBJECT2_RIB_OBJECT_NAME = "A= 1, Barcelona";
+static const std::string OBJECT2_RIB_OBJECT_CLASS = "Barcelona";
+static const std::string OBJECT3_RIB_OBJECT_NAME = "A = 1, Barcelona = 1, 1";
+static const std::string OBJECT3_RIB_OBJECT_CLASS = "1";
+static const std::string OBJECT4_RIB_OBJECT_NAME = "A=1, Barcelona = 1, 1 = 1, test1";
+static const std::string OBJECT4_RIB_OBJECT_CLASS = "test1";
+static const std::string OBJECT5_RIB_OBJECT_NAME = "A = 1, Barcelona = 1, 1 = 2, test2";
+static const std::string OBJECT5_RIB_OBJECT_CLASS = "test2";
+static const std::string OBJECT6_RIB_OBJECT_NAME = "A = 1, Barcelona = 1, 1 = 2, test2=1, test3";
+static const std::string OBJECT6_RIB_OBJECT_CLASS = "test3";
+
 class CheckRIB
 {
  public:
   CheckRIB(const rina::RIBSchema *rib_schema)
   {
     rib_daemon_ = new RIBDaemonSpecific(rib_schema);
-    object1_ = createNewObject(rib_daemon_, "A", "A", idFactory_);
-    object2_ = createNewObject(rib_daemon_, "Barcelona",
-                               "A= 1, Barcelona", idFactory_);
-    object3_ = createNewObject(rib_daemon_, "1",
-                               "A = 1, Barcelona = 1, 1", idFactory_);
-    object4_ = createNewObject(rib_daemon_, "test1",
-                               "A=1, Barcelona = 1, 1 = 1, test1",
+    object1_ = createNewObject(rib_daemon_, OBJECT1_RIB_OBJECT_CLASS, OBJECT1_RIB_OBJECT_NAME, idFactory_);
+    object2_ = createNewObject(rib_daemon_, OBJECT2_RIB_OBJECT_CLASS,
+                               OBJECT2_RIB_OBJECT_NAME, idFactory_);
+    object3_ = createNewObject(rib_daemon_, OBJECT3_RIB_OBJECT_CLASS,
+                               OBJECT3_RIB_OBJECT_NAME, idFactory_);
+    object4_ = createNewObject(rib_daemon_, OBJECT4_RIB_OBJECT_CLASS,
+                               OBJECT4_RIB_OBJECT_NAME,
                                idFactory_);
-    object5_ = createNewObject(rib_daemon_, "test2",
-                               "A = 1, Barcelona = 1, 1 = 2, test2",
+    object5_ = createNewObject(rib_daemon_, OBJECT5_RIB_OBJECT_CLASS,
+                               OBJECT5_RIB_OBJECT_NAME,
                                idFactory_);
     object6_ = createNewObject(
-        rib_daemon_, "test3",
-        "A = 1, Barcelona = 1, 1 = 2, test2=1, test3", idFactory_);
+        rib_daemon_, OBJECT6_RIB_OBJECT_CLASS,
+        OBJECT6_RIB_OBJECT_NAME, idFactory_);
   }
   ~CheckRIB()
   {
@@ -198,14 +211,17 @@ class CheckRIB
   {
     try {
       NewObject *object_recovered = (NewObject*) rib_daemon_
-          ->readObject(object2_->get_class(), object2_->get_name());
+          ->readObject(OBJECT2_RIB_OBJECT_CLASS, OBJECT2_RIB_OBJECT_NAME);
       if (object2_ != object_recovered)
         return false;
       object_recovered = (NewObject*) rib_daemon_->readObject(
-          object5_->get_class(), object5_->get_instance());
+          OBJECT5_RIB_OBJECT_CLASS, OBJECT5_RIB_OBJECT_NAME);
       if (object5_ != object_recovered)
         return false;
+      object_recovered = (NewObject*)rib_daemon_
+          ->readObject(OBJECT3_RIB_OBJECT_CLASS, OBJECT3_RIB_OBJECT_NAME);
     } catch (Exception &e1) {
+      std::cout<<e1.what();
       return false;
     }
     return true;
@@ -273,6 +289,8 @@ int main()
     std::cout << "TEST FAILED" << std::endl;
     return -1;
   }
+
+  // REMOVE object twice
 
   return 0;
 }
