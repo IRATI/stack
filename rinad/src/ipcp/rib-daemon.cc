@@ -164,6 +164,8 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(const rina::RIBSchema *rib_schema)
   ipc_process_ = 0;
   management_sdu_reader_ = 0;
   n_minus_one_flow_manager_ = 0;
+  // TODO switch with RIB versions
+  initialFillRIBv1();
 }
 
 void IPCPRIBDaemonImpl::set_ipc_process(IPCProcess * ipc_process)
