@@ -184,6 +184,7 @@ int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
         return 0;
 }
 
+#if 0
 static uint_t dropped_pdus(struct dtp_sv * sv)
 {
         uint_t tmp;
@@ -196,6 +197,7 @@ static uint_t dropped_pdus(struct dtp_sv * sv)
 
         return tmp;
 }
+#endif
 
 static void dropped_pdus_inc(struct dtp_sv * sv)
 {
