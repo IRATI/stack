@@ -228,22 +228,6 @@ int sdu_buffer_disown(struct sdu * sdu)
 }
 EXPORT_SYMBOL(sdu_buffer_disown);
 
-struct sdu * sdu_protect(struct sdu * s)
-{
-        LOG_MISSING;
-
-        return NULL;
-}
-EXPORT_SYMBOL(sdu_protect);
-
-struct sdu * sdu_unprotect(struct sdu * s)
-{
-        LOG_MISSING;
-
-        return NULL;
-}
-EXPORT_SYMBOL(sdu_unprotect);
-
 static struct sdu_wpi * sdu_wpi_create_with_gfp(gfp_t           flags,
                                                 struct buffer * buffer)
 {
