@@ -57,7 +57,8 @@ public:
 	static const std::string FLOWS;
 	static const std::string FLOW_ALLOCATOR;
 	static const std::string IPC;
-	static const std::string MANAGEMENT;
+	static const std::string DIFMANAGEMENT;
+  static const std::string DAFMANAGEMENT;
 	static const std::string NEIGHBORS;
 	static const std::string NAMING;
 	static const std::string NMINUSONEFLOWMANAGER;
@@ -77,6 +78,29 @@ public:
 	static const std::string WATCHDOG;
 
 	/* Full names */
+  static const std::string DAF_RIB_OBJECT_CLASS;
+  static const std::string DAF_RIB_OBJECT_NAME;
+  static const std::string DIF_RIB_OBJECT_CLASS;
+  static const std::string DIF_RIB_OBJECT_NAME;
+  static const std::string DAF_MANAGEMENT_RIB_OBJECT_CLASS;
+  static const std::string DAF_MANAGEMENT_RIB_OBJECT_NAME;
+  static const std::string DIF_MANAGEMENT_RIB_OBJECT_CLASS;
+  static const std::string DIF_MANAGEMENT_RIB_OBJECT_NAME;
+  static const std::string RESOURCE_ALLOCATION_RIB_OBJECT_CLASS;
+  static const std::string RESOURCE_ALLOCATION_RIB_OBJECT_NAME;
+  static const std::string NMINUSONEFLOWMANAGER_RIB_OBJECT_CLASS;
+  static const std::string NMINUSONEFLOWMANAGER_RIB_OBJECT_NAME;
+  static const std::string NAMING_RIB_OBJECT_CLASS;
+  static const std::string NAMING_RIB_OBJECT_NAME;
+  static const std::string FLOW_ALLOCATOR_RIB_OBJECT_CLASS;
+  static const std::string FLOW_ALLOCATOR_RIB_OBJECT_NAME;
+  static const std::string LINKSTATE_RIB_OBJECT_CLASS;
+  static const std::string LINKSTATE_RIB_OBJECT_NAME;
+  static const std::string IPC_RIB_OBJECT_CLASS;
+  static const std::string IPC_RIB_OBJECT_NAME;
+  static const std::string DATA_TRANSFER_RIB_OBJECT_CLASS;
+  static const std::string DATA_TRANSFER_RIB_OBJECT_NAME;
+
 	static const std::string ADDRESS_RIB_OBJECT_CLASS;
 	static const std::string ADDRESS_RIB_OBJECT_NAME;
 	static const std::string DATA_TRANSFER_CONSTANTS_RIB_OBJECT_CLASS;

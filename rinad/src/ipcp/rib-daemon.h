@@ -85,6 +85,7 @@ class IPCPRIBDaemonImpl : public BaseRIBDaemon, public EventListener
   /// any CDAP sessions over it should be terminated.
   void nMinusOneFlowDeallocated(int portId);
   void nMinusOneFlowAllocated(NMinusOneFlowAllocatedEvent * event);
+  void initialFillRIBv1();
 };
 
 class SimplestRIBObj: public rina::BaseRIBObject{

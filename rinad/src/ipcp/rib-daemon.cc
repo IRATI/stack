@@ -226,6 +226,23 @@ void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(
     return;
 }
 
+void IPCPRIBDaemonImpl::initialFillRIBv1()
+{
+  rina::BaseRIBObject *rib_obj = new SimplestRIBObj(this, EncoderConstants::DAF_RIB_OBJECT_CLASS, EncoderConstants::DAF_RIB_OBJECT_NAME);
+  addRIBObject(rib_obj);
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::DIF_RIB_OBJECT_CLASS, EncoderConstants::DIF_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::DAF_MANAGEMENT_RIB_OBJECT_CLASS, EncoderConstants::DAF_MANAGEMENT_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::DIF_MANAGEMENT_RIB_OBJECT_CLASS, EncoderConstants::DIF_MANAGEMENT_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::RESOURCE_ALLOCATION_RIB_OBJECT_CLASS, EncoderConstants::RESOURCE_ALLOCATION_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::NMINUSONEFLOWMANAGER_RIB_OBJECT_CLASS, EncoderConstants::NMINUSONEFLOWMANAGER_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::NAMING_RIB_OBJECT_CLASS, EncoderConstants::NAMING_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::FLOW_ALLOCATOR_RIB_OBJECT_CLASS, EncoderConstants::FLOW_ALLOCATOR_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_CLASS, EncoderConstants::PDU_FORWARDING_TABLE_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::LINKSTATE_RIB_OBJECT_CLASS, EncoderConstants::LINKSTATE_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::IPC_RIB_OBJECT_CLASS, EncoderConstants::IPC_RIB_OBJECT_NAME));
+  addRIBObject(new SimplestRIBObj(this, EncoderConstants::DATA_TRANSFER_RIB_OBJECT_CLASS, EncoderConstants::DATA_TRANSFER_RIB_OBJECT_NAME));
+}
+
 void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(
     const rina::QueryRIBRequestEvent& event)
 {

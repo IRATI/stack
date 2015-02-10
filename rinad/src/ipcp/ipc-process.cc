@@ -338,7 +338,6 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(
   LOG_DBG("The kernel processed successfully the Assign to DIF request");
   try {
     rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
-    createBasicRIBObjects();
     resource_allocator_->set_dif_configuration(
         dif_information_.dif_configuration_);
     namespace_manager_->set_dif_configuration(
@@ -806,12 +805,6 @@ int IPCProcessImpl::psDestroy(const std::string& component,
   return 0;
 }
 
-void IPCProcessImpl::createBasicRIBObjects() const
-{
-  rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "ROOT", "/"));
-  rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "DIF", "/DIF"));
-  rib_daemon_->addRIBObject(new SimplestRIBObj(rib_daemon_, "RA", "/"));
-}
 
 //Event loop handlers
 static void ipc_process_dif_registration_notification_handler(

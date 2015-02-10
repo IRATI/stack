@@ -75,7 +75,6 @@ public:
   void init_encoder();
   int plugin_load(const std::string& name);
   int plugin_unload(const std::string& name);
-  void createBasicRIBObjects() const;
 
   IPCProcessOperationalState state;
   std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
