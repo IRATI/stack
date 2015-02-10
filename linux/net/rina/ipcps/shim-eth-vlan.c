@@ -157,10 +157,8 @@ static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
 
         spin_lock_irqsave(&data->lock, flags);
-        LOG_DBG("Target flow: %u", id);
 
         list_for_each_entry(flow, &data->flows, list) {
-        		LOG_DBG("Candidate: %u", flow->port_id);
                 if (flow->port_id == id) {
                         spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
