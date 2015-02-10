@@ -141,7 +141,7 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
                               struct sdu *                sdu)
 {
         if (rmt_receive(data->rmt, sdu, id)) {
-                LOG_ERR("Enqueue :Could not post SDU into the RMT");
+                LOG_ERR("Could not enqueue SDU into the RMT");
                 return -1;
         }
 
@@ -158,7 +158,8 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
         flow = find_flow(data, id);
         if (!flow || flow->state != PORT_STATE_ALLOCATED) {
                 spin_unlock(&data->lock);
-                LOG_ERR("Write: There is no flow bound to this port_id: %d", id);
+                LOG_ERR("Write: There is no flow bound to this port_id: %d",
+                        id);
                 sdu_destroy(sdu);
                 return -1;
         }
@@ -274,7 +275,9 @@ static int connection_update_request(struct ipcp_instance_data * data,
         }
         ASSERT(user_ipcp->ops);
         ASSERT(user_ipcp->ops->flow_binding_ipcp);
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data, port_id, n1_ipcp)) {
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              n1_ipcp)) {
                 LOG_ERR("Cannot bind flow with user ipcp");
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
