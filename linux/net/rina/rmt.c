@@ -1073,7 +1073,7 @@ static int forward_pdu(struct rmt * rmt,
                 }
 
                 queue = n1pmap_find(rmt->ingress.n1_ports,
-                					rmt->ingress.cache.pids[i]);
+                					rmt->ingress.cache.pids[0]);
                 if (!queue)
                         /* FIXME: As in the continue before, some port could not
                          * be used */
