@@ -106,8 +106,6 @@ void ManagementAgent_::init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
 
-	try
-	{
 	//Nice trace
 	LOG_INFO("Initializing components...");
 
@@ -149,12 +147,6 @@ void ManagementAgent_::init(const std::string& conf,
 	/*
 	* Run the bg task manager loop in the main thread
 	*/
-	BGTaskManager->run(NULL);
-	}
-	catch(Exception &e1)
-	{
-		LOG_ERR("Program finished due to a bad operation");
-	}
 	FlowManager->runIOLoop();
 }
 
@@ -184,7 +176,6 @@ ManagementAgent_::ManagementAgent_(){
 
 
 ManagementAgent_::~ManagementAgent_(void){
-	LOG_INFO(" Goodbye!");
 }
 
 }; //namespace mad
