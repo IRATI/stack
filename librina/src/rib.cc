@@ -550,12 +550,16 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
 
         //We need to notify, find out to whom the notifications must be sent to, and do it
         std::list<int> peersToIgnore = notificationPolicy->cdap_session_ids_;
+        LOG_DBG("Aqui");
         std::vector<int> peers;
         cdap_session_manager_->getAllCDAPSessionIds(peers);
+        LOG_DBG("Aqui2");
 
         const rina::CDAPMessage * cdapMessage = 0;
         for (std::vector<int>::size_type i = 0; i<peers.size(); i++) {
+        	LOG_DBG("%d %d", i, peers[i]);
                 if (!isOnList(peers[i], peersToIgnore)) {
+                	LOG_DBG("Aqui3");
                         try {
                                 cdapMessage =
                                         cdap_session_manager_->
@@ -565,8 +569,11 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                                                                       0,
                                                                       objectName,
                                                                       0, false);
+                                LOG_DBG("Aqui4");
                                 sendMessage(*cdapMessage, peers[i], 0);
+                                LOG_DBG("Aqui5");
                                 delete cdapMessage;
+                                LOG_DBG("Aqui6");
                         } catch(Exception & e) {
                                 LOG_ERR("Problems notifying neighbors: %s", e.what());
                                 if (cdapMessage) {
@@ -575,6 +582,8 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                         }
                 }
         }
+
+        LOG_DBG("Aqui 7");
 }
 
 BaseRIBObject * RIBDaemon::readObject(const std::string& objectClass,
