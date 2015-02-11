@@ -583,9 +583,9 @@ char RIB::get_name_separator() const
 
 std::string RIB::get_parent_name(const std::string child_name) const
 {
-  unsigned int last_field_separator = child_name.find_last_of(
+  size_t last_field_separator = child_name.find_last_of(
       rib_schema_->field_separator_, std::string::npos);
-  unsigned int last_id_separator = child_name.find_last_of(
+  size_t last_id_separator = child_name.find_last_of(
       rib_schema_->id_separator_, std::string::npos);
   if (last_field_separator == std::string::npos)
     return "";
