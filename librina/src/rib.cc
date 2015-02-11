@@ -540,10 +540,10 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                              const NotificationPolicy * notificationPolicy)
 {
         BaseRIBObject * ribObject;
-        //Copy objectClass and objectName since they will be deleted when
-        //deleting the object
-        std::string oClass = objectClass;
-        std::string oName = oName;
+        //Copy objectClass and objectName since they may be deleted when
+        //deleting the object (depending who calls deleteObject)
+        std::string oClass = std::string(objectClass);
+        std::string oName = std::string(objectName);
 
         ribObject = rib_.getRIBObject(objectClass, objectName, true);
         ribObject->deleteObject(objectValue);
