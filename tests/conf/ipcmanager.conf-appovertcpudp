@@ -1,6 +1,6 @@
 {
     "localConfiguration" : {
-        "installationPath" : "/usr/local/irati/share/rinad",
+        "installationPath" : "/usr/local/irati/bin",
         "libraryPath" : "/usr/local/irati/lib",
         "consolePort" : 32766,
         "cdapTimeoutInMs" : 10000,
@@ -28,8 +28,8 @@
         "difType" : "shim-tcp-udp",
         "configParameters" : {
          "hostname" : "10.1.1.2",
-         "dirEntry" : "25:rina.apps.echotime.server0:8:10.1.1.34:2426",
-         "expReg" : "25:rina.apps.echotime.server0:4:2426"
+         "dirEntry" : "1:25:rina.apps.echotime.server0:8:10.1.1.34:2426",
+         "expReg" : "1:25:rina.apps.echotime.server0:4:2426"
             }
      } ] 
 }

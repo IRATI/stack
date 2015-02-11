@@ -22,7 +22,7 @@ mad_SOURCES  = 					\
 mad_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/../				\
+	-I$(srcdir)/../			\
 	-I$(srcdir)/../common
 
 mad_LDADD = 					\

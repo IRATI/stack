@@ -854,10 +854,20 @@ void parse_local_conf(const Json::Value &         root,
                         .get("installationPath",
                              local.installationPath)
                         .asString();
+                if (local.libraryPath.empty())
+                	local.libraryPath = std::string(DEFAULT_BINDIR);
                 local.libraryPath = local_conf
                         .get("libraryPath",
                              local.libraryPath)
                         .asString();
+                if (local.libraryPath.empty())
+                	local.libraryPath = std::string(DEFAULT_LIBDIR);
+                local.logPath = local_conf
+                        .get("logPath",
+                             local.logPath)
+                        .asString();
+                if (local.logPath.empty())
+                	local.logPath = std::string(DEFAULT_LOGDIR);
         }
 }
 

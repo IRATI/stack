@@ -4,9 +4,14 @@
 #include "bgtm.h"
 #include "confm.h"
 #include "flowm.h"
+#include "ribf.h"
+#include "ribs/ribd_v1.h"
 
 #define RINA_PREFIX "mad"
 #include <librina/logs.h>
+
+// std libraries
+#include <list>
 
 namespace rinad {
 namespace mad {
@@ -95,11 +100,14 @@ void ManagementAgent_::reg(){
 	*/
 }
 
+
 //Initialization and destruction routines
 void ManagementAgent_::init(const std::string& conf,
 					const std::string& cl_logfile,
 					const std::string& cl_loglevel){
 
+	try
+	{
 	//Nice trace
 	LOG_INFO("Initializing components...");
 
@@ -111,9 +119,10 @@ void ManagementAgent_::init(const std::string& conf,
 	/*
 	* Initialize subsystems
 	*/
-
 	//Create RIBs
-	//RIBFactory->createRIB(version1);
+	//TODO charge from configuration
+	std::list<uint64_t> supported_versions;
+	RIBFactory->init(supported_versions);
 
 	//TODO
 	//FlowManager
@@ -140,6 +149,12 @@ void ManagementAgent_::init(const std::string& conf,
 	/*
 	* Run the bg task manager loop in the main thread
 	*/
+	BGTaskManager->run(NULL);
+	}
+	catch(Exception &e1)
+	{
+		LOG_ERR("Program finished due to a bad operation");
+	}
 	FlowManager->runIOLoop();
 }
 
@@ -167,7 +182,9 @@ void ManagementAgent_::destroy(){
 ManagementAgent_::ManagementAgent_(){
 }
 
+
 ManagementAgent_::~ManagementAgent_(void){
+	LOG_INFO(" Goodbye!");
 }
 
 }; //namespace mad

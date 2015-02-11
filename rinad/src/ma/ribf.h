@@ -45,24 +45,18 @@ DECLARE_EXCEPTION_SUBCLASS(eRIBNotFound);
 /**
 * @brief RIB manager
 */
-class RIBFactory_ {
+class RIBFactory_ :public rina::Lockable {
 
 public:
 	/**
 	* Initialize running state
 	*/
-	void init(void);
+	void init(std::list<uint64_t> supported_versions);
 
 	/**
 	* Destroy the running state
 	*/
 	void destroy(void);
-
-	/**
-	* Create a RIB instance
-	* @throwseDuplicatedRIB
-	*/
-	rina::IRIBDaemon& createRIB(uint64_t version);
 
 	/**
 	* Get a reference to a RIB
@@ -82,16 +76,21 @@ public:
 	void destroyRIB(uint64_t version);
 #endif
 
+protected:
+	/**
+	* Create a RIB instance
+	* @throwseDuplicatedRIB
+	*/
+	void createRIB(uint64_t version);
+
 private:
-	//RWLock
-	pthread_rwlock_t rwlock;
 
 	//Map with the current RIB instances
 	std::map<uint64_t, rina::IRIBDaemon*> rib_inst;
 
 	//Constructors
 	RIBFactory_(void);
-	~RIBFactory_(void);
+	virtual ~RIBFactory_(void) throw();
 
 	/*
 	* Internal methods

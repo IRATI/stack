@@ -29,15 +29,28 @@ namespace mad{
 
 //TODO FIXME: this is a place holder class
 class RIBDaemonv1: public rina::RIBDaemon{
+public:
+	RIBDaemonv1(const rina::RIBSchema *schema);
 
 	//XXX: fill-in
-	virtual void sendMessageSpecific(bool useAddress,
-			const rina::CDAPMessage& cdapMessage,
-			int sessionId,
-			unsigned int address,
-			rina::ICDAPResponseMessageHandler* cdapMessageHandler);
+	void sendMessageSpecific(const rina::RemoteProcessId &remote_proc,
+		        		const rina::CDAPMessage & cdapMessage,
+		        		rina::ICDAPResponseMessageHandler *cdapMessageHandler);
+};
 
+class SimplestRIBObj: public rina::BaseRIBObject{
+public:
+	SimplestRIBObj(rina::IRIBDaemon *rib_daemon, const std::string &object_class, const std::string &object_name);
+    const void* get_value() const;
+};
 
+class SimpleRIBObj: public rina::BaseRIBObject{
+public:
+	SimpleRIBObj(rina::IRIBDaemon *rib_daemon, const std::string &object_class, const std::string &object_name, unsigned int id);
+    const void* get_value() const;
+    unsigned int get_id() const;
+private:
+    unsigned int id_;
 };
 
 }; //namespace mad

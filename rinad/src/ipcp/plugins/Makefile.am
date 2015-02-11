@@ -10,17 +10,19 @@ CLEANFILES   =
 COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/..				\
-	-I$(srcdir)/../..			\
-	-I$(srcdir)/../common
+	-I$(top_srcdir)/src			\
+	-I$(top_srcdir)/src/common
 
-libps_sm_passwd_la_CFLAGS =
-libps_sm_passwd_la_CPPFLAGS =			\
+pluginsdir          = $(pkglibdir)/ipcp
+plugins_LTLIBRARIES =
+
+sm_passwd_la_CFLAGS   =
+sm_passwd_la_CPPFLAGS =				\
 	$(COMMONCPPFLAGS)
-libps_sm_passwd_la_LIBADD =
-libps_sm_passwd_la_LDFLAGS =
-libps_sm_passwd_la_SOURCES =			\
-		security-manager-passwd.cc	\
-		component.h
+sm_passwd_la_LIBADD   =
+sm_passwd_la_LDFLAGS  = -module
+sm_passwd_la_SOURCES  =				\
+	security-manager-passwd.cc		\
+	component.h
 
-lib_LTLIBRARIES = libps-sm-passwd.la
+plugins_LTLIBRARIES += sm-passwd.la

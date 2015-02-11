@@ -30,10 +30,12 @@
 
 namespace rinad {
 
+
 class IPCProcessImpl: public IPCProcess, public EventLoopData {
 public:
 	IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
-			unsigned short id, unsigned int ipc_manager_port);
+			unsigned short id, unsigned int ipc_manager_port,
+			std::string log_level, std::string log_file);
 	~IPCProcessImpl();
 	unsigned short get_id();
 	const std::list<rina::Neighbor*> get_neighbors() const;
@@ -59,35 +61,29 @@ public:
         void processPluginLoadRequestEvent(
                 const rina::PluginLoadRequestEvent& event);
 
-        std::vector<PsFactory>::iterator
-                        psFactoryLookup(const std::string& component,
-                                       const std::string& name);
-        int psFactoryPublish(const PsFactory& factory);
-        int psFactoryUnpublish(const std::string& component,
-                                              const std::string& name);
-        IPolicySet * psCreate(const std::string& component,
-                                            const std::string& name,
-                                            IPCProcessComponent* context);
-        int psDestroy(const std::string& component,
-                                    const std::string& name,
-                                    IPolicySet * instance);
+  std::vector<PsFactory>::iterator
+  psFactoryLookup(const std::string& component, const std::string& name);
+  int psFactoryPublish(const PsFactory& factory);
+  int psFactoryUnpublish(const std::string& component, const std::string& name);
+  IPolicySet * psCreate(const std::string& component, const std::string& name,
+                        IPCProcessComponent* context);
+  int psDestroy(const std::string& component, const std::string& name,
+                IPolicySet * instance);
 
-private:
-	void init_cdap_session_manager();
-	void init_encoder();
-        int plugin_load(const std::string& name);
-        int plugin_unload(const std::string& name);
+ private:
+  void init_cdap_session_manager();
+  void init_encoder();
+  int plugin_load(const std::string& name);
+  int plugin_unload(const std::string& name);
 
-	IPCProcessOperationalState state;
-	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
-        std::map<unsigned int, rina::SetPolicySetParamRequestEvent>
-                pending_set_policy_set_param_events;
-        std::map<unsigned int, rina::SelectPolicySetRequestEvent>
-                pending_select_policy_set_events;
-	rina::Lockable * lock_;
-	rina::DIFInformation dif_information_;
-        std::map< std::string, void * > plugins_handles;
-        std::vector<PsFactory> components_factories;
+  IPCProcessOperationalState state;
+  std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
+  std::map<unsigned int, rina::SetPolicySetParamRequestEvent> pending_set_policy_set_param_events;
+  std::map<unsigned int, rina::SelectPolicySetRequestEvent> pending_select_policy_set_events;
+  rina::Lockable * lock_;
+  rina::DIFInformation dif_information_;
+  std::map<std::string, void *> plugins_handles;
+  std::vector<PsFactory> components_factories;
 };
 
 void register_handlers_all(EventLoop& loop);

@@ -27,7 +27,12 @@ Singleton<RIBFactory_> RIBFactory;
 
 
 //Initialization and destruction routines
-void RIBFactory_::init(void){
+void RIBFactory_::init(std::list<uint64_t> supported_versions){
+	for (std::list<uint64_t>::iterator it = supported_versions.begin();
+			it != supported_versions.end(); it++)
+	{
+		createRIB(*it);
+	}
 
 	LOG_DBG("Initialized");
 }
@@ -41,39 +46,35 @@ void RIBFactory_::destroy(void){
 //Constructors destructors
 RIBFactory_::RIBFactory_(){
 	//TODO: register to flow events in librina and spawn workers
-	pthread_rwlock_init(&rwlock, NULL);
 }
 
-RIBFactory_::~RIBFactory_(){
-	pthread_rwlock_destroy(&rwlock);
-}
+RIBFactory_::~RIBFactory_() throw (){}
 
 /*
 * Inner API
 */
-rina::IRIBDaemon& RIBFactory_::createRIB(uint64_t version){
-
-	rina::IRIBDaemon* rib;
-
+void RIBFactory_::createRIB(uint64_t version){
 	//Serialize
-	pthread_rwlock_wrlock(&rwlock);
+	lock();
 
 	//Check if it exists
 	if( rib_inst.find(version) != rib_inst.end() ){
-		pthread_rwlock_unlock(&rwlock);
+		unlock();
 		throw eDuplicatedRIB("An instance of the RIB with this version already exists");
 	}
 
 	//Create object
-	rib = new RIBDaemonv1();
-
-	//TODO: initialize further?
-	rib_inst[version] = rib;
+	switch(version)
+	{
+	case 1:
+		rib_inst[version] = new RIBDaemonv1(0);
+		break;
+	default:
+		break;
+	}
 
 	//Unlock
-	pthread_rwlock_unlock(&rwlock);
-
-	return *rib;
+	unlock();
 }
 
 rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
@@ -81,7 +82,7 @@ rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
 	rina::IRIBDaemon* rib;
 
 	//Serialize
-	pthread_rwlock_rdlock(&rwlock);
+	lock();
 
 	//Note: it is safe to recover the RIB reference without a RD lock
 	//because removal of RIBs is NOT implemented. However this
@@ -96,7 +97,7 @@ rina::IRIBDaemon& RIBFactory_::getRIB(uint64_t version){
 	rib = rib_inst[version];
 
 	//Unlock
-	pthread_rwlock_unlock(&rwlock);
+	unlock();
 
 	return *rib;
 }
