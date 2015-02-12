@@ -44,8 +44,8 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 
-#define CUBE_RELIABLE   0
-#define CUBE_UNRELIABLE 1
+#define CUBE_RELIABLE   1
+#define CUBE_UNRELIABLE 0
 
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
