@@ -846,18 +846,25 @@ int dtcp_sending_ack_policy(struct dtcp * dtcp)
                 LOG_ERR("No DTCP passed...");
                 return -1;
         }
+
         ASSERT(dtcp->policies);
         if (!dtcp->policies->sending_ack) {
                 LOG_ERR("No sending_ack policy in dtcp");
                 return -1;
         }
+
         return dtcp->policies->sending_ack(dtcp);
 }
 
 static int default_sending_ack(struct dtcp * dtcp)
 {
-        struct dtp *         dtp;
-        seq_num_t            seq_num;
+        struct dtp * dtp;
+        seq_num_t    seq_num;
+
+        if (!dtcp) {
+                LOG_ERR("No DTCP passed...");
+                return -1;
+        }
 
         dtp = dt_dtp(dtcp->parent);
         if (!dtp) {
@@ -874,19 +881,24 @@ static int default_sending_ack(struct dtcp * dtcp)
                 return -1;
         }
 
-	return dtcp->policies->sv_update(dtcp, seq_num);
+        ASSERT(dtcp->policies);
+        if (!dtcp->policies->sv_update) {
+                LOG_ERR("No sv_update policy in dtcp");
+                return -1;
+        }
 
+	return dtcp->policies->sv_update(dtcp, seq_num);
 }
 
 int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
-        struct pdu * pdu;
-        pdu_type_t   type;
+        struct pdu *   pdu;
+        pdu_type_t     type;
 
         /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
         struct timeval te;
-        long long milliseconds;
-        seq_num_t dbg_seq_num;
+        long long      milliseconds;
+        seq_num_t      dbg_seq_num;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -922,6 +934,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
                 dbg_seq_num, milliseconds);
 
         atomic_dec(&dtcp->cpdus_in_transit);
+
         return 0;
 }
 
