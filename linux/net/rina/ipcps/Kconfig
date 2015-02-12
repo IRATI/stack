@@ -115,6 +115,7 @@ config RINA_SHIM_TCP_UDP
 config RINA_SHIM_TCP_UDP_BUFFER_SIZE
         int "Buffer size"
 	default 1500
+        range 2 65535
         depends on RINA_SHIM_TCP_UDP
 	help
 	  No help for the time being
