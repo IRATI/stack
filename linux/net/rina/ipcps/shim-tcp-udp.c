@@ -592,10 +592,11 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
-                                          struct ipcp_instance *      user_ipcp,
-                                          port_id_t                   port_id,
-                                          int                         result)
+static int
+tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
+                               struct ipcp_instance *      user_ipcp,
+                               port_id_t                   port_id,
+                               int                         result)
 {
         struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
@@ -663,9 +664,10 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              tmp)) {
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        tmp)) {
                                 LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return -1;
                         }
@@ -2428,13 +2430,17 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         inst->data->host_name = INADDR_ANY;
 
+        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE < 2);
+        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE > 65535);
+
         inst->data->qos[0]->average_bandwidth           = 0;
         inst->data->qos[0]->average_sdu_bandwidth       = 0;
         inst->data->qos[0]->delay                       = 0;
         inst->data->qos[0]->jitter                      = 0;
         inst->data->qos[0]->max_allowable_gap           = -1;
         inst->data->qos[0]->max_sdu_size                =
-                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
+
         inst->data->qos[0]->ordered_delivery            = 0;
         inst->data->qos[0]->partial_delivery            = 1;
         inst->data->qos[0]->peak_bandwidth_duration     = 0;
@@ -2447,7 +2453,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[1]->jitter                      = 0;
         inst->data->qos[1]->max_allowable_gap           = 0;
         inst->data->qos[1]->max_sdu_size                =
-                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
         inst->data->qos[1]->ordered_delivery            = 1;
         inst->data->qos[1]->partial_delivery            = 0;
         inst->data->qos[1]->peak_bandwidth_duration     = 0;
