@@ -62,9 +62,7 @@ struct buffer *       sdu_buffer_rw(struct sdu * s);
 struct sdu *          sdu_dup(const struct sdu * sdu);
 struct sdu *          sdu_dup_ni(const struct sdu * sdu);
 bool                  sdu_is_ok(const struct sdu * sdu);
-struct sdu *          sdu_protect(struct sdu * sdu);
 int                   sdu_buffer_disown(struct sdu * sdu);
-struct sdu *          sdu_unprotect(struct sdu * sdu);
 
 struct sdu_wpi *      sdu_wpi_create_with(struct buffer * buffer);
 struct sdu_wpi *      sdu_wpi_create_with_ni(struct buffer * buffer);

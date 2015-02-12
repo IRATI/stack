@@ -1103,13 +1103,12 @@ void LinkStatePDUFTGeneratorPolicy::propagateFSDB() const
 		return;
 	}
 
-	rina::RIBObjectValue robject_value;
-	robject_value.type_ = rina::RIBObjectValue::complextype;
-	robject_value.complex_value_ = &(db_->flow_state_objects_);
-
 	for (std::map <int, std::list<FlowStateObject*> >::iterator it =
 	    objectsToSend.begin(); it != objectsToSend.end(); ++it){
 	  if (!it->second.empty()){
+	    rina::RIBObjectValue robject_value;
+	    robject_value.type_ = rina::RIBObjectValue::complextype;
+	    robject_value.complex_value_ = &(it->second);
 	    rina::RemoteProcessId remote_id;
       remote_id.port_id_ = it->first;
       try {

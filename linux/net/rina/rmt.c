@@ -47,7 +47,7 @@
 enum flow_state {
         PORT_STATE_ENABLED,
         PORT_STATE_DISABLED,
-        PORT_STATE_BUSSY
+        PORT_STATE_BUSY
 };
 
 struct rmt_n1_port {
@@ -422,7 +422,7 @@ static void send_worker(unsigned long o)
                         spin_lock(&tmp->egress.n1_ports->lock);
                         continue;
                 }
-                entry->state = PORT_STATE_BUSSY;
+                entry->state = PORT_STATE_BUSY;
                 spin_unlock(&entry->lock);
 
                 n1_port_write(tmp->serdes, entry, pdu);
@@ -489,7 +489,7 @@ int rmt_send_port_id(struct rmt * instance,
         if (out_n1_port->state == PORT_STATE_ENABLED &&
             atomic_read(&out_n1_port->n_sdus) == 1) {
                 int ret = 0;
-                out_n1_port->state = PORT_STATE_BUSSY;
+                out_n1_port->state = PORT_STATE_BUSY;
                 spin_unlock_irqrestore(&out_n1_port->lock, flags);
                 if (n1_port_write(instance->serdes, out_n1_port, pdu))
                         ret = -1;
@@ -498,23 +498,23 @@ int rmt_send_port_id(struct rmt * instance,
                 if (atomic_read(&out_n1_port->n_sdus) <= 0) {
                         atomic_set(&out_n1_port->n_sdus, 0);
                         if (out_n1_port->state != PORT_STATE_DISABLED) {
-                                LOG_DBG("RMT: sent and enabling port");
+                                LOG_DBG("Sent and enabling port");
                                 out_n1_port->state = PORT_STATE_ENABLED;
                         }
                 } else {
-                        LOG_DBG("RMT: sent and scheduling cause there are more"
+                        LOG_DBG("Sent and scheduling cause there are more"
                                 " pdus in the port");
                         tasklet_hi_schedule(&instance->egress.egress_tasklet);
                 }
                 spin_unlock_irqrestore(&out_n1_port->lock, flags);
                 return ret;
-        } else if (out_n1_port->state == PORT_STATE_BUSSY) {
+        } else if (out_n1_port->state == PORT_STATE_BUSY) {
                 if (rfifo_push_ni(out_n1_port->queue, pdu)) {
                         spin_unlock_irqrestore(&out_n1_port->lock, flags);
                         pdu_destroy(pdu);
                         return -1;
                 }
-                LOG_DBG("RMT: port was bussy, enqueuing PDU..");
+                LOG_DBG("Port was busy, enqueuing PDU..");
         } else {
                 LOG_ERR("Port state deallocated, discarding PDU");
                 pdu_destroy(pdu);
@@ -1383,7 +1383,7 @@ int rmt_receive(struct rmt * instance,
                 return -1;
         }
         if (!instance->ingress.n1_ports) {
-                LOG_ERR("No ingress n1_ports in RMT: %pK", instance);
+                LOG_ERR("No ingress n1_ports in RMT instance %pK", instance);
                 sdu_destroy(sdu);
                 return -1;
         }

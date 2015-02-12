@@ -540,6 +540,10 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                              const NotificationPolicy * notificationPolicy)
 {
         BaseRIBObject * ribObject;
+        //Copy objectClass and objectName since they may be deleted when
+        //deleting the object (depending who calls deleteObject)
+        std::string oClass = std::string(objectClass);
+        std::string oName = std::string(objectName);
 
         ribObject = rib_.getRIBObject(objectClass, objectName, true);
         ribObject->deleteObject(objectValue);
@@ -561,9 +565,9 @@ void RIBDaemon::deleteObject(const std::string& objectClass,
                                         cdap_session_manager_->
                                         getDeleteObjectRequestMessage(peers[i], 0,
                                                                       rina::CDAPMessage::NONE_FLAGS,
-                                                                      objectClass,
+                                                                      oClass,
                                                                       0,
-                                                                      objectName,
+                                                                      oName,
                                                                       0, false);
                                 sendMessage(*cdapMessage, peers[i], 0);
                                 delete cdapMessage;

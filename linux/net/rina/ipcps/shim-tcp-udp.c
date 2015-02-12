@@ -44,6 +44,9 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 
+#define CUBE_RELIABLE   1
+#define CUBE_UNRELIABLE 0
+
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
 static struct work_struct        rcv_work;
@@ -400,7 +403,7 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
 }
 
 static int tcp_unbind_and_destroy_flow(struct ipcp_instance_data * data,
-                                            struct shim_tcp_udp_flow *  flow)
+                                       struct shim_tcp_udp_flow *  flow)
 {
         ASSERT(data);
         ASSERT(flow);
@@ -592,10 +595,11 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
-                                          struct ipcp_instance *      user_ipcp,
-                                          port_id_t                   port_id,
-                                          int                         result)
+static int
+tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
+                               struct ipcp_instance *      user_ipcp,
+                               port_id_t                   port_id,
+                               int                         result)
 {
         struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
@@ -663,9 +667,10 @@ static int tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              tmp)) {
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        tmp)) {
                                 LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return -1;
                         }
@@ -914,8 +919,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
-                                        LOG_ERR("Problems destroying shim-eth-vlan "
-                                                "flow");
+                                        LOG_ERR("Problems destroying flow");
                                 return -1;
                         }
                 }
@@ -968,7 +972,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                        data->dif_name,
                                        sname,
                                        app->app_name,
-                                       data->qos[0])) {
+                                       data->qos[CUBE_UNRELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
@@ -983,10 +987,11 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -1087,10 +1092,11 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -1165,10 +1171,11 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -1357,7 +1364,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                        data->dif_name,
                                        sname,
                                        app->app_name,
-                                       data->qos[1])) {
+                                       data->qos[CUBE_RELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         tcp_unbind_and_destroy_flow(data, flow);
@@ -2348,10 +2355,10 @@ static void inst_cleanup(struct ipcp_instance * inst)
 
         if (inst->data) {
                 if (inst->data->qos) {
-                        if (inst->data->qos[0])
-                                rkfree(inst->data->qos[0]);
-                        if (inst->data->qos[1])
-                                rkfree(inst->data->qos[1]);
+                        if (inst->data->qos[CUBE_UNRELIABLE])
+                                rkfree(inst->data->qos[CUBE_UNRELIABLE]);
+                        if (inst->data->qos[CUBE_RELIABLE])
+                                rkfree(inst->data->qos[CUBE_RELIABLE]);
 
                         rkfree(inst->data->qos);
                 }
@@ -2412,15 +2419,17 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->qos[0] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
-        if (!inst->data->qos[0]) {
+        inst->data->qos[CUBE_UNRELIABLE] =
+                rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
+        if (!inst->data->qos[CUBE_UNRELIABLE]) {
                 LOG_ERR("Failed creation of qos cube 1");
                 inst_cleanup(inst);
                 return NULL;
         }
 
-        inst->data->qos[1] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
-        if (!inst->data->qos[1]) {
+        inst->data->qos[CUBE_RELIABLE] = rkzalloc(sizeof(struct flow_spec),
+                                                  GFP_KERNEL);
+        if (!inst->data->qos[CUBE_RELIABLE]) {
                 LOG_ERR("Failed creation of qos cube 2");
                 inst_cleanup(inst);
                 return NULL;
@@ -2428,31 +2437,35 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         inst->data->host_name = INADDR_ANY;
 
-        inst->data->qos[0]->average_bandwidth           = 0;
-        inst->data->qos[0]->average_sdu_bandwidth       = 0;
-        inst->data->qos[0]->delay                       = 0;
-        inst->data->qos[0]->jitter                      = 0;
-        inst->data->qos[0]->max_allowable_gap           = -1;
-        inst->data->qos[0]->max_sdu_size                =
-                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
-        inst->data->qos[0]->ordered_delivery            = 0;
-        inst->data->qos[0]->partial_delivery            = 1;
-        inst->data->qos[0]->peak_bandwidth_duration     = 0;
-        inst->data->qos[0]->peak_sdu_bandwidth_duration = 0;
-        inst->data->qos[0]->undetected_bit_error_rate   = 0;
+        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE < 2);
+        BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE > 65535);
 
-        inst->data->qos[1]->average_bandwidth           = 0;
-        inst->data->qos[1]->average_sdu_bandwidth       = 0;
-        inst->data->qos[1]->delay                       = 0;
-        inst->data->qos[1]->jitter                      = 0;
-        inst->data->qos[1]->max_allowable_gap           = 0;
-        inst->data->qos[1]->max_sdu_size                =
+        inst->data->qos[CUBE_UNRELIABLE]->average_bandwidth           = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->average_sdu_bandwidth       = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->delay                       = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->jitter                      = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->max_allowable_gap           = -1;
+        inst->data->qos[CUBE_UNRELIABLE]->max_sdu_size                =
                 CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
-        inst->data->qos[1]->ordered_delivery            = 1;
-        inst->data->qos[1]->partial_delivery            = 0;
-        inst->data->qos[1]->peak_bandwidth_duration     = 0;
-        inst->data->qos[1]->peak_sdu_bandwidth_duration = 0;
-        inst->data->qos[1]->undetected_bit_error_rate   = 0;
+
+        inst->data->qos[CUBE_UNRELIABLE]->ordered_delivery            = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->partial_delivery            = 1;
+        inst->data->qos[CUBE_UNRELIABLE]->peak_bandwidth_duration     = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->peak_sdu_bandwidth_duration = 0;
+        inst->data->qos[CUBE_UNRELIABLE]->undetected_bit_error_rate   = 0;
+
+        inst->data->qos[CUBE_RELIABLE]->average_bandwidth             = 0;
+        inst->data->qos[CUBE_RELIABLE]->average_sdu_bandwidth         = 0;
+        inst->data->qos[CUBE_RELIABLE]->delay                         = 0;
+        inst->data->qos[CUBE_RELIABLE]->jitter                        = 0;
+        inst->data->qos[CUBE_RELIABLE]->max_allowable_gap             = 0;
+        inst->data->qos[CUBE_RELIABLE]->max_sdu_size                  =
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
+        inst->data->qos[CUBE_RELIABLE]->ordered_delivery              = 1;
+        inst->data->qos[CUBE_RELIABLE]->partial_delivery              = 0;
+        inst->data->qos[CUBE_RELIABLE]->peak_bandwidth_duration       = 0;
+        inst->data->qos[CUBE_RELIABLE]->peak_sdu_bandwidth_duration   = 0;
+        inst->data->qos[CUBE_RELIABLE]->undetected_bit_error_rate     = 0;
 
         /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
@@ -2502,10 +2515,10 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                         spin_unlock(&data->lock);
 
                         /* Destroy it */
-                        if (pos->qos[0])
-                                rkfree(pos->qos[0]);
-                        if (pos->qos[1])
-                                rkfree(pos->qos[1]);
+                        if (pos->qos[CUBE_UNRELIABLE])
+                                rkfree(pos->qos[CUBE_UNRELIABLE]);
+                        if (pos->qos[CUBE_RELIABLE])
+                                rkfree(pos->qos[CUBE_RELIABLE]);
                         if (pos->qos)
                                 rkfree(pos->qos);
 
