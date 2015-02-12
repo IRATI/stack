@@ -44,6 +44,9 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 
+#define CUBE_RELIABLE   0
+#define CUBE_UNRELIABLE 1
+
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
 static struct work_struct        rcv_work;
@@ -916,8 +919,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
-                                        LOG_ERR("Problems destroying shim-eth-vlan "
-                                                "flow");
+                                        LOG_ERR("Problems destroying flow");
                                 return -1;
                         }
                 }
@@ -985,10 +987,11 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -1089,10 +1092,11 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -1167,10 +1171,11 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -2439,7 +2444,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[0]->jitter                      = 0;
         inst->data->qos[0]->max_allowable_gap           = -1;
         inst->data->qos[0]->max_sdu_size                =
-                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
 
         inst->data->qos[0]->ordered_delivery            = 0;
         inst->data->qos[0]->partial_delivery            = 1;
@@ -2453,7 +2458,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[1]->jitter                      = 0;
         inst->data->qos[1]->max_allowable_gap           = 0;
         inst->data->qos[1]->max_sdu_size                =
-                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
         inst->data->qos[1]->ordered_delivery            = 1;
         inst->data->qos[1]->partial_delivery            = 0;
         inst->data->qos[1]->peak_bandwidth_duration     = 0;
