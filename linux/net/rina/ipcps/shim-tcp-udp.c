@@ -2453,7 +2453,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[1]->jitter                      = 0;
         inst->data->qos[1]->max_allowable_gap           = 0;
         inst->data->qos[1]->max_sdu_size                =
-                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
+                CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE;
         inst->data->qos[1]->ordered_delivery            = 1;
         inst->data->qos[1]->partial_delivery            = 0;
         inst->data->qos[1]->peak_bandwidth_duration     = 0;
