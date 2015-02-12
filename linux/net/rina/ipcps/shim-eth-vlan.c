@@ -339,6 +339,7 @@ static void rinarp_resolve_handler(void *             opaque,
         struct ipcp_instance *      user_ipcp;
         struct ipcp_instance *      ipcp;
         struct shim_eth_flow *      flow;
+        unsigned long 				irqflags;
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
 
@@ -349,10 +350,10 @@ static void rinarp_resolve_handler(void *             opaque,
                 return;
         }
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, irqflags);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, irqflags);
 
                 flow->dest_ha = gha_dup_ni(dest_ha);
 
@@ -408,7 +409,7 @@ static void rinarp_resolve_handler(void *             opaque,
                         return;
                 }
         } else {
-                spin_unlock(&data->lock);
+        	spin_unlock_irqrestore(&data->lock, irqflags);
         }
 }
 
