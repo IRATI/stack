@@ -1364,7 +1364,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                        data->dif_name,
                                        sname,
                                        app->app_name,
-                                       data->qos[1])) {
+                                       data->qos[CUBE_RELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         tcp_unbind_and_destroy_flow(data, flow);
@@ -2357,8 +2357,8 @@ static void inst_cleanup(struct ipcp_instance * inst)
                 if (inst->data->qos) {
                         if (inst->data->qos[CUBE_UNRELIABLE])
                                 rkfree(inst->data->qos[CUBE_UNRELIABLE]);
-                        if (inst->data->qos[1])
-                                rkfree(inst->data->qos[1]);
+                        if (inst->data->qos[CUBE_RELIABLE])
+                                rkfree(inst->data->qos[CUBE_RELIABLE]);
 
                         rkfree(inst->data->qos);
                 }
@@ -2427,8 +2427,9 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->qos[1] = rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
-        if (!inst->data->qos[1]) {
+        inst->data->qos[CUBE_RELIABLE] = rkzalloc(sizeof(struct flow_spec),
+                                                  GFP_KERNEL);
+        if (!inst->data->qos[CUBE_RELIABLE]) {
                 LOG_ERR("Failed creation of qos cube 2");
                 inst_cleanup(inst);
                 return NULL;
@@ -2453,18 +2454,18 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[CUBE_UNRELIABLE]->peak_sdu_bandwidth_duration = 0;
         inst->data->qos[CUBE_UNRELIABLE]->undetected_bit_error_rate   = 0;
 
-        inst->data->qos[1]->average_bandwidth           = 0;
-        inst->data->qos[1]->average_sdu_bandwidth       = 0;
-        inst->data->qos[1]->delay                       = 0;
-        inst->data->qos[1]->jitter                      = 0;
-        inst->data->qos[1]->max_allowable_gap           = 0;
-        inst->data->qos[1]->max_sdu_size                =
+        inst->data->qos[CUBE_RELIABLE]->average_bandwidth             = 0;
+        inst->data->qos[CUBE_RELIABLE]->average_sdu_bandwidth         = 0;
+        inst->data->qos[CUBE_RELIABLE]->delay                         = 0;
+        inst->data->qos[CUBE_RELIABLE]->jitter                        = 0;
+        inst->data->qos[CUBE_RELIABLE]->max_allowable_gap             = 0;
+        inst->data->qos[CUBE_RELIABLE]->max_sdu_size                  =
                 CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - sizeof(__be16);
-        inst->data->qos[1]->ordered_delivery            = 1;
-        inst->data->qos[1]->partial_delivery            = 0;
-        inst->data->qos[1]->peak_bandwidth_duration     = 0;
-        inst->data->qos[1]->peak_sdu_bandwidth_duration = 0;
-        inst->data->qos[1]->undetected_bit_error_rate   = 0;
+        inst->data->qos[CUBE_RELIABLE]->ordered_delivery              = 1;
+        inst->data->qos[CUBE_RELIABLE]->partial_delivery              = 0;
+        inst->data->qos[CUBE_RELIABLE]->peak_bandwidth_duration       = 0;
+        inst->data->qos[CUBE_RELIABLE]->peak_sdu_bandwidth_duration   = 0;
+        inst->data->qos[CUBE_RELIABLE]->undetected_bit_error_rate     = 0;
 
         /* FIXME: Remove as soon as the kipcm_kfa gets removed*/
         inst->data->kfa = kipcm_kfa(default_kipcm);
@@ -2516,8 +2517,8 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                         /* Destroy it */
                         if (pos->qos[CUBE_UNRELIABLE])
                                 rkfree(pos->qos[CUBE_UNRELIABLE]);
-                        if (pos->qos[1])
-                                rkfree(pos->qos[1]);
+                        if (pos->qos[CUBE_RELIABLE])
+                                rkfree(pos->qos[CUBE_RELIABLE]);
                         if (pos->qos)
                                 rkfree(pos->qos);
 
