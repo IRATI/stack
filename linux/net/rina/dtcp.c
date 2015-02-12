@@ -856,20 +856,13 @@ int dtcp_sending_ack_policy(struct dtcp * dtcp)
 static int default_sending_ack(struct dtcp * dtcp)
 {
         struct dtp *         dtp;
-        pdu_type_t           type;
-        struct dtcp_config * dtcp_cfg;
         seq_num_t            seq_num;
-        struct pdu *         pdu;
 
         dtp = dt_dtp(dtcp->parent);
         if (!dtp) {
                 LOG_ERR("No DTP from dtcp->parent");
                 return -1;
         }
-
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
 
         /* Invoke delimiting and update left window edge */
 
@@ -879,22 +872,8 @@ static int default_sending_ack(struct dtcp * dtcp)
                 return -1;
         }
 
-        type = pdu_ctrl_type_get(dtcp, seq_num);
-        if (!type) {
-                return 0;
-        }
+	return dtcp->policies->sv_update(dtcp, seq_num);
 
-        pdu = pdu_ctrl_generate(dtcp, type);;
-        if (!pdu)
-                return -1;
-
-        dump_we(dtcp, pdu_pci_get_rw(pdu));
-        if (pdu_send(dtcp, pdu)) {
-                LOG_ERR("Could not send ctrl PDU");
-                return -1;
-        }
-
-        return 0;
 }
 
 int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
