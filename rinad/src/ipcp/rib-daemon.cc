@@ -251,7 +251,6 @@ void IPCPRIBDaemonImpl::sendMessageSpecific(bool useAddress, const rina::CDAPMes
 	atomic_send_lock_.lock();
     sdu = 0;
 	try {
-		sdu = cdsm->encodeNextMessageToBeSent(cdapMessage, sessionId);
 		if (useAddress) {
 			adata.source_address_ = ipc_process_->get_address();
 			adata.dest_address_ = address;
