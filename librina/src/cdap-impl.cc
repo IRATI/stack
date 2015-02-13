@@ -607,11 +607,11 @@ void CDAPSessionImpl::requestMessageSentOrReceived(
 	checkIsConnected();
 	checkInvokeIdNotExists(cdap_message, sent);
 
-        std::map<int, CDAPOperationState*>* pending_messages;
-        if (sent)
-                pending_messages = &pending_messages_sent_;
-        else
-                pending_messages = &pending_messages_recv_;
+	std::map<int, CDAPOperationState*>* pending_messages;
+	if (sent)
+		pending_messages = &pending_messages_sent_;
+	else
+		pending_messages = &pending_messages_recv_;
 
 	if (cdap_message.get_invoke_id() != 0) {
 		CDAPOperationState *new_operation_state = new CDAPOperationState(
@@ -619,8 +619,6 @@ void CDAPSessionImpl::requestMessageSentOrReceived(
 		pending_messages->insert(
 				std::pair<int, CDAPOperationState*>(
 						cdap_message.get_invoke_id(), new_operation_state));
-		LOG_DBG("Inserted request message in %p. Opcode: %d, invoke-id: %d",
-				pending_messages, op_code, cdap_message.get_invoke_id());
 	}
 }
 void CDAPSessionImpl::cancelReadMessageSentOrReceived(
@@ -642,8 +640,6 @@ void CDAPSessionImpl::checkCanSendOrReceiveResponse(
 	else
 		pending_messages = &pending_messages_recv_;
 
-	LOG_DBG("Looking in %p for request message with invoke_id %d",
-			pending_messages, cdap_message.invoke_id_);
 	std::map<int, CDAPOperationState*>::const_iterator iterator;
 	iterator = pending_messages->find(cdap_message.invoke_id_);
 	if (iterator == pending_messages->end()) {
