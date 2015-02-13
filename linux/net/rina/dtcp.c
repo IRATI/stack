@@ -640,11 +640,12 @@ static void dump_we(struct dtcp * dtcp,
         pci_seqn  = pci_sequence_number_get(pci);
         ack       = pci_control_ack_seq_num(pci);
 
-        LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u RcvRWE: %u RcvLWE: %u"
-                " newRWE: %u newLWE: %u myRWE: %u myLWE: %u cwqLWE: %u",
+        LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u "
+                "RcvRWE: %u RcvLWE: %u "
+                "newRWE: %u newLWE: %u "
+                "myRWE: %u myLWE: %u cwqLWE: %u",
                 pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
                 new_rt_we, new_lf_we, my_rt_we, my_lf_we, cwq_lf_we);
-
 }
 
 static int rcv_flow_ctl(struct dtcp * dtcp,
@@ -845,21 +846,25 @@ int dtcp_sending_ack_policy(struct dtcp * dtcp)
                 LOG_ERR("No DTCP passed...");
                 return -1;
         }
+
         ASSERT(dtcp->policies);
         if (!dtcp->policies->sending_ack) {
                 LOG_ERR("No sending_ack policy in dtcp");
                 return -1;
         }
+
         return dtcp->policies->sending_ack(dtcp);
 }
 
 static int default_sending_ack(struct dtcp * dtcp)
 {
-        struct dtp *         dtp;
-        pdu_type_t           type;
-        struct dtcp_config * dtcp_cfg;
-        seq_num_t            seq_num;
-        struct pdu *         pdu;
+        struct dtp * dtp;
+        seq_num_t    seq_num;
+
+        if (!dtcp) {
+                LOG_ERR("No DTCP passed...");
+                return -1;
+        }
 
         dtp = dt_dtp(dtcp->parent);
         if (!dtp) {
@@ -867,45 +872,33 @@ static int default_sending_ack(struct dtcp * dtcp)
                 return -1;
         }
 
-        dtcp_cfg = dtcp_config_get(dtcp);
-        if (!dtcp_cfg)
-                return -1;
-
         /* Invoke delimiting and update left window edge */
 
         seq_num = process_A_expiration(dtp, dtcp);
         if ((int) seq_num < 0) {
-                LOG_ERR("Seq num returned by A-timer is negative, bailing out...");
+                LOG_ERR("Seq num returned by A-timer is negative, "
+                        "bailing out ...");
                 return -1;
         }
 
-        type = pdu_ctrl_type_get(dtcp, seq_num);
-        if (!type) {
-                return 0;
-        }
-
-        pdu = pdu_ctrl_generate(dtcp, type);;
-        if (!pdu)
-                return -1;
-
-        dump_we(dtcp, pdu_pci_get_rw(pdu));
-        if (pdu_send(dtcp, pdu)) {
-                LOG_ERR("Could not send ctrl PDU");
+        ASSERT(dtcp->policies);
+        if (!dtcp->policies->sv_update) {
+                LOG_ERR("No sv_update policy in dtcp");
                 return -1;
         }
 
-        return 0;
+	return dtcp->policies->sv_update(dtcp, seq_num);
 }
 
 int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
-        struct pdu * pdu;
-        pdu_type_t   type;
+        struct pdu *   pdu;
+        pdu_type_t     type;
 
         /* VARIABLES FOR SYSTEM TIMESTAMP DBG MESSAGE BELOW*/
         struct timeval te;
-        long long milliseconds;
-        seq_num_t dbg_seq_num;
+        long long      milliseconds;
+        seq_num_t      dbg_seq_num;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -941,6 +934,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
                 dbg_seq_num, milliseconds);
 
         atomic_dec(&dtcp->cpdus_in_transit);
+
         return 0;
 }
 
