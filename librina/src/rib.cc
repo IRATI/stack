@@ -806,7 +806,6 @@ void RIBDaemon::processIncomingCDAPMessage(const rina::CDAPMessage * cdapMessage
                         break;
                 case rina::CDAPMessage::M_CREATE_R:
                         processIncomingResponseMessage(cdapMessage, cdapSessionDescriptor);
-                        delete cdapMessage;
                         break;
                 case rina::CDAPMessage::M_DELETE:
                         processIncomingRequestMessage(cdapMessage, cdapSessionDescriptor);
