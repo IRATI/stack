@@ -317,12 +317,10 @@ public:
 
         /// Causes a CDAP message to be sent. Takes ownership of the CDAPMessage
         /// @param cdapMessage the message to be sent
-        /// @param sessionId the CDAP session id
         /// @param address the address of the IPC Process to send the Message To
         /// @param cdapMessageHandler the class to be called when the response message is received (if required)
         /// @throws Exception
-        virtual void sendMessageToAddress(const CDAPMessage & cdapMessage,
-                                          int sessionId,
+        virtual void sendAData(const CDAPMessage & cdapMessage,
                                           unsigned int address,
                                           ICDAPResponseMessageHandler * cdapMessageHandler) = 0;
 
