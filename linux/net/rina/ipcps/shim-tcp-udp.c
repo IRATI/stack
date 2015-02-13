@@ -44,8 +44,8 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 
-#define CUBE_RELIABLE   1
 #define CUBE_UNRELIABLE 0
+#define CUBE_RELIABLE   1
 
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
@@ -501,8 +501,8 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         }
 
                         sin.sin_addr.s_addr = htonl(data->host_name);
-                        sin.sin_family = AF_INET;
-                        sin.sin_port = htons(0);
+                        sin.sin_family      = AF_INET;
+                        sin.sin_port        = htons(0);
 
                         err = kernel_bind(flow->sock, (struct sockaddr*) &sin,
                                           sizeof(sin));
@@ -779,7 +779,9 @@ int recv_msg(struct socket *      sock,
 
         size = kernel_recvmsg(sock, &msg, &iov, 1, len, msg.msg_flags);
         if (size >= 0)
-                LOG_DBG("received message with %d bytes", size);
+                LOG_DBG("Received message with %d bytes", size);
+        else
+                LOG_ERR("Problems receiving message");
 
         return size;
 }
@@ -805,13 +807,15 @@ int send_msg(struct socket *      sock,
 
         size = kernel_sendmsg(sock, &msg, &iov, 1, len);
         if (size > 0)
-                LOG_DBG("send message with %d bytes", size);
+                LOG_DBG("Sent message with %d bytes", size);
+        else
+                LOG_ERR("Problems sending message");
 
         return size;
 }
 
 static int udp_process_msg(struct ipcp_instance_data * data,
-                           struct socket * sock)
+                           struct socket *             sock)
 {
         struct shim_tcp_udp_flow *  flow;
         struct sockaddr_in          addr;
@@ -864,6 +868,9 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
         user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
                                             app->app_name);
+
+        ASSERT(data);
+
         if (!user_ipcp)
                 user_ipcp = kfa_ipcp_instance(data->kfa);
         ipcp = kipcm_find_ipcp(default_kipcm, data->id);
@@ -1221,7 +1228,10 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
         ASSERT(sock);
 
         flow = find_tcp_flow_by_socket(data, sock);
-        ASSERT(flow);
+        if (!flow) {
+                LOG_ERR("Cannot find the flow for (%p, %p)", data, sock);
+                return -1;
+        }
 
         if (flow->bytes_left == 0)
                 size = tcp_recv_new_message(data, sock, flow);
@@ -1230,14 +1240,14 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
         if (size == 0 && (flow->port_id_state == PORT_STATE_ALLOCATED ||
                           flow->port_id_state == PORT_STATE_PENDING)) {
-                LOG_DBG("closing flow");
+                LOG_DBG("Closing flow");
 
                 if (flow->port_id_state == PORT_STATE_ALLOCATED)
                         flow->port_id_state = PORT_STATE_NULL;
-
+                
                 write_lock_bh(&flow->sock->sk->sk_callback_lock);
                 flow->sock->sk->sk_data_ready = flow->sock->sk->sk_user_data;
-                flow->sock->sk->sk_user_data = NULL;
+                flow->sock->sk->sk_user_data  = NULL;
                 write_unlock_bh(&flow->sock->sk->sk_callback_lock);
 
                 /* FIXME: better cleanup */
@@ -1310,10 +1320,9 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 spin_lock(&data->lock);
 
                 flow->port_id_state = PORT_STATE_PENDING;
-                flow->fspec_id = 1;
-
-                flow->port_id = kfa_port_id_reserve(data->kfa, data->id);
-                flow->sock = acsock;
+                flow->fspec_id      = 1;
+                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+                flow->sock          = acsock;
 
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
@@ -1385,27 +1394,28 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         struct socket *                     sock;
         int                                 res, len;
 
+        ASSERT(sk);
+
         sock = sk->sk_socket;
+        ASSERT(sock);
 
         len = sizeof(struct sockaddr_in);
         if (kernel_getsockname(sock, (struct sockaddr*) &own, &len)) {
                 LOG_ERR("Couldn't retrieve hostname");
+                return -1;
         }
-        LOG_DBG("found sockname: %d", ntohl(own.sin_addr.s_addr));
+        LOG_DBG("Found sockname: %d", ntohl(own.sin_addr.s_addr));
 
         mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
-
         ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
                 res = udp_process_msg(mapping->data, sock);
-                while (res > 0) {
+                while (res > 0)
                         res = udp_process_msg(mapping->data, sock);
-                }
                 return res;
-        } else {
+        } else
                 return tcp_process(mapping->data, sock);
-        }
 }
 
 static void tcp_udp_rcv_worker(struct work_struct * work)
@@ -1423,8 +1433,11 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 
                 LOG_DBG("worker on %p", recvd->sk);
 
-                if (recvd->sk != NULL)
-                        tcp_udp_rcv_process_msg(recvd->sk);
+                if (recvd->sk != NULL) {
+                        int res = tcp_udp_rcv_process_msg(recvd->sk);
+                        if (res <= 0)
+                                LOG_DBG("TCP/UDP processing returned %d", res);
+                }
 
                 rkfree(recvd);
 
@@ -2422,15 +2435,15 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->data->qos[CUBE_UNRELIABLE] =
                 rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
         if (!inst->data->qos[CUBE_UNRELIABLE]) {
-                LOG_ERR("Failed creation of qos cube 1");
+                LOG_ERR("Failed creation of qos cube %d", CUBE_UNRELIABLE);
                 inst_cleanup(inst);
                 return NULL;
         }
 
-        inst->data->qos[CUBE_RELIABLE] = rkzalloc(sizeof(struct flow_spec),
-                                                  GFP_KERNEL);
+        inst->data->qos[CUBE_RELIABLE] =
+                rkzalloc(sizeof(struct flow_spec), GFP_KERNEL);
         if (!inst->data->qos[CUBE_RELIABLE]) {
-                LOG_ERR("Failed creation of qos cube 2");
+                LOG_ERR("Failed creation of qos cube %d", CUBE_RELIABLE);
                 inst_cleanup(inst);
                 return NULL;
         }
@@ -2565,31 +2578,51 @@ static int __init mod_init(void)
 
         rcv_wq = alloc_workqueue(SHIM_NAME_RWQ,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
+        if (!rcv_wq) {
+                LOG_CRIT("Cannot create the receiver-wq");
+                return -1;
+        }
+
         snd_wq = alloc_workqueue(SHIM_NAME_WWQ,
                                  WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
-        if (!rcv_wq || !snd_wq) {
-                LOG_CRIT("Cannot create a workqueue for shim %s", SHIM_NAME);
+        if (!snd_wq) {
+                LOG_CRIT("Cannot create the sender-wq");
+                destroy_workqueue(rcv_wq);
                 return -1;
         }
 
         shim = kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,
                                            &tcp_udp_data, &tcp_udp_ops);
-        if (!shim)
+        if (!shim) {
+                destroy_workqueue(snd_wq);
+                destroy_workqueue(rcv_wq);
                 return -1;
+        }
 
         return 0;
 }
 
 static void __exit mod_exit(void)
 {
-        struct rcv_data * recvd, *nxt;
+        struct rcv_data * recvd, * nxt_r;
+        struct rcv_data * sendd, * nxt_s;
 
+        LOG_DBG("Disposing receiver-wq");
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
-
-        list_for_each_entry_safe(recvd, nxt, &rcv_wq_data, list) {
+        list_for_each_entry_safe(recvd, nxt_r, &rcv_wq_data, list) {
+                LOG_DBG("Disposing stale data in receiver-wq");
                 list_del(&recvd->list);
                 rkfree(recvd);
+        }
+
+        LOG_DBG("Disposing sender-wq");
+        flush_workqueue(snd_wq);
+        destroy_workqueue(snd_wq);
+        list_for_each_entry_safe(sendd, nxt_s, &rcv_wq_data, list) {
+                LOG_DBG("Disposing stale data in sender-wq");
+                list_del(&sendd->list);
+                rkfree(sendd);
         }
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim);
