@@ -338,7 +338,7 @@ void IPCPRIBDaemonImpl::cdapMessageDelivered(char* message, int length, int port
     		aDataCDAPMessage = cdap_session_manager_->decodeCDAPMessage(*adata->encoded_cdap_message_);
     		cdapSessionDescriptor = new rina::CDAPSessionDescriptor();
 
-    	    LOG_DBG("Received A-Data CDAP message through portId %d: %s", portId,
+    	    LOG_DBG("Received A-Data CDAP message from address %u : %s", adata->source_address_,
     	    		aDataCDAPMessage->to_string().c_str());
 
     		atomic_send_lock_.unlock();
