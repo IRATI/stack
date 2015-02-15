@@ -288,9 +288,9 @@ static bool compare_addr(const struct sockaddr_in * f,
         ASSERT(f);
         ASSERT(s);
 
-        return f->sin_family == s->sin_family &&
-                f->sin_port == s->sin_port    &&
-                f->sin_addr.s_addr == s->sin_addr.s_addr;
+        return ((f->sin_family      == s->sin_family)      &&
+                (f->sin_port        == s->sin_port)        &&
+                (f->sin_addr.s_addr == s->sin_addr.s_addr));
 }
 
 /* No lock needed here, called only when already holding a lock */
@@ -392,13 +392,17 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
 {
         ASSERT(data);
         ASSERT(flow);
+        ASSERT(flow->user_ipcp);
+        ASSERT(flow->user_ipcp->ops);
+        ASSERT(flow->user_ipcp->ops->flow_unbinding_ipcp);
 
         flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
                                                   flow->port_id);
         if (flow_destroy(data, flow)) {
-                LOG_ERR("Failed to destroy shim-tcp-udp flow");
+                LOG_ERR("Failed to destroy a flow");
                 return -1;
         }
+
         return 0;
 }
 
@@ -473,7 +477,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 spin_unlock(&data->lock);
                 LOG_DBG("allocate request flow added");
 
-                /* this should be done with DNS or DHT */
+                /* This should be done with DNS or DHT */
                 entry = find_dir_entry(data, dest);
                 if (!entry) {
                         LOG_ERR("Directory entry not found");
@@ -609,6 +613,7 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
 
         ASSERT(data);
         ASSERT(is_port_id_ok(port_id));
+
         if (!user_ipcp) {
                 LOG_ERR("Wrong user_ipcp passed, bailing out");
                 kfa_port_id_release(data->kfa, port_id);
@@ -635,7 +640,7 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
         if (!result) {
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_ALLOCATED;
-                flow->user_ipcp = user_ipcp;
+                flow->user_ipcp     = user_ipcp;
                 spin_unlock(&data->lock);
 
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
@@ -1264,6 +1269,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                 while (flow->sdu_queue != NULL) {
                         msleep(2);
                 }
+
                 LOG_DBG("notifying kipcm aboud deallocate");
                 kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1289,14 +1295,13 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
         app = find_app_by_socket(data, sock);
         if (!app) {
-                //connection exists
+                /* connection exists */
                 err = tcp_process_msg(data, sock);
-                while (err > 0) {
+                while (err > 0)
                         err = tcp_process_msg(data, sock);
-                }
                 return err;
         } else {
-                //accept connection
+                /* accept connection */
                 err = kernel_accept(app->tcpsock, &acsock, O_NONBLOCK);
                 if (err < 0) {
                         LOG_ERR("could not accept socket");
@@ -1305,7 +1310,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 LOG_DBG("accepted socket");
 
                 write_lock_bh(&acsock->sk->sk_callback_lock);
-                acsock->sk->sk_user_data = acsock->sk->sk_data_ready;
+                acsock->sk->sk_user_data  = acsock->sk->sk_data_ready;
                 acsock->sk->sk_data_ready = tcp_udp_rcv;
                 write_unlock_bh(&acsock->sk->sk_callback_lock);
 
@@ -1380,8 +1385,9 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                         name_destroy(sname);
                         return -1;
                 }
+
                 name_destroy(sname);
-                LOG_DBG("tcp_process: flow created");
+                LOG_DBG("TCP flow created");
 
                 return 0;
         }
@@ -2570,7 +2576,7 @@ static struct ipcp_factory_ops tcp_udp_ops = {
         .destroy = tcp_udp_destroy,
 };
 
-static struct ipcp_factory *shim = NULL;
+static struct ipcp_factory * shim = NULL;
 
 static int __init mod_init(void)
 {
@@ -2591,7 +2597,8 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        shim = kipcm_ipcp_factory_register(default_kipcm, SHIM_NAME,
+        shim = kipcm_ipcp_factory_register(default_kipcm,
+                                           SHIM_NAME,
                                            &tcp_udp_data, &tcp_udp_ops);
         if (!shim) {
                 destroy_workqueue(snd_wq);
