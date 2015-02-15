@@ -103,7 +103,7 @@ struct reg_app_data {
 };
 
 struct shim_tcp_udp_flow {
-        struct list_head   list;
+        struct list_head       list;
 
         port_id_t              port_id;
         enum port_id_state     port_id_state;
