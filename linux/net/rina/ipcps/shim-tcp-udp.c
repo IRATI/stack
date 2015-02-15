@@ -30,8 +30,8 @@
 #include <net/sock.h>
 
 #define SHIM_NAME     "shim-tcp-udp"
-#define SHIM_NAME_RWQ "shim-tcp-udp-rwq"
-#define SHIM_NAME_WWQ "shim-tcp-udp-wwq"
+#define SHIM_NAME_RWQ SHIM_NAME "-rwq"
+#define SHIM_NAME_WWQ SHIM_NAME "-wwq"
 
 #define RINA_PREFIX SHIM_NAME
 
