@@ -441,7 +441,7 @@ static void tcp_udp_rcv(struct sock * sk)
                 LOG_ERR("Bad socket passed to callback, bailing out");
                 return;
         }
-        LOG_DBG("Callback on %p", sk->sk_socket);
+        LOG_DBG("Callback on socket %pK", sk->sk_socket);
 
         recvd = rkmalloc(sizeof(struct rcv_data), GFP_ATOMIC);
         if (!recvd) {
@@ -1181,7 +1181,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
         size = recv_msg(sock, NULL, 0, &flow->buf[start], flow->bytes_left);
         if (size <= 0) {
                 if (size != -EAGAIN)
-                        LOG_ERR("error during tcp receive: %d", size);
+                        LOG_ERR("Error during TCP receive: %d", size);
                 return size;
         }
 
@@ -1260,7 +1260,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
         flow = find_flow_by_socket(data, sock);
         if (!flow) {
-                LOG_ERR("Cannot find the flow for (%p, %p)", data, sock);
+                LOG_ERR("Cannot find the flow for (%pK, %pK)", data, sock);
                 return -1;
         }
 
@@ -1319,7 +1319,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
         ASSERT(sock);
 
-        LOG_DBG("Processing TCP socket %p", sock);
+        LOG_DBG("Processing TCP socket %pK", sock);
 
         app = find_app_by_socket(data, sock);
         if (!app) {
@@ -1466,7 +1466,7 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
                 list_del(&recvd->list);
                 spin_unlock_irqrestore(&rcv_wq_lock, flags);
 
-                LOG_DBG("worker on %p", recvd->sk);
+                LOG_DBG("Worker on %pK", recvd->sk);
 
                 if (recvd->sk != NULL) {
                         int res = tcp_udp_rcv_process_msg(recvd->sk);
@@ -2452,7 +2452,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
         if (!inst) {
-                LOG_ERR("Could not allocate mem for ipcp instance");
+                LOG_ERR("Could not allocate memory for IPCP instance");
                 return NULL;
         }
 
@@ -2460,13 +2460,12 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
         inst->ops  = &tcp_udp_instance_ops;
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
-                LOG_ERR("Could not allocate memory for instance data");
+                LOG_ERR("Could not allocate memory for IPCP instance data");
                 inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->id = id;
-
         inst->data->name = name_dup(name);
         if (!inst->data->name) {
                 LOG_ERR("Failed creation of IPC name");
@@ -2534,7 +2533,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         ASSERT(inst->data->kfa);
 
-        LOG_DBG("KFA instance %pK bound to the shim tcp-udp", inst->data->kfa);
+        LOG_DBG("KFA instance %pK bound", inst->data->kfa);
 
         spin_lock_init(&inst->data->lock);
 
@@ -2570,7 +2569,7 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
 
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
-                        LOG_DBG("It is %p", pos);
+                        LOG_DBG("Instance is %pK", pos);
 
                         /* Unbind from the instances set */
                         spin_lock(&data->lock);
@@ -2608,7 +2607,7 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                 }
         }
 
-        LOG_DBG("Didn't find the instance I was lookg for, returning error");
+        LOG_DBG("Didn't find the instance I was lookig for, returning error");
 
         return -1;
 }
