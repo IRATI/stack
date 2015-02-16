@@ -237,7 +237,6 @@ find_exp_reg(struct ipcp_instance_data * data,
         return NULL;
 }
 
-
 static struct shim_tcp_udp_flow * find_flow(struct ipcp_instance_data * data,
                                             port_id_t                   id)
 {
@@ -391,6 +390,7 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                                    struct shim_tcp_udp_flow *  flow)
 {
         ASSERT(data);
+
         ASSERT(flow);
         ASSERT(flow->user_ipcp);
         ASSERT(flow->user_ipcp->ops);
@@ -420,7 +420,7 @@ static void tcp_udp_rcv(struct sock * sk)
 {
         struct rcv_data * recvd;
 
-        LOG_DBG("callback on %p", sk->sk_socket);
+        LOG_DBG("Callback on %p", sk->sk_socket);
 
         recvd = rkmalloc(sizeof(struct rcv_data), GFP_ATOMIC);
         if (!recvd) {
@@ -619,7 +619,6 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 kfa_port_id_release(data->kfa, port_id);
                 return -1;
         }
-
 
         flow = find_flow(data, port_id);
         if (!flow) {
@@ -871,8 +870,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
-                                            app->app_name);
+        user_ipcp = kipcm_find_ipcp_by_name(default_kipcm, app->app_name);
 
         ASSERT(data);
 
@@ -1041,7 +1039,6 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         char            sbuf[2];
         int             size;
         __be16          nlen;
-
 
         size = recv_msg(sock, NULL, 0, sbuf, 2);
         if (size <= 0) {
@@ -1555,7 +1552,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         }
 
         write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
-        app->tcpsock->sk->sk_user_data = app->tcpsock->sk->sk_data_ready;
+        app->tcpsock->sk->sk_user_data  = app->tcpsock->sk->sk_data_ready;
         app->tcpsock->sk->sk_data_ready = tcp_udp_rcv;
         write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
 
