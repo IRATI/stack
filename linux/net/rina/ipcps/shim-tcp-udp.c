@@ -586,9 +586,11 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
+
                 ASSERT(user_ipcp);
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
+
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                                       flow->port_id,
                                                       ipcp)) {
@@ -681,6 +683,7 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                 ASSERT(user_ipcp);
                 ASSERT(user_ipcp->ops);
                 ASSERT(user_ipcp->ops->flow_binding_ipcp);
+
                 if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                                       flow->port_id,
                                                       ipcp)) {
