@@ -911,7 +911,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
             	spin_unlock(&data->lock);
-                LOG_DBG("udp_process_msg: no flow found, creating it");
+                LOG_DBG("No flow found, creating it");
 
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
@@ -1385,8 +1385,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 		LOG_ERR("Could not create flow in KFA");
                 		kfa_port_id_release(data->kfa, flow->port_id);
                 		if (flow_destroy(data, flow))
-                			LOG_ERR("Problems destroying shim-eth-vlan "
-                					"flow");
+                			LOG_ERR("Problems destroying flow");
                 		return -1;
                 	}
                 }
