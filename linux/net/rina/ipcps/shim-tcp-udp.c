@@ -1009,8 +1009,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_unlock(&data->lock);
-
                 /* FIXME: This sets the name to the server? */
                 sname = name_create_ni();
                 if (!name_init_from_ni(sname, "Unknown app", "", "", "")) {
