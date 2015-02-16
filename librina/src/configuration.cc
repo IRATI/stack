@@ -1104,6 +1104,10 @@ void RMTConfiguration::set_rmt_scheduling_policy(
 }
 
 // CLASS LinkStateRouting Configuraiton
+
+const std::string LinkStateRoutingConfiguration::DEFAULT_ROUTING_ALGORITHM =
+    "Dijkstra";
+
 LinkStateRoutingConfiguration::LinkStateRoutingConfiguration()
 {
 	wait_until_read_cdap_ = WAIT_UNTIL_READ_CDAP_DEFAULT;
@@ -1114,9 +1118,6 @@ LinkStateRoutingConfiguration::LinkStateRoutingConfiguration()
 	object_maximum_age_ = PULSES_UNTIL_FSO_EXPIRATION_DEFAULT;
 	routing_algorithm_ = DEFAULT_ROUTING_ALGORITHM;
 }
-
-const std::string LinkStateRoutingConfiguration::DEFAULT_ROUTING_ALGORITHM =
-		"Dijkstra";
 
 const std::string LinkStateRoutingConfiguration::toString() {
 	std::stringstream ss;
@@ -1241,6 +1242,10 @@ AddressPrefixConfiguration::AddressPrefixConfiguration() {
 }
 
 // CLASS DIF CONFIGURATION
+DIFConfiguration::DIFConfiguration(){
+  address_ = 0;
+}
+
 unsigned int DIFConfiguration::get_address() const {
 	return address_;
 }
