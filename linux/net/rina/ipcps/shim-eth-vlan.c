@@ -33,7 +33,6 @@
 #define SHIM_NAME   "shim-eth-vlan"
 
 #define RINA_PREFIX SHIM_NAME
-#define PROTO_LEN   32
 
 #include "logs.h"
 #include "common.h"
@@ -111,10 +110,10 @@ struct ipcp_instance_data {
         struct list_head       flows;
 
         /* FIXME: Remove it as soon as the kipcm_kfa gets removed */
-        struct kfa * kfa;
+        struct kfa *           kfa;
 
         /* RINARP related */
-        struct rinarp_handle *  handle;
+        struct rinarp_handle * handle;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -479,10 +478,11 @@ static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
-                                           struct ipcp_instance *      user_ipcp,
-                                           port_id_t                   port_id,
-                                           int                         result)
+static int
+eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
+                                struct ipcp_instance *      user_ipcp,
+                                port_id_t                   port_id,
+                                int                         result)
 {
         struct shim_eth_flow * flow;
         struct ipcp_instance * ipcp;
@@ -549,9 +549,10 @@ static int eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         LOG_DBG("Got a new element from the fifo");
 
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              tmp)) {
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        tmp)) {
                                 LOG_ERR("Couldn't enqueue SDU to KFA ...");
                                 return -1;
                         }
@@ -1064,10 +1065,11 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
-                        if (flow->user_ipcp->ops->sdu_enqueue(flow->user_ipcp->data,
-                                                              flow->port_id,
-                                                              du)) {
-                                LOG_ERR("Couldn't enqueue SDU to user IPCP ...");
+                        if (flow->user_ipcp->ops->
+                            sdu_enqueue(flow->user_ipcp->data,
+                                        flow->port_id,
+                                        du)) {
+                                LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
 
@@ -1089,7 +1091,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         sdu_destroy(du);
                 }
 
-                LOG_DBG("eth_vlan_recv_process_packet ends....");
+                LOG_DBG("eth_vlan_recv_process_packet ends ...");
         }
 
         return 0;
