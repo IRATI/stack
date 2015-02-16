@@ -122,11 +122,12 @@ int  kfa_port_id_release(struct kfa * instance,
         /*FIXME: should this be irqsave? */
         spin_lock(&instance->lock);
 
-        /* To avoid releasing the port if it is used by a flow in the kfa (to */
-        /* an app) which will be automatically destroyed when the flow is     */
-        /* unbound by the provider ipcp and the writers/readers/posters in kfa*/
-        /* are 0. This avoids allocating the freed port again before the kfa  */
-        /* finally destroys everything. */
+        /* To avoid releasing the port if it is used by a flow in the KFA
+         * (to an app) which will be automatically destroyed when the flow is
+         * unbound by the provider IPCP and the writers/readers/posters in KFA
+         * are 0. This avoids allocating the freed port again before the KFA
+         * finally destroys everything.
+         */
         flow = kfa_pmap_find(instance->flows, port_id);
         if (flow) {
                 spin_unlock(&instance->lock);
@@ -789,9 +790,11 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                               struct ipcp_instance *      ipcp)
 {
         struct ipcp_flow * flow;
-        struct kfa * instance;
+        struct kfa *       instance;
 
         IRQ_BARRIER;
+
+        LOG_DBG("Binding IPCP %pK to flow on port %d", ipcp, pid);
 
         if (!data)
                 return -1;
@@ -817,18 +820,19 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data * data,
                 return-1;
         }
 
-        /*FIXME: should this be irqsave? */
+        /* FIXME: should this be irqsave? */
         spin_lock(&instance->lock);
         flow = kfa_pmap_find(instance->flows, pid);
         if (!flow) {
                 spin_unlock(&instance->lock);
+                LOG_ERR("Cannot bind IPCP %pK to flow on port %d since "
+                        "flow is missing on that port", ipcp, pid);
                 return -1;
         }
 
         flow->ipc_process = ipcp;
-
-        flow->state     = PORT_STATE_ALLOCATED;
-        flow->sdu_ready = rfifo_create_ni();
+        flow->state       = PORT_STATE_ALLOCATED;
+        flow->sdu_ready   = rfifo_create_ni();
         if (!flow->sdu_ready) {
                 kfa_pmap_remove(instance->flows, pid);
                 rkfree(flow);
