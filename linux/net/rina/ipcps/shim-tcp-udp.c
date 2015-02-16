@@ -600,6 +600,9 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
+                if (!rfifo_is_empty(flow->sdu_queue)) {
+                        LOG_ERR("We are going to leak ...");
+                }
                 flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
@@ -806,10 +809,17 @@ int recv_msg(struct socket *      sock,
         msg.msg_namelen    = lother;
 
         size = kernel_recvmsg(sock, &msg, &iov, 1, len, msg.msg_flags);
-        if (size >= 0)
+        if (size < 0) {
+                if (size == -EAGAIN) {
+                        LOG_DBG("I should try receiving the message again");
+                } else if (size == -EWOULDBLOCK) {
+                        LOG_DBG("Operation would block ...");
+                } else {
+                        LOG_ERR("Problems receiving message (%d)", size);
+                }
+        } else {
                 LOG_DBG("Received message with %d bytes", size);
-        else
-                LOG_ERR("Problems receiving message");
+        }
 
         return size;
 }
@@ -1124,8 +1134,10 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock(&data->lock);
 
+                        ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
+
                         if (flow->user_ipcp->ops->
                             sdu_enqueue(flow->user_ipcp->data,
                                         flow->port_id,
@@ -1133,7 +1145,6 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
-
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
 
@@ -1214,7 +1225,6 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
-
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
 
@@ -1294,6 +1304,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
                 /* FIXME: remove the msleep */
                 while (flow->sdu_queue != NULL) {
+                        LOG_DBG("Waiting the SDU queue to become empty ...");
                         msleep(2);
                 }
 
@@ -1551,8 +1562,8 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         }
 
         sin.sin_addr.s_addr = htonl(data->host_name);
-        sin.sin_family = AF_INET;
-        sin.sin_port = htons(app->port);
+        sin.sin_family      = AF_INET;
+        sin.sin_port        = htons(app->port);
 
         err = kernel_bind(app->udpsock, (struct sockaddr*) &sin, sizeof(sin));
         if (err < 0) {
