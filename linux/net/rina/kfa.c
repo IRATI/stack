@@ -189,7 +189,7 @@ static int kfa_flow_destroy(struct kfa *       instance,
 }
 
 static int kfa_flow_deallocate(struct ipcp_instance_data * data,
-                               port_id_t    id)
+                               port_id_t                   id)
 {
         struct ipcp_flow * flow;
         struct kfa *       instance;
