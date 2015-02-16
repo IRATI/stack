@@ -514,13 +514,13 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->addr.sin_port        = htons(entry->port);
 
                 if (!fspec->max_allowable_gap == 0) {
-                        LOG_DBG("unreliable flow requested");
+                        LOG_DBG("Unreliable flow requested");
                         flow->fspec_id = 0;
 
                         err = sock_create_kern(PF_INET, SOCK_DGRAM,
                                                IPPROTO_UDP, &flow->sock);
                         if (err < 0) {
-                                LOG_ERR("could not create udp socket");
+                                LOG_ERR("Could not create udp socket");
                                 unbind_and_destroy_flow(data, flow);
                                 return -1;
                         }
@@ -560,7 +560,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                              (struct sockaddr*)&flow->addr,
                                              sizeof(struct sockaddr), 0);
                         if (err < 0) {
-                                LOG_ERR("could not connect TCP socket");
+                                LOG_ERR("Could not connect TCP socket");
                                 sock_release(flow->sock);
                                 unbind_and_destroy_flow(data, flow);
                                 return -1;
@@ -604,7 +604,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm, data->id,
                                                        flow->port_id, 0)) {
-                        LOG_ERR("couldn't tell flow is allocated to KIPCM");
+                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
                         if (fspec->ordered_delivery) {
                                 kernel_sock_shutdown(flow->sock, SHUT_RDWR);
                                 sock_release(flow->sock);
@@ -865,14 +865,14 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         if ((size = recv_msg(sock, &addr, sizeof(addr),
                              buf, CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE)) < 0) {
                 if (size != -EAGAIN)
-                        LOG_ERR("error during udp recv: %d", size);
+                        LOG_ERR("Error during UDP recv: %d", size);
                 rkfree(buf);
                 return -1;
         }
 
         sdubuf = buffer_create_from(buf, size);
         if (!sdubuf) {
-                LOG_ERR("could not create buffer");
+                LOG_ERR("Could not create buffer");
                 rkfree(buf);
                 return -1;
         }
@@ -906,6 +906,9 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 sdu_destroy(du);
                 return -1;
         }
+
+        ASSERT(user_ipcp);
+        ASSERT(ipcp);
 
         spin_lock(&data->lock);
         flow = find_udp_flow(data, &addr, sock);
@@ -1025,7 +1028,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
-
                 } else if (flow->port_id_state == PORT_STATE_PENDING) {
                         LOG_DBG("Queueing frame");
 
@@ -1069,7 +1071,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         }
 
         if (size != 2) {
-                LOG_DBG("didn't read both bytes for size: %d", size);
+                LOG_DBG("Didn't read both bytes for size: %d", size);
 
                 /*
                  * Shim can't function correct when only one size byte is read,
@@ -1154,7 +1156,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
                 return size;
         } else {
-                LOG_DBG("didn't receive complete message");
+                LOG_DBG("Didn't receive complete message");
 
                 flow->buf = buf;
                 flow->lbuf = flow->bytes_left;
@@ -1188,7 +1190,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                 sdubuf = buffer_create_with(flow->buf, flow->lbuf);
                 if (!sdubuf) {
                         rkfree(flow->buf);
-                        LOG_ERR("could not create buffer");
+                        LOG_ERR("Could not create buffer");
                         return -1;
                 }
 
@@ -1235,7 +1237,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
                 return size;
         } else {
-                LOG_DBG("still didn't receive complete message");
+                LOG_DBG("Still didn't receive complete message");
 
                 flow->bytes_left = flow->bytes_left - size;
 
@@ -1295,7 +1297,7 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
                         msleep(2);
                 }
 
-                LOG_DBG("notifying kipcm aboud deallocate");
+                LOG_DBG("Notifying KIPCM aboud deallocate");
                 kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
                 kfa_port_id_release(data->kfa, flow->port_id);
                 unbind_and_destroy_flow(data, flow);
@@ -1350,9 +1352,12 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                         return -1;
                 }
 
-                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm, app->app_name);
+                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
+                                                    app->app_name);
                 if (!user_ipcp)
                 	user_ipcp = kfa_ipcp_instance(data->kfa);
+                ASSERT(user_ipcp);
+
                 ipcp = kipcm_find_ipcp(default_kipcm, data->id);
 
                 flow->port_id_state = PORT_STATE_PENDING;
@@ -1375,6 +1380,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                         sock_release(acsock);
                         if (flow_destroy(data, flow))
                                 LOG_ERR("Problems destroying flow");
+
                         return -1;
                 }
                 LOG_DBG("Added flow to the list");
