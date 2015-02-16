@@ -319,9 +319,16 @@ static int flow_destroy(struct ipcp_instance_data * data,
 static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                                    struct shim_eth_flow *      flow)
 {
-        if (flow->user_ipcp)
-                flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
-                                                          flow->port_id);
+        ASSERT(flow);
+
+        if (flow->user_ipcp) {
+                ASSERT(flow->user_ipcp->ops);
+
+                flow->user_ipcp->ops->
+                        flow_unbinding_ipcp(flow->user_ipcp->data,
+                                            flow->port_id);
+        }
+
         if (flow_destroy(data, flow)) {
                 LOG_ERR("Failed to destroy shim-eth-vlan flow");
                 return -1;
@@ -412,12 +419,13 @@ static void rinarp_resolve_handler(void *             opaque,
         }
 }
 
-static int eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
-                                          struct ipcp_instance *      user_ipcp,
-                                          const struct name *         source,
-                                          const struct name *         dest,
-                                          const struct flow_spec *    fspec,
-                                          port_id_t                   id)
+static int
+eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
+                               struct ipcp_instance *      user_ipcp,
+                               const struct name *         source,
+                               const struct name *         dest,
+                               const struct flow_spec *    fspec,
+                               port_id_t                   id)
 {
         struct shim_eth_flow * flow;
 
@@ -560,7 +568,6 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
                 rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
                 flow->sdu_queue = NULL;
-
         } else {
                 spin_lock(&data->lock);
                 flow->port_id_state = PORT_STATE_NULL;
@@ -586,6 +593,7 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
         struct shim_eth_flow * flow;
 
         ASSERT(data);
+
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, cannot remove");
@@ -1024,7 +1032,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 INIT_LIST_HEAD(&flow->list);
                 flow->sdu_queue = rfifo_create_ni();
                 if (!flow->sdu_queue) {
-                        LOG_ERR("Couldn't create the sdu queue for a new flow");
+                        LOG_ERR("Couldn't create the SDU queue "
+                                "for a new flow");
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
                         rkfree(flow);
@@ -1037,7 +1046,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         sdu_destroy(du);
                         gha_destroy(ghaddr);
                         rkfree (flow);
-                        rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                        rfifo_destroy(flow->sdu_queue,
+                                      (void (*)(void *)) pdu_destroy);
                         return -1;
                 }
 

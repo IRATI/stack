@@ -1334,10 +1334,10 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 /* accept connection */
                 err = kernel_accept(app->tcpsock, &acsock, O_NONBLOCK);
                 if (err < 0) {
-                        LOG_ERR("could not accept socket");
+                        LOG_ERR("Could not accept socket");
                         return -1;
                 }
-                LOG_DBG("accepted socket");
+                LOG_DBG("Socket accepted");
 
                 write_lock_bh(&acsock->sk->sk_callback_lock);
                 acsock->sk->sk_user_data  = acsock->sk->sk_data_ready;
@@ -1361,7 +1361,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-                LOG_DBG("tcp flow added");
+                LOG_DBG("TCP flow added");
 
                 memset(&flow->addr, 0, sizeof(struct sockaddr_in));
 
