@@ -910,11 +910,11 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         spin_lock(&data->lock);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
+            	spin_unlock(&data->lock);
                 LOG_DBG("udp_process_msg: no flow found, creating it");
 
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
-                        spin_unlock(&data->lock);
                         LOG_ERR("Could not allocate flow");
                         sdu_destroy(du);
                         return -1;
@@ -931,8 +931,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 flow->addr.sin_addr.s_addr = addr.sin_addr.s_addr;
 
                 if (!is_port_id_ok(flow->port_id)) {
-                        spin_unlock(&data->lock);
-
                         LOG_ERR("Port id is not ok");
                         sdu_destroy(du);
                         if (flow_destroy(data, flow))
@@ -940,14 +938,15 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         return -1;
                 }
 
+                spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
+                spin_unlock(&data->lock);
                 LOG_DBG("Added UDP flow");
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
                         if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
-                                spin_unlock(&data->lock);
                                 LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -960,7 +959,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 flow->sdu_queue = rfifo_create();
                 if (!flow->sdu_queue) {
                         flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->lock);
 
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
@@ -976,7 +974,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 /* Store SDU in queue */
                 if (rfifo_push(flow->sdu_queue, du)) {
                         flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->lock);
 
                         LOG_ERR("Could not write %zd bytes into the fifo",
                                 sizeof(struct sdu *));
@@ -1316,6 +1313,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
         struct socket *             acsock;
         struct name *               sname;
         int                         err;
+        struct ipcp_instance     * ipcp, * user_ipcp;
 
         LOG_HBEAT;
 
@@ -1352,23 +1350,26 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                user_ipcp = kipcm_find_ipcp_by_name(default_kipcm, app->app_name);
+                if (!user_ipcp)
+                	user_ipcp = kfa_ipcp_instance(data->kfa);
+                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->fspec_id      = 1;
                 flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
                 flow->sock          = acsock;
 
+                spin_lock(&data->lock);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
+                spin_unlock(&data->lock);
                 LOG_DBG("tcp flow added");
 
                 memset(&flow->addr, 0, sizeof(struct sockaddr_in));
 
                 if (!is_port_id_ok(flow->port_id)) {
                         flow->port_id_state = PORT_STATE_NULL;
-                        spin_unlock(&data->lock);
-
                         LOG_ERR("Port id is not ok");
 
                         sock_release(acsock);
@@ -1378,18 +1379,26 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 }
                 LOG_DBG("Added flow to the list");
 
+                if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
+                	LOG_DBG("This flow goes for an app");
+                	if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                		LOG_ERR("Could not create flow in KFA");
+                		kfa_port_id_release(data->kfa, flow->port_id);
+                		if (flow_destroy(data, flow))
+                			LOG_ERR("Problems destroying shim-eth-vlan "
+                					"flow");
+                		return -1;
+                	}
+                }
+
                 flow->sdu_queue = rfifo_create_ni();
                 if (!flow->sdu_queue) {
-                        spin_unlock(&data->lock);
-
                         LOG_ERR("Couldn't create the sdu queue "
                                 "for a new flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         tcp_unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
-
-                spin_unlock(&data->lock);
 
                 LOG_DBG("Queue has been created");
 
