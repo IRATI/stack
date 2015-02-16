@@ -69,6 +69,7 @@ struct snd_data {
         struct sdu *                sdu;
 };
 
+/* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
 /*
@@ -91,7 +92,7 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
-/* data for registrated applications */
+/* Data for registrated applications */
 struct reg_app_data {
         struct list_head list;
 
@@ -1260,7 +1261,8 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
         flow = find_flow_by_socket(data, sock);
         if (!flow) {
-                LOG_ERR("Cannot find the flow for (%pK, %pK)", data, sock);
+                LOG_ERR("Cannot find the flow "
+                        "(data = %pK, socket = %pK)", data, sock);
                 return -1;
         }
 
